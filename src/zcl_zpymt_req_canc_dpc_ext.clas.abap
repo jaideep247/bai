@@ -813,8 +813,8 @@
                       go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
                                                                    msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
                     ELSE.
-                      " Not found anywhere — unknown/invalid FIN Trans ID, not a duplicate
-                      lv_status = gc_cancld.
+                      " Not found anywhere — unknown/invalid FIN Trans ID, not a duplicate.
+                      " lv_status is left INITIAL; downstream sets it to gc_invalid when msgty = gc_e.
                       ls_msg-msgty = gc_e.
                       CONCATENATE 'Payment Request for the FIN Trans ID:'(006) ls_pymt_canc-zz_fin_tran_num
                       ', does not have an Open Item/Pay Plan Item to reverse'(007) INTO ls_msg-text_ext SEPARATED BY space.
