@@ -375,12 +375,19 @@
             IF NOT ls_pymt_canc-zz_fin_tran_num IS INITIAL.
 
 ** Update payment request log table
+*             ROOT CAUSE FIX (Bug 5): The original WHERE zz_status = gc_succ only finds
+*             records where the internal API result is 'SUCCESS'. For sources like pcprod_cc,
+*             zz_status stores the external system response (e.g. 'SCHEDULED'), so the
+*             record is missed, lv_paym_req_cncl stays SPACE, and the code falls through
+*             to the dfkkop ELSE block which incorrectly fires message 004 on the first
+*             cancellation attempt. Fix: filter by zz_payment_request_status NE gc_cancld
+*             so any active (non-cancelled) record is found regardless of zz_status value.
               SELECT SINGLE *
               FROM zcd_paym_req_log
               INTO @DATA(ls_paym_req_log)
               WHERE origin = @ls_pymt_canc-zz_source
               AND zz_fin_tran_num = @ls_pymt_canc-zz_fin_tran_num
-              AND zz_status = @gc_succ. "@gc_success.  added by Pl6u195 on 11/10/2025
+              AND zz_payment_request_status NE @gc_cancld.
 
               IF sy-subrc EQ 0 AND ls_paym_req_log-zz_sap_stage NE gc_s
                 AND ls_paym_req_log-zz_payment_request_status NE gc_cancld.
@@ -751,24 +758,55 @@
                     go_appl_log->log_save( ).
                   ENDIF.
                 ELSE.
-                  lv_status = gc_cancld. " IEPA-26247
-                  lv_msgv1 = ls_pymt_canc-zz_fin_tran_num.
-                  ls_msg-msgty = gc_e.
-                  CONCATENATE 'Payment Request for the FIN Trans ID:'(006) ls_pymt_canc-zz_fin_tran_num
-                  ', does not have an Open Item/Pay Plan Item to reverse'(007) INTO ls_msg-text_ext SEPARATED BY space."was Cancelled-Duplicate Request
+*                 SAFETY NET FIX (Bug 5 cont.): dfkkop returned no rows. Before
+*                 declaring this a duplicate/not-found (message 004), check if the
+*                 payment exists in zcd_paym_req_log in a non-cancelled state (e.g.
+*                 SCHEDULED). This covers the time window between external submission
+*                 and SAP FI posting where neither dfkkop nor vvscpos have entries yet.
+                  SELECT SINGLE *
+                    FROM zcd_paym_req_log
+                    INTO @DATA(ls_pr_log_schd)
+                    WHERE origin = @ls_pymt_canc-zz_source
+                      AND zz_fin_tran_num = @ls_pymt_canc-zz_fin_tran_num
+                      AND zz_payment_request_status NE @gc_cancld.
 
+                  IF sy-subrc = 0.
+                    " Payment is in log but FI document not yet created (e.g. SCHEDULED)
+                    " Cancel at log level — no open item to reverse yet
+                    ls_pr_log_schd-zz_payment_request_status = gc_cancld.
+                    ls_pr_log_schd-zz_sap_stage = gc_x.
+                    UPDATE zcd_paym_req_log FROM ls_pr_log_schd.
+                    lv_paym_req_cncl = gc_x.
+                    lv_msgv1 = ls_pymt_canc-zz_fin_tran_num.
+                    go_pymt_req_canc->get_message_text( EXPORTING msgty  = lc_s
+                                                                  msgid  = lc_msgid
+                                                                  msgno  = '002'
+                                                                  msgv1  = lv_msgv1
+                                                        IMPORTING es_msg = ls_msg ).
+                    APPEND ls_msg TO lt_msg.
+                    go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ lc_s }| msgid = |{ lc_msgid }|
+                                                                 msgno = |002|      msgv1 = |{ lv_msgv1 }| ) ) ).
+                    gc_canc_flag = gc_x.
+                  ELSE.
+                    " Genuinely not found in log, vvscpos, or dfkkop — true duplicate/invalid
+                    lv_status = gc_cancld. " IEPA-26247
+                    lv_msgv1 = ls_pymt_canc-zz_fin_tran_num.
+                    ls_msg-msgty = gc_e.
+                    CONCATENATE 'Payment Request for the FIN Trans ID:'(006) ls_pymt_canc-zz_fin_tran_num
+                    ', does not have an Open Item/Pay Plan Item to reverse'(007) INTO ls_msg-text_ext SEPARATED BY space.
 
-                  go_pymt_req_canc->get_message_text( EXPORTING msgid  = lc_msgid
-                                                                msgty  = ls_msg-msgty
-                                                                msgno  = '004'
-                                                                msgv1  = lv_msgv1
-                                                      IMPORTING es_msg = ls_msg ).
+                    go_pymt_req_canc->get_message_text( EXPORTING msgid  = lc_msgid
+                                                                  msgty  = ls_msg-msgty
+                                                                  msgno  = '004'
+                                                                  msgv1  = lv_msgv1
+                                                        IMPORTING es_msg = ls_msg ).
 
-                  APPEND ls_msg TO lt_msg.
-                  go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
-                                                               msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
-                  go_appl_log->log_save( ).
-                  lv_cler_flag  = gc_x.
+                    APPEND ls_msg TO lt_msg.
+                    go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
+                                                                 msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
+                    go_appl_log->log_save( ).
+                    lv_cler_flag  = gc_x.
+                  ENDIF.
                 ENDIF.
               ELSE.
                 lv_vvscpos_flg = gc_x.
