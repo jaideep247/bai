@@ -788,24 +788,43 @@
                                                                  msgno = |002|      msgv1 = |{ lv_msgv1 }| ) ) ).
                     gc_canc_flag = gc_x.
                   ELSE.
-                    " Genuinely not found in log, vvscpos, or dfkkop — true duplicate/invalid
-                    lv_status = gc_cancld. " IEPA-26247
+*                   BUG 6 FIX: Cannot call this a "duplicate" without evidence.
+*                   A duplicate means the record WAS found and is already cancelled.
+*                   If nothing is found at all, it is an unknown/invalid FIN Trans ID —
+*                   a different error that must not reuse the duplicate message.
                     lv_msgv1 = ls_pymt_canc-zz_fin_tran_num.
-                    ls_msg-msgty = gc_e.
-                    CONCATENATE 'Payment Request for the FIN Trans ID:'(006) ls_pymt_canc-zz_fin_tran_num
-                    ', does not have an Open Item/Pay Plan Item to reverse'(007) INTO ls_msg-text_ext SEPARATED BY space.
 
-                    go_pymt_req_canc->get_message_text( EXPORTING msgid  = lc_msgid
-                                                                  msgty  = ls_msg-msgty
-                                                                  msgno  = '004'
-                                                                  msgv1  = lv_msgv1
-                                                        IMPORTING es_msg = ls_msg ).
+                    SELECT SINGLE *
+                      FROM zcd_paym_req_log
+                      INTO @DATA(ls_pr_log_dup)
+                      WHERE origin = @ls_pymt_canc-zz_source
+                        AND zz_fin_tran_num = @ls_pymt_canc-zz_fin_tran_num
+                        AND zz_payment_request_status = @gc_cancld.
 
-                    APPEND ls_msg TO lt_msg.
-                    go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
-                                                                 msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
+                    IF sy-subrc = 0.
+                      " Found AND already cancelled — this is a genuine duplicate cancellation
+                      lv_status = gc_cancld.
+                      go_pymt_req_canc->get_message_text( EXPORTING msgid  = lc_msgid
+                                                                    msgty  = gc_e
+                                                                    msgno  = '004'
+                                                                    msgv1  = lv_msgv1
+                                                          IMPORTING es_msg = ls_msg ).
+                      APPEND ls_msg TO lt_msg.
+                      go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
+                                                                   msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
+                    ELSE.
+                      " Not found anywhere — unknown/invalid FIN Trans ID, not a duplicate
+                      lv_status = gc_cancld.
+                      ls_msg-msgty = gc_e.
+                      CONCATENATE 'Payment Request for the FIN Trans ID:'(006) ls_pymt_canc-zz_fin_tran_num
+                      ', does not have an Open Item/Pay Plan Item to reverse'(007) INTO ls_msg-text_ext SEPARATED BY space.
+                      APPEND ls_msg TO lt_msg.
+                      go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |{ gc_e }| msgid = |{ lc_msgid }|
+                                                                   msgno = |004|      msgv1 = |{ lv_msgv1 }| ) ) ).
+                    ENDIF.
+
                     go_appl_log->log_save( ).
-                    lv_cler_flag  = gc_x.
+                    lv_cler_flag = gc_x.
                   ENDIF.
                 ENDIF.
               ELSE.
