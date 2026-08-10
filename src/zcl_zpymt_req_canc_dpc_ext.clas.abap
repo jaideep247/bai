@@ -197,7 +197,7 @@
                                      iv_extno     = ls_lock_request-zz_fin_tran_num ).
             go_appl_log->message_add( VALUE bal_t_msg( ( msgty = |E|
                                                          msgid = |{ lc_msgid }|
-                                                         msgno = |207|
+                                                         msgno = |004|
                                                          msgv1 = |{ ls_lock_request-zz_fin_tran_num }| ) ) ).
             go_appl_log->log_save( ).
             er_deep_entity-response = VALUE #( BASE er_deep_entity-response
