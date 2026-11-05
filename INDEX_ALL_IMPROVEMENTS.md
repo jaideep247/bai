@@ -65,6 +65,12 @@ Start here → **`COMPREHENSIVE_HARDCODING_REMOVAL_STATUS.md`**
 | **ARCHITECTURE_VALIDATION.md** | Design validation |
 | **FRAMEWORK_DIRECTORY_STRUCTURE.md** | File organization |
 
+### 🧭 Next-Generation Operations Suite (Design Brief)
+
+| File | Purpose |
+|------|---------|
+| **MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md** | Master prompt for the FS-CD/FI-CA suite: Health Check, File Monitoring (SAP → PRISM → Bank), BAI2/CAMT EBS validation with BTC rule engine, Job Cycle monitor and Control-M fallback |
+
 ### 🚀 Deployment & Operations
 
 | File | Purpose |
