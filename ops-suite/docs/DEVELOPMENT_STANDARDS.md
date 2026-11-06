@@ -57,6 +57,26 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 - Explicit field lists in every `SELECT` (no `SELECT *`), `@` host variables.
 - Deliver complete files.
 
+### Naming and length (enforced by abaplint `abaplint.json` and `tools/portable_checks.py`)
+
+| Element | Convention | Example | Enforced by |
+|---|---|---|---|
+| Importing / exporting / changing / returning parameter | `I?_` / `E?_` / `C?_` / `R?_` + type letter (v value, s structure, t table, o object, r reference, x exception) | `iv_key`, `es_diagnostic`, `ct_lines`, `rt_findings` | `method_parameter_names` |
+| Class attribute | static `G?_`, instance `M?_`, constant `GC_` (also local classes and interfaces) | `gv_memo_package`, `mt_rules`, `gc_switch_name` | `class_attribute_names` |
+| Local data / constant / field symbol | `L?_`, `LC_`, `<L?_…>`; a caught exception is `lx_error` (a second one in the same method `lx_<meaning>`) | `lv_key`, `lc_max`, `<ls_line>` | `local_variable_names` |
+| Type | `TY_` (structure / element), `TT_` (table) | `ty_rule`, `tt_rule` | `types_naming` |
+| Local class | `LCL_` (helper), `LHC_` / `LSC_` (RAP handler / saver), `LTD_` (test double or test data builder), `LCX_` (exception), test class `LTC_` | `ltd_sap_dao`, `ltc_r05_lot_reason` | `local_class_naming` |
+| Selection screen | `P_` parameter, `S_` select-option, `SC_` screen element | `p_feb`, `s_kukey` | `selection_screen_naming` |
+| Object | class `ZCL_CD_` / `ZCX_CD_` / behaviour pool `ZBP_`, interface `ZIF_CD_`, program / table / message class `Z…` | `ZCL_CD_EBS_ENGINE` | `object_naming` |
+| Method | snake_case, never a data prefix (`lv_`, `it_`, `mo_`, `gc_` …; predicates `is_…` allowed), ≤ 30 incl. test methods | `validate_package`, `is_allowed` | `method_names` (portable) |
+| Lengths (SAP) | objects, CDS entities, DDLS / SRVD / DCLS, methods, attributes, types, local classes, local data ≤ 30; **transparent tables ≤ 16**; message class ≤ 20; table fields ≤ 30; short texts ≤ 60 | `ZCD_OPS_ALRULE` (14) | `name_lengths`, `short_text_max_60` (portable) |
+
+### Modern syntax (enforced by abaplint `abaplint.json`)
+
+`INSERT … INTO TABLE` instead of `APPEND` (`prefer_insert_into_table`), string templates instead of `&&` with literals — a long template is split into `|…| && |…|` lines, an embedded expression may span lines (`prefer_string_template`), `RAISE EXCEPTION NEW` (`prefer_raise_exception_new`), `IS NOT` / `NP` instead of `NOT … IS` / `NOT … CP` (`prefer_is_not`), `CASE` instead of `IF / ELSEIF` on one operand (`change_if_to_case`), inline `CAST …( )->method( )` for a single-use cast helper (`prefer_inline_cast`), `RETURNING` instead of a single `EXPORTING` parameter (`prefer_returning_to_exporting`), no `RETURN` as last statement, no chaining of a single declaration, no `RECEIVING`, `xsdbool( )`, `line_exists( )`, `CORRESPONDING`, functional calls, strict SQL, no `SELECT *` / `ENDSELECT`, no needless copies / loop guards / boolean-via-IF / leading zeros in literals / SQL value conversion / pragmas, class-based exceptions. Mechanical fixes are reproducible: `python3 tools/modernize.py --abaplint <binary>` (table renames above 16 characters, `lx` → `lx_error`, `LCL_` test helpers → `LTD_`, the safe abaplint quick fixes) — idempotent, re-run after every merge.
+
+**Left off on purpose:** `prefer_inline` — its quick fix turns typed declarations (`DATA lv_amount TYPE ty_amount`) into inferred calculation types (9 syntax errors in 72 fixes, rounding / type changes in amount arithmetic); declare inline where the expression already has the wanted type. `single_use_expression_temp` — its fixes nest whole DAO reads into calls (HCK checks) and fold named conditions (`lv_technical`, `lv_same`) and test expectations (`lt_exp`, given / when / then shape of §2 Unit tests) into one statement; a named intermediate that explains is kept (Clean ABAP). `omit_parameter_name` — explicit names on one-parameter calls are house style for readability. `select_single_full_key` (base config) — stays in the ATC-equivalent set, where the documented exemptions live. `prefer_abap_bool` — `abap_bool` is already used for every flag; `boolean` / `xfeld` DDIC fields stay as delivered.
+
 ### Unit tests
 - `FOR TESTING RISK LEVEL HARMLESS DURATION SHORT` on every test class.
 - Business logic: local `LTD_*` test doubles injected through the payment engine area injector (`ZCL_CD_<MOD>_INJECTOR`) and the core injector `ZCL_CD_OPS_INJECTOR`; `teardown` calls the injectors' `reset( )`.

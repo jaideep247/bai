@@ -9,7 +9,7 @@
 |---|---|---|---|
 | Syntax, typing, house rules | abaplint 2.x, ABAP 7.58, SAP stubs (`abaplint/deps`) and the suite's own abapGit table/message definitions | `ops-suite/abaplint.json` | **0 issues / 309 files** |
 | ATC-equivalent checks | abaplint rules mapped to SAP Code Inspector / SLIN / security / DDIC checks | `ops-suite/abaplint.atc.json` | **2 findings = 2 documented exemptions** (§4) |
-| House rules not in abaplint | `tools/portable_checks.py` | — | 13/13 checks passed |
+| House rules not in abaplint | `tools/portable_checks.py` | — | 17/17 checks passed (incl. `name_lengths`, `method_names`) |
 | Continuous | GitHub Actions `.github/workflows/abaplint.yml` | both configs on every push | fails on any new finding |
 
 ## 2. ATC check categories covered offline
@@ -24,6 +24,8 @@
 | Security — dynamic SQL, CALL TRANSACTION authority, kernel calls, modifying SAP tables, host-variable escaping, strict SQL | `dangerous_statement`, `call_transaction_authority_check`, `forbidden_kernel_write`, `modify_only_own_db_tables`, `sql_escape_host_variables`, `strict_sql` |
 | DDIC — table definitions, enhancement category, abapGit XML consistency | `check_ddic`, `tabl_enhancement_category`, `xml_consistency`, `description_empty` |
 | Obsolete statements, classic exceptions | `obsolete_statement`, `use_class_based_exceptions`, `classic_exceptions_overlap`, `try_without_catch`, `try_cast_empty_catch` |
+| Modern syntax (Clean ABAP; `abaplint.json`) | `prefer_insert_into_table`, `prefer_string_template`, `prefer_raise_exception_new`, `prefer_is_not`, `prefer_inline_cast`, `prefer_returning_to_exporting`, `prefer_corresponding`, `prefer_xsdbool`, `use_bool_expression`, `use_line_exists`, `functional_writing`, `strict_sql`, `unnecessary_return`, `unnecessary_chaining`, `omit_receiving`, `select_performance`, `unnecessary_copy`, `unnecessary_loop_guard`, `boolean_flag_via_if`, `change_if_to_case`, `omit_preceding_zeros`, `sql_value_conversion`, `unnecessary_pragma` — 0 findings after 197 + 14 + 2 + 2 + 1 automatic and 25 + 4 + 2 + 1 manual fixes. Left off with reasons: `prefer_inline`, `single_use_expression_temp`, `omit_parameter_name`, `prefer_abap_bool` (`DEVELOPMENT_STANDARDS.md` §2) |
+| Naming (house convention; `abaplint.json`) | `method_parameter_names`, `class_attribute_names`, `local_variable_names`, `local_class_naming`, `types_naming`, `selection_screen_naming`, `object_naming`; lengths and method names in `tools/portable_checks.py` (`name_lengths`, `method_names`) |
 
 ## 3. Findings fixed in this validation (184 → 1)
 

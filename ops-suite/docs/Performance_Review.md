@@ -82,6 +82,12 @@ Kept as `INTO` (71 evaluated loops): the work area is changed as a local copy or
 | FMON event writes (`insert_event` per event, bounded retry) | Documented ATC exemption; array insert needs a new collision strategy |
 | FMON open-key sample: status filter on the sample read | Needs a second IN condition in the validated query type |
 
+## 6a. Scaling and data volume (decisions)
+
+1. **Scaling route: parallel job variants, no mass-activity framework.** More throughput comes from several SM36 / Control-M jobs of the same report with **non-overlapping selections** (company code / house bank / statement-key ranges for EBS, interface or source ranges for FMON, check categories for HCK). The run lock key includes the **variant** (`ZIF_CD_OPS_LOCK` acquire per payment engine area and variant; a held lock is refused by `ZCL_CD_OPS_RUN_GUARD`), so parallel variants never block each other while the same variant cannot run twice. A mass-activity (FKKMA) integration would add a second scheduling model, its own parallelisation objects and restart logic for a workload that packages already bound — not justified by the volumes known today.
+2. **HANA table partitioning only as a Basis decision after gate 3 volumes.** Partitioning `ZCD_OPS_FINDING`, `ZCD_OPS_RUN`, `ZCD_FMON_EVENT` or `ZCD_HCK_METRIC` is considered only when the gate 3 (QA1 / production-like) volumes show row counts in the **hundreds of millions** for a table; the purge (`ZCD_OPS_PURGE`, retention days per table in ZCD_OPS_PARAM) is already packaged and keeps the tables at their retention size. Partitioning is a Basis / DBA decision (range on the date / run ID, re-partitioning effort), not an application change.
+3. **HCK date literals as host variables (low value).** A few HCK aggregate reads compare a date column with a literal computed in ABAP and embedded into the dynamic WHERE (escaped via `cl_abap_dyn_prg`). Binding them as host variables would let HANA reuse one statement plan per check instead of one per day — low value (one execution per check and day, statement cache absorbs it); noted, not built.
+
 ## 7. VERIFY-ADT (first activation / ABAP Unit in DV1)
 
 - Fix 6: internal table as JOIN source (`INNER JOIN @it_requests`) — on HANA since 7.52; also inside `cl_osql_test_environment` with the ACDOCA double.
