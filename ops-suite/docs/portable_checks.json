@@ -7,7 +7,7 @@
   "passed": 15,
   "total": 15,
   "abap_files": 244,
-  "declared_unit_methods": 720,
+  "declared_unit_methods": 722,
   "measured_coverage": null,
   "checks": [
     {

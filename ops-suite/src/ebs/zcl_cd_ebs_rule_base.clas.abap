@@ -276,6 +276,14 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rs_account) TYPE zif_cd_ebs_types=>ty_account_cfg.
 
+
+    "! Identity of a package for package memos (fixes 1, 2): its statement keys in order
+    METHODS package_fingerprint
+      IMPORTING
+        it_statements         TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rv_fingerprint) TYPE string.
+
   PRIVATE SECTION.
     TYPES tt_ztnum_hash TYPE HASHED TABLE OF zif_cd_ebs_sap_dao=>ty_ztnum WITH UNIQUE KEY table_line.
 
@@ -294,13 +302,6 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         it_statements    TYPE zif_cd_ebs_types=>tt_statement
       RETURNING
         VALUE(rt_checks) TYPE zif_cd_ebs_sap_dao=>tt_check.
-
-    "! Identity of a package for the memo: its statement keys in order
-    METHODS package_fingerprint
-      IMPORTING
-        it_statements         TYPE zif_cd_ebs_types=>tt_statement
-      RETURNING
-        VALUE(rv_fingerprint) TYPE string.
 
 ENDCLASS.
 

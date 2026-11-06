@@ -19,6 +19,7 @@
 *& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
 *& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
 *& 2026-11-06 | Performance fix 1: register memo (one read per package, new package re-reads, no key leak), zero flag parity.
+*& 2026-11-06 | Performance fix 2: R22 history once per account per package, statement windows kept apart.
 *& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
@@ -147,6 +148,7 @@ CLASS ltd_feb_dao DEFINITION FINAL FOR TESTING.
     DATA ms_prior  TYPE zif_cd_ebs_feb_dao=>ty_header.
     DATA mv_exists TYPE abap_bool.
     DATA mt_recent TYPE zif_cd_ebs_feb_dao=>tt_item.
+    DATA mv_recent_reads TYPE i.
     DATA mv_from   TYPE d.
 ENDCLASS.
 
@@ -165,7 +167,11 @@ CLASS ltd_feb_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_feb_dao~get_recent_items.
     mv_from  = iv_from.
-    rt_items = mt_recent.
+    mv_recent_reads = mv_recent_reads + 1.
+    " Window on the statement date, as the repository applies it
+    LOOP AT mt_recent ASSIGNING FIELD-SYMBOL(<ls_item>) WHERE azdat >= iv_from AND azdat <= iv_to.
+      INSERT <ls_item> INTO TABLE rt_items.
+    ENDLOOP.
   ENDMETHOD.
 ENDCLASS.
 
@@ -1577,8 +1583,11 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS add_history_item
       IMPORTING
         iv_kukey  TYPE zif_cd_ebs_types=>ty_kukey
-        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount.
+        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount
+        iv_azdat  TYPE d OPTIONAL.
     METHODS run_r22.
+    METHODS r22_history_once_per_package FOR TESTING.
+    METHODS r22_windows_per_statement    FOR TESTING.
     METHODS r18_gl_by_house_bank         FOR TESTING.
     METHODS s04_house_bank_preferred     FOR TESTING.
     METHODS s04_missing_currency         FOR TESTING.
@@ -1735,7 +1744,61 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
     ls_item-kwbtr = iv_amount.
     ls_item-chect = gc_test-ref.
     ls_item-budat = gc_test-today - 1.
+    ls_item-azdat = COND #( WHEN iv_azdat IS SUPPLIED THEN iv_azdat ELSE gc_test-today - 1 ).
     INSERT ls_item INTO TABLE mo_feb_dao->mt_recent.
+  ENDMETHOD.
+
+
+  " Fix 2: R22 (group *) runs once per rule group - the history is read once per package
+  METHOD r22_history_once_per_package.
+    TRY.
+        add_history_item( '00000008' ).
+        add_statement( ).
+        mt_stmts[ 1 ]-kukey = '00000009'.
+        add_line( ).
+        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R22_DUP_HISTORY' ) ).
+        DATA(ls_rule) = rule( iv_rule_id = 'R22' iv_window_days = 5 ).
+        DATA(lt_first) = lo_rule->execute( is_rule = ls_rule it_statements = mt_stmts it_lines = mt_lines ).
+        mt_findings = lo_rule->execute( is_rule = ls_rule it_statements = mt_stmts it_lines = mt_lines ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings exp = lt_first
+                                            msg = 'The second rule group must get the same result' ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-duplicate_history
+                         iv_msg        = 'The duplicate must still be reported from the memo' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_recent_reads exp = 1
+                                            msg = 'One history read per account and package' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 2 parity: one read over the union of two statements' windows, each statement still
+  " sees only its own window (an entry 12 days old is a duplicate only for the 10-day-old statement)
+  METHOD r22_windows_per_statement.
+    TRY.
+        add_history_item( iv_kukey = '00000005' iv_azdat = CONV d( gc_test-today - 12 ) ).
+        add_statement( ).
+        mt_stmts[ 1 ]-kukey = '00000009'.
+        add_statement( ).
+        mt_stmts[ 2 ]-kukey     = '00000007'.
+        mt_stmts[ 2 ]-stmt_key  = 'S0002'.
+        mt_stmts[ 2 ]-stmt_date = gc_test-today - 10.
+        add_line( ).
+        add_line( ).
+        mt_lines[ 2 ]-stmt_key = 'S0002'.
+        run( iv_class = 'ZCL_CD_EBS_R_R22_DUP_HISTORY' is_rule = rule( iv_rule_id = 'R22' iv_window_days = 5 ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-duplicate_history
+                         iv_msg        = 'Only the statement whose window holds the entry may report it' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-object_key
+                                            exp = zcl_cd_ebs_finding=>line_key( mt_lines[ 2 ] )
+                                            msg = 'The finding belongs to the line of the older statement' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_recent_reads exp = 1
+                                            msg = 'Both statements of the account share one read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_from exp = CONV d( gc_test-today - 15 )
+                                            msg = 'The read starts at the earliest window' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

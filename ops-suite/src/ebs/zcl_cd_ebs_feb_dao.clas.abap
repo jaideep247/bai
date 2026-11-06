@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Audit A14: get_recent_items for rule R22.
+*& 2026-11-06 | Performance fix 2: get_recent_items returns FEBKO-AZDAT (one read per account, window in ABAP).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION
@@ -69,7 +70,7 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
     " A14: history of the account for the cross-statement duplicate rule R22.
     " VERIFY-DDIC: FEBEP-VORGC / VGEXT / EPVOZ as in get_items
     SELECT p~kukey, p~esnum, p~vorgc, p~vgext, p~vgint, p~epvoz, p~kwbtr, p~kwaer, p~budat, p~valut,
-           p~chect, p~xblnr, p~belnr, p~gjahr
+           p~chect, p~xblnr, p~belnr, p~gjahr, k~azdat
       FROM febep AS p
       INNER JOIN febko AS k ON k~kukey = p~kukey
       WHERE k~bukrs = @iv_bukrs

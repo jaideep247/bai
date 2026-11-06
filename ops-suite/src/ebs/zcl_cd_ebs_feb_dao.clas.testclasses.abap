@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A14: recent items of an account (R22 history).
+*& 2026-11-06 | Performance fix 2: recent items carry the statement date FEBKO-AZDAT.
 *&---------------------------------------------------------------------*
 CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -127,6 +128,9 @@ CLASS ltc_feb_dao IMPLEMENTATION.
                                             msg = 'Only the statements of 04 and 05 Nov are in the window' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_items[ kukey = '00000001' ] ) )
                                            msg = 'The 03 Nov statement is outside the window' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_items[ kukey = '00000002' ]-azdat OPTIONAL )
+                                            exp = CONV d( '20261104' )
+                                            msg = 'Each item must carry its statement date (R22 window in ABAP)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

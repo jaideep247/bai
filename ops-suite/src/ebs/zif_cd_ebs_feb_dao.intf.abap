@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A14: get_recent_items (history of an account, DEFAULT IGNORE).
+*& 2026-11-06 | Performance fix 2: TY_ITEM-AZDAT (statement date, filled by get_recent_items only).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - imported bank statements (FEBKO/FEBEP)</p>
 "! Raw reads only; conversion to the format-neutral model happens in
@@ -64,6 +65,9 @@ INTERFACE zif_cd_ebs_feb_dao
       xblnr TYPE c LENGTH 16,
       belnr TYPE c LENGTH 10,
       gjahr TYPE n LENGTH 4,
+      "! FEBKO-AZDAT of the item's statement - get_recent_items only (R22 applies the
+      "! look-back window per statement in ABAP); initial from get_items
+      azdat TYPE d,
     END OF ty_item.
   TYPES tt_item TYPE STANDARD TABLE OF ty_item WITH EMPTY KEY.
 
