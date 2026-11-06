@@ -12,6 +12,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A27 blocks-posting flag and A03 required rules (RULE_GROUP_EMPTY, RULE_UNUSABLE, NONE row).
 *& 2026-11-06 | Audit A25 / A33: canonical account key, missing-currency check codes.
+*& 2026-11-06 | Audit A14: R22 duplicate history (check code, message, look-back parameter).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -357,6 +358,8 @@ INTERFACE zif_cd_ebs_types
       "! Leading zeros of check numbers are not significant (X, default) or are (blank)
       ztnum_ignore_zeros TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_ZTNUM_IGNORE_ZEROS',
       keylen_ztnum       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_ZTNUM',
+      "! A14: look-back days of R22 when the rule row has no WINDOW_DAYS
+      dup_lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DUP_LOOKBACK_DAYS',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
@@ -417,6 +420,7 @@ INTERFACE zif_cd_ebs_types
       currency_missing               TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISSING',
       declared_totals                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DECLARED_TOTALS',
       duplicate_entry                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_ENTRY',
+      duplicate_history              TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_HISTORY',
       entries_not_accounted          TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRIES_NOT_ACCOUNTED',
       entry_count                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRY_COUNT',
       fi_doc_not_cleared             TYPE zif_cd_ops_types=>ty_check_code VALUE 'FI_DOC_NOT_CLEARED',
@@ -569,6 +573,7 @@ INTERFACE zif_cd_ebs_types
       rule_unusable               TYPE zif_cd_ops_types=>ty_msgno VALUE '514',
       currency_missing            TYPE zif_cd_ops_types=>ty_msgno VALUE '515',
       account_currency_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '516',
+      duplicate_history           TYPE zif_cd_ops_types=>ty_msgno VALUE '517',
     END OF gc_msg.
 
 ENDINTERFACE.

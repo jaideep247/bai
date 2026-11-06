@@ -1604,6 +1604,12 @@
      <MSGNR>516</MSGNR>
      <TEXT>Account &amp;1: currency missing in the statement or in ZCD_EBS_ACCT</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>517</MSGNR>
+     <TEXT>Entry &amp;1 already in statement &amp;2 of the account (reference &amp;3)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

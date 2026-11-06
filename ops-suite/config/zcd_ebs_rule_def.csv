@@ -25,3 +25,4 @@ R12,L,ZCL_CD_EBS_R_R12_CODE_TOTAL,E,EXCEPTION,Settlement total = register / run 
 R15,L,ZCL_CD_EBS_R_R15_POSTING_RULE,E,EXCEPTION,Posting rule resolves and matches map,X,
 R19,L,ZCL_CD_EBS_R_R19_FI_DOCUMENT,E,EXCEPTION,FI posting exists / cleared,X,X
 R21,L,ZCL_CD_EBS_R_R21_LOOKUP,E,EXCEPTION,Configurable table lookup (ZCD_EBS_LOOKUP via PARAM1),X,X
+R22,L,ZCL_CD_EBS_R_R22_DUP_HISTORY,W,EXCEPTION,Entry already in an earlier statement (look-back),X,

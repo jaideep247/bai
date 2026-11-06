@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A11: 166 disbursement retrieval-log chain (R07L PARAM2 AP, PARAM3 LOT).
 *& 2026-11-06 | Audit A25 / A33: canonical account identity, missing currencies.
 *& 2026-11-06 | Audit A07 / A08: company code in the register match, leading zeros, R12 populations.
+*& 2026-11-06 | Audit A14: cross-statement duplicate look-back (R22).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -137,6 +138,8 @@ CLASS ltd_feb_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_feb_dao.
     DATA ms_prior  TYPE zif_cd_ebs_feb_dao=>ty_header.
     DATA mv_exists TYPE abap_bool.
+    DATA mt_recent TYPE zif_cd_ebs_feb_dao=>tt_item.
+    DATA mv_from   TYPE d.
 ENDCLASS.
 
 CLASS ltd_feb_dao IMPLEMENTATION.
@@ -151,6 +154,10 @@ CLASS ltd_feb_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_feb_dao~statement_exists.
     rv_exists = mv_exists.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_feb_dao~get_recent_items.
+    mv_from  = iv_from.
+    rt_items = mt_recent.
   ENDMETHOD.
 ENDCLASS.
 
@@ -1189,6 +1196,15 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s01_nearest_package_prior    FOR TESTING.
     METHODS s01_other_account_not_prior  FOR TESTING.
     METHODS s07_two_accounts_same_number FOR TESTING.
+    METHODS r22_entry_in_earlier_stmt    FOR TESTING.
+    METHODS r22_own_statement_ignored    FOR TESTING.
+    METHODS r22_other_amount_not_dup     FOR TESTING.
+    METHODS r22_window_from_rule         FOR TESTING.
+    METHODS add_history_item
+      IMPORTING
+        iv_kukey  TYPE zif_cd_ebs_types=>ty_kukey
+        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount.
+    METHODS run_r22.
     METHODS r18_gl_by_house_bank         FOR TESTING.
     METHODS s04_house_bank_preferred     FOR TESTING.
     METHODS s04_missing_currency         FOR TESTING.
@@ -1327,6 +1343,77 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-account_currency_missing
                          iv_msg        = 'A statement without currency must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_history_item.
+    DATA ls_item TYPE zif_cd_ebs_feb_dao=>ty_item.
+    ls_item-kukey = iv_kukey.
+    ls_item-esnum = 1.
+    ls_item-vorgc = '168'.
+    ls_item-epvoz = 'H'.
+    ls_item-kwbtr = iv_amount.
+    ls_item-chect = gc_test-ref.
+    ls_item-budat = gc_test-today - 1.
+    INSERT ls_item INTO TABLE mo_feb_dao->mt_recent.
+  ENDMETHOD.
+
+
+  METHOD run_r22.
+    add_statement( ).
+    mt_stmts[ 1 ]-kukey = '00000009'.
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R22_DUP_HISTORY' is_rule = rule( iv_rule_id = 'R22' iv_window_days = 5 ) ).
+  ENDMETHOD.
+
+
+  " A14 (business decision): the same entry already imported in another statement of the
+  " account within the look-back window is reported
+  METHOD r22_entry_in_earlier_stmt.
+    TRY.
+        add_history_item( '00000008' ).
+        run_r22( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-duplicate_history
+                         iv_msg        = 'An entry already in an earlier statement must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: the statement's own entries (same KUKEY) are not a duplicate
+  METHOD r22_own_statement_ignored.
+    TRY.
+        add_history_item( '00000009' ).
+        run_r22( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'The statement itself must be excluded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: a different amount is a different entry
+  METHOD r22_other_amount_not_dup.
+    TRY.
+        add_history_item( iv_kukey = '00000008' iv_amount = '999.00' ).
+        run_r22( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Another amount must not be a duplicate' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: the look-back window comes from the rule (WINDOW_DAYS) - 5 days before the statement date
+  METHOD r22_window_from_rule.
+    TRY.
+        run_r22( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_from exp = CONV d( gc_test-today - 5 )
+                                            msg = 'The history must be read from the statement date minus WINDOW_DAYS' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

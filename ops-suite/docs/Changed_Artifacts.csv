@@ -418,6 +418,8 @@ src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.abap,ABAP,"R19: the FI document of an 
 src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r21_lookup.clas.abap,ABAP,"R21: generic configurable lookup. PARAM1 names a ZCD_EBS_LOOKUP row (table,"
 src/ebs/zcl_cd_ebs_r_r21_lookup.clas.xml,abapGit,
+src/ebs/zcl_cd_ebs_r_r22_dup_history.clas.abap,ABAP,R22: an entry must not already be in another imported statement of the same
+src/ebs/zcl_cd_ebs_r_r22_dup_history.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.abap,ABAP,S01: the opening balance must equal the closing balance of the previous
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s02_balance.clas.abap,ABAP,S02: opening + credit entries - debit entries must equal the closing
