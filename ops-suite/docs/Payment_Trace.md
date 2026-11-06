@@ -24,9 +24,10 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | 5 | FILE_GENERATED | configured `TRACE_SRC_REGUT` (`ZCDT_REGUT`) | DPAYH LAUFD (+ LAUFI) | File reference, date, time — **only** through the configured, DDIC-validated register |
 | 6 | PRISM_HANDOFF | `ZCD_FMON_FILE` / `ZCD_FMON_EVENT` | normalised file reference (digest for long names, A100), business date ± `TRACE_BANK_LOOKBACK_DAYS` | Event SENT_TO_PRISM / FORWARDED_TO_BANK, UTC time stamp |
 | 7 | BANK_ACK | configured `TRACE_SRC_ACK` (payment level, disbursements), else `ZCD_FMON_EVENT` (file level) | clearing reference / file | ACK row or ACK_RECEIVED event (FAILED on NACK / `TRACE_ACK_NACK_VALUES`); NOT_APPLICABLE for methods in `TRACE_NO_ACK_METHODS` |
-| 8 | SETTLEMENT | `FEBEP`; `DFKKRP` (returns lot, `DFKKRK-STARS`); `ZCD_ACH_RTRV_LOG`; configured `TRACE_SRC_CHQ_HIST` (`ZCD_CHECK_HIST`) | `CHECT = AUGBL` (E G H I J K L) or `CHECT = ZTNUM` (C); `SELW1 = AUGBL`; retrieval log `AUGBL` | Bank line KUKEY / ESNUM / CHECT and posting date (encashment for cheques); return or retrieval = FAILED; cheque status, terminal 3/4/9 = FAILED |
-| 9 | FICA_CLEARING | `DFKKOP` (current) / history source (historical); `BSEG` | item + AUGBL; BSEG by document key with `XREF2 = AUGBL` | Clearing date; clearing-account line of the G/L transfer document (not for method C) |
-| 10 | GL | `DFKKKO` → `DFKKSUMC` → `BKPF` | `DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY`, `AWTYP = TRACE_GL_AWTYP` (FKKSU), same BUKRS, `STBLG` blank | G/L document BUKRS / BELNR / GJAHR, entry date / time |
+| 8 | SETTLEMENT | `FEBEP`; `DFKKRP` (returns lot, `DFKKRK-STARS`); `ZCD_ACH_RTRV_LOG`; configured `TRACE_SRC_CHQ_HIST` (`ZCD_CHECK_HIST`) | `CHECT = AUGBL` (E G H I J K L) or `CHECT = ZTNUM` (C); `SELW1 = AUGBL`; retrieval log `AUGBL` | Bank line KUKEY / ESNUM / CHECT and posting date (encashment for cheques); return or retrieval = FAILED, every returns lot item with its **return reason `DFKKRP-RLGRD`** (code only — no text table is read; VERIFY-SE11), for every clearing reference incl. the historical ones of reversed items; items of one clearing reference with different RLGRD add one AMBIGUOUS row (`RETURN_REASON_AMBIGUOUS`) listing all reasons; cheque status, terminal 3/4/9 = FAILED |
+| 9 | NOC | `DFKKNRP` (NOC lot items; shared EBS read `GET_NOC_ITEMS`) | `INFOF` (CHAR 50, **not a key**) = the attempt's clearing document (AUGBL) or a payment reference of the attempt (FIN of its items, cheque number) — each read as stored and without leading zeros, matched after condensing / removing leading zeros of all-digit values; exact INFOF content VERIFY-SE11 | Lot KEYN1, item POSNA, **NOC reason `FLGRD`** and the INFOF value. **Informational** (account data change, not a return): VERIFIED when found, NOT_APPLICABLE (`NO_NOC_ITEM`) when not — never MISSING; several items with different FLGRD or the row cap = AMBIGUOUS (all listed). NOC rows never set the first gap and never change the verdict |
+| 10 | FICA_CLEARING | `DFKKOP` (current) / history source (historical); `BSEG` | item + AUGBL; BSEG by document key with `XREF2 = AUGBL` | Clearing date; clearing-account line of the G/L transfer document (not for method C) |
+| 11 | GL | `DFKKKO` → `DFKKSUMC` → `BKPF` | `DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY`, `AWTYP = TRACE_GL_AWTYP` (FKKSU), same BUKRS, `STBLG` blank | G/L document BUKRS / BELNR / GJAHR, entry date / time |
 
 ## 3. Statuses and verdict
 
@@ -39,7 +40,7 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | FAILED | Positive evidence of failure: NACK, return lot, retrieval, terminal cheque status |
 | NOT_APPLICABLE | Stage does not exist for this payment (e.g. no ACK for the method) — with reason |
 
-There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict. **Incomplete evidence can never produce COMPLETE.**
+There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict; NOC rows are information only and are ignored by the verdict and the first gap. **Incomplete evidence can never produce COMPLETE.**
 
 ## 4. The two lookup paths (verified against the repository)
 
@@ -52,14 +53,14 @@ There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA f
 | Partner `ZZ_MEMBER_NO = BUT000-BPEXT`, with SOURCE first, then without (legacy PCLM) | `docs/DEVELOPMENT_STANDARDS.md` §1 |
 | Table / field names of the request log are configuration, validated against the DDIC | HCK value query `src/hck/zcl_cd_hck_value_query.clas.abap`; FMON reader `src/fmon/zcl_cd_fmon_query.clas.abap:91` (validate), `src/fmon/zcl_cd_fmon_dao.clas.abap:315, 399-410` (approval + S_TABU_NAM) |
 
-Implementation: `ZCL_CD_OPS_TRACE_ENGINE` `trace_request` (`:449`, rule at `:465`), `resolve_partner` (`:510`), `check_items` (`:538`). Two SUCCESS rows → both AMBIGUOUS; a failed retry after the SUCCESS row is ignored; partner without source is shown as `PARTNER_WITHOUT_SOURCE`; a request partner that owns none of the FIN's items → `PARTNER_MISMATCH` (AMBIGUOUS, not traced further).
+Implementation: `ZCL_CD_OPS_TRACE_ENGINE` `trace_request` (`:469`, rule at `:485`), `resolve_partner` (`:530`), `check_items` (`:558`). Two SUCCESS rows → both AMBIGUOUS; a failed retry after the SUCCESS row is ignored; partner without source is shown as `PARTNER_WITHOUT_SOURCE`; a request partner that owns none of the FIN's items → `PARTNER_MISMATCH` (AMBIGUOUS, not traced further).
 
 ### 4.2 Separate clearing-reference lookup for reversed items
 
 After a reversal or clearing reset, `DFKKOP` of the request item carries a **new** AUGBL (or none), while the bank and G/L evidence (`FEBEP-CHECT`, `BSEG-XREF2`) still carries the **original** clearing reference. The trace therefore:
 
 1. reads the item's historical clearing references from the clearing-reset history (`TRACE_SRC_HISTORY`, candidate `DFKKRAPT`; key = item OPBEL, REF = historical clearing document, DATE / TIME = reset date / time — **field names VERIFY-SE11**, validated against the DDIC at run time through the FMON reader);
-2. traces payment, file, ACK, settlement / return and G/L **for every clearing reference** (current + historical), one attempt each — a reissue is a later attempt (`trace_history` `:615`, `build_attempts` `:705`);
+2. traces payment, file, ACK, settlement / return and G/L **for every clearing reference** (current + historical), one attempt each — a reissue is a later attempt (`trace_history` `:635`, `build_attempts` `:725`);
 3. treats reversal evidence without a history row as **`REVERSAL_HISTORY_MISSING`** (MISSING), and an unconfigured / unreadable history source as UNAVAILABLE — with reason `REVERSAL_HISTORY_MISSING` when the item shows reversal evidence. Neither is ever a pass; an unconfigured history keeps every trace INCOMPLETE, because the absence of an earlier attempt is then unproven.
 
 Reversal evidence used: `DFKKOP-AUGRD` in `TRACE_REVERSAL_AUGRD` (default `05`; then the current AUGBL is the reversal, not a payment attempt), or `DFKKKO-STBEL` set on the current clearing document. Both are standard fields **not used elsewhere in this repository — VERIFY-SE11**. `BKPF-STBLG` (used by `src/hck/zcl_cd_hck_dao.clas.abap:532`) excludes reversed G/L documents.
@@ -69,10 +70,11 @@ Reversal evidence used: `DFKKOP-AUGRD` in `TRACE_REVERSAL_AUGRD` (default `05`; 
 
 | Read | Reused from |
 |---|---|
-| DPAYH by DOC1R (`ZZ_PAYMENT_STATUS`, proposal runs excluded via `XVORL`) | `ZCL_CD_EBS_SAP_DAO=>GET_PAYMENTS` (`src/ebs/zcl_cd_ebs_sap_dao.clas.abap:69-81`) |
-| DFKKCR by ZTNUM (house bank, optional company-code field) | `GET_CHECKS` (`:141`) |
-| DFKKRP by SELW1 with DFKKRK-STARS | `GET_RETURN_ITEMS` (`:56`) |
-| ZCD_ACH_RTRV_LOG by AUGBL, status field `EBS_RTRV_STATUS_FIELD` (DDIC-validated) | `GET_RETRIEVALS` (`:120`) |
+| DPAYH by DOC1R (`ZZ_PAYMENT_STATUS`, proposal runs excluded via `XVORL`) | `ZCL_CD_EBS_SAP_DAO=>GET_PAYMENTS` (`src/ebs/zcl_cd_ebs_sap_dao.clas.abap:85-98`) |
+| DFKKCR by ZTNUM (house bank, optional company-code field) | `GET_CHECKS` (`:157`) |
+| DFKKRP by SELW1 with DFKKRK-STARS and the return reason RLGRD | `GET_RETURN_ITEMS` (`:56`) |
+| DFKKNRP by INFOF with the NOC reason FLGRD (capped in the trace DAO at `TRACE_MAX_ROWS` + 1, as the cheque read) | `GET_NOC_ITEMS` (`:71`) |
+| ZCD_ACH_RTRV_LOG by AUGBL, status field `EBS_RTRV_STATUS_FIELD` (DDIC-validated) | `GET_RETRIEVALS` (`:136`) |
 | Configured sources (request log, history, ZCDT_REGUT, ACK, cheque history, BUT000 source field) | FMON reader: `ZCL_CD_FMON_QUERY=>VALIDATE` + `ZCL_CD_FMON_DAO=>READ_LEGACY` (DDIC, `ZCD_FMON_TABWL`, `S_TABU_NAM` 03, bound values) |
 | FMON file correlation key / digest | `ZCL_CD_FMON_UTIL=>NORMALIZE_REF` / `IS_DIGEST_REF` / `CANONICAL_NAME` (A100) |
 | G/L transfer rule (AWTYP, BUKRS, STBLG) | `ZCL_CD_HCK_DAO=>GET_FIKEYS_WITHOUT_GL` (`src/hck/zcl_cd_hck_dao.clas.abap:517-533`, A43) |
@@ -131,6 +133,8 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 | `ZCDT_REGUT` | LAUFD / LAUFI and file key fields; that the file key equals the FMON REGUT source FILE_KEY_FIELD |
 | ACK tables (`ZCD_ACH_ACK`, `ZCD_WIRE_ACK`) | Payment key = clearing reference? status values for NACK |
 | `ZCD_CHECK_HIST` | Cheque number, status, date / time fields |
+| `DFKKRP-RLGRD` | Return reason field and length (3); a text table for the reason code (not read — code only) |
+| `DFKKNRP-INFOF`, `FLGRD`; INFOF index | INFOF holds AUGBL (with leading zeros?) or which payment reference (FIN, cheque number, other); FLGRD length; a secondary index on INFOF for volume |
 | `DFKKCR-RWBTR`, `CRSTATUS`; `FEBEP-KWBTR`, CHECT index | As EBS (VERIFY-DDIC); FEBEP read by CHECT needs an index (performance) |
 | `TFK042Z` key LAND1 / ZLSCH via `T001-LAND1` | Collection vs disbursement for the ACK level |
 | `BKPF-CPUDT/CPUTM/STBLG`, `DFKKSUMC-BUKRS` | As HCK (VERIFY-DDIC) |
@@ -165,7 +169,14 @@ ABAP Unit (`ZCL_CD_OPS_TRACE_ENGINE` local test class `ltc_trace`, LTD read-repo
 | `clearing_doc_input_traces` | Clearing document input finds item and request through its FIN |
 | `unknown_fin_is_not_found` | Unknown FIN → NOT_FOUND |
 | `member_number_is_masked` | Member number never shown unmasked |
+| `return_shows_return_reason` | Returns lot item on the clearing: FAILED with its return reason RLGRD; verdict FAILED |
+| `historical_return_has_reason` | Reversed item: the return under the historical clearing reference shows its RLGRD |
+| `two_return_reasons_ambiguous` | Two returns lot items with different RLGRD → one AMBIGUOUS row listing both, both items shown |
+| `noc_found_by_clearing_doc` | NOC item with INFOF = AUGBL → VERIFIED, DFKKNRP, KEYN1 / POSNA, FLGRD |
+| `noc_found_by_payment_ref` | NOC item with INFOF = payment reference (FIN) → VERIFIED |
+| `no_noc_is_not_applicable` | No NOC item → NOT_APPLICABLE (`NO_NOC_ITEM`), never MISSING, no gap |
+| `noc_never_changes_verdict` | Two NOC items with different FLGRD → AMBIGUOUS rows, verdict still COMPLETE, no first gap |
 
-OSQL (`ZCL_CD_OPS_TRACE_DAO`, `ltc_trace_dao`): items by FIN and row cap, FEBEP by reference and date, DFKKCR by DOC1R, FMON file in the business-date window, BKPF by AWTYP/AWKEY, BSEG by key and XREF2, FOR ALL ENTRIES guard.
+OSQL (`ZCL_CD_OPS_TRACE_DAO`, `ltc_trace_dao`): items by FIN and row cap, FEBEP by reference and date, DFKKCR by DOC1R, FMON file in the business-date window, BKPF by AWTYP/AWKEY, BSEG by key and XREF2, FOR ALL ENTRIES guard, NOC items by INFOF capped at the row cap + 1 (`noc_items_by_infof_capped`). The full-chain test now also lists the NOC row (NOT_APPLICABLE without a NOC).
 
 QA1 cases (L1/L2 reproduce search → correlate → inspect → hand off): one PCLM claims ACH payment end to end; one cheque (mailed, encashed); one collection (file-level ACK); a reissued payment after a return; a reversed item with and without history; a FIN with two SUCCESS rows; a payment sent but not acknowledged; a user without the company code. For each, compare with SE16 / FPL9 / FEBAN and confirm that running the trace changed no business table, job, lock, file or interface (ST05 shows SELECT only).

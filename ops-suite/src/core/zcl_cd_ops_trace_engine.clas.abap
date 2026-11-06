@@ -17,6 +17,8 @@
 *&            | file date window, cheque history unavailable, test-first review fixes.
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Return / NOC reasons: return rows show DFKKRP-RLGRD (different reasons = AMBIGUOUS row);
+*&            | NOC evidence row per attempt (DFKKNRP by INFOF), informational - never decides the verdict.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -202,6 +204,22 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
       IMPORTING
         is_attempt TYPE ty_attempt
         iv_cheque  TYPE abap_bool.
+
+    "! NOC (notification of change) of the attempt: DFKKNRP items whose INFOF holds the
+    "! clearing document or a payment reference of the attempt (FIN, cheque number).
+    "! Informational: VERIFIED / AMBIGUOUS / NOT_APPLICABLE, never MISSING, no verdict impact
+    METHODS stage_noc
+      IMPORTING
+        is_attempt TYPE ty_attempt
+        it_checks  TYPE zif_cd_ops_trace_types=>tt_check.
+
+    "! Comparable form of a document number / reference: condensed, leading zeros of an
+    "! all-digit value removed
+    CLASS-METHODS canonical
+      IMPORTING
+        iv_value        TYPE clike
+      RETURNING
+        VALUE(rv_value) TYPE string.
 
     "! One row per candidate: 0 = MISSING, 1 = VERIFIED, more or row cap = AMBIGUOUS
     METHODS candidate_status
@@ -768,6 +786,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                            et_events  = DATA(lt_events) ).
     stage_bank_ack( is_attempt = is_attempt it_files = lt_files it_events = lt_events ).
     stage_settlement( is_attempt = is_attempt iv_cheque = lv_cheque it_checks = lt_checks ).
+    stage_noc( is_attempt = is_attempt it_checks = lt_checks ).
     stage_clearing_and_gl( is_attempt = is_attempt iv_cheque = lv_cheque ).
   ENDMETHOD.
 
@@ -1058,17 +1077,36 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     DATA(lt_docno) = VALUE zif_cd_ops_trace_types=>tt_docno( ( is_attempt-ref ) ).
 
     " Returns lot (DFKKRP-SELW1 = clearing reference) and ACH retrieval log: positive evidence
-    " that the money came back
-    LOOP AT mo_dao->get_returns( lt_docno ) INTO DATA(ls_return).
+    " that the money came back. Every item shows its return reason DFKKRP-RLGRD (code only);
+    " items of one clearing reference with different reasons add one AMBIGUOUS row
+    DATA lt_reasons TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_return-rlgrd WITH UNIQUE KEY table_line.
+    DATA(lt_returns) = mo_dao->get_returns( lt_docno ).
+    LOOP AT lt_returns ASSIGNING FIELD-SYMBOL(<ls_return>).
+      INSERT <ls_return>-rlgrd INTO TABLE lt_reasons.
       add_row( is_attempt = is_attempt
                is_row     = VALUE #( BASE ls_base status = zif_cd_ops_trace_types=>gc_status-failed
                                      reason       = zif_cd_ops_trace_types=>gc_reason-returned
                                      source_table = zif_cd_ops_trace_types=>gc_table-dfkkrp
-                                     record_key   = key_text( iv_part1 = ls_return-selw1 iv_part2 = ls_return-opbel )
+                                     record_key   = key_text( iv_part1 = <ls_return>-selw1 iv_part2 = <ls_return>-opbel )
                                      detail       = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-returned
-                                                                           iv_v1    = ls_return-opbel
-                                                                           iv_v2    = ls_return-lot_stars ) ) ).
+                                                                           iv_v1    = <ls_return>-opbel
+                                                                           iv_v2    = <ls_return>-lot_stars
+                                                                           iv_v3    = <ls_return>-rlgrd ) ) ).
     ENDLOOP.
+    IF lines( lt_reasons ) > 1.
+      DATA(lv_reasons) = REDUCE string( INIT lv_list = ``
+                                        FOR lv_reason IN lt_reasons
+                                        NEXT lv_list = condense( |{ lv_list } { lv_reason }| ) ).
+      add_row( is_attempt = is_attempt
+               is_row     = VALUE #( BASE ls_base status = zif_cd_ops_trace_types=>gc_status-ambiguous
+                                     reason       = zif_cd_ops_trace_types=>gc_reason-return_reason_ambiguous
+                                     source_table = zif_cd_ops_trace_types=>gc_table-dfkkrp
+                                     record_key   = is_attempt-ref
+                                     detail       = zcl_cd_ops_util=>text(
+                                                      iv_msgno = zif_cd_ops_trace_types=>gc_msg-return_reasons
+                                                      iv_v1    = is_attempt-ref
+                                                      iv_v2    = lv_reasons ) ) ).
+    ENDIF.
     TRY.
         LOOP AT mo_dao->get_retrievals( lt_docno ) INTO DATA(ls_rtrv).
           add_row( is_attempt = is_attempt
@@ -1299,6 +1337,85 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD stage_noc.
+    DATA lt_infof TYPE zif_cd_ops_trace_types=>tt_infof.
+    DATA lt_forms TYPE SORTED TABLE OF string WITH UNIQUE KEY table_line.
+    DATA lt_refs TYPE STANDARD TABLE OF string WITH EMPTY KEY.
+    DATA lt_reasons TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_noc-flgrd WITH UNIQUE KEY table_line.
+    DATA lt_matched TYPE zif_cd_ops_trace_types=>tt_noc.
+    DATA(ls_base) = VALUE ty_row( stage        = zif_cd_ops_trace_types=>gc_stage-noc
+                                  bukrs        = is_attempt-bukrs
+                                  source_table = zif_cd_ops_trace_types=>gc_table-dfkknrp ).
+
+    " INFOF (CHAR 50) holds the payment document (AUGBL) or the payment reference (confirmed
+    " 2026-11-06; exact content VERIFY-SE11): the clearing document of the attempt, the FIN
+    " of its items and its cheque numbers - each as stored and without leading zeros
+    INSERT CONV #( is_attempt-ref ) INTO TABLE lt_refs.
+    LOOP AT mt_items ASSIGNING FIELD-SYMBOL(<ls_item>)
+         WHERE fin IS NOT INITIAL AND ( opbel = is_attempt-item_opbel OR augbl = is_attempt-ref ).
+      INSERT CONV #( <ls_item>-fin ) INTO TABLE lt_refs.
+    ENDLOOP.
+    LOOP AT it_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+      INSERT CONV #( <ls_check>-ztnum ) INTO TABLE lt_refs.
+    ENDLOOP.
+    LOOP AT lt_refs ASSIGNING FIELD-SYMBOL(<lv_ref>).
+      DATA(lv_canonical) = canonical( <lv_ref> ).
+      IF lv_canonical IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT lv_canonical INTO TABLE lt_forms.
+      INSERT CONV #( condense( <lv_ref> ) ) INTO TABLE lt_infof.
+      INSERT CONV #( lv_canonical ) INTO TABLE lt_infof.
+    ENDLOOP.
+
+    DATA(lt_items) = mo_dao->get_noc_items( it_infof = lt_infof iv_max_rows = ms_cfg-max_rows ).
+    LOOP AT lt_items ASSIGNING FIELD-SYMBOL(<ls_noc>).
+      IF line_exists( lt_forms[ table_line = canonical( <ls_noc>-infof ) ] ).
+        INSERT <ls_noc> INTO TABLE lt_matched.
+        INSERT <ls_noc>-flgrd INTO TABLE lt_reasons.
+      ENDIF.
+    ENDLOOP.
+    " No NOC item: the payment had no notification of change - not applicable, never missing
+    IF lt_matched IS INITIAL.
+      add_row( is_attempt = is_attempt
+               is_row     = VALUE #( BASE ls_base status = zif_cd_ops_trace_types=>gc_status-not_applicable
+                                     reason     = zif_cd_ops_trace_types=>gc_reason-no_noc
+                                     record_key = is_attempt-ref
+                                     detail     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-no_noc
+                                                                         iv_v1    = is_attempt-ref
+                                                                         iv_v2    = concat_lines_of( table = lt_forms
+                                                                                                     sep   = ` ` ) ) ) ).
+      RETURN.
+    ENDIF.
+    " Several items with different NOC reasons, or the row cap: AMBIGUOUS, every item listed
+    IF lines( lt_reasons ) > 1 OR lines( lt_items ) > ms_cfg-max_rows.
+      ls_base-status = zif_cd_ops_trace_types=>gc_status-ambiguous.
+      ls_base-reason = COND #( WHEN lines( lt_items ) > ms_cfg-max_rows THEN zif_cd_ops_trace_types=>gc_reason-row_cap
+                               ELSE zif_cd_ops_trace_types=>gc_reason-multiple ).
+    ELSE.
+      ls_base-status = zif_cd_ops_trace_types=>gc_status-verified.
+      ls_base-reason = zif_cd_ops_trace_types=>gc_reason-noc_item.
+    ENDIF.
+    LOOP AT lt_matched ASSIGNING FIELD-SYMBOL(<ls_match>).
+      ls_base-record_key = key_text( iv_part1 = <ls_match>-keyn1 iv_part2 = <ls_match>-posna ).
+      ls_base-detail     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-noc_item
+                                                  iv_v1    = <ls_match>-keyn1
+                                                  iv_v2    = <ls_match>-posna
+                                                  iv_v3    = <ls_match>-flgrd
+                                                  iv_v4    = condense( <ls_match>-infof ) ).
+      add_row( is_attempt = is_attempt is_row = ls_base ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD canonical.
+    rv_value = condense( CONV string( iv_value ) ).
+    IF rv_value CO gc_digits.
+      SHIFT rv_value LEFT DELETING LEADING '0'.
+    ENDIF.
+  ENDMETHOD.
+
+
   METHOD candidate_status.
     CLEAR ev_reason.
     IF iv_count >= ms_cfg-max_rows.
@@ -1350,8 +1467,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
     SORT mt_rows STABLE BY attempt seq.
     " First missing or failed milestone of every attempt
+    " NOC rows are informational (a notification of change is no failure of the payment)
     LOOP AT mt_rows ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE status <> zif_cd_ops_trace_types=>gc_status-verified
-                                                      AND status <> zif_cd_ops_trace_types=>gc_status-not_applicable.
+                                                      AND status <> zif_cd_ops_trace_types=>gc_status-not_applicable
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-noc.
       IF NOT line_exists( mt_rows[ attempt = <ls_row>-attempt first_gap = abap_true ] ).
         <ls_row>-first_gap = abap_true.
       ENDIF.
@@ -1359,7 +1478,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
     " The verdict looks at the request and the current attempts; historical attempts were
     " reversed or reset and are shown for evidence only
-    LOOP AT mt_rows INTO DATA(ls_row) WHERE attempt_kind <> zif_cd_ops_trace_types=>gc_attempt-historical.
+    LOOP AT mt_rows INTO DATA(ls_row) WHERE attempt_kind <> zif_cd_ops_trace_types=>gc_attempt-historical
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-noc.
       CASE ls_row-status.
         WHEN zif_cd_ops_trace_types=>gc_status-failed.
           lv_failed = abap_true.
@@ -1405,8 +1525,9 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                        WHEN zif_cd_ops_trace_types=>gc_stage-prism      THEN 6
                        WHEN zif_cd_ops_trace_types=>gc_stage-bank_ack   THEN 7
                        WHEN zif_cd_ops_trace_types=>gc_stage-settlement THEN 8
-                       WHEN zif_cd_ops_trace_types=>gc_stage-fica       THEN 9
-                       WHEN zif_cd_ops_trace_types=>gc_stage-gl         THEN 10 ).
+                       WHEN zif_cd_ops_trace_types=>gc_stage-noc        THEN 9
+                       WHEN zif_cd_ops_trace_types=>gc_stage-fica       THEN 10
+                       WHEN zif_cd_ops_trace_types=>gc_stage-gl         THEN 11 ).
   ENDMETHOD.
 
 

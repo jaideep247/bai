@@ -2034,7 +2034,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>718</MSGNR>
-     <TEXT>Returned: returns lot document &amp;1 status &amp;2</TEXT>
+     <TEXT>Returned: returns lot document &amp;1 status &amp;2, return reason &amp;3</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2137,6 +2137,24 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>738</MSGNR>
      <TEXT>Request partner &amp;1 owns none of the items of FIN &amp;2 - review the link</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>739</MSGNR>
+     <TEXT>Clearing &amp;1: returns lot items with different return reasons (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>740</MSGNR>
+     <TEXT>NOC lot &amp;1 item &amp;2: NOC reason &amp;3 (INFOF &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>741</MSGNR>
+     <TEXT>No NOC lot item for clearing &amp;1 or payment reference &amp;2</TEXT>
     </T100>
    </T100>
   </asx:values>

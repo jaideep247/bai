@@ -10,6 +10,9 @@
 *& prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
+*& 2026-11-06 | Return / NOC reasons: return reason RLGRD shown (current and historical clearing),
+*&            | different reasons AMBIGUOUS; NOC evidence by clearing document / payment reference,
+*&            | not found = NOT_APPLICABLE, never changes the verdict. Full chain lists the NOC row.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -35,6 +38,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_gl_docs TYPE zif_cd_ops_trace_types=>tt_gl_doc.
     DATA mt_gl_lines TYPE zif_cd_ops_trace_types=>tt_gl_line.
     DATA mv_kind TYPE zif_cd_ops_trace_types=>ty_kind.
+    DATA mt_noc TYPE zif_cd_ops_trace_types=>tt_noc.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -141,6 +145,14 @@ CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_cd_ops_trace_dao~get_method_kind.
     rv_kind = mv_kind.
   ENDMETHOD.
+  METHOD zif_cd_ops_trace_dao~get_noc_items.
+    " As the database: exact INFOF values only
+    LOOP AT mt_noc ASSIGNING FIELD-SYMBOL(<ls_noc>).
+      IF line_exists( it_infof[ table_line = <ls_noc>-infof ] ).
+        INSERT <ls_noc> INTO TABLE rt_items.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
 ENDCLASS.
 
 
@@ -196,6 +208,13 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
         unauthorised      TYPE abap_bool,
         partner_mismatch  TYPE abap_bool,
         partner_legacy    TYPE abap_bool,
+        "! Returns lot item on the current clearing (with return reason RLGRD)
+        returned          TYPE abap_bool,
+        "! A second returns lot item with another return reason
+        two_reasons       TYPE abap_bool,
+        "! NOC lot item whose INFOF holds the clearing document / the FIN (payment reference)
+        noc_by_augbl      TYPE abap_bool,
+        noc_by_fin        TYPE abap_bool,
       END OF ty_flags.
 
     CONSTANTS:
@@ -225,6 +244,11 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
         reason_rev TYPE c LENGTH 2 VALUE '05',
         hist_date  TYPE c LENGTH 8 VALUE '20261101',
         hist_time  TYPE c LENGTH 6 VALUE '080000',
+        rlgrd      TYPE c LENGTH 3 VALUE 'R01',
+        rlgrd_2    TYPE c LENGTH 3 VALUE 'R03',
+        flgrd      TYPE c LENGTH 3 VALUE 'C01',
+        flgrd_2    TYPE c LENGTH 3 VALUE 'C02',
+        noc_lot    TYPE c LENGTH 12 VALUE 'NOC000000001',
       END OF gc.
     CONSTANTS gc_file_id TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '00000000000000000000000000000001'.
 
@@ -247,6 +271,9 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
       IMPORTING
         is_flags TYPE ty_flags.
     METHODS configure_reissue.
+    METHODS configure_return_and_noc
+      IMPORTING
+        is_flags TYPE ty_flags.
     METHODS run_trace
       IMPORTING
         is_input         TYPE zif_cd_ops_trace_types=>ty_trace_input OPTIONAL
@@ -290,6 +317,13 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     METHODS clearing_doc_input_traces     FOR TESTING.
     METHODS unknown_fin_is_not_found      FOR TESTING.
     METHODS member_number_is_masked       FOR TESTING.
+    METHODS return_shows_return_reason    FOR TESTING.
+    METHODS historical_return_has_reason  FOR TESTING.
+    METHODS two_return_reasons_ambiguous  FOR TESTING.
+    METHODS noc_found_by_clearing_doc     FOR TESTING.
+    METHODS noc_found_by_payment_ref      FOR TESTING.
+    METHODS no_noc_is_not_applicable      FOR TESTING.
+    METHODS noc_never_changes_verdict     FOR TESTING.
 ENDCLASS.
 
 
@@ -382,6 +416,7 @@ CLASS ltc_trace IMPLEMENTATION.
     IF is_flags-reissued = abap_true.
       configure_reissue( ).
     ENDIF.
+    configure_return_and_noc( is_flags ).
     IF is_flags-unauthorised = abap_true.
       INSERT CONV bukrs( gc-bukrs ) INTO TABLE mo_auth->mt_denied.
     ENDIF.
@@ -543,10 +578,42 @@ CLASS ltc_trace IMPLEMENTATION.
     ls_return-selw1     = gc-original.
     ls_return-opbel     = '000000400001'.
     ls_return-lot_stars = '1'.
+    ls_return-rlgrd     = gc-rlgrd.
     INSERT ls_return INTO TABLE mo_dao->mt_returns.
     ls_header-opbel = gc-original.
     ls_header-fikey = gc-old_fikey.
     INSERT ls_header INTO TABLE mo_dao->mt_headers.
+  ENDMETHOD.
+
+
+  METHOD configure_return_and_noc.
+    DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
+    DATA ls_noc TYPE zif_cd_ops_trace_types=>ty_noc.
+    IF is_flags-returned = abap_true OR is_flags-two_reasons = abap_true.
+      ls_return-selw1     = gc-current.
+      ls_return-opbel     = '000000400002'.
+      ls_return-lot_stars = '1'.
+      ls_return-rlgrd     = gc-rlgrd.
+      INSERT ls_return INTO TABLE mo_dao->mt_returns.
+    ENDIF.
+    IF is_flags-two_reasons = abap_true.
+      ls_return-opbel = '000000400003'.
+      ls_return-rlgrd = gc-rlgrd_2.
+      INSERT ls_return INTO TABLE mo_dao->mt_returns.
+    ENDIF.
+    ls_noc-keyn1 = gc-noc_lot.
+    IF is_flags-noc_by_augbl = abap_true.
+      ls_noc-posna = 1.
+      ls_noc-infof = gc-current.
+      ls_noc-flgrd = gc-flgrd.
+      INSERT ls_noc INTO TABLE mo_dao->mt_noc.
+    ENDIF.
+    IF is_flags-noc_by_fin = abap_true.
+      ls_noc-posna = 2.
+      ls_noc-infof = gc-fin.
+      ls_noc-flgrd = COND #( WHEN is_flags-noc_by_augbl = abap_true THEN gc-flgrd_2 ELSE gc-flgrd ).
+      INSERT ls_noc INTO TABLE mo_dao->mt_noc.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -584,12 +651,16 @@ CLASS ltc_trace IMPLEMENTATION.
           act = lt_stages
           exp = VALUE string_table( ( `REQUEST` ) ( `SAP_ITEM` ) ( `CLEAR_HISTORY` ) ( `PAYMENT` )
                                     ( `FILE_GENERATED` ) ( `PRISM_HANDOFF` ) ( `BANK_ACK` ) ( `SETTLEMENT` )
-                                    ( `FICA_CLEARING` ) ( `FICA_CLEARING` ) ( `GL` ) )
-          msg = 'Every stage once in timeline order (clearing: DFKKOP and BSEG line)' ).
+                                    ( `NOC` ) ( `FICA_CLEARING` ) ( `FICA_CLEARING` ) ( `GL` ) )
+          msg = 'Every stage once in timeline order (clearing: DFKKOP and BSEG line; NOC evidence row)' ).
         DATA(lt_not_verified) = VALUE tt_status( FOR ls IN ls_result-rows
-                                                 WHERE ( status <> zif_cd_ops_trace_types=>gc_status-verified )
+                                                 WHERE ( status <> zif_cd_ops_trace_types=>gc_status-verified
+                                                         AND stage <> zif_cd_ops_trace_types=>gc_stage-noc )
                                                  ( ls-status ) ).
         cl_abap_unit_assert=>assert_initial( act = lt_not_verified msg = 'Every row must be VERIFIED' ).
+        cl_abap_unit_assert=>assert_equals( act = statuses( is_result = ls_result iv_stage = zif_cd_ops_trace_types=>gc_stage-noc )
+                                            exp = VALUE tt_status( ( zif_cd_ops_trace_types=>gc_status-not_applicable ) )
+                                            msg = 'Without a NOC the NOC row is NOT_APPLICABLE' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -976,6 +1047,135 @@ CLASS ltc_trace IMPLEMENTATION.
         DATA(ls_request) = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-request ].
         cl_abap_unit_assert=>assert_char_np( act = ls_request-detail exp = |*{ gc-member }*|
                                              msg = 'The member number never appears unmasked' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Return / NOC reasons 2026-11-06: a returns lot item on the clearing shows its return
+  " reason DFKKRP-RLGRD in the evidence; the return still fails the payment
+  METHOD return_shows_return_reason.
+    TRY.
+        configure_scenario( VALUE #( returned = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_return) = ls_result-rows[ attempt = 1 reason = zif_cd_ops_trace_types=>gc_reason-returned ].
+        cl_abap_unit_assert=>assert_equals( act = ls_return-status exp = zif_cd_ops_trace_types=>gc_status-failed
+                                            msg = 'A return is positive evidence of a failure' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_return-detail exp = |*{ gc-rlgrd }*|
+                                             msg = 'The return reason RLGRD is shown' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-failed
+                                            msg = 'A returned payment fails the trace' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The return of a reversed item sits under the historical clearing reference: its return
+  " reason is shown on that attempt as well
+  METHOD historical_return_has_reason.
+    TRY.
+        configure_scenario( VALUE #( reissued = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_return) = ls_result-rows[ attempt = 1 reason = zif_cd_ops_trace_types=>gc_reason-returned ].
+        cl_abap_unit_assert=>assert_equals( act = ls_return-clearing_ref exp = gc-original
+                                            msg = 'The return belongs to the original clearing reference' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_return-detail exp = |*{ gc-rlgrd }*|
+                                             msg = 'The historical return shows its reason' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Two returns lot items of one clearing with different return reasons: one AMBIGUOUS row
+  " listing both, next to the FAILED item rows
+  METHOD two_return_reasons_ambiguous.
+    TRY.
+        configure_scenario( VALUE #( two_reasons = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_ambiguous) = ls_result-rows[ reason = zif_cd_ops_trace_types=>gc_reason-return_reason_ambiguous ].
+        cl_abap_unit_assert=>assert_equals( act = ls_ambiguous-status exp = zif_cd_ops_trace_types=>gc_status-ambiguous
+                                            msg = 'Different return reasons are AMBIGUOUS' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_ambiguous-detail exp = |*{ gc-rlgrd }*{ gc-rlgrd_2 }*|
+                                             msg = 'Every return reason is listed' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( VALUE tt_status( FOR ls IN ls_result-rows
+                                                                          WHERE ( reason = zif_cd_ops_trace_types=>gc_reason-returned )
+                                                                          ( ls-status ) ) )
+                                            exp = 2 msg = 'Both returns lot items are shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " NOC lot item whose INFOF holds the clearing document (AUGBL): VERIFIED evidence with lot,
+  " item and NOC reason FLGRD
+  METHOD noc_found_by_clearing_doc.
+    TRY.
+        configure_scenario( VALUE #( noc_by_augbl = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_noc) = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-noc ].
+        cl_abap_unit_assert=>assert_equals( act = ls_noc-status exp = zif_cd_ops_trace_types=>gc_status-verified
+                                            msg = 'A NOC found by the clearing document is VERIFIED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_noc-source_table exp = zif_cd_ops_trace_types=>gc_table-dfkknrp
+                                            msg = 'The NOC evidence names DFKKNRP' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_noc-record_key exp = |{ gc-noc_lot }/000001|
+                                            msg = 'Record key KEYN1 / POSNA' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_noc-detail exp = |*{ gc-flgrd }*|
+                                             msg = 'The NOC reason FLGRD is shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " NOC lot item whose INFOF holds the payment reference (the FIN of the item) instead of AUGBL
+  METHOD noc_found_by_payment_ref.
+    TRY.
+        configure_scenario( VALUE #( noc_by_fin = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        cl_abap_unit_assert=>assert_equals( act = statuses( is_result = ls_result iv_stage = zif_cd_ops_trace_types=>gc_stage-noc )
+                                            exp = VALUE tt_status( ( zif_cd_ops_trace_types=>gc_status-verified ) )
+                                            msg = 'A NOC found by the payment reference is VERIFIED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " No NOC item: NOT_APPLICABLE with reason NO_NOC_ITEM - never MISSING, no gap
+  METHOD no_noc_is_not_applicable.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        DATA(ls_result) = run_trace( ).
+        DATA(ls_noc) = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-noc ].
+        cl_abap_unit_assert=>assert_equals( act = ls_noc-status exp = zif_cd_ops_trace_types=>gc_status-not_applicable
+                                            msg = 'No NOC is not applicable' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_noc-reason exp = zif_cd_ops_trace_types=>gc_reason-no_noc
+                                            msg = 'Reason NO_NOC_ITEM' ).
+        cl_abap_unit_assert=>assert_false( act = ls_noc-first_gap msg = 'A missing NOC is never a gap' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A NOC is information (account data change), not a failure: even two NOC items with
+  " different reasons (AMBIGUOUS) leave a complete payment COMPLETE, without a gap
+  METHOD noc_never_changes_verdict.
+    TRY.
+        configure_scenario( VALUE #( noc_by_augbl = abap_true noc_by_fin = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        cl_abap_unit_assert=>assert_equals( act = statuses( is_result = ls_result iv_stage = zif_cd_ops_trace_types=>gc_stage-noc )
+                                            exp = VALUE tt_status( ( zif_cd_ops_trace_types=>gc_status-ambiguous )
+                                                                   ( zif_cd_ops_trace_types=>gc_status-ambiguous ) )
+                                            msg = 'Two NOC items with different reasons are AMBIGUOUS, both listed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
+                                            msg = 'A NOC never changes the verdict' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result-first_gap_stage msg = 'A NOC is never the first gap' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

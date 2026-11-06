@@ -16,6 +16,8 @@
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Reuse of the FMON reader and the EBS reads; FMON files by business date.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Return / NOC reasons: RLGRD with the returns (shared EBS read); NOC items through the
+*&            | shared EBS read DFKKNRP by INFOF, capped like the cheque read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -221,6 +223,18 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
     " Shared EBS read: DFKKRP-SELW1 = DFKKOP-AUGBL with the lot status DFKKRK-STARS
     DATA(lt_docno) = CORRESPONDING zif_cd_ebs_sap_dao=>tt_docno( it_docno ).
     rt_returns = CORRESPONDING #( zcl_cd_ebs_factory=>get_sap_dao( )->get_return_items( lt_docno ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_trace_dao~get_noc_items.
+    " Shared EBS read: DFKKNRP by INFOF (payment document or reference, confirmed 2026-11-06)
+    " with the NOC reason FLGRD; INFOF is no key - exact values only, result capped
+    DATA(lt_infof) = CORRESPONDING zif_cd_ebs_sap_dao=>tt_infof( it_infof ).
+    rt_items = CORRESPONDING #( zcl_cd_ebs_factory=>get_sap_dao( )->get_noc_items( lt_infof ) ).
+    DATA(lv_first_over) = iv_max_rows + 1.
+    IF lines( rt_items ) >= lv_first_over.
+      DELETE rt_items FROM lv_first_over.
+    ENDIF.
   ENDMETHOD.
 
 

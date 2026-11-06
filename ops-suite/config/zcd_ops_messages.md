@@ -343,7 +343,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 715 | File &1 is not registered in file monitoring |
 | 716 | Payment-level ACK &1 status &2 |
 | 717 | Bank line &1 / &2 reference &3 posted &4 |
-| 718 | Returned: returns lot document &1 status &2 |
+| 718 | Returned: returns lot document &1 status &2, return reason &3 |
 | 719 | Retrieval logged for &1 status &2 |
 | 720 | Cheque &1 status &2 |
 | 721 | Item &1 cleared by &2 on &3 |
@@ -361,3 +361,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 733 | No &1 evidence found for &2 |
 | 737 | Partner &1 found by external number without source (legacy) |
 | 738 | Request partner &1 owns none of the items of FIN &2 - review the link |
+| 739 | Clearing &1: returns lot items with different return reasons (&2) |
+| 740 | NOC lot &1 item &2: NOC reason &3 (INFOF &4) |
+| 741 | No NOC lot item for clearing &1 or payment reference &2 |

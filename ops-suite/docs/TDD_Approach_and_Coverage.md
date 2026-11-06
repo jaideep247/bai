@@ -42,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 767 ABAP Unit methods in 56 test includes
+## 4. Coverage today — 775 ABAP Unit methods in 56 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -60,8 +60,8 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seams) | 11 | Domain |
 | Core | ZCL_CD_OPS_PURGE (retention rules, packages, test mode) | 5 | Domain / Application |
 | Core | ZCL_CD_OPS_PURGE_DAO | 7 | OSQL |
-| Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 8 | OSQL |
-| Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 21 | Application |
+| Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 9 | OSQL |
+| Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 28 | Application |
 | Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
 | Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 18 | OSQL |
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |

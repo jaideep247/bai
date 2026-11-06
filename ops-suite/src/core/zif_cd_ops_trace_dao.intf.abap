@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Configured and EBS reads reuse the existing validated readers; files by date.
+*& 2026-11-06 | Return / NOC reasons: get_returns carries DFKKRP-RLGRD; get_noc_items (DFKKNRP by INFOF, capped).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -100,12 +101,22 @@ INTERFACE zif_cd_ops_trace_dao
     RETURNING
       VALUE(rt_lines) TYPE zif_cd_ops_trace_types=>tt_bank_line.
 
-  "! Returns lot items (DFKKRP-SELW1 = clearing reference) with the lot status
+  "! Returns lot items (DFKKRP-SELW1 = clearing reference) with the lot status and the
+  "! return reason RLGRD
   METHODS get_returns
     IMPORTING
       it_docno          TYPE zif_cd_ops_trace_types=>tt_docno
     RETURNING
       VALUE(rt_returns) TYPE zif_cd_ops_trace_types=>tt_return.
+
+  "! NOC lot items (DFKKNRP) whose INFOF is one of the given exact values (clearing document
+  "! or payment reference in every stored form); at most iv_max_rows + 1 rows (INFOF is no key)
+  METHODS get_noc_items
+    IMPORTING
+      it_infof        TYPE zif_cd_ops_trace_types=>tt_infof
+      iv_max_rows     TYPE i
+    RETURNING
+      VALUE(rt_items) TYPE zif_cd_ops_trace_types=>tt_noc.
 
   "! ACH retrieval log (ZCD_ACH_RTRV_LOG-AUGBL); status field from EBS_RTRV_STATUS_FIELD
   "! (the EBS read, shared)

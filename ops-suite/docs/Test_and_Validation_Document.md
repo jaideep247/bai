@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-767 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+775 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 767 / 767 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 775 / 775 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -128,6 +128,8 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | TRC-06 | FIN with two SUCCESS rows; FEBEP with two lines for one reference | — | AMBIGUOUS, all candidates listed | pending |
 | TRC-07 | File sent to PRISM, no ACK; ACK without statement line | — | First gap BANK_ACK resp. SETTLEMENT; INCOMPLETE | pending |
 | TRC-08 | User without ZCD_OPS 03 for the item's company code | Role | Item row NOT_AUTHORISED, no key shown, nothing MISSING | pending |
+| TRC-04a | Returned payment (current clearing) and a reversed item whose return sits under the historical clearing reference; one clearing with two returns lot items of different reasons | DFKKRP-RLGRD confirmed in SE11 | Each return row shows its RLGRD; the two-reason clearing shows one AMBIGUOUS row listing both | pending |
+| TRC-04b | Payment with a NOC (C01) whose DFKKNRP item carries the AUGBL in INFOF; one whose INFOF carries the payment reference; one without NOC | DFKKNRP-INFOF / FLGRD confirmed in SE11 | NOC row VERIFIED with lot, item, FLGRD (both forms); NOT_APPLICABLE without NOC; the verdict is the same as without the NOC rows | pending |
 | TRC-09 | Side effects | ST05 during TRC-01..08 | SELECT only; no change in any business table, job, lock, file or interface; nothing written to ZCD_OPS_* | pending |
 | TRC-10 | Performance | 20 traces at peak | Each trace < 5 s; FEBEP / DFKKOP / BUT000 reads use an index | pending |
 

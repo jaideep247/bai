@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Cheque company code, file name (digest check), partner mismatch reason.
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Return / NOC reasons: TY_RETURN-RLGRD, NOC stage and lot item (DFKKNRP), messages 739-741.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -54,6 +55,9 @@ INTERFACE zif_cd_ops_trace_types
       prism      TYPE ty_stage VALUE 'PRISM_HANDOFF',
       bank_ack   TYPE ty_stage VALUE 'BANK_ACK',
       settlement TYPE ty_stage VALUE 'SETTLEMENT',
+      "! NOC (notification of change) evidence of the attempt - informational, never decides
+      "! the verdict (DFKKNRP by INFOF; return / NOC correction 2026-11-06)
+      noc        TYPE ty_stage VALUE 'NOC',
       fica       TYPE ty_stage VALUE 'FICA_CLEARING',
       gl         TYPE ty_stage VALUE 'GL',
     END OF gc_stage.
@@ -88,6 +92,10 @@ INTERFACE zif_cd_ops_trace_types
       nack             TYPE ty_reason VALUE 'NACK_REJECTED',
       no_ack_method    TYPE ty_reason VALUE 'NO_ACK_FOR_METHOD',
       returned         TYPE ty_reason VALUE 'RETURNED',
+      "! Returns lot items of one clearing reference carry different return reasons (RLGRD)
+      return_reason_ambiguous TYPE ty_reason VALUE 'RETURN_REASON_AMBIGUOUS',
+      noc_item         TYPE ty_reason VALUE 'NOC_ITEM',
+      no_noc           TYPE ty_reason VALUE 'NO_NOC_ITEM',
       retrieval        TYPE ty_reason VALUE 'RETRIEVAL_LOGGED',
       cheque_terminal  TYPE ty_reason VALUE 'CHEQUE_TERMINAL_STATUS',
       cheque_status    TYPE ty_reason VALUE 'CHEQUE_STATUS',
@@ -206,6 +214,7 @@ INTERFACE zif_cd_ops_trace_types
       dfkkcr  TYPE ty_tabname VALUE 'DFKKCR',
       febep   TYPE ty_tabname VALUE 'FEBEP',
       dfkkrp  TYPE ty_tabname VALUE 'DFKKRP',
+      dfkknrp TYPE ty_tabname VALUE 'DFKKNRP',
       rtrv    TYPE ty_tabname VALUE 'ZCD_ACH_RTRV_LOG',
       fmon    TYPE ty_tabname VALUE 'ZCD_FMON_EVENT',
       bkpf    TYPE ty_tabname VALUE 'BKPF',
@@ -363,8 +372,25 @@ INTERFACE zif_cd_ops_trace_types
       selw1     TYPE ty_docno,
       opbel     TYPE ty_docno,
       lot_stars TYPE c LENGTH 20,
+      "! Return reason DFKKRP-RLGRD (VERIFY-SE11; code only - no text table read)
+      rlgrd     TYPE c LENGTH 3,
     END OF ty_return.
   TYPES tt_return TYPE STANDARD TABLE OF ty_return WITH EMPTY KEY.
+
+  "! DFKKNRP-INFOF (CHAR 50): payment document (AUGBL) or payment reference (confirmed
+  "! 2026-11-06; exact content VERIFY-SE11)
+  TYPES ty_infof TYPE c LENGTH 50.
+  TYPES tt_infof TYPE SORTED TABLE OF ty_infof WITH UNIQUE KEY table_line.
+
+  "! NOC lot item (DFKKNRP: KEYN1 lot, POSNA item, INFOF, NOC reason FLGRD - VERIFY-SE11)
+  TYPES:
+    BEGIN OF ty_noc,
+      keyn1 TYPE c LENGTH 12,
+      posna TYPE n LENGTH 6,
+      infof TYPE ty_infof,
+      flgrd TYPE c LENGTH 3,
+    END OF ty_noc.
+  TYPES tt_noc TYPE STANDARD TABLE OF ty_noc WITH EMPTY KEY.
 
   TYPES:
     BEGIN OF ty_retrieval,
@@ -478,6 +504,9 @@ INTERFACE zif_cd_ops_trace_types
       stage_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '733',
       partner_legacy    TYPE zif_cd_ops_types=>ty_msgno VALUE '737',
       partner_mismatch  TYPE zif_cd_ops_types=>ty_msgno VALUE '738',
+      return_reasons    TYPE zif_cd_ops_types=>ty_msgno VALUE '739',
+      noc_item          TYPE zif_cd_ops_types=>ty_msgno VALUE '740',
+      no_noc            TYPE zif_cd_ops_types=>ty_msgno VALUE '741',
     END OF gc_msg.
 
 ENDINTERFACE.

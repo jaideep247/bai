@@ -10,6 +10,7 @@
 *& repository are tested there. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
+*& 2026-11-06 | Return / NOC reasons: NOC lot items by INFOF through the shared EBS read, capped.
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -53,6 +54,7 @@ CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
     METHODS gl_document_by_awtyp_awkey  FOR TESTING.
     METHODS gl_line_by_key_and_xref2    FOR TESTING.
     METHODS empty_keys_read_nothing     FOR TESTING.
+    METHODS noc_items_by_infof_capped   FOR TESTING.
 ENDCLASS.
 
 
@@ -61,7 +63,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'DFKKOP' ) ( 'FEBEP' ) ( 'DFKKCR' ) ( 'ZCD_FMON_FILE' )
-                                   ( 'DFKKSUMC' ) ( 'BKPF' ) ( 'BSEG' ) ) ).
+                                   ( 'DFKKSUMC' ) ( 'BKPF' ) ( 'BSEG' ) ( 'DFKKNRP' ) ) ).
   ENDMETHOD.
 
 
@@ -289,6 +291,39 @@ CLASS ltc_trace_dao IMPLEMENTATION.
                                                                            iv_from     = gc_test-from
                                                                            iv_to       = gc_test-to )
                                              msg = 'No files without a reference' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Return / NOC reasons 2026-11-06: NOC lot items are found by an exact INFOF value (payment
+  " document or reference) with their NOC reason FLGRD; INFOF is no key, so the result is
+  " capped at the row cap + 1 (the engine shows ROW_CAP_REACHED)
+  METHOD noc_items_by_infof_capped.
+    DATA lt_nrp TYPE STANDARD TABLE OF dfkknrp WITH EMPTY KEY.
+    DATA ls_nrp TYPE dfkknrp.
+    TRY.
+        ls_nrp-keyn1 = 'NOC000000001'.
+        ls_nrp-infof = gc_test-payment.
+        ls_nrp-flgrd = 'C01'.
+        DO 3 TIMES.
+          ls_nrp-posna = sy-index.
+          INSERT ls_nrp INTO TABLE lt_nrp.
+        ENDDO.
+        ls_nrp-posna = 4.
+        ls_nrp-infof = gc_test-other_doc.
+        INSERT ls_nrp INTO TABLE lt_nrp.
+        go_env->insert_test_data( lt_nrp ).
+        DATA(lt_items) = mo_cut->get_noc_items( it_infof    = VALUE #( ( CONV #( gc_test-payment ) ) )
+                                                iv_max_rows = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 2
+                                            msg = 'At most the row cap + 1 items of the INFOF value' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-flgrd exp = 'C01'
+                                            msg = 'The NOC reason must come from DFKKNRP-FLGRD' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_noc_items( it_infof = VALUE #( ) iv_max_rows = 50 )
+                                             msg = 'No NOC items without an INFOF value' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
