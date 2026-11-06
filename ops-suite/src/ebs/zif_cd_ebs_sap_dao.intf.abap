@@ -10,6 +10,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A07: company code of the register row (optional, configured field).
 *& 2026-11-06 | Audit A28: get_febep_reasons (configured FEBEP field, DEFAULT IGNORE).
+*& 2026-11-06 | Audit A65: TY_DOCNO width is the document key width (VERIFY-DDIC OPBEL_KK / AUGBL_KK / DOC1R CHAR 12).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -18,6 +19,8 @@
 INTERFACE zif_cd_ebs_sap_dao
   PUBLIC.
 
+  "! A65: key width of OPBEL / AUGBL / DOC1R - rules read it from this type, never truncate to
+  "! it (VERIFY-DDIC: OPBEL_KK, AUGBL_KK and DPAYH-DOC1R are CHAR 12)
   TYPES ty_docno TYPE c LENGTH 12.
   TYPES tt_docno TYPE SORTED TABLE OF ty_docno WITH UNIQUE KEY table_line.
   TYPES ty_ztnum TYPE c LENGTH 35.
