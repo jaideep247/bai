@@ -14,6 +14,7 @@
 *& 2026-11-06 | gc_engine_key-registry.
 *& 2026-11-06 | Plug-in interface names for the core factory check (audit A62).
 *& 2026-11-06 | File reference digest for names longer than the key (audit A100).
+*& 2026-11-06 | Performance fix 8: TY_RAW_COUNT (grouped legacy read: values by role + number of rows).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -504,6 +505,14 @@ INTERFACE zif_cd_fmon_types
       file_link   TYPE string,
     END OF ty_raw_row.
   TYPES tt_raw_row TYPE STANDARD TABLE OF ty_raw_row WITH EMPTY KEY.
+
+  "! Fix 8: one group of a grouped legacy read - the field values by role and the rows counted
+  TYPES:
+    BEGIN OF ty_raw_count,
+      row       TYPE ty_raw_row,
+      row_count TYPE int8,
+    END OF ty_raw_count.
+  TYPES tt_raw_count TYPE STANDARD TABLE OF ty_raw_count WITH EMPTY KEY.
 
   TYPES:
     BEGIN OF ty_ddic_field,

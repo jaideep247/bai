@@ -11,6 +11,8 @@
 *& 2026-11-06 | Audit A04 version-checked save (conflicts returned), A05/A49 event key per file
 *&              instance, A49 reference lookup by date, A50 open-file upper bound,
 *&              A51 approved tables + S_TABU_NAM at the read boundary, A52 half-open range.
+*& 2026-11-06 | Performance fix 8: count_legacy - GROUP BY the query fields with COUNT(*) on the same
+*&            | validated path as read_legacy (shared select_legacy).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -48,6 +50,32 @@ CLASS zcl_cd_fmon_dao DEFINITION
         is_event         TYPE zif_cd_fmon_types=>ty_event
       RETURNING
         VALUE(rv_exists) TYPE abap_bool.
+
+    "! Fix 8: alias of the row count in the grouped read and its SQL expression
+    CONSTANTS gc_count_alias TYPE string VALUE `ROW_COUNT`.
+    CONSTANTS gc_count_expression TYPE string VALUE `, COUNT(*) AS ROW_COUNT`.
+
+    "! The validated dynamic read of read_legacy; with iv_count the rows are grouped by the
+    "! query fields and counted (fix 8) instead of returned one by one
+    METHODS select_legacy
+      IMPORTING
+        is_query         TYPE zif_cd_fmon_types=>ty_query
+        iv_count         TYPE abap_bool
+      RETURNING
+        VALUE(rt_counts) TYPE zif_cd_fmon_types=>tt_raw_count
+      RAISING
+        zcx_cd_ops_error.
+
+    "! Fix 8: result table of the grouped read - the query fields with their DDIC types plus
+    "! ROW_COUNT (INT8)
+    METHODS count_table
+      IMPORTING
+        iv_table       TYPE string
+        is_query       TYPE zif_cd_fmon_types=>ty_query
+      RETURNING
+        VALUE(rr_rows) TYPE REF TO data
+      RAISING
+        zcx_cd_ops_error.
 
     "! De-duplicated, comma-separated field list (strict mode) for the dynamic SELECT
     METHODS field_list
@@ -313,8 +341,20 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_fmon_dao~read_legacy.
+    LOOP AT select_legacy( is_query = is_query iv_count = abap_false ) ASSIGNING FIELD-SYMBOL(<ls_read>).
+      INSERT <ls_read>-row INTO TABLE rt_rows.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_fmon_dao~count_legacy.
+    rt_counts = select_legacy( is_query = is_query iv_count = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD select_legacy.
     DATA lr_rows TYPE REF TO data.
-    DATA ls_raw TYPE zif_cd_fmon_types=>ty_raw_row.
+    DATA ls_raw TYPE zif_cd_fmon_types=>ty_raw_count.
     DATA lt_in TYPE RANGE OF zif_cd_fmon_types=>ty_key_value.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
     FIELD-SYMBOLS <ls_row> TYPE any.
@@ -361,14 +401,27 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
                                   ELSE is_query-in_field ).
 
     TRY.
-        CREATE DATA lr_rows TYPE STANDARD TABLE OF (lv_table).
-        ASSIGN lr_rows->* TO <lt_rows>.
-        SELECT (lv_fields)
-          FROM (lv_table)
-          WHERE (lv_where)
-          ORDER BY (lv_order)
-          INTO CORRESPONDING FIELDS OF TABLE @<lt_rows>
-          UP TO @is_query-max_rows ROWS.
+        IF iv_count = abap_true.
+          " Fix 8: one row per distinct combination of the fields, with the number of rows
+          lr_rows = count_table( iv_table = lv_table is_query = is_query ).
+          ASSIGN lr_rows->* TO <lt_rows>.
+          DATA(lv_select) = lv_fields && gc_count_expression.
+          SELECT (lv_select)
+            FROM (lv_table)
+            WHERE (lv_where)
+            GROUP BY (lv_fields)
+            ORDER BY (lv_fields)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_rows>.
+        ELSE.
+          CREATE DATA lr_rows TYPE STANDARD TABLE OF (lv_table).
+          ASSIGN lr_rows->* TO <lt_rows>.
+          SELECT (lv_fields)
+            FROM (lv_table)
+            WHERE (lv_where)
+            ORDER BY (lv_order)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_rows>
+            UP TO @is_query-max_rows ROWS.
+        ENDIF.
       CATCH cx_sy_create_data_error cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         DATA(lv_text) = lx_sql->get_text( ).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
@@ -379,20 +432,83 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
     LOOP AT <lt_rows> ASSIGNING <ls_row>.
       CLEAR ls_raw.
-      LOOP AT is_query-fields INTO DATA(ls_field).
-        ASSIGN COMPONENT ls_field-field OF STRUCTURE <ls_row> TO <lv_source>.
+      LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+        ASSIGN COMPONENT <ls_field>-field OF STRUCTURE <ls_row> TO <lv_source>.
         IF sy-subrc <> 0.
           CONTINUE.
         ENDIF.
-        ASSIGN COMPONENT ls_field-role OF STRUCTURE ls_raw TO <lv_target>.
+        ASSIGN COMPONENT <ls_field>-role OF STRUCTURE ls_raw-row TO <lv_target>.
         IF sy-subrc <> 0.
           CONTINUE.
         ENDIF.
         " Unformatted text: dates YYYYMMDD, times HHMMSS, numbers with leading sign
         <lv_target> = condense( |{ <lv_source> }| ).
       ENDLOOP.
-      INSERT ls_raw INTO TABLE rt_rows.
+      IF iv_count = abap_true.
+        ASSIGN COMPONENT gc_count_alias OF STRUCTURE <ls_row> TO <lv_source>.
+        IF sy-subrc = 0.
+          ls_raw-row_count = <lv_source>.
+        ENDIF.
+      ENDIF.
+      INSERT ls_raw INTO TABLE rt_counts.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD count_table.
+    DATA lo_descr TYPE REF TO cl_abap_typedescr.
+    DATA lo_struct TYPE REF TO cl_abap_structdescr.
+    DATA lo_type TYPE REF TO cl_abap_datadescr.
+    DATA lt_components TYPE cl_abap_structdescr=>component_table.
+    DATA lt_names TYPE SORTED TABLE OF zif_cd_fmon_types=>ty_fieldname WITH UNIQUE KEY table_line.
+    cl_abap_typedescr=>describe_by_name(
+      EXPORTING
+        p_name         = iv_table
+      RECEIVING
+        p_descr_ref    = lo_descr
+      EXCEPTIONS
+        type_not_found = 1
+        OTHERS         = 2 ).
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e202(zcd_ops) WITH iv_table.
+    ENDIF.
+    TRY.
+        lo_struct ?= lo_descr.
+      CATCH cx_sy_move_cast_error.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e202(zcd_ops) WITH iv_table.
+    ENDTRY.
+    LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+      INSERT <ls_field>-field INTO TABLE lt_names.
+    ENDLOOP.
+    LOOP AT lt_names ASSIGNING FIELD-SYMBOL(<lv_name>).
+      lo_struct->get_component_type(
+        EXPORTING
+          p_name                 = <lv_name>
+        RECEIVING
+          p_descr_ref            = lo_type
+        EXCEPTIONS
+          component_not_found    = 1
+          unsupported_input_type = 2
+          OTHERS                 = 3 ).
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e201(zcd_ops) WITH <lv_name> iv_table.
+      ENDIF.
+      INSERT VALUE #( name = <lv_name> type = lo_type ) INTO TABLE lt_components.
+    ENDLOOP.
+    INSERT VALUE #( name = gc_count_alias type = cl_abap_elemdescr=>get_int8( ) ) INTO TABLE lt_components.
+    TRY.
+        DATA(lo_table) = cl_abap_tabledescr=>create( p_line_type = cl_abap_structdescr=>create( lt_components ) ).
+        CREATE DATA rr_rows TYPE HANDLE lo_table.
+      CATCH cx_sy_struct_creation cx_sy_table_creation cx_sy_create_data_error INTO DATA(lx_type).
+        DATA(lv_text) = lx_type->get_text( ).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e205(zcd_ops) WITH iv_table lv_text
+          EXPORTING
+            previous = lx_type.
+    ENDTRY.
   ENDMETHOD.
 
 

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A04/A49: version-checked save returns conflicts; reference lookup bounded by date.
+*& 2026-11-06 | Performance fix 8: count_legacy - grouped COUNT(*) on the same validated read path (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -113,6 +114,17 @@ INTERFACE zif_cd_fmon_dao
       is_query       TYPE zif_cd_fmon_types=>ty_query
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_fmon_types=>tt_raw_row
+    RAISING
+      zcx_cd_ops_error.
+
+  "! Fix 8: the rows of the same read counted per distinct combination of the query's fields
+  "! (GROUP BY every field, COUNT(*)); same name validation, ZCD_FMON_TABWL approval and
+  "! S_TABU_NAM check as read_legacy. No row cap: one row per group
+  METHODS count_legacy DEFAULT IGNORE
+    IMPORTING
+      is_query         TYPE zif_cd_fmon_types=>ty_query
+    RETURNING
+      VALUE(rt_counts) TYPE zif_cd_fmon_types=>tt_raw_count
     RAISING
       zcx_cd_ops_error.
 

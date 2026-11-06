@@ -13,9 +13,9 @@ ZCL_CD_EBS_SAP_DAO,5,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FEB,11,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,10,90,,Not run in target SAP
-ZCL_CD_FMON_DAO,15,90,,Not run in target SAP
+ZCL_CD_FMON_DAO,17,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,29,90,,Not run in target SAP
-ZCL_CD_FMON_LOT_READER,5,90,,Not run in target SAP
+ZCL_CD_FMON_LOT_READER,7,90,,Not run in target SAP
 ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
