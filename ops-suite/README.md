@@ -10,7 +10,7 @@ Built against `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (repository root) for the
 | Payment engine area | Folder | Delivers | Master prompt |
 |---|---|---|---|
 | **Core** | `src/core` | Result/exception store (ZCD_OPS_RUN / ZCD_OPS_FINDING) with exception carry-forward and auto-resolution on re-run, parameters, configurable alert router (rules, e-mail / application log / HTTP webhook, throttling, quiet hours, escalation, delivery log), authorisation object ZCD_OPS, run lock per payment engine area and variant, retention purge `ZCD_OPS_PURGE`, factory/injector, clock | Shared engine, store, alert router |
-| **EBS validation** | `src/ebs` | BAI2 + CAMT.053/054 parsers, BTC rule engine (C01–X01, R01–R20, S01–S12), zero-suspense blocking, pre-posting decision with kill switch, report `ZCD_EBS_VALIDATE` | Framework 3 |
+| **EBS validation** | `src/ebs` | BAI2 + CAMT.053/054 parsers, BTC rule engine (C01–X01, R01–R19, S01–S12), zero-suspense blocking, pre-posting decision with kill switch, report `ZCD_EBS_VALIDATE` | Framework 3 |
 | **File monitoring** | `src/fmon` | File registry over the existing ZCD_* tables, SAP → PRISM → bank → SAP event chain, SLA / missing / NACK / ack-mismatch checks, returns & NOC completeness, report `ZCD_FMON_MONITOR` | Framework 2 |
 | **Health check & morning report** | `src/hck` | Check engine with categories A–E, baselines and outlier detection, job-cycle monitoring, volume KPIs, health of the health check, report `ZCD_MORNING_REPORT` (ALV + HTML e-mail), analytics CDS for the dashboard | Frameworks 1 and 4 (monitoring), dashboard |
 

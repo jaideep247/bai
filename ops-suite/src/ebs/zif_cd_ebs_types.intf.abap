@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -354,7 +355,6 @@ INTERFACE zif_cd_ebs_types
       not_posted                  TYPE zif_cd_ops_types=>ty_msgno VALUE '155',
       fi_doc_not_found            TYPE zif_cd_ops_types=>ty_msgno VALUE '156',
       fi_doc_not_cleared          TYPE zif_cd_ops_types=>ty_msgno VALUE '157',
-      posted_unexpectedly         TYPE zif_cd_ops_types=>ty_msgno VALUE '158',
       opening_ne_prior_closing    TYPE zif_cd_ops_types=>ty_msgno VALUE '159',
       balance_arithmetic          TYPE zif_cd_ops_types=>ty_msgno VALUE '162',
       declared_totals             TYPE zif_cd_ops_types=>ty_msgno VALUE '163',

@@ -16,10 +16,10 @@
 | ZCL_BAI_168_DISB | DFKKRP+DFKKRK STARS = 5; DPAYH by DOC1R status RETURNED; ZCD_ACH_RTRV_LOG status AF | BAI2 168 / D → `BAI168D` | R04, R07R (5), R07 (RETURNED), R07L (AF) | `r07r_…`, `r07_not_returned_fails`, `r07l_retrieval_not_af_fails` | **Different (D1, D3, D4, D5)** |
 | ZCL_BAI_195_DISB | DPAYH exists by DOC1R | BAI2 195 / D → `BAI195D` | R04, R07 | `r07_missing_payment_fails` | Same (key length D6) |
 | ZCL_BAI_255_DISB | DFKKCR exists by ZTNUM; CRSTATUS ≠ 99 | BAI2 255 / D → `BAI255D` | R04, R07C (PARAM1 99) | `r07c_cancelled_check_fails` | **Different (D1, D6)** |
-| ZCL_BAI_275_DISB | BELNR must be empty | BAI2 275 / D → `BAI275D` | R20 | `r20_posted_line_fails` | **Different (D1)** |
+| ZCL_BAI_275_DISB | BELNR must be empty | **Removed by business decision 2026-11-06**: 275 is mapped as a ZBA sweep (flow `*`, category T02) without code-specific validation | — | `sweep_275_575_not_validated` | **Removed (D14)** |
 | ZCL_BAI_466_DISB | BSEG exists for BELNR/GJAHR (no BUKRS) | BAI2 466 / D → `BAI466D` | R19 | `r19_missing_doc_fails` | **Different (D1, D2)** |
 | ZCL_BAI_468_DISB | ZCD_ACH_RTRV_LOG by AUGBL status AF | BAI2 468 / D → `BAI468D` | R04, R07L (AF) | `r07l_retrieval_not_af_fails` | **Different (D1, D5)** |
-| ZCL_BAI_575_DISB | BELNR must be empty | BAI2 575 / D → `BAI575D` | R20 | `r20_posted_line_fails` | **Different (D1)** |
+| ZCL_BAI_575_DISB | BELNR must be empty | **Removed by business decision 2026-11-06**: 575 is mapped as a ZBA sweep (flow `*`, category T02) without code-specific validation | — | `sweep_275_575_not_validated` | **Removed (D14)** |
 | ZCL_BAI_581_DISB | Per check: DFKKCR exists, RWBTR = KWBTR; whole input: sum and count equal; extra DFKKCR | BAI2 581 / D → `BAI581D` | R04, R08 (tol 0.00), R12 (tol 0.00) | `r08_check_amount_mismatch`, `r08_within_tolerance_passes`, `r12_code_total_mismatch` | **Different (D7)** |
 | *(any code without a validator)* | silently not validated | X01 — no map row | R14 (built in, BLOCK) + S09 | `unmapped_btc_always_blocks`, `unmapped_code_always_blocked` | **Different (D8)** |
 
@@ -40,6 +40,7 @@
 | D11 | Failure-rate stop after 3 chunks > 50 % (hard-coded), alert to a hard-coded fallback address | Same circuit breaker, thresholds in ZCD_OPS_PARAM (`EBS_CB_*`); alerts through ZCD_OPS_ALERT_RULE only, no hard-coded address | Same business rule, now configuration | `circuit_breaker_aborts_run` |
 | D12 | Lookups took the **first** matching row (DPAYH, retrieval log, returns lot, register); legacy read one row too | R07 / R07L / R07R pass when **any** matching record has an allowed status (several runs, retry attempts, several lots — same principle as `ZCD_PAYM_REQ_LOG` SUCCESS); R07C fails when **any** register row is cancelled (fail closed). R12 count = bank entries with at least one register row; total = every register row of those entries | The first row returned by the database is not the business-authoritative record (audit 2026-11-06) | `r07_any_run_with_status_ok`, `r07l_any_af_attempt_passes`, `r07r_any_done_lot_passes`, `r07c_any_cancelled_row_fails` |
 | D13 | Check register matched across house banks when the statement had no house bank | Matched only when every candidate row is in one house bank account; otherwise HOUSE_BANK_AMBIGUOUS (R07C, R08, R12). R18 reports GL_ACCOUNT_NOT_MAPPED instead of skipping | No silent pass; account isolation (audit 2026-11-06) | `r08_unknown_bank_ambiguous`, `r08_unknown_bank_single_ok`, `r18_unmapped_gl_reported` |
+| D14 | 275 / 575 (ZBA sweeps): BELNR must be empty (rule R20 in groups BAI275D / BAI575D) | **No validation** — both codes stay mapped through the sweep rows (category T02, flow `*`), so they are never blocked by R14; groups BAI275D / BAI575D and rule R20 are removed | Business decision 2026-11-06: no need for 275 / 575 validation | `sweep_275_575_not_validated` |
 
 ## 3. Legacy framework defects not carried over (COMPLETE 4 / earlier packs)
 

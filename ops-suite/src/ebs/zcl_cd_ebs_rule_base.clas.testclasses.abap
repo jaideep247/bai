@@ -1,13 +1,14 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ebs_rule_base.clas.testclasses.abap
 *& Purpose:
-*& Tests for every EBS rule class (R01-R20, S01-S12), grouped by test level:
+*& Tests for every EBS rule class (R01-R19, S01-S12), grouped by test level:
 *& LTC_LINE_RULES (domain, no repository), LTC_LOOKUP_RULES (payment engine
 *& reads through LTD_SAP_DAO) and LTC_STMT_RULES (statement checks, LTD_FEB_DAO).
 *& Legacy parity rows (v4 BAI validators) are named in the comments.
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -361,7 +362,6 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS r09_second_identical_entry   FOR TESTING.
     METHODS r10_value_date_out_of_window FOR TESTING.
     METHODS r15_posting_rule_mismatch    FOR TESTING.
-    METHODS r20_posted_line_fails        FOR TESTING.
 ENDCLASS.
 
 
@@ -493,14 +493,6 @@ CLASS ltc_line_rules IMPLEMENTATION.
     assert_one_code( iv_check_code = 'POSTING_RULE_MISMATCH' iv_msg = 'Wrong posting rule must fail R15' ).
   ENDMETHOD.
 
-
-  " R20 (legacy 275/575 BELNR_NOT_EMPTY): this code must not have been posted
-  METHOD r20_posted_line_fails.
-    add_statement( ).
-    add_line( iv_belnr = '1400000001' ).
-    run( iv_class = 'ZCL_CD_EBS_R_R20_NOT_POSTED' is_rule = rule( 'R20' ) ).
-    assert_one_code( iv_check_code = 'POSTED_UNEXPECTEDLY' iv_msg = 'Posted 275/575 line must fail R20' ).
-  ENDMETHOD.
 
 ENDCLASS.
 

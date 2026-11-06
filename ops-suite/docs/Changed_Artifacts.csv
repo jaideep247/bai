@@ -405,8 +405,6 @@ src/ebs/zcl_cd_ebs_r_r18_gl_balance.clas.abap,ABAP,"R18 (statement level, after 
 src/ebs/zcl_cd_ebs_r_r18_gl_balance.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.abap,ABAP,"R19: the FI document of an imported entry (FEBEP-BELNR/GJAHR, company code"
 src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.xml,abapGit,
-src/ebs/zcl_cd_ebs_r_r20_not_posted.clas.abap,ABAP,R20: entries of this group must not carry an FI document (e.g. ZBA sweeps
-src/ebs/zcl_cd_ebs_r_r20_not_posted.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.abap,ABAP,S01: the opening balance must equal the closing balance of the previous
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s02_balance.clas.abap,ABAP,S02: opening + credit entries - debit entries must equal the closing
@@ -432,7 +430,7 @@ src/ebs/zcl_cd_ebs_release_policy.clas.abap,ABAP,"Blocked-line release rules (de
 src/ebs/zcl_cd_ebs_release_policy.clas.testclasses.abap,ABAP,Pure tests of the blocked-line release rules (design 6.2): an approved
 src/ebs/zcl_cd_ebs_release_policy.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_rule_base.clas.abap,ABAP,"Shared helpers for EBS rules: repository access through the factory, key"
-src/ebs/zcl_cd_ebs_rule_base.clas.testclasses.abap,ABAP,"Tests for every EBS rule class (R01-R20, S01-S12), grouped by test level:"
+src/ebs/zcl_cd_ebs_rule_base.clas.testclasses.abap,ABAP,"Tests for every EBS rule class (R01-R19, S01-S12), grouped by test level:"
 src/ebs/zcl_cd_ebs_rule_base.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_sap_dao.clas.abap,ABAP,"SQL for the payment engine lookups of the EBS rules: returns lots, payment"
 src/ebs/zcl_cd_ebs_sap_dao.clas.testclasses.abap,ABAP,OSQL tests of the payment engine read repository: returns lot items are found

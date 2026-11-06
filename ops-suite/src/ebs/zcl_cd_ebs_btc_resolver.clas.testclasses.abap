@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -75,6 +76,7 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS block_action_blocks_noc_line FOR TESTING.
     METHODS group_defaults_to_category   FOR TESTING.
     METHODS statement_gets_account_cfg   FOR TESTING.
+    METHODS sweep_275_575_not_validated  FOR TESTING.
 ENDCLASS.
 
 
@@ -407,6 +409,40 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_stmt-flow_default
                                             exp = zif_cd_ebs_types=>gc_flow-disbursement
                                             msg = 'Statement must take the default flow of its account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Business decision 2026-11-06: 275 / 575 (ZBA sweeps) are not validated. Both codes
+  " stay mapped through the sweep rows (flow *, category T02, no rule group of their own),
+  " so they are never blocked by R14 and get no code-specific rules - for D and C flows
+  METHOD sweep_275_575_not_validated.
+    DATA lt_flows TYPE STANDARD TABLE OF zif_cd_ebs_types=>ty_flow WITH EMPTY KEY.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = '275' iv_category = 'T02' ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = '575' iv_category = 'T02' ).
+        lt_flows = VALUE #( ( zif_cd_ebs_types=>gc_flow-disbursement ) ( zif_cd_ebs_types=>gc_flow-collection ) ).
+        LOOP AT lt_flows INTO DATA(lv_flow).
+          CLEAR: mt_lines, mt_findings.
+          mt_accounts[ 1 ]-flow_default = lv_flow.
+          add_line( iv_code = '275' ).
+          add_line( iv_code = '575' ).
+
+          run_resolver( ).
+
+          cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                               msg = |275/575 flow { lv_flow } must raise no finding (no R14)| ).
+          LOOP AT mt_lines INTO DATA(ls_line).
+            cl_abap_unit_assert=>assert_false( act = ls_line-blocked
+                                               msg = |{ ls_line-btc_code } flow { lv_flow } must not be blocked| ).
+            cl_abap_unit_assert=>assert_equals( act = ls_line-category exp = 'T02'
+                                                msg = |{ ls_line-btc_code } must resolve to the sweep row| ).
+            cl_abap_unit_assert=>assert_equals( act = ls_line-rule_group exp = 'T02'
+                                                msg = |{ ls_line-btc_code } must have no code-specific rule group| ).
+          ENDLOOP.
+        ENDLOOP.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

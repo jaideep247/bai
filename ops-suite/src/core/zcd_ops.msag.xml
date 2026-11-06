@@ -515,12 +515,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>158</MSGNR>
-     <TEXT>&amp;1 must not be posted, found FI document &amp;2</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>159</MSGNR>
      <TEXT>Opening &amp;1 &lt;&gt; prior closing &amp;2</TEXT>
     </T100>

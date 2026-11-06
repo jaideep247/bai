@@ -33,7 +33,7 @@
 | M01/M02 | Miscellaneous credit / debit | PMNT-RCDT/ICDT-ADJT | 399 · 699 | On account — never suspense |
 | X01 | Unmapped code | anything not in the map | anything | **BLOCK + exception** |
 
-Production codes used today (legacy validators, disbursement accounts) keep their own rule groups: 166, 168, 195, 255, 275, 466, 468, 575, 581 (and 166 on collection accounts). See `Legacy_Parity_Comparison.md`.
+Production codes used today (legacy validators, disbursement accounts) keep their own rule groups: 166, 168, 195, 255, 466, 468, 581 (and 166 on collection accounts; 143 on collection accounts like 166, 452 like 468). 275 / 575 (ZBA sweeps) are mapped without code-specific validation (business decision 2026-11-06). See `Legacy_Parity_Comparison.md`.
 
 ### A3. Triage playbook (RAG)
 
@@ -87,7 +87,7 @@ Points of no return: the commit after each package (findings durable) and the al
 |---|---|---|
 | Types | `ZIF_CD_EBS_TYPES` | Format-neutral statement/line model and configuration types |
 | Ports | `ZIF_CD_EBS_PARSER`, `ZIF_CD_EBS_SOURCE`, `ZIF_CD_EBS_RULE`, `ZIF_CD_EBS_CFG_DAO`, `ZIF_CD_EBS_FEB_DAO`, `ZIF_CD_EBS_SAP_DAO` | Strategy and repository interfaces |
-| Domain | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_R_*` (26 rules), `ZCL_CD_EBS_PARSER_BAI2/_CAMT` | No SQL |
+| Domain | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_R_*` (25 rules), `ZCL_CD_EBS_PARSER_BAI2/_CAMT` | No SQL |
 | Repositories | `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` | All SQL |
 | Application | `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB`, `ZCL_CD_EBS_SRC_FILE`, `ZCL_CD_EBS_FACTORY`, `ZCL_CD_EBS_INJECTOR` | Orchestration |
 | Presentation | `ZCD_EBS_VALIDATE` | Selection, ALV, background |
@@ -139,7 +139,6 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | R17 | FMON | ack adapters | Debit matches prior positive ack via PRISM |
 | R18 | S | …_R18_GL_BALANCE | Bank G/L = closing |
 | R19 | L | …_R19_FI_DOCUMENT | FI posting exists / cleared |
-| R20 | L | …_R20_NOT_POSTED | Must not be posted |
 
 ### B5. Parameters (ZCD_OPS_PARAM)
 

@@ -24,4 +24,3 @@ R10,L,ZCL_CD_EBS_R_R10_VALUE_DATE,W,NOTIFY,Value date window (also R13 reversal 
 R12,L,ZCL_CD_EBS_R_R12_CODE_TOTAL,E,EXCEPTION,Settlement total = register / run total,X
 R15,L,ZCL_CD_EBS_R_R15_POSTING_RULE,E,EXCEPTION,Posting rule resolves and matches map,X
 R19,L,ZCL_CD_EBS_R_R19_FI_DOCUMENT,E,EXCEPTION,FI posting exists / cleared,X
-R20,L,ZCL_CD_EBS_R_R20_NOT_POSTED,E,EXCEPTION,Entry must not be posted,X

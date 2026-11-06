@@ -5,7 +5,7 @@
    <VSEOINTERF>
     <CLSNAME>ZIF_CD_EBS_RULE</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>EBS validation - rule strategy (R01-R20, S01-S12)</DESCRIPT>
+    <DESCRIPT>EBS validation - rule strategy (R01-R19, S01-S12)</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>

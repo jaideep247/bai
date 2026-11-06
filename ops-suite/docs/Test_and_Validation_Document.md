@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-455 methods in 47 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+456 methods in 47 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 455 / 455 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 456 / 456 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -119,7 +119,7 @@ Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–
 
 | BAI code / flow | Legacy failures | New findings | Differences explained by | Status |
 |---|---|---|---|---|
-| 166 D / 166 C / 168 D / 195 D / 255 D / 275 D / 466 D / 468 D / 575 D / 581 D | pending | pending | pending | pending |
+| 166 D / 166 C / 143 C / 168 D / 195 D / 255 D / 466 D / 468 D / 452 D / 581 D (275 / 575: sweeps, no validation — D14) | pending | pending | pending | pending |
 
 ## 8. Integration (QA1)
 PRISM file hand-off and ack tables populated by the real interfaces; registry events derived from them in the right order (FMON-01, FMON-05). BCS, SLG1 and SM59 channels (ALR-05 … 07).

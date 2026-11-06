@@ -89,7 +89,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 155 | Entry &1 &2 has no FI document |
 | 156 | FI document &1 &2 &3 not found |
 | 157 | FI document &1 &2 is not cleared |
-| 158 | &1 must not be posted, found FI document &2 |
 | 159 | Opening &1 <> prior closing &2 |
 | 160 | Release is not waiting for approval (status &1) |
 | 161 | Line (object key) and check code are required for a release |

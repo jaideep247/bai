@@ -7,8 +7,9 @@
 *& group being validated. Rules never write and never commit.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">EBS validation - rule strategy (R01-R20, S01-S12)</p>
+"! <p class="shorttext synchronized">EBS validation - rule strategy (R01-R19, S01-S12)</p>
 "! One class per rule, configured in ZCD_EBS_RULE_DEF and assigned to rule
 "! groups in ZCD_BTC_RULE. Statement rules (level S) receive all statements and
 "! lines of a package; line rules (level L) receive only the lines of the rule
