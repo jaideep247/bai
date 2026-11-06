@@ -363,6 +363,8 @@ INTERFACE zif_cd_ebs_types
       alnum    TYPE string VALUE `ALNUM`,
       required TYPE string VALUE `REQUIRED`,
       optional TYPE string VALUE `OPTIONAL`,
+      "! R07L PARAM3: a retrieval passing on PARAM1 also needs a returns-lot entry (A11)
+      lot      TYPE string VALUE `LOT`,
     END OF gc_rule_keyword.
 
   "! Characters of a numeric code (BAI2 type codes are three digits)

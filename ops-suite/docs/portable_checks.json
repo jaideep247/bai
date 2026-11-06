@@ -7,7 +7,7 @@
   "passed": 15,
   "total": 15,
   "abap_files": 223,
-  "declared_unit_methods": 474,
+  "declared_unit_methods": 479,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (1449 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (1450 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {

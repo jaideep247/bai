@@ -8,7 +8,7 @@ ZCL_CD_EBS_PARSER_BAI2,17,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_CAMT,14,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_DAO,1,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_POLICY,7,90,,Not run in target SAP
-ZCL_CD_EBS_RULE_BASE,48,90,,Not run in target SAP
+ZCL_CD_EBS_RULE_BASE,53,90,,Not run in target SAP
 ZCL_CD_EBS_SAP_DAO,3,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FEB,6,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP

@@ -10,6 +10,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A11: 166 disbursement retrieval-log chain (R07L PARAM2 AP, PARAM3 LOT).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -215,6 +216,7 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
         iv_rule_id     TYPE zif_cd_ops_types=>ty_rule_id
         iv_param1      TYPE clike OPTIONAL
         iv_param2      TYPE clike OPTIONAL
+        iv_param3      TYPE clike OPTIONAL
         iv_tolerance   TYPE zif_cd_ops_types=>ty_amount OPTIONAL
         iv_window_days TYPE i OPTIONAL
       RETURNING
@@ -287,6 +289,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
     rs_rule-action      = zif_cd_ops_types=>gc_action-exception.
     rs_rule-param1      = iv_param1.
     rs_rule-param2      = iv_param2.
+    rs_rule-param3      = iv_param3.
     rs_rule-tolerance   = iv_tolerance.
     rs_rule-window_days = iv_window_days.
     rs_rule-active      = abap_true.
@@ -535,6 +538,15 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r19_missing_doc_fails        FOR TESTING.
     METHODS r07_any_run_with_status_ok   FOR TESTING.
     METHODS r07l_any_af_attempt_passes   FOR TESTING.
+    METHODS r07l_ap_passes_without_lot   FOR TESTING.
+    METHODS r07l_af_with_lot_passes      FOR TESTING.
+    METHODS r07l_af_without_lot_fails    FOR TESTING.
+    METHODS r07l_chain_no_retrieval      FOR TESTING.
+    METHODS r07l_chain_other_status      FOR TESTING.
+    METHODS run_166d_chain
+      IMPORTING
+        iv_status TYPE zif_cd_ebs_sap_dao=>ty_retrieval-status OPTIONAL
+        iv_lot    TYPE abap_bool DEFAULT abap_false.
     METHODS r07r_any_done_lot_passes     FOR TESTING.
     METHODS r07c_any_cancelled_row_fails FOR TESTING.
     METHODS r08_unknown_bank_ambiguous   FOR TESTING.
@@ -717,6 +729,87 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL' is_rule = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' ) ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings
                                              msg = 'An AF attempt among several must satisfy R07L' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11 (business decision): 166 disbursement - retrieval-log chain. R07L with PARAM1 AF,
+  " PARAM2 AP (passes alone) and PARAM3 LOT (AF needs a returns-lot entry by SELW1)
+  METHOD run_166d_chain.
+    DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
+    DATA ls_item      TYPE zif_cd_ebs_sap_dao=>ty_return_item.
+    IF iv_status IS NOT INITIAL.
+      ls_retrieval-augbl  = gc_test-docno.
+      ls_retrieval-status = iv_status.
+      INSERT ls_retrieval INTO TABLE mo_sap_dao->mt_retrievals.
+    ENDIF.
+    IF iv_lot = abap_true.
+      ls_item-selw1     = gc_test-docno.
+      ls_item-opbel     = '000000000001'.
+      ls_item-lot_stars = '1'.
+      INSERT ls_item INTO TABLE mo_sap_dao->mt_items.
+    ENDIF.
+    add_statement( ).
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL'
+         is_rule  = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' iv_param2 = 'AP' iv_param3 = 'LOT' ) ).
+  ENDMETHOD.
+
+
+  " A11: retrieval status AP passes on its own - no returns lot needed
+  METHOD r07l_ap_passes_without_lot.
+    TRY.
+        run_166d_chain( iv_status = 'AP' ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AP must pass without a returns lot' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: retrieval status AF plus a returns-lot entry passes
+  METHOD r07l_af_with_lot_passes.
+    TRY.
+        run_166d_chain( iv_status = 'AF' iv_lot = abap_true ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AF with a returns lot must pass' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: AF without a returns-lot entry fails
+  METHOD r07l_af_without_lot_fails.
+    TRY.
+        run_166d_chain( iv_status = 'AF' ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
+                         iv_msg        = 'AF without a returns lot must fail' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: no retrieval at all fails, even when a returns lot exists
+  METHOD r07l_chain_no_retrieval.
+    TRY.
+        run_166d_chain( iv_lot = abap_true ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_not_found
+                         iv_msg        = 'A missing retrieval must fail the chain' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: a retrieval in another status (neither AP nor AF) fails
+  METHOD r07l_chain_other_status.
+    TRY.
+        run_166d_chain( iv_status = 'ER' iv_lot = abap_true ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_status
+                         iv_msg        = 'A retrieval neither AP nor AF must fail the chain' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
