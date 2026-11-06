@@ -1,0 +1,5 @@
+@EndUserText.label: 'PRISM payment requests handled manually'
+@ObjectModel.leadingEntity.name: 'ZC_CD_FMONPRQWA'
+define service ZUI_CD_FMON_PRQ {
+  expose ZC_CD_FmonPrqWa as Handled;
+}

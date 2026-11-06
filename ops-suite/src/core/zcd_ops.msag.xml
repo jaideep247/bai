@@ -263,6 +263,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>230</MSGNR>
+     <TEXT>Stage &amp;1 cannot be set by hand on file &amp;2 (current stage &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>232</MSGNR>
+     <TEXT>PRISM request, handling reference and reason are required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
     </T100>

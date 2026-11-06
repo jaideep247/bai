@@ -1,0 +1,5 @@
+@EndUserText.label: 'Monitored files - manual status'
+@ObjectModel.leadingEntity.name: 'ZC_CD_FMONFILE'
+define service ZUI_CD_FMON_MAN {
+  expose ZC_CD_FmonFile as FmonFile;
+}

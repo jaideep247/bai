@@ -1,0 +1,49 @@
+// UI annotations: Monitored files - manual status
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'File', typeNamePlural: 'Files',
+                  title: { type: #STANDARD, value: 'FileName' },
+                  description: { type: #STANDARD, value: 'IfaceId' } }
+annotate entity ZC_CD_FmonFile with
+{
+  @UI.facet: [ { id: 'File', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'File', position: 10 } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_ACTION, dataAction: 'setManualStatus', label: 'Set status manually' } ]
+  @UI.identification: [ { position: 10 },
+                        { type: #FOR_ACTION, dataAction: 'setManualStatus', label: 'Set status manually' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  IfaceId;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  FileName;
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 40 } ]
+  FileRef;
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Stage;
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Outcome;
+  @UI.identification: [ { position: 70 } ]
+  Direction;
+  @UI.identification: [ { position: 80 } ]
+  UnprocessedCount;
+  @UI.identification: [ { position: 90 } ]
+  RecordCount;
+  @UI.identification: [ { position: 100 } ]
+  ControlTotal;
+  @UI.identification: [ { position: 110 } ]
+  LastEventAt;
+  @UI.identification: [ { position: 120 } ]
+  ChangedBy;
+  @UI.identification: [ { position: 130 } ]
+  ChangedAt;
+  @UI.hidden: true
+  FileId;
+}

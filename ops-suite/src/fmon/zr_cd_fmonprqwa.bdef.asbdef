@@ -1,0 +1,36 @@
+managed implementation in class zbp_r_cd_fmonprqwa unique;
+strict ( 2 );
+
+// PRISM payment request handled manually (design 6.5, record only - no re-send, no re-post):
+// creating the record is the handling; on save the request's open FMON exception is resolved.
+define behavior for ZR_CD_FmonPrqWa alias Handled
+persistent table zcd_fmon_prq_wa
+with additional save
+lock master
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  create;
+  internal update;
+  field ( numbering : managed, readonly ) WaUuid;
+  field ( readonly ) Status, HandledBy, HandledAt, LocalLastChangedAt, LastChangedAt;
+  field ( mandatory : create, readonly : update ) RequestRef, Reference, Reason;
+  field ( readonly : update ) Source;
+
+  determination setHandled on modify { create; }
+  validation validateHandled on save { create; }
+
+  mapping for zcd_fmon_prq_wa
+  {
+    WaUuid             = wa_uuid;
+    RequestRef         = request_ref;
+    Source             = source;
+    Reference          = reference;
+    Reason             = reason;
+    Status             = status;
+    HandledBy          = handled_by;
+    HandledAt          = handled_at;
+    LocalLastChangedAt = local_last_changed_at;
+    LastChangedAt      = last_changed_at;
+  }
+}

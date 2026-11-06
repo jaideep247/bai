@@ -16,6 +16,7 @@ ZCL_CD_FMON_ADAPTER_GENERIC,6,90,,Not run in target SAP
 ZCL_CD_FMON_DAO,6,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,17,90,,Not run in target SAP
 ZCL_CD_FMON_LOT_READER,3,90,,Not run in target SAP
+ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,5,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,35,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,15,90,,Not run in target SAP

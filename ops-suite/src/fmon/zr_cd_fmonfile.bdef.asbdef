@@ -1,0 +1,35 @@
+managed implementation in class zbp_r_cd_fmonfile unique;
+strict ( 2 );
+
+// FMON manual status (design 6.4): a stage is set by hand only where the state machine
+// would move the file itself; the event (source MANUAL, reason, evidence) is written on save.
+define behavior for ZR_CD_FmonFile alias FmonFile
+persistent table zcd_fmon_file
+with additional save
+lock master
+authorization master ( global )
+{
+  internal update;
+  field ( readonly ) FileId, IfaceId, FileRef, Direction, FileName, BusinessDate, Stage, Outcome,
+                     UnprocessedCount, RecordCount, ControlTotal, LastEventAt, ChangedAt, ChangedBy;
+
+  action setManualStatus parameter ZA_CD_FmonManual result [1] $self;
+
+  mapping for zcd_fmon_file
+  {
+    FileId           = file_id;
+    IfaceId          = iface_id;
+    FileRef          = file_ref;
+    Direction        = direction;
+    FileName         = file_name;
+    BusinessDate     = business_date;
+    Stage            = stage;
+    Outcome          = outcome;
+    UnprocessedCount = unprocessed_count;
+    RecordCount      = record_count;
+    ControlTotal     = control_total;
+    LastEventAt      = last_event_at;
+    ChangedAt        = changed_at;
+    ChangedBy        = changed_by;
+  }
+}

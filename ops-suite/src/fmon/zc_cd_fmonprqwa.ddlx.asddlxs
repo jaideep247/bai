@@ -1,0 +1,39 @@
+// UI annotations: PRISM payment requests handled manually
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Handled request', typeNamePlural: 'Handled requests',
+                  title: { type: #STANDARD, value: 'RequestRef' },
+                  description: { type: #STANDARD, value: 'Reference' } }
+annotate entity ZC_CD_FmonPrqWa with
+{
+  @UI.facet: [ { id: 'Handled', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Handled manually', position: 10 } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RequestRef;
+  @UI.lineItem: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Source;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  Reference;
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 40 } ]
+  Reason;
+  @UI.lineItem: [ { position: 50 } ]
+  @UI.identification: [ { position: 50 } ]
+  Status;
+  @UI.lineItem: [ { position: 60 } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  HandledBy;
+  @UI.lineItem: [ { position: 70 } ]
+  @UI.identification: [ { position: 70 } ]
+  HandledAt;
+  @UI.hidden: true
+  WaUuid;
+  @UI.hidden: true
+  LocalLastChangedAt;
+  @UI.hidden: true
+  LastChangedAt;
+}

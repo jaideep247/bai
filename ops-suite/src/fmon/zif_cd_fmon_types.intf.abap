@@ -6,6 +6,7 @@
 *& FMON classes. No logic.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | gc_manual_src_id (design 6.4).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -210,6 +211,8 @@ INTERFACE zif_cd_fmon_types
   CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE'.
   CONSTANTS gc_engine_rule TYPE ty_check_id VALUE 'ENGINE'.
   CONSTANTS gc_lot_src_id TYPE ty_src_id VALUE 'LOT'.
+  "! Source of events set by hand in the manual-status app (design 6.4)
+  CONSTANTS gc_manual_src_id TYPE ty_src_id VALUE 'MANUAL'.
   "! Token in a done-value list that stands for an initial status
   CONSTANTS gc_blank_token TYPE string VALUE `<BLANK>`.
 

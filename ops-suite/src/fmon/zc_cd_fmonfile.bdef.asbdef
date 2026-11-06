@@ -1,0 +1,7 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CD_FmonFile alias FmonFile
+{
+  use action setManualStatus;
+}

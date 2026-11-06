@@ -1,0 +1,8 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CD_FmonPrqWa alias Handled
+use etag
+{
+  use create;
+}

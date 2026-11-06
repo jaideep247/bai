@@ -47,6 +47,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 209 | Read of table &1 has no date or key restriction |
 | 211 | File ID could not be generated |
 | 220 | File monitoring &1: &2 file(s), &3 finding(s), RAG &4 |
+| 230 | Stage &1 cannot be set by hand on file &2 (current stage &3) |
+| 232 | PRISM request, handling reference and reason are required |
 | 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
 | 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
