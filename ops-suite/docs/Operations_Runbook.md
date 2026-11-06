@@ -48,6 +48,17 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 All three reports are re-runnable: EBS and HCK create a new run; FMON registry events are idempotent (same source row, same stage = one event). Use test mode to check a fix before a productive re-run.
 
+## 5b. Statuses introduced by the audit fixes
+
+| Where | Status / finding | Meaning | Action |
+|---|---|---|---|
+| Run header | **N** (no data) | The source delivered nothing to evaluate; RAG grey, never green | Check the FEB date range or the file path; if an empty feed is normal for that variant set `EBS_EMPTY_FEED_OK` |
+| EBS line | AWAITING_LOT_TRANSFER (warning) | Lookup not found while the statement is younger than `EBS_INFLIGHT_HOURS` — FPB7 / FP09 may still be running | None if it clears on the next run; otherwise investigate the lot transfer |
+| EBS line | Disposition NOT_POSTED / ON_ACCOUNT / EXCEPTION / BLOCK | What the posting caller must do with the line | Follow the disposition; BLOCK lines need a release (EBS release app) or a fix |
+| FMON file | PERSIST_CONFLICT | Another run (or a manual status) changed the file first; the newer state was kept | None unless it repeats |
+| FMON file | LOT_SCAN_TRUNCATED / FILE_REF_AMBIGUOUS / MALFORMED_SOURCE_ROW | Completeness or identity could not be proven | Investigate the lot / source rows; nothing is marked complete meanwhile |
+| Alert log | C older than its run | Delivery was interrupted (dump) | Re-send, then set to F |
+
 ## 5a. Housekeeping
 
 `ZCD_OPS_PURGE` (monthly, Control-M, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060).

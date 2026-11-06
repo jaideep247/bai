@@ -40,6 +40,18 @@ Follow `RAP_Config_Apps.md` §6: confirm the VERIFY-ADT items (business-configur
 
 Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on the history association, `READ ENTITIES` in `save_modified`, `RAISE SHORTDUMP`), activate tables → abstract entities `ZA_CD_*` → `ZR_` / `ZC_` views → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions, then create and publish `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_EBS_REL_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`. Approver roles (ZCD_OPS 85) go only to users who do not request (segregation of duties).
 
+## Step 1c — Phase 6 prerequisites (audit fixes)
+
+| # | Item | Done when |
+|---|---|---|
+| 1c.1 | SE11 → Indexes on the 11 indexed tables (17 indexes, now generated in the abapGit TABL XML from `// @index` markers): ZCD_FMON_FILE REF/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALERT_LOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
+| 1c.2 | `ZCD_FMON_TABWL` maintained for every table in ZCD_FMON_SRC / ZCD_FMON_LOTCFG (seed list `config/fmon_seed.md`) | Without it every legacy read is refused (PLUGIN_ERROR, message 244) |
+| 1c.3 | Role with `S_TABU_NAM` ACTVT 03 for those tables: batch user and online monitor users | No message 245 in a test run |
+| 1c.4 | Parameters in ZCD_OPS_PARAM: `FMON_AGE_BASIS` (default A), `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_REASON_FIELD`, `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS` (`config/alert_seed.md`, `Audit_Response_EBS.md`) | Values confirmed with the process owner; VERIFY-DDIC field names checked in SE11 |
+| 1c.5 | Seeds: ZCD_EBS_RULE_DEF (BLOCKS_POSTING, R21, R22), ZCD_BTC_RULE (BLOCKS_POSTING overrides, 166D retrieval-log chain, `*` R22), ZCD_BTC_MAP (DISPOSITION, one canonical wildcard) | Resolver load shows no configuration findings |
+| 1c.6 | HCK baselines retaken once after transport (drift hash version 2) | No drift finding caused by the version change |
+| 1c.7 | Launchpad target mappings `ZCDBankStatement-reprocess` → FEBAN and `ZCDPaymentLot-clarify` → FPCPL in the operations catalog | Navigation buttons open the standard transactions |
+
 ## Step 2 — Classes, in dependency order (activate each group together)
 
 | Group | Objects |

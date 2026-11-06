@@ -64,3 +64,114 @@ Second review, this time of `ops-suite` itself (engines and FMON DAO). Each find
 | — | R09 misses duplicates split across packages | **Not confirmed**: a package holds whole statements (`ZCL_CD_EBS_SRC_FEB`, N statements per package) and the duplicate key contains the statement; a statement delivered twice is S07 | No change | `r09_second_identical_entry`, `s07_already_imported_fails` (existing) |
 
 **Verification:** abaplint 0 issues; ATC-equivalent set: 2 documented exemptions; portable checks 13/13; 363 test methods on this branch before the phase 2 merge. Not executed in SAP.
+
+
+---
+
+# Part D — static repository audit A01–A99 (consolidated index)
+
+The audit reviewed `main` at `8cdfdce`; all fixes below are on branch `claude/loving-albattani-qexsjc` (phase 6 merged 2026-11-06) and were taken to `main` afterwards. Per-finding verdict, fix, tests and residual risk: `Audit_Response_EBS.md`, `Audit_Response_FMON.md`, `Audit_Response_HCK_CORE.md`. Business decisions: `RAP_Apps_Design.md` (D-1…D-6) and `Release_Readiness.md` §3. Nothing here has been executed in SAP — gates in `Release_Readiness.md`.
+
+| Finding | Status |
+|---|---|
+| A01 | Fixed: CI pinned to abaplint 2.120.92, report parameter typed (e9cc7ac); the divisor finding was a false positive of abaplint 2.120.19 |
+| A02 | Open — needs the SE18 signature of FIEB_CHANGE_BS_DATA; contract (dispositions, kill-switch diagnostic, caller owns the LUW) documented in Release_Readiness.md |
+| A03 | Fixed — see Audit_Response_EBS.md |
+| A04 | Fixed — see Audit_Response_FMON.md |
+| A05 | Fixed — see Audit_Response_FMON.md |
+| A06 | Fixed — see Audit_Response_HCK_CORE.md |
+| A07 | Fixed — see Audit_Response_EBS.md |
+| A08 | Fixed — see Audit_Response_EBS.md |
+| A09 | Fixed: any productive run with an allowed status passes, all statuses reported (d79e084) |
+| A10 | Fixed: any matching record with an allowed status passes (d79e084) |
+| A11 | Fixed — see Audit_Response_EBS.md |
+| A12 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A13 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A14 | Fixed — see Audit_Response_EBS.md |
+| A15 | Fixed: nearest predecessor by date and number; canonical account key in phase 6 (ac9cefb, A25) |
+| A16 | Fixed: GL_ACCOUNT_NOT_MAPPED (d79e084); company/house-bank identity via A25 |
+| A17 | Fixed — see Audit_Response_HCK_CORE.md |
+| A18 | Fixed — see Audit_Response_HCK_CORE.md |
+| A19 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A20 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A21 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A22 | Fixed: ZCD_OPS authorisation (activity 16 per payment engine area) in all reports (phase 1, 463e88e) |
+| A23 | Fixed: retention purge (phase 1) and exception app with four-eyes waivers (phase 3); retention decision 400 days |
+| A24 | Fixed: ATC step requires exit 0/1, summary line, files and matching count (e9cc7ac) |
+| A25 | Fixed — see Audit_Response_EBS.md |
+| A26 | Fixed — see Audit_Response_EBS.md |
+| A27 | Fixed — see Audit_Response_EBS.md |
+| A28 | Fixed — see Audit_Response_EBS.md |
+| A29 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A30 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A31 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A32 | Fixed — see Audit_Response_EBS.md |
+| A33 | Fixed — see Audit_Response_EBS.md |
+| A34 | Fixed — see Audit_Response_EBS.md |
+| A35 | Fixed — see Audit_Response_EBS.md |
+| A36 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A37 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A38 | Fixed — see Audit_Response_FMON.md |
+| A39 | Fixed — see Audit_Response_FMON.md |
+| A40 | Fixed — see Audit_Response_FMON.md |
+| A41 | Fixed — see Audit_Response_FMON.md |
+| A42 | Fixed — see Audit_Response_HCK_CORE.md |
+| A43 | Fixed — see Audit_Response_HCK_CORE.md |
+| A44 | Fixed — see Audit_Response_HCK_CORE.md |
+| A45 | Fixed — see Audit_Response_HCK_CORE.md |
+| A46 | Fixed — see Audit_Response_HCK_CORE.md |
+| A47 | Fixed — see Audit_Response_HCK_CORE.md |
+| A48 | Fixed — see Audit_Response_HCK_CORE.md |
+| A49 | Fixed — see Audit_Response_FMON.md |
+| A50 | Fixed — see Audit_Response_FMON.md |
+| A51 | Fixed — see Audit_Response_FMON.md |
+| A52 | Fixed — see Audit_Response_FMON.md |
+| A53 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A54 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A55 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A56 | Fixed — see Audit_Response_HCK_CORE.md |
+| A57 | Fixed — see Audit_Response_HCK_CORE.md |
+| A58 | Fixed — see Audit_Response_HCK_CORE.md |
+| A59 | Fixed — see Audit_Response_HCK_CORE.md |
+| A60 | Fixed — see Audit_Response_HCK_CORE.md |
+| A61 | Fixed — see Audit_Response_HCK_CORE.md |
+| A62 | Fixed — see Audit_Response_EBS.md |
+| A63 | Fixed — see Audit_Response_HCK_CORE.md |
+| A64 | Fixed — see Audit_Response_EBS.md |
+| A65 | Fixed — see Audit_Response_EBS.md |
+| A66 | Fixed — see Audit_Response_EBS.md |
+| A67 | Fixed — see Audit_Response_EBS.md |
+| A68 | Fixed — see Audit_Response_EBS.md |
+| A69 | Fixed — see Audit_Response_EBS.md |
+| A70 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A71 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A72 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A73 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A74 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A75 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A76 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A77 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A78 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A79 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A80 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A81 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A82 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A83 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A84 | Not deployed (legacy / jaideep247/src reference) — recorded in Legacy_Parity_Comparison; used only as comparison baseline |
+| A85 | Fixed — see Audit_Response_EBS.md |
+| A86 | Fixed — see Audit_Response_EBS.md |
+| A87 | Fixed — see Audit_Response_HCK_CORE.md |
+| A88 | Fixed — see Audit_Response_HCK_CORE.md |
+| A89 | Fixed — see Audit_Response_FMON.md |
+| A90 | Fixed — see Audit_Response_FMON.md |
+| A91 | Fixed — see Audit_Response_EBS.md |
+| A92 | Fixed — see Audit_Response_EBS.md |
+| A93 | Fixed — see Audit_Response_EBS.md |
+| A94 | Fixed — see Audit_Response_EBS.md |
+| A95 | Fixed — see Audit_Response_EBS.md |
+| A96 | Fixed — see Audit_Response_EBS.md |
+| A97 | Fixed — see Audit_Response_EBS.md |
+| A98 | Fixed — see Audit_Response_EBS.md |
+| A99 | Fixed: BCS result checked (A45); status S documented as submitted, SOST for delivery (3c7049b) |
+
+**Verification (offline):** abaplint 2.120.92 (`v758` = S/4HANA 2023) 0 issues; ATC-equivalent rule set: 3 documented exemptions (`ATC_Validation.md` §4); portable checks 15/15; generator fixture tests OK; 648 ABAP Unit test methods declared (not executed); CI green on every push.

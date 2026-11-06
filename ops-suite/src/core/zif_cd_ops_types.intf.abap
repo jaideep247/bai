@@ -13,6 +13,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Alert claim / repeat / partial statuses, intent key, SLG1 external ID, escalation override (A17, A45, A46).
 *& 2026-11-06 | Plug-in interface names for the factory interface check (audit A62).
+*& 2026-11-06 | Run status NO_DATA (N) for runs without input (audit A68).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -118,6 +119,8 @@ INTERFACE zif_cd_ops_types
       warning TYPE ty_run_status VALUE 'W',
       error   TYPE ty_run_status VALUE 'E',
       aborted TYPE ty_run_status VALUE 'A',
+      "! Completed, but the source delivered nothing to evaluate (audit A68) - RAG grey, never green
+      no_data TYPE ty_run_status VALUE 'N',
     END OF gc_run_status.
 
   "! Action taken for a finding (master prompt: ZCD_BTC_RULE-ACTION)

@@ -6,6 +6,7 @@
 *& doubles are written into its private slots by ZCL_CD_FMON_INJECTOR.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Adapter and check plug-ins created with the core interface check (audit A62).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - factory</p>
 "! Getters have no side effects and never read the database.
@@ -99,23 +100,28 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
                            ELSE NEW zcl_cd_fmon_adapter_generic( ) ).
       RETURN.
     ENDIF.
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin( iv_class_name ).
+    " A62: the core factory checks the interface by RTTI before CREATE OBJECT
+    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin(
+                        iv_class_name = iv_class_name
+                        iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-adapter ).
     TRY.
         ro_adapter ?= lo_object.
       CATCH cx_sy_move_cast_error.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH iv_class_name 'ZIF_CD_FMON_ADAPTER'.
+          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-adapter.
     ENDTRY.
   ENDMETHOD.
 
 
   METHOD get_check.
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin( iv_class_name ).
+    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin(
+                        iv_class_name = iv_class_name
+                        iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-check ).
     TRY.
         ro_check ?= lo_object.
       CATCH cx_sy_move_cast_error.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH iv_class_name 'ZIF_CD_FMON_CHECK'.
+          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-check.
     ENDTRY.
   ENDMETHOD.
 

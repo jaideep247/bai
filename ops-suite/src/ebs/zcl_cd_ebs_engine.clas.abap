@@ -25,6 +25,7 @@
 *& 2026-11-06 | In-flight grace: AWAITING_LOT_TRANSFER lines are EXCEPTION in the posting disposition.
 *& 2026-11-06 | Audit A62/A64: rule plug-ins created with interface check; parameter snapshot refreshed per posting check.
 *& 2026-11-06 | Audit A91: kill switch read failure / missing / invalid value -> MONITOR with KILL_SWITCH_FALLBACK diagnostic.
+*& 2026-11-06 | NO_DATA status taken from the core run-status constants.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -53,7 +54,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
 
     "! A68: run status of a run that selected no statement (RAG grey). The core run status
     "! list has no such value yet - merge note in docs/Audit_Response_EBS.md
-    CONSTANTS gc_status_no_data TYPE zif_cd_ops_types=>ty_run_status VALUE 'N'.
+    CONSTANTS gc_status_no_data TYPE zif_cd_ops_types=>ty_run_status VALUE zif_cd_ops_types=>gc_run_status-no_data.
 
     TYPES:
       BEGIN OF ty_result,
