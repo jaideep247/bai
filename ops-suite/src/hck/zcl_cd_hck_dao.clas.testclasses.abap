@@ -36,6 +36,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
 
     METHODS history_newest_first_capped FOR TESTING.
     METHODS history_only_same_dimension FOR TESTING.
+    METHODS history_only_same_dim2 FOR TESTING.
     METHODS saved_metric_is_read_back FOR TESTING.
     METHODS metric_kind_and_weight_saved FOR TESTING.
     METHODS overdue_open_and_assigned FOR TESTING.
@@ -55,7 +56,8 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
         iv_dim1     TYPE zif_cd_hck_types=>ty_dim
         iv_value    TYPE zif_cd_hck_types=>ty_value
         iv_at       TYPE timestampl
-        iv_status   TYPE zif_cd_ops_types=>ty_run_status DEFAULT zif_cd_ops_types=>gc_run_status-success.
+        iv_status   TYPE zif_cd_ops_types=>ty_run_status DEFAULT zif_cd_ops_types=>gc_run_status-success
+        iv_dim2     TYPE zif_cd_hck_types=>ty_dim OPTIONAL.
 
     "! Metric rows and the run headers they belong to
     METHODS insert_history.
@@ -107,6 +109,7 @@ CLASS ltc_dao IMPLEMENTATION.
     ls_row-check_id    = gc_check.
     ls_row-metric      = gc_metric.
     ls_row-dim1        = iv_dim1.
+    ls_row-dim2        = iv_dim2.
     ls_row-value       = iv_value.
     ls_row-measured_at = iv_at.
     INSERT ls_row INTO TABLE mt_metrics.
@@ -182,6 +185,33 @@ CLASS ltc_dao IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
+
+  " Audit A101: history is read at the persisted grain - two series sharing DIM1 with a
+  " different DIM2 (e.g. company code / source) never mix their baselines
+  METHOD history_only_same_dim2.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_dim2 = 'US01' iv_value = 10 iv_at = '20261102070000.0000000' ).
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_dim2 = 'US02' iv_value = 900 iv_at = '20261102070000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_dim2 = 'US01' iv_value = 12 iv_at = '20261103070000.0000000' ).
+        insert_history( ).
+        lv_value = 12.
+        INSERT lv_value INTO TABLE lt_exp.
+        lv_value = 10.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_dim2     = 'US01'
+                                                                              iv_max_rows = 8 )
+                                            exp = lt_exp
+                                            msg = 'Only the US01 series, one point per run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
 
 
   " Rule: saved metrics become history (round trip through ZCD_HCK_METRIC)

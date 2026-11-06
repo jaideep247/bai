@@ -10,6 +10,7 @@
 *& 2026-11-06 | get_metric_history by distinct completed runs with as-of bound (audit A58).
 *& 2026-11-06 | get_unresolved_jobs; job runs carry program/variant (audit A42, A44).
 *& 2026-11-06 | G/L transfer gaps per company code and reference type; total count (audit A43).
+*& 2026-11-06 | get_metric_history at the persisted grain incl. DIM2 (audit A101).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -75,6 +76,8 @@ INTERFACE zif_cd_hck_dao
       iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
       iv_metric        TYPE zif_cd_hck_types=>ty_metric_name
       iv_dim1          TYPE zif_cd_hck_types=>ty_dim
+      "! Second dimension of the series (audit A101: history at the persisted grain)
+      iv_dim2          TYPE zif_cd_hck_types=>ty_dim OPTIONAL
       iv_max_rows      TYPE i
       iv_as_of         TYPE timestampl OPTIONAL
     RETURNING

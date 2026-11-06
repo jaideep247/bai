@@ -18,6 +18,6 @@ define table zcd_hck_metric {
   weight        : abap.dec(31,4);
 }
 // Secondary index HST: baseline history; TIM: dashboard trend, archiving / deletion
-// @index HST: MANDT, CHECK_ID, METRIC, DIM1, MEASURED_AT
+// @index HST: MANDT, CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT
 // @index TIM: MANDT, MEASURED_AT
 // Retention: delete rows older than ZCD_OPS_PARAM HCK_METRIC_KEEP_DAYS (housekeeping job, later phase).

@@ -16,6 +16,7 @@
 *& 2026-11-06 | Aggregate and value queries rebuilt and re-validated at the SQL boundary (audit A56).
 *& 2026-11-06 | Drift hash over canonical typed fields, version 2; cursor closed on all paths (audit A57).
 *& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
+*& 2026-11-06 | Baseline history filtered by DIM2 as well (audit A101).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -200,14 +201,16 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA lv_as_of TYPE timestampl.
     CHECK iv_max_rows > 0.
     lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
-    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, MEASURED_AT. Several points of one
-    " run (job instances, backfilled days) count as one run: its latest point (A58)
+    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT. One series = the
+    " persisted grain incl. DIM2 (A101); several points of one run (job instances, backfilled
+    " days) count as one run: its latest point (A58)
     SELECT m~run_id, m~value
       FROM zcd_hck_metric AS m
         INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
       WHERE m~check_id    = @iv_check_id
         AND m~metric      = @iv_metric
         AND m~dim1        = @iv_dim1
+        AND m~dim2        = @iv_dim2
         AND m~measured_at <= @lv_as_of
         AND r~test_mode   = @abap_false
         AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,

@@ -18,6 +18,7 @@
 *& 2026-11-06 | Check interface verified by the factory before instantiation (audit A62).
 *& 2026-11-06 | Baseline refreshes the parameter snapshot; runs get it from start_run (audit A64).
 *& 2026-11-06 | Metric kind and weight passed to the history (audit A88).
+*& 2026-11-06 | Baseline history requested per series incl. DIM2 (audit A101).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -504,6 +505,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
           iv_check_id = cs_result-check_id
           iv_metric   = ls_metric-metric
           iv_dim1     = ls_metric-dim1
+          iv_dim2     = ls_metric-dim2
           iv_max_rows = COND #( WHEN ls_threshold-lookback_runs > 0 THEN ls_threshold-lookback_runs
                                 ELSE lv_default_lookback )
           iv_as_of    = mv_as_of ).

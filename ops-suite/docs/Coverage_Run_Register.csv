@@ -25,7 +25,7 @@ ZCL_CD_HCK_AGG_QUERY,12,90,,Not run in target SAP
 ZCL_CD_HCK_BUDGET,3,90,,Not run in target SAP
 ZCL_CD_HCK_CANONICAL,3,90,,Not run in target SAP
 ZCL_CD_HCK_CYCLE_EVAL,14,90,,Not run in target SAP
-ZCL_CD_HCK_DAO,14,90,,Not run in target SAP
+ZCL_CD_HCK_DAO,15,90,,Not run in target SAP
 ZCL_CD_HCK_ENGINE,19,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,3,90,,Not run in target SAP
 ZCL_CD_HCK_PARAM,3,90,,Not run in target SAP
