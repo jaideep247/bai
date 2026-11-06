@@ -25,6 +25,7 @@
 *& 2026-11-06 | Audit A91: kill switch fallback check code and message.
 *& 2026-11-06 | Audit A98: MAP_CONFLICT check code and message.
 *& 2026-11-06 | Audit A96: message FUNDS_LAYOUT.
+*& 2026-11-06 | Audit A92-A94: CAMT entry status on the line; messages 536-540.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -202,6 +203,8 @@ INTERFACE zif_cd_ebs_types
       not_posted    TYPE abap_bool,
       "! A85: action of the map row (AUTO_POST / EXCEPTION / ON_ACCOUNT / BLOCK)
       map_action    TYPE zif_cd_ops_types=>ty_action,
+      "! A93: CAMT entry status (Ntry/Sts or Ntry/Sts/Cd); only BOOK entries become lines
+      entry_status  TYPE c LENGTH 4,
     END OF ty_line.
   "! A35: secondary key STMT - statement rules read their statement's lines by key
   TYPES tt_line TYPE STANDARD TABLE OF ty_line WITH EMPTY KEY
@@ -656,6 +659,11 @@ INTERFACE zif_cd_ebs_types
       kill_switch_fallback        TYPE zif_cd_ops_types=>ty_msgno VALUE '533',
       map_conflict                TYPE zif_cd_ops_types=>ty_msgno VALUE '534',
       funds_layout                TYPE zif_cd_ops_types=>ty_msgno VALUE '535',
+      camt_document               TYPE zif_cd_ops_types=>ty_msgno VALUE '536',
+      invalid_count               TYPE zif_cd_ops_types=>ty_msgno VALUE '537',
+      entry_not_booked            TYPE zif_cd_ops_types=>ty_msgno VALUE '538',
+      batch_mismatch              TYPE zif_cd_ops_types=>ty_msgno VALUE '539',
+      batch_detail_amount         TYPE zif_cd_ops_types=>ty_msgno VALUE '540',
     END OF gc_msg.
 
 ENDINTERFACE.

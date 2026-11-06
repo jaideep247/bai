@@ -1856,6 +1856,36 @@
      <MSGNR>535</MSGNR>
      <TEXT>Entry type &amp;1 in line &amp;2: funds-type layout invalid (&amp;3) - entry not read</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>536</MSGNR>
+     <TEXT>CAMT document &amp;1: &amp;2 &amp;3 not accepted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>537</MSGNR>
+     <TEXT>Element &amp;1: '&amp;2' is not a count</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>538</MSGNR>
+     <TEXT>Entry &amp;1 (&amp;2 &amp;3) has status '&amp;4' - not booked, not posted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>539</MSGNR>
+     <TEXT>Entry &amp;1: transaction details &amp;2 do not reconcile to the entry &amp;3 (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>540</MSGNR>
+     <TEXT>Entry &amp;1: a transaction detail has no amount - the batch stays one entry </TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

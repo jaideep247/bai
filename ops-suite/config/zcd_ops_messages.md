@@ -314,3 +314,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 533 | Kill switch &1: &2 - validation mode M (monitor) used |
 | 534 | ZCD_BTC_MAP rows for &1 &2 bank &3 flow &4 contradict each other (blank flow = *) |
 | 535 | Entry type &1 in line &2: funds-type layout invalid (&3) - entry not read |
+| 536 | CAMT document &1: &2 &3 not accepted |
+| 537 | Element &1: '&2' is not a count |
+| 538 | Entry &1 (&2 &3) has status '&4' - not booked, not posted |
+| 539 | Entry &1: transaction details &2 do not reconcile to the entry &3 (&4) |
+| 540 | Entry &1: a transaction detail has no amount - the batch stays one entry line |

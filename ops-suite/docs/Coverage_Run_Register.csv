@@ -5,7 +5,7 @@ ZCL_CD_EBS_ENGINE,49,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,4,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_BAI2,27,90,,Not run in target SAP
-ZCL_CD_EBS_PARSER_CAMT,14,90,,Not run in target SAP
+ZCL_CD_EBS_PARSER_CAMT,24,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_DAO,1,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_POLICY,7,90,,Not run in target SAP
 ZCL_CD_EBS_RULE_BASE,83,90,,Not run in target SAP
