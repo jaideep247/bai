@@ -653,6 +653,7 @@ src/fmon/zcl_cd_fmon_adapter_generic.clas.abap,ABAP,Generic legacy source adapte
 src/fmon/zcl_cd_fmon_adapter_generic.clas.testclasses.abap,ABAP,ltc_mapping: pure tests (no doubles) of legacy row -> status record.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_prism.clas.abap,ABAP,Source adapter of ZCD_FMON_PRISM (PRISM status API) for the ZCD_FMON_SRC
+src/fmon/zcl_cd_fmon_adapter_prism.clas.testclasses.abap,ABAP,Unit tests of the PRISM source adapter with an LTD_* PRISM DAO: configured
 src/fmon/zcl_cd_fmon_adapter_prism.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function payment engine areas
 src/fmon/zcl_cd_fmon_calendar.clas.xml,abapGit,
@@ -669,8 +670,10 @@ src/fmon/zcl_cd_fmon_chk_missing.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_noc_aging.clas.abap,ABAP,"Plug-in check NOC_AGING (compliance, severity from config, E) when a"
 src/fmon/zcl_cd_fmon_chk_noc_aging.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_prism_file.clas.abap,ABAP,Plug-in check: PRISM evidence (PRISM status API) that SAP's own evidence
+src/fmon/zcl_cd_fmon_chk_prism_file.clas.testclasses.abap,ABAP,Pure unit tests of the check of PRISM evidence SAP does not confirm
 src/fmon/zcl_cd_fmon_chk_prism_file.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_reject.clas.abap,ABAP,Plug-in check NACK (bank rejected the file or payments of it) and
+src/fmon/zcl_cd_fmon_chk_reject.clas.testclasses.abap,ABAP,Pure unit tests of the reject check: parameter OUTCOME=PRISM_FAILED reports
 src/fmon/zcl_cd_fmon_chk_reject.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_size.clas.abap,ABAP,Plug-in check ZERO_BYTE / SIZE_OUT_OF_BOUNDS against MIN_BYTES and
 src/fmon/zcl_cd_fmon_chk_size.clas.xml,abapGit,
@@ -711,6 +714,7 @@ src/fmon/zcl_cd_fmon_prism_http.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_op.clas.abap,ABAP,"bgPF operation (transactional, uncontrolled - the FMON store commits itself)"
 src/fmon/zcl_cd_fmon_prism_op.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_proc.clas.abap,ABAP,Instant processing of one stored PRISM event (body of the bgPF unit): read
+src/fmon/zcl_cd_fmon_prism_proc.clas.testclasses.abap,ABAP,Application tests of the instant PRISM unit through the real FMON engine
 src/fmon/zcl_cd_fmon_prism_proc.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_queue.clas.abap,ABAP,bgPF implementation of ZIF_CD_FMON_PRISM_QUEUE: one background process per
 src/fmon/zcl_cd_fmon_prism_queue.clas.xml,abapGit,

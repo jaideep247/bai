@@ -9,7 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-06 | Parameter OUTCOME=PRISM_FAILED for the PRISM status API (check row F_PRISMFAIL);
+*& 2026-11-06 | Parameter OUTCOME=PRISM_FAILED for the PRISM status API (check row F_PRFAIL);
 *&              without the parameter the behaviour is unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - bank NACK / failed inbound file</p>

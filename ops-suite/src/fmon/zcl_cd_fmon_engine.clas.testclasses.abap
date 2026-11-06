@@ -12,6 +12,8 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Audit A04/A05/A38-A41/A49/A52: conflicts, SQL error, file instances by date,
 *&              payment ACK dedupe, truncated lots, calendar failure, malformed rows.
+*& 2026-11-06 | PRISM status API (5-minute run): PRISM events become stages between SAP's
+*&              own; an outbound file only PRISM reported surfaces as PRISM_UNKNOWN_FILE.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -330,6 +332,8 @@ CLASS ltc_engine DEFINITION FINAL
     CONSTANTS gc_src_out TYPE zif_cd_fmon_types=>ty_src_id VALUE 'REGUT'.
     CONSTANTS gc_src_ack TYPE zif_cd_fmon_types=>ty_src_id VALUE 'ACHACK'.
     CONSTANTS gc_src_in TYPE zif_cd_fmon_types=>ty_src_id VALUE 'RTRV'.
+    CONSTANTS gc_src_prism TYPE zif_cd_fmon_types=>ty_src_id VALUE 'PRISM'.
+    CONSTANTS gc_prism_only TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_PNC_20261102_99'.
     CONSTANTS gc_fail_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_FAILING_CHECK'.
     CONSTANTS gc_lot_check TYPE zif_cd_fmon_types=>ty_check_id VALUE 'C_LOT'.
 
@@ -441,6 +445,11 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS calendar_failure_no_aging FOR TESTING.
     METHODS malformed_row_quarantined FOR TESTING.
     METHODS source_full_event_is_capped FOR TESTING.
+    METHODS prism_events_become_stages FOR TESTING.
+    METHODS prism_only_file_surfaces FOR TESTING.
+
+    "! The PRISM source as the 5-minute run reads it (generic records via LTD adapter)
+    METHODS add_prism_source.
 
 ENDCLASS.
 
@@ -1209,6 +1218,62 @@ CLASS ltc_engine IMPLEMENTATION.
           msg = 'A source FULLY of a lot-controlled file must not be stored as FULLY' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD add_prism_source.
+    DATA ls_src TYPE zif_cd_fmon_types=>ty_src.
+    ls_src-src_id        = gc_src_prism.
+    ls_src-active        = abap_true.
+    ls_src-adapter_class = space.
+    INSERT ls_src INTO TABLE mo_dao->mt_srcs.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API, batch path): PRISM_RECEIVED / PRISM_DELIVERED rows of the PRISM source are
+  " applied in event-time order between SENT_TO_PRISM and the bank ACK and stored as events.
+  METHOD prism_events_become_stages.
+    TRY.
+        configure_scenario( VALUE #( outbound = abap_true ) ).
+        add_prism_source( ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_out_file
+                    iv_stage = zif_cd_fmon_types=>gc_stage-prism_received iv_at = '20261102044500' ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_out_file
+                    iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered iv_at = '20261102045000' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
+                                            exp = zif_cd_fmon_types=>gc_stage-ack
+                                            msg = 'The file still ends ACK_RECEIVED' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lines( VALUE zif_cd_fmon_types=>tt_event( FOR ls_event IN mo_dao->mt_events
+                                                          WHERE ( src_id = gc_src_prism ) ( ls_event ) ) )
+          exp = 2
+          msg = 'Both PRISM milestones must be stored as events' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-unmapped_status ] ) )
+          msg = 'PRISM stages fit the outbound direction' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API, unknown file never vanishes): an outbound file PRISM reported but SAP never
+  " generated is opened by the 5-minute run and reported PRISM_UNKNOWN_FILE after the grace period.
+  METHOD prism_only_file_surfaces.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_prism_source( ).
+        add_check( iv_check_id = 'C_PRF' iv_class = 'ZCL_CD_FMON_CHK_PRISM_FILE' ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_prism_only
+                    iv_stage = zif_cd_fmon_types=>gc_stage-prism_received iv_at = '20261102050000' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-prism_unknown
+                                                          object_key = gc_prism_only ] ) )
+          msg = 'PRISM_UNKNOWN_FILE must be raised for the file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
