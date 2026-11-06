@@ -43,7 +43,7 @@
 
 | Object | Check | Justification |
 |---|---|---|
-| `ZCL_CD_HCK_DAO=>EXECUTE_AGGREGATE` (line 188 after the performance fixes of 2026-11-06) | SELECT without ORDER BY | Aggregate without GROUP BY returns exactly one row; pseudo comment `"#EC CI_NOORDER` set (honoured by ATC; abaplint's rule ignores pseudo comments) |
+| `ZCL_CD_HCK_DAO=>EXECUTE_AGGREGATE` (line 189 after the performance fixes of 2026-11-06) | SELECT without ORDER BY | Aggregate without GROUP BY returns exactly one row; pseudo comment `"#EC CI_NOORDER` set (honoured by ATC; abaplint's rule ignores pseudo comments) |
 | `ZCL_CD_OPS_ALERT_DAO=>INSERT_LOG` | sy-subrc after INSERT … ACCEPTING DUPLICATE KEYS | Duplicate audit keys are skipped on purpose; `"#EC CI_SUBRC` set |
 | `ZBP_R_CD_*` behaviour pools | `check_abstract`, `unused_methods` | ABAP requires `ABSTRACT FINAL … FOR BEHAVIOR OF`; handler methods are called by the RAP framework. Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these |
 | `ZCL_CD_FMON_DAO=>INSERT_EVENT` and `SAVE_FILES` | Database operation in loop | INSERT_EVENT: bounded retry (3 attempts) only after a primary-key collision with a parallel writer. SAVE_FILES (audit A04): row lock + version compare per registry row, bounded by the files of one run. `"#EC CI_SEL_NESTED` set |
