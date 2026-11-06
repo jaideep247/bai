@@ -66,6 +66,6 @@ python3 tools/portable_checks.py "$(command -v abaplint)"
 GitHub (`jaideep247/bai`, branch `main`) is the master copy. Changes are committed and pushed there; the local clone pulls from it.
 
 - VS Code user settings: `git.autofetch` (every 120 s), `git.postCommitCommand: sync`, `git.confirmSync: false`, `git.pullBeforeCheckout`.
-- Commit when a piece of work is done — VS Code pushes it; a cloud session sees it after `git fetch`.
+- Commit when a piece of work is done — VS Code pushes it; any other clone sees it after `git fetch`.
 - Never edit the same file in two places between syncs; if it happens, VS Code shows the merge side by side.
 - SAP side: abapGit in DV1 pulls `ops-suite/src` from the same repository.
