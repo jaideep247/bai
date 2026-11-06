@@ -808,6 +808,11 @@ CLASS ltc_trace IMPLEMENTATION.
     TRY.
         configure_scenario( VALUE #( no_bank_line = abap_true ) ).
         DATA(ls_result) = run_trace( ).
+        DATA(ls_payment) = ls_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-payment
+                                           status = zif_cd_ops_trace_types=>gc_status-verified ].
+        cl_abap_unit_assert=>assert_equals( act = ls_payment-clearing_ref
+                                            exp = gc-current
+                                            msg = 'The verified payment uses the current clearing reference' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-first_gap_stage
                                             exp = zif_cd_ops_trace_types=>gc_stage-settlement
                                             msg = 'First gap SETTLEMENT' ).
