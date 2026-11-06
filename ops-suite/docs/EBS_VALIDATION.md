@@ -72,7 +72,7 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 | No lines at all | Same (decision: nothing proves it is a payment engine statement) |
 | Exceptions of earlier runs for it or its lines | **Stay open** — not reconciled (as POSTING_OPEN entries: a statement that was not evaluated never resolves anything) |
 | Counting | `ZCL_CD_EBS_ENGINE=>TY_RESULT-OUT_OF_SCOPE` and the run message (ZCD_OPS 546 *n statements out of scope (lines not all payment engine accounts)*). `ZCD_OPS_RUN` has no field for it; the message carries it |
-| NO_DATA | A selection that found statements is never NO_DATA, even when all of them are out of scope (the run closes on its other results, typically green with 0 entries and the out-of-scope count in the message) |
+| NO_DATA | Only statements **in scope** count as evaluated. A run whose statements were **all out of scope** evaluated nothing: status **N (NO_DATA), RAG grey, never green**, with the out-of-scope count in the run message — an empty or wrong `ACCOUNT_NO` configuration therefore shows up instead of looking like a clean day. `EBS_EMPTY_FEED_OK` = X declares such a day as expected (as for an empty feed) |
 | Dashboard | Not shown (`Dashboard_EBS_Validation.md` §2: same rule in CDS) |
 
 **S04 (account configured)** stays: it checks the in-scope statement's house bank account (company code, house bank, account ID) and currency against `ZCD_EBS_ACCT`; it never sees an out-of-scope statement, so it reports only a payment engine statement whose house bank account row is missing or has another currency.

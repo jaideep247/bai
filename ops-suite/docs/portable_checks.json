@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (1990 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (1992 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {

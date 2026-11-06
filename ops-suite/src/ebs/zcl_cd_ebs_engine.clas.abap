@@ -38,6 +38,7 @@
 *&            | statements whose lines are not all active payment engine accounts (account from
 *&            | FEBEP-XBLNR, ZCL_CD_EBS_PE_SCOPE) are removed with their lines - no rule, no finding, no
 *&            | reconciliation - and counted (result OUT_OF_SCOPE, run message 546).
+*& 2026-11-06 | Run with every statement out of scope is NO_DATA (grey), not green; count in the message.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -460,13 +461,14 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         EXIT.
       ENDIF.
 
-      " Statements selected (also those out of scope): a selection that found statements is
-      " never NO_DATA
-      lv_statements += lines( ls_package-statements ).
       " User decision 2026-11-06: only statements whose every line is a payment engine account
       " are validated; the others leave the package before any rule, finding or reconciliation
       load_configuration( ).
       rs_result-out_of_scope += mo_scope->remove_out_of_scope( CHANGING cs_package = ls_package ).
+      " Only statements in scope count as evaluated: a run whose statements were all out of
+      " scope evaluated nothing and is NO_DATA (grey), never green - an empty or wrong account
+      " configuration must not look like a clean day
+      lv_statements += lines( ls_package-statements ).
       IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
         FREE ls_package.
         CONTINUE.
@@ -1036,6 +1038,11 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       cs_run-status  = gc_status_no_data.
       cs_run-message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-no_data
                                               iv_v1    = cs_run-variant ).
+      IF iv_out_of_scope > 0.
+        cs_run-message = |{ cs_run-message } {
+                            zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-out_of_scope
+                                                   iv_v1    = iv_out_of_scope ) }|.
+      ENDIF.
       RETURN.
     ENDIF.
     IF cs_run-status <> zif_cd_ops_types=>gc_run_status-aborted.

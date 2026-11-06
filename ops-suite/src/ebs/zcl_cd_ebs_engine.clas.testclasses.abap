@@ -2112,7 +2112,7 @@ CLASS ltc_pe_scope DEFINITION FINAL FOR TESTING
     METHODS mixed_statement_no_findings  FOR TESTING.
     METHODS mixed_statement_counted      FOR TESTING.
     METHODS mixed_statement_not_reconcil FOR TESTING.
-    METHODS only_mixed_run_not_no_data   FOR TESTING.
+    METHODS only_mixed_run_is_no_data    FOR TESTING.
 ENDCLASS.
 
 
@@ -2351,15 +2351,18 @@ CLASS ltc_pe_scope IMPLEMENTATION.
 
 
   " A selection whose statements are all out of scope did select statements: not NO_DATA
-  METHOD only_mixed_run_not_no_data.
+  METHOD only_mixed_run_is_no_data.
     TRY.
         configure_scenario( iv_mixed = abap_true iv_in_scope = abap_false ).
         run_engine( ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-out_of_scope exp = 1
                                             msg = 'The statement is counted as out of scope' ).
-        cl_abap_unit_assert=>assert_differs( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
-                                             msg = 'Statements were selected - the run is not NO_DATA' ).
-        cl_abap_unit_assert=>assert_initial( act = mo_store->mt_saved msg = 'No finding is saved' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
+                                            msg = 'Nothing was in scope - NO_DATA (grey), never green' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-grey
+                                            msg = 'An empty account configuration must not look like a clean day' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_store->mt_saved[ rule_id = 'S04' ] ) )
+                                           msg = 'No rule finding for the skipped statement' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
