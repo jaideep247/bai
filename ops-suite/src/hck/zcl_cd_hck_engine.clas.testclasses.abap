@@ -389,7 +389,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
 
     IF is_flags-include_pe_areas = abap_true.
-      INSERT VALUE #( name = 'HCK_WATCH_MODULES' value = 'EBS,FMON' ) INTO TABLE mo_store->mt_params.
+      INSERT VALUE #( name = 'HCK_WATCH_PE_AREAS' value = 'EBS,FMON' ) INTO TABLE mo_store->mt_params.
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
       ls_last_run-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-started_at = ltd_clock=>gc_base.
@@ -412,7 +412,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
     " the current HCK run (run ID of ltd_store=>start_run) seen as running
     IF is_flags-own_run_running = abap_true.
-      INSERT VALUE #( name = 'HCK_WATCH_MODULES' value = 'HCK' ) INTO TABLE mo_store->mt_params.
+      INSERT VALUE #( name = 'HCK_WATCH_PE_AREAS' value = 'HCK' ) INTO TABLE mo_store->mt_params.
       CLEAR ls_last_run.
       ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
       ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.

@@ -22,6 +22,7 @@
 *& 2026-11-06 | Baseline warm-up: info finding, check grey not GREEN, not scored (audit A102).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Parameter HCK_WATCH_PE_AREAS (was HCK_WATCH_MODULES; matches the documentation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -30,7 +31,7 @@
 "! evaluated against ZCD_HCK_THRESH ('*' fallback, z-score / IQR baseline),
 "! findings and metrics persisted per check (payment engine area HCK, object type CHECK,
 "! GROUP1 = category, GROUP2 = check id). Health of the health check: the
-"! payment engine areas in HCK_WATCH_MODULES must have run within HCK_MAX_AGE_HOURS.
+"! payment engine areas in HCK_WATCH_PE_AREAS must have run within HCK_MAX_AGE_HOURS.
 "! Test mode: nothing saved, nothing committed, no alert, no e-mail.
 CLASS zcl_cd_hck_engine DEFINITION
   PUBLIC
@@ -41,7 +42,7 @@ CLASS zcl_cd_hck_engine DEFINITION
 
     CONSTANTS:
       BEGIN OF gc_param,
-        watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_MODULES',
+        watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',
         max_age_hours TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
         timeout_sec   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
         lookback      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
