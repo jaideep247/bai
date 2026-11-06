@@ -6,6 +6,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Severity-ordered cap, full-selection severity, held-back count (audit A63).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -34,6 +35,7 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
         iv_severity       TYPE zif_cd_ops_types=>ty_severity
         iv_rule_id        TYPE zif_cd_ops_types=>ty_rule_id DEFAULT 'R14'
         iv_message        TYPE zif_cd_ops_types=>ty_message DEFAULT 'test finding'
+        iv_object_key     TYPE zif_cd_ops_types=>ty_finding-object_key DEFAULT 'S0001/1'
       RETURNING
         VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
 
@@ -51,6 +53,9 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS digest_is_one_message        FOR TESTING.
     METHODS per_finding_caps_at_max      FOR TESTING.
     METHODS html_values_are_escaped      FOR TESTING.
+    METHODS blocker_after_cap_is_kept    FOR TESTING.
+    METHODS per_finding_blocker_first    FOR TESTING.
+    METHODS cap_order_is_stable          FOR TESTING.
 ENDCLASS.
 
 
@@ -75,7 +80,7 @@ CLASS ltc_alert_policy IMPLEMENTATION.
 
   METHOD finding.
     rs_finding-object_type = 'LINE'.
-    rs_finding-object_key  = 'S0001/1'.
+    rs_finding-object_key  = iv_object_key.
     rs_finding-rule_id     = iv_rule_id.
     rs_finding-check_code  = 'UNMAPPED_BTC'.
     rs_finding-severity    = iv_severity.
@@ -316,6 +321,96 @@ CLASS ltc_alert_policy IMPLEMENTATION.
                                                     iv_destination = gc_test-dest ).
         cl_abap_unit_assert=>assert_char_np( act = lt_messages[ 1 ]-html exp = '*<script>*'
                                              msg = 'Raw markup must not reach the HTML body' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A63: a blocker placed after the cap is still shown; the digest severity and the
+  " subject come from the complete selection and the held-back count is in the message
+  METHOD blocker_after_cap_is_kept.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    TRY.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( iv_severity = zif_cd_ops_types=>gc_severity-warning
+                                                    iv_message  = 'first warning' ) )
+                                         ( finding( iv_severity = zif_cd_ops_types=>gc_severity-error
+                                                    iv_message  = 'an error' ) )
+                                         ( finding( iv_severity = zif_cd_ops_types=>gc_severity-warning
+                                                    iv_message  = 'second warning' ) )
+                                         ( finding( iv_severity = zif_cd_ops_types=>gc_severity-block
+                                                    iv_message  = 'the blocker' ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-text exp = '*the blocker*'
+                                             msg = 'The blocker behind the cap must be shown' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-text exp = '*an error*'
+                                             msg = 'The error ranks before the warnings' ).
+        cl_abap_unit_assert=>assert_char_np( act = ls_message-text exp = '*first warning*'
+                                             msg = 'Warnings are the ones held back' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-severity
+                                            exp = zif_cd_ops_types=>gc_severity-block
+                                            msg = 'Digest severity is the worst of the selection' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-item_count exp = 4
+                                            msg = 'The digest counts the complete selection' ).
+        DATA(lv_more) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_more_findings
+                                               iv_v1    = 2 ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-text exp = |*{ lv_more }*|
+                                             msg = 'The held-back count must be in the text' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-html exp = |*{ lv_more }*|
+                                             msg = 'The held-back count must be in the HTML' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A63: per-finding mode sends the blocker first; the last message names the rest
+  METHOD per_finding_blocker_first.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    TRY.
+        ms_rule-digest = abap_false.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) )
+                                         ( finding( zif_cd_ops_types=>gc_severity-error ) )
+                                         ( finding( zif_cd_ops_types=>gc_severity-block ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-severity
+                                            exp = zif_cd_ops_types=>gc_severity-block
+                                            msg = 'The blocker must be sent first' ).
+        DATA(lv_more) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_more_findings
+                                               iv_v1    = 1 ).
+        cl_abap_unit_assert=>assert_char_cp( act = lt_messages[ lines( lt_messages ) ]-text
+                                             exp = |*{ lv_more }*|
+                                             msg = 'The last message must name the held-back finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A63: equal severities are capped in a stable order, whatever the input order
+  METHOD cap_order_is_stable.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    TRY.
+        ms_rule-max_items = 1.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( iv_severity   = zif_cd_ops_types=>gc_severity-error
+                                                    iv_message    = 'line two'
+                                                    iv_object_key = 'S0001/2' ) )
+                                         ( finding( iv_severity   = zif_cd_ops_types=>gc_severity-error
+                                                    iv_message    = 'line one'
+                                                    iv_object_key = 'S0001/1' ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        cl_abap_unit_assert=>assert_char_cp( act = lt_messages[ 1 ]-text exp = '*line one*'
+                                             msg = 'Ties are broken by object key, not input order' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

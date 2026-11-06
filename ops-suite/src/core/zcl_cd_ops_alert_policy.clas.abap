@@ -7,6 +7,8 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Cap keeps the most severe findings (B > E > W > I, stable order); digest severity from the full
+*& 2026-11-06 |               selection; held-back count in text and HTML (audit A63).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
 CLASS zcl_cd_ops_alert_policy DEFINITION
@@ -109,6 +111,8 @@ CLASS zcl_cd_ops_alert_policy DEFINITION
       RETURNING
         VALUE(rv_hit) TYPE abap_bool.
 
+    "! @parameter iv_worst      | severity of the complete selection (digest); blank = worst shown
+    "! @parameter iv_suppressed | findings of the selection beyond the cap (shown as a count)
     METHODS new_message
       IMPORTING
         is_selection      TYPE ty_selection
@@ -116,15 +120,25 @@ CLASS zcl_cd_ops_alert_policy DEFINITION
         iv_destination    TYPE zif_cd_ops_types=>ty_alert_dest
         it_findings       TYPE zif_cd_ops_types=>tt_finding
         iv_total          TYPE i
+        iv_worst          TYPE zif_cd_ops_types=>ty_severity OPTIONAL
+        iv_suppressed     TYPE i DEFAULT 0
       RETURNING
         VALUE(rs_message) TYPE zif_cd_ops_types=>ty_alert_message.
 
     METHODS findings_html
       IMPORTING
         it_findings    TYPE zif_cd_ops_types=>tt_finding
-        iv_total       TYPE i
+        iv_suppressed  TYPE i
       RETURNING
         VALUE(rv_html) TYPE string.
+
+    "! Findings ordered B > E > W > I; ties by rule, check, object and input position
+    "! so the same selection always yields the same capped list (audit A63)
+    METHODS ranked
+      IMPORTING
+        it_findings        TYPE zif_cd_ops_types=>tt_finding
+      RETURNING
+        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
 
 ENDCLASS.
 
@@ -198,26 +212,36 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     DATA(lv_max) = COND i( WHEN is_selection-rule-max_items > 0 THEN is_selection-rule-max_items
                            ELSE gc_default_max_items ).
     DATA(lv_total) = lines( is_selection-findings ).
+    " A63: the cap keeps the most severe findings - a blocker behind the cap is never lost
+    DATA(lt_ranked) = ranked( is_selection-findings ).
+    DATA(lv_suppressed) = nmax( val1 = lv_total - lv_max val2 = 0 ).
 
     IF is_selection-rule-digest = abap_true OR is_selection-findings IS INITIAL.
       DATA lt_shown TYPE zif_cd_ops_types=>tt_finding.
-      LOOP AT is_selection-findings INTO DATA(ls_shown) TO lv_max.
+      LOOP AT lt_ranked INTO DATA(ls_shown) TO lv_max.
         INSERT ls_shown INTO TABLE lt_shown.
       ENDLOOP.
+      " subject and severity describe the complete selection, not only the shown part
       INSERT new_message( is_selection   = is_selection
                           is_run         = is_run
                           iv_destination = iv_destination
                           it_findings    = lt_shown
-                          iv_total       = lv_total ) INTO TABLE rt_messages.
+                          iv_total       = lv_total
+                          iv_worst       = zcl_cd_ops_util=>worst_severity( is_selection-findings )
+                          iv_suppressed  = lv_suppressed ) INTO TABLE rt_messages.
       RETURN.
     ENDIF.
 
-    LOOP AT is_selection-findings INTO DATA(ls_finding) TO lv_max.
+    LOOP AT lt_ranked INTO DATA(ls_finding) TO lv_max.
+      DATA(lv_last) = xsdbool( sy-tabix = nmin( val1 = lv_max val2 = lv_total ) ).
+      " the last message of the capped series names how many were held back
       INSERT new_message( is_selection   = is_selection
                           is_run         = is_run
                           iv_destination = iv_destination
                           it_findings    = VALUE #( ( ls_finding ) )
-                          iv_total       = 1 ) INTO TABLE rt_messages.
+                          iv_total       = 1
+                          iv_suppressed  = COND #( WHEN lv_last = abap_true THEN lv_suppressed ) )
+             INTO TABLE rt_messages.
     ENDLOOP.
   ENDMETHOD.
 
@@ -248,7 +272,9 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
 
 
   METHOD new_message.
-    DATA(lv_worst) = zcl_cd_ops_util=>worst_severity( it_findings ).
+    DATA(lv_worst) = COND zif_cd_ops_types=>ty_severity(
+      WHEN iv_worst IS NOT INITIAL THEN iv_worst
+      ELSE zcl_cd_ops_util=>worst_severity( it_findings ) ).
     IF lv_worst IS INITIAL.
       lv_worst = COND #( WHEN is_run-status = zif_cd_ops_types=>gc_run_status-aborted
                          THEN zif_cd_ops_types=>gc_severity-error
@@ -288,12 +314,17 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
                                                iv_v1    = is_run-failed_items
                                                iv_v2    = is_run-blocked_items ) )
                    && gc_html-p_close
-                   && findings_html( it_findings = it_findings iv_total = iv_total ).
+                   && findings_html( it_findings = it_findings iv_suppressed = iv_suppressed ).
     rs_message-text = rs_message-subject.
     LOOP AT it_findings INTO DATA(ls_finding).
       rs_message-text = |{ rs_message-text }\n{ ls_finding-severity } { ls_finding-rule_id } |
                      && |{ ls_finding-object_key } { ls_finding-message }|.
     ENDLOOP.
+    IF iv_suppressed > 0.
+      rs_message-text = |{ rs_message-text }\n|
+                     && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_more_findings
+                                               iv_v1    = iv_suppressed ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -321,13 +352,35 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
              && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
-    IF iv_total > lines( it_findings ).
+    IF iv_suppressed > 0.
       rv_html = rv_html && gc_html-p_open
              && zcl_cd_ops_util=>html_escape( zcl_cd_ops_util=>text(
                                                 iv_msgno = zif_cd_ops_types=>gc_msg-alert_more_findings
-                                                iv_v1    = iv_total - lines( it_findings ) ) )
+                                                iv_v1    = iv_suppressed ) )
              && gc_html-p_close.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD ranked.
+    TYPES:
+      BEGIN OF ty_ranked,
+        rank    TYPE i,
+        pos     TYPE i,
+        finding TYPE zif_cd_ops_types=>ty_finding,
+      END OF ty_ranked.
+    DATA lt_ranked TYPE STANDARD TABLE OF ty_ranked WITH EMPTY KEY.
+    DATA lv_pos    TYPE i.
+    LOOP AT it_findings INTO DATA(ls_finding).
+      lv_pos = lv_pos + 1.
+      INSERT VALUE #( rank    = zcl_cd_ops_util=>severity_rank( ls_finding-severity )
+                      pos     = lv_pos
+                      finding = ls_finding ) INTO TABLE lt_ranked.
+    ENDLOOP.
+    SORT lt_ranked BY rank DESCENDING
+                      finding-rule_id finding-check_code finding-object_type finding-object_key
+                      pos.
+    rt_findings = VALUE #( FOR ls_ranked IN lt_ranked ( ls_ranked-finding ) ).
   ENDMETHOD.
 
 ENDCLASS.
