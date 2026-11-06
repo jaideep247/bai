@@ -5,6 +5,7 @@
 *& company code ('*' fallback) and evaluate a value statically and vs baseline.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Flat baseline: adverse deviation beyond a tolerance is an outlier (audit A59).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - threshold resolution and evaluation</p>
 "! Static limits: higher is worse -> a zero limit is "not set";
@@ -21,6 +22,9 @@ CLASS zcl_cd_hck_threshold DEFINITION
     CONSTANTS gc_min_points TYPE i VALUE 3.
     CONSTANTS gc_default_z TYPE zif_cd_hck_types=>ty_value VALUE 3.
     CONSTANTS gc_default_k TYPE zif_cd_hck_types=>ty_value VALUE '1.5'.
+    "! Flat baseline (standard deviation 0): allowed adverse deviation in % of the mean
+    CONSTANTS gc_default_flat_tol_pct TYPE zif_cd_hck_types=>ty_value VALUE 10.
+    CONSTANTS gc_percent TYPE zif_cd_hck_types=>ty_value VALUE 100.
 
     "! Precedence: (metric, key) > (metric, '*') > ('*', '*'); initial when none
     CLASS-METHODS resolve
@@ -36,6 +40,7 @@ CLASS zcl_cd_hck_threshold DEFINITION
         iv_value             TYPE zif_cd_hck_types=>ty_value
         is_threshold         TYPE zif_cd_hck_types=>ty_threshold
         it_history           TYPE zif_cd_hck_types=>tt_value
+        iv_flat_tol_pct      TYPE zif_cd_hck_types=>ty_value DEFAULT gc_default_flat_tol_pct
       RETURNING
         VALUE(rs_evaluation) TYPE zif_cd_hck_types=>ty_evaluation.
 
@@ -53,8 +58,19 @@ CLASS zcl_cd_hck_threshold DEFINITION
         iv_value          TYPE zif_cd_hck_types=>ty_value
         is_threshold      TYPE zif_cd_hck_types=>ty_threshold
         it_history        TYPE zif_cd_hck_types=>tt_value
+        iv_flat_tol_pct   TYPE zif_cd_hck_types=>ty_value
       EXPORTING
         ev_z_score        TYPE zif_cd_hck_types=>ty_value
+      RETURNING
+        VALUE(rv_outlier) TYPE abap_bool.
+
+    "! Flat baseline: adverse deviation from the mean beyond the tolerance (A59)
+    CLASS-METHODS is_flat_outlier
+      IMPORTING
+        iv_value          TYPE zif_cd_hck_types=>ty_value
+        iv_mean           TYPE zif_cd_hck_types=>ty_value
+        iv_higher_worse   TYPE abap_bool
+        iv_flat_tol_pct   TYPE zif_cd_hck_types=>ty_value
       RETURNING
         VALUE(rv_outlier) TYPE abap_bool.
 
@@ -99,10 +115,11 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF is_outlier( EXPORTING iv_value     = iv_value
-                             is_threshold = is_threshold
-                             it_history   = it_history
-                   IMPORTING ev_z_score   = rs_evaluation-z_score ) = abap_false.
+    IF is_outlier( EXPORTING iv_value        = iv_value
+                             is_threshold    = is_threshold
+                             it_history      = it_history
+                             iv_flat_tol_pct = iv_flat_tol_pct
+                   IMPORTING ev_z_score      = rs_evaluation-z_score ) = abap_false.
       RETURN.
     ENDIF.
     IF rs_evaluation-rag = zif_cd_ops_types=>gc_rag-green.
@@ -139,6 +156,15 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
 
   METHOD is_outlier.
     CLEAR ev_z_score.
+    " A flat history has no spread: z-score and IQR cannot judge it (z = 0, IQR = 0),
+    " so the deviation from the mean decides, in the adverse direction only
+    IF zcl_cd_hck_stats=>std_dev( it_history ) = 0.
+      rv_outlier = is_flat_outlier( iv_value        = iv_value
+                                    iv_mean         = zcl_cd_hck_stats=>mean( it_history )
+                                    iv_higher_worse = is_threshold-higher_is_worse
+                                    iv_flat_tol_pct = iv_flat_tol_pct ).
+      RETURN.
+    ENDIF.
     CASE is_threshold-baseline_mode.
       WHEN zif_cd_hck_types=>gc_baseline-zscore.
         DATA(lv_limit) = COND zif_cd_hck_types=>ty_value( WHEN is_threshold-z_limit > 0 THEN is_threshold-z_limit
@@ -159,6 +185,16 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
       WHEN OTHERS.
         rv_outlier = abap_false.
     ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD is_flat_outlier.
+    DATA(lv_adverse) = COND zif_cd_hck_types=>ty_value( WHEN iv_higher_worse = abap_true THEN iv_value - iv_mean
+                                                       ELSE iv_mean - iv_value ).
+    IF lv_adverse <= 0.
+      RETURN.
+    ENDIF.
+    rv_outlier = xsdbool( lv_adverse > abs( iv_mean ) * iv_flat_tol_pct / gc_percent ).
   ENDMETHOD.
 
 ENDCLASS.

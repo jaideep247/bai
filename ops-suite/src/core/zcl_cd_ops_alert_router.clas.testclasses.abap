@@ -6,6 +6,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Claim, repeat, consecutive escalation, escalation override, send failures (audit A17, A45, A46).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -14,6 +15,10 @@ CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
     DATA mt_channels TYPE zif_cd_ops_types=>tt_alert_channel.
     DATA mt_log      TYPE zif_cd_ops_types=>tt_alert_log.
     DATA mt_inserted TYPE zif_cd_ops_types=>tt_alert_log.
+    "! Claims written before the send; final statuses arrive through complete( ) in mt_inserted
+    DATA mt_claims   TYPE zif_cd_ops_types=>tt_alert_log.
+    DATA mv_claimed_elsewhere TYPE abap_bool.
+    DATA mt_repeat   TYPE zif_cd_ops_types=>tt_repeat_key.
 ENDCLASS.
 
 CLASS ltd_alert_dao IMPLEMENTATION.
@@ -31,6 +36,18 @@ CLASS ltd_alert_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_alert_dao~insert_log.
     INSERT LINES OF it_log INTO TABLE mt_inserted.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~claim.
+    rv_claimed_elsewhere = mv_claimed_elsewhere.
+    IF mv_claimed_elsewhere = abap_false.
+      INSERT is_log INTO TABLE mt_claims.
+    ENDIF.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~complete.
+    INSERT is_log INTO TABLE mt_inserted.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~get_repeat_keys.
+    rt_keys = mt_repeat.
   ENDMETHOD.
 ENDCLASS.
 
@@ -73,6 +90,8 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
     DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+    "! Run history for consecutive escalation (get_runs_since)
+    DATA mt_runs   TYPE zif_cd_ops_types=>tt_run.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -95,7 +114,9 @@ CLASS ltd_store IMPLEMENTATION.
     CLEAR rs_run.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_runs_since.
-    CLEAR rt_runs.
+    LOOP AT mt_runs INTO DATA(ls_run) WHERE pe_area = iv_pe_area AND started_at >= iv_since.
+      INSERT ls_run INTO TABLE rt_runs.
+    ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_findings.
     CLEAR rt_findings.
@@ -116,6 +137,7 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
         now        TYPE timestampl VALUE '20261105080000.0000000',
         ten_ago    TYPE timestampl VALUE '20261105075000.0000000',
         two_h_ago  TYPE timestampl VALUE '20261105060000.0000000',
+        one_h_ago  TYPE timestampl VALUE '20261105070000.0000000',
         day        TYPE t VALUE '080000',
         night      TYPE t VALUE '230000',
         channel_cl TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_OPS_CHN_EMAIL',
@@ -129,6 +151,11 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
         quiet_at_night   TYPE abap_bool,
         night            TYPE abap_bool,
         channel_fails    TYPE abap_bool,
+        claimed_elsewhere TYPE abap_bool,
+        carried          TYPE abap_bool,
+        esc_override     TYPE abap_bool,
+        healthy_between  TYPE abap_bool,
+        channel_inactive TYPE abap_bool,
         escalate_after   TYPE i,
         prior_runs_sent  TYPE i,
       END OF ty_flags.
@@ -158,7 +185,13 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
     METHODS no_active_rule_no_delivery   FOR TESTING.
     METHODS escalation_adds_destination  FOR TESTING.
     METHODS send_uses_route_parameter    FOR TESTING.
-    METHODS send_without_recipient_skips FOR TESTING.
+    METHODS send_without_recipient_fails FOR TESTING.
+    METHODS claim_precedes_delivery      FOR TESTING.
+    METHODS claimed_elsewhere_not_sent   FOR TESTING.
+    METHODS carried_exception_no_realert FOR TESTING.
+    METHODS healthy_run_breaks_series    FOR TESTING.
+    METHODS escalation_beats_throttle    FOR TESTING.
+    METHODS send_inactive_channel_fails  FOR TESTING.
 ENDCLASS.
 
 
@@ -211,6 +244,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ls_rule-throttle_min    = is_flags-throttle_min.
     ls_rule-escalate_after  = is_flags-escalate_after.
     ls_rule-escalation_dest = gc_test-escalation.
+    ls_rule-esc_override    = is_flags-esc_override.
     ls_rule-active          = is_flags-rule_active.
     IF is_flags-quiet_at_night = abap_true.
       ls_rule-quiet_from = '220000'.
@@ -220,7 +254,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
 
     ls_channel-channel    = zif_cd_ops_types=>gc_channel-email.
     ls_channel-class_name = gc_test-channel_cl.
-    ls_channel-active     = abap_true.
+    ls_channel-active     = xsdbool( is_flags-channel_inactive = abap_false ).
     INSERT ls_channel INTO TABLE mo_dao->mt_channels.
 
     IF is_flags-sent_minutes_ago > 0.
@@ -241,7 +275,23 @@ CLASS ltc_alert_router IMPLEMENTATION.
           cl_abap_unit_assert=>fail( msg = 'UUID for prior run could not be created' ).
       ENDTRY.
       INSERT ls_log INTO TABLE mo_dao->mt_log.
+      " A46: the alerting runs are part of the run history
+      INSERT VALUE #( run_id = ls_log-run_id pe_area = zif_cd_ops_types=>gc_pe_area-ebs
+                      started_at = gc_test-two_h_ago ) INTO TABLE mo_store->mt_runs.
     ENDDO.
+    " A46: a healthy run (no alert of the rule) after the alerting ones breaks the series
+    IF is_flags-healthy_between = abap_true.
+      TRY.
+          INSERT VALUE #( run_id = cl_system_uuid=>create_uuid_x16_static( ) pe_area = zif_cd_ops_types=>gc_pe_area-ebs
+                          started_at = gc_test-one_h_ago ) INTO TABLE mo_store->mt_runs.
+        CATCH cx_uuid_error.
+          cl_abap_unit_assert=>fail( msg = 'UUID for healthy run could not be created' ).
+      ENDTRY.
+    ENDIF.
+    mo_dao->mv_claimed_elsewhere = is_flags-claimed_elsewhere.
+    IF is_flags-carried = abap_true.
+      INSERT VALUE #( object_type = 'LINE' object_key = 'S0001/1' check_code = 'UNMAPPED_BTC' ) INTO TABLE mo_dao->mt_repeat.
+    ENDIF.
 
     mo_channel->mv_fail = is_flags-channel_fails.
     mo_clock->mv_now    = gc_test-now.
@@ -409,18 +459,125 @@ CLASS ltc_alert_router IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " send( ) without maintained recipients sends nothing (no hardcoded address)
-  METHOD send_without_recipient_skips.
+  " Audit A45: send( ) without maintained recipients sends nothing and says so - a
+  " failed log row and an exception, never a silent return (no hardcoded address)
+  METHOD send_without_recipient_fails.
+    configure_scenario( default_flags( ) ).
     TRY.
-        configure_scenario( default_flags( ) ).
-
         zcl_cd_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
                                                iv_html = `<p>ok</p>` ).
-
+        cl_abap_unit_assert=>fail( msg = 'A report without recipients must raise' ).
+      CATCH zcx_cd_ops_error.
         cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
                                              msg = 'Without recipients nothing may be sent' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-status
+                                            exp = zif_cd_ops_types=>gc_alert_status-failed
+                                            msg = 'The missing recipient must be logged as F' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A17: the alert is claimed (status C) before the channel delivers it, then completed
+  METHOD claim_precedes_delivery.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        run_dispatch( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_claims ) exp = 1 msg = 'One claim before the send' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-alert_id
+                                            exp = mo_channel->mt_delivered[ 1 ]-alert_id
+                                            msg = 'The delivered alert is the claimed one' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_claims[ 1 ]-intent_key
+                                                 msg = 'The claim carries the alert intent' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A17: an intent claimed by another dispatcher is not sent a second time
+  METHOD claimed_elsewhere_not_sent.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-claimed_elsewhere = abap_true.
+        configure_scenario( ls_flags ).
+        run_dispatch( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
+                                             msg = 'A claimed intent must not be delivered again' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A17: an exception that was only carried forward is not alerted again (log R)
+  METHOD carried_exception_no_realert.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-carried = abap_true.
+        configure_scenario( ls_flags ).
+        run_dispatch( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
+                                             msg = 'A carried-forward exception must not be alerted again' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-status
+                                            exp = zif_cd_ops_types=>gc_alert_status-repeat
+                                            msg = 'The suppressed repeat must be logged as R' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A46: escalation counts consecutive runs - a healthy run in between resets it
+  METHOD healthy_run_breaks_series.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-escalate_after  = 3.
+        ls_flags-prior_runs_sent = 2.
+        ls_flags-healthy_between = abap_true.
+        configure_scenario( ls_flags ).
+        run_dispatch( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-destination
+                                            exp = gc_test-dest
+                                            msg = 'After a healthy run the series restarts - no escalation' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A46: with ESC_OVERRIDE a due escalation is delivered inside the throttle window
+  METHOD escalation_beats_throttle.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-throttle_min     = 30.
+        ls_flags-sent_minutes_ago = 10.
+        ls_flags-escalate_after   = 2.
+        ls_flags-prior_runs_sent  = 1.
+        ls_flags-esc_override     = abap_true.
+        configure_scenario( ls_flags ).
+        run_dispatch( ).
+        cl_abap_unit_assert=>assert_char_cp( act = mo_channel->mt_delivered[ 1 ]-destination
+                                             exp = |*{ gc_test-escalation }*|
+                                             msg = 'The escalation must be delivered despite the throttle' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A45: send( ) respects the channel's active flag
+  METHOD send_inactive_channel_fails.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-channel_inactive = abap_true.
+    configure_scenario( ls_flags ).
+    INSERT VALUE #( name = 'ALERT_MORNING' value = gc_test-dest ) INTO TABLE mo_store->mt_params.
+    TRY.
+        zcl_cd_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
+                                               iv_html = `<p>ok</p>` ).
+        cl_abap_unit_assert=>fail( msg = 'An inactive channel must raise' ).
+      CATCH zcx_cd_ops_error.
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
+                                             msg = 'An inactive channel must not deliver' ).
     ENDTRY.
   ENDMETHOD.
 

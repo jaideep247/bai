@@ -10,6 +10,12 @@
 *& 2026-11-06 | select_values: validated value queries (known-table checks).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Metric history by distinct completed runs, as-of bound (audit A58).
+*& 2026-11-06 | Job runs with first-step program/variant; unresolved jobs regardless of date (audit A42, A44).
+*& 2026-11-06 | G/L transfer gaps by AWTYP, company code, unreversed document; uncapped count (audit A43).
+*& 2026-11-06 | Aggregate and value queries rebuilt and re-validated at the SQL boundary (audit A56).
+*& 2026-11-06 | Drift hash over canonical typed fields, version 2; cursor closed on all paths (audit A57).
+*& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -30,8 +36,16 @@ CLASS zcl_cd_hck_dao DEFINITION
     "! Query kind named in message 308 for a value (not aggregate) query
     CONSTANTS gc_query_kind_values TYPE string VALUE `VALUES`.
     CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
-    CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
+    CONSTANTS gc_first_step TYPE i VALUE 1.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
+    "! Metric points scanned to find the last N distinct runs (A58)
+    CONSTANTS gc_max_history_points TYPE i VALUE 5000.
+    CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
+
+    "! Program and variant of the first job step (TBTCP) into the job runs (A42)
+    METHODS add_step_program
+      CHANGING
+        ct_runs TYPE zif_cd_hck_types=>tt_job_run.
 
     METHODS sha256
       IMPORTING
@@ -135,16 +149,26 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~aggregate.
-    " names in is_query were checked against the DDIC by ZCL_CD_HCK_AGG_QUERY=>BUILD
-    DATA(lv_select) = COND string( WHEN is_query-group_field IS NOT INITIAL
-                                   THEN |{ is_query-group_field } AS group_value, | ).
-    lv_select = lv_select && `COUNT(*) AS row_count`.
-    IF is_query-agg_func = zif_cd_hck_types=>gc_agg_func-sum.
-      lv_select = |{ lv_select }, SUM( { is_query-sum_field } ) AS total|.
+    DATA lt_fields TYPE zif_cd_hck_types=>tt_field.
+    " A56: the SQL boundary trusts no caller-built string. The query is rebuilt from its
+    " definition - whitelist, DDIC field names, quoted literals - and only that runs.
+    DATA(lv_whitelisted) = zif_cd_hck_dao~is_table_whitelisted( is_query-def-tabname ).
+    IF lv_whitelisted = abap_true.
+      lt_fields = zif_cd_hck_dao~get_table_fields( is_query-def-tabname ).
     ENDIF.
-    DATA(lv_from)  = CONV string( is_query-tabname ).
-    DATA(lv_where) = is_query-where_clause.
-    DATA(lv_group) = CONV string( is_query-group_field ).
+    DATA(ls_query) = zcl_cd_hck_agg_query=>build( is_def         = is_query-def
+                                                  it_fields      = lt_fields
+                                                  iv_whitelisted = lv_whitelisted
+                                                  iv_ref_date    = is_query-ref_date ).
+    DATA(lv_select) = COND string( WHEN ls_query-group_field IS NOT INITIAL
+                                   THEN |{ ls_query-group_field } AS group_value, | ).
+    lv_select = lv_select && `COUNT(*) AS row_count`.
+    IF ls_query-agg_func = zif_cd_hck_types=>gc_agg_func-sum.
+      lv_select = |{ lv_select }, SUM( { ls_query-sum_field } ) AS total|.
+    ENDIF.
+    DATA(lv_from)  = CONV string( ls_query-tabname ).
+    DATA(lv_where) = ls_query-where_clause.
+    DATA(lv_group) = CONV string( ls_query-group_field ).
 
     TRY.
         IF lv_group IS INITIAL.
@@ -164,7 +188,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         ENDIF.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e308(zcd_ops) WITH is_query-tabname is_query-agg_id
+          MESSAGE e308(zcd_ops) WITH ls_query-tabname ls_query-agg_id
           EXPORTING
             previous = lx_sql.
     ENDTRY.
@@ -172,15 +196,36 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_metric_history.
-    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, MEASURED_AT
-    SELECT value
-      FROM zcd_hck_metric
-      WHERE check_id = @iv_check_id
-        AND metric   = @iv_metric
-        AND dim1     = @iv_dim1
-      ORDER BY measured_at DESCENDING
-      INTO TABLE @rt_values
-      UP TO @iv_max_rows ROWS.
+    DATA lt_seen TYPE SORTED TABLE OF sysuuid_x16 WITH UNIQUE KEY table_line.
+    DATA lv_as_of TYPE timestampl.
+    CHECK iv_max_rows > 0.
+    lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
+    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, MEASURED_AT. Several points of one
+    " run (job instances, backfilled days) count as one run: its latest point (A58)
+    SELECT m~run_id, m~value
+      FROM zcd_hck_metric AS m
+        INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
+      WHERE m~check_id    = @iv_check_id
+        AND m~metric      = @iv_metric
+        AND m~dim1        = @iv_dim1
+        AND m~measured_at <= @lv_as_of
+        AND r~test_mode   = @abap_false
+        AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
+                          @zif_cd_ops_types=>gc_run_status-warning,
+                          @zif_cd_ops_types=>gc_run_status-error )
+      ORDER BY m~measured_at DESCENDING, m~run_id DESCENDING
+      INTO TABLE @DATA(lt_points)
+      UP TO @gc_max_history_points ROWS.
+    LOOP AT lt_points INTO DATA(ls_point).
+      INSERT ls_point-run_id INTO TABLE lt_seen.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+      INSERT ls_point-value INTO TABLE rt_values.
+      IF lines( rt_values ) >= iv_max_rows.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -200,6 +245,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       ls_db-dim2        = ls_metric-dim2.
       ls_db-value       = ls_metric-value.
       ls_db-measured_at = ls_metric-measured_at.
+      " A88: the analytics aggregate by kind - an unclassified metric is a volume
+      ls_db-kind        = COND #( WHEN ls_metric-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
+                                  ELSE ls_metric-kind ).
+      ls_db-weight      = ls_metric-weight.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " a duplicate key inside one run is a repeated measurement: keep the first
@@ -221,7 +270,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_baselines.
-    SELECT tabname, hash, row_count, taken_at, taken_by
+    SELECT tabname, hash, row_count, taken_at, taken_by, hash_version
       FROM zcd_hck_baseline
       ORDER BY tabname
       INTO CORRESPONDING FIELDS OF TABLE @rt_baselines.
@@ -233,10 +282,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA lt_names TYPE string_table.
     DATA lv_package TYPE string.
     DATA lv_cursor TYPE cursor.
+    DATA lv_open TYPE abap_bool.
     " used in the dynamic OPEN CURSOR select list (not seen by static checks)
     DATA lv_select TYPE string ##NEEDED.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
-    FIELD-SYMBOLS <lv_field> TYPE any.
 
     DATA(lt_fields) = zif_cd_hck_dao~get_table_fields( iv_tabname ).
     LOOP AT lt_fields INTO DATA(ls_field).
@@ -245,7 +294,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     lv_select = concat_lines_of( table = lt_names sep = `, ` ).
     DATA(lv_from) = to_upper( condense( CONV string( iv_tabname ) ) ).
 
-    rs_hash-tabname = lv_from.
+    rs_hash-tabname      = lv_from.
+    rs_hash-hash_version = zcl_cd_hck_canonical=>gc_hash_version.
     TRY.
         CREATE DATA lr_table TYPE STANDARD TABLE OF (lv_from).
         ASSIGN lr_table->* TO <lt_rows>.
@@ -253,6 +303,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           SELECT (lv_select)
             FROM (lv_from)
             ORDER BY PRIMARY KEY.
+        lv_open = abap_true.
         DO.
           FETCH NEXT CURSOR @lv_cursor INTO CORRESPONDING FIELDS OF TABLE @<lt_rows> PACKAGE SIZE @gc_hash_package.
           IF sy-subrc <> 0.
@@ -260,25 +311,29 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           ENDIF.
           " chained hash: H(n) = SHA256( H(n-1) || rows of package n ), deterministic by primary key
           lv_package = rs_hash-hash.
+          " A57: canonical, length-prefixed typed fields - no separator ambiguity
           LOOP AT <lt_rows> ASSIGNING FIELD-SYMBOL(<ls_row>).
-            DO.
-              ASSIGN COMPONENT sy-index OF STRUCTURE <ls_row> TO <lv_field>.
-              IF sy-subrc <> 0.
-                EXIT.
-              ENDIF.
-              lv_package = |{ lv_package }{ <lv_field> }\||.
-            ENDDO.
-            lv_package = lv_package && cl_abap_char_utilities=>newline.
+            lv_package = lv_package && zcl_cd_hck_canonical=>row( <ls_row> ) && cl_abap_char_utilities=>newline.
           ENDLOOP.
           rs_hash-row_count = rs_hash-row_count + lines( <lt_rows> ).
           rs_hash-hash = sha256( lv_package ).
         ENDDO.
         CLOSE CURSOR @lv_cursor.
+        lv_open = abap_false.
       CATCH cx_sy_dynamic_osql_error cx_sy_create_data_error INTO DATA(lx_sql).
+        " A57: the cursor is closed on every path, also after an SQL error
+        IF lv_open = abap_true.
+          CLOSE CURSOR @lv_cursor.
+        ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e311(zcd_ops) WITH lv_from
           EXPORTING
             previous = lx_sql.
+      CLEANUP.
+        " any other exception leaving the method (e.g. a hash error) also closes the cursor
+        IF lv_open = abap_true.
+          CLOSE CURSOR @lv_cursor.
+        ENDIF.
     ENDTRY.
     IF rs_hash-hash IS INITIAL.
       " empty table: hash of the empty string, so 'emptied' is detected as drift
@@ -297,6 +352,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       ls_db-row_count = ls_baseline-row_count.
       ls_db-taken_at  = ls_baseline-taken_at.
       ls_db-taken_by  = ls_baseline-taken_by.
+      ls_db-hash_version = ls_baseline-hash_version.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     MODIFY zcd_hck_baseline FROM TABLE @lt_db.
@@ -357,7 +413,49 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
            OR strtdate  BETWEEN @iv_from AND @iv_to )
       ORDER BY jobname, jobcount
       INTO CORRESPONDING FIELDS OF TABLE @rt_runs
-      UP TO @gc_max_job_rows ROWS.
+      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+    add_step_program( CHANGING ct_runs = rt_runs ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~get_unresolved_jobs.
+    IF it_jobnames IS INITIAL.
+      RETURN.
+    ENDIF.
+    "VERIFY-DDIC: TBTCO-STATUS values R running, Y ready, Z active, S released
+    SELECT jobname, jobcount, status, sdlstrtdt, sdlstrttm, strtdate, strttime, enddate, endtime
+      FROM tbtco
+      WHERE jobname IN @it_jobnames
+        AND status IN ( @zif_cd_hck_types=>gc_job_status-running,
+                        @zif_cd_hck_types=>gc_job_status-ready,
+                        @zif_cd_hck_types=>gc_job_status-put_activ,
+                        @zif_cd_hck_types=>gc_job_status-released )
+      ORDER BY sdlstrtdt, sdlstrttm, jobname, jobcount
+      INTO CORRESPONDING FIELDS OF TABLE @rt_runs
+      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+    add_step_program( CHANGING ct_runs = rt_runs ).
+  ENDMETHOD.
+
+
+  METHOD add_step_program.
+    CHECK ct_runs IS NOT INITIAL.
+    "VERIFY-DDIC: TBTCP-JOBNAME, JOBCOUNT, STEPCOUNT, PROGNAME, VARIANT
+    SELECT jobname, jobcount, progname, variant
+      FROM tbtcp
+      FOR ALL ENTRIES IN @ct_runs
+      WHERE jobname   = @ct_runs-jobname
+        AND jobcount  = @ct_runs-jobcount
+        AND stepcount = @gc_first_step
+      INTO TABLE @DATA(lt_steps).
+    SORT lt_steps BY jobname jobcount.
+    LOOP AT ct_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      READ TABLE lt_steps INTO DATA(ls_step) WITH KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount
+        BINARY SEARCH.
+      IF sy-subrc = 0.
+        <ls_run>-progname = ls_step-progname.
+        <ls_run>-variant  = ls_step-variant.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -405,20 +503,42 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_fikeys_without_gl.
-    " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY; the header BKPF-AWKEY
-    " carries the same reference key and is indexed (AWTYP/AWKEY), BSEG-AWKEY is not.
-    "VERIFY-DDIC: DFKKKO-BUDAT (posting date of the payment engine document header)
-    "VERIFY-DDIC: BKPF-AWKEY holds the reconciliation key (FIKEY) for the payment engine transfer
-    SELECT DISTINCT s~fikey
+    " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY. A43: the GL document must be
+    " of the transfer reference type, for the same company code, and not reversed - an
+    " unrelated document or the transfer of another company code no longer hides a gap.
+    "VERIFY-DDIC: DFKKSUMC-BUKRS, DFKKKO-BUDAT, BKPF-AWTYP / AWKEY / BUKRS / STBLG
+    "VERIFY-DDIC: AWTYP of the payment engine GL transfer (PARAM4, default FKKSU)
+    SELECT DISTINCT s~fikey, s~bukrs
       FROM dfkksumc AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )
         AND NOT EXISTS ( SELECT awkey FROM bkpf
-                           WHERE awkey = s~fikey )
-      ORDER BY s~fikey
+                           WHERE awtyp = @iv_awtyp
+                             AND awkey = s~fikey
+                             AND bukrs = s~bukrs
+                             AND stblg = @space )
+      ORDER BY s~fikey, s~bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_gaps
       UP TO @iv_max_rows ROWS.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~count_fikeys_without_gl.
+    " same population as get_fikeys_without_gl, without the display cap (keys only)
+    SELECT DISTINCT s~fikey, s~bukrs
+      FROM dfkksumc AS s
+      WHERE EXISTS ( SELECT fikey FROM dfkkko
+                       WHERE fikey = s~fikey
+                         AND budat BETWEEN @iv_from AND @iv_to )
+        AND NOT EXISTS ( SELECT awkey FROM bkpf
+                           WHERE awtyp = @iv_awtyp
+                             AND awkey = s~fikey
+                             AND bukrs = s~bukrs
+                             AND stblg = @space )
+      ORDER BY s~fikey, s~bukrs
+      INTO TABLE @DATA(lt_keys).
+    rv_count = lines( lt_keys ).
   ENDMETHOD.
 
 
@@ -516,11 +636,23 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~select_values.
-    " names in is_query were checked against the DDIC and the whitelist by ZCL_CD_HCK_VALUE_QUERY
-    DATA(lv_fields) = is_query-field_list.
-    DATA(lv_from)   = CONV string( is_query-tabname ).
-    DATA(lv_where)  = is_query-where_clause.
-    DATA(lv_order)  = is_query-order_by.
+    DATA lt_fields TYPE zif_cd_hck_types=>tt_field.
+    " A56: rebuilt from its specification at the SQL boundary (whitelist, DDIC, quoting)
+    DATA(lv_whitelisted) = zif_cd_hck_dao~is_table_whitelisted( is_query-tabname ).
+    IF lv_whitelisted = abap_true.
+      lt_fields = zif_cd_hck_dao~get_table_fields( is_query-tabname ).
+    ENDIF.
+    DATA(ls_query) = zcl_cd_hck_value_query=>build( iv_tabname     = is_query-tabname
+                                                    it_return      = is_query-returns
+                                                    it_conditions  = is_query-conditions
+                                                    iv_date_field  = is_query-date_field
+                                                    iv_date_from   = is_query-date_from
+                                                    it_fields      = lt_fields
+                                                    iv_whitelisted = lv_whitelisted ).
+    DATA(lv_fields) = ls_query-field_list.
+    DATA(lv_from)   = CONV string( ls_query-tabname ).
+    DATA(lv_where)  = ls_query-where_clause.
+    DATA(lv_order)  = ls_query-order_by.
     TRY.
         SELECT (lv_fields)
           FROM (lv_from)
@@ -530,7 +662,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e308(zcd_ops) WITH is_query-tabname gc_query_kind_values
+          MESSAGE e308(zcd_ops) WITH ls_query-tabname gc_query_kind_values
           EXPORTING
             previous = lx_sql.
     ENDTRY.

@@ -23,9 +23,12 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 022 | Application log &1/&2 could not be written |
 | 023 | HTTP destination &1 could not be reached (&2) |
 | 024 | HTTP destination &1 answered &2 &3 |
+| 025 | Application log &1/&2 written only in part (&3 of &4 lines) |
+| 026 | E-mail for &1 was not accepted by SAPconnect (BCS send result) |
 | 030 | Class &1 does not exist |
 | 031 | Class &1 cannot be instantiated as a plug-in |
 | 032 | Class &1 does not implement interface &2 |
+| 033 | Plug-in interface &1 does not exist |
 | 040 | Run for &1 &2 is already active (lock held by &3) |
 | 041 | No authorization for &1 activity &2 |
 | 042 | Lock service failed for &1 &2 (run not started) |
@@ -249,6 +252,16 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 357 | (&1 red, &2 amber of &3) |
 | 358 | Payment engine area &1 |
 | 359 | last run &1, &2 h ago, &3 errors |
+| 360 | Payment engine area &1: &2 run(s) still running after &3 min |
+| 361 | No business check selected or active - the report proves nothing |
+| 362 | Health check configuration (selected and active checks) |
+| 363 | retried: &1 attempt(s), completed attempt started &2 |
+| 364 | completed attempt started &1, after window end &2 |
+| 365 | Job read capped at &1 rows for &2 - result may be incomplete |
+| 366 | &1 reconciliation key(s) / company code(s) without GL document, &2 listed |
+| 367 | Baseline of &1 uses hash version &2 (current &3): take a new baseline |
+| 368 | Export file &1 could not be written completely - no partial file kept |
+| 369 | Check &1 stopped after &2 of &3 item(s): time budget of &4 s used |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

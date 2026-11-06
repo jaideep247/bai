@@ -11,5 +11,7 @@ define table zcd_hck_baseline {
   row_count     : abap.int4;
   taken_at      : timestampl;
   taken_by      : syuname;
+  // Serialization version of HASH (audit A57): 2 = length-prefixed typed fields
+  hash_version  : abap.char(2);
 }
 // Delivery class A: the golden baseline is per system (taken after each approved transport), never transported.

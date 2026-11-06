@@ -113,6 +113,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>025</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 written only in part (&amp;3 of &amp;4 lines)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>026</MSGNR>
+     <TEXT>E-mail for &amp;1 was not accepted by SAPconnect (BCS send result)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>030</MSGNR>
      <TEXT>Class &amp;1 does not exist</TEXT>
     </T100>
@@ -127,6 +139,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>032</MSGNR>
      <TEXT>Class &amp;1 does not implement interface &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>033</MSGNR>
+     <TEXT>Plug-in interface &amp;1 does not exist</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1465,6 +1483,66 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>359</MSGNR>
      <TEXT>last run &amp;1, &amp;2 h ago, &amp;3 errors</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>360</MSGNR>
+     <TEXT>Payment engine area &amp;1: &amp;2 run(s) still running after &amp;3 min</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>361</MSGNR>
+     <TEXT>No business check selected or active - the report proves nothing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>362</MSGNR>
+     <TEXT>Health check configuration (selected and active checks)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>363</MSGNR>
+     <TEXT>retried: &amp;1 attempt(s), completed attempt started &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>364</MSGNR>
+     <TEXT>completed attempt started &amp;1, after window end &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>365</MSGNR>
+     <TEXT>Job read capped at &amp;1 rows for &amp;2 - result may be incomplete</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>366</MSGNR>
+     <TEXT>&amp;1 reconciliation key(s) / company code(s) without GL document, &amp;2 listed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>367</MSGNR>
+     <TEXT>Baseline of &amp;1 uses hash version &amp;2 (current &amp;3): take a new baseline</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>368</MSGNR>
+     <TEXT>Export file &amp;1 could not be written completely - no partial file kept</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>369</MSGNR>
+     <TEXT>Check &amp;1 stopped after &amp;2 of &amp;3 item(s): time budget of &amp;4 s used</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

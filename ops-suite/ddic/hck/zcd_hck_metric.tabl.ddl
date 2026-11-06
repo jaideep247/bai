@@ -12,6 +12,10 @@ define table zcd_hck_metric {
   key dim2      : abap.char(35) not null;
   value         : abap.dec(31,4);
   measured_at   : timestampl;
+  // A88: V volume (SUM), L level - duration / age / size (MAX, AVG), R rate (weighted)
+  kind          : abap.char(1);
+  // rates: denominator the rate was computed over; weighted rate = SUM(value*weight)/SUM(weight)
+  weight        : abap.dec(31,4);
 }
 // Secondary index HST: baseline history; TIM: dashboard trend, archiving / deletion
 // @index HST: MANDT, CHECK_ID, METRIC, DIM1, MEASURED_AT

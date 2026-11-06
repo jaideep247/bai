@@ -25,6 +25,7 @@ define view entity ZC_CD_AlertRule
       QuietTo,
       EscalateAfter,
       EscalationDest,
+      EscOverride,
       Active,
       ChangedBy,
       ChangedAt,

@@ -5,6 +5,7 @@
 *& lock entries (count and age of the oldest lock).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Oldest lock age is a level metric (MAX / AVG, audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - short dumps, update errors, locks</p>
 "! Metrics (DIM1 '*'): SHORT_DUMPS (report date), UPDATE_ERRORS,
@@ -40,7 +41,8 @@ CLASS zcl_cd_hck_c_tech_sys IMPLEMENTATION.
       ( metric = gc_metric-short_dumps   value = lo_dao->count_short_dumps( is_context-report_date ) )
       ( metric = gc_metric-update_errors value = lo_dao->count_update_errors( ) )
       ( metric = gc_metric-lock_entries  value = ls_locks-lock_entries )
-      ( metric = gc_metric-lock_max_age  value = ls_locks-lock_max_age_min ) ).
+      ( metric = gc_metric-lock_max_age  value = ls_locks-lock_max_age_min
+        kind   = zif_cd_hck_types=>gc_metric_kind-level ) ).
   ENDMETHOD.
 
 ENDCLASS.

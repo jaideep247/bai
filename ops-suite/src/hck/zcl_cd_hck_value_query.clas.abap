@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Query keeps its specification (audit A56).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - value queries for known tables</p>
 CLASS zcl_cd_hck_value_query DEFINITION
@@ -141,6 +142,10 @@ CLASS zcl_cd_hck_value_query IMPLEMENTATION.
                                             it_fields   = it_fields ) INTO TABLE lt_where.
 
     rs_query-tabname      = iv_tabname.
+    rs_query-returns      = it_return.
+    rs_query-conditions   = it_conditions.
+    rs_query-date_field   = iv_date_field.
+    rs_query-date_from    = iv_date_from.
     rs_query-field_list   = concat_lines_of( table = lt_select sep = `, ` ).
     rs_query-where_clause = concat_lines_of( table = lt_where sep = ` AND ` ).
     rs_query-order_by     = concat_lines_of( table = lt_order sep = `, ` ).
