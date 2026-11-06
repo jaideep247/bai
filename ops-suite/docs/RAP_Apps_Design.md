@@ -10,7 +10,7 @@ Decisions taken with the business owner (2026-11-06):
 | D-1 | `ops-suite` is the final product: EBS validation, file monitoring, morning report. Legacy and `jaideep247/src` are references only |
 | D-2 | **One configuration app per module** (EBS, FMON, HCK, Alerting) |
 | D-3 | **New configuration entries via transport** (created in DV1, recorded on a customizing request); **existing entries editable directly in production** (no transport; change-logged, authorised) |
-| D-4 | Operations apps: exception disposition, EBS blocked-line release, HCK check suppression, FMON manual file status, PRISM payment-request API handling |
+| D-4 | Operations apps: exception disposition, EBS blocked-line release, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
 | D-5 | Also in this build: retention purge (G1), authorisation object `ZCD_OPS` (G3), run lock, exception carry-forward |
 
 Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; **RAP managed BOs with draft** for the apps, OData V4 UI service, Fiori elements. House rules (`DEVELOPMENT_STANDARDS.md`) apply to every class.
@@ -92,7 +92,8 @@ All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every 
 ### 6.5 PRISM payment-request API calls
 - Payment requests reach SAP as API calls from PRISM (log `ZCD_PAYM_REQ_LOG`; rule: status `ZZ_STATUS = SUCCESS`, never the highest COUNTER).
 - Monitoring: an FMON interface of type API over the log through the generic adapter (configuration, no code) — stuck / failed requests become FMON findings and therefore exceptions (§6.1).
-- Operations app: **pending** — needs the SE11 structure of `ZCD_PAYM_REQ_LOG` and the reprocessing mechanism (which class / FM PRISM's call executes) before an action other than "handled manually with reference" can be offered.
+- Operations app `ZUI_CD_FMON_PRQ_O4` (decision 2026-11-06: **record only, no reprocessing**): new table `ZCD_FMON_PRQ_WA` keyed by the PRISM request reference (CHAR 70, as delivered by PRISM) + sequence. Action **Handled manually** (reference — e.g. payment document or ticket — mandatory, reason mandatory) → status H; the open FMON exception for that request is resolved with the reference (§6.1 history row). Nothing is re-sent or re-posted by SAP.
+- Still needed for the monitoring side: the SE11 structure of `ZCD_PAYM_REQ_LOG` (request reference, status and timestamp fields) to configure the FMON API interface; until then the reference is entered by hand from PRISM.
 
 ## 7. Delivery and verification
 
