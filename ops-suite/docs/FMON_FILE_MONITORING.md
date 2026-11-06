@@ -101,7 +101,7 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 
 **SLA basis (unchanged).** Each `ZCD_FMON_SLA` row gives the minutes allowed to reach a stage. Basis **P** measures from the latest event of the highest lower stage (e.g. `PRISM_DELIVERED` from `PRISM_RECEIVED`), basis **G** from the file's first event (generation). Only the stage's own event meets the SLA (A40).
 
-**PRISM throttle (fact, confirmed by the user 2026-11-06):** PRISM throttles **ACH and wire** files at **2 minutes per file** before sending them to the bank; positive pay and stop pay are not throttled. A fixed delivery SLA would report false "late" findings whenever several files go together (the evening ACH cycle), and the bank ACK SLA measured from generation is shifted the same way.
+**PRISM throttle (fact, confirmed by the user 2026-11-06):** PRISM throttles **ACH and wire** files at **2 minutes per file** before sending them to the bank; positive pay and stop pay are not throttled. **One queue across all banks** (JPMC, BOA, PNC … — confirmed by the user 2026-11-06); the gap is **1–2 minutes per file** (parameter default 2) and is measured from the PRISM status API timestamps (PRISM_RECEIVED → PRISM_DELIVERED) after go-live, then `FMON_PRISM_THROTTLE_MIN` is tuned. A fixed delivery SLA would report false "late" findings whenever several files go together (the evening ACH cycle), and the bank ACK SLA measured from generation is shifted the same way.
 
 | Item | Rule (`ZCL_CD_FMON_RULES`) |
 |---|---|

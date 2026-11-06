@@ -3,7 +3,7 @@
 > **First principle:** one engine, one exception store, one alert router — every check, rule, file expectation and alert route is a customizing row, never a code change.
 > **Analogy:** an airport operations centre — runway checks (health checks), baggage tracking (file monitoring) and customs (bank statement validation) all report to one control room board (exception store + morning report) and one paging system (alert router).
 
-Built against `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (repository root) for the payment engine on S/4HANA 2023 (SAP_BASIS 7.58). Consolidates and supersedes the BAI validators (v4), the BAI validation framework packs and the first morning report (snapshots in `../legacy/`).
+Built against `REQUIREMENTS_FSCD_OPERATIONS_SUITE.md` (repository root) for the payment engine on S/4HANA 2023 (SAP_BASIS 7.58). Consolidates and supersedes the BAI validators (v4), the BAI validation framework packs and the first morning report (snapshots in `../legacy/`).
 
 ## What is in it
 

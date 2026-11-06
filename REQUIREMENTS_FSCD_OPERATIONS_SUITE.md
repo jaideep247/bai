@@ -1,4 +1,4 @@
-# Master prompt — SAP FS-CD Production Support Operations Suite
+# Requirements — SAP FS-CD Production Support Operations Suite
 
 ## Role and objective
 

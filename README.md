@@ -7,7 +7,7 @@
 |---|---|
 | `ops-suite/` | **The product** — EBS validation (BAI2 + CAMT), file monitoring, health check and morning report, configurable alerting. Start with `ops-suite/README.md`. |
 | `ops-suite/src/` | ABAP source in **abapGit** format (classes, interfaces, programs, tables, message class, packages) |
-| `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` | The requirements the suite is built against |
+| `REQUIREMENTS_FSCD_OPERATIONS_SUITE.md` | The requirements the suite is built against |
 | `tools/git-sync/` | Windows scheduled task that keeps a local clone in step with GitHub |
 | `legacy/` | Superseded code and the 65 status documents of the first framework (reference only — do not transport) |
 
