@@ -16,10 +16,10 @@
 | ZCL_BAI_168_DISB | DFKKRP+DFKKRK STARS = 5; DPAYH by DOC1R status RETURNED; ZCD_ACH_RTRV_LOG status AF | BAI2 168 / D → `BAI168D` | R04, R07R (5), R07 (RETURNED), R07L (AF) | `r07r_…`, `r07_not_returned_fails`, `r07l_retrieval_not_af_fails` | **Different (D1, D3, D4, D5)** |
 | ZCL_BAI_195_DISB | DPAYH exists by DOC1R | BAI2 195 / D → `BAI195D` | R04, R07 | `r07_missing_payment_fails` | Same (key length D6) |
 | ZCL_BAI_255_DISB | DFKKCR exists by ZTNUM; CRSTATUS ≠ 99 | BAI2 255 / D → `BAI255D` | R04, R07C (PARAM1 99) | `r07c_cancelled_check_fails` | **Different (D1, D6)** |
-| ZCL_BAI_275_DISB | BELNR must be empty | BAI2 275 / D → `BAI275D` | R20 | `r20_posted_line_fails` | Same |
+| ZCL_BAI_275_DISB | BELNR must be empty | BAI2 275 / D → `BAI275D` | R20 | `r20_posted_line_fails` | **Different (D1)** |
 | ZCL_BAI_466_DISB | BSEG exists for BELNR/GJAHR (no BUKRS) | BAI2 466 / D → `BAI466D` | R19 | `r19_missing_doc_fails` | **Different (D1, D2)** |
-| ZCL_BAI_468_DISB | ZCD_ACH_RTRV_LOG by AUGBL status AF | BAI2 468 / D → `BAI468D` | R04, R07L (AF) | `r07l_retrieval_not_af_fails` | Same (D5 field name) |
-| ZCL_BAI_575_DISB | BELNR must be empty | BAI2 575 / D → `BAI575D` | R20 | `r20_posted_line_fails` | Same |
+| ZCL_BAI_468_DISB | ZCD_ACH_RTRV_LOG by AUGBL status AF | BAI2 468 / D → `BAI468D` | R04, R07L (AF) | `r07l_retrieval_not_af_fails` | **Different (D1, D5)** |
+| ZCL_BAI_575_DISB | BELNR must be empty | BAI2 575 / D → `BAI575D` | R20 | `r20_posted_line_fails` | **Different (D1)** |
 | ZCL_BAI_581_DISB | Per check: DFKKCR exists, RWBTR = KWBTR; whole input: sum and count equal; extra DFKKCR | BAI2 581 / D → `BAI581D` | R04, R08 (tol 0.00), R12 (tol 0.00) | `r08_check_amount_mismatch`, `r08_within_tolerance_passes`, `r12_code_total_mismatch` | **Different (D7)** |
 | *(any code without a validator)* | silently not validated | X01 — no map row | R14 (built in, BLOCK) + S09 | `unmapped_btc_always_blocks`, `unmapped_code_always_blocked` | **Different (D8)** |
 
@@ -27,7 +27,7 @@
 
 | # | Legacy behaviour | New behaviour | Why | Test that fails on the legacy behaviour |
 |---|---|---|---|---|
-| D1 | **v4 filters `FOR ls IN lt_f` on the table being built** in 166D, 166C, 168D, 255D, 466D → the filtered table is always empty → **every line passes unchecked** | Engine routes each line by its BTC map row; rules receive the lines of their group | Silent pass of every 166/168/255/466 line is a defect, not behaviour to keep | `new_code_needs_config_only`, `group_rule_skips_other_codes` |
+| D1 | **v4 filters `FOR ls IN lt_f` on the table being built** in 8 of 10 validators — 166C, 166D, 168D, 255D, 275D, 466D, 468D, 575D (only 195 and 581 read `it_febep`) → the filtered table is always empty → **every line passes unchecked** | Engine routes each line by its BTC map row; rules receive the lines of their group | Silent pass of every 166/168/255/466 line is a defect, not behaviour to keep | `new_code_needs_config_only`, `group_rule_skips_other_codes` |
 | D2 | Company code hard-coded `'1000'` (166C) or missing (466D, BSEG read without BUKRS) | Company code of the statement (FEBKO-BUKRS / ZCD_EBS_ACCT) | Hard-coded org unit; key access without BUKRS is a full scan on BSEG | `r19_uncleared_doc_fails` (BUKRS from statement) |
 | D3 | DFKKRP matched on **OPBEL = CHECT** | DFKKRP matched on **SELW1 = payment document** (confirmed path *Return → payment: DFKKRP-SELW1 = DFKKOP-AUGBL*); lot status still read through DFKKRP-OPBEL → DFKKRK as in v4 | v4 compared the bank reference with the returns document number. **VERIFY in QA1 with a real returned payment.** | `return_item_found_by_selw1` (OSQL) |
 | D4 | DPAYH status field `ZZPAYMENT_STATUS` | `ZZ_PAYMENT_STATUS` (landscape reference: "live status in DPAYH-ZZ_PAYMENT_STATUS") | Field name taken from the confirmed landscape facts. **VERIFY-DDIC.** | — (DAO field list) |
