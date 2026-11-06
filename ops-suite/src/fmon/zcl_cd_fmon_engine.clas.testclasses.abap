@@ -6,6 +6,7 @@
 *& includes acceptance test 8; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -509,7 +510,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
 
   METHOD board_row.
-    READ TABLE is_result-board INTO rs_row WITH KEY file_name = iv_name.
+    rs_row = VALUE #( is_result-board[ file_name = iv_name ] OPTIONAL ).
   ENDMETHOD.
 
 
@@ -523,7 +524,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
   METHOD expected_lot_finding.
     DATA ls_finding TYPE zif_cd_ops_types=>ty_finding.
-    READ TABLE mo_dao->mt_saved INTO DATA(ls_file) WITH KEY file_name = gc_ret_file.
+    DATA(ls_file) = VALUE #( mo_dao->mt_saved[ file_name = gc_ret_file ] OPTIONAL ).
     ls_finding-object_type = zif_cd_fmon_types=>gc_object_type.
     ls_finding-object_key  = gc_ret_file.
     ls_finding-group1      = gc_ret.

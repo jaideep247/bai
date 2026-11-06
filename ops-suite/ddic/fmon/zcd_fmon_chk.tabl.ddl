@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_chk {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   // Written to ZCD_OPS_FINDING-RULE_ID
   key check_id : abap.char(10) not null;
   // Class implementing ZIF_CD_FMON_CHECK

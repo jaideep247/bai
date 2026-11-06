@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_fmon_file {
-  key client        : abap.clnt not null;
+  key mandt         : abap.clnt not null;
   key file_id       : sysuuid_x16 not null;
   iface_id          : abap.char(20);
   // Cross-source correlation key (file key field, else file name; upper case)
@@ -40,8 +40,8 @@ define table zcd_fmon_file {
   changed_by        : syuname;
 }
 // Secondary indexes:
-//   ZCD_FMON_FILE~REF (UNIQUE) : CLIENT, IFACE_ID, FILE_REF      (correlation of legacy rows)
-//   ZCD_FMON_FILE~BDT          : CLIENT, BUSINESS_DATE, IFACE_ID (board / evaluation window)
-//   ZCD_FMON_FILE~OUT          : CLIENT, OUTCOME, BUSINESS_DATE  (open files under watch)
-//   ZCD_FMON_FILE~NAM          : CLIENT, FILE_NAME               (duplicate history)
-//   ZCD_FMON_FILE~CHK          : CLIENT, CHECKSUM                (duplicate history)
+//   ZCD_FMON_FILE~REF (UNIQUE) : MANDT, IFACE_ID, FILE_REF      (correlation of legacy rows)
+//   ZCD_FMON_FILE~BDT          : MANDT, BUSINESS_DATE, IFACE_ID (board / evaluation window)
+//   ZCD_FMON_FILE~OUT          : MANDT, OUTCOME, BUSINESS_DATE  (open files under watch)
+//   ZCD_FMON_FILE~NAM          : MANDT, FILE_NAME               (duplicate history)
+//   ZCD_FMON_FILE~CHK          : MANDT, CHECKSUM                (duplicate history)

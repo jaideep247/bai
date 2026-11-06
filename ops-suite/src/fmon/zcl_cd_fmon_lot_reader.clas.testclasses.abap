@@ -6,6 +6,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -166,7 +167,7 @@ CLASS ltc_lot_reader IMPLEMENTATION.
     TRY.
         configure_scenario( VALUE #( ) ).
         act( ).
-        READ TABLE mo_dao->mt_queries INTO DATA(ls_items) INDEX 2.
+        DATA(ls_items) = VALUE #( mo_dao->mt_queries[ 2 ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_items-in_values
                                             exp = VALUE zif_cd_fmon_types=>tt_key_value( ( CONV #( gc_lot ) ) )
                                             msg = 'Item read must be restricted to the lot key' ).

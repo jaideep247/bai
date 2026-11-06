@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_job_cycle {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key cycle_id  : abap.char(20) not null;
   description   : abap.char(60);
   // factory calendar (SCAL); blank = every day; non-working days are not monitored

@@ -6,6 +6,7 @@
 *& back to defaults. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -107,8 +108,9 @@ CLASS ltc_store IMPLEMENTATION.
         DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) )
                                CHANGING  cs_run      = ls_run ).
-        SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id
+        SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
           INTO @DATA(ls_row).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The saved finding must be readable' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-disposition exp = zcl_cd_ops_store=>gc_disposition-open
                                             msg = 'E finding must be an open exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-due_date exp = '20261106'
@@ -125,8 +127,9 @@ CLASS ltc_store IMPLEMENTATION.
         DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-info ) ) )
                                CHANGING  cs_run      = ls_run ).
-        SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id
+        SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
           INTO @DATA(ls_row).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The saved finding must be readable' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-disposition
                                             exp = zcl_cd_ops_store=>gc_disposition-information
                                             msg = 'I finding must be information' ).
@@ -149,7 +152,9 @@ CLASS ltc_store IMPLEMENTATION.
         DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-block ) ) )
                                CHANGING  cs_run      = ls_run ).
-        SELECT SINGLE due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id INTO @DATA(lv_due).
+        SELECT SINGLE due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
+          INTO @DATA(lv_due).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The saved finding must be readable' ).
         cl_abap_unit_assert=>assert_equals( act = lv_due exp = '20261105' msg = 'Blocks are due the same day' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

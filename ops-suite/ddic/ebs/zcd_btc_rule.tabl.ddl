@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_btc_rule {
-  key client     : abap.clnt not null;
+  key mandt      : abap.clnt not null;
   // Rule group of ZCD_BTC_MAP, or * for every statement / every mapped line
   key rule_group : abap.char(10) not null;
   // R01..R20, S01..S12 (ZCD_EBS_RULE_DEF)

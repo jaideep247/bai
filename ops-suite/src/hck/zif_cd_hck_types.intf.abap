@@ -5,6 +5,7 @@
 *& metrics, check results, job-cycle states and the morning report model.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -56,7 +57,6 @@ INTERFACE zif_cd_hck_types
   TYPES ty_disposition   TYPE c LENGTH 1.
   "! ZCD_OPS_ALERT_LOG-STATUS: S sent, F failed, T throttled
   TYPES ty_alert_status  TYPE c LENGTH 1.
-  TYPES tt_alert_status_range TYPE RANGE OF ty_alert_status.
 
   TYPES tt_category_range TYPE RANGE OF ty_category.
   TYPES tt_priority_range TYPE RANGE OF ty_priority.

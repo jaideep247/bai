@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ebs_acct {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   key bukrs    : abap.char(4) not null;
   key hbkid    : abap.char(5) not null;
   key hktid    : abap.char(5) not null;
@@ -21,4 +21,4 @@ define table zcd_ebs_acct {
   gl_account   : abap.char(10);
   active       : abap_boolean;
 }
-// Secondary index ZCD_EBS_ACCT~ACC : CLIENT, ACCOUNT_NO (file statements)
+// Secondary index ZCD_EBS_ACCT~ACC : MANDT, ACCOUNT_NO (file statements)

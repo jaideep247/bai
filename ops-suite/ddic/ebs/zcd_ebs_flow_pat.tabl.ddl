@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ebs_flow_pat {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   key priority : abap.int4 not null;
   // CP pattern on FEBEP-XBLNR (ported from ZB_BAI_GL_CONFIG)
   key pattern  : abap.char(30) not null;

@@ -6,6 +6,7 @@
 *& defaults), ZCD_EBS_ACCT, ZCD_EBS_FLOW_PAT and ZCD_EBS_RSN_MAP.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - customizing repository</p>
 CLASS zcl_cd_ebs_cfg_dao DEFINITION
@@ -26,6 +27,7 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
     SELECT scheme, btc_code, bank_key, flow_type, category, rule_group, exp_cdi, pay_method,
            posting_rule, ret_reason, action, active, description
       FROM zcd_btc_map
+      ORDER BY scheme, btc_code, bank_key, flow_type
       INTO CORRESPONDING FIELDS OF TABLE @rt_map.
   ENDMETHOD.
 
@@ -58,6 +60,7 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
   METHOD zif_cd_ebs_cfg_dao~get_accounts.
     SELECT bukrs, hbkid, hktid, account_no, bank_key, format, flow_default, currency, gl_account, active
       FROM zcd_ebs_acct
+      ORDER BY bukrs, hbkid, hktid
       INTO CORRESPONDING FIELDS OF TABLE @rt_accounts.
   ENDMETHOD.
 

@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_cal {
-  key client     : abap.clnt not null;
+  key mandt      : abap.clnt not null;
   key iface_id   : abap.char(20) not null;
   // NORMAL, MONTH_END, HOLIDAY, RETURNS_DAY (MONTH_END/RETURNS_DAY fall back to NORMAL; HOLIDAY does not)
   key day_type   : abap.char(12) not null;

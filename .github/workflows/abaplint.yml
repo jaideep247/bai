@@ -1,0 +1,25 @@
+name: abaplint
+
+on:
+  push:
+    paths: ['ops-suite/**', '.github/workflows/abaplint.yml']
+  pull_request:
+    paths: ['ops-suite/**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops-suite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install abaplint
+        run: npm install -g @abaplint/cli@2
+      - name: Syntax and house rules (abaplint.json)
+        run: abaplint abaplint.json
+      - name: ATC-equivalent checks (abaplint.atc.json)
+        run: python3 tools/portable_checks.py "$(command -v abaplint)"

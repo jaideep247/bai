@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_srcmap {
-  key client       : abap.clnt not null;
+  key mandt        : abap.clnt not null;
   key src_id       : abap.char(10) not null;
   // Value of the source's status field; '*' = every other value
   key status_value : abap.char(40) not null;

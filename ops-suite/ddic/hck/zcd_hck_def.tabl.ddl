@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_hck_def {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key check_id  : abap.char(20) not null;
   description   : abap.char(60);
   // A financial integrity, B mass-run health, C exception queues, D config drift, E technical

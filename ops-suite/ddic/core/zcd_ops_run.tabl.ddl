@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_ops_run {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key run_id    : sysuuid_x16 not null;
   module        : abap.char(4);
   variant       : abap.char(30);
@@ -23,4 +23,4 @@ define table zcd_ops_run {
   message       : abap.char(255);
   created_by    : syuname;
 }
-// Secondary index ZCD_OPS_RUN~MOD: CLIENT, MODULE, STARTED_AT (morning report / last-run lookups)
+// Secondary index ZCD_OPS_RUN~MOD: MANDT, MODULE, STARTED_AT (morning report / last-run lookups)

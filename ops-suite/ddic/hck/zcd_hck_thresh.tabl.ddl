@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_hck_thresh {
-  key client      : abap.clnt not null;
+  key mandt       : abap.clnt not null;
   key check_id    : abap.char(20) not null;
   // metric name or '*' (all metrics of the check)
   key metric      : abap.char(30) not null;

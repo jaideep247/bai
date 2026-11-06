@@ -5,6 +5,7 @@
 *& baselines and the technical reads (TBTCO, BALHDR, SNAP, VBHDR, locks).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -55,6 +56,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     SELECT check_id, metric, bukrs, amber, red, higher_is_worse, baseline_mode, z_limit, lookback_runs
       FROM zcd_hck_thresh
       WHERE check_id = @iv_check_id
+      ORDER BY check_id, metric, bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_thresholds.
   ENDMETHOD.
 
@@ -72,14 +74,11 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~is_table_whitelisted.
     DATA(lv_tabname) = to_upper( iv_tabname ).
-    SELECT SINGLE @abap_true
+    SELECT SINGLE active
       FROM zcd_hck_tabwl
       WHERE tabname = @lv_tabname
-        AND active  = @abap_true
-      INTO @rv_allowed.
-    IF sy-subrc <> 0.
-      rv_allowed = abap_false.
-    ENDIF.
+      INTO @DATA(lv_active).
+    rv_allowed = xsdbool( sy-subrc = 0 AND lv_active = abap_true ).
   ENDMETHOD.
 
 
@@ -141,15 +140,17 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
     TRY.
         IF lv_group IS INITIAL.
+          " Aggregate without GROUP BY returns exactly one row: order is irrelevant
           SELECT (lv_select)
             FROM (lv_from)
             WHERE (lv_where)
-            INTO CORRESPONDING FIELDS OF TABLE @rt_rows.
+            INTO CORRESPONDING FIELDS OF TABLE @rt_rows.             "#EC CI_NOORDER
         ELSE.
           SELECT (lv_select)
             FROM (lv_from)
             WHERE (lv_where)
             GROUP BY (lv_group)
+            ORDER BY (lv_group)
             INTO CORRESPONDING FIELDS OF TABLE @rt_rows
             UP TO @gc_max_agg_rows ROWS.
         ENDIF.
@@ -214,6 +215,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_baselines.
     SELECT tabname, hash, row_count, taken_at, taken_by
       FROM zcd_hck_baseline
+      ORDER BY tabname
       INTO CORRESPONDING FIELDS OF TABLE @rt_baselines.
   ENDMETHOD.
 
@@ -345,6 +347,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       WHERE jobname IN @it_jobnames
         AND ( sdlstrtdt BETWEEN @iv_from AND @iv_to
            OR strtdate  BETWEEN @iv_from AND @iv_to )
+      ORDER BY jobname, jobcount
       INTO CORRESPONDING FIELDS OF TABLE @rt_runs
       UP TO @gc_max_job_rows ROWS.
   ENDMETHOD.
@@ -363,6 +366,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         AND object    IN @it_objects
         AND subobject IN @it_subobjects
       GROUP BY object, subobject
+      ORDER BY object, subobject
       INTO CORRESPONDING FIELDS OF TABLE @rt_stat.
   ENDMETHOD.
 
@@ -376,6 +380,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         AND due_date    < @iv_today
         AND due_date    > @lc_no_date
       GROUP BY module
+      ORDER BY module
       INTO CORRESPONDING FIELDS OF TABLE @rt_overdue.
   ENDMETHOD.
 
@@ -468,6 +473,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       FROM zcd_ops_alert_log
       WHERE sent_at BETWEEN @iv_from AND @iv_to
       GROUP BY channel, status
+      ORDER BY channel, status
       INTO CORRESPONDING FIELDS OF TABLE @rt_stat.
   ENDMETHOD.
 

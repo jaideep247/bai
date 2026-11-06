@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_hck_metric {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key run_id    : sysuuid_x16 not null;
   key check_id  : abap.char(20) not null;
   key metric    : abap.char(30) not null;
@@ -13,6 +13,6 @@ define table zcd_hck_metric {
   value         : abap.dec(31,4);
   measured_at   : timestampl;
 }
-// Secondary index ZCD_HCK_METRIC~HST: CLIENT, CHECK_ID, METRIC, DIM1, MEASURED_AT (baseline history)
-// Secondary index ZCD_HCK_METRIC~TIM: CLIENT, MEASURED_AT (dashboard trend, archiving/deletion)
+// Secondary index ZCD_HCK_METRIC~HST: MANDT, CHECK_ID, METRIC, DIM1, MEASURED_AT (baseline history)
+// Secondary index ZCD_HCK_METRIC~TIM: MANDT, MEASURED_AT (dashboard trend, archiving/deletion)
 // Retention: delete rows older than ZCD_OPS_PARAM HCK_METRIC_KEEP_DAYS (housekeeping job, later phase).

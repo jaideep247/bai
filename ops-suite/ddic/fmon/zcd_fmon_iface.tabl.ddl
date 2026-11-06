@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_iface {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   key iface_id : abap.char(20) not null;
   // O = outbound (SAP -> PRISM -> bank), I = inbound (bank -> SAP)
   direction    : abap.char(1);

@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_src {
-  key client      : abap.clnt not null;
+  key mandt       : abap.clnt not null;
   key src_id      : abap.char(10) not null;
   // Blank = derive the interface from the file name pattern
   iface_id        : abap.char(20);

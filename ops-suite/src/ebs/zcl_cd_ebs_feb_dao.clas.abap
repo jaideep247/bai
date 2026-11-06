@@ -6,6 +6,7 @@
 *& duplicate check. Read-only. Field list limited to what the suite uses.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION
@@ -36,9 +37,7 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_feb_dao~get_items.
-    IF it_kukey IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_kukey IS NOT INITIAL.
     " VERIFY-DDIC: FEBEP-VORGC (BAI type code used by the legacy validators), VGEXT, EPVOZ, KWAER
     SELECT kukey, esnum, vorgc, vgext, vgint, epvoz, kwbtr, kwaer, budat, valut, chect, xblnr, belnr, gjahr
       FROM febep
@@ -61,7 +60,7 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
       ORDER BY azdat DESCENDING, aznum DESCENDING
       INTO CORRESPONDING FIELDS OF TABLE @lt_headers
       UP TO 1 ROWS.
-    READ TABLE lt_headers INTO rs_header INDEX 1.
+    rs_header = VALUE #( lt_headers[ 1 ] OPTIONAL ).
   ENDMETHOD.
 
 

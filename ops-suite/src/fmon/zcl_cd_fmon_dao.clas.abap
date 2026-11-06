@@ -6,6 +6,7 @@
 *& and the dynamic read of configured, DDIC-validated legacy tables.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -97,9 +98,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_fmon_dao~find_files_by_ref.
-    IF it_keys IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_keys IS NOT INITIAL.
     SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
            business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
            unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
@@ -123,6 +122,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         WHERE business_date BETWEEN @iv_date_from AND @iv_date_to
            OR ( business_date >= @iv_open_since
                 AND ( outcome = @lv_no_outcome OR outcome = @zif_cd_fmon_types=>gc_stage-partially ) )
+        ORDER BY business_date, file_id
         INTO CORRESPONDING FIELDS OF TABLE @rt_files.
     ELSE.
       SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
@@ -134,6 +134,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
           AND ( business_date BETWEEN @iv_date_from AND @iv_date_to
                 OR ( business_date >= @iv_open_since
                      AND ( outcome = @lv_no_outcome OR outcome = @zif_cd_fmon_types=>gc_stage-partially ) ) )
+        ORDER BY business_date, file_id
         INTO CORRESPONDING FIELDS OF TABLE @rt_files.
     ENDIF.
   ENDMETHOD.
@@ -173,9 +174,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_fmon_dao~get_events.
-    IF it_file_ids IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_file_ids IS NOT INITIAL.
     SELECT file_id, event_no, stage, event_at, src_id, src_key, record_count, amount, info,
            created_by, created_at
       FROM zcd_fmon_event
@@ -188,9 +187,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
   METHOD zif_cd_fmon_dao~save_files.
     DATA lt_db TYPE ty_db_files.
-    IF it_files IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_files IS NOT INITIAL.
     lt_db = CORRESPONDING #( it_files ).
     MODIFY zcd_fmon_file FROM TABLE @lt_db.
     IF sy-subrc <> 0.
@@ -203,13 +200,17 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~insert_event.
     DATA ls_db TYPE zcd_fmon_event.
 
-    SELECT SINGLE file_id
+    " Unique secondary index SRC_ID / SRC_KEY / STAGE: at most one row
+    SELECT file_id
       FROM zcd_fmon_event
       WHERE src_id  = @is_event-src_id
         AND src_key = @is_event-src_key
         AND stage   = @is_event-stage
-      INTO @DATA(lv_existing).
-    IF sy-subrc = 0 AND lv_existing IS NOT INITIAL.
+      ORDER BY file_id
+      INTO TABLE @DATA(lt_existing)
+      UP TO 1 ROWS.
+    DATA(lv_existing) = VALUE #( lt_existing[ 1 ]-file_id OPTIONAL ).
+    IF lv_existing IS NOT INITIAL.
       RETURN.
     ENDIF.
 
@@ -261,9 +262,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     ENDIF.
     IF is_query-in_field IS NOT INITIAL
        AND zcl_cd_fmon_query=>is_valid_name( is_query-in_field ) = abap_true.
-      IF lt_in IS INITIAL.
-        RETURN.
-      ENDIF.
+      CHECK lt_in IS NOT INITIAL.
       lv_where = COND #( WHEN lv_where IS INITIAL THEN |{ is_query-in_field } IN @LT_IN|
                          ELSE |{ lv_where } AND { is_query-in_field } IN @LT_IN| ).
     ENDIF.
@@ -271,6 +270,9 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e209(zcd_ops) WITH is_query-table_name.
     ENDIF.
+    " UP TO n ROWS needs a defined order on HANA: the validated date field, else the IN field
+    DATA(lv_order) = COND string( WHEN is_query-date_field IS NOT INITIAL THEN is_query-date_field
+                                  ELSE is_query-in_field ).
 
     TRY.
         CREATE DATA lr_rows TYPE STANDARD TABLE OF (lv_table).
@@ -278,6 +280,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         SELECT (lv_fields)
           FROM (lv_table)
           WHERE (lv_where)
+          ORDER BY (lv_order)
           INTO CORRESPONDING FIELDS OF TABLE @<lt_rows>
           UP TO @is_query-max_rows ROWS.
       CATCH cx_sy_create_data_error cx_sy_dynamic_osql_error INTO DATA(lx_sql).

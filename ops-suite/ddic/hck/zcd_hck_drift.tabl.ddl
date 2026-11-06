@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_hck_drift {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key tabname   : abap.char(30) not null;
   description   : abap.char(60);
   active        : abap_boolean;

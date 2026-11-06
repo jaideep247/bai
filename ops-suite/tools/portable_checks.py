@@ -100,6 +100,17 @@ if lint_bin:
     lint_detail = f'abaplint (v758 syntax, SAP stubs from abaplint/deps): {issues} issue(s) over {len(files)} files.'
 check('abaplint_clean', lint_failures, lint_detail)
 
+# ATC-equivalent rule set (abaplint.atc.json); documented exemptions only, see docs/ATC_Validation.md
+ATC_KNOWN = {('src/hck/zcl_cd_hck_dao.clas.abap', 'select_add_order_by')}
+atc_detail, atc_failures = 'ATC-equivalent set not run (no binary given)', ['not run']
+if lint_bin:
+    out = subprocess.run([lint_bin, 'abaplint.atc.json'], cwd=ROOT, capture_output=True, text=True).stdout
+    found = re.findall(r'^(\S+)\[\d+, \d+\].*\((\w+)\) \[', out, re.M)
+    atc_failures = [f'{f} {r}' for f, r in found if (f, r) not in ATC_KNOWN]
+    atc_detail = (f'ATC-equivalent abaplint rule set: {len(found)} finding(s), '
+                  f'{len(found) - len(atc_failures)} documented exemption(s).')
+check('atc_equivalent_clean', atc_failures, atc_detail)
+
 docs = os.path.join(ROOT, 'docs')
 result = {
     '_artifact': {'name': 'portable_checks.json',
@@ -140,3 +151,5 @@ print(f"{result['passed']}/{result['total']} checks passed; {len(files)} ABAP fi
 for c in checks:
     if not c['passed']:
         print('FAIL', c['name'], c['failures'][:5])
+
+sys.exit(0 if result['passed'] == result['total'] else 1)

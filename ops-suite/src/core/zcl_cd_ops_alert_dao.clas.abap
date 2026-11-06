@@ -5,6 +5,7 @@
 *& log. The log write is part of the caller's LUW (the engine commits).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert repository</p>
 CLASS zcl_cd_ops_alert_dao DEFINITION
@@ -38,6 +39,7 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
   METHOD zif_cd_ops_alert_dao~get_channels.
     SELECT channel, class_name, destination, active
       FROM zcd_ops_alert_chn
+      ORDER BY channel
       INTO CORRESPONDING FIELDS OF TABLE @rt_channels.
   ENDMETHOD.
 
@@ -73,8 +75,9 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
-    " Audit rows; a duplicate key (UUID collision) must not lose the others
-    INSERT zcd_ops_alert_log FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
+    " Audit rows; a duplicate key (UUID collision) must not lose the others, so
+    " sy-subrc 4 (some rows skipped) is accepted deliberately
+    INSERT zcd_ops_alert_log FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS. "#EC CI_SUBRC
   ENDMETHOD.
 
 ENDCLASS.

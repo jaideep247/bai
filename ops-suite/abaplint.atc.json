@@ -1,0 +1,271 @@
+{
+  "global": {
+    "files": "/src/**/*.*",
+    "skipGeneratedGatewayClasses": true,
+    "skipGeneratedPersistentClasses": true,
+    "skipGeneratedFunctionGroups": true
+  },
+  "dependencies": [
+    {
+      "url": "https://github.com/abaplint/deps",
+      "folder": "/deps",
+      "files": "/src/**/*.*"
+    }
+  ],
+  "syntax": {
+    "version": "v758",
+    "errorNamespace": "^(ZCL_CD_|ZIF_CD_|ZCX_CD_|LCL_|LTC_|LTD_|LIF_)",
+    "globalConstants": [],
+    "globalMacros": []
+  },
+  "rules": {
+    "db_operation_in_loop": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "select_performance": {
+      "exclude": [],
+      "severity": "Error",
+      "endSelect": true,
+      "selectStar": true,
+      "starOkayIfFewColumns": 10
+    },
+    "select_single_full_key": {
+      "exclude": [],
+      "severity": "Error",
+      "allowPseudo": true
+    },
+    "select_add_order_by": {
+      "severity": "Error",
+      "skipForAllEntries": true
+    },
+    "delete_index_in_loop": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "sort_empty_key": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "check_subrc": {
+      "severity": "Error",
+      "openDataset": true,
+      "authorityCheck": true,
+      "selectSingle": true,
+      "selectTable": false,
+      "updateDatabase": true,
+      "insertDatabase": true,
+      "modifyDatabase": true,
+      "deleteDatabase": true,
+      "readTable": true,
+      "assign": true,
+      "find": false
+    },
+    "uncaught_exception": {
+      "exclude": [],
+      "severity": "Error",
+      "reportDynamic": false,
+      "reportNoCheck": false
+    },
+    "unused_variables": {
+      "exclude": [],
+      "severity": "Error",
+      "skipNames": [],
+      "skipAbstract": false
+    },
+    "unused_types": {
+      "exclude": [],
+      "severity": "Error",
+      "skipNames": []
+    },
+    "unused_methods": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "unreachable_code": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "empty_statement": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "identical_conditions": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "constant_condition": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "invalid_table_index": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "try_without_catch": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "try_cast_empty_catch": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "superfluous_value": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "sy_modification": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "subrc_after_assign": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "check_text_elements": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "selection_screen_texts_missing": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "message_exists": {
+      "exclude": [],
+      "severity": "Error",
+      "checkPlaceholders": true
+    },
+    "msag_consistency": {
+      "exclude": [],
+      "severity": "Error",
+      "numericParameters": true
+    },
+    "implement_methods": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "method_implemented_twice": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "superclass_final": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "check_abstract": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "call_transaction_authority_check": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "dangerous_statement": {
+      "exclude": [
+        "src/ebs/zcl_cd_ebs_sap_dao.clas.abap",
+        "src/fmon/zcl_cd_fmon_dao.clas.abap",
+        "src/hck/zcl_cd_hck_dao.clas.abap"
+      ],
+      "severity": "Error",
+      "execSQL": true,
+      "kernelCall": true,
+      "systemCall": true,
+      "insertReport": true,
+      "generateDynpro": true,
+      "generateReport": true,
+      "generateSubroutine": true,
+      "deleteReport": true,
+      "deleteTextpool": true,
+      "insertTextpool": true,
+      "deleteDynpro": true,
+      "exportDynpro": true,
+      "editorCallForReport": true,
+      "dynamicSQL": true,
+      "ignoreRAPQueryProvider": true
+    },
+    "forbidden_kernel_write": {
+      "exclude": [],
+      "severity": "Error",
+      "allow": []
+    },
+    "modify_only_own_db_tables": {
+      "reportDynamic": true,
+      "ownTables": "^Z",
+      "severity": "Error"
+    },
+    "sql_escape_host_variables": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "strict_sql": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "check_ddic": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "tabl_enhancement_category": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "xml_consistency": {
+      "exclude": [],
+      "severity": "Error",
+      "textAndTranslationLengthSeverity": "Error",
+      "dataElementSeverity": "Error",
+      "transparentTableSeverity": "Error"
+    },
+    "description_empty": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "obsolete_statement": {
+      "exclude": [],
+      "severity": "Error",
+      "refresh": true,
+      "compute": true,
+      "add": true,
+      "subtract": true,
+      "multiply": true,
+      "divide": true,
+      "move": true,
+      "requested": true,
+      "occurs": true,
+      "setExtended": true,
+      "withHeaderLine": true,
+      "fieldSymbolStructure": true,
+      "typePools": true,
+      "load": true,
+      "parameter": true,
+      "ranges": true,
+      "communication": true,
+      "pack": true,
+      "selectWithoutInto": true,
+      "freeMemory": true,
+      "exitFromSQL": true,
+      "sortByFS": true,
+      "callTransformation": true,
+      "regex": true,
+      "occurences": true,
+      "clientSpecified": true,
+      "formDefinition": true,
+      "formImplementation": true,
+      "commonPart": true,
+      "fieldGroups": true,
+      "replaceInto": true,
+      "loopExtract": true,
+      "sortExtract": true
+    },
+    "use_class_based_exceptions": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "classic_exceptions_overlap": {
+      "exclude": [],
+      "severity": "Error"
+    },
+    "parser_error": true,
+    "check_syntax": true
+  }
+}

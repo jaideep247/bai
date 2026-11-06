@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ops_param {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key param_name : abap.char(30) not null;
   param_value   : abap.char(255);
   description   : abap.char(60);

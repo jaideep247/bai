@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation; replaces
 *&            | Z_BAI_MASS_VALIDATION / ZFIR_BANK_POST_VALIDATION_V2).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -68,6 +69,12 @@ CLASS lcl_report DEFINITION FINAL.
       RETURNING
         VALUE(rv_format) TYPE zif_cd_ebs_types=>ty_format.
 
+    METHODS is_result_text
+      IMPORTING
+        is_run         TYPE zif_cd_ops_types=>ty_run
+      RETURNING
+        VALUE(rv_text) TYPE symsgv.
+
     METHODS display
       IMPORTING
         is_result TYPE zcl_cd_ebs_engine=>ty_result.
@@ -88,7 +95,7 @@ CLASS lcl_report IMPLEMENTATION.
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).
         IF sy-batch = abap_true.
-          MESSAGE s000(zcd_ops) WITH ls_result-run-message.
+          MESSAGE s000(zcd_ops) WITH is_result_text( ls_result-run ) space space space.
         ELSE.
           display( ls_result ).
         ENDIF.
@@ -156,6 +163,11 @@ CLASS lcl_report IMPLEMENTATION.
       ENDTRY.
     ENDIF.
     rv_content = concat_lines_of( table = lt_lines sep = cl_abap_char_utilities=>newline ).
+  ENDMETHOD.
+
+
+  METHOD is_result_text.
+    rv_text = |EBS { is_run-status }/{ is_run-rag }: { is_run-failed_items } failed, { is_run-blocked_items } blocked|.
   ENDMETHOD.
 
 

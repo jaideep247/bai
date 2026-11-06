@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_ops_alert_log {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key alert_id  : sysuuid_x16 not null;
   rule_id       : abap.char(10);
   channel       : abap.char(10);
@@ -18,4 +18,4 @@ define table zcd_ops_alert_log {
   error         : abap.char(255);
   created_by    : syuname;
 }
-// Secondary index ZCD_OPS_ALERT_LOG~RUL : CLIENT, RULE_ID, SENT_AT (throttling / escalation)
+// Secondary index ZCD_OPS_ALERT_LOG~RUL : MANDT, RULE_ID, SENT_AT (throttling / escalation)

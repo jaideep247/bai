@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_btc_map {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   // BAI2 / ISO (CAMT Domain-Family-SubFamily) / PRTRY (proprietary)
   key scheme   : abap.char(5) not null;
   // BAI2: '168' - ISO: 'PMNT-ICDT-ARET' or family row 'PMNT-ICDT'

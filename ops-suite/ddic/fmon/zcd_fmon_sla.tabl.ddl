@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_sla {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   key iface_id : abap.char(20) not null;
   // Stage that must be reached, e.g. SENT_TO_PRISM, ACK_RECEIVED, FULLY_PROCESSED
   key stage    : abap.char(20) not null;

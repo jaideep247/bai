@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_hck_agg {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key check_id  : abap.char(20) not null;
   // becomes the metric name; one check may hold several aggregates
   key agg_id    : abap.char(10) not null;

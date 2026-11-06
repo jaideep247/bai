@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_job_step {
-  key client      : abap.clnt not null;
+  key mandt       : abap.clnt not null;
   key cycle_id    : abap.char(20) not null;
   key step_no     : abap.numc(3) not null;
   description     : abap.char(60);

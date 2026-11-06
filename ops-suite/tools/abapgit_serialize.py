@@ -80,6 +80,18 @@ for d, _, files in os.walk(SRC):
         elif f.endswith('.prog.abap'):
             body = '   <PROGDIR>\n' + tag('NAME', name) + tag('SUBC', '1') + tag('RLOAD', 'E') + \
                    tag('FIXPT', 'X') + tag('UCCHECK', 'X') + '   </PROGDIR>\n'
+            texts = os.path.join(ROOT, 'docs', 'text_elements', f.replace('.prog.abap', '.prog.texts.md'))
+            if os.path.exists(texts):
+                body += '   <TPOOL>\n'
+                kinds = {'Title': 'R', 'Text symbol': 'I', 'Selection text': 'S'}
+                for kind, key, text in re.findall(r'^\| (Title|Text symbol|Selection text) \| (\S+) \| (.*?) \|$',
+                                                  open(texts, encoding='utf-8').read(), re.M):
+                    entry = (' ' * 8 + text) if kinds[kind] == 'S' else text
+                    body += '    <item>\n' + tag('ID', kinds[kind], 5)
+                    if kinds[kind] != 'R':
+                        body += tag('KEY', key, 5)
+                    body += tag('ENTRY', entry, 5) + tag('LENGTH', len(entry), 5) + '    </item>\n'
+                body += '   </TPOOL>\n'
             changed += write(p.replace('.prog.abap', '.prog.xml'), wrap('LCL_OBJECT_PROG', body))
 
 # tables from DDL
@@ -91,7 +103,7 @@ BUILTIN = {  # type -> (INTTYPE, intlen(fn of len), DATATYPE, leng(fn of len))
     'tims': ('T', lambda n: 12, 'TIMS', lambda n: 6),
     'int1': ('b', lambda n: 1, 'INT1', lambda n: 3),
     'int2': ('s', lambda n: 2, 'INT2', lambda n: 5),
-    'int4': ('I', lambda n: 4, 'INT4', lambda n: 10),
+    'int4': ('X', lambda n: 4, 'INT4', lambda n: 10),
     'int8': ('8', lambda n: 8, 'INT8', lambda n: 19),
     'string': ('g', lambda n: 8, 'STRG', lambda n: 0),
 }

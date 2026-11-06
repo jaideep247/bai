@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_fmon_event {
-  key client   : abap.clnt not null;
+  key mandt    : abap.clnt not null;
   key file_id  : sysuuid_x16 not null;
   key event_no : abap.int4 not null;
   // Stage as reported by the source (also when capped or ignored by the state machine)
@@ -20,4 +20,4 @@ define table zcd_fmon_event {
   created_by   : syuname;
   created_at   : timestampl;
 }
-// Secondary index ZCD_FMON_EVENT~SRC (UNIQUE): CLIENT, SRC_ID, SRC_KEY, STAGE  (idempotent event insert)
+// Secondary index ZCD_FMON_EVENT~SRC (UNIQUE): MANDT, SRC_ID, SRC_KEY, STAGE  (idempotent event insert)

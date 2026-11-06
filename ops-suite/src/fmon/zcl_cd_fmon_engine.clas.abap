@@ -6,6 +6,7 @@
 *& plug-in checks, persist, write findings and dispatch alerts.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -303,10 +304,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     prefetch( lt_groups ).
     SORT lt_groups BY event_at src_id.
     LOOP AT lt_groups INTO DATA(ls_group).
-      READ TABLE mt_ifaces INTO DATA(ls_iface) WITH TABLE KEY iface_id = ls_group-iface_id.
+      DATA(ls_iface) = VALUE #( mt_ifaces[ iface_id = ls_group-iface_id ] OPTIONAL ).
       DATA(lv_file_id) = get_or_create( is_group = ls_group
                                         is_iface = ls_iface ).
-      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
+      DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
       IF zcl_cd_fmon_status=>rank( ls_group-stage ) = 1
          AND ls_group-business_date > ls_file-business_date.
         " A new generation/receipt under a reference already used on an earlier day:
@@ -759,10 +760,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         INSERT ls_named-checksum INTO TABLE lt_checksums.
       ENDIF.
     ENDLOOP.
-    SORT lt_names.
-    DELETE ADJACENT DUPLICATES FROM lt_names.
-    SORT lt_checksums.
-    DELETE ADJACENT DUPLICATES FROM lt_checksums.
+    SORT lt_names BY table_line.
+    DELETE ADJACENT DUPLICATES FROM lt_names COMPARING table_line.
+    SORT lt_checksums BY table_line.
+    DELETE ADJACENT DUPLICATES FROM lt_checksums COMPARING table_line.
     DATA lv_since TYPE d.
     lv_since = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-dup_days iv_default = 7 ).
     rs_ctx-history = mo_dao->get_history( it_names     = lt_names
@@ -793,7 +794,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_save TYPE zif_cd_fmon_types=>tt_file.
 
     LOOP AT mt_changed INTO DATA(lv_file_id).
-      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
+      DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
       IF sy-subrc = 0.
         ls_file-changed_at = mv_now.
         ls_file-changed_by = sy-uname.

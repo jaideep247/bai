@@ -220,15 +220,15 @@ sequenceDiagram
 
 | Table | Class | Key | Purpose |
 |---|---|---|---|
-| `ZCD_HCK_DEF` | C | CLIENT, CHECK_ID | Check catalog: category, class, active, SEQ, priority, PARAM1–4, package size, timeout |
-| `ZCD_HCK_THRESH` | C | CLIENT, CHECK_ID, METRIC, BUKRS | Amber/red limits, direction, baseline mode (NONE/ZSCORE/IQR), z limit / IQR k, lookback; `*` default rows |
-| `ZCD_HCK_AGG` | C | CLIENT, CHECK_ID, AGG_ID | Generic COUNT/SUM: table, date field + mode (AGE/DAY) + days, group field, 3 conditions |
-| `ZCD_HCK_TABWL` | C | CLIENT, TABNAME | Tables the generic aggregate may read (security boundary, with approver) |
-| `ZCD_HCK_DRIFT` | C | CLIENT, TABNAME | Tables under configuration-drift control |
-| `ZCD_JOB_CYCLE` | C | CLIENT, CYCLE_ID | Cycle header: text, factory calendar, active |
-| `ZCD_JOB_STEP` | C | CLIENT, CYCLE_ID, STEP_NO | Job name pattern, program, variant, predecessor, day offset, start window, max runtime, skippable, critical |
-| `ZCD_HCK_METRIC` | A | CLIENT, RUN_ID, CHECK_ID, METRIC, DIM1, DIM2 | Metric history for baselines, trends, dashboard. Index `HST` (CHECK_ID, METRIC, DIM1, MEASURED_AT), `TIM` (MEASURED_AT) |
-| `ZCD_HCK_BASELINE` | A | CLIENT, TABNAME | Golden baseline hash, row count, taken at / by (per system, never transported) |
+| `ZCD_HCK_DEF` | C | MANDT, CHECK_ID | Check catalog: category, class, active, SEQ, priority, PARAM1–4, package size, timeout |
+| `ZCD_HCK_THRESH` | C | MANDT, CHECK_ID, METRIC, BUKRS | Amber/red limits, direction, baseline mode (NONE/ZSCORE/IQR), z limit / IQR k, lookback; `*` default rows |
+| `ZCD_HCK_AGG` | C | MANDT, CHECK_ID, AGG_ID | Generic COUNT/SUM: table, date field + mode (AGE/DAY) + days, group field, 3 conditions |
+| `ZCD_HCK_TABWL` | C | MANDT, TABNAME | Tables the generic aggregate may read (security boundary, with approver) |
+| `ZCD_HCK_DRIFT` | C | MANDT, TABNAME | Tables under configuration-drift control |
+| `ZCD_JOB_CYCLE` | C | MANDT, CYCLE_ID | Cycle header: text, factory calendar, active |
+| `ZCD_JOB_STEP` | C | MANDT, CYCLE_ID, STEP_NO | Job name pattern, program, variant, predecessor, day offset, start window, max runtime, skippable, critical |
+| `ZCD_HCK_METRIC` | A | MANDT, RUN_ID, CHECK_ID, METRIC, DIM1, DIM2 | Metric history for baselines, trends, dashboard. Index `HST` (CHECK_ID, METRIC, DIM1, MEASURED_AT), `TIM` (MEASURED_AT) |
+| `ZCD_HCK_BASELINE` | A | MANDT, TABNAME | Golden baseline hash, row count, taken at / by (per system, never transported) |
 | Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` / `ZCD_OPS_PARAM` | A / A / C | — | Run header, findings / owned exceptions, parameters (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
 | Core `ZCD_OPS_ALERT_LOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
 

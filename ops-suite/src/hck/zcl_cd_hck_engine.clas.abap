@@ -5,6 +5,7 @@
 *& evaluates thresholds/baselines, persists via the core store and alerts.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -398,7 +399,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ENDIF.
       RETURN.
     ENDIF.
-    READ TABLE cs_result-findings INTO DATA(ls_worst) WITH KEY severity = lv_worst.
+    DATA(ls_worst) = VALUE #( cs_result-findings[ severity = lv_worst ] OPTIONAL ).
     cs_result-summary = COND #( WHEN lines( cs_result-findings ) > 1
                                 THEN |{ ls_worst-message } (+{ lines( cs_result-findings ) - 1 } more)|
                                 ELSE ls_worst-message ).

@@ -6,6 +6,7 @@
 *& logic over configuration passed in. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -148,7 +149,7 @@ CLASS ltc_resolver IMPLEMENTATION.
 
 
   METHOD first_line.
-    READ TABLE mt_lines INTO rs_line INDEX 1.
+    rs_line = VALUE #( mt_lines[ 1 ] OPTIONAL ).
   ENDMETHOD.
 
 

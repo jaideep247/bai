@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ebs_rule_def {
-  key client       : abap.clnt not null;
+  key mandt        : abap.clnt not null;
   key rule_id      : abap.char(10) not null;
   // S statement / L line
   rule_level       : abap.char(1);

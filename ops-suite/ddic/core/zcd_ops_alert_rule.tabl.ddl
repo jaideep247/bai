@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ops_alert_rule {
-  key client      : abap.clnt not null;
+  key mandt       : abap.clnt not null;
   key rule_id     : abap.char(10) not null;
   // HCK / FMON / EBS or * for every module
   module          : abap.char(4);

@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_ops_finding {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key run_id    : sysuuid_x16 not null;
   key finding_no : abap.int4 not null;
   module        : abap.char(4);
@@ -32,5 +32,5 @@ define table zcd_ops_finding {
   created_at    : timestampl;
 }
 // Secondary indexes:
-//   ZCD_OPS_FINDING~OPN : CLIENT, MODULE, DISPOSITION, DUE_DATE   (exception queue / aging)
-//   ZCD_OPS_FINDING~OBJ : CLIENT, MODULE, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)
+//   ZCD_OPS_FINDING~OPN : MANDT, MODULE, DISPOSITION, DUE_DATE   (exception queue / aging)
+//   ZCD_OPS_FINDING~OBJ : MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)

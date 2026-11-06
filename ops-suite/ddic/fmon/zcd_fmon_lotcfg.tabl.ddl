@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_fmon_lotcfg {
-  key client        : abap.clnt not null;
+  key mandt         : abap.clnt not null;
   // Interface, or '*' = default for every interface of the lot type
   key iface_id      : abap.char(20) not null;
   // RETURNS or NOC (equals ZCD_FMON_IFACE-FILE_TYPE of the inbound interface)

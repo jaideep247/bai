@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ebs_rsn_map {
-  key client  : abap.clnt not null;
+  key mandt   : abap.clnt not null;
   // R01..R85 or C01..C07
   key reason  : abap.char(4) not null;
   // FI-CA return reason (returns lot)

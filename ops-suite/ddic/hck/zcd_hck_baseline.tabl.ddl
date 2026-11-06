@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_hck_baseline {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key tabname   : abap.char(30) not null;
   // SHA-256 (hex) over all rows ordered by primary key
   hash          : abap.char(64);

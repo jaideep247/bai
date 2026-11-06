@@ -4,7 +4,7 @@
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ops_alert_chn {
-  key client    : abap.clnt not null;
+  key mandt     : abap.clnt not null;
   key channel   : abap.char(10) not null;
   // Implements ZIF_CD_OPS_ALERT_CHANNEL
   class_name    : seoclsname;

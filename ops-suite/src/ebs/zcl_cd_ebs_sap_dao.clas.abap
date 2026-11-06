@@ -38,9 +38,7 @@ ENDCLASS.
 CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_sap_dao~get_return_items.
-    IF it_docno IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_docno IS NOT INITIAL.
     " Confirmed: DFKKRP-SELW1 = DFKKOP-AUGBL (= FEBEP-CHECT).
     " VERIFY-DDIC: DFKKRK-STARS joined via OPBEL as in legacy v4 (ZCL_BAI_168_DISB)
     SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars
@@ -53,9 +51,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_sap_dao~get_payments.
-    IF it_docno IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_docno IS NOT INITIAL.
     " Confirmed: DPAYH LAUFD/LAUFI by DOC1R; live status DPAYH-ZZ_PAYMENT_STATUS
     " (legacy v4 used ZZPAYMENT_STATUS - see Legacy_Parity_Comparison.md)
     " DOC1R is not unique in DPAYH (re-runs, proposal runs): proposal rows are excluded and
@@ -71,9 +67,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_sap_dao~get_retrievals.
-    IF it_docno IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_docno IS NOT INITIAL.
     " VERIFY-DDIC: the status field name differs between legacy versions
     " (ZZ_RTRV_STATUS in v4 168, ZZRETRIEVAL_STATUS in v4 468). It is a parameter,
     " validated against the DDIC before use - never concatenated unchecked.
@@ -94,9 +88,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_sap_dao~get_checks.
-    IF it_ztnum IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_ztnum IS NOT INITIAL.
     " Confirmed: DFKKCR-ZTNUM = FEBEP-CHECT, DFKKCR-DOC1R = DFKKOP-AUGBL.
     " VERIFY-DDIC: DFKKCR-RWBTR (amount) and CRSTATUS as used by legacy v4 581/255;
     " HBKID/HKTID returned so rules scope a check number to its house bank account
@@ -109,9 +101,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_sap_dao~get_fi_lines.
-    IF it_keys IS INITIAL.
-      RETURN.
-    ENDIF.
+    CHECK it_keys IS NOT INITIAL.
     " Key access only (BUKRS/BELNR/GJAHR) - never BSEG by AUGBL or XREF2 (full scan)
     SELECT bukrs, belnr, gjahr, buzei, hkont, augbl
       FROM bseg
