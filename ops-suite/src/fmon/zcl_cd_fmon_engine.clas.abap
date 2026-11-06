@@ -17,6 +17,7 @@
 *&              A38 truncated lot scans, A39 payment-level ACK dedupe and cumulative counts,
 *&              A40 events stored as applied, A41 unknown age, A49 file instance by
 *&              business date, A52 malformed rows quarantined.
+*& 2026-11-06 | Digest file references verified against the full file name in the registry (audit A100).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -661,6 +662,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                             WHEN lv_origin = abap_true THEN mv_date ).
     LOOP AT mt_files INTO DATA(ls_file) USING KEY ref
          WHERE iface_id = is_group-iface_id AND file_ref = is_group-file_ref.
+      " Audit A100: a digest reference matches only the file with the same full name
+      IF zcl_cd_fmon_util=>is_digest_ref( is_group-file_ref ) = abap_true
+         AND is_group-file_name IS NOT INITIAL AND ls_file-file_name IS NOT INITIAL
+         AND zcl_cd_fmon_util=>canonical_name( is_group-file_name )
+             <> zcl_cd_fmon_util=>canonical_name( ls_file-file_name ).
+        ev_ambiguous = abap_true.
+        RETURN.
+      ENDIF.
       lv_count += 1.
       IF lv_date IS NOT INITIAL AND ls_file-business_date = lv_date.
         ev_file_id = ls_file-file_id.

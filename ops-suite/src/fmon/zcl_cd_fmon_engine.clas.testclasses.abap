@@ -434,6 +434,7 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS same_name_next_day_new_file FOR TESTING.
     METHODS late_ack_goes_to_its_day FOR TESTING.
     METHODS undated_ref_ambiguous FOR TESTING.
+    METHODS long_name_digest_verified FOR TESTING.
     METHODS payment_acks_deduplicated FOR TESTING.
     METHODS ack_count_never_decreases FOR TESTING.
     METHODS truncated_lot_not_completed FOR TESTING.
@@ -1070,6 +1071,30 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
+
+  " Audit A100: a reference built from a digest of a long file name is accepted only when
+  " the full name in the registry is the same file name - otherwise it is reported
+  METHOD long_name_digest_verified.
+    TRY.
+        DATA(lv_name_a) = |ACH_PNC_{ repeat( val = `7` occ = 64 ) }_A.TXT|.
+        DATA(lv_name_b) = |ACH_PNC_{ repeat( val = `7` occ = 64 ) }_B.TXT|.
+        configure_scenario( VALUE #( ) ).
+        existing_file( iv_id = 95 iv_date = gc_prev_day iv_stage = zif_cd_fmon_types=>gc_stage-sent ).
+        " the registry row carries the digest of name A but holds name B (a digest collision)
+        mo_dao->mt_existing[ file_id = CONV zif_cd_fmon_types=>ty_file_id( 95 ) ]-file_ref =
+          zcl_cd_fmon_util=>normalize_ref( lv_name_a ).
+        mo_dao->mt_existing[ file_id = CONV zif_cd_fmon_types=>ty_file_id( 95 ) ]-file_name = lv_name_b.
+        add_record( iv_src_id = gc_src_ack iv_name = CONV #( lv_name_a ) iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_count = 10 iv_date = gc_prev_day ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ref_ambiguous ] ) )
+          msg = 'A digest reference whose full name differs must be FILE_REF_AMBIGUOUS' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
 
 
   " Audit A39: per-payment ACKs count distinct payments - a payment acknowledged twice

@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A52: IS_NUMBER for numeric source fields.
+*& 2026-11-06 | Long references keep their identity through a SHA-1 digest; IS_DIGEST_REF, CANONICAL_NAME (audit A100).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -72,12 +73,28 @@ CLASS zcl_cd_fmon_util DEFINITION
       RETURNING
         VALUE(rv_timestamp) TYPE timestampl.
 
-    "! Cross-source correlation key: condensed, upper case
+    "! Cross-source correlation key: condensed, upper case. A canonical value longer than the
+    "! key keeps its identity as prefix + marker + SHA-1 of the whole value (audit A100); blank
+    "! when the digest cannot be computed - callers reject a blank reference
     CLASS-METHODS normalize_ref
       IMPORTING
         iv_value      TYPE clike
       RETURNING
         VALUE(rv_ref) TYPE zif_cd_fmon_types=>ty_file_ref.
+
+    "! The reference was built from a digest (a long name): verify the full name before use
+    CLASS-METHODS is_digest_ref
+      IMPORTING
+        iv_ref           TYPE zif_cd_fmon_types=>ty_file_ref
+      RETURNING
+        VALUE(rv_digest) TYPE abap_bool.
+
+    "! Canonical form of a file name or key: condensed, upper case, full length
+    CLASS-METHODS canonical_name
+      IMPORTING
+        iv_value       TYPE clike
+      RETURNING
+        VALUE(rv_name) TYPE string.
 
     "! Unformatted number as written by the dynamic reader: optional sign (leading or
     "! trailing), digits, optional decimals (audit A52 - no silent zero for garbage)
@@ -185,7 +202,40 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
 
 
   METHOD normalize_ref.
-    rv_ref = to_upper( condense( CONV string( iv_value ) ) ).
+    DATA lv_hash TYPE string.
+    DATA(lv_canonical) = canonical_name( iv_value ).
+    IF strlen( lv_canonical ) <= zif_cd_fmon_types=>gc_ref_digest-width.
+      rv_ref = lv_canonical.
+      RETURN.
+    ENDIF.
+    TRY.
+        " VERIFY-ADT: CL_ABAP_MESSAGE_DIGEST=>CALCULATE_HASH_FOR_CHAR (same call as the alert intent key)
+        cl_abap_message_digest=>calculate_hash_for_char(
+          EXPORTING
+            if_algorithm  = zif_cd_fmon_types=>gc_ref_digest-algorithm
+            if_data       = lv_canonical
+          IMPORTING
+            ef_hashstring = lv_hash ).
+      CATCH cx_abap_message_digest.
+        " no reference rather than a truncated one: the adapter quarantines the row
+        CLEAR rv_ref.
+        RETURN.
+    ENDTRY.
+    rv_ref = |{ substring( val = lv_canonical len = zif_cd_fmon_types=>gc_ref_digest-prefix ) }|
+          && |{ zif_cd_fmon_types=>gc_ref_digest-marker }{ to_upper( lv_hash ) }|.
+  ENDMETHOD.
+
+
+  METHOD is_digest_ref.
+    DATA(lv_ref) = CONV string( iv_ref ).
+    rv_digest = xsdbool( strlen( lv_ref ) = zif_cd_fmon_types=>gc_ref_digest-width
+                         AND substring( val = lv_ref off = zif_cd_fmon_types=>gc_ref_digest-prefix len = 1 )
+                             = zif_cd_fmon_types=>gc_ref_digest-marker ).
+  ENDMETHOD.
+
+
+  METHOD canonical_name.
+    rv_name = to_upper( condense( CONV string( iv_value ) ) ).
   ENDMETHOD.
 
 

@@ -646,6 +646,7 @@ src/fmon/zcl_cd_fmon_status.clas.abap,ABAP,"File status state machine (pure doma
 src/fmon/zcl_cd_fmon_status.clas.testclasses.abap,ABAP,Pure unit tests (no doubles) for the file status state machine:
 src/fmon/zcl_cd_fmon_status.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_util.clas.abap,ABAP,"Stateless FMON helpers: finding builder, check-parameter parsing,"
+src/fmon/zcl_cd_fmon_util.clas.testclasses.abap,ABAP,Unit tests for the file-reference normalisation of ZCL_CD_FMON_UTIL
 src/fmon/zcl_cd_fmon_util.clas.xml,abapGit,
 src/fmon/zi_cd_fmoncfgchg.ddls.asddls,CDS,
 src/fmon/zi_cd_fmoncfgchg.ddls.xml,abapGit,

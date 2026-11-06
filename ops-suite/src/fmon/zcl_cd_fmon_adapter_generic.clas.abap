@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A39/A52: payment key, malformed rows flagged (not counted), half-open range.
+*& 2026-11-06 | Rows without a usable file reference are quarantined (audit A100).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - generic legacy source adapter</p>
 "! No field name of any legacy table is coded here: the structures of the
@@ -156,6 +157,10 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
     rs_record-file_ref  = zcl_cd_fmon_util=>normalize_ref( COND string( WHEN is_raw-file_key IS NOT INITIAL
                                                                         THEN is_raw-file_key
                                                                         ELSE is_raw-file_name ) ).
+    IF rs_record-file_ref IS INITIAL.
+      " Audit A100: a row without a usable reference is rejected, never correlated by a blank key
+      mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-file_key CHANGING cs_record = rs_record ).
+    ENDIF.
     rs_record-raw_status = is_raw-status.
     rs_record-stage = COND #( WHEN is_request-src-status_field IS INITIAL THEN is_request-src-default_stage
                               ELSE map_stage( is_request = is_request

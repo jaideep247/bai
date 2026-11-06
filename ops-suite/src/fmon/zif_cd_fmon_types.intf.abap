@@ -13,6 +13,7 @@
 *&              dedupe, lot truncation, SLA evidence, age basis, approved tables, malformed rows.
 *& 2026-11-06 | gc_engine_key-registry.
 *& 2026-11-06 | Plug-in interface names for the core factory check (audit A62).
+*& 2026-11-06 | File reference digest for names longer than the key (audit A100).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -64,6 +65,16 @@ INTERFACE zif_cd_fmon_types
   TYPES ty_age_basis    TYPE c LENGTH 1.
   "! Factory-calendar correction option of DATE_CONVERT_TO_FACTORYDATE ('+' next, '-' previous)
   TYPES ty_fcal_correct TYPE c LENGTH 1.
+
+  "! File reference longer than the correlation key (audit A100): first PREFIX characters of the
+  "! canonical name + MARKER + SHA-1 hex of the whole canonical name = exactly WIDTH characters
+  CONSTANTS:
+    BEGIN OF gc_ref_digest,
+      width     TYPE i VALUE 70,
+      prefix    TYPE i VALUE 29,
+      marker    TYPE c LENGTH 1 VALUE '#',
+      algorithm TYPE string VALUE `SHA1`,
+    END OF gc_ref_digest.
 
   "! Plug-in interfaces checked by the core factory before instantiation (audit A62)
   CONSTANTS:
