@@ -1,0 +1,5 @@
+@EndUserText.label: 'Health check suppressions'
+@ObjectModel.leadingEntity.name: 'ZC_CD_HCKSUPPRESS'
+define service ZUI_CD_HCK_SUP {
+  expose ZC_CD_HckSuppress as Suppression;
+}

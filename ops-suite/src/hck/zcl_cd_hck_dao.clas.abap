@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | get_suppressions: active suppressions of the day (design 6.3).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -494,6 +495,17 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             previous = lx_digest.
     ENDTRY.
     rv_hash = lv_hash.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~get_suppressions.
+    " index ZCD_HCK_SUPPRESS~ACT
+    SELECT suppress_uuid, check_id, key_pattern, bukrs, valid_from, valid_to, status, created_by
+      FROM zcd_hck_suppress
+      WHERE status     = @zif_cd_hck_suppress_types=>gc_status-active
+        AND valid_from <= @iv_today
+        AND valid_to   >= @iv_today
+      ORDER BY check_id, suppress_uuid
+      INTO CORRESPONDING FIELDS OF TABLE @rt_suppressions.
   ENDMETHOD.
 
 ENDCLASS.

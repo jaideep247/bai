@@ -1,0 +1,42 @@
+managed implementation in class zbp_r_cd_hcksuppress unique;
+strict ( 2 );
+
+// Health-check suppression (design 6.3): create (ZCD_OPS 02, HCK) applies at once up to
+// HCK_SUPPRESS_MAX_DAYS days; longer waits for a second user (ZCD_OPS 85).
+define behavior for ZR_CD_HckSuppress alias Suppression
+persistent table zcd_hck_suppress
+lock master
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  create;
+  internal update;
+  field ( numbering : managed, readonly ) SuppressUuid;
+  field ( readonly ) Status, CreatedBy, CreatedAt, ApprovedBy, ApprovedAt, LocalLastChangedAt, LastChangedAt;
+  field ( mandatory : create, readonly : update ) CheckId, ValidFrom, ValidTo, Reason;
+  field ( readonly : update ) KeyPattern, CompanyCode;
+
+  determination setStatus on modify { create; }
+  validation validateRequest on save { create; }
+
+  action ( features : instance ) approveSuppression result [1] $self;
+  action ( features : instance ) endSuppression result [1] $self;
+
+  mapping for zcd_hck_suppress
+  {
+    SuppressUuid       = suppress_uuid;
+    CheckId            = check_id;
+    KeyPattern         = key_pattern;
+    CompanyCode        = bukrs;
+    ValidFrom          = valid_from;
+    ValidTo            = valid_to;
+    Reason             = reason;
+    Status             = status;
+    CreatedBy          = created_by;
+    CreatedAt          = created_at;
+    ApprovedBy         = approved_by;
+    ApprovedAt         = approved_at;
+    LocalLastChangedAt = local_last_changed_at;
+    LastChangedAt      = last_changed_at;
+  }
+}

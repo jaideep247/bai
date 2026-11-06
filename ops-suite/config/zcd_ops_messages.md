@@ -66,6 +66,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 316 | Export file &1 could not be opened for writing |
 | 317 | Aggregate function &1 of check &2 is not supported (COUNT, SUM) |
 | 318 | SUM field &1 of table &2 is not numeric |
+| 320 | Suppression period is invalid (from &1 to &2) |
+| 321 | Suppression is not waiting for approval (status &1) |
+| 322 | A check ID is required for a suppression |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

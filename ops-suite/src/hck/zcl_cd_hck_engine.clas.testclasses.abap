@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: executed checks reconciled; failed check excluded.
+*& 2026-11-06 | suppressed_red_is_not_red (design 6.3).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -154,6 +155,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_defs TYPE zif_cd_hck_types=>tt_check_def.
     DATA mt_thresholds TYPE zif_cd_hck_types=>tt_threshold.
     DATA mv_metric_saves TYPE i.
+    DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -175,6 +177,10 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_open_exceptions.
     CLEAR rt_exceptions.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~get_suppressions.
+    rt_suppressions = mt_suppressions.
   ENDMETHOD.
 ENDCLASS.
 
@@ -236,6 +242,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
 
     METHODS all_green_scores_hundred FOR TESTING.
     METHODS red_metric_turns_check_red FOR TESTING.
+    METHODS suppressed_red_is_not_red FOR TESTING.
     METHODS failed_plugin_does_not_abort FOR TESTING.
     METHODS timeout_overrun_is_flagged FOR TESTING.
     METHODS test_mode_saves_nothing FOR TESTING.
@@ -594,6 +601,30 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_group( gc_fail_check ) ] ) )
           msg = 'A check that failed must not resolve its exceptions' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (design 6.3): a suppressed finding stays listed as information and the check is not
+  " red because of it (not scored, not alerted)
+  METHOD suppressed_red_is_not_red.
+    DATA ls_suppression TYPE zif_cd_hck_suppress_types=>ty_suppression.
+    TRY.
+        configure_scenario( VALUE #( red_metric = abap_true ) ).
+        ls_suppression-check_id   = gc_red_check.
+        ls_suppression-valid_from = '20261101'.
+        ls_suppression-valid_to   = '20261130'.
+        ls_suppression-status     = zif_cd_hck_suppress_types=>gc_status-active.
+        ls_suppression-created_by = 'RTB_LEAD'.
+        INSERT ls_suppression INTO TABLE mo_dao->mt_suppressions.
+        DATA(ls_report) = act( ).
+        DATA(ls_result) = ls_report-results[ check_id = gc_red_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_result-rag exp = gc_green
+                                            msg = 'A check whose only finding is suppressed must be green' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-info
+                                            msg = 'The suppressed finding must stay listed as information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

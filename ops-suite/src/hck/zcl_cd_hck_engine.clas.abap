@@ -9,6 +9,7 @@
 *& 2026-11-06 | Run header committed at start; results committed before alerts and report mail.
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: executed checks reconciled by check ID.
+*& 2026-11-06 | Active suppressions applied per check result (design 6.3).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -91,6 +92,9 @@ CLASS zcl_cd_hck_engine DEFINITION
     DATA mo_store TYPE REF TO zif_cd_ops_store.
     DATA mo_dao TYPE REF TO zif_cd_hck_dao.
     DATA mo_clock TYPE REF TO zif_cd_ops_clock.
+    "! Active suppressions of the report day (design 6.3), read once per run
+    DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
+    DATA mv_today TYPE d.
 
     METHODS execute_check
       IMPORTING
@@ -265,6 +269,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                            now_time    = mo_clock->time( )
                                                            run_id      = rs_report-run-run_id
                                                            test_mode   = is_selection-test_mode ).
+
+    mv_today = lv_today.
+    mt_suppressions = mo_dao->get_suppressions( lv_today ).
 
     DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
                                             it_priorities = is_selection-priorities
@@ -469,6 +476,17 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         <ls_finding>-object_key = cs_result-check_id.
       ENDIF.
     ENDLOOP.
+
+    " Design 6.3: suppressed findings stay listed as information. When nothing of rank >= 2
+    " is left, the check is not red or amber because of them (plugin RAG included).
+    DATA(lt_before) = cs_result-findings.
+    cs_result-findings = zcl_cd_hck_suppression=>apply( it_findings     = cs_result-findings
+                                                        it_suppressions = mt_suppressions
+                                                        iv_today        = mv_today ).
+    IF cs_result-findings <> lt_before
+       AND zcl_cd_ops_util=>severity_rank( zcl_cd_ops_util=>worst_severity( cs_result-findings ) ) < 2.
+      cs_result-rag = zif_cd_ops_types=>gc_rag-green.
+    ENDIF.
 
     cs_result-rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = cs_result-rag
                                                 iv_rag2 = zcl_cd_ops_util=>rag_from_findings( cs_result-findings ) ).

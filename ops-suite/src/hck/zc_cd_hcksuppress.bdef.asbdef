@@ -1,0 +1,10 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CD_HckSuppress alias Suppression
+use etag
+{
+  use create;
+  use action approveSuppression;
+  use action endSuppression;
+}

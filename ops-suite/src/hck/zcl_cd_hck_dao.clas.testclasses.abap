@@ -5,6 +5,7 @@
 *& history and overdue exceptions; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | only_active_suppressions (design 6.3).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -31,6 +32,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_only_same_dimension FOR TESTING.
     METHODS saved_metric_is_read_back FOR TESTING.
     METHODS overdue_open_and_assigned FOR TESTING.
+    METHODS only_active_suppressions FOR TESTING.
 
     METHODS add_metric
       IMPORTING
@@ -54,7 +56,8 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_HCK_METRIC' )
-                                                                            ( 'ZCD_OPS_FINDING' ) ) ).
+                                                                            ( 'ZCD_OPS_FINDING' )
+                                                                            ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
 
 
@@ -187,6 +190,36 @@ CLASS ltc_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_overdue_exceptions( gc_today )
                                             exp = lt_exp
                                             msg = 'Only open/assigned EBS items past due count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (design 6.3): only active suppressions valid today are read - pending and expired are not
+  METHOD only_active_suppressions.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_suppress WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_hck_suppress.
+    TRY.
+        ls_row-suppress_uuid = '000000000000000000000000000000C1'.
+        ls_row-check_id      = 'HCK_C04'.
+        ls_row-valid_from    = '20261101'.
+        ls_row-valid_to      = '20261110'.
+        ls_row-status        = zif_cd_hck_suppress_types=>gc_status-active.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-suppress_uuid = '000000000000000000000000000000C2'.
+        ls_row-status        = zif_cd_hck_suppress_types=>gc_status-requested.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-suppress_uuid = '000000000000000000000000000000C3'.
+        ls_row-status        = zif_cd_hck_suppress_types=>gc_status-active.
+        ls_row-valid_to      = '20261105'.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_active) = mo_cut->get_suppressions( '20261106' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_active ) exp = 1
+                                            msg = 'Only the active suppression valid today must be read' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_active[ 1 ]-suppress_uuid exp = '000000000000000000000000000000C1'
+                                            msg = 'The active suppression must be the one read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

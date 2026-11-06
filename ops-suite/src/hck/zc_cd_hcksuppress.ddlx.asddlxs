@@ -1,0 +1,52 @@
+// UI annotations: Health check suppressions
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Suppression', typeNamePlural: 'Suppressions',
+                  title: { type: #STANDARD, value: 'CheckId' },
+                  description: { type: #STANDARD, value: 'Reason' } }
+annotate entity ZC_CD_HckSuppress with
+{
+  @UI.facet: [ { id: 'Suppression', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Suppression', position: 10 } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_ACTION, dataAction: 'approveSuppression', label: 'Approve' },
+                  { type: #FOR_ACTION, dataAction: 'endSuppression', label: 'End now' } ]
+  @UI.identification: [ { position: 10 },
+                        { type: #FOR_ACTION, dataAction: 'approveSuppression', label: 'Approve' },
+                        { type: #FOR_ACTION, dataAction: 'endSuppression', label: 'End now' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  CheckId;
+  @UI.lineItem: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  KeyPattern;
+  @UI.lineItem: [ { position: 30 } ]
+  @UI.identification: [ { position: 30 } ]
+  CompanyCode;
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  ValidFrom;
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  ValidTo;
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Status;
+  @UI.lineItem: [ { position: 70 } ]
+  @UI.identification: [ { position: 70 } ]
+  Reason;
+  @UI.lineItem: [ { position: 80 } ]
+  @UI.identification: [ { position: 80 } ]
+  CreatedBy;
+  @UI.identification: [ { position: 90 } ]
+  CreatedAt;
+  @UI.identification: [ { position: 100 } ]
+  ApprovedBy;
+  @UI.identification: [ { position: 110 } ]
+  ApprovedAt;
+  @UI.hidden: true
+  SuppressUuid;
+  @UI.hidden: true
+  LocalLastChangedAt;
+  @UI.hidden: true
+  LastChangedAt;
+}

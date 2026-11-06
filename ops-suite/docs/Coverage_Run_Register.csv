@@ -21,12 +21,13 @@ ZCL_CD_FMON_RULES,35,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,15,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,12,90,,Not run in target SAP
 ZCL_CD_HCK_CYCLE_EVAL,11,90,,Not run in target SAP
-ZCL_CD_HCK_DAO,4,90,,Not run in target SAP
-ZCL_CD_HCK_ENGINE,13,90,,Not run in target SAP
+ZCL_CD_HCK_DAO,5,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,14,90,,Not run in target SAP
 ZCL_CD_HCK_PARAM,3,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,7,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,6,90,,Not run in target SAP
 ZCL_CD_HCK_STATS,12,90,,Not run in target SAP
+ZCL_CD_HCK_SUPPRESSION,8,90,,Not run in target SAP
 ZCL_CD_HCK_THRESHOLD,11,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_POLICY,14,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_ROUTER,8,90,,Not run in target SAP
