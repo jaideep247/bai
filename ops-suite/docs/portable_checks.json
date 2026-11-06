@@ -1,0 +1,86 @@
+{
+  "_artifact": {
+    "name": "portable_checks.json",
+    "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
+    "generated": "2026-11-06"
+  },
+  "passed": 12,
+  "total": 12,
+  "abap_files": 143,
+  "declared_unit_methods": 262,
+  "measured_coverage": null,
+  "checks": [
+    {
+      "name": "artifact_header_present",
+      "passed": true,
+      "detail": "Every ABAP source starts with the Artifact/Purpose/Modification log header.",
+      "failures": []
+    },
+    {
+      "name": "object_names_max_30",
+      "passed": true,
+      "detail": "Every object name is 30 characters or fewer.",
+      "failures": []
+    },
+    {
+      "name": "short_text_max_60",
+      "passed": true,
+      "detail": "Every SE24 short text (ABAP Doc shorttext) is 60 characters or fewer.",
+      "failures": []
+    },
+    {
+      "name": "no_select_star",
+      "passed": true,
+      "detail": "No SELECT * (explicit field lists only).",
+      "failures": []
+    },
+    {
+      "name": "fae_guarded",
+      "passed": true,
+      "detail": "Every method with FOR ALL ENTRIES checks the driver table for INITIAL first.",
+      "failures": []
+    },
+    {
+      "name": "no_hardcoded_company_code",
+      "passed": true,
+      "detail": "No hard-coded company code '1000' in production code.",
+      "failures": []
+    },
+    {
+      "name": "concrete_classes_final",
+      "passed": true,
+      "detail": "Every concrete public class is FINAL.",
+      "failures": []
+    },
+    {
+      "name": "tests_harmless_short",
+      "passed": true,
+      "detail": "Every test class is RISK LEVEL HARMLESS DURATION SHORT.",
+      "failures": []
+    },
+    {
+      "name": "test_method_names_max_30",
+      "passed": true,
+      "detail": "Every test method name is 30 characters or fewer.",
+      "failures": []
+    },
+    {
+      "name": "commit_only_in_sanctioned_objects",
+      "passed": true,
+      "detail": "COMMIT WORK only in the store (LUW owner) and the e-mail channel (BCS).",
+      "failures": []
+    },
+    {
+      "name": "no_write_lists",
+      "passed": true,
+      "detail": "Programs use ALV / HTML output, never WRITE lists.",
+      "failures": []
+    },
+    {
+      "name": "abaplint_clean",
+      "passed": true,
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 143 files.",
+      "failures": []
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+*&---------------------------------------------------------------------*
+*& Artifact: zcl_cd_fmon_lot_reader.clas.testclasses.abap
+*& Purpose:
+*& Application tests of the returns/NOC lot reader with LTD_* DAO and
+*& DDIC doubles (header -> item join, completeness counting, config gaps).
+*& Static ABAP Unit only; does not prove live SAP runtime behavior.
+*& Modification log:
+*& 2026-11-05 | Initial version (ops suite consolidation).
+*&---------------------------------------------------------------------*
+CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_fmon_ddic.
+ENDCLASS.
+
+
+CLASS ltd_ddic IMPLEMENTATION.
+  METHOD zif_cd_fmon_ddic~describe_table.
+    " Every configured name exists: field validation itself is proven in ZCL_CD_FMON_QUERY
+    DATA ls_field TYPE zif_cd_fmon_types=>ty_ddic_field.
+    DATA(lt_names) = VALUE string_table( ( `LOTNO` ) ( `FILEREF` ) ( `ITEMNO` ) ( `ITEMSTAT` ) ).
+    LOOP AT lt_names INTO DATA(lv_name).
+      ls_field-fieldname = lv_name.
+      ls_field-inttype   = 'C'.
+      INSERT ls_field INTO TABLE rt_fields.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_fmon_dao PARTIALLY IMPLEMENTED.
+    DATA mt_header TYPE zif_cd_fmon_types=>tt_raw_row.
+    DATA mt_items TYPE zif_cd_fmon_types=>tt_raw_row.
+    DATA mt_queries TYPE STANDARD TABLE OF zif_cd_fmon_types=>ty_query WITH EMPTY KEY.
+ENDCLASS.
+
+
+CLASS ltd_dao IMPLEMENTATION.
+  METHOD zif_cd_fmon_dao~read_legacy.
+    INSERT is_query INTO TABLE mt_queries.
+    rt_rows = COND #( WHEN is_query-table_name = 'ZLOT_HDR' THEN mt_header ELSE mt_items ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltc_lot_reader DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    TYPES:
+      BEGIN OF ty_flags,
+        open_items   TYPE i,
+        no_status_field TYPE abap_bool,
+      END OF ty_flags.
+
+    CONSTANTS gc_file TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_RET_20261102'.
+    CONSTANTS gc_lot TYPE string VALUE `0000004711`.
+
+    DATA mo_dao TYPE REF TO ltd_dao.
+    DATA ms_cfg TYPE zif_cd_fmon_types=>ty_lotcfg.
+    DATA mt_files TYPE zif_cd_fmon_types=>tt_file.
+
+    METHODS setup.
+    METHODS teardown.
+
+    METHODS configure_scenario
+      IMPORTING
+        is_flags TYPE ty_flags.
+
+    METHODS act
+      RETURNING
+        VALUE(rt_status) TYPE zif_cd_fmon_types=>tt_lot_status
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS one_open_item_is_counted FOR TESTING.
+    METHODS lot_items_read_by_lot_key FOR TESTING.
+    METHODS incomplete_config_is_refused FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_lot_reader IMPLEMENTATION.
+
+  METHOD setup.
+    mo_dao = NEW #( ).
+    zcl_cd_fmon_injector=>inject_dao( mo_dao ).
+    zcl_cd_fmon_injector=>inject_ddic( NEW ltd_ddic( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_fmon_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  METHOD configure_scenario.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    DATA ls_row TYPE zif_cd_fmon_types=>ty_raw_row.
+    CLEAR: ms_cfg, mt_files, mo_dao->mt_header, mo_dao->mt_items.
+
+    ms_cfg-iface_id          = zif_cd_fmon_types=>gc_wildcard.
+    ms_cfg-lot_type          = zif_cd_fmon_types=>gc_lot_type-returns.
+    ms_cfg-hdr_table         = 'ZLOT_HDR'.
+    ms_cfg-hdr_lot_field     = 'LOTNO'.
+    ms_cfg-hdr_link_field    = 'FILEREF'.
+    ms_cfg-item_table        = 'ZLOT_ITEM'.
+    ms_cfg-item_lot_field    = 'LOTNO'.
+    ms_cfg-item_key_field    = 'ITEMNO'.
+    ms_cfg-item_status_field = COND #( WHEN is_flags-no_status_field = abap_false THEN 'ITEMSTAT' ).
+    ms_cfg-link_by           = zif_cd_fmon_types=>gc_link_by-name.
+    ms_cfg-done_values       = 'X'.
+    ms_cfg-active            = abap_true.
+
+    ls_file-file_id   = CONV zif_cd_fmon_types=>ty_file_id( 1 ).
+    ls_file-file_name = gc_file.
+    INSERT ls_file INTO TABLE mt_files.
+
+    ls_row-lot_key   = gc_lot.
+    ls_row-file_link = gc_file.
+    INSERT ls_row INTO TABLE mo_dao->mt_header.
+
+    CLEAR ls_row.
+    ls_row-lot_key = gc_lot.
+    DO 3 TIMES.
+      ls_row-item_key    = |{ sy-index }|.
+      ls_row-item_status = COND #( WHEN sy-index <= 3 - is_flags-open_items THEN `X` ELSE `` ).
+      INSERT ls_row INTO TABLE mo_dao->mt_items.
+    ENDDO.
+  ENDMETHOD.
+
+
+  METHOD act.
+    rt_status = zcl_cd_fmon_factory=>get_lot_reader( )->read( is_cfg   = ms_cfg
+                                                              it_files = mt_files ).
+  ENDMETHOD.
+
+
+  " Rule: every item of the file's lot is counted; an item whose status is not
+  " in the done list is open (whole returned table asserted).
+  METHOD one_open_item_is_counted.
+    DATA lt_exp TYPE zif_cd_fmon_types=>tt_lot_status.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_lot_status.
+    TRY.
+        configure_scenario( VALUE #( open_items = 1 ) ).
+        ls_exp-file_id     = CONV zif_cd_fmon_types=>ty_file_id( 1 ).
+        ls_exp-lot_type    = zif_cd_fmon_types=>gc_lot_type-returns.
+        ls_exp-found       = abap_true.
+        ls_exp-total_items = 3.
+        ls_exp-done_items  = 2.
+        ls_exp-open_items  = 1.
+        ls_exp-open_keys   = |{ gc_lot }/3|.
+        INSERT ls_exp INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = act( ) exp = lt_exp
+                                            msg = '3 items, 2 done must give 1 open item' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: items are selected by the lot keys found in the header for the file (no free WHERE).
+  METHOD lot_items_read_by_lot_key.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        act( ).
+        READ TABLE mo_dao->mt_queries INTO DATA(ls_items) INDEX 2.
+        cl_abap_unit_assert=>assert_equals( act = ls_items-in_values
+                                            exp = VALUE zif_cd_fmon_types=>tt_key_value( ( CONV #( gc_lot ) ) )
+                                            msg = 'Item read must be restricted to the lot key' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a lot row without item status field is refused (message 208), nothing is read.
+  METHOD incomplete_config_is_refused.
+    DATA lv_msgno TYPE symsgno.
+    configure_scenario( VALUE #( no_status_field = abap_true ) ).
+    TRY.
+        act( ).
+      CATCH zcx_cd_ops_error INTO DATA(lx).
+        lv_msgno = lx->if_t100_message~t100key-msgno.
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '208'
+                                        msg = 'Missing item status field must raise 208' ).
+    cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_queries
+                                         msg = 'No table may be read' ).
+  ENDMETHOD.
+
+ENDCLASS.
