@@ -37,6 +37,20 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
   "! Message type used when a text is only built, never shown
   CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
+  "! Time of day limits and the time zone used for UTC timestamps
+  CONSTANTS:
+    BEGIN OF gc_time,
+      day_start TYPE t VALUE '000000',
+      day_end   TYPE t VALUE '235959',
+    END OF gc_time.
+  CONSTANTS gc_time_zone_utc TYPE tznzone VALUE 'UTC'.
+  "! SALV exception column values (traffic light)
+  CONSTANTS:
+    BEGIN OF gc_light,
+      red    TYPE c LENGTH 1 VALUE '1',
+      yellow TYPE c LENGTH 1 VALUE '2',
+      green  TYPE c LENGTH 1 VALUE '3',
+    END OF gc_light.
   "! Message 000 (&1 &2 &3 &4): carries a text that is already a message
   CONSTANTS gc_msgno_free TYPE ty_msgno VALUE '000'.
   TYPES ty_action      TYPE c LENGTH 10.

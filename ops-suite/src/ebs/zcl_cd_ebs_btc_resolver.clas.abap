@@ -42,6 +42,8 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
         VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
 
   PRIVATE SECTION.
+    "! A proprietary BAI code: three digits (the field may carry trailing blanks)
+    CONSTANTS gc_digits_or_blank TYPE string VALUE `0123456789 `.
     TYPES tt_map_hash TYPE HASHED TABLE OF zif_cd_ebs_types=>ty_btc_map
       WITH UNIQUE KEY scheme btc_code bank_key flow_type.
     TYPES tt_stmt_hash TYPE HASHED TABLE OF zif_cd_ebs_types=>ty_statement
@@ -265,7 +267,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
     " US banks deliver BAI type codes in CAMT BkTxCd/Prtry with issuer BAI
     rv_bai = xsdbool( is_line-prtry_issuer CP gc_issuer_bai
                       OR ( strlen( condense( is_line-prtry_code ) ) = 3
-                           AND is_line-prtry_code CO '0123456789 ' ) ).
+                           AND is_line-prtry_code CO gc_digits_or_blank ) ).
   ENDMETHOD.
 
 ENDCLASS.

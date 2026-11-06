@@ -8,6 +8,7 @@
 *& dictionary metadata only. Messages are chosen by the caller.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -80,6 +81,8 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
         VALUE(rt_missing) TYPE zif_cd_ops_cfg_types=>ty_names.
 
   PRIVATE SECTION.
+    "! DDIC / class name: letters, digits, underscore, namespace slashes, max 30
+    CONSTANTS gc_name_pattern TYPE string VALUE `^[A-Z/][A-Z0-9_/]{0,29}$`.
     CLASS-METHODS describe
       IMPORTING
         iv_name        TYPE zif_cd_ops_cfg_types=>ty_name
@@ -94,7 +97,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
   METHOD is_valid_name.
     DATA(lv_name) = to_upper( condense( iv_name ) ).
-    rv_valid = xsdbool( matches( val = lv_name regex = `^[A-Z/][A-Z0-9_/]{0,29}$` ) ).
+    rv_valid = xsdbool( matches( val = lv_name regex = gc_name_pattern ) ).
   ENDMETHOD.
 
 

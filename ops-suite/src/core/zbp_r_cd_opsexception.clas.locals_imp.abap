@@ -9,6 +9,18 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
+"! Content IDs of the history rows created by each action (one per action)
+INTERFACE lif_c.
+  CONSTANTS:
+    BEGIN OF gc_cid,
+      assign    TYPE abp_behv_cid VALUE 'ASSIGN',
+      resolve   TYPE abp_behv_cid VALUE 'RESOLVE',
+      waive_req TYPE abp_behv_cid VALUE 'WAIVE_REQ',
+      waive_ok  TYPE abp_behv_cid VALUE 'WAIVE_OK',
+    END OF gc_cid.
+ENDINTERFACE.
+
+
 CLASS lhc_exception DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
@@ -125,7 +137,7 @@ CLASS lhc_exception IMPLEMENTATION.
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner CreatedBy CreatedAt )
           WITH VALUE #( ( %tky    = ls_exception-%tky
-                          %target = VALUE #( ( %cid       = 'ASSIGN'
+                          %target = VALUE #( ( %cid       = lif_c=>gc_cid-assign
                                                HistAction = zif_cd_ops_exc_types=>gc_action-assign
                                                FromDisp   = ls_exception-Disposition
                                                ToDisp     = zif_cd_ops_types=>gc_disposition-assigned
@@ -171,7 +183,7 @@ CLASS lhc_exception IMPLEMENTATION.
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
           WITH VALUE #( ( %tky    = ls_exception-%tky
-                          %target = VALUE #( ( %cid       = 'RESOLVE'
+                          %target = VALUE #( ( %cid       = lif_c=>gc_cid-resolve
                                                HistAction = zif_cd_ops_exc_types=>gc_action-resolve
                                                FromDisp   = ls_exception-Disposition
                                                ToDisp     = zif_cd_ops_types=>gc_disposition-resolved
@@ -221,7 +233,7 @@ CLASS lhc_exception IMPLEMENTATION.
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
           WITH VALUE #( ( %tky    = ls_exception-%tky
-                          %target = VALUE #( ( %cid       = 'WAIVE_REQ'
+                          %target = VALUE #( ( %cid       = lif_c=>gc_cid-waive_req
                                                HistAction = zif_cd_ops_exc_types=>gc_action-waive_req
                                                FromDisp   = ls_exception-Disposition
                                                ToDisp     = ls_exception-Disposition
@@ -267,7 +279,7 @@ CLASS lhc_exception IMPLEMENTATION.
           CREATE BY \_History
           FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
           WITH VALUE #( ( %tky    = ls_exception-%tky
-                          %target = VALUE #( ( %cid       = 'WAIVE_OK'
+                          %target = VALUE #( ( %cid       = lif_c=>gc_cid-waive_ok
                                                HistAction = zif_cd_ops_exc_types=>gc_action-waive_ok
                                                FromDisp   = ls_exception-Disposition
                                                ToDisp     = zif_cd_ops_types=>gc_disposition-waived

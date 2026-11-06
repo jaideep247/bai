@@ -8,6 +8,7 @@
 *& with was_refused( ).
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - refused run (run lock held)</p>
 CLASS zcl_cd_ops_run_guard DEFINITION
@@ -18,6 +19,7 @@ CLASS zcl_cd_ops_run_guard DEFINITION
   PUBLIC SECTION.
     CONSTANTS gc_check_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'RUN_LOCKED'.
     CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'RUN'.
+    CONSTANTS gc_rule_id TYPE zif_cd_ops_types=>ty_rule_id VALUE 'LOCK'.
 
     TYPES:
       BEGIN OF ty_refusal,
@@ -72,7 +74,7 @@ CLASS zcl_cd_ops_run_guard IMPLEMENTATION.
     INSERT VALUE #( object_type = gc_object_type
                     object_key  = |{ iv_pe_area }/{ iv_variant }|
                     group1      = iv_pe_area
-                    rule_id     = 'LOCK'
+                    rule_id     = gc_rule_id
                     check_code  = gc_check_code
                     severity    = zif_cd_ops_types=>gc_severity-error
                     action      = zif_cd_ops_types=>gc_action-notify

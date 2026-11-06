@@ -337,7 +337,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mv_test_mode = iv_test_mode.
     mv_now       = mo_clock->now( ).
     mv_tz        = mo_store->get_param( iv_name    = zif_cd_fmon_types=>gc_param-time_zone
-                                        iv_default = `UTC` ).
+                                        iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ).
   ENDMETHOD.
 
 
@@ -846,7 +846,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       RETURN.
     ENDLOOP.
     rv_cal = mo_store->get_param( iv_name    = zif_cd_fmon_types=>gc_param-factory_cal
-                                  iv_default = `US` ).
+                                  iv_default = zif_cd_fmon_types=>gc_param_default-factory_cal ).
   ENDMETHOD.
 
 
@@ -972,9 +972,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     LOOP AT rt_board ASSIGNING FIELD-SYMBOL(<ls_board>).
       <ls_board>-sla_light = SWITCH #( <ls_board>-sla_status
-                                       WHEN zif_cd_ops_types=>gc_rag-red   THEN '1'
-                                       WHEN zif_cd_ops_types=>gc_rag-amber THEN '2'
-                                       ELSE '3' ).
+                                       WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_ops_types=>gc_light-red
+                                       WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_ops_types=>gc_light-yellow
+                                       ELSE zif_cd_ops_types=>gc_light-green ).
     ENDLOOP.
     SORT rt_board BY iface_id business_date file_name.
   ENDMETHOD.

@@ -31,7 +31,7 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
     DATA(lt_reasons) = zcl_cd_ebs_factory=>get_cfg_dao( )->get_reason_map( ).
     LOOP AT it_lines INTO DATA(ls_line).
       IF ls_line-return_reason IS INITIAL.
-        IF to_upper( condense( CONV string( is_rule-param1 ) ) ) = `REQUIRED`.
+        IF to_upper( condense( CONV string( is_rule-param1 ) ) ) = zif_cd_ebs_types=>gc_rule_keyword-required.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
                    is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_missing
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_missing

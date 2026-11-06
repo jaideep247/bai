@@ -231,6 +231,13 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 350 | Health of the health check (EBS, FMON, HCK ran) |
 | 351 | Payment engine area &1 has never run |
 | 352 | Payment engine area &1 last ran &2 h ago (max &3 h) |
+| 353 | Enter the report date (P_DATE) for 'Other date' |
+| 354 | Enter the export file path (P_FILE) |
+| 355 | Test mode never sends the report e-mail (P_MAIL ignored) |
+| 356 | Payment engine morning report &1 |
+| 357 | (&1 red, &2 amber of &3) |
+| 358 | Payment engine area &1 |
+| 359 | last run &1, &2 h ago, &3 errors |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
@@ -254,3 +261,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 504 | Group trailer 98 in line &1 without an open group; expected 02 first |
 | 505 | Record &1 in line &2 found after file trailer 99; expected end of file |
 | 506 | Statement has no date |
+| 507 | EBS &1/&2: &3 failed, &4 blocked |
+| 508 | EBS validation &1 - status &2 RAG &3 |
+| 509 | Saved as run, &1 findings |
+| 510 | Enter the bank file path (P_PATH) to validate a file |

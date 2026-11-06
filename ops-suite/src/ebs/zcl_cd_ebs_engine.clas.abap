@@ -377,8 +377,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         " Deliberately broad, fail closed: a validation that could not run is never
         " permission to post (enforce mode blocks on action BLOCK)
         INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
-                        object_key  = 'VALIDATE_FOR_POSTING'
-                        rule_id     = 'ENG'
+                        object_key  = zif_cd_ebs_types=>gc_engine-posting_object
+                        rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
                         check_code  = gc_check_code-validation_error
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
@@ -422,8 +422,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     SELECT SINGLE low
       FROM tvarvc BYPASSING BUFFER
       WHERE name = @gc_switch_name
-        AND type = 'P'
-        AND numb = '0000'
+        AND type = @zif_cd_ebs_types=>gc_tvarvc-type_parameter
+        AND numb = @zif_cd_ebs_types=>gc_tvarvc-numb_single
       INTO @DATA(lv_low).
     rv_mode = COND #( WHEN sy-subrc <> 0 THEN gc_mode-monitor
                       WHEN lv_low = gc_mode-enforce OR lv_low = gc_mode-off THEN lv_low

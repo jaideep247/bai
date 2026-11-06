@@ -21,3 +21,12 @@
 | Selection text | P_EXP | Export CSV to app. server |
 | Selection text | P_FILE | Export file path |
 | Selection text | P_BASE | Take configuration baseline |
+| Text symbol | T01 | (test mode, not saved) |
+| Text symbol | T02 | Oldest open exceptions (all payment engine areas) |
+| Text symbol | T03 | Health score |
+| Text symbol | T04 | Red (critical) / amber (high) |
+| Text symbol | T05 | Mode |
+| Text symbol | T06 | TEST - nothing saved, no mail |
+| Text symbol | T07 | PRODUCTIVE - results saved |
+| Text symbol | T08 | never ran - STALE |
+| Text symbol | T09 |  - STALE |

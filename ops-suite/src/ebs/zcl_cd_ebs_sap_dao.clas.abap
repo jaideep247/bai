@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -22,6 +23,8 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
     CONSTANTS gc_default_ledger TYPE c LENGTH 2 VALUE '0L'.
     "! Status field of ZCD_ACH_RTRV_LOG (ZCD_OPS_PARAM EBS_RTRV_STATUS_FIELD)
     CONSTANTS gc_default_rtrv_field TYPE string VALUE `ZZ_RTRV_STATUS`.
+    "! ACH retrieval log (legacy custom table, status field configurable - parity D5)
+    CONSTANTS gc_rtrv_table TYPE string VALUE `ZCD_ACH_RTRV_LOG`.
 
   PRIVATE SECTION.
     METHODS field_exists
@@ -72,11 +75,11 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " (ZZ_RTRV_STATUS in v4 168, ZZRETRIEVAL_STATUS in v4 468). It is a parameter,
     " validated against the DDIC before use - never concatenated unchecked.
     DATA(lv_field) = to_upper( zcl_cd_ops_factory=>get_store( )->get_param(
-                                 iv_name    = 'EBS_RTRV_STATUS_FIELD'
+                                 iv_name    = zif_cd_ebs_types=>gc_param-rtrv_status_field
                                  iv_default = gc_default_rtrv_field ) ).
-    IF field_exists( iv_table = `ZCD_ACH_RTRV_LOG` iv_field = lv_field ) = abap_false.
+    IF field_exists( iv_table = gc_rtrv_table iv_field = lv_field ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e051(zcd_ops) WITH lv_field 'EBS_RTRV_STATUS_FIELD'.
+        MESSAGE e051(zcd_ops) WITH lv_field zif_cd_ebs_types=>gc_param-rtrv_status_field.
     ENDIF.
     DATA(lv_select) = |AUGBL, { lv_field } AS STATUS|.
     SELECT (lv_select)

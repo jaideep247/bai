@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area HCK at start.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -45,6 +46,17 @@ SELECTION-SCREEN BEGIN OF BLOCK b04 WITH FRAME TITLE TEXT-b04.
   PARAMETERS p_base AS CHECKBOX.
 SELECTION-SCREEN END OF BLOCK b04.
 
+
+"! Technical values of the report: SALV exception column and its values, dataset activity
+CONSTANTS gc_light_column TYPE lvc_fname VALUE 'LIGHT'.
+CONSTANTS:
+  BEGIN OF gc_light,
+    red    TYPE c LENGTH 1 VALUE '1',
+    yellow TYPE c LENGTH 1 VALUE '2',
+    green  TYPE c LENGTH 1 VALUE '3',
+    none   TYPE c LENGTH 1 VALUE ' ',
+  END OF gc_light.
+CONSTANTS gc_dataset_write TYPE authb-actvt VALUE 'WRITE'.
 
 CLASS lcl_app DEFINITION FINAL.
   PUBLIC SECTION.
@@ -127,14 +139,14 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD validate.
     IF p_cust = abap_true AND p_date IS INITIAL.
-      MESSAGE e050(zcd_ops) WITH 'P_DATE' 'custom report date'.
+      MESSAGE e353(zcd_ops).
     ENDIF.
     IF p_exp = abap_true AND p_file IS INITIAL.
-      MESSAGE e050(zcd_ops) WITH 'P_FILE' 'export path'.
+      MESSAGE e354(zcd_ops).
     ENDIF.
     IF p_mail = abap_true AND p_test = abap_true.
       " test mode never mails - say so instead of silently ignoring the flag
-      MESSAGE w051(zcd_ops) WITH 'P_MAIL' 'test mode'.
+      MESSAGE w355(zcd_ops).
     ENDIF.
   ENDMETHOD.
 
@@ -196,7 +208,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD take_baseline.
     TRY.
         DATA(lv_count) = zcl_cd_hck_factory=>get_engine( )->take_baseline( p_test ).
-        MESSAGE s314(zcd_ops) WITH lv_count COND string( WHEN p_test = abap_true THEN `(test mode, not saved)` ).
+        MESSAGE s314(zcd_ops) WITH lv_count COND string( WHEN p_test = abap_true THEN TEXT-t01 ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
@@ -234,9 +246,10 @@ CLASS lcl_app IMPLEMENTATION.
         lo_alv->get_functions( )->set_default( abap_true ).
         DATA(lo_columns) = lo_alv->get_columns( ).
         lo_columns->set_optimize( abap_true ).
-        lo_columns->set_exception_column( 'LIGHT' ).
+        lo_columns->set_exception_column( gc_light_column ).
         lo_alv->get_display_settings( )->set_list_header(
-          CONV #( |Payment engine morning report { ms_report-report_date DATE = ISO }| ) ).
+          CONV #( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_list_header
+                                         iv_v1    = |{ ms_report-report_date DATE = ISO }| ) ) ).
         lo_alv->get_display_settings( )->set_striped_pattern( abap_true ).
         DATA(lo_header) = header( ).
         lo_alv->set_top_of_list( lo_header ).
@@ -259,7 +272,7 @@ CLASS lcl_app IMPLEMENTATION.
                                 CHANGING  t_table      = ms_report-exceptions ).
         lo_alv->get_functions( )->set_default( abap_true ).
         lo_alv->get_columns( )->set_optimize( abap_true ).
-        lo_alv->get_display_settings( )->set_list_header( 'Oldest open exceptions (all payment engine areas)' ).
+        lo_alv->get_display_settings( )->set_list_header( CONV #( TEXT-t02 ) ).
         lo_alv->display( ).
       CATCH cx_salv_msg INTO DATA(lx_salv).
         MESSAGE lx_salv TYPE 'S' DISPLAY LIKE 'E'.
@@ -271,19 +284,19 @@ CLASS lcl_app IMPLEMENTATION.
     DATA lv_row TYPE i.
     ro_grid = NEW #( ).
     lv_row = 1.
-    ro_grid->create_label( row = lv_row column = 1 text = 'Health score' ).
+    ro_grid->create_label( row = lv_row column = 1 text = CONV #( TEXT-t03 ) ).
     ro_grid->create_text( row    = lv_row
                           column = 2
                           text   = |{ ms_report-score }/100 { zcl_cd_hck_report_html=>rag_text( ms_report-overall_rag ) }| ).
     lv_row = lv_row + 1.
-    ro_grid->create_label( row = lv_row column = 1 text = 'Red (critical) / amber (high)' ).
+    ro_grid->create_label( row = lv_row column = 1 text = CONV #( TEXT-t04 ) ).
     ro_grid->create_text( row = lv_row column = 2 text = |{ ms_report-critical_count } / { ms_report-high_count }| ).
     lv_row = lv_row + 1.
-    ro_grid->create_label( row = lv_row column = 1 text = 'Mode' ).
+    ro_grid->create_label( row = lv_row column = 1 text = CONV #( TEXT-t05 ) ).
     ro_grid->create_text( row    = lv_row
                           column = 2
-                          text   = COND string( WHEN ms_report-run-test_mode = abap_true THEN `TEST - nothing saved, no mail`
-                                                ELSE `PRODUCTIVE - results saved` ) ).
+                          text   = COND string( WHEN ms_report-run-test_mode = abap_true THEN TEXT-t06
+                                                ELSE TEXT-t07 ) ).
     LOOP AT ms_report-categories INTO DATA(ls_category).
       lv_row = lv_row + 1.
       ro_grid->create_label( row    = lv_row
@@ -291,18 +304,25 @@ CLASS lcl_app IMPLEMENTATION.
                              text   = |{ ls_category-category } { zcl_cd_hck_report_html=>category_text( ls_category-category ) }| ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = |{ zcl_cd_hck_report_html=>rag_text( ls_category-rag ) } | &&
-                                     |({ ls_category-red_count } red, { ls_category-amber_count } amber of { ls_category-check_count })| ).
+                            text   = zcl_cd_hck_report_html=>rag_text( ls_category-rag ) && ` ` &&
+                                     zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_category
+                                                            iv_v1    = ls_category-red_count
+                                                            iv_v2    = ls_category-amber_count
+                                                            iv_v3    = ls_category-check_count ) ).
     ENDLOOP.
     LOOP AT ms_report-pe_areas INTO DATA(ls_pe_area).
       lv_row = lv_row + 1.
-      ro_grid->create_label( row = lv_row column = 1 text = |Payment engine area { ls_pe_area-pe_area }| ).
+      ro_grid->create_label( row = lv_row column = 1 text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_area
+                                                                         iv_v1    = ls_pe_area-pe_area ) ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = COND string( WHEN ls_pe_area-last_run_at IS INITIAL THEN `never ran - STALE`
-                                                  ELSE |last run { ls_pe_area-last_run_at TIMESTAMP = ISO }, | &&
-                                                       |{ ls_pe_area-age_hours } h ago, { ls_pe_area-error_count } errors| &&
-                                                       COND string( WHEN ls_pe_area-stale = abap_true THEN ` - STALE` ) ) ).
+                            text   = COND string( WHEN ls_pe_area-last_run_at IS INITIAL THEN TEXT-t08
+                                                  ELSE zcl_cd_ops_util=>text(
+                                                         iv_msgno = zif_cd_hck_types=>gc_msg-report_last_run
+                                                         iv_v1    = |{ ls_pe_area-last_run_at TIMESTAMP = ISO }|
+                                                         iv_v2    = ls_pe_area-age_hours
+                                                         iv_v3    = ls_pe_area-error_count ) &&
+                                                       COND string( WHEN ls_pe_area-stale = abap_true THEN TEXT-t09 ) ) ).
     ENDLOOP.
   ENDMETHOD.
 
@@ -355,14 +375,14 @@ CLASS lcl_app IMPLEMENTATION.
     CALL FUNCTION 'AUTHORITY_CHECK_DATASET'
       EXPORTING
         program          = sy-repid
-        activity         = 'WRITE'
+        activity         = gc_dataset_write
         filename         = CONV authb-filename( lv_file )
       EXCEPTIONS
         no_authority     = 1
         activity_unknown = 2
         OTHERS           = 3.
     IF sy-subrc <> 0.
-      MESSAGE s041(zcd_ops) WITH lv_file 'WRITE' DISPLAY LIKE 'E'.
+      MESSAGE s041(zcd_ops) WITH lv_file gc_dataset_write DISPLAY LIKE 'E'.
       RETURN.
     ENDIF.
 
@@ -386,10 +406,10 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD light.
     " SALV exception column: 1 red, 2 yellow, 3 green, space = none
     rv_light = SWITCH #( iv_rag
-                         WHEN zif_cd_ops_types=>gc_rag-red   THEN '1'
-                         WHEN zif_cd_ops_types=>gc_rag-amber THEN '2'
-                         WHEN zif_cd_ops_types=>gc_rag-green THEN '3'
-                         ELSE ' ' ).
+                         WHEN zif_cd_ops_types=>gc_rag-red   THEN gc_light-red
+                         WHEN zif_cd_ops_types=>gc_rag-amber THEN gc_light-yellow
+                         WHEN zif_cd_ops_types=>gc_rag-green THEN gc_light-green
+                         ELSE gc_light-none ).
   ENDMETHOD.
 
 ENDCLASS.

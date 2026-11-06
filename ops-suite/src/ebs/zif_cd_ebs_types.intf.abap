@@ -298,6 +298,43 @@ INTERFACE zif_cd_ebs_types
     END OF ty_reason_map.
   TYPES tt_reason_map TYPE SORTED TABLE OF ty_reason_map WITH UNIQUE KEY reason.
 
+  "! Parameters (ZCD_OPS_PARAM) read by EBS and their delivered defaults
+  CONSTANTS:
+    BEGIN OF gc_param,
+      feb_debit_ind     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_DEBIT_IND',
+      feb_credit_ind    TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_CREDIT_IND',
+      rtrv_status_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_RTRV_STATUS_FIELD',
+    END OF gc_param,
+    BEGIN OF gc_param_default,
+      feb_debit_ind  TYPE string VALUE `S`,
+      feb_credit_ind TYPE string VALUE `H`,
+    END OF gc_param_default.
+
+  "! Keywords of rule parameters in ZCD_BTC_RULE (PARAM1..PARAM3)
+  CONSTANTS:
+    BEGIN OF gc_rule_keyword,
+      alnum    TYPE string VALUE `ALNUM`,
+      required TYPE string VALUE `REQUIRED`,
+      optional TYPE string VALUE `OPTIONAL`,
+    END OF gc_rule_keyword.
+
+  "! Characters of a numeric code (BAI2 type codes are three digits)
+  CONSTANTS gc_digits TYPE c LENGTH 10 VALUE '0123456789'.
+
+  "! Engine findings that are not about a rule: object key and pseudo rule ID
+  CONSTANTS:
+    BEGIN OF gc_engine,
+      posting_object TYPE c LENGTH 20 VALUE 'VALIDATE_FOR_POSTING',
+      rule_id        TYPE zif_cd_ops_types=>ty_rule_id VALUE 'ENG',
+    END OF gc_engine.
+
+  "! TVARVC kill switch: a parameter (type P) with line number 0000
+  CONSTANTS:
+    BEGIN OF gc_tvarvc,
+      type_parameter TYPE c LENGTH 1 VALUE 'P',
+      numb_single    TYPE c LENGTH 4 VALUE '0000',
+    END OF gc_tvarvc.
+
   "! Statement keys of imported statements: FEB<KUKEY>
   CONSTANTS gc_feb_stmt_prefix TYPE c LENGTH 3 VALUE 'FEB'.
   "! Statement keys of a parsed file (not yet imported): S0001, S0002, ...
@@ -461,6 +498,10 @@ INTERFACE zif_cd_ebs_types
       group_trailer_no_group      TYPE zif_cd_ops_types=>ty_msgno VALUE '504',
       record_after_trailer        TYPE zif_cd_ops_types=>ty_msgno VALUE '505',
       stmt_date_missing           TYPE zif_cd_ops_types=>ty_msgno VALUE '506',
+      report_result               TYPE zif_cd_ops_types=>ty_msgno VALUE '507',
+      report_header               TYPE zif_cd_ops_types=>ty_msgno VALUE '508',
+      report_saved                TYPE zif_cd_ops_types=>ty_msgno VALUE '509',
+      report_path_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '510',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -1,0 +1,24 @@
+# Literals allowed in production ABAP outside declarations (tools/literal_scan.py, check no_inline_texts).
+# Format: <file path suffix> <substring of the literal>   # reason
+# Every entry is syntax or a wire format, never a user-facing text or a business value.
+
+# Dynamic Open SQL clauses: keywords and host-variable names of the statement itself
+# (table / field names are customizing, validated against the DDIC; values are bound host variables)
+src/fmon/zcl_cd_fmon_dao.clas.abap BETWEEN @   # dynamic WHERE: date / timestamp window
+src/fmon/zcl_cd_fmon_dao.clas.abap IN @LT_IN   # dynamic WHERE: key list
+src/fmon/zcl_cd_fmon_dao.clas.abap  AND        # dynamic WHERE: conjunction
+src/hck/zcl_cd_hck_agg_query.clas.abap  AND    # dynamic WHERE: conjunction
+src/hck/zcl_cd_hck_agg_query.clas.abap  IN (   # dynamic WHERE: IN list of escaped literals
+src/hck/zcl_cd_hck_dao.clas.abap COUNT(*)      # dynamic aggregate field list
+src/hck/zcl_cd_hck_dao.clas.abap SUM(          # dynamic aggregate field list
+src/hck/zcl_cd_hck_dao.clas.abap ) AS total    # dynamic aggregate field list
+src/hck/zcl_cd_hck_value_query.clas.abap  AS v   # dynamic field list alias
+src/hck/zcl_cd_hck_value_query.clas.abap  AND   # dynamic WHERE: conjunction
+
+# Webhook payload (JSON keys are the receiver's interface, see ALERTING.md)
+src/core/zcl_cd_ops_chn_http.clas.abap "ruleId":
+src/core/zcl_cd_ops_chn_http.clas.abap "peArea":
+src/core/zcl_cd_ops_chn_http.clas.abap "severity":
+src/core/zcl_cd_ops_chn_http.clas.abap "subject":
+src/core/zcl_cd_ops_chn_http.clas.abap "items":
+src/core/zcl_cd_ops_chn_http.clas.abap "text":

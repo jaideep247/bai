@@ -571,6 +571,12 @@ INTERFACE zif_cd_fmon_types
       findings TYPE zif_cd_ops_types=>tt_finding,
     END OF ty_result.
 
+  "! Delivered default of a parameter: factory calendar (SCAL) when none is configured
+  CONSTANTS:
+    BEGIN OF gc_param_default,
+      factory_cal TYPE string VALUE `US`,
+    END OF gc_param_default.
+
   "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
   CONSTANTS:
     BEGIN OF gc_engine_key,

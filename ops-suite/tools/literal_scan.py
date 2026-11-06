@@ -37,6 +37,7 @@ SYNTAX = [
     re.compile(r"\bTYPE\s*$", re.I),            # MESSAGE ... TYPE 'E'
     re.compile(r"\bDISPLAY\s+LIKE\s*$", re.I),
     re.compile(r"\bFORMAT\s*$", re.I),
+    re.compile(r"DELETING\s+(LEADING|TRAILING)\s*$", re.I),
 ]
 SEPARATOR = re.compile(r"^[\s,;:/\-–()\[\]\.=<>|#%+*&\x01]*$")
 WORDS = re.compile(r"[A-Za-z]{2,}[a-z][A-Za-z]*\s+\S|[a-z]{3,}")
@@ -46,10 +47,18 @@ def load_allow():
     entries = []
     if os.path.exists(ALLOW):
         for line in open(ALLOW, encoding='utf-8'):
-            line = line.split('#', 1)[0].strip()
-            if line:
-                path, _, pattern = line.partition(' ')
-                entries.append((path.strip(), pattern.strip()))
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            body = line.rstrip('\n')
+            if '   #' in body:
+                body = body[:body.index('   #')]
+            path, _, pattern = body.partition(' ')
+            pattern = pattern.rstrip() if pattern.strip() else ''
+            # a pattern written with a leading blank keeps one leading blank
+            if pattern.startswith('  '):
+                pattern = pattern[1:]
+            if pattern:
+                entries.append((path.strip(), pattern))
     return entries
 
 
@@ -130,6 +139,12 @@ def classify(path, stmt, lit, kind, prefix, allow):
         return 3, 'syntax'
     if lit == '' or SEPARATOR.match(lit):
         return 3, 'separator'
+    # range tables: SIGN / OPTION values are ABAP semantics (I/E, EQ/CP/BT ...)
+    if re.search(r'\b(sign|option)\s*=\s*(COND #\(.*)?$', prefix, re.I) and re.fullmatch(r'[IE]|EQ|NE|CP|NP|BT|NB|GT|GE|LT|LE', lit):
+        return 3, 'range semantics'
+    # names of the suite's own repository objects (tables, interfaces, classes)
+    if re.fullmatch(r'(ZCD_|ZIF_CD_|ZCL_CD_|ZCX_CD_)[A-Z0-9_]*', lit):
+        return 3, 'repository object name'
     if kind == '|' or WORDS.search(lit):
         return (1, 'text') if re.search(r'[A-Za-z]', lit) else (3, 'format')
     return 2, 'value'

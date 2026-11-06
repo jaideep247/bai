@@ -69,8 +69,10 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
 
     IF mv_loaded = abap_false.
       DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
-      mv_debit_ind  = lo_store->get_param( iv_name = 'EBS_FEB_DEBIT_IND'  iv_default = `S` ).
-      mv_credit_ind = lo_store->get_param( iv_name = 'EBS_FEB_CREDIT_IND' iv_default = `H` ).
+      mv_debit_ind  = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_debit_ind
+                                          iv_default = zif_cd_ebs_types=>gc_param_default-feb_debit_ind ).
+      mv_credit_ind = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_credit_ind
+                                          iv_default = zif_cd_ebs_types=>gc_param_default-feb_credit_ind ).
       mt_headers = zcl_cd_ebs_factory=>get_feb_dao( )->get_headers( ms_selection ).
       mv_loaded = abap_true.
     ENDIF.
@@ -148,7 +150,7 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
       rs_line-btc_code  = COND #( WHEN lv_subfamily IS NOT INITIAL THEN |{ lv_domain }-{ lv_family }-{ lv_subfamily }|
                                   ELSE |{ lv_domain }-{ lv_family }| ).
     ELSE.
-      rs_line-scheme     = COND #( WHEN strlen( lv_code ) = 3 AND lv_code CO '0123456789'
+      rs_line-scheme     = COND #( WHEN strlen( lv_code ) = 3 AND lv_code CO zif_cd_ebs_types=>gc_digits
                                    THEN zif_cd_ebs_types=>gc_scheme-bai2
                                    ELSE zif_cd_ebs_types=>gc_scheme-prtry ).
       rs_line-btc_code   = lv_code.

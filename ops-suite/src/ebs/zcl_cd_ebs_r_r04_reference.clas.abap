@@ -42,7 +42,7 @@ CLASS zcl_cd_ebs_r_r04_reference IMPLEMENTATION.
                                                      iv_v1    = is_rule-param1
                                                      iv_v2    = ls_line-btc_code ) )
           INTO TABLE rt_findings.
-      ELSEIF to_upper( condense( CONV string( is_rule-param2 ) ) ) = `ALNUM`
+      ELSEIF to_upper( condense( CONV string( is_rule-param2 ) ) ) = zif_cd_ebs_types=>gc_rule_keyword-alnum
              AND to_upper( lv_reference ) CN gc_alnum.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-ref_format

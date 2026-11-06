@@ -582,6 +582,13 @@ INTERFACE zif_cd_hck_types
       self_check_text             TYPE zif_cd_ops_types=>ty_msgno VALUE '350',
       area_never_ran              TYPE zif_cd_ops_types=>ty_msgno VALUE '351',
       area_last_ran               TYPE zif_cd_ops_types=>ty_msgno VALUE '352',
+      report_date_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '353',
+      report_file_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '354',
+      report_mail_test_mode       TYPE zif_cd_ops_types=>ty_msgno VALUE '355',
+      report_list_header          TYPE zif_cd_ops_types=>ty_msgno VALUE '356',
+      report_category             TYPE zif_cd_ops_types=>ty_msgno VALUE '357',
+      report_area                 TYPE zif_cd_ops_types=>ty_msgno VALUE '358',
+      report_last_run             TYPE zif_cd_ops_types=>ty_msgno VALUE '359',
     END OF gc_msg.
 
 ENDINTERFACE.

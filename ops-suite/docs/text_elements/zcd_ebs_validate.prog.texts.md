@@ -23,3 +23,4 @@
 | Selection text | P_VAR | Run variant |
 | Selection text | P_TEST | Test mode (no save, no alert) |
 | Selection text | P_ALL | Show information findings |
+| Text symbol | T01 | TEST MODE - nothing saved, no alert |

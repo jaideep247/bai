@@ -1367,6 +1367,48 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>353</MSGNR>
+     <TEXT>Enter the report date (P_DATE) for 'Other date'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>354</MSGNR>
+     <TEXT>Enter the export file path (P_FILE)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>355</MSGNR>
+     <TEXT>Test mode never sends the report e-mail (P_MAIL ignored)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>356</MSGNR>
+     <TEXT>Payment engine morning report &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>357</MSGNR>
+     <TEXT>(&amp;1 red, &amp;2 amber of &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>358</MSGNR>
+     <TEXT>Payment engine area &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>359</MSGNR>
+     <TEXT>last run &amp;1, &amp;2 h ago, &amp;3 errors</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>
@@ -1501,6 +1543,30 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>506</MSGNR>
      <TEXT>Statement has no date</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>507</MSGNR>
+     <TEXT>EBS &amp;1/&amp;2: &amp;3 failed, &amp;4 blocked</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>508</MSGNR>
+     <TEXT>EBS validation &amp;1 - status &amp;2 RAG &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>509</MSGNR>
+     <TEXT>Saved as run, &amp;1 findings</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>510</MSGNR>
+     <TEXT>Enter the bank file path (P_PATH) to validate a file</TEXT>
     </T100>
    </T100>
   </asx:values>

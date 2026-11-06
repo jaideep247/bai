@@ -12,6 +12,7 @@
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area EBS replaces S_PROGRAM.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -51,6 +52,12 @@ SELECTION-SCREEN END OF BLOCK b_run.
 
 
 "! Report controller: builds the source, runs the engine, shows the result
+"! Technical values of the report (selection-screen function, PC upload format)
+CONSTANTS gc_ucomm_execute TYPE sy-ucomm VALUE 'ONLI'.
+CONSTANTS gc_upload_filetype TYPE char10 VALUE 'ASC'.
+"! SAP code page 4110 = UTF-8
+CONSTANTS gc_codepage_utf8 TYPE abap_encod VALUE '4110'.
+
 CLASS lcl_report DEFINITION FINAL.
   PUBLIC SECTION.
     METHODS run.
@@ -142,8 +149,8 @@ CLASS lcl_report IMPLEMENTATION.
 
     IF p_pc = abap_true AND sy-batch = abap_false.
       cl_gui_frontend_services=>gui_upload( EXPORTING  filename = p_path
-                                                       filetype = 'ASC'
-                                                       codepage = '4110'
+                                                       filetype = gc_upload_filetype
+                                                       codepage = gc_codepage_utf8
                                             CHANGING   data_tab = lt_lines
                                             EXCEPTIONS OTHERS   = 1 ).
       IF sy-subrc <> 0.
@@ -174,7 +181,11 @@ CLASS lcl_report IMPLEMENTATION.
 
 
   METHOD is_result_text.
-    rv_text = |EBS { is_run-status }/{ is_run-rag }: { is_run-failed_items } failed, { is_run-blocked_items } blocked|.
+    rv_text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-report_result
+                                     iv_v1    = is_run-status
+                                     iv_v2    = is_run-rag
+                                     iv_v3    = is_run-failed_items
+                                     iv_v4    = is_run-blocked_items ).
   ENDMETHOD.
 
 
@@ -190,12 +201,15 @@ CLASS lcl_report IMPLEMENTATION.
         lo_alv->get_functions( )->set_all( abap_true ).
         lo_alv->get_columns( )->set_optimize( abap_true ).
         DATA(lo_header) = NEW cl_salv_form_layout_grid( ).
-        lo_header->create_text( row = 1 column = 1 text = |EBS validation { is_result-run-variant } - |
-                                                       && |status { is_result-run-status } RAG { is_result-run-rag }| ).
+        lo_header->create_text( row = 1 column = 1 text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-report_header
+                                                                                 iv_v1    = is_result-run-variant
+                                                                                 iv_v2    = is_result-run-status
+                                                                                 iv_v3    = is_result-run-rag ) ).
         lo_header->create_text( row = 2 column = 1 text = is_result-run-message ).
         lo_header->create_text( row = 3 column = 1
-                                text = COND string( WHEN p_test = abap_true THEN 'TEST MODE - nothing saved, no alert'
-                                                    ELSE |Saved as run, { is_result-run-finding_count } findings| ) ).
+                                text = COND string( WHEN p_test = abap_true THEN TEXT-t01
+                                                    ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-report_saved
+                                                                                iv_v1    = is_result-run-finding_count ) ) ).
         lo_alv->set_top_of_list( lo_header ).
         lo_alv->display( ).
       CATCH cx_salv_msg INTO DATA(lx_salv).
@@ -207,8 +221,8 @@ ENDCLASS.
 
 
 AT SELECTION-SCREEN.
-  IF sscrfields-ucomm = 'ONLI' AND p_file = abap_true AND p_path IS INITIAL.
-    MESSAGE e050(zcd_ops) WITH 'P_PATH' 'file path'.
+  IF sscrfields-ucomm = gc_ucomm_execute AND p_file = abap_true AND p_path IS INITIAL.
+    MESSAGE e510(zcd_ops).
   ENDIF.
 
 START-OF-SELECTION.

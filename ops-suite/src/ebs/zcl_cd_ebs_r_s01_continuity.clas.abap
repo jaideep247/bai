@@ -59,7 +59,8 @@ CLASS zcl_cd_ebs_r_s01_continuity IMPLEMENTATION.
            AND ( lv_found = abap_false OR ls_header-azdat > lv_best_date
                  OR ( ls_header-azdat = lv_best_date AND CONV string( ls_header-aznum ) > CONV string( lv_best_no ) ) ).
           lv_found = abap_true.
-          lv_prior = COND #( WHEN ls_header-esvoz = param( iv_name = 'EBS_FEB_DEBIT_IND' iv_default = `S` )
+          lv_prior = COND #( WHEN ls_header-esvoz = param( iv_name    = zif_cd_ebs_types=>gc_param-feb_debit_ind
+                                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_debit_ind )
                              THEN - ls_header-esbtr ELSE ls_header-esbtr ).
         ENDIF.
       ENDIF.

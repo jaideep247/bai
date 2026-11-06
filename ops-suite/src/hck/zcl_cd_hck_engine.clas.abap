@@ -68,6 +68,9 @@ CLASS zcl_cd_hck_engine DEFINITION
         zcx_cd_ops_error.
 
   PRIVATE SECTION.
+    "! S_TABU_NAM check before a configuration baseline is written
+    CONSTANTS gc_actvt_change TYPE activ_auth VALUE '02'.
+    CONSTANTS gc_baseline_table TYPE tabname VALUE 'ZCD_HCK_BASELINE'.
 
     "! The run itself, under the run lock taken by run( )
     METHODS execute
@@ -329,11 +332,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA lt_baselines TYPE zif_cd_hck_types=>tt_baseline.
 
     AUTHORITY-CHECK OBJECT 'S_TABU_NAM'
-      ID 'ACTVT' FIELD '02'
-      ID 'TABLE' FIELD 'ZCD_HCK_BASELINE'.
+      ID 'ACTVT' FIELD gc_actvt_change
+      ID 'TABLE' FIELD gc_baseline_table.
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e041(zcd_ops) WITH 'ZCD_HCK_BASELINE' '02'.
+        MESSAGE e041(zcd_ops) WITH gc_baseline_table gc_actvt_change.
     ENDIF.
 
     mo_store = zcl_cd_ops_factory=>get_store( ).

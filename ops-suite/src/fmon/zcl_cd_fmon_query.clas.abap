@@ -6,6 +6,7 @@
 *& fitting type before the DAO may execute it. Pure, no database.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC validation of configured reads</p>
 CLASS zcl_cd_fmon_query DEFINITION
@@ -40,6 +41,8 @@ CLASS zcl_cd_fmon_query DEFINITION
         zcx_cd_ops_error.
 
   PRIVATE SECTION.
+    "! DDIC name, optionally with namespace (/ABC/NAME); length checked separately
+    CONSTANTS gc_ddic_name_pattern TYPE string VALUE `^/?[A-Z][A-Z0-9_]*(/[A-Z0-9_]+)?$`.
 
     CLASS-METHODS check_field
       IMPORTING
@@ -59,7 +62,7 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
 
   METHOD is_valid_name.
     DATA(lv_name) = CONV string( iv_name ).
-    rv_valid = xsdbool( matches( val = lv_name pcre = `^/?[A-Z][A-Z0-9_]*(/[A-Z0-9_]+)?$` )
+    rv_valid = xsdbool( matches( val = lv_name pcre = gc_ddic_name_pattern )
                         AND strlen( lv_name ) <= 30 ).
   ENDMETHOD.
 

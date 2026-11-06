@@ -9,6 +9,7 @@
 *& 2026-11-06 | get_suppressions: active suppressions of the day (design 6.3).
 *& 2026-11-06 | select_values: validated value queries (known-table checks).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -24,6 +25,10 @@ CLASS zcl_cd_hck_dao DEFINITION
     INTERFACES zif_cd_hck_dao.
 
   PRIVATE SECTION.
+    "! Hash of a table's content for configuration drift
+    CONSTANTS gc_hash_algorithm TYPE string VALUE `SHA256`.
+    "! Query kind named in message 308 for a value (not aggregate) query
+    CONSTANTS gc_query_kind_values TYPE string VALUE `VALUES`.
     CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
     CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
@@ -486,13 +491,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     TRY.
         cl_abap_message_digest=>calculate_hash_for_char(
           EXPORTING
-            if_algorithm  = 'SHA256'
+            if_algorithm  = gc_hash_algorithm
             if_data       = iv_data
           IMPORTING
             ef_hashstring = lv_hash ).
       CATCH cx_abap_message_digest INTO DATA(lx_digest).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e311(zcd_ops) WITH 'SHA256'
+          MESSAGE e311(zcd_ops) WITH gc_hash_algorithm
           EXPORTING
             previous = lx_digest.
     ENDTRY.
@@ -525,7 +530,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e308(zcd_ops) WITH is_query-tabname 'VALUES'
+          MESSAGE e308(zcd_ops) WITH is_query-tabname gc_query_kind_values
           EXPORTING
             previous = lx_sql.
     ENDTRY.

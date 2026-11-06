@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area FMON at start.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 REPORT zcd_fmon_monitor.
 
@@ -16,6 +17,9 @@ PARAMETERS p_iface TYPE c LENGTH 20.
 PARAMETERS p_test AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_find AS CHECKBOX DEFAULT ' '.
 
+
+"! SALV exception column of the file board (traffic light of the SLA)
+CONSTANTS gc_light_column TYPE lvc_fname VALUE 'SLA_LIGHT'.
 
 CLASS lcl_app DEFINITION FINAL.
   PUBLIC SECTION.
@@ -74,7 +78,7 @@ CLASS lcl_app IMPLEMENTATION.
         lo_alv->get_functions( )->set_all( abap_true ).
         DATA(lo_columns) = lo_alv->get_columns( ).
         lo_columns->set_optimize( abap_true ).
-        lo_columns->set_exception_column( 'SLA_LIGHT' ).
+        lo_columns->set_exception_column( gc_light_column ).
         lo_alv->display( ).
       CATCH cx_salv_msg cx_salv_data_error INTO DATA(lx_salv).
         MESSAGE lx_salv TYPE 'S' DISPLAY LIKE 'E'.

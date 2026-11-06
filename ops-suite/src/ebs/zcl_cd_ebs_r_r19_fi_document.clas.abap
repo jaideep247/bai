@@ -43,7 +43,7 @@ CLASS zcl_cd_ebs_r_r19_fi_document IMPLEMENTATION.
 
     LOOP AT it_lines INTO DATA(ls_line).
       IF ls_line-belnr IS INITIAL.
-        IF to_upper( condense( CONV string( is_rule-param3 ) ) ) <> `OPTIONAL`.
+        IF to_upper( condense( CONV string( is_rule-param3 ) ) ) <> zif_cd_ebs_types=>gc_rule_keyword-optional.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
                    is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-not_posted
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-not_posted

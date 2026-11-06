@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | condition( ) and date_literal( ) public for ZCL_CD_HCK_VALUE_QUERY.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -75,6 +76,8 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RETURNING
         VALUE(rv_literal) TYPE string.
   PRIVATE SECTION.
+    "! A decimal number literal accepted as a condition value
+    CONSTANTS gc_number_pattern TYPE string VALUE `[-+]?[0-9]+(\.[0-9]+)?`.
 
     CLASS-METHODS field_kind
       IMPORTING
@@ -159,7 +162,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
       DATA(lv_date_field) = CONV zif_cd_hck_types=>ty_fieldname( to_upper( is_def-date_field ) ).
       IF field_kind( iv_field   = lv_date_field
                      iv_tabname = rs_query-tabname
-                     it_fields  = it_fields ) <> 'D'.
+                     it_fields  = it_fields ) <> cl_abap_typedescr=>typekind_date.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e309(zcd_ops) WITH lv_date_field rs_query-tabname.
       ENDIF.
@@ -247,8 +250,11 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
 
   METHOD is_numeric_kind.
     " I int4, b int1, s int2, 8 int8, P packed, F float, a/e decfloat
-    rv_numeric = xsdbool( iv_kind = 'I' OR iv_kind = 'b' OR iv_kind = 's' OR iv_kind = '8'
-                       OR iv_kind = 'P' OR iv_kind = 'F' OR iv_kind = 'a' OR iv_kind = 'e' ).
+    rv_numeric = xsdbool( iv_kind = cl_abap_typedescr=>typekind_int OR iv_kind = cl_abap_typedescr=>typekind_int1
+                       OR iv_kind = cl_abap_typedescr=>typekind_int2 OR iv_kind = cl_abap_typedescr=>typekind_int8
+                       OR iv_kind = cl_abap_typedescr=>typekind_packed OR iv_kind = cl_abap_typedescr=>typekind_float
+                       OR iv_kind = cl_abap_typedescr=>typekind_decfloat16
+                       OR iv_kind = cl_abap_typedescr=>typekind_decfloat34 ).
   ENDMETHOD.
 
 
@@ -259,7 +265,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
       rv_literal = cl_abap_dyn_prg=>quote( lv_value ).
       RETURN.
     ENDIF.
-    IF NOT matches( val = lv_value pcre = `[-+]?[0-9]+(\.[0-9]+)?` ).
+    IF NOT matches( val = lv_value pcre = gc_number_pattern ).
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e306(zcd_ops) WITH lv_value iv_field.
     ENDIF.

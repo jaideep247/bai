@@ -6,6 +6,7 @@
 *& / ZCD_FMON_SRCMAP; names are DDIC-validated before the DAO reads.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - generic legacy source adapter</p>
 "! No field name of any legacy table is coded here: the structures of the
@@ -42,6 +43,13 @@ CLASS zcl_cd_fmon_adapter_generic DEFINITION
         VALUE(rs_record) TYPE zif_cd_fmon_types=>ty_src_record.
 
   PRIVATE SECTION.
+    "! Columns of ZCD_FMON_SRC named in configuration messages (one of each pair is required)
+    CONSTANTS:
+      BEGIN OF gc_cfg_fields,
+        file   TYPE string VALUE `FILE_KEY_FIELD/FILE_NAME_FIELD`,
+        date   TYPE string VALUE `DATE_FIELD/TS_FIELD`,
+        status TYPE string VALUE `STATUS_FIELD/DEFAULT_STAGE`,
+      END OF gc_cfg_fields.
 
     CLASS-METHODS map_stage
       IMPORTING
@@ -78,15 +86,15 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
 
     IF ls_src-file_key_field IS INITIAL AND ls_src-file_name_field IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e204(zcd_ops) WITH ls_src-src_id 'FILE_KEY_FIELD/FILE_NAME_FIELD'.
+        MESSAGE e204(zcd_ops) WITH ls_src-src_id gc_cfg_fields-file.
     ENDIF.
     IF ls_src-date_field IS INITIAL AND ls_src-ts_field IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e204(zcd_ops) WITH ls_src-src_id 'DATE_FIELD/TS_FIELD'.
+        MESSAGE e204(zcd_ops) WITH ls_src-src_id gc_cfg_fields-date.
     ENDIF.
     IF ls_src-status_field IS INITIAL AND ls_src-default_stage IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e204(zcd_ops) WITH ls_src-src_id 'STATUS_FIELD/DEFAULT_STAGE'.
+        MESSAGE e204(zcd_ops) WITH ls_src-src_id gc_cfg_fields-status.
     ENDIF.
 
     rs_query-table_name = to_upper( condense( ls_src-table_name ) ).
@@ -114,9 +122,9 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
     IF ls_src-ts_field IS NOT INITIAL.
       rs_query-date_field = to_upper( condense( ls_src-ts_field ) ).
       rs_query-date_kind  = zif_cd_fmon_types=>gc_date_kind-timestamp.
-      CONVERT DATE is_request-date_from TIME '000000'
+      CONVERT DATE is_request-date_from TIME zif_cd_ops_types=>gc_time-day_start
         INTO TIME STAMP rs_query-ts_from TIME ZONE is_request-time_zone.
-      CONVERT DATE is_request-date_to TIME '235959'
+      CONVERT DATE is_request-date_to TIME zif_cd_ops_types=>gc_time-day_end
         INTO TIME STAMP rs_query-ts_to TIME ZONE is_request-time_zone.
     ELSE.
       rs_query-date_field = to_upper( condense( ls_src-date_field ) ).
@@ -149,7 +157,7 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
             INTO DATE rs_record-business_date TIME lv_time.
         ELSE.
           lv_date = is_raw-ev_date.
-          lv_time = COND #( WHEN is_raw-ev_time IS NOT INITIAL THEN is_raw-ev_time ELSE '000000' ).
+          lv_time = COND #( WHEN is_raw-ev_time IS NOT INITIAL THEN is_raw-ev_time ELSE zif_cd_ops_types=>gc_time-day_start ).
           rs_record-business_date = lv_date.
           CONVERT DATE lv_date TIME lv_time
             INTO TIME STAMP rs_record-event_at TIME ZONE is_request-time_zone.

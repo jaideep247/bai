@@ -27,6 +27,8 @@ CLASS zcl_cd_ops_chn_http DEFINITION
         VALUE(rv_json) TYPE string.
 
   PRIVATE SECTION.
+    "! HTTP step named in message 023 when the request could not be sent
+    CONSTANTS gc_http_step_send TYPE string VALUE `SEND`.
     "! Webhook payload format (wire format of the receiver, not text)
     CONSTANTS gc_content_type TYPE string VALUE `application/json; charset=utf-8`.
     CLASS-METHODS json_string
@@ -72,7 +74,7 @@ CLASS zcl_cd_ops_chn_http IMPLEMENTATION.
     ENDIF.
     IF sy-subrc <> 0.
       lo_client->close( EXCEPTIONS OTHERS = 0 ).
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e023(zcd_ops) WITH is_message-destination 'SEND'.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e023(zcd_ops) WITH is_message-destination gc_http_step_send.
     ENDIF.
 
     lo_client->response->get_status( IMPORTING code = lv_status reason = lv_reason ).

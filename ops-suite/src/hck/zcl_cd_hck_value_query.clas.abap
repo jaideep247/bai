@@ -8,6 +8,7 @@
 *& ZCL_CD_HCK_AGG_QUERY (quoted). The DAO runs the query.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - value queries for known tables</p>
 CLASS zcl_cd_hck_value_query DEFINITION
@@ -70,6 +71,8 @@ CLASS zcl_cd_hck_value_query DEFINITION
         VALUE(rt_keys) TYPE zif_cd_hck_value_types=>tt_key.
 
   PRIVATE SECTION.
+    "! Expected kind named in message 203 (character-like fields only)
+    CONSTANTS gc_expected_kind TYPE string VALUE `CHAR`.
     CONSTANTS gc_char_kinds TYPE string VALUE `CNDT`.
 ENDCLASS.
 
@@ -118,7 +121,7 @@ CLASS zcl_cd_hck_value_query IMPLEMENTATION.
       ENDIF.
       IF ls_field-type_kind IS INITIAL OR gc_char_kinds NS ls_field-type_kind.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e203(zcd_ops) WITH lv_field iv_tabname ls_field-type_kind 'CHAR'.
+          MESSAGE e203(zcd_ops) WITH lv_field iv_tabname ls_field-type_kind gc_expected_kind.
       ENDIF.
       INSERT |{ lv_field } AS v{ sy-tabix }| INTO TABLE lt_select.
       INSERT CONV string( lv_field ) INTO TABLE lt_order.

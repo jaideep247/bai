@@ -90,6 +90,31 @@ check('test_method_names_max_30', tnames, 'Every test method name is 30 characte
 check('commit_only_in_sanctioned_objects', commits, 'COMMIT WORK only in the store (LUW owner) and the e-mail channel (BCS).')
 check('no_write_lists', writes, 'Programs use ALV / HTML output, never WRITE lists.')
 
+# Phase 5: no hardcoding - user-facing texts are ZCD_OPS messages / text symbols, values are
+# named constants, parameters or customizing (tools/literal_scan.py, allow-list with reasons)
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import literal_scan  # noqa: E402
+_lits = literal_scan.scan()
+inline = [f'{r[0]}:{r[1]} {r[5][:40]}' for r in _lits if r[2] in (1, 2)]
+check('no_inline_texts', inline,
+      f'No user-facing text or technical value as a literal outside declarations ({len(_lits)} literals scanned; '
+      f'allow-list tools/literal_allowlist.txt).')
+
+# Every message number held in a gc_msg constant exists in class ZCD_OPS and is used once
+_md = open(os.path.join(ROOT, 'config', 'zcd_ops_messages.md'), encoding='utf-8').read()
+_numbers = set(re.findall(r'^\| (\d{3}) \|', _md, re.M))
+_msg_fail, _seen = [], {}
+for _p in files:
+    if not re.search(r'zif_cd_\w*types\.intf\.abap$', _p):
+        continue
+    _m = re.search(r'BEGIN OF gc_msg,(.*?)END OF gc_msg\.', open(_p, encoding='utf-8').read(), re.S)
+    for _name, _no in re.findall(r"(\w+)\s+TYPE\s+\S+\s+VALUE\s+'(\d{3})'", _m.group(1) if _m else ''):
+        if _no not in _numbers:
+            _msg_fail.append(f'{os.path.relpath(_p, ROOT)}: {_name} -> {_no} not in ZCD_OPS')
+        _seen[f'{_p}:{_name}'] = _no
+check('message_constants_exist', _msg_fail,
+      f'{len(_seen)} message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).')
+
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']
 if lint_bin:
