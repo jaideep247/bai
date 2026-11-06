@@ -115,6 +115,15 @@ for _p in files:
 check('message_constants_exist', _msg_fail,
       f'{len(_seen)} message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).')
 
+# SAP length limits and the house method naming rule (tools/name_checks.py)
+import name_checks  # noqa: E402
+check('name_lengths', name_checks.name_length_failures(ROOT),
+      'Objects, CDS entities, DDLS / SRVD / DCLS names, methods, attributes, types, local classes and '
+      'local data 30 characters at most; transparent tables 16; message class 20; table fields 30.')
+check('method_names', name_checks.method_name_failures(ROOT),
+      'Methods are snake_case, never start with a data prefix (lv_, it_, mo_, gc_, ...) and have '
+      '30 characters at most (test methods included).')
+
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']
 if lint_bin:

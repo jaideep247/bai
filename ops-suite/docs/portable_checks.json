@@ -4,8 +4,8 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-06"
   },
-  "passed": 15,
-  "total": 15,
+  "passed": 17,
+  "total": 17,
   "abap_files": 246,
   "declared_unit_methods": 776,
   "measured_coverage": null,
@@ -86,6 +86,18 @@
       "name": "message_constants_exist",
       "passed": true,
       "detail": "304 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "failures": []
+    },
+    {
+      "name": "name_lengths",
+      "passed": true,
+      "detail": "Objects, CDS entities, DDLS / SRVD / DCLS names, methods, attributes, types, local classes and local data 30 characters at most; transparent tables 16; message class 20; table fields 30.",
+      "failures": []
+    },
+    {
+      "name": "method_names",
+      "passed": true,
+      "detail": "Methods are snake_case, never start with a data prefix (lv_, it_, mo_, gc_, ...) and have 30 characters at most (test methods included).",
       "failures": []
     },
     {
