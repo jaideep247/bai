@@ -1,0 +1,104 @@
+// UI annotations: FMON file monitoring dashboard - KPI per day
+// Overview-page cards: KPI and analytical card on chart FilesByBucket, data points per KPI.
+// VERIFY-ADT: card rendering in the overview page (annotation paths in the OVP manifest).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Business date', typeNamePlural: 'Business dates',
+                  title: { type: #STANDARD, value: 'BusinessDate' } }
+@UI.chart: [ { qualifier: 'FilesByBucket',
+               title: 'Files by flow bucket',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'BusinessDate' ],
+               measures: [ 'ReceivedFileCount', 'AtPrismFileCount', 'InTransitFileCount', 'InProcessFileCount',
+                           'AckFileCount', 'RejectedFileCount', 'PartialFileCount', 'UnknownFileCount' ],
+               dimensionAttributes: [ { dimension: 'BusinessDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'ReceivedFileCount', role: #AXIS_1 },
+                                    { measure: 'AtPrismFileCount', role: #AXIS_1 },
+                                    { measure: 'InTransitFileCount', role: #AXIS_1 },
+                                    { measure: 'InProcessFileCount', role: #AXIS_1 },
+                                    { measure: 'AckFileCount', role: #AXIS_1 },
+                                    { measure: 'RejectedFileCount', role: #AXIS_1 },
+                                    { measure: 'PartialFileCount', role: #AXIS_1 },
+                                    { measure: 'UnknownFileCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BusinessDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'FilesByBucket' },
+                                               { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Business date today',
+                          filter: 'IsToday EQ X' } ]
+annotate entity ZC_CD_FmonFlowKpi with
+{
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  BusinessDate;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Business date is today'
+  IsToday;
+  @EndUserText.label: 'Monitor as of'
+  @UI.lineItem: [ { position: 200, importance: #LOW } ]
+  AsOfAt;
+  @EndUserText.label: 'Monitor age (minutes)'
+  @UI.dataPoint: { qualifier: 'MonitorAge', title: 'Monitor age (minutes)', criticality: 'MonitorCriticality' }
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Monitor stale'
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Files'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Files', title: 'Files' }
+  FileCount;
+  @EndUserText.label: 'Received / generated'
+  @UI.lineItem: [ { position: 30 } ]
+  ReceivedFileCount;
+  @EndUserText.label: 'At PRISM'
+  @UI.lineItem: [ { position: 40 } ]
+  AtPrismFileCount;
+  @EndUserText.label: 'Sent (in transit)'
+  @UI.lineItem: [ { position: 50 } ]
+  InTransitFileCount;
+  @EndUserText.label: 'Loaded / processed'
+  @UI.lineItem: [ { position: 60 } ]
+  InProcessFileCount;
+  @EndUserText.label: 'Acknowledged'
+  @UI.lineItem: [ { position: 70 } ]
+  AckFileCount;
+  @EndUserText.label: 'Rejected / failed'
+  @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'DayCriticality' } ]
+  @UI.dataPoint: { qualifier: 'Rejected', title: 'Rejected / failed files', criticality: 'DayCriticality' }
+  RejectedFileCount;
+  @EndUserText.label: 'Partially processed'
+  @UI.lineItem: [ { position: 90 } ]
+  PartialFileCount;
+  @EndUserText.label: 'Unknown stage'
+  UnknownFileCount;
+  @EndUserText.label: 'Successful'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  SuccessFileCount;
+  @EndUserText.label: 'Processed (inbound, reached)'
+  ProcessedFileCount;
+  @EndUserText.label: 'Sent (outbound, reached)'
+  SentFileCount;
+  @EndUserText.label: 'Files with unprocessed items'
+  @UI.lineItem: [ { position: 110 } ]
+  @UI.dataPoint: { qualifier: 'Unprocessed', title: 'Files with unprocessed items' }
+  UnprocessedFileCount;
+  @EndUserText.label: 'Unprocessed items'
+  @UI.lineItem: [ { position: 120 } ]
+  UnprocessedCount;
+  @EndUserText.label: 'Files with breached SLA'
+  @UI.lineItem: [ { position: 130, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Breached', title: 'Files with breached SLA' }
+  BreachedFileCount;
+  @EndUserText.label: 'Files late'
+  @UI.lineItem: [ { position: 140 } ]
+  LateFileCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 150 } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Records'
+  @UI.lineItem: [ { position: 160 } ]
+  RecordCount;
+  @UI.hidden: true
+  DayCriticality;
+}

@@ -21,6 +21,7 @@
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
 | **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
+| **Test after, file monitoring dashboard 2026-11-06** — CDS tests written against the drafted views (bucket table and SLA rule first in the doc, then views, then `cl_cds_test_environment` tests); not executed | `ZCL_CD_FMON_FLOW_CDS_TEST` (19: `ltc_flow` 12, `ltc_as_of` 5, `ltc_kpi` 2) | `Dashboard_File_Monitoring.md` §11 |
 | **Test first, payment trace 2026-11-06** — engine tests written against the draft before the review fixes (partner mismatch, history unavailable on reversal, cheque history unavailable, digest file reference); lint red until the code existed; not executed | `ZCL_CD_OPS_TRACE_ENGINE` (21), `ZCL_CD_OPS_TRACE_DAO` (8) | `Payment_Trace.md` §10 |
 | **Test first, core controls 2026-11-06** — test written before the code it drives; lint red until the code existed; not executed | `ZCL_CD_OPS_RUN_GUARD`, `ZCL_CD_OPS_PURGE`, `ZCL_CD_OPS_PURGE_DAO`, store carry-forward / `reconcile` (7 OSQL tests), engine lock and reconciliation tests (EBS 4, FMON 4, HCK 3), `injected_auth_is_returned` | `RAP_Apps_Design.md` §1–§4; commit history of 2026-11-06 |
 | **Test first, configuration apps** — red observed in abaplint (47 "not found") before the classes existed | `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE` | Phase 2 hand-over |
@@ -41,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 735 ABAP Unit methods in 55 test includes
+## 4. Coverage today — 754 ABAP Unit methods in 56 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -80,6 +81,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 10 | Domain / Application |
 | FMON | ZCL_CD_FMON_DAO | 17 | OSQL |
 | FMON | ZCL_CD_FMON_ENGINE | 29 | Application |
+| FMON | ZCL_CD_FMON_FLOW_CDS_TEST (file monitoring dashboard CDS views, `cl_cds_test_environment`) | 19 | CDS |
 | FMON | ZCL_CD_FMON_LOT_READER | 7 | Application |
 | FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 8 | Domain |
@@ -139,7 +141,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | 9 FMON check classes, 11 HCK check classes | Thin loops over pure rule classes | Rule tests + engine tests with every check configured |
 | ZCL_CD_HCK_DAO technical reads (TBTCO, BALHDR, SNAP, VBHDR, ENQUEUE_READ) | Standard tables / FMs with unverified fields | Pure evaluators + QA1 |
 | Reports ZCD_EBS_VALIDATE, ZCD_FMON_MONITOR, ZCD_MORNING_REPORT, ZCD_OPS_PURGE | Selection screen, authorisation and ALV | QA1 functional cases |
-| CDS views and DCL | Not parseable offline | ADT data preview in DV1; QA1 dashboard case |
+| CDS views and DCL (`cds/` analytics; the DCL `ZC_CD_FMONFLOW` and the UI annotations of the file monitoring dashboard) | `cds/` not in the lint scope; DCL and UI rendering not executable offline (the file monitoring dashboard views themselves are covered by `ZCL_CD_FMON_FLOW_CDS_TEST`) | ADT data preview in DV1; QA1 dashboard cases (HCK-QA-13, FMD-01 … FMD-13) |
 
 ## 6. What to run, and when
 

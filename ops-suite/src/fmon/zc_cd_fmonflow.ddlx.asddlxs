@@ -1,0 +1,244 @@
+// UI annotations: FMON file monitoring dashboard (analytical list page)
+// Charts: files by flow bucket stacked by payment method (default), files per business date.
+// VERIFY-ADT: UI.chart / UI.presentationVariant rendering in the V4 analytical list page.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'File', typeNamePlural: 'Files',
+                  title: { type: #STANDARD, value: 'FileName' },
+                  description: { type: #STANDARD, value: 'IfaceId' } }
+@UI.chart: [ { qualifier: 'FlowByBucket',
+               title: 'Files by flow bucket and payment method',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'FlowBucket', 'PaymentMethod' ],
+               measures: [ 'FileCount' ],
+               dimensionAttributes: [ { dimension: 'FlowBucket', role: #CATEGORY },
+                                      { dimension: 'PaymentMethod', role: #SERIES } ],
+               measureAttributes: [ { measure: 'FileCount', role: #AXIS_1 } ] },
+             { qualifier: 'FlowByDate',
+               title: 'Files per business date',
+               chartType: #LINE,
+               dimensions: [ 'BusinessDate' ],
+               measures: [ 'FileCount', 'SuccessFileCount', 'RejectedFileCount' ],
+               dimensionAttributes: [ { dimension: 'BusinessDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'FileCount', role: #AXIS_1 },
+                                    { measure: 'SuccessFileCount', role: #AXIS_1 },
+                                    { measure: 'RejectedFileCount', role: #AXIS_1 } ] },
+             { qualifier: 'RecordsBySource',
+               title: 'Records by source, LOB and payment method',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'SourceSystem', 'Lob' ],
+               measures: [ 'RecordCount' ],
+               dimensionAttributes: [ { dimension: 'SourceSystem', role: #CATEGORY },
+                                      { dimension: 'Lob', role: #SERIES } ],
+               measureAttributes: [ { measure: 'RecordCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BusinessDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'FlowByBucket' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'ByDate',
+                             sortOrder: [ { by: 'BusinessDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'FlowByDate' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'BySource',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'RecordsBySource' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_FmonFlow with
+{
+  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'File', position: 10 },
+               { id: 'Flow', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Flow', position: 10 },
+               { id: 'Measures', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Measures',
+                 label: 'Counts and amounts', position: 20 },
+               { id: 'AsOf', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'AsOf',
+                 label: 'Monitor as of', position: 30 },
+               { id: 'Events', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Events',
+                 label: 'Events (audit trail)', position: 20 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_OpenFindings',
+                 label: 'Open exceptions', position: 30 },
+               { id: 'HeaderSla', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'SlaStatus',
+                 position: 10 },
+               { id: 'HeaderAsOf', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'MonitorAge',
+                 position: 20 } ]
+  @UI.hidden: true
+  FileId;
+  @UI.hidden: true
+  FileIdHex;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Interface'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  IfaceId;
+  @EndUserText.label: 'Interface description'
+  @UI.identification: [ { position: 20 } ]
+  IfaceDescription;
+  @EndUserText.label: 'Direction (O out, I in)'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  Direction;
+  @EndUserText.label: 'File type'
+  @UI.identification: [ { position: 40 } ]
+  FileType;
+  @EndUserText.label: 'Source system'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  SourceSystem;
+  @EndUserText.label: 'Line of business'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Lob;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Bank'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  BankKey;
+  @EndUserText.label: 'Target system'
+  @UI.identification: [ { position: 90 } ]
+  TargetSystem;
+  @EndUserText.label: 'Interface owner'
+  @UI.identification: [ { position: 100 } ]
+  IfaceOwner;
+  @EndUserText.label: 'ACK expected'
+  @UI.identification: [ { position: 110 } ]
+  AckExpected;
+  @EndUserText.label: 'ACK level'
+  @UI.identification: [ { position: 120 } ]
+  AckLevel;
+  @EndUserText.label: 'File reference'
+  @UI.identification: [ { position: 130 } ]
+  FileRef;
+  @EndUserText.label: 'File name'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 140 } ]
+  FileName;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 150 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  BusinessDate;
+  @EndUserText.label: 'Business date is today'
+  IsToday;
+  @EndUserText.label: 'Stage'
+  @UI.identification: [ { position: 160 } ]
+  Stage;
+  @EndUserText.label: 'Outcome'
+  @UI.identification: [ { position: 170 } ]
+  Outcome;
+  @EndUserText.label: 'Flow bucket'
+  @UI.lineItem: [ { position: 90, importance: #HIGH, criticality: 'FlowCriticality' } ]
+  @UI.identification: [ { position: 180, criticality: 'FlowCriticality' } ]
+  @UI.selectionField: [ { position: 80 } ]
+  FlowBucket;
+  @UI.hidden: true
+  FlowCriticality;
+  @EndUserText.label: 'Successful'
+  @UI.lineItem: [ { position: 95, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 190 } ]
+  IsSuccess;
+  @EndUserText.label: 'First event'
+  @UI.identification: [ { position: 200 } ]
+  FirstEventAt;
+  @EndUserText.label: 'Last event'
+  @UI.lineItem: [ { position: 180, importance: #LOW } ]
+  @UI.identification: [ { position: 210 } ]
+  LastEventAt;
+  @EndUserText.label: 'SLA status'
+  @UI.lineItem: [ { position: 100, importance: #HIGH, criticality: 'SlaCriticality' } ]
+  @UI.selectionField: [ { position: 90 } ]
+  @UI.dataPoint: { qualifier: 'SlaStatus', title: 'SLA status', criticality: 'SlaCriticality' }
+  SlaStatus;
+  @UI.hidden: true
+  SlaCriticality;
+  @EndUserText.label: 'Worst open severity'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  WorstSeverity;
+  @EndUserText.label: 'Monitor as of (last completed run)'
+  @UI.lineItem: [ { position: 190, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 10 } ]
+  AsOfAt;
+  @EndUserText.label: 'Monitor run'
+  @UI.hidden: true
+  AsOfRunId;
+  @EndUserText.label: 'Monitor run status'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 20 } ]
+  AsOfRunStatus;
+  @EndUserText.label: 'Monitor age (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 30, criticality: 'MonitorCriticality' } ]
+  @UI.dataPoint: { qualifier: 'MonitorAge', title: 'Monitor age (minutes)', criticality: 'MonitorCriticality' }
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Monitor stale'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 40, criticality: 'MonitorCriticality' } ]
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Files'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 10 } ]
+  FileCount;
+  @EndUserText.label: 'Successful files'
+  SuccessFileCount;
+  @EndUserText.label: 'Processed files (inbound)'
+  ProcessedFileCount;
+  @EndUserText.label: 'Sent files (outbound)'
+  SentFileCount;
+  @EndUserText.label: 'Received / generated files'
+  ReceivedFileCount;
+  @EndUserText.label: 'Files at PRISM'
+  AtPrismFileCount;
+  @EndUserText.label: 'Files sent (in transit)'
+  InTransitFileCount;
+  @EndUserText.label: 'Files loaded / processed'
+  InProcessFileCount;
+  @EndUserText.label: 'Acknowledged files'
+  AckFileCount;
+  @EndUserText.label: 'Rejected / failed files'
+  RejectedFileCount;
+  @EndUserText.label: 'Partially processed files'
+  PartialFileCount;
+  @EndUserText.label: 'Files with unknown stage'
+  UnknownFileCount;
+  @EndUserText.label: 'Files with unprocessed items'
+  UnprocessedFileCount;
+  @EndUserText.label: 'Files with breached SLA'
+  BreachedFileCount;
+  @EndUserText.label: 'Files late'
+  LateFileCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 170, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 100 } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Records'
+  @UI.lineItem: [ { position: 120, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 20 } ]
+  RecordCount;
+  @EndUserText.label: 'Control total (contract currency)'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 30 } ]
+  ControlTotal;
+  @EndUserText.label: 'ACK count'
+  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 40 } ]
+  AckCount;
+  @EndUserText.label: 'ACK amount'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 50 } ]
+  AckAmount;
+  @EndUserText.label: 'ACK count reported'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 60 } ]
+  AckCountKnown;
+  @EndUserText.label: 'NACK count'
+  @UI.lineItem: [ { position: 150, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 70 } ]
+  NackCount;
+  @EndUserText.label: 'Unprocessed items'
+  @UI.lineItem: [ { position: 160, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 80 } ]
+  UnprocessedCount;
+  @EndUserText.label: 'Source rows of the first stage'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 90 } ]
+  OriginRows;
+}

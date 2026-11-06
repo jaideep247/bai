@@ -1,0 +1,40 @@
+// UI annotations: FMON monitor as of (last completed run)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Monitor as of', typeNamePlural: 'Monitor as of',
+                  title: { type: #STANDARD, value: 'AsOfAt' } }
+annotate entity ZC_CD_FmonAsOf with
+{
+  @UI.facet: [ { id: 'AsOf', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Monitor', position: 10 } ]
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'As of (end of last completed run, UTC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  AsOfAt;
+  @EndUserText.label: 'Run started'
+  @UI.identification: [ { position: 20 } ]
+  RunStartedAt;
+  @EndUserText.label: 'Run status (S, W, E)'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 30 } ]
+  RunStatus;
+  @EndUserText.label: 'Run RAG'
+  @UI.identification: [ { position: 40 } ]
+  RunRag;
+  @EndUserText.label: 'Findings of the run'
+  @UI.identification: [ { position: 50 } ]
+  RunFindingCount;
+  @EndUserText.label: 'Age (minutes)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 60, criticality: 'StaleCriticality' } ]
+  @UI.dataPoint: { title: 'Monitor age (minutes)', criticality: 'StaleCriticality' }
+  AgeMinutes;
+  @EndUserText.label: 'Stale (older than 45 minutes)'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 70, criticality: 'StaleCriticality' } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+}

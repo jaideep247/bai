@@ -3,7 +3,7 @@
 > **First principle:** the fastest read is the one that is not repeated — ask the database once for exactly the rows (or the totals) the decision needs, then look them up by key, never by scanning.
 > **Analogy:** a librarian who fetches every book a class needs in one trip and shelves them by call number — instead of walking to the stacks once per pupil and then reading every spine to find the right one.
 
-Pure performance work: **behaviour unchanged**, every existing ABAP Unit test still holds (the FMON lot-reader truncation test and two FEB source tests were re-shaped where the access path itself changed — §2 fix 3 and fix 8). Where a change carries a parity risk (keys, counts, SQL aggregation) a test was added: 20 new test methods, 2 moved from the SAP DAO to the FEB DAO (735 declared methods including the merged posting-state work).
+Pure performance work: **behaviour unchanged**, every existing ABAP Unit test still holds (the FMON lot-reader truncation test and two FEB source tests were re-shaped where the access path itself changed — §2 fix 3 and fix 8). Where a change carries a parity risk (keys, counts, SQL aggregation) a test was added: 20 new test methods, 2 moved from the SAP DAO to the FEB DAO (754 declared methods including the merged posting-state and dashboard work).
 
 Verified offline only: abaplint (v758) 0 issues, ATC-equivalent rule set 3 documented exemptions, `tools/portable_checks.py` 15/15. **Not verified:** activation, ABAP Unit execution, HANA plans and run times — measure in DV1/QA1 (§7, §8).
 
