@@ -14,7 +14,7 @@
 ## Import into SAP with abapGit
 
 1. In DV1 create package `ZCD_OPS` (software component HOME/your component, transport layer of DV1).
-2. abapGit → New Online → URL `https://github.com/jaideep247/bai.git`, branch `claude/loving-albattani-qexsjc` (or `main` after merge), package `ZCD_OPS`.
+2. abapGit → New Online → URL `https://github.com/jaideep247/bai.git`, branch `main`, package `ZCD_OPS`.
 3. abapGit reads `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and creates sub-packages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`.
 4. Pull. Before the first pull complete step 0 of `ops-suite/docs/Implementation_Order.md` (SE11 checks of `VERIFY-DDIC` fields).
 

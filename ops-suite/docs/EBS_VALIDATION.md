@@ -61,7 +61,7 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 5. **Records** every problem as an owned exception with a due date, and **alerts** according to the alert rules.
 6. **Would block** (pre-posting enforce mode — dormant, §B7) any line that must not post: unmapped codes, NOC entries, failed integrity checks. In this release the batch run after posting only reports (§A0).
 
-### A2. Category reference (master prompt matrix)
+### A2. Category reference (requirements baseline matrix)
 
 | ID | Category | CAMT | BAI2 | Expected processing |
 |---|---|---|---|---|

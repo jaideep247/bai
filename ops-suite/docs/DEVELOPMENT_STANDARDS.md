@@ -66,7 +66,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 - Shape: a `ty_flags` struct for scenario intent, one `configure_scenario` helper, one act helper that gets the CUT from the factory, assertions with `assert_equals` and a `msg` on every assertion, constants instead of literals.
 - `cl_abap_testdouble`: interface names lowercase; `set_parameter` only on EXPORTING/CHANGING/RETURNING; never guess a signature.
 - Test through the public seam; no `LOCAL FRIENDS` when `run( )` reaches the behaviour.
-- Coverage target ≥ 90 % (engine-redesign) — master prompt minimum 85 %. Assert absence of side effects (no save, no commit, no alert) where relevant.
+- Coverage target ≥ 90 % (engine-redesign) — requirements baseline minimum 85 %. Assert absence of side effects (no save, no commit, no alert) where relevant.
 
 ## 3. Architecture
 
@@ -100,7 +100,7 @@ Tables as ADT DDL source in `ddic/<pe_area>/<name>.tabl.ddl`. Delivery class C f
 ## 4. Verification
 
 Lint (offline, no SAP system): from `ops-suite/` run
-`/tmp/claude-0/-home-user-bai/914e445a-1a4a-59f8-9715-e9953e835f40/scratchpad/lint/node_modules/.bin/abaplint`
+`npx @abaplint/cli@2.120.92`
 The config pins v758-compatible syntax and pulls SAP stubs from `abaplint/deps`. A clean lint proves syntax and typing against stubs only — **not** activation, DDIC existence or ABAP Unit execution. Say so in every hand-over.
 
 ## 5. TDD and artefact headers (house approach)
