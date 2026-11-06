@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Stops between aggregates when the time budget is used up (audit A18).
+*& 2026-11-06 | Expected groups (ZCD_HCK_AGGGRP) measure zero when silent (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate check (ZCD_HCK_AGG)</p>
 "! One metric per ZCD_HCK_AGG row and group value (METRIC = AGG_ID,
@@ -34,6 +35,7 @@ CLASS zcl_cd_hck_c_generic_agg IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e310(zcd_ops) WITH is_def-check_id.
     ENDIF.
+    DATA(lt_groups) = lo_dao->get_agg_groups( is_def-check_id ).
 
     LOOP AT lt_defs INTO DATA(ls_agg).
       " A18: stop between aggregates once the check's time budget is used up
@@ -45,9 +47,13 @@ CLASS zcl_cd_hck_c_generic_agg IMPLEMENTATION.
         EXIT.
       ENDIF.
       TRY.
-          INSERT LINES OF zcl_cd_hck_agg_query=>measure( is_def      = ls_agg
-                                                         iv_ref_date = is_context-report_date
-                                                         io_dao      = lo_dao ) INTO TABLE rs_result-metrics.
+          " A103: expected groups (ZCD_HCK_AGGGRP) without rows measure 0
+          INSERT LINES OF zcl_cd_hck_agg_query=>measure(
+            is_def      = ls_agg
+            iv_ref_date = is_context-report_date
+            io_dao      = lo_dao
+            it_expected = VALUE #( FOR ls_group IN lt_groups WHERE ( agg_id = ls_agg-agg_id )
+                                   ( ls_group-group_value ) ) ) INTO TABLE rs_result-metrics.
         CATCH zcx_cd_ops_error INTO DATA(lx_config).
           INSERT VALUE #( object_key = |{ is_def-check_id }/{ ls_agg-agg_id }|
                           check_code = zif_cd_hck_types=>gc_code-agg_invalid

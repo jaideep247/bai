@@ -8,6 +8,7 @@
 *& 2026-11-06 | condition( ) and date_literal( ) public for ZCL_CD_HCK_VALUE_QUERY.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Query keeps its definition (audit A56).
+*& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -36,22 +37,26 @@ CLASS zcl_cd_hck_agg_query DEFINITION
         zcx_cd_ops_error.
 
     "! METRIC = AGG_ID, DIM1 = group value ('*' without grouping or rows),
-    "! DIM2 = counted day in DAY mode; VALUE = COUNT or SUM
+    "! DIM2 = counted day in DAY mode; VALUE = COUNT or SUM.
+    "! A103: every expected group without a row measures 0 (instead of '*')
     CLASS-METHODS to_metrics
       IMPORTING
         is_def           TYPE zif_cd_hck_types=>ty_agg_def
         it_rows          TYPE zif_cd_hck_types=>tt_agg_row
         iv_ref_date      TYPE d
+        it_expected      TYPE zif_cd_hck_types=>tt_group_value OPTIONAL
       RETURNING
         VALUE(rt_metrics) TYPE zif_cd_hck_types=>tt_metric.
 
-    "! Validate one definition (whitelist + DDIC via the DAO) and run it
+    "! Validate one definition (whitelist + DDIC via the DAO) and run it. A failure raises
+    "! and measures nothing - it is never reported as zero volume (A103)
     "! @raising zcx_cd_ops_error | validation (302-318) or SQL error (308)
     CLASS-METHODS measure
       IMPORTING
         is_def            TYPE zif_cd_hck_types=>ty_agg_def
         iv_ref_date       TYPE d
         io_dao            TYPE REF TO zif_cd_hck_dao
+        it_expected       TYPE zif_cd_hck_types=>tt_group_value OPTIONAL
       RETURNING
         VALUE(rt_metrics) TYPE zif_cd_hck_types=>tt_metric
       RAISING
@@ -206,7 +211,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
                                       iv_ref_date = iv_ref_date ).
     ENDIF.
 
-    IF it_rows IS INITIAL.
+    IF it_rows IS INITIAL AND it_expected IS INITIAL.
       ls_metric-dim1 = zif_cd_hck_types=>gc_default_key.
       INSERT ls_metric INTO TABLE rt_metrics.
       RETURN.
@@ -221,6 +226,16 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
                                 ELSE ls_row-row_count ).
       INSERT ls_metric INTO TABLE rt_metrics.
     ENDLOOP.
+
+    " A103: an expected group (e.g. company code) with no rows measured zero - a silent
+    " company next to an active one stays visible to its lower-is-worse threshold
+    CLEAR ls_metric-value.
+    LOOP AT it_expected INTO DATA(lv_expected).
+      ls_metric-dim1 = lv_expected.
+      IF NOT line_exists( rt_metrics[ dim1 = ls_metric-dim1 ] ).
+        INSERT ls_metric INTO TABLE rt_metrics.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -234,9 +249,13 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
                             it_fields      = lt_fields
                             iv_whitelisted = lv_whitelisted
                             iv_ref_date    = iv_ref_date ).
+    DATA(lt_rows) = io_dao->aggregate( ls_query ).
+    " a result at the row cap may be cut off: an absent group is unknown, not zero
     rt_metrics = to_metrics( is_def      = is_def
-                             it_rows     = io_dao->aggregate( ls_query )
-                             iv_ref_date = iv_ref_date ).
+                             it_rows     = lt_rows
+                             iv_ref_date = iv_ref_date
+                             it_expected = COND #( WHEN lines( lt_rows ) < zif_cd_hck_dao=>gc_max_agg_rows
+                                                   THEN it_expected ) ).
   ENDMETHOD.
 
 

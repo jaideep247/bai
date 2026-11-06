@@ -34,6 +34,7 @@ INTERFACE lif_c.
       windowto                       TYPE string VALUE `WINDOWTO`,
     END OF gc_el,
     BEGIN OF gc_ent,
+      hckagggroup                    TYPE string VALUE `HckAggGroup`,
       hckaggregate                   TYPE string VALUE `HckAggregate`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
       hckdrifttable                  TYPE string VALUE `HckDriftTable`,
@@ -46,6 +47,7 @@ INTERFACE lif_c.
       zif_cd_hck_check               TYPE string VALUE `ZIF_CD_HCK_CHECK`,
     END OF gc_if,
     BEGIN OF gc_tab,
+      hckagggroup                    TYPE string VALUE `ZCD_HCK_AGGGRP`,
       hckaggregate                   TYPE string VALUE `ZCD_HCK_AGG`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
       hckdrifttable                  TYPE string VALUE `ZCD_HCK_DRIFT`,
@@ -110,6 +112,9 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckAggregate = if_abap_behv=>mk-on.
       result-%assoc-_HckAggregate = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_HckAggGroup = if_abap_behv=>mk-on.
+      result-%assoc-_HckAggGroup = lv_create.
     ENDIF.
     IF requested_features-%assoc-_HckDriftTable = if_abap_behv=>mk-on.
       result-%assoc-_HckDriftTable = lv_create.
@@ -512,6 +517,61 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_hckagggroup DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR HckAggGroup RESULT result.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR HckAggGroup~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_hckagggroup IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
+      ENTITY HckCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckagggroup.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckagggroup.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
+                                             hckcfgall-SingletonID = 1 ) )
+        TO reported-hckagggroup.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lhc_hckdrifttable DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
@@ -885,6 +945,7 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckcheckdef table = lif_c=>gc_tab-hckcheckdef )
             ( entity = lif_c=>gc_ent-hckthreshold table = lif_c=>gc_tab-hckthreshold )
             ( entity = lif_c=>gc_ent-hckaggregate table = lif_c=>gc_tab-hckaggregate )
+            ( entity = lif_c=>gc_ent-hckagggroup table = lif_c=>gc_tab-hckagggroup )
             ( entity = lif_c=>gc_ent-hckdrifttable table = lif_c=>gc_tab-hckdrifttable )
             ( entity = lif_c=>gc_ent-hckwhitelist table = lif_c=>gc_tab-hckwhitelist )
             ( entity = lif_c=>gc_ent-jobcycle table = lif_c=>gc_tab-jobcycle )

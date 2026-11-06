@@ -14,14 +14,16 @@ annotate entity ZC_CD_HckCfgAll with
       label: 'Thresholds', position: 30, targetElement: '_HckThreshold' },
     { id: 'HckAggregate', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Generic aggregates', position: 40, targetElement: '_HckAggregate' },
+    { id: 'HckAggGroup', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Expected groups', position: 50, targetElement: '_HckAggGroup' },
     { id: 'HckDriftTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Tables under drift control', position: 50, targetElement: '_HckDriftTable' },
+      label: 'Tables under drift control', position: 60, targetElement: '_HckDriftTable' },
     { id: 'HckWhitelist', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Aggregate table whitelist', position: 60, targetElement: '_HckWhitelist' },
+      label: 'Aggregate table whitelist', position: 70, targetElement: '_HckWhitelist' },
     { id: 'JobCycle', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Job cycles', position: 70, targetElement: '_JobCycle' },
+      label: 'Job cycles', position: 80, targetElement: '_JobCycle' },
     { id: 'JobStep', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Job cycle steps', position: 80, targetElement: '_JobStep' }
+      label: 'Job cycle steps', position: 90, targetElement: '_JobStep' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

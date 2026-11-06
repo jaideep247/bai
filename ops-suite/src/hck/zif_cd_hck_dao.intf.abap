@@ -11,12 +11,17 @@
 *& 2026-11-06 | get_unresolved_jobs; job runs carry program/variant (audit A42, A44).
 *& 2026-11-06 | G/L transfer gaps per company code and reference type; total count (audit A43).
 *& 2026-11-06 | get_metric_history at the persisted grain incl. DIM2 (audit A101).
+*& 2026-11-06 | get_agg_groups (expected groups); row cap public (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
 "! descriptions or reads system tables. Checks and the engine stay SQL-free.
 INTERFACE zif_cd_hck_dao
   PUBLIC.
+
+  "! Groups returned by one grouped aggregate at most; a result of this size may be cut
+  "! off, so missing expected groups are not filled with zero then (A103)
+  CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
 
   "! Active checks (ZCD_HCK_DEF) matching the selection, ordered by SEQ
   METHODS get_check_defs
@@ -40,6 +45,13 @@ INTERFACE zif_cd_hck_dao
       iv_check_id    TYPE zif_cd_hck_types=>ty_check_id
     RETURNING
       VALUE(rt_defs) TYPE zif_cd_hck_types=>tt_agg_def.
+
+  "! Expected GROUP_FIELD values (ZCD_HCK_AGGGRP) of the aggregates of a check (A103)
+  METHODS get_agg_groups DEFAULT IGNORE
+    IMPORTING
+      iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
+    RETURNING
+      VALUE(rt_groups) TYPE zif_cd_hck_types=>tt_agg_group.
 
   "! Table is on the whitelist ZCD_HCK_TABWL and active
   METHODS is_table_whitelisted

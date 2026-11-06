@@ -5,13 +5,16 @@
 *& definitions, stored as metrics to feed baselines and the dashboard.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Expected groups (ZCD_HCK_AGGGRP) measure zero when silent (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - volume KPIs per day / source (LOB)</p>
 "! Every ZCD_HCK_AGG row of the check is measured in DAY mode: DATE_FIELD =
 "! report date - offset. PARAM1 = first offset in days (default 1 =
 "! yesterday), PARAM2 = number of days (default 1; >1 backfills history).
 "! DIM1 = GROUP_FIELD value (source / LOB, '*' when ungrouped), DIM2 = day.
-"! A missing feed is visible as value 0 under '*' (lower-is-worse threshold).
+"! A missing feed is visible as value 0 under '*' (lower-is-worse threshold);
+"! with expected groups in ZCD_HCK_AGGGRP each silent group measures 0 (A103).
+"! A failed query is an AGG_INVALID error finding and measures nothing.
 CLASS zcl_cd_hck_c_volume DEFINITION
   PUBLIC
   FINAL
@@ -36,15 +39,19 @@ CLASS zcl_cd_hck_c_volume IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e310(zcd_ops) WITH is_def-check_id.
     ENDIF.
+    DATA(lt_groups) = lo_dao->get_agg_groups( is_def-check_id ).
 
     LOOP AT lt_defs INTO DATA(ls_agg).
       ls_agg-date_mode = zif_cd_hck_types=>gc_date_mode-day.
+      DATA(lt_expected) = VALUE zif_cd_hck_types=>tt_group_value(
+        FOR ls_group IN lt_groups WHERE ( agg_id = ls_agg-agg_id ) ( ls_group-group_value ) ).
       DO lv_days TIMES.
         ls_agg-age_days_min = lv_offset + sy-index - 1.
         TRY.
             INSERT LINES OF zcl_cd_hck_agg_query=>measure( is_def      = ls_agg
                                                            iv_ref_date = is_context-report_date
-                                                           io_dao      = lo_dao ) INTO TABLE rs_result-metrics.
+                                                           io_dao      = lo_dao
+                                                           it_expected = lt_expected ) INTO TABLE rs_result-metrics.
           CATCH zcx_cd_ops_error INTO DATA(lx_config).
             INSERT VALUE #( object_key = |{ is_def-check_id }/{ ls_agg-agg_id }|
                             check_code = zif_cd_hck_types=>gc_code-agg_invalid

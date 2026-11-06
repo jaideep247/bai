@@ -18,6 +18,7 @@ authorization master ( global )
   association _HckCheckDef { create ( features : global ); with draft; }
   association _HckThreshold { create ( features : global ); with draft; }
   association _HckAggregate { create ( features : global ); with draft; }
+  association _HckAggGroup { create ( features : global ); with draft; }
   association _HckDriftTable { create ( features : global ); with draft; }
   association _HckWhitelist { create ( features : global ); with draft; }
   association _JobCycle { create ( features : global ); with draft; }
@@ -35,6 +36,7 @@ authorization master ( global )
     validation HckThreshold ~ validateTransport;
     validation HckAggregate ~ validateFields;
     validation HckAggregate ~ validateTransport;
+    validation HckAggGroup ~ validateTransport;
     validation HckDriftTable ~ validateFields;
     validation HckDriftTable ~ validateTransport;
     validation HckWhitelist ~ validateFields;
@@ -159,6 +161,36 @@ etag master LocalLastChangedAt
     Cond3Field = cond3_field;
     Cond3Op = cond3_op;
     Cond3Value = cond3_value;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_HckAggGroup alias HckAggGroup
+persistent table zcd_hck_agggrp
+with additional save
+draft table zcd_d_hckaggg
+lock dependent by _HckCfgAll
+authorization dependent by _HckCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) CheckId, AggId, GroupValue;
+  field ( mandatory : create ) CheckId, AggId, GroupValue;
+  association _HckCfgAll { with draft; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_hck_agggrp
+  {
+    CheckId = check_id;
+    AggId = agg_id;
+    GroupValue = group_value;
+    Description = description;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;

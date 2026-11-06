@@ -102,6 +102,8 @@ SPEC = {
               ('enum', 'agg_func', 'COUNT,SUM'), ('enum', 'date_mode', ',AGE,DAY'),
               ('enum', 'cond1_op', ',EQ,NE,GT,LT,GE,LE,IN'), ('enum', 'cond2_op', ',EQ,NE,GT,LT,GE,LE,IN'),
               ('enum', 'cond3_op', ',EQ,NE,GT,LT,GE,LE,IN')]),
+            # Audit A103: expected groups of a grouped aggregate (silent group = measured 0)
+            ('zcd_hck_agggrp', 'HckAggGroup', 'zcd_d_hckaggg', 'Expected group', 'Expected groups', [], []),
             ('zcd_hck_drift', 'HckDriftTable', 'zcd_d_hckdrift', 'Drift table', 'Tables under drift control', [],
              [('table', 'tabname')]),
             ('zcd_hck_tabwl', 'HckWhitelist', 'zcd_d_hcktabwl', 'Whitelisted table', 'Aggregate table whitelist',

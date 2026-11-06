@@ -17,6 +17,7 @@
 *& 2026-11-06 | Drift hash over canonical typed fields, version 2; cursor closed on all paths (audit A57).
 *& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
 *& 2026-11-06 | Baseline history filtered by DIM2 as well (audit A101).
+*& 2026-11-06 | Expected groups read from ZCD_HCK_AGGGRP; row cap on the interface (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -36,7 +37,6 @@ CLASS zcl_cd_hck_dao DEFINITION
     CONSTANTS gc_hash_algorithm TYPE string VALUE `SHA256`.
     "! Query kind named in message 308 for a value (not aggregate) query
     CONSTANTS gc_query_kind_values TYPE string VALUE `VALUES`.
-    CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
     CONSTANTS gc_first_step TYPE i VALUE 1.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
     "! Metric points scanned to find the last N distinct runs (A58)
@@ -92,6 +92,15 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       WHERE check_id = @iv_check_id
       ORDER BY agg_id
       INTO CORRESPONDING FIELDS OF TABLE @rt_defs.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~get_agg_groups.
+    SELECT check_id, agg_id, group_value
+      FROM zcd_hck_agggrp
+      WHERE check_id = @iv_check_id
+      ORDER BY agg_id, group_value
+      INTO CORRESPONDING FIELDS OF TABLE @rt_groups.
   ENDMETHOD.
 
 
@@ -185,7 +194,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             GROUP BY (lv_group)
             ORDER BY (lv_group)
             INTO CORRESPONDING FIELDS OF TABLE @rt_rows
-            UP TO @gc_max_agg_rows ROWS.
+            UP TO @zif_cd_hck_dao=>gc_max_agg_rows ROWS.
         ENDIF.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error

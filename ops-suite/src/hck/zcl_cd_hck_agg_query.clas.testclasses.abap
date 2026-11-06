@@ -5,6 +5,7 @@
 *& operators, literals) and WHERE building; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
 *&---------------------------------------------------------------------*
 CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -34,6 +35,8 @@ CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
     METHODS day_mode_compares_one_date FOR TESTING.
     METHODS no_rows_give_star_zero FOR TESTING.
     METHODS group_rows_become_dims FOR TESTING.
+    METHODS missing_expected_group_zero FOR TESTING.
+    METHODS no_rows_zero_per_expected FOR TESTING.
 
     METHODS add_field
       IMPORTING
@@ -258,6 +261,54 @@ CLASS ltc_agg_query IMPLEMENTATION.
                                                   iv_ref_date = gc_ref_date )
           exp = lt_exp
           msg = 'Group values must map to DIM1 with the count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A103): an expected group without rows measures 0 - one company silent while another
+  " is active must not vanish from the metrics
+  METHOD missing_expected_group_zero.
+    DATA lt_rows TYPE zif_cd_hck_types=>tt_agg_row.
+    DATA lt_expected TYPE zif_cd_hck_types=>tt_group_value.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
+    TRY.
+        INSERT VALUE #( group_value = 'US01' row_count = 12 ) INTO TABLE lt_rows.
+        INSERT CONV #( 'US01' ) INTO TABLE lt_expected.
+        INSERT CONV #( 'US02' ) INTO TABLE lt_expected.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 12 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 ) INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_agg_query=>to_metrics( is_def      = ms_def
+                                                  it_rows     = lt_rows
+                                                  iv_ref_date = gc_ref_date
+                                                  it_expected = lt_expected )
+          exp = lt_exp
+          msg = 'Missing company US02 must measure 0 next to active US01' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A103): with an expected set, an empty result is a zero per expected group, not '*'
+  METHOD no_rows_zero_per_expected.
+    DATA lt_rows TYPE zif_cd_hck_types=>tt_agg_row.
+    DATA lt_expected TYPE zif_cd_hck_types=>tt_group_value.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
+    TRY.
+        INSERT CONV #( 'US01' ) INTO TABLE lt_expected.
+        INSERT CONV #( 'US02' ) INTO TABLE lt_expected.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 0 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 ) INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_agg_query=>to_metrics( is_def      = ms_def
+                                                  it_rows     = lt_rows
+                                                  iv_ref_date = gc_ref_date
+                                                  it_expected = lt_expected )
+          exp = lt_exp
+          msg = 'Every expected company must measure 0' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

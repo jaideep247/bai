@@ -14,6 +14,8 @@
 *& 2026-11-06 | Baseline hash version; CONFIG_BASELINE_OUTDATED (audit A57).
 *& 2026-11-06 | Check time budget in the context; CHECK_BUDGET_EXHAUSTED (audit A18).
 *& 2026-11-06 | Metric kind and weight: aggregation by metric semantics (audit A88).
+*& 2026-11-06 | BASELINE_WARMUP code, warm-up flag and counts (audit A102).
+*& 2026-11-06 | Expected group set of an aggregate, ZCD_HCK_AGGGRP (audit A103).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -318,6 +320,16 @@ INTERFACE zif_cd_hck_types
       total       TYPE ty_value,
     END OF ty_agg_row.
   TYPES tt_agg_row TYPE STANDARD TABLE OF ty_agg_row WITH EMPTY KEY.
+
+  "! ZCD_HCK_AGGGRP: expected GROUP_FIELD values of an aggregate (audit A103)
+  TYPES:
+    BEGIN OF ty_agg_group,
+      check_id    TYPE ty_check_id,
+      agg_id      TYPE ty_agg_id,
+      group_value TYPE ty_group_value,
+    END OF ty_agg_group.
+  TYPES tt_agg_group TYPE STANDARD TABLE OF ty_agg_group WITH EMPTY KEY.
+  TYPES tt_group_value TYPE STANDARD TABLE OF ty_group_value WITH EMPTY KEY.
 
   "! A measured key figure (ZCD_HCK_METRIC without run id / time stamp)
   TYPES:

@@ -113,6 +113,22 @@ Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
 | B_VOLUME | FEB_STMT | FEBKO | COUNT | AZDAT (VERIFY-DDIC) | DAY | (set by check) | `<format/sender field, VERIFY-DDIC>` | | Statements loaded per day (BAI vs CAMT) |
 | B_VOLUME | PAY_REQ | ZCD_PAYM_REQ_LOG | COUNT | `<request date field (DATS), VERIFY-DDIC>` | DAY | (set by check) | `<source field, VERIFY-DDIC>` | ZZ_STATUS EQ `SUCCESS` | Never "highest COUNTER" — status SUCCESS per standards |
 
+### 4a. Expected groups — `ZCD_HCK_AGGGRP` (audit A103)
+
+A grouped aggregate only returns groups that have rows: a company code or source that delivered nothing
+would simply be absent. Each row below names a group value the aggregate must report; when the query
+returns no row for it, the check measures **0** for that group, so a lower-is-worse threshold on that
+company can fire while another company is active. A **failed** query is an `AGG_CONFIG_INVALID` error
+finding and measures nothing — it never reads as zero volume. When a grouped result reaches the row cap
+(5 000 groups) it may be cut off and missing groups are not filled.
+
+| CHECK_ID | AGG_ID | GROUP_VALUE | DESCRIPTION |
+|---|---|---|---|
+| B_VOLUME | PAY_REQ | `<source system 1, from ZCD_PAYM_REQ_LOG-SOURCE, VERIFY-SE16>` | Payment requests expected daily |
+| A_RET_AGED | RET_AGED | `<company code, VERIFY with Treasury>` | Company codes reported even when nothing is aged |
+
+Maintained in the health check configuration app (entity *Expected groups*), table logging on.
+
 ## 5. Table whitelist — `ZCD_HCK_TABWL`
 
 | TABNAME | DESCRIPTION | ACTIVE | APPROVED_BY |
@@ -137,6 +153,7 @@ security boundary; every new row needs a reviewer.
 | ZCD_HCK_DEF | Health check catalog | X |
 | ZCD_HCK_THRESH | Health check thresholds | X |
 | ZCD_HCK_AGG | Generic aggregates | X |
+| ZCD_HCK_AGGGRP | Expected groups of aggregates (A103) | X |
 | ZCD_OPS_PARAM | Suite parameters | X |
 | ZCD_JOB_STEP | Job cycle steps | X |
 

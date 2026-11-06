@@ -15,6 +15,7 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _HckCheckDef { create; with draft; }
   use association _HckThreshold { create; with draft; }
   use association _HckAggregate { create; with draft; }
+  use association _HckAggGroup { create; with draft; }
   use association _HckDriftTable { create; with draft; }
   use association _HckWhitelist { create; with draft; }
   use association _JobCycle { create; with draft; }
@@ -40,6 +41,15 @@ use etag
 }
 
 define behavior for ZC_CD_HckAggregate alias HckAggregate
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckAggGroup alias HckAggGroup
 use etag
 {
   use update;
