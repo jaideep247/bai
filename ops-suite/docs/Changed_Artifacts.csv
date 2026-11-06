@@ -674,6 +674,9 @@ src/fmon/zcl_cd_fmon_engine.clas.testclasses.abap,ABAP,"Application tests of the
 src/fmon/zcl_cd_fmon_engine.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_factory.clas.abap,ABAP,"FMON factory: single resolution point for the DAO, DDIC describer,"
 src/fmon/zcl_cd_fmon_factory.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_flow_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the file monitoring dashboard
+src/fmon/zcl_cd_fmon_flow_cds_test.clas.testclasses.abap,ABAP,CDS tests of the file monitoring dashboard on cl_cds_test_environment
+src/fmon/zcl_cd_fmon_flow_cds_test.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_injector.clas.abap,ABAP,Test injector for ZCL_CD_FMON_FACTORY (unit tests only; not FOR TESTING
 src/fmon/zcl_cd_fmon_injector.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_lot_reader.clas.abap,ABAP,Generic returns / NOC lot completeness reader. Table and field names
