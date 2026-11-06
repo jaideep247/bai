@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A27 blocks-posting flag and A03 required rules (RULE_GROUP_EMPTY, RULE_UNUSABLE, NONE row).
+*& 2026-11-06 | Audit A25 / A33: canonical account key, missing-currency check codes.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -395,6 +396,7 @@ INTERFACE zif_cd_ebs_types
       lookup_not_found               TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOOKUP_NOT_FOUND',
       lookup_status                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOOKUP_STATUS',
       account_currency               TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_CURRENCY',
+      account_currency_missing       TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_CURRENCY_MISSING',
       account_not_configured         TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_NOT_CONFIGURED',
       amount_above_max               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_ABOVE_MAX',
       amount_below_min               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_BELOW_MIN',
@@ -407,6 +409,7 @@ INTERFACE zif_cd_ebs_types
       code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
       code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
       currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
+      currency_missing               TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISSING',
       declared_totals                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DECLARED_TOTALS',
       duplicate_entry                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_ENTRY',
       entries_not_accounted          TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRIES_NOT_ACCOUNTED',
@@ -559,6 +562,8 @@ INTERFACE zif_cd_ebs_types
       lookup_status               TYPE zif_cd_ops_types=>ty_msgno VALUE '512',
       rule_group_empty            TYPE zif_cd_ops_types=>ty_msgno VALUE '513',
       rule_unusable               TYPE zif_cd_ops_types=>ty_msgno VALUE '514',
+      currency_missing            TYPE zif_cd_ops_types=>ty_msgno VALUE '515',
+      account_currency_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '516',
     END OF gc_msg.
 
 ENDINTERFACE.

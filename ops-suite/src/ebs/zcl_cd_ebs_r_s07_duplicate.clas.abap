@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A25: duplicate key uses the canonical account identity.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S07 - duplicate statement</p>
 CLASS zcl_cd_ebs_r_s07_duplicate DEFINITION
@@ -27,14 +28,15 @@ CLASS zcl_cd_ebs_r_s07_duplicate IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     TYPES:
       BEGIN OF ty_key,
-        account_no TYPE zif_cd_ebs_types=>ty_text35,
+        account    TYPE string,
         stmt_no    TYPE zif_cd_ebs_types=>ty_statement-stmt_no,
         stmt_date  TYPE d,
       END OF ty_key.
     DATA lt_seen TYPE HASHED TABLE OF ty_key WITH UNIQUE KEY table_line.
     DATA ls_key TYPE ty_key.
     LOOP AT it_statements INTO DATA(ls_statement).
-      ls_key-account_no = ls_statement-account_no.
+      " A25: canonical account identity - two house bank accounts never collide
+      ls_key-account    = account_key( ls_statement ).
       ls_key-stmt_no    = ls_statement-stmt_no.
       ls_key-stmt_date  = ls_statement-stmt_date.
       INSERT ls_key INTO TABLE lt_seen.

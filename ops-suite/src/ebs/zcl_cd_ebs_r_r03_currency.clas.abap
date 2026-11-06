@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A33: missing line or statement currency reported.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R03 - line currency = statement currency</p>
 CLASS zcl_cd_ebs_r_r03_currency DEFINITION
@@ -27,9 +28,16 @@ CLASS zcl_cd_ebs_r_r03_currency IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     DATA lt_statements TYPE tt_stmt_hash.
     lt_statements = it_statements.
-    LOOP AT it_lines INTO DATA(ls_line) WHERE currency IS NOT INITIAL.
+    LOOP AT it_lines INTO DATA(ls_line).
       DATA(lv_stmt_currency) = VALUE #( lt_statements[ stmt_key = ls_line-stmt_key ]-currency OPTIONAL ).
-      IF lv_stmt_currency IS NOT INITIAL AND lv_stmt_currency <> ls_line-currency.
+      IF ls_line-currency IS INITIAL OR lv_stmt_currency IS INITIAL.
+        " A33: an unknown currency cannot be compared - reported, never skipped
+        INSERT zcl_cd_ebs_finding=>for_rule_line(
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-currency_missing
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-currency_missing
+                                                     iv_v1    = zcl_cd_ebs_finding=>line_key( ls_line ) ) )
+          INTO TABLE rt_findings.
+      ELSEIF lv_stmt_currency <> ls_line-currency.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-currency_mismatch
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-currency_mismatch

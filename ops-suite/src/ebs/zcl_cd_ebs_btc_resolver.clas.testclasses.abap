@@ -9,6 +9,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A25: imported statement gets its account number from ZCD_EBS_ACCT.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -80,6 +81,7 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS sweep_275_575_not_validated  FOR TESTING.
     METHODS bai143_collections_only      FOR TESTING.
     METHODS bai452_validated_as_468      FOR TESTING.
+    METHODS imported_stmt_gets_account   FOR TESTING.
 ENDCLASS.
 
 
@@ -491,6 +493,20 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = first_line( )-rule_group exp = 'BAI468D'
                                             msg = '452 must run the 468D rules' ).
         cl_abap_unit_assert=>assert_false( act = first_line( )-blocked msg = '452 must not be blocked' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25: FEBKO carries no account number - enrichment fills it from the house bank account,
+  " so every rule sees the same canonical account identity
+  METHOD imported_stmt_gets_account.
+    TRY.
+        CLEAR mt_stmts[ 1 ]-account_no.
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_equals( act = mt_stmts[ 1 ]-account_no exp = gc_test-account
+                                            msg = 'The imported statement must get the configured account number' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

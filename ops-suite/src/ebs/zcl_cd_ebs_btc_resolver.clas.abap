@@ -9,6 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A25: imported statement gets the account number of its house bank account.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -127,6 +128,10 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
         <ls_statement>-bukrs = ls_account-bukrs.
         <ls_statement>-hbkid = ls_account-hbkid.
         <ls_statement>-hktid = ls_account-hktid.
+      ENDIF.
+      " A25: imported statements (FEBKO) carry no account number - take the configured one
+      IF <ls_statement>-account_no IS INITIAL.
+        <ls_statement>-account_no = ls_account-account_no.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

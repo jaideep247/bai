@@ -270,3 +270,5 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 512 | Lookup &1: &2 has status &3, expected &4 |
 | 513 | Rule group &1 has no usable rule assignment (configuration) |
 | 514 | Rule &1 of group &2 is missing or inactive in ZCD_EBS_RULE_DEF |
+| 515 | Entry &1: currency missing on the entry or its statement |
+| 516 | Account &1: currency missing in the statement or in ZCD_EBS_ACCT |

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Missing G/L account reported as GL_ACCOUNT_NOT_MAPPED instead of skipped (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A25: G/L account found through the canonical account identity.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check R18 - bank G/L balance = closing</p>
 CLASS zcl_cd_ebs_r_r18_gl_balance DEFINITION
@@ -29,8 +30,8 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     DATA(lt_accounts) = zcl_cd_ebs_factory=>get_cfg_dao( )->get_accounts( ).
     LOOP AT it_statements INTO DATA(ls_statement) WHERE has_closing = abap_true AND bukrs IS NOT INITIAL.
-      DATA(lv_gl_account) = VALUE #( lt_accounts[ account_no = ls_statement-account_no active = abap_true ]-gl_account
-                                     OPTIONAL ).
+      " A25 / A16: house bank identity first, then account number
+      DATA(lv_gl_account) = account_of( it_accounts = lt_accounts is_statement = ls_statement )-gl_account.
       IF lv_gl_account IS INITIAL.
         " No silent pass: a statement that cannot be reconciled is reported
         " (an account missing from ZCD_EBS_ACCT altogether is S04's finding)

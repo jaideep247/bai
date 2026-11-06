@@ -9,6 +9,7 @@
 *& 2026-11-06 | Nearest predecessor by date and number; stored statement wins when nearer (audit A15).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A25: predecessor matched on the canonical account identity.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S01 - opening = prior closing</p>
 CLASS zcl_cd_ebs_r_s01_continuity DEFINITION
@@ -35,11 +36,16 @@ CLASS zcl_cd_ebs_r_s01_continuity IMPLEMENTATION.
       CLEAR: lv_best_date, lv_best_no.
       " Nearest earlier statement of the same account and currency in the package:
       " latest date, then highest statement number (table order is irrelevant)
+      DATA(lv_account) = account_key( ls_statement ).
       LOOP AT it_statements INTO DATA(ls_other)
-           WHERE account_no = ls_statement-account_no AND currency = ls_statement-currency
+           WHERE currency = ls_statement-currency
              AND has_closing = abap_true
              AND ( stmt_date < ls_statement-stmt_date
                 OR ( stmt_date = ls_statement-stmt_date AND stmt_no < ls_statement-stmt_no ) ).
+        " A25: same canonical account (house bank identity, else account number)
+        IF account_key( ls_other ) <> lv_account.
+          CONTINUE.
+        ENDIF.
         IF lv_found = abap_false OR ls_other-stmt_date > lv_best_date
            OR ( ls_other-stmt_date = lv_best_date AND ls_other-stmt_no > lv_best_no ).
           lv_prior     = ls_other-closing_bal.

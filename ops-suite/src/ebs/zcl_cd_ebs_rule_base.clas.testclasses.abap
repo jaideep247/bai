@@ -11,6 +11,7 @@
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A11: 166 disbursement retrieval-log chain (R07L PARAM2 AP, PARAM3 LOT).
+*& 2026-11-06 | Audit A25 / A33: canonical account identity, missing currencies.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -370,6 +371,7 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS teardown.
     METHODS r01_debit_on_credit_code     FOR TESTING.
+    METHODS r03_missing_currency         FOR TESTING.
     METHODS r01_reversal_may_flip_sign   FOR TESTING.
     METHODS r02_amount_above_max_fails   FOR TESTING.
     METHODS r03_foreign_currency_fails   FOR TESTING.
@@ -396,6 +398,21 @@ CLASS ltc_line_rules IMPLEMENTATION.
 
 
   " R01: a debit on a code that expects credits is a sign error
+  " A33: a line without currency cannot be compared - reported instead of skipped
+  METHOD r03_missing_currency.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        CLEAR mt_lines[ 1 ]-currency.
+        run( iv_class = 'ZCL_CD_EBS_R_R03_CURRENCY' is_rule = rule( 'R03' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-currency_missing
+                         iv_msg        = 'A line without currency must be reported by R03' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD r01_debit_on_credit_code.
     add_statement( ).
     add_line( iv_cdi = zif_cd_ebs_types=>gc_cdi-debit iv_exp_cdi = zif_cd_ebs_types=>gc_cdi-credit ).
@@ -1052,6 +1069,15 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s01_opening_ne_prior_closing FOR TESTING.
     METHODS s01_deviation_within_toler   FOR TESTING.
     METHODS s01_nearest_package_prior    FOR TESTING.
+    METHODS s01_other_account_not_prior  FOR TESTING.
+    METHODS s07_two_accounts_same_number FOR TESTING.
+    METHODS r18_gl_by_house_bank         FOR TESTING.
+    METHODS s04_house_bank_preferred     FOR TESTING.
+    METHODS s04_missing_currency         FOR TESTING.
+    METHODS add_second_account_statement
+      IMPORTING
+        iv_opening TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_closing TYPE zif_cd_ops_types=>ty_amount OPTIONAL.
     METHODS s01_newer_stored_prior_wins  FOR TESTING.
     METHODS s02_arithmetic_break_fails   FOR TESTING.
     METHODS s02_balanced_statement_ok    FOR TESTING.
@@ -1094,6 +1120,101 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
   " S01 / acceptance test 4: a deviation up to the configured 0.01 tolerance passes
   " Audit A15: the nearest earlier statement of the account (date, then number) is the
   " predecessor - not the last one in table order
+  " Second statement of the same date and number on another house bank account; both
+  " imported (FEBKO has no account number) - only the house bank identity tells them apart
+  METHOD add_second_account_statement.
+    add_statement( iv_opening = iv_opening iv_closing = iv_closing ).
+    DATA(lv_last) = lines( mt_stmts ).
+    mt_stmts[ lv_last ]-stmt_key = 'S0002'.
+    mt_stmts[ lv_last ]-hbkid    = 'BOFA1'.
+    mt_stmts[ lv_last ]-hktid    = 'COLL1'.
+    LOOP AT mt_stmts ASSIGNING FIELD-SYMBOL(<ls_stmt>).
+      CLEAR <ls_stmt>-account_no.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " A25: a statement of another house bank account is never the predecessor
+  METHOD s01_other_account_not_prior.
+    TRY.
+        add_statement( iv_opening = '500.00' iv_closing = '600.00' ).
+        add_second_account_statement( iv_opening = '100.00' iv_closing = '999.00' ).
+        mt_stmts[ 2 ]-stmt_date = gc_test-today - 1.
+        CLEAR mt_stmts[ 2 ]-has_opening.
+        run( iv_class = 'ZCL_CD_EBS_R_S01_CONTINUITY' is_rule = rule( 'S01' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Another account''s closing must not be compared' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25: two accounts with the same statement date and number in one package are no duplicate
+  METHOD s07_two_accounts_same_number.
+    TRY.
+        add_statement( ).
+        add_second_account_statement( ).
+        run( iv_class = 'ZCL_CD_EBS_R_S07_DUPLICATE' is_rule = rule( 'S07' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Different house bank accounts must not collide in S07' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25 / A16: the G/L account is found through the house bank identity of an imported statement
+  METHOD r18_gl_by_house_bank.
+    TRY.
+        mo_sap_dao->mv_gl_balance = '1150.00'.
+        add_statement( iv_opening = '1000.00' iv_closing = '1150.00' ).
+        CLEAR mt_stmts[ 1 ]-account_no.
+        run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'R18 must find the G/L account by house bank account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A33: the SAP house bank identity wins over an account number configured elsewhere
+  METHOD s04_house_bank_preferred.
+    DATA ls_other TYPE zif_cd_ebs_types=>ty_account_cfg.
+    TRY.
+        ls_other-bukrs      = gc_test-bukrs.
+        ls_other-hbkid      = 'BOFA1'.
+        ls_other-hktid      = 'COLL1'.
+        ls_other-account_no = '000999999999'.
+        ls_other-currency   = 'EUR'.
+        ls_other-active     = abap_true.
+        INSERT ls_other INTO TABLE mo_cfg_dao->mt_accounts.
+        add_statement( ).
+        mt_stmts[ 1 ]-account_no = ls_other-account_no.
+        run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'The house bank account (USD) must be used, not the EUR one' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A33: a statement without currency cannot be checked - reported instead of skipped
+  METHOD s04_missing_currency.
+    TRY.
+        add_statement( ).
+        CLEAR mt_stmts[ 1 ]-currency.
+        run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-account_currency_missing
+                         iv_msg        = 'A statement without currency must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD s01_nearest_package_prior.
     TRY.
         " day 3 statement, opening 500 = closing of day 2

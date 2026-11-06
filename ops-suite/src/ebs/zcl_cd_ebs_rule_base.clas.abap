@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | House bank: statement without house bank matches only when one account is possible (audit 2026-11-06).
+*& 2026-11-06 | Audit A25: account_key / account_of - one canonical account identity for all rules.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -117,6 +118,22 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rv_reference) TYPE zif_cd_ebs_types=>ty_text35.
 
+    "! A25: canonical account identity of a statement - SAP house bank account
+    "! (company code / house bank / account ID) when known, else the bank account number
+    METHODS account_key
+      IMPORTING
+        is_statement  TYPE zif_cd_ebs_types=>ty_statement
+      RETURNING
+        VALUE(rv_key) TYPE string.
+
+    "! A25 / A33: configured account of a statement - house bank identity first, then account number
+    METHODS account_of
+      IMPORTING
+        it_accounts       TYPE zif_cd_ebs_types=>tt_account_cfg
+        is_statement      TYPE zif_cd_ebs_types=>ty_statement
+      RETURNING
+        VALUE(rs_account) TYPE zif_cd_ebs_types=>ty_account_cfg.
+
 ENDCLASS.
 
 
@@ -221,6 +238,26 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
         RETURN.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD account_key.
+    rv_key = COND #( WHEN is_statement-hbkid IS NOT INITIAL
+                     THEN |{ is_statement-bukrs }/{ is_statement-hbkid }/{ is_statement-hktid }|
+                     ELSE condense( CONV string( is_statement-account_no ) ) ).
+  ENDMETHOD.
+
+
+  METHOD account_of.
+    IF is_statement-hbkid IS NOT INITIAL.
+      rs_account = VALUE #( it_accounts[ bukrs  = is_statement-bukrs
+                                         hbkid  = is_statement-hbkid
+                                         hktid  = is_statement-hktid
+                                         active = abap_true ] OPTIONAL ).
+    ENDIF.
+    IF rs_account IS INITIAL AND is_statement-account_no IS NOT INITIAL.
+      rs_account = VALUE #( it_accounts[ account_no = is_statement-account_no active = abap_true ] OPTIONAL ).
+    ENDIF.
   ENDMETHOD.
 
 
