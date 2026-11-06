@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A86: an empty total/count of a present 49/98/99 trailer is TRAILER_FIELD_MISSING, never the computed value.
 *& 2026-11-06 | Audit A95/A96: missing 49/98/99 blocks (B); funds-type layout validated before references are read.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -598,8 +599,8 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     assert_bai2( lt_lines[ 1 ] ).
     DATA(lt_records) = build_records( lt_lines ).
-    LOOP AT lt_records INTO DATA(ls_record).
-      dispatch_record( ls_record ).
+    LOOP AT lt_records ASSIGNING FIELD-SYMBOL(<ls_record>).
+      dispatch_record( <ls_record> ).
     ENDLOOP.
     finish_file( ).
     rs_file = ms_file.
@@ -618,8 +619,8 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     DATA(lv_content) = replace( val = iv_content sub = |\r\n| with = |\n| occ = 0 ).
     lv_content = replace( val = lv_content sub = |\r| with = |\n| occ = 0 ).
     SPLIT lv_content AT |\n| INTO TABLE DATA(lt_raw).
-    LOOP AT lt_raw INTO DATA(lv_raw).
-      DATA(lv_line) = trim( lv_raw ).
+    LOOP AT lt_raw ASSIGNING FIELD-SYMBOL(<lv_raw>).
+      DATA(lv_line) = trim( <lv_raw> ).
       IF lv_line IS NOT INITIAL.
         APPEND lv_line TO rt_lines.
       ENDIF.
@@ -1006,8 +1007,8 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD detail_text.
     " The text is the remainder of the record and may itself contain commas
     DATA lt_parts TYPE string_table.
-    LOOP AT it_fields INTO DATA(lv_part) FROM iv_index.
-      APPEND lv_part TO lt_parts.
+    LOOP AT it_fields ASSIGNING FIELD-SYMBOL(<lv_part>) FROM iv_index.
+      APPEND <lv_part> TO lt_parts.
     ENDLOOP.
     rv_text = trim( concat_lines_of( table = lt_parts sep = gc_delimiter ) ).
   ENDMETHOD.

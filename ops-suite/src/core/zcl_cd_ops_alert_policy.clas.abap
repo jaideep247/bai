@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Cap keeps the most severe findings (B > E > W > I, stable order); digest severity from the full
 *& 2026-11-06 |               selection; held-back count in text and HTML (audit A63).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
 CLASS zcl_cd_ops_alert_policy DEFINITION
@@ -160,16 +161,16 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
 
   METHOD select.
     DATA ls_selection TYPE ty_selection.
-    LOOP AT it_rules INTO DATA(ls_rule) WHERE active = abap_true.
+    LOOP AT it_rules ASSIGNING FIELD-SYMBOL(<ls_rule>) WHERE active = abap_true.
       CLEAR ls_selection.
-      ls_selection-rule = ls_rule.
-      LOOP AT it_findings INTO DATA(ls_finding).
-        IF matches( is_rule = ls_rule is_finding = ls_finding ) = abap_true.
-          INSERT ls_finding INTO TABLE ls_selection-findings.
+      ls_selection-rule = <ls_rule>.
+      LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+        IF matches( is_rule = <ls_rule> is_finding = <ls_finding> ) = abap_true.
+          INSERT <ls_finding> INTO TABLE ls_selection-findings.
         ENDIF.
       ENDLOOP.
       IF ls_selection-findings IS INITIAL.
-        ls_selection-run_level = run_triggers( is_rule = ls_rule is_run = is_run ).
+        ls_selection-run_level = run_triggers( is_rule = <ls_rule> is_run = is_run ).
       ENDIF.
       IF ls_selection-findings IS NOT INITIAL OR ls_selection-run_level = abap_true.
         INSERT ls_selection INTO TABLE rt_selection.
@@ -218,8 +219,8 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
 
     IF is_selection-rule-digest = abap_true OR is_selection-findings IS INITIAL.
       DATA lt_shown TYPE zif_cd_ops_types=>tt_finding.
-      LOOP AT lt_ranked INTO DATA(ls_shown) TO lv_max.
-        INSERT ls_shown INTO TABLE lt_shown.
+      LOOP AT lt_ranked ASSIGNING FIELD-SYMBOL(<ls_shown>) TO lv_max.
+        INSERT <ls_shown> INTO TABLE lt_shown.
       ENDLOOP.
       " subject and severity describe the complete selection, not only the shown part
       INSERT new_message( is_selection   = is_selection
@@ -232,13 +233,13 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT lt_ranked INTO DATA(ls_finding) TO lv_max.
+    LOOP AT lt_ranked ASSIGNING FIELD-SYMBOL(<ls_finding>) TO lv_max.
       DATA(lv_last) = xsdbool( sy-tabix = nmin( val1 = lv_max val2 = lv_total ) ).
       " the last message of the capped series names how many were held back
       INSERT new_message( is_selection   = is_selection
                           is_run         = is_run
                           iv_destination = iv_destination
-                          it_findings    = VALUE #( ( ls_finding ) )
+                          it_findings    = VALUE #( ( <ls_finding> ) )
                           iv_total       = 1
                           iv_suppressed  = COND #( WHEN lv_last = abap_true THEN lv_suppressed ) )
              INTO TABLE rt_messages.
@@ -316,9 +317,9 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
                    && gc_html-p_close
                    && findings_html( it_findings = it_findings iv_suppressed = iv_suppressed ).
     rs_message-text = rs_message-subject.
-    LOOP AT it_findings INTO DATA(ls_finding).
-      rs_message-text = |{ rs_message-text }\n{ ls_finding-severity } { ls_finding-rule_id } |
-                     && |{ ls_finding-object_key } { ls_finding-message }|.
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      rs_message-text = |{ rs_message-text }\n{ <ls_finding>-severity } { <ls_finding>-rule_id } |
+                     && |{ <ls_finding>-object_key } { <ls_finding>-message }|.
     ENDLOOP.
     IF iv_suppressed > 0.
       rs_message-text = |{ rs_message-text }\n|
@@ -335,20 +336,20 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     rv_html = gc_html-table_open && gc_html-tr_open.
     LOOP AT VALUE string_table( ( CONV #( TEXT-c01 ) ) ( CONV #( TEXT-c02 ) ) ( CONV #( TEXT-c03 ) )
                                 ( CONV #( TEXT-c04 ) ) ( CONV #( TEXT-c05 ) ) ( CONV #( TEXT-c06 ) )
-                                ( CONV #( TEXT-c07 ) ) ) INTO DATA(lv_title).
-      rv_html = rv_html && gc_html-th_open && zcl_cd_ops_util=>html_escape( lv_title ) && gc_html-th_close.
+                                ( CONV #( TEXT-c07 ) ) ) ASSIGNING FIELD-SYMBOL(<lv_title>).
+      rv_html = rv_html && gc_html-th_open && zcl_cd_ops_util=>html_escape( <lv_title> ) && gc_html-th_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-tr_close.
-    LOOP AT it_findings INTO DATA(ls_finding).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       rv_html = rv_html && gc_html-tr_open
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-severity ) && gc_html-td_close
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-rule_id ) && gc_html-td_close
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-check_code ) && gc_html-td_close
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-object_key ) && gc_html-td_close
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-reference ) && gc_html-td_close
-             && gc_html-td_open && |{ ls_finding-amount } | && zcl_cd_ops_util=>html_escape( ls_finding-currency )
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-severity ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-rule_id ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-check_code ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-object_key ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-reference ) && gc_html-td_close
+             && gc_html-td_open && |{ <ls_finding>-amount } | && zcl_cd_ops_util=>html_escape( <ls_finding>-currency )
              && gc_html-td_close
-             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-message ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( <ls_finding>-message ) && gc_html-td_close
              && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
@@ -371,11 +372,11 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
       END OF ty_ranked.
     DATA lt_ranked TYPE STANDARD TABLE OF ty_ranked WITH EMPTY KEY.
     DATA lv_pos    TYPE i.
-    LOOP AT it_findings INTO DATA(ls_finding).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       lv_pos = lv_pos + 1.
-      INSERT VALUE #( rank    = zcl_cd_ops_util=>severity_rank( ls_finding-severity )
+      INSERT VALUE #( rank    = zcl_cd_ops_util=>severity_rank( <ls_finding>-severity )
                       pos     = lv_pos
-                      finding = ls_finding ) INTO TABLE lt_ranked.
+                      finding = <ls_finding> ) INTO TABLE lt_ranked.
     ENDLOOP.
     SORT lt_ranked BY rank DESCENDING
                       finding-rule_id finding-check_code finding-object_type finding-object_key

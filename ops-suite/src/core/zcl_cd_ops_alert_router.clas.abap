@@ -13,6 +13,7 @@
 *&              history, escalation override, direct send failures surfaced (audit A17, A45, A46).
 *& 2026-11-06 | Channel interface checked before the channel class is created (audit A62).
 *& 2026-11-06 | Message handed to the channel carries intent key and raise time (webhook de-duplication).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -101,8 +102,8 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     DATA(lt_selection) = mo_policy->select( it_rules    = lt_rules
                                             is_run      = is_run
                                             it_findings = it_findings ).
-    LOOP AT lt_selection INTO DATA(ls_selection).
-      route_selection( is_selection = ls_selection
+    LOOP AT lt_selection ASSIGNING FIELD-SYMBOL(<ls_selection>).
+      route_selection( is_selection = <ls_selection>
                        is_run       = is_run
                        it_channels  = lt_channels
                        io_dao       = lo_dao ).
@@ -221,11 +222,11 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
       iv_consecutive = count_consecutive( it_log = lt_log is_run = is_run iv_since = lv_since ) ).
     DATA(lv_last_sent) = VALUE timestampl( ).
     " A17: a claim in delivery counts like a sent alert for throttling
-    LOOP AT lt_log INTO DATA(ls_log) WHERE status = zif_cd_ops_types=>gc_alert_status-sent
+    LOOP AT lt_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE status = zif_cd_ops_types=>gc_alert_status-sent
                                         OR status = zif_cd_ops_types=>gc_alert_status-claimed
                                         OR status = zif_cd_ops_types=>gc_alert_status-partial.
-      IF ls_log-sent_at > lv_last_sent.
-        lv_last_sent = ls_log-sent_at.
+      IF <ls_log>-sent_at > lv_last_sent.
+        lv_last_sent = <ls_log>-sent_at.
       ENDIF.
     ENDLOOP.
     IF mo_policy->is_throttled( is_rule = ls_rule iv_last_sent = lv_last_sent iv_now = lv_now ) = abap_true
@@ -246,11 +247,11 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     DATA(ls_selection) = is_selection.
     IF lv_escalate = abap_false AND mt_repeat IS NOT INITIAL AND ls_selection-findings IS NOT INITIAL.
       CLEAR ls_selection-findings.
-      LOOP AT is_selection-findings INTO DATA(ls_finding).
-        IF NOT line_exists( mt_repeat[ object_type = ls_finding-object_type
-                                       object_key  = ls_finding-object_key
-                                       check_code  = ls_finding-check_code ] ).
-          INSERT ls_finding INTO TABLE ls_selection-findings.
+      LOOP AT is_selection-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+        IF NOT line_exists( mt_repeat[ object_type = <ls_finding>-object_type
+                                       object_key  = <ls_finding>-object_key
+                                       check_code  = <ls_finding>-check_code ] ).
+          INSERT <ls_finding> INTO TABLE ls_selection-findings.
         ENDIF.
       ENDLOOP.
       IF ls_selection-findings IS INITIAL.
@@ -281,10 +282,10 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
           iv_class_name = is_channel-class_name
           iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
       CATCH zcx_cd_ops_error cx_sy_move_cast_error INTO DATA(lx_wiring).
-        LOOP AT it_messages INTO DATA(ls_failed).
-          add_log( iv_rule_id = ls_failed-rule_id iv_channel = ls_failed-channel is_run = is_run
+        LOOP AT it_messages ASSIGNING FIELD-SYMBOL(<ls_failed>).
+          add_log( iv_rule_id = <ls_failed>-rule_id iv_channel = <ls_failed>-channel is_run = is_run
                    iv_status = zif_cd_ops_types=>gc_alert_status-failed
-                   iv_destination = ls_failed-destination iv_subject = ls_failed-subject
+                   iv_destination = <ls_failed>-destination iv_subject = <ls_failed>-subject
                    iv_error = lx_wiring->get_text( ) ).
         ENDLOOP.
         RETURN.
@@ -337,16 +338,16 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
   METHOD count_consecutive.
     DATA lt_fired TYPE SORTED TABLE OF zif_cd_ops_types=>ty_run_id WITH UNIQUE KEY table_line.
     " every logged decision (sent, throttled, quiet, repeat, failed, claimed) means the rule fired
-    LOOP AT it_log INTO DATA(ls_log) WHERE run_id IS NOT INITIAL.
-      INSERT ls_log-run_id INTO TABLE lt_fired.
+    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>) WHERE run_id IS NOT INITIAL.
+      INSERT <ls_log>-run_id INTO TABLE lt_fired.
     ENDLOOP.
     DATA(lt_runs) = zcl_cd_ops_factory=>get_store( )->get_runs_since( iv_pe_area = is_run-pe_area
                                                                       iv_since   = iv_since ).
     SORT lt_runs BY started_at DESCENDING run_id DESCENDING.
     " The current run is the newest of the series
     rv_count = 1.
-    LOOP AT lt_runs INTO DATA(ls_run) WHERE run_id <> is_run-run_id.
-      IF NOT line_exists( lt_fired[ table_line = ls_run-run_id ] ).
+    LOOP AT lt_runs ASSIGNING FIELD-SYMBOL(<ls_run>) WHERE run_id <> is_run-run_id.
+      IF NOT line_exists( lt_fired[ table_line = <ls_run>-run_id ] ).
         " A46: a healthy run of the area ends the series
         EXIT.
       ENDIF.

@@ -1,0 +1,64 @@
+// UI annotations: FMON file monitoring dashboard - latest failures
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Failed file', typeNamePlural: 'Latest failures',
+                  title: { type: #STANDARD, value: 'FileName' },
+                  description: { type: #STANDARD, value: 'IfaceId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'LastEventAt', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_FmonFlowFail with
+{
+  @UI.hidden: true
+  FileId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  BusinessDate;
+  @EndUserText.label: 'Business date is today'
+  IsToday;
+  @EndUserText.label: 'Interface'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  IfaceId;
+  @EndUserText.label: 'Direction'
+  Direction;
+  @EndUserText.label: 'Source system'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  SourceSystem;
+  @EndUserText.label: 'Line of business'
+  Lob;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  PaymentMethod;
+  @EndUserText.label: 'Bank'
+  BankKey;
+  @EndUserText.label: 'File name'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  FileName;
+  @EndUserText.label: 'Flow bucket'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'FlowCriticality' } ]
+  FlowBucket;
+  @UI.hidden: true
+  FlowCriticality;
+  @EndUserText.label: 'SLA status'
+  @UI.lineItem: [ { position: 70, importance: #HIGH, criticality: 'SlaCriticality' } ]
+  SlaStatus;
+  @UI.hidden: true
+  SlaCriticality;
+  @EndUserText.label: 'Worst open severity'
+  WorstSeverity;
+  @EndUserText.label: 'Last event'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  LastEventAt;
+  @EndUserText.label: 'Records'
+  RecordCount;
+  @EndUserText.label: 'Unprocessed items'
+  UnprocessedCount;
+  @EndUserText.label: 'NACK count'
+  NackCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  OpenFindingCount;
+}

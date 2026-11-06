@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-698 methods in 55 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+754 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 698 / 698 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 754 / 754 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -129,6 +129,26 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | TRC-08 | User without ZCD_OPS 03 for the item's company code | Role | Item row NOT_AUTHORISED, no key shown, nothing MISSING | pending |
 | TRC-09 | Side effects | ST05 during TRC-01..08 | SELECT only; no change in any business table, job, lock, file or interface; nothing written to ZCD_OPS_* | pending |
 | TRC-10 | Performance | 20 traces at peak | Each trace < 5 s; FEBEP / DFKKOP / BUT000 reads use an index | pending |
+
+### 6.7 File monitoring dashboard (`ZUI_CD_FMON_FLOW_O4`, `Dashboard_File_Monitoring.md`)
+
+Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP Unit: `ZCL_CD_FMON_FLOW_CDS_TEST` (19 CDS tests: bucket of every stage incl. PRISM status API stages, success for ACK / no-ACK / inbound / unregistered interfaces, measures per source / LOB / method, SLA status, as-of from the last completed full run, stale flag, KPI per day, latest failures). QA1:
+
+| ID | Case | Expected |
+|---|---|---|
+| FMD-01 | Monitor run (test mode off), open the dashboard | As of = end of that run; age < 30 min; not stale |
+| FMD-02 | No monitor run for > 45 min | Header, rows and tile *Stale monitor* red — never shown as a quiet day |
+| FMD-03 | Single-interface run and test-mode run | As of unchanged |
+| FMD-04 | Outbound ACH file generated → sent → ACK | RECEIVED → SENT → ACKNOWLEDGED; successful only after the ACK |
+| FMD-05 | BlackLine file (no ACK) sent to PRISM | SENT, successful |
+| FMD-06 | Returns file with open lot items | PARTIAL, unprocessed items; tile *Unprocessed*; in *Latest failures* |
+| FMD-07 | Open NO_BANK_ACK, resolve, re-run | SLA BREACHED → NO_FINDINGS |
+| FMD-08 | User with ZCD_OPS FMON missing (HCK only) | No rows in any entity; with FMON 03 rows visible |
+| FMD-09 | Filters source / LOB / method / bank / date | Totals equal SE16 sums on ZCD_FMON_FILE for the same filter |
+| FMD-10 | Drill-down file → events → open exceptions | Equal to ZCD_FMON_EVENT / open ZCD_OPS_FINDING rows of the file |
+| FMD-11 | Expected file not received | Tile *Missing files* = 1; no file row |
+| FMD-12 | ST05 during use | SELECT only on the FMON / ops store tables; no write, lock or job |
+| FMD-13 | PRISM status API live: PRISM_RECEIVED / _DELIVERED / _FAILED | AT_PRISM; SENT (out) / RECEIVED (in); REJECTED |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

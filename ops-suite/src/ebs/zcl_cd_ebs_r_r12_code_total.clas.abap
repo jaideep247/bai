@@ -12,6 +12,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Check-register query with every form of the check number (leading zeros).
 *& 2026-11-06 | Audit A08: bank entries against distinct register rows (no row reused).
+*& 2026-11-06 | Performance fix 1: register from check_register( ) (package memo, sorted index), one match per line.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R12 - code total vs register total</p>
 CLASS zcl_cd_ebs_r_r12_code_total DEFINITION
@@ -30,15 +31,11 @@ ENDCLASS.
 CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
 
   METHOD zif_cd_ebs_rule~execute.
-    DATA lt_ztnum TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
-    DATA lt_statements TYPE tt_stmt_hash.
     DATA lt_register TYPE HASHED TABLE OF zif_cd_ebs_sap_dao=>ty_check WITH UNIQUE KEY table_line.
-    lt_statements = it_statements.
-    " Every form the check number can take in the register (leading zeros)
-    lt_ztnum = ztnum_query_keys( it_lines ).
-    DATA(lt_checks) = sap_dao( )->get_checks( lt_ztnum ).
+    " Every form the check number can take in the register (leading zeros), read once per package
+    DATA(ls_register) = check_register( it_lines = it_lines it_statements = it_statements ).
 
-    LOOP AT it_lines INTO DATA(ls_group) GROUP BY ls_group-stmt_key INTO DATA(lv_stmt_key).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_group>) GROUP BY <ls_group>-stmt_key INTO DATA(lv_stmt_key).
       DATA(lv_bank_total) = CONV zif_cd_ops_types=>ty_amount( 0 ).
       DATA(lv_bank_count) = 0.
       DATA(lv_ambiguous)  = abap_false.
@@ -46,15 +43,17 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
       " register rows they match (count, total); a register row counts once even when
       " several bank entries carry its check number
       CLEAR lt_register.
-      LOOP AT GROUP lv_stmt_key INTO DATA(ls_line).
-        IF house_bank_ambiguous( it_checks = lt_checks is_line = ls_line it_statements = it_statements ) = abap_true.
+      LOOP AT GROUP lv_stmt_key ASSIGNING FIELD-SYMBOL(<ls_line>).
+        " One register match per line (ambiguity and rows evaluated once, not twice)
+        DATA(ls_match) = register_match( is_register = ls_register is_line = <ls_line> ).
+        IF ls_match-ambiguous = abap_true.
           lv_ambiguous = abap_true.
         ENDIF.
-        lv_bank_total += ls_line-amount.
+        lv_bank_total += <ls_line>-amount.
         lv_bank_count += 1.
-        DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
-        LOOP AT lt_line_checks INTO DATA(ls_check).
-          INSERT ls_check INTO TABLE lt_register.
+        " Single INSERT (not INSERT LINES OF): a row already counted is skipped, never a duplicate-key dump
+        LOOP AT ls_match-checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+          INSERT <ls_check> INTO TABLE lt_register.
         ENDLOOP.
       ENDLOOP.
       DATA(lv_reg_count) = lines( lt_register ).
@@ -62,7 +61,7 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
         INIT lv_sum = CONV zif_cd_ops_types=>ty_amount( 0 )
         FOR ls_row IN lt_register
         NEXT lv_sum = lv_sum + abs( ls_row-amount ) ).
-      DATA(ls_statement) = VALUE #( lt_statements[ stmt_key = lv_stmt_key ] OPTIONAL ).
+      DATA(ls_statement) = VALUE #( ls_register-statements[ stmt_key = lv_stmt_key ] OPTIONAL ).
       ls_statement-stmt_key = lv_stmt_key.
       IF lv_ambiguous = abap_true.
         " Totals would mix accounts: report instead of comparing

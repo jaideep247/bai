@@ -9,6 +9,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A38-A41: SLA admissible evidence / INFERRED, reported ACK counts only,
 *&              truncated lots derive nothing, unknown age no verdict, receipt correction.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PRISM status API: SLA verdict ranks stages in the file's direction (PRISM_*).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
@@ -226,26 +228,26 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT it_ifaces INTO DATA(ls_iface) WHERE active = abap_true.
-      DATA(lv_pattern) = to_upper( condense( CONV string( ls_iface-name_pattern ) ) ).
+    LOOP AT it_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true.
+      DATA(lv_pattern) = to_upper( condense( CONV string( <ls_iface>-name_pattern ) ) ).
       IF lv_pattern IS INITIAL OR NOT lv_name CP lv_pattern.
         CONTINUE.
       ENDIF.
-      IF dimension_matches( iv_configured = ls_iface-source_sys iv_actual = iv_source ) = abap_false
-         OR dimension_matches( iv_configured = ls_iface-lob iv_actual = iv_lob ) = abap_false.
+      IF dimension_matches( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_false
+         OR dimension_matches( iv_configured = <ls_iface>-lob iv_actual = iv_lob ) = abap_false.
         CONTINUE.
       ENDIF.
       DATA(lv_score) = ( strlen( lv_pattern ) - count( val = lv_pattern sub = `*` )
                                               - count( val = lv_pattern sub = `+` ) ) * 4.
-      IF is_specific( iv_configured = ls_iface-source_sys iv_actual = iv_source ) = abap_true.
+      IF is_specific( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_true.
         lv_score += 2.
       ENDIF.
-      IF is_specific( iv_configured = ls_iface-lob iv_actual = iv_lob ) = abap_true.
+      IF is_specific( iv_configured = <ls_iface>-lob iv_actual = iv_lob ) = abap_true.
         lv_score += 1.
       ENDIF.
       IF lv_score > lv_best.
         lv_best  = lv_score.
-        rs_iface = ls_iface.
+        rs_iface = <ls_iface>.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -348,22 +350,24 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT it_events INTO DATA(ls_event) WHERE file_id = is_file-file_id.
-      DATA(lv_rank) = zcl_cd_fmon_status=>rank( iv_stage     = ls_event-stage
+    " Sweep: by key (the verdict does not depend on the order of the events); ranks in the
+    " file's direction - PRISM_* stages belong to both directions
+    LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file WHERE file_id = is_file-file_id.
+      DATA(lv_rank) = zcl_cd_fmon_status=>rank( iv_stage     = <ls_event>-stage
                                                 iv_direction = is_file-direction ).
       IF lv_rank = 0.
         CONTINUE.
       ENDIF.
-      IF is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = ls_event-stage ) = abap_true.
-        IF lv_reached IS INITIAL OR ls_event-event_at < lv_reached.
-          lv_reached = ls_event-event_at.
+      IF is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = <ls_event>-stage ) = abap_true.
+        IF lv_reached IS INITIAL OR <ls_event>-event_at < lv_reached.
+          lv_reached = <ls_event>-event_at.
         ENDIF.
       ELSEIF lv_rank > lv_target.
         lv_beyond = abap_true.
       ELSEIF lv_rank < lv_target
-         AND ( lv_rank > lv_prev_rank OR ( lv_rank = lv_prev_rank AND ls_event-event_at > lv_prev_at ) ).
+         AND ( lv_rank > lv_prev_rank OR ( lv_rank = lv_prev_rank AND <ls_event>-event_at > lv_prev_at ) ).
         lv_prev_rank = lv_rank.
-        lv_prev_at   = ls_event-event_at.
+        lv_prev_at   = <ls_event>-event_at.
       ENDIF.
     ENDLOOP.
 
@@ -514,8 +518,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     IF lv_status IS INITIAL.
       lv_status = zif_cd_fmon_types=>gc_blank_token.
     ENDIF.
-    LOOP AT zcl_cd_ops_util=>split_list( iv_done_values ) INTO DATA(lv_token).
-      IF to_upper( lv_token ) = lv_status.
+    LOOP AT zcl_cd_ops_util=>split_list( iv_done_values ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+      IF to_upper( <lv_token> ) = lv_status.
         rv_done = abap_true.
         RETURN.
       ENDIF.
@@ -535,8 +539,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
   METHOD lot_cfg_for.
     DATA lt_candidates TYPE STANDARD TABLE OF zif_cd_fmon_types=>ty_iface_id WITH EMPTY KEY.
     lt_candidates = VALUE #( ( iv_iface_id ) ( zif_cd_fmon_types=>gc_wildcard ) ( `` ) ).
-    LOOP AT lt_candidates INTO DATA(lv_iface).
-      READ TABLE it_cfgs INTO rs_cfg WITH TABLE KEY iface_id = lv_iface
+    LOOP AT lt_candidates ASSIGNING FIELD-SYMBOL(<lv_iface>).
+      READ TABLE it_cfgs INTO rs_cfg WITH TABLE KEY iface_id = <lv_iface>
                                                     lot_type = iv_lot_type.
       IF sy-subrc = 0 AND rs_cfg-active = abap_true.
         RETURN.

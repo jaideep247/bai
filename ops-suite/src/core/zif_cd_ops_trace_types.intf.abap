@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Cheque company code, file name (digest check), partner mismatch reason.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -321,7 +322,9 @@ INTERFACE zif_cd_ops_trace_types
       cpudt TYPE d,
       cputm TYPE t,
     END OF ty_doc_header.
-  TYPES tt_doc_header TYPE STANDARD TABLE OF ty_doc_header WITH EMPTY KEY.
+  "! Sweep: secondary key BY_OPBEL - the trace reads headers by document number
+  TYPES tt_doc_header TYPE STANDARD TABLE OF ty_doc_header WITH EMPTY KEY
+                      WITH NON-UNIQUE SORTED KEY by_opbel COMPONENTS opbel.
 
   TYPES:
     BEGIN OF ty_payment_run,

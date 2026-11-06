@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 CLASS lhc_suppression DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -105,17 +106,17 @@ CLASS lhc_suppression IMPLEMENTATION.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression FIELDS ( CheckId Reason ValidFrom ValidTo ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
-    LOOP AT lt_rows INTO DATA(ls_row).
-      DATA(ls_decision) = zcl_cd_hck_suppression=>check_request( iv_check_id = ls_row-CheckId
-                                                                 iv_reason   = ls_row-Reason
-                                                                 iv_from     = ls_row-ValidFrom
-                                                                 iv_to       = ls_row-ValidTo ).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      DATA(ls_decision) = zcl_cd_hck_suppression=>check_request( iv_check_id = <ls_row>-CheckId
+                                                                 iv_reason   = <ls_row>-Reason
+                                                                 iv_from     = <ls_row>-ValidFrom
+                                                                 iv_to       = <ls_row>-ValidTo ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-suppression.
-        APPEND VALUE #( %tky = ls_row-%tky
+        APPEND VALUE #( %tky = <ls_row>-%tky ) TO failed-suppression.
+        APPEND VALUE #( %tky = <ls_row>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error
-                                            v1 = |{ ls_row-ValidFrom DATE = ISO }| v2 = |{ ls_row-ValidTo DATE = ISO }| ) )
+                                            v1 = |{ <ls_row>-ValidFrom DATE = ISO }| v2 = |{ <ls_row>-ValidTo DATE = ISO }| ) )
           TO reported-suppression.
       ENDIF.
     ENDLOOP.

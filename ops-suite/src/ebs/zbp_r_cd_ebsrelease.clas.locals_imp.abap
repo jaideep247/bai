@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 CLASS lhc_release DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -91,13 +92,13 @@ CLASS lhc_release IMPLEMENTATION.
     READ ENTITIES OF zr_cd_ebsrelease IN LOCAL MODE
       ENTITY Release FIELDS ( ObjectKey CheckCode Reason ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_releases).
-    LOOP AT lt_releases INTO DATA(ls_release).
-      DATA(ls_decision) = zcl_cd_ebs_release_policy=>check_request( iv_object_key = ls_release-ObjectKey
-                                                                    iv_check_code = ls_release-CheckCode
-                                                                    iv_reason     = ls_release-Reason ).
+    LOOP AT lt_releases ASSIGNING FIELD-SYMBOL(<ls_release>).
+      DATA(ls_decision) = zcl_cd_ebs_release_policy=>check_request( iv_object_key = <ls_release>-ObjectKey
+                                                                    iv_check_code = <ls_release>-CheckCode
+                                                                    iv_reason     = <ls_release>-Reason ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
-        APPEND VALUE #( %tky = ls_release-%tky
+        APPEND VALUE #( %tky = <ls_release>-%tky ) TO failed-release.
+        APPEND VALUE #( %tky = <ls_release>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
           TO reported-release.
@@ -195,19 +196,19 @@ CLASS lsc_release IMPLEMENTATION.
       RESULT DATA(lt_releases).
     DATA(lo_exc_dao) = zcl_cd_ops_factory=>get_exc_dao( ).
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    LOOP AT lt_releases INTO DATA(ls_release) WHERE Status = zif_cd_ebs_release_types=>gc_status-approved.
+    LOOP AT lt_releases ASSIGNING FIELD-SYMBOL(<ls_release>) WHERE Status = zif_cd_ebs_release_types=>gc_status-approved.
       TRY.
           lo_exc_dao->resolve( it_keys      = lo_exc_dao->find_open( iv_pe_area     = zif_cd_ops_types=>gc_pe_area-ebs
-                                                                     iv_object_key = ls_release-ObjectKey
-                                                                     iv_check_code = ls_release-CheckCode )
+                                                                     iv_object_key = <ls_release>-ObjectKey
+                                                                     iv_check_code = <ls_release>-CheckCode )
                                iv_action    = zif_cd_ops_exc_types=>gc_action-release
-                               iv_reason    = ls_release-Reason
-                               iv_reference = |{ ls_release-ReleaseUuid }|
-                               iv_user      = ls_release-ApprovedBy
+                               iv_reason    = <ls_release>-Reason
+                               iv_reference = |{ <ls_release>-ReleaseUuid }|
+                               iv_user      = <ls_release>-ApprovedBy
                                iv_at        = lv_now ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the release itself is saved; the exception stays open and is visible in the app
-          APPEND VALUE #( %tky = ls_release-%tky
+          APPEND VALUE #( %tky = <ls_release>-%tky
                           %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
                                               v1 = lx_error->get_text( ) ) ) TO reported-release.

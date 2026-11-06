@@ -170,6 +170,7 @@
     },
     "dangerous_statement": {
       "exclude": [
+        "src/ebs/zcl_cd_ebs_feb_dao.clas.abap",
         "src/ebs/zcl_cd_ebs_sap_dao.clas.abap",
         "src/fmon/zcl_cd_fmon_dao.clas.abap",
         "src/hck/zcl_cd_hck_dao.clas.abap"

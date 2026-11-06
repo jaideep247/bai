@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A26: map disposition NOT_POSTED reaches the line.
 *& 2026-11-06 | Audit A85: map action carried onto the line for the posting disposition.
 *& 2026-11-06 | Audit A98: blank and * map rows that contradict each other are MAP_CONFLICT (BLOCK), not first-row-wins.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -252,9 +253,9 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
 
   METHOD derive_flow.
     IF is_line-xblnr IS NOT INITIAL.
-      LOOP AT mt_patterns INTO DATA(ls_pattern).
-        IF is_line-xblnr CP ls_pattern-pattern.
-          rv_flow = ls_pattern-flow_type.
+      LOOP AT mt_patterns ASSIGNING FIELD-SYMBOL(<ls_pattern>).
+        IF is_line-xblnr CP <ls_pattern>-pattern.
+          rv_flow = <ls_pattern>-flow_type.
           RETURN.
         ENDIF.
       ENDLOOP.
@@ -270,11 +271,11 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
       ( bank_key = space       flow_type = iv_flow )
       ( bank_key = space       flow_type = zif_cd_ebs_types=>gc_flow-any ) ).
     " An unknown (blank) flow finds no flow row and falls through to the '*' rows
-    LOOP AT lt_try INTO DATA(ls_try).
+    LOOP AT lt_try ASSIGNING FIELD-SYMBOL(<ls_try>).
       rs_map = VALUE #( mt_map[ scheme    = iv_scheme
                                 btc_code  = iv_code
-                                bank_key  = ls_try-bank_key
-                                flow_type = ls_try-flow_type ] OPTIONAL ).
+                                bank_key  = <ls_try>-bank_key
+                                flow_type = <ls_try>-flow_type ] OPTIONAL ).
       IF rs_map IS NOT INITIAL.
         RETURN.
       ENDIF.

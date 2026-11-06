@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Capped job read reported (audit A44).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle monitor (ZCD_JOB_CYCLE/STEP)</p>
 "! PARAM1 = cycle date offset in days (default 0 = report date),
@@ -78,23 +79,23 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       CLEAR: lv_not_ok, lv_completed.
-      LOOP AT GROUP lt_cycle_group INTO DATA(ls_cycle_step).
+      LOOP AT GROUP lt_cycle_group ASSIGNING FIELD-SYMBOL(<ls_cycle_step>).
         CLEAR lv_pred_state.
-        IF ls_cycle_step-pred_step IS NOT INITIAL.
+        IF <ls_cycle_step>-pred_step IS NOT INITIAL.
           READ TABLE rs_result-step_status INTO DATA(ls_pred)
-            WITH KEY cycle_id = ls_cycle_step-cycle_id step_no = ls_cycle_step-pred_step.
+            WITH KEY cycle_id = <ls_cycle_step>-cycle_id step_no = <ls_cycle_step>-pred_step.
           IF sy-subrc = 0.
             lv_pred_state = ls_pred-state.
           ENDIF.
         ENDIF.
-        DATA(ls_status) = zcl_cd_hck_cycle_eval=>derive_state( is_step       = ls_cycle_step
+        DATA(ls_status) = zcl_cd_hck_cycle_eval=>derive_state( is_step       = <ls_cycle_step>
                                                                it_runs       = lt_runs
                                                                iv_cycle_date = lv_cycle_date
                                                                iv_now_date   = is_context-now_date
                                                                iv_now_time   = is_context-now_time
                                                                iv_pred_state = lv_pred_state ).
         INSERT ls_status INTO TABLE rs_result-step_status.
-        INSERT LINES OF zcl_cd_hck_cycle_eval=>findings_for( is_step   = ls_cycle_step
+        INSERT LINES OF zcl_cd_hck_cycle_eval=>findings_for( is_step   = <ls_cycle_step>
                                                              is_status = ls_status ) INTO TABLE rs_result-findings.
         CASE ls_status-state.
           WHEN zif_cd_hck_types=>gc_step_state-completed.

@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job duration vs rolling baseline</p>
 "! PARAM1 = job name patterns (e.g. ZCD_*), PARAM2 = day offset (default 1 =
@@ -39,15 +40,15 @@ CLASS zcl_cd_hck_c_job_runtime IMPLEMENTATION.
     DATA(lt_runs) = zcl_cd_hck_factory=>get_dao( )->get_job_runs( it_jobnames = lt_patterns
                                                                    iv_from     = lv_day
                                                                    iv_to       = lv_day ).
-    LOOP AT lt_runs INTO DATA(ls_run)
+    LOOP AT lt_runs ASSIGNING FIELD-SYMBOL(<ls_run>)
          WHERE status = zif_cd_hck_types=>gc_job_status-finished AND strtdate = lv_day.
       INSERT VALUE #( metric = gc_metric
-                      dim1   = ls_run-jobname
-                      dim2   = ls_run-jobcount
-                      value  = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = ls_run-strtdate
-                                                                       iv_from_time = ls_run-strttime
-                                                                       iv_to_date   = ls_run-enddate
-                                                                       iv_to_time   = ls_run-endtime ) )
+                      dim1   = <ls_run>-jobname
+                      dim2   = <ls_run>-jobcount
+                      value  = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = <ls_run>-strtdate
+                                                                       iv_from_time = <ls_run>-strttime
+                                                                       iv_to_date   = <ls_run>-enddate
+                                                                       iv_to_time   = <ls_run>-endtime ) )
         INTO TABLE rs_result-metrics.
     ENDLOOP.
   ENDMETHOD.

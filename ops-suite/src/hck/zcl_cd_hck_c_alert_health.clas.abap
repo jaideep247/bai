@@ -5,6 +5,7 @@
 *& deliveries per channel in ZCD_OPS_ALERT_LOG within a time window.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - alert delivery health (ZCD_OPS_ALERT_LOG)</p>
 "! PARAM1 = window in hours back from now (default 24).
@@ -45,14 +46,14 @@ CLASS zcl_cd_hck_c_alert_health IMPLEMENTATION.
 
     DATA(lt_stats) = zcl_cd_hck_factory=>get_dao( )->get_alert_stats( iv_from = lv_from
                                                                        iv_to   = lv_to ).
-    LOOP AT lt_stats INTO DATA(ls_stat).
-      CASE ls_stat-status.
+    LOOP AT lt_stats ASSIGNING FIELD-SYMBOL(<ls_stat>).
+      CASE <ls_stat>-status.
         WHEN zif_cd_hck_types=>gc_alert_status-failed.
-          lv_failed_total = lv_failed_total + ls_stat-item_count.
-          INSERT VALUE #( metric = gc_metric-failed dim1 = ls_stat-channel value = ls_stat-item_count )
+          lv_failed_total = lv_failed_total + <ls_stat>-item_count.
+          INSERT VALUE #( metric = gc_metric-failed dim1 = <ls_stat>-channel value = <ls_stat>-item_count )
             INTO TABLE rs_result-metrics.
         WHEN zif_cd_hck_types=>gc_alert_status-throttled.
-          INSERT VALUE #( metric = gc_metric-throttled dim1 = ls_stat-channel value = ls_stat-item_count )
+          INSERT VALUE #( metric = gc_metric-throttled dim1 = <ls_stat>-channel value = <ls_stat>-item_count )
             INTO TABLE rs_result-metrics.
       ENDCASE.
     ENDLOOP.

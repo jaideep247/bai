@@ -18,6 +18,10 @@
 *& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
 *& 2026-11-06 | Baseline history filtered by DIM2 as well (audit A101).
 *& 2026-11-06 | Expected groups read from ZCD_HCK_AGGGRP; row cap on the interface (audit A103).
+*& 2026-11-06 | Performance fix 7: metric history - latest point per run by ROW_NUMBER( ) in a CTE, newest runs
+*&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -40,7 +44,6 @@ CLASS zcl_cd_hck_dao DEFINITION
     CONSTANTS gc_first_step TYPE i VALUE 1.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
     "! Metric points scanned to find the last N distinct runs (A58)
-    CONSTANTS gc_max_history_points TYPE i VALUE 5000.
     CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
 
     "! Program and variant of the first job step (TBTCP) into the job runs (A42)
@@ -150,10 +153,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e303(zcd_ops) WITH lv_name.
     ENDIF.
-    LOOP AT lt_ddic INTO DATA(ls_ddic).
-      INSERT VALUE #( fieldname = ls_ddic-fieldname
-                      type_kind = ls_ddic-inttype
-                      keyflag   = ls_ddic-keyflag ) INTO TABLE rt_fields.
+    LOOP AT lt_ddic ASSIGNING FIELD-SYMBOL(<ls_ddic>).
+      INSERT VALUE #( fieldname = <ls_ddic>-fieldname
+                      type_kind = <ls_ddic>-inttype
+                      keyflag   = <ls_ddic>-keyflag ) INTO TABLE rt_fields.
     ENDLOOP.
   ENDMETHOD.
 
@@ -206,37 +209,36 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_metric_history.
-    DATA lt_seen TYPE SORTED TABLE OF sysuuid_x16 WITH UNIQUE KEY table_line.
     DATA lv_as_of TYPE timestampl.
     CHECK iv_max_rows > 0.
     lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
     " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT. One series = the
     " persisted grain incl. DIM2 (A101); several points of one run (job instances, backfilled
-    " days) count as one run: its latest point (A58)
-    SELECT m~run_id, m~value
-      FROM zcd_hck_metric AS m
-        INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
-      WHERE m~check_id    = @iv_check_id
-        AND m~metric      = @iv_metric
-        AND m~dim1        = @iv_dim1
-        AND m~dim2        = @iv_dim2
-        AND m~measured_at <= @lv_as_of
-        AND r~test_mode   = @abap_false
-        AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
-                          @zif_cd_ops_types=>gc_run_status-warning,
-                          @zif_cd_ops_types=>gc_run_status-error )
-      ORDER BY m~measured_at DESCENDING, m~run_id DESCENDING
+    " days) count as one run: its latest point (A58).
+    " Fix 7: the database keeps the latest point per run (ROW_NUMBER = 1) and returns only the
+    " iv_max_rows newest runs - same values and order as the former ABAP de-duplication
+    WITH +points AS (
+      SELECT m~run_id, m~value, m~measured_at,
+             row_number( ) OVER( PARTITION BY m~run_id ORDER BY m~measured_at DESCENDING ) AS rn
+        FROM zcd_hck_metric AS m
+          INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
+        WHERE m~check_id    = @iv_check_id
+          AND m~metric      = @iv_metric
+          AND m~dim1        = @iv_dim1
+          AND m~dim2        = @iv_dim2
+          AND m~measured_at <= @lv_as_of
+          AND r~test_mode   = @abap_false
+          AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
+                            @zif_cd_ops_types=>gc_run_status-warning,
+                            @zif_cd_ops_types=>gc_run_status-error ) )
+    SELECT run_id, value, measured_at
+      FROM +points
+      WHERE rn = 1
+      ORDER BY measured_at DESCENDING, run_id DESCENDING
       INTO TABLE @DATA(lt_points)
-      UP TO @gc_max_history_points ROWS.
-    LOOP AT lt_points INTO DATA(ls_point).
-      INSERT ls_point-run_id INTO TABLE lt_seen.
-      IF sy-subrc <> 0.
-        CONTINUE.
-      ENDIF.
-      INSERT ls_point-value INTO TABLE rt_values.
-      IF lines( rt_values ) >= iv_max_rows.
-        EXIT.
-      ENDIF.
+      UP TO @iv_max_rows ROWS.
+    LOOP AT lt_points ASSIGNING FIELD-SYMBOL(<ls_point>).
+      INSERT <ls_point>-value INTO TABLE rt_values.
     ENDLOOP.
   ENDMETHOD.
 
@@ -248,19 +250,19 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     IF it_metrics IS INITIAL.
       RETURN.
     ENDIF.
-    LOOP AT it_metrics INTO DATA(ls_metric).
+    LOOP AT it_metrics ASSIGNING FIELD-SYMBOL(<ls_metric>).
       CLEAR ls_db.
-      ls_db-run_id      = ls_metric-run_id.
-      ls_db-check_id    = ls_metric-check_id.
-      ls_db-metric      = ls_metric-metric.
-      ls_db-dim1        = ls_metric-dim1.
-      ls_db-dim2        = ls_metric-dim2.
-      ls_db-value       = ls_metric-value.
-      ls_db-measured_at = ls_metric-measured_at.
+      ls_db-run_id      = <ls_metric>-run_id.
+      ls_db-check_id    = <ls_metric>-check_id.
+      ls_db-metric      = <ls_metric>-metric.
+      ls_db-dim1        = <ls_metric>-dim1.
+      ls_db-dim2        = <ls_metric>-dim2.
+      ls_db-value       = <ls_metric>-value.
+      ls_db-measured_at = <ls_metric>-measured_at.
       " A88: the analytics aggregate by kind - an unclassified metric is a volume
-      ls_db-kind        = COND #( WHEN ls_metric-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
-                                  ELSE ls_metric-kind ).
-      ls_db-weight      = ls_metric-weight.
+      ls_db-kind        = COND #( WHEN <ls_metric>-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
+                                  ELSE <ls_metric>-kind ).
+      ls_db-weight      = <ls_metric>-weight.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " a duplicate key inside one run is a repeated measurement: keep the first
@@ -300,8 +302,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
 
     DATA(lt_fields) = zif_cd_hck_dao~get_table_fields( iv_tabname ).
-    LOOP AT lt_fields INTO DATA(ls_field).
-      INSERT CONV string( ls_field-fieldname ) INTO TABLE lt_names.
+    LOOP AT lt_fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+      INSERT CONV string( <ls_field>-fieldname ) INTO TABLE lt_names.
     ENDLOOP.
     lv_select = concat_lines_of( table = lt_names sep = `, ` ).
     DATA(lv_from) = to_upper( condense( CONV string( iv_tabname ) ) ).
@@ -357,14 +359,14 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~save_baselines.
     DATA lt_db TYPE STANDARD TABLE OF zcd_hck_baseline WITH EMPTY KEY.
     DATA ls_db TYPE zcd_hck_baseline.
-    LOOP AT it_baselines INTO DATA(ls_baseline).
+    LOOP AT it_baselines ASSIGNING FIELD-SYMBOL(<ls_baseline>).
       CLEAR ls_db.
-      ls_db-tabname   = ls_baseline-tabname.
-      ls_db-hash      = ls_baseline-hash.
-      ls_db-row_count = ls_baseline-row_count.
-      ls_db-taken_at  = ls_baseline-taken_at.
-      ls_db-taken_by  = ls_baseline-taken_by.
-      ls_db-hash_version = ls_baseline-hash_version.
+      ls_db-tabname   = <ls_baseline>-tabname.
+      ls_db-hash      = <ls_baseline>-hash.
+      ls_db-row_count = <ls_baseline>-row_count.
+      ls_db-taken_at  = <ls_baseline>-taken_at.
+      ls_db-taken_by  = <ls_baseline>-taken_by.
+      ls_db-hash_version = <ls_baseline>-hash_version.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     MODIFY zcd_hck_baseline FROM TABLE @lt_db.
@@ -450,6 +452,15 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD add_step_program.
+    TYPES:
+      BEGIN OF ty_step,
+        jobname  TYPE zif_cd_hck_types=>ty_job_run-jobname,
+        jobcount TYPE zif_cd_hck_types=>ty_job_run-jobcount,
+        progname TYPE zif_cd_hck_types=>ty_job_run-progname,
+        variant  TYPE zif_cd_hck_types=>ty_job_run-variant,
+      END OF ty_step.
+    " Sweep: sorted key instead of SORT + BINARY SEARCH (one first step per job)
+    DATA lt_steps TYPE SORTED TABLE OF ty_step WITH NON-UNIQUE KEY jobname jobcount.
     CHECK ct_runs IS NOT INITIAL.
     "VERIFY-DDIC: TBTCP-JOBNAME, JOBCOUNT, STEPCOUNT, PROGNAME, VARIANT
     SELECT jobname, jobcount, progname, variant
@@ -458,14 +469,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       WHERE jobname   = @ct_runs-jobname
         AND jobcount  = @ct_runs-jobcount
         AND stepcount = @gc_first_step
-      INTO TABLE @DATA(lt_steps).
-    SORT lt_steps BY jobname jobcount.
+      INTO CORRESPONDING FIELDS OF TABLE @lt_steps.
     LOOP AT ct_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
-      READ TABLE lt_steps INTO DATA(ls_step) WITH KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount
-        BINARY SEARCH.
+      READ TABLE lt_steps ASSIGNING FIELD-SYMBOL(<ls_step>)
+           WITH TABLE KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount.
       IF sy-subrc = 0.
-        <ls_run>-progname = ls_step-progname.
-        <ls_run>-variant  = ls_step-variant.
+        <ls_run>-progname = <ls_step>-progname.
+        <ls_run>-variant  = <ls_step>-variant.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -596,9 +606,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     ENDIF.
     rs_stat-lock_entries = lv_number.
     "VERIFY-DDIC: SEQG3-GTDATE / GTTIME (date and time the lock was set)
-    LOOP AT lt_enq INTO DATA(ls_enq).
-      DATA(lv_age) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = ls_enq-gtdate
-                                                             iv_from_time = ls_enq-gttime
+    LOOP AT lt_enq ASSIGNING FIELD-SYMBOL(<ls_enq>).
+      DATA(lv_age) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = <ls_enq>-gtdate
+                                                             iv_from_time = <ls_enq>-gttime
                                                              iv_to_date   = iv_now_date
                                                              iv_to_time   = iv_now_time ).
       rs_stat-lock_max_age_min = nmax( val1 = rs_stat-lock_max_age_min

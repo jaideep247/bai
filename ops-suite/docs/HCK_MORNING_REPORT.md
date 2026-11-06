@@ -86,7 +86,7 @@ Many "failures" are timing: if a behaviour is working as designed, record it as 
 >
 > **Analogy:** the morning stand-up of a ward — one list, one owner per bed, decisions recorded.
 
-1. The scheduled run (Control-M → SAP job running `ZCD_MORNING_REPORT` with the productive variant) finishes before the first business payment cycle; the e-mail reaches the RTB distribution list.
+1. The scheduled run (native SAP job in SM36 running `ZCD_MORNING_REPORT` with the productive variant) finishes before the first business payment cycle; the e-mail reaches the RTB distribution list.
 2. The RTB analyst on duty reads the scorecard, works RED first, then AMBER, using §3.
 3. Every RED/AMBER finding is already an owned exception (payment engine area HCK) with a due date; assign the owner the same morning.
 4. Persistent false positives are a **threshold change** (customizing, §13) — never "ignore the colour".
@@ -329,6 +329,7 @@ Sources in `cds/` (ADT text sources; release-dependent annotations marked *verif
 | `ZI_CD_OpsFindingCube` / `ZC_CD_OpsFindingQry` | cube / query | Finding, open, overdue counts, max days past due, amount per payment engine area/category/check/severity/owner |
 | `ZI_CD_HckCheck` | dimension | Check text, category, priority |
 | `ZI_CD_HckMetric` / `ZI_CD_HckMetricCube` / `ZC_CD_HckMetricQry` | basic / cube / query | Metric trend (volumes per source/LOB per day, durations, error rates) |
+| `ZI_CD_FmonFlowCube` / `ZC_CD_FmonFlowQry` | cube / query | Files, records, control totals, ACK / NACK, rejected / partial per source / LOB / payment method / bank / business date (over `src/fmon` `ZI_CD_FmonFlowFile`; the Fiori deliverable is the file monitoring dashboard, `Dashboard_File_Monitoring.md`) |
 | `ZI_CD_OpsAnalytics` (DCL) | role | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on basic views and cubes — authorization object `ZCD_OPS` must be created (SU21) |
 
 Amounts are DEC without currency reference: always slice by `Currency` before reading totals. Recommended consumption: Fiori "Analytical List Page" / KPI tiles or Analysis for Office on the three queries; test mode runs are filtered out of the run cube and filterable in the findings query.

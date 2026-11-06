@@ -43,6 +43,8 @@ define table zcd_ops_finding {
   created_by    : syuname;
   created_at    : timestampl;
 }
-// Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation
+// Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
+// carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and
+// the exception repository know only the object key, so a leading OBJECT_TYPE left PE_AREA alone usable
 // @index OPN: MANDT, PE_AREA, DISPOSITION, DUE_DATE
-// @index OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY
+// @index OBJ: MANDT, PE_AREA, OBJECT_KEY

@@ -14,7 +14,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | Artifact | Where | Step |
 |---|---|---|
 | Analytical CDS views and access control `ZI_CD_OpsAnalytics` in `ops-suite/cds/` (outside the import folder) | ADT, after the pull | 2.7 |
-| Service bindings `ZUI_*_O4` (in-scope apps only) and FLP tiles | ADT / launchpad designer | 1a, 1b |
+| Service bindings `ZUI_*_O4` (in-scope apps only, incl. the file monitoring dashboard `ZUI_CD_FMON_FLOW_O4`) and FLP tiles | ADT / launchpad designer | 1a, 1b, 1d |
 | Authorization object `ZCD_OPS`, field `ZCD_PE_AREA`, roles incl. `S_TABU_NAM` | SU21 / PFCG | 0, 1c.3 |
 | Customizing rows (`config/*.csv`, `*_seed.md`) — the pull loads no data | Configuration apps / SM30, customizing request | 3 |
 | Job variants and Control-M jobs | SE38 / Control-M | 4 |
@@ -71,6 +71,19 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 | 1c.7 | **Not in this rollout (read-only scope).** Launchpad target mappings `ZCDBankStatement-reprocess` → FEBAN and `ZCDPaymentLot-clarify` → FPCPL stay uncreated; operators use the runbook transactions directly | The navigation buttons stay hidden (no target mapping) |
 | 1c.8 | Payment trace (`Payment_Trace.md` §5, §9): SE11 check of every VERIFY-SE11 field (DFKKRAPT, ZCDT_REGUT, ZCD_PAYM_REQ_LOG, ACK tables, ZCD_CHECK_HIST, DFKKOP-AUGRD/PYMET, DFKKKO-STBEL); parameters `TRACE_SRC_REQUEST`, `TRACE_SRC_HISTORY`, `TRACE_SRC_REGUT`, `TRACE_SRC_ACK`, `TRACE_SRC_CHQ_HIST`, `TRACE_BP_SOURCE_FIELD`, `TRACE_MAX_ROWS`, `TRACE_REVERSAL_AUGRD`, `TRACE_GL_AWTYP`, `TRACE_CHECK_METHODS`, `TRACE_NO_ACK_METHODS`, `TRACE_ACK_NACK_VALUES`, `TRACE_CHQ_FAILED`, `TRACE_BANK_LOOKBACK_DAYS`; `ZCD_FMON_TABWL` rows for DFKKRAPT, BUT000 (if a source field is configured) and every other configured table not yet approved; role with ZCD_OPS 03 (CORE + company codes) and S_TABU_NAM 03 for those tables | A QA1 trace of one ACH, one cheque and one reissued payment shows no SOURCE_NOT_CONFIGURED / SOURCE_NOT_READABLE row |
 
+## Step 1d — File monitoring dashboard (read-only, `Dashboard_File_Monitoring.md`)
+
+| # | Item | Done when |
+|---|---|---|
+| 1d.1 | Activate (abapGit pull, after the FMON and core tables): `ZI_CD_FmonFlowFile`, `ZI_CD_FmonFileExc`, `ZI_CD_FmonRunLast` → `ZR_CD_FmonAsOf`, `ZR_CD_FmonFlowEvt`, `ZR_CD_FmonFlowFind` → `ZR_CD_FmonFlow` → `ZR_CD_FmonFlowKpi`, `ZR_CD_FmonFlowFail` → the six `ZC_CD_*` projections → metadata extensions → access control `ZC_CD_FMONFLOW` → service definition `ZUI_CD_FMON_FLOW`; then class `ZCL_CD_FMON_FLOW_CDS_TEST` and run its ABAP Unit include. Confirm the VERIFY-ADT list (§10 of the dashboard doc) | All objects active; the 19 CDS tests green |
+| 1d.2 | ADT: create service binding **`ZUI_CD_FMON_FLOW_O4`** (binding type OData V4 – UI, service definition `ZUI_CD_FMON_FLOW`), activate, **Publish** (local service endpoint; on-premise also `/IWFND/V4_ADMIN` → publish service group if not auto-published). Preview `FileFlow` in the binding | `$metadata` shows `Aggregation.ApplySupported` on `FileFlow` and `FileFlowKpi`; preview lists files |
+| 1d.3 | Fiori elements app (Business Application Studio / VS Code Fiori tools, floorplan **Analytical List Page**, OData V4, main entity `FileFlow`), deploy to the ABAP repository (BSP `ZCD_FMON_FLOW`, package `ZCD_OPS_FMON`), or use the binding's generated app for DV1 | App opens with chart, filter bar and table |
+| 1d.4 | Launchpad (`/UI2/FLPD_CUST` or the launchpad app manager): technical catalog `ZCD_OPS_TC_FMON` with the app tile (semantic object **`ZCDFileFlow`**, action `analyze`, target mapping → the deployed app) and the dynamic tiles *Stale monitor*, *Rejected today*, *Unprocessed*, *Breached SLA*, *Missing files* (service URL and `$count` filters in the dashboard doc §6); business catalog `ZCD_OPS_BC_FMON`; group / page in the **Production Support** space | Tiles show counts; a tap opens the dashboard |
+| 1d.5 | Roles (PFCG): business role `ZCD_OPS_FMON_DISPLAY` with the business catalog, `S_SERVICE` for `ZUI_CD_FMON_FLOW_O4`, **ZCD_OPS ZCD_PE_AREA = FMON, ACTVT 03**; give it to L1/L2 and team leads (display only — the role grants no 02) | QA FMD-08: a user without FMON 03 sees no row |
+| 1d.6 | Optional: `cds/ZI_CD_FmonFlowCube`, `cds/ZC_CD_FmonFlowQry` with step 2.7 (grant in `ZI_CD_OpsAnalytics`) for Analysis for Office | Query opens in RSRT / Analysis for Office |
+
+Not in this step: navigation to the payment trace (proposed — the trace does not accept a file reference yet) and the overall overview page (later job, reuses `FileFlowKpi` and `LatestFailure`).
+
 ## Step 2 — Classes, in dependency order (activate each group together)
 
 | Group | Objects |
@@ -83,7 +96,7 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 | 2.4 EBS | `ZIF_CD_EBS_TYPES` → other `ZIF_CD_EBS_*` → `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_BTC_RESOLVER`, DAOs, parsers → `ZCL_CD_EBS_FACTORY` + `ZCL_CD_EBS_INJECTOR` → `ZCL_CD_EBS_RULE_BASE` → 28 `ZCL_CD_EBS_R_*` → sources → `ZCL_CD_EBS_ENGINE` → report `ZCD_EBS_VALIDATE` |
 | 2.5 FMON | `ZIF_CD_FMON_TYPES` → other `ZIF_CD_FMON_*` → pure classes (status, rules, query, util) → DAO, DDIC describer, calendar, adapter, lot reader → factory + injector → 9 checks → engine → report `ZCD_FMON_MONITOR` |
 | 2.6 HCK | `ZIF_CD_HCK_TYPES` → other `ZIF_CD_HCK_*` → pure classes (stats, threshold, score, cycle_eval, agg_query, param, report_html) → DAO → factory + injector → 11 checks → engine → report `ZCD_MORNING_REPORT` |
-| 2.7 CDS | `cds/` (created in ADT, not via abapGit): basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` |
+| 2.7 CDS | `cds/` (created in ADT, not via abapGit): basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` (incl. `ZI_CD_FmonFlowCube` / `ZC_CD_FmonFlowQry` after step 1d.1) |
 
 Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10), then the full package before releasing the transport.
 
@@ -96,14 +109,16 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).
 6. TVARVC `ZCD_EBS_VALIDATION_MODE` = `O` (off). The batch run `ZCD_EBS_VALIDATE` never reads it; it governs only the dormant pre-posting path, which has no caller in this release.
 
-## Step 4 — Jobs (Control-M)
+## Step 4 — Jobs (native SAP jobs; EBS chained in Control-M)
+
+**Scheduling decision (2026-11-06).** The suite's own monitors are SAP-internal and owned by the SAP support team, so they run as **native SAP periodic jobs (SM36)**: file monitoring every 5 minutes, the morning report daily, purge monthly. Only `ZCD_EBS_VALIDATE` stays in **Control-M**, because it must start after the statement import, posting and payment clearing jobs that Control-M schedules. PRISM status API calls are processed on arrival by a background unit (bgPF), so PRISM milestones do not wait for the 5-minute run. Trade-off: a native job cannot report that SAP background processing itself has stopped; the morning report's health-of-health check (last run per payment engine area) and Basis monitoring cover that.
 
 | Job | Program / variant | When |
 |---|---|---|
 | ZCD_EBS_VALIDATE_ALL | `ZCD_EBS_VALIDATE`, FEB source, yesterday–today, test mode off | After each BAI load (JPMC/BOA 8:20 am cycle) **once the statement import, the posting job (FEBP) and the payment clearing job have completed** — a post-posting detective control (operating model 2026-11-06); a Control-M dependency on those three jobs, not a clock time (predecessors below) |
-| ZCD_FMON_MONITOR_ALL | `ZCD_FMON_MONITOR`, business date today | Every 30 min, 4 am – 8 pm (an overlapping start is refused with RUN_LOCKED) |
-| ZCD_MORNING_REPORT | `ZCD_MORNING_REPORT`, all categories, e-mail on | 6:45 am, after the overnight cycle and before business hours |
-| ZCD_OPS_PURGE_MONTHLY | `ZCD_OPS_PURGE`, test mode off | Monthly, outside the payment windows (first Sunday, 3 am) |
+| ZCD_FMON_MONITOR_ALL | `ZCD_FMON_MONITOR`, business date today | **SM36 periodic job, every 5 min**, around the clock or 4 am – 8 pm per the payment windows (an overlapping start is refused with RUN_LOCKED; must finish well within 5 min — measure at gate 3) |
+| ZCD_MORNING_REPORT | `ZCD_MORNING_REPORT`, all categories, e-mail on | **SM36 daily job**, 6:45 am, after the overnight cycle and before business hours |
+| ZCD_OPS_PURGE_MONTHLY | `ZCD_OPS_PURGE`, test mode off | **SM36 monthly job**, outside the payment windows (first Sunday, 3 am) |
 
 **Control-M predecessors of ZCD_EBS_VALIDATE_ALL (operating model 2026-11-06).** Define in-conditions, per bank cycle, on the successful end (OK) of:
 
@@ -115,10 +130,10 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 The predecessors are parsed from free-text comments in the schedule export — absence of a dependency there does not prove independence; confirm the chain with the job owners. If the validation starts before a predecessor finished, the run reports **POSTING_INCOMPLETE** and does not evaluate the posting-dependent rules for the unposted lines (never a false pass or a false failure); a Control-M rerun after the predecessors is idempotent (`Operations_Runbook.md` §5c). Do not add the reverse dependency: nothing waits for the validation.
 
-**Batch server group and runtime limits (Basis, before gate 3).** Run the three suite jobs and the purge on a dedicated batch server group — RZ12 (logon / RFC server groups) for the group, SM61 job server group `ZCD_OPS` naming the application servers and their background work processes — and set it as the *target server group* of each Control-M job (SM36 *Exec. target*). Keep the group off the servers that carry the FS-CD mass runs (FPY1, FPVA, FPVB, FP09, FPB7, FEBP) so the suite never competes for their background work processes; schedule job class C. Limit runtime in Control-M (max runtime alert per job, e.g. 30 min for the FMON cycle, 60 min for EBS and the morning report) — the run lock (RUN_LOCKED) stops overlapping starts, the stale-run check of the morning report shows a hung run.
+**Batch server group and runtime limits (Basis, before gate 3).** Run the three suite jobs and the purge on a dedicated batch server group — RZ12 (logon / RFC server groups) for the group, SM61 job server group `ZCD_OPS` naming the application servers and their background work processes — and set it as the *target server group* of each job (SM36 *Exec. target*; for the Control-M EBS job in its SAP job definition). Keep the group off the servers that carry the FS-CD mass runs (FPY1, FPVA, FPVB, FP09, FPB7, FEBP) so the suite never competes for their background work processes; schedule job class C. Limit runtime (Control-M max-runtime alert for EBS, 60 min; for the native jobs the morning report's stale-run and job-runtime checks, e.g. 4 min for the FMON cycle, 60 min for the morning report) — the run lock (RUN_LOCKED) stops overlapping starts, the stale-run check of the morning report shows a hung run.
 
 **No locks on standard tables.** The suite only reads FS-CD / FI tables (DFKKOP, DPAYH, DFKKCR, DFKKRP, FEBKO / FEBEP, BSEG, ACDOCA …) with Open SQL `SELECT`; it takes no ENQUEUE on them and never writes them. On SAP HANA a read sees committed data without read locks (MVCC), so a running FEBP / FPY1 is neither blocked nor slowed by a suite run. The only lock the suite takes is its own run lock (`E_TABLE` on `ZCD_OPS_LOCK`, client + payment engine area + variant).
 
 ## Step 5 — Rollback
 
-Deactivate the jobs (Control-M) and set `ZCD_EBS_VALIDATION_MODE` = `O`. No standard object is modified and the BAdI is not part of this delivery, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.
+Deactivate the jobs (SM36 periodic jobs and the Control-M EBS job) and set `ZCD_EBS_VALIDATION_MODE` = `O`. No standard object is modified and the BAdI is not part of this delivery, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.

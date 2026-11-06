@@ -12,6 +12,8 @@
 *& 2026-11-06 | Audit A07: company code in the register match; canonical check numbers (leading zeros).
 *& 2026-11-06 | Audit A65: document keys checked against the DDIC key width and format before conversion (no truncation).
 *& 2026-11-06 | FS-CD review: in-flight grace - not found within EBS_INFLIGHT_HOURS is AWAITING_LOT_TRANSFER (W, NOTIFY).
+*& 2026-11-06 | Perf fix 1: DFKKCR read once per package (memo for R07C/R08/R12), rows canonicalised once (sorted index).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -37,8 +39,41 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
     "! A65: characters a document-number key may contain (checked before conversion)
     CONSTANTS gc_key_alphabet TYPE string VALUE `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
 
+    "! Performance fix 1: forget the check-register rows read for the current package. Called
+    "! by the EBS injector (test isolation); a new package (other statement keys) clears it too
+    CLASS-METHODS clear_memo.
+
   PROTECTED SECTION.
     TYPES tt_stmt_hash TYPE HASHED TABLE OF zif_cd_ebs_types=>ty_statement WITH UNIQUE KEY stmt_key.
+
+    "! Register row with its canonical check number and account, computed once per row
+    TYPES:
+      BEGIN OF ty_register_row,
+        canonical TYPE string,
+        account   TYPE string,
+        check     TYPE zif_cd_ebs_sap_dao=>ty_check,
+      END OF ty_register_row.
+    "! Non-unique sorted key: rows of one canonical number keep their read order
+    TYPES tt_register_row TYPE SORTED TABLE OF ty_register_row WITH NON-UNIQUE KEY canonical.
+
+    "! Check register of a line rule call: rows indexed by canonical number, the statements
+    "! by key, and the two parameters that shape a check-number key (read once per call)
+    TYPES:
+      BEGIN OF ty_register,
+        ztnum_length TYPE i,
+        ignore_zeros TYPE abap_bool,
+        statements   TYPE tt_stmt_hash,
+        rows         TYPE tt_register_row,
+      END OF ty_register.
+
+    "! Register rows of one bank line: its check-number key, HOUSE_BANK_AMBIGUOUS and the
+    "! rows scoped to the statement's house bank account (none when ambiguous)
+    TYPES:
+      BEGIN OF ty_register_match,
+        ztnum     TYPE zif_cd_ebs_sap_dao=>ty_ztnum,
+        ambiguous TYPE abap_bool,
+        checks    TYPE zif_cd_ebs_sap_dao=>tt_check,
+      END OF ty_register_match.
 
     METHODS sap_dao
       RETURNING
@@ -156,12 +191,40 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         VALUE(rt_keys) TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
 
     "! Canonical check number: condensed; leading zeros removed from an all-digit number
-    "! unless EBS_ZTNUM_IGNORE_ZEROS is blank (one rule for bank CHECT and DFKKCR-ZTNUM)
+    "! when iv_ignore_zeros is set (EBS_ZTNUM_IGNORE_ZEROS, default X - one rule for bank
+    "! CHECT and DFKKCR-ZTNUM)
     METHODS ztnum_canonical
       IMPORTING
         iv_value        TYPE clike
+        iv_ignore_zeros TYPE abap_bool
       RETURNING
         VALUE(rv_value) TYPE string.
+
+    "! EBS_ZTNUM_IGNORE_ZEROS (default X)
+    METHODS ztnum_ignore_zeros
+      RETURNING
+        VALUE(rv_ignore) TYPE abap_bool.
+
+    "! Check register of the lines: DFKKCR rows of every form of their check numbers (read
+    "! once per package, see register_rows), each canonicalised once
+    METHODS check_register
+      IMPORTING
+        it_lines           TYPE zif_cd_ebs_types=>tt_line
+        it_statements      TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rs_register) TYPE ty_register.
+
+    "! Check register rows of one check number, scoped to the house bank account of the
+    "! line's statement (ZTNUM is unique only per account). Statement without house bank:
+    "! rows only when they all belong to one account, else AMBIGUOUS (the register rows
+    "! cannot be attributed - rules report HOUSE_BANK_AMBIGUOUS). A register row without
+    "! house bank is accepted: HBKID is part of the DFKKCR key (VERIFY-DDIC), so it is never blank
+    METHODS register_match
+      IMPORTING
+        is_register     TYPE ty_register
+        is_line         TYPE zif_cd_ebs_types=>ty_line
+      RETURNING
+        VALUE(rs_match) TYPE ty_register_match.
 
     "! Comma list from a rule parameter, or the default list when the parameter is blank
     METHODS value_list
@@ -192,28 +255,6 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rv_tolerance) TYPE zif_cd_ops_types=>ty_amount.
 
-    "! Statement has no house bank account and the check number exists in more than one
-    "! account: the register rows cannot be attributed - rules report HOUSE_BANK_AMBIGUOUS
-    METHODS house_bank_ambiguous
-      IMPORTING
-        it_checks           TYPE zif_cd_ebs_sap_dao=>tt_check
-        is_line             TYPE zif_cd_ebs_types=>ty_line
-        it_statements       TYPE zif_cd_ebs_types=>tt_statement
-      RETURNING
-        VALUE(rv_ambiguous) TYPE abap_bool.
-
-    "! Check register rows of one check number, scoped to the house bank account of the
-    "! line's statement (ZTNUM is unique only per account). Statement without house bank:
-    "! rows only when they all belong to one account. A register row without house bank
-    "! is accepted: HBKID is part of the DFKKCR key (VERIFY-DDIC), so it is never blank
-    METHODS checks_for_line
-      IMPORTING
-        it_checks        TYPE zif_cd_ebs_sap_dao=>tt_check
-        is_line          TYPE zif_cd_ebs_types=>ty_line
-        it_statements    TYPE zif_cd_ebs_types=>tt_statement
-      RETURNING
-        VALUE(rt_checks) TYPE zif_cd_ebs_sap_dao=>tt_check.
-
     METHODS line_reference
       IMPORTING
         is_line             TYPE zif_cd_ebs_types=>ty_line
@@ -236,11 +277,43 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rs_account) TYPE zif_cd_ebs_types=>ty_account_cfg.
 
+
+    "! Identity of a package for package memos (fixes 1, 2): its statement keys in order
+    METHODS package_fingerprint
+      IMPORTING
+        it_statements         TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rv_fingerprint) TYPE string.
+
+  PRIVATE SECTION.
+    TYPES tt_ztnum_hash TYPE HASHED TABLE OF zif_cd_ebs_sap_dao=>ty_ztnum WITH UNIQUE KEY table_line.
+
+    "! Performance fix 1: DFKKCR rows already read for the current package, shared by every
+    "! check rule (R07C, R08, R12 run on the same lines of a rule group). A key is read once
+    "! per package; rows keep the order the repository returned them in
+    CLASS-DATA gv_memo_package TYPE string.
+    CLASS-DATA gt_memo_keys TYPE tt_ztnum_hash.
+    CLASS-DATA gt_memo_checks TYPE zif_cd_ebs_sap_dao=>tt_check.
+
+    "! DFKKCR rows of the query keys - exactly the rows one get_checks( it_ztnum ) returns,
+    "! but keys already read in this package are served from the memo
+    METHODS register_rows
+      IMPORTING
+        it_ztnum         TYPE zif_cd_ebs_sap_dao=>tt_ztnum
+        it_statements    TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rt_checks) TYPE zif_cd_ebs_sap_dao=>tt_check.
+
 ENDCLASS.
 
 
 
 CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
+
+  METHOD clear_memo.
+    CLEAR: gv_memo_package, gt_memo_keys, gt_memo_checks.
+  ENDMETHOD.
+
 
   METHOD sap_dao.
     ro_dao = zcl_cd_ebs_factory=>get_sap_dao( ).
@@ -396,30 +469,97 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD ztnum_query_keys.
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(lv_reference) = condense( CONV string( line_reference( ls_line ) ) ).
+    " Parameters read once per call, not once per line
+    DATA(lv_length) = ztnum_length( ).
+    DATA(lv_ignore_zeros) = ztnum_ignore_zeros( ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(lv_reference) = condense( CONV string( line_reference( <ls_line> ) ) ).
       IF lv_reference IS INITIAL.
         CONTINUE.
       ENDIF.
       INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( lv_reference ) INTO TABLE rt_keys.
-      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( ztnum_key( lv_reference ) ) INTO TABLE rt_keys.
-      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( ztnum_canonical( lv_reference ) ) INTO TABLE rt_keys.
+      " = ztnum_key( lv_reference ) with the length read above
+      DATA(lv_key) = CONV zif_cd_ebs_sap_dao=>ty_ztnum(
+        zcl_cd_ops_util=>normalize_key( iv_reference = lv_reference iv_length = lv_length ) ).
+      INSERT lv_key INTO TABLE rt_keys.
+      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( ztnum_canonical( iv_value        = lv_reference
+                                                                 iv_ignore_zeros = lv_ignore_zeros ) ) INTO TABLE rt_keys.
     ENDLOOP.
   ENDMETHOD.
 
 
   METHOD ztnum_canonical.
     rv_value = condense( CONV string( iv_value ) ).
-    IF param( iv_name = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros iv_default = CONV #( abap_true ) ) = abap_true
-       AND rv_value CO zif_cd_ebs_types=>gc_digits.
+    IF iv_ignore_zeros = abap_true AND rv_value CO zif_cd_ebs_types=>gc_digits.
       SHIFT rv_value LEFT DELETING LEADING '0'.
     ENDIF.
   ENDMETHOD.
 
 
+  METHOD ztnum_ignore_zeros.
+    rv_ignore = xsdbool( param( iv_name    = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros
+                                iv_default = CONV #( abap_true ) ) = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD check_register.
+    DATA ls_row TYPE ty_register_row.
+    rs_register-ztnum_length = ztnum_length( ).
+    rs_register-ignore_zeros = ztnum_ignore_zeros( ).
+    " First statement of a key wins, as it_statements[ stmt_key = ... ] did (no duplicate-key dump)
+    LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
+      INSERT <ls_statement> INTO TABLE rs_register-statements.
+    ENDLOOP.
+    " Every form the check number can take in the register (leading zeros)
+    DATA(lt_checks) = register_rows( it_ztnum      = ztnum_query_keys( it_lines )
+                                     it_statements = it_statements ).
+    " Each register row is canonicalised once (not once per bank line)
+    LOOP AT lt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+      ls_row-canonical = ztnum_canonical( iv_value        = <ls_check>-ztnum
+                                          iv_ignore_zeros = rs_register-ignore_zeros ).
+      ls_row-account   = |{ <ls_check>-bukrs }/{ <ls_check>-hbkid }/{ <ls_check>-hktid }|.
+      ls_row-check     = <ls_check>.
+      INSERT ls_row INTO TABLE rs_register-rows.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD register_rows.
+    DATA lt_missing TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
+    " A new package (other statement keys) starts a new memo
+    DATA(lv_package) = package_fingerprint( it_statements ).
+    IF lv_package <> gv_memo_package.
+      clear_memo( ).
+      gv_memo_package = lv_package.
+    ENDIF.
+    LOOP AT it_ztnum ASSIGNING FIELD-SYMBOL(<lv_ztnum>).
+      IF NOT line_exists( gt_memo_keys[ table_line = <lv_ztnum> ] ).
+        INSERT <lv_ztnum> INTO TABLE lt_missing.
+      ENDIF.
+    ENDLOOP.
+    IF lt_missing IS NOT INITIAL.
+      INSERT LINES OF sap_dao( )->get_checks( lt_missing ) INTO TABLE gt_memo_checks.
+      INSERT LINES OF lt_missing INTO TABLE gt_memo_keys.
+    ENDIF.
+    " Only the rows of the requested keys, in read order - the rows one read of it_ztnum returns
+    LOOP AT gt_memo_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+      IF line_exists( it_ztnum[ table_line = <ls_check>-ztnum ] ).
+        INSERT <ls_check> INTO TABLE rt_checks.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD package_fingerprint.
+    LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
+      rv_fingerprint = rv_fingerprint && <ls_statement>-stmt_key && cl_abap_char_utilities=>horizontal_tab.
+    ENDLOOP.
+  ENDMETHOD.
+
+
   METHOD docno_keys.
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(lv_reference) = line_reference( ls_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(lv_reference) = line_reference( <ls_line> ).
       IF lv_reference IS NOT INITIAL.
         INSERT docno_key( lv_reference ) INTO TABLE rt_keys.
       ENDIF.
@@ -450,53 +590,38 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD checks_for_line.
-    DATA(lv_ztnum) = ztnum_key( line_reference( is_line ) ).
-    IF lv_ztnum IS INITIAL.
+  METHOD register_match.
+    DATA lv_first TYPE string.
+    rs_match-ztnum = zcl_cd_ops_util=>normalize_key( iv_reference = line_reference( is_line )
+                                                     iv_length    = is_register-ztnum_length ).
+    IF rs_match-ztnum IS INITIAL.
       RETURN.
     ENDIF.
-    IF house_bank_ambiguous( it_checks = it_checks is_line = is_line it_statements = it_statements ) = abap_true.
-      RETURN.
+    DATA(ls_statement) = VALUE #( is_register-statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
+    DATA(lv_canonical) = ztnum_canonical( iv_value        = rs_match-ztnum
+                                          iv_ignore_zeros = is_register-ignore_zeros ).
+    " Statement without house bank: the rows of the number must all belong to one account
+    IF ls_statement-hbkid IS INITIAL.
+      LOOP AT is_register-rows ASSIGNING FIELD-SYMBOL(<ls_any>) WHERE canonical = lv_canonical.
+        IF lv_first IS INITIAL.
+          lv_first = <ls_any>-account.
+        ELSEIF <ls_any>-account <> lv_first.
+          rs_match-ambiguous = abap_true.
+          RETURN.
+        ENDIF.
+      ENDLOOP.
     ENDIF.
-    DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
-    DATA(lv_canonical) = ztnum_canonical( lv_ztnum ).
-    LOOP AT it_checks INTO DATA(ls_check).
-      IF ztnum_canonical( ls_check-ztnum ) <> lv_canonical.
-        CONTINUE.
-      ENDIF.
-      IF ls_statement-hbkid IS NOT INITIAL AND ls_check-hbkid IS NOT INITIAL
-         AND ( ls_check-hbkid <> ls_statement-hbkid OR ls_check-hktid <> ls_statement-hktid ).
+    LOOP AT is_register-rows ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE canonical = lv_canonical.
+      IF ls_statement-hbkid IS NOT INITIAL AND <ls_row>-check-hbkid IS NOT INITIAL
+         AND ( <ls_row>-check-hbkid <> ls_statement-hbkid OR <ls_row>-check-hktid <> ls_statement-hktid ).
         CONTINUE.
       ENDIF.
       " A07: a house bank ID is unique only within its company code
-      IF ls_statement-bukrs IS NOT INITIAL AND ls_check-bukrs IS NOT INITIAL
-         AND ls_check-bukrs <> ls_statement-bukrs.
+      IF ls_statement-bukrs IS NOT INITIAL AND <ls_row>-check-bukrs IS NOT INITIAL
+         AND <ls_row>-check-bukrs <> ls_statement-bukrs.
         CONTINUE.
       ENDIF.
-      INSERT ls_check INTO TABLE rt_checks.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD house_bank_ambiguous.
-    DATA lv_first TYPE string.
-    DATA(lv_ztnum) = ztnum_key( line_reference( is_line ) ).
-    DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
-    IF lv_ztnum IS INITIAL OR ls_statement-hbkid IS NOT INITIAL.
-      RETURN.
-    ENDIF.
-    DATA(lv_canonical) = ztnum_canonical( lv_ztnum ).
-    LOOP AT it_checks INTO DATA(ls_check).
-      IF ztnum_canonical( ls_check-ztnum ) <> lv_canonical.
-        CONTINUE.
-      ENDIF.
-      DATA(lv_account) = |{ ls_check-bukrs }/{ ls_check-hbkid }/{ ls_check-hktid }|.
-      IF lv_first IS INITIAL.
-        lv_first = lv_account.
-      ELSEIF lv_account <> lv_first.
-        rv_ambiguous = abap_true.
-        RETURN.
-      ENDIF.
+      INSERT <ls_row>-check INTO TABLE rs_match-checks.
     ENDLOOP.
   ENDMETHOD.
 

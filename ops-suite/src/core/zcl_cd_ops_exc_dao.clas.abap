@@ -8,6 +8,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Performance fix 5: index OBJ is (MANDT, PE_AREA, OBJECT_KEY) - the object type is not known here.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception repository</p>
 CLASS zcl_cd_ops_exc_dao DEFINITION
@@ -29,7 +31,7 @@ ENDCLASS.
 CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_exc_dao~find_open.
-    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5: callers know no object type)
     SELECT run_id, finding_no
       FROM zcd_ops_finding
       WHERE pe_area     = @iv_pe_area
@@ -56,10 +58,10 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
 
     DATA lt_update TYPE tt_db_update.
     DATA ls_update TYPE ty_db_update.
-    LOOP AT lt_current INTO DATA(ls_current).
+    LOOP AT lt_current ASSIGNING FIELD-SYMBOL(<ls_current>).
       CLEAR ls_update.
-      ls_update-run_id              = ls_current-run_id.
-      ls_update-finding_no          = ls_current-finding_no.
+      ls_update-run_id              = <ls_current>-run_id.
+      ls_update-finding_no          = <ls_current>-finding_no.
       ls_update-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
       ls_update-resolved_by         = iv_user.
       ls_update-resolved_at         = iv_at.
@@ -79,12 +81,12 @@ CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
             EXPORTING
               previous = lx_uuid.
       ENDTRY.
-      ls_hist-run_id     = ls_current-run_id.
-      ls_hist-finding_no = ls_current-finding_no.
+      ls_hist-run_id     = <ls_current>-run_id.
+      ls_hist-finding_no = <ls_current>-finding_no.
       ls_hist-action     = iv_action.
-      ls_hist-from_disp  = ls_current-disposition.
+      ls_hist-from_disp  = <ls_current>-disposition.
       ls_hist-to_disp    = zif_cd_ops_types=>gc_disposition-resolved.
-      ls_hist-owner      = ls_current-owner.
+      ls_hist-owner      = <ls_current>-owner.
       ls_hist-reason     = iv_reason.
       ls_hist-reference  = iv_reference.
       ls_hist-created_by = iv_user.

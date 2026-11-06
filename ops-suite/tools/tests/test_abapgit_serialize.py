@@ -115,6 +115,24 @@ class SerializerFixture(unittest.TestCase):
         self.assertEqual(os.stat(other).st_mtime_ns, mtime)
         self.assertFalse(filecmp.cmp(os.path.join(SUITE, FMON_XML), os.path.join(self.root, FMON_XML), shallow=False))
 
+    def test_dcls_is_serialized(self):
+        # access control: name from the file, description from @EndUserText.label (dashboard DCL)
+        src = os.path.join(self.root, 'src', 'fmon', 'zc_cd_fixture.dcls.asdcls')
+        with open(src, 'w', encoding='utf-8', newline='\n') as fh:
+            fh.write("@EndUserText.label: 'Fixture role'\n@MappingRole: true\n"
+                     "define role ZC_CD_Fixture { grant select on ZC_CD_FmonFlow\n"
+                     "  where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' ); }\n")
+        result = self.run_serializer()
+        self.assertEqual(result.returncode, 0)
+        xml = self.read(os.path.join('src', 'fmon', 'zc_cd_fixture.dcls.xml'))
+        self.assertIn('serializer="LCL_OBJECT_DCLS"', xml)
+        self.assertIn('<DCLNAME>ZC_CD_FIXTURE</DCLNAME>', xml)
+        self.assertIn('<DESCRIPTION>Fixture role</DESCRIPTION>', xml)
+        self.assertNotIn('define role', xml)  # the source stays in .asdcls
+        # the checked-in dashboard role is serialized as well
+        self.assertIn('<DCLNAME>ZC_CD_FMONFLOW</DCLNAME>',
+                      self.read(os.path.join('src', 'fmon', 'zc_cd_fmonflow.dcls.xml')))
+
 
 if __name__ == '__main__':
     unittest.main()

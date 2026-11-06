@@ -11,6 +11,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Check-register query with every form of the check number (leading zeros).
+*& 2026-11-06 | Performance fix 1: register from check_register( ) (package memo, sorted index), one match per line.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07C - check in register, not cancelled</p>
 CLASS zcl_cd_ebs_r_r07c_check DEFINITION
@@ -29,41 +30,38 @@ ENDCLASS.
 CLASS zcl_cd_ebs_r_r07c_check IMPLEMENTATION.
 
   METHOD zif_cd_ebs_rule~execute.
-    DATA lt_ztnum TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
-    " Every form the check number can take in the register (leading zeros)
-    lt_ztnum = ztnum_query_keys( it_lines ).
-    DATA(lt_checks) = sap_dao( )->get_checks( lt_ztnum ).
+    " Every form the check number can take in the register (leading zeros), read once per package
+    DATA(ls_register) = check_register( it_lines = it_lines it_statements = it_statements ).
     DATA(lt_forbidden) = value_list( iv_values = is_rule-param1 iv_default = `99` ).
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(lv_ztnum) = ztnum_key( line_reference( ls_line ) ).
-      IF lv_ztnum IS INITIAL.
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(ls_match) = register_match( is_register = ls_register is_line = <ls_line> ).
+      IF ls_match-ztnum IS INITIAL.
         CONTINUE.
       ENDIF.
-      IF house_bank_ambiguous( it_checks = lt_checks is_line = ls_line it_statements = it_statements ) = abap_true.
+      IF ls_match-ambiguous = abap_true.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-house_bank_ambiguous
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-house_bank_ambiguous
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-house_bank_ambiguous
-                                                     iv_v1    = lv_ztnum ) )
+                                                     iv_v1    = ls_match-ztnum ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
-      DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
-      IF lt_line_checks IS INITIAL.
+      IF ls_match-checks IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-check_not_found
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-check_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_not_found
-                                          iv_v1 = lv_ztnum ) ) INTO TABLE rt_findings.
+                                          iv_v1 = ls_match-ztnum ) ) INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
       " Fail closed: any forbidden register row fails, not only the first one
-      LOOP AT lt_line_checks INTO DATA(ls_check).
-        IF in_list( iv_value = ls_check-crstatus it_list = lt_forbidden ) = abap_true.
+      LOOP AT ls_match-checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+        IF in_list( iv_value = <ls_check>-crstatus it_list = lt_forbidden ) = abap_true.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-check_status
+                   is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-check_status
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_status
-                                                       iv_v1    = lv_ztnum
-                                                       iv_v2    = ls_check-crstatus ) )
+                                                       iv_v1    = ls_match-ztnum
+                                                       iv_v2    = <ls_check>-crstatus ) )
             INTO TABLE rt_findings.
           EXIT.
         ENDIF.

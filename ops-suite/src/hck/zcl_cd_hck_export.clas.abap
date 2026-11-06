@@ -6,6 +6,7 @@
 *& failure closes both, deletes the temporary file and a partly written target.
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A61: no truncated report export).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - complete-or-nothing file export</p>
 "! ABAP cannot rename a dataset atomically. Instead the full content is proven
@@ -66,8 +67,8 @@ CLASS zcl_cd_hck_export IMPLEMENTATION.
 
   METHOD write_all.
     io_file->open_output( iv_file ).
-    LOOP AT it_lines INTO DATA(lv_line).
-      io_file->transfer( iv_file = iv_file iv_line = lv_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<lv_line>).
+      io_file->transfer( iv_file = iv_file iv_line = <lv_line> ).
     ENDLOOP.
     io_file->close( iv_file ).
   ENDMETHOD.

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A92-A94: CAMT document gate, booked entries only, details reconciled to their entry; invalid amount / count block.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).
@@ -726,9 +727,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
   METHOD attribute_value.
     DATA(lt_attributes) = io_element->get_attributes( ).
-    LOOP AT lt_attributes INTO DATA(lo_attribute).
-      IF lo_attribute->qname-name = iv_name.
-        rv_value = lo_attribute->get_value( ).
+    LOOP AT lt_attributes ASSIGNING FIELD-SYMBOL(<lo_attribute>).
+      IF <lo_attribute>->qname-name = iv_name.
+        rv_value = <lo_attribute>->get_value( ).
         RETURN.
       ENDIF.
     ENDLOOP.
@@ -771,8 +772,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
   METHOD relative_path.
     DATA(lv_from) = iv_anchor_depth + 1.
-    LOOP AT mt_path INTO DATA(lv_name) FROM lv_from.
-      rv_path = COND #( WHEN rv_path IS INITIAL THEN lv_name ELSE rv_path && gc_path_separator && lv_name ).
+    LOOP AT mt_path ASSIGNING FIELD-SYMBOL(<lv_name>) FROM lv_from.
+      rv_path = COND #( WHEN rv_path IS INITIAL THEN <lv_name> ELSE rv_path && gc_path_separator && <lv_name> ).
     ENDLOOP.
   ENDMETHOD.
 
@@ -892,20 +893,20 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
   METHOD derive_balances.
     " Opening from OPBD, PRCD (previous closing) only when OPBD is absent; closing from CLBD
     DATA lv_has_opbd TYPE abap_bool.
-    LOOP AT ms_stmt-stmt-balances INTO DATA(ls_balance).
-      CASE ls_balance-bal_type.
+    LOOP AT ms_stmt-stmt-balances ASSIGNING FIELD-SYMBOL(<ls_balance>).
+      CASE <ls_balance>-bal_type.
         WHEN zif_cd_ebs_types=>gc_balance-opening_booked.
           lv_has_opbd = abap_true.
           ms_stmt-stmt-has_opening = abap_true.
-          ms_stmt-stmt-opening_bal = ls_balance-amount.
+          ms_stmt-stmt-opening_bal = <ls_balance>-amount.
         WHEN zif_cd_ebs_types=>gc_balance-prev_closing.
           IF lv_has_opbd = abap_false.
             ms_stmt-stmt-has_opening = abap_true.
-            ms_stmt-stmt-opening_bal = ls_balance-amount.
+            ms_stmt-stmt-opening_bal = <ls_balance>-amount.
           ENDIF.
         WHEN zif_cd_ebs_types=>gc_balance-closing_booked.
           ms_stmt-stmt-has_closing = abap_true.
-          ms_stmt-stmt-closing_bal = ls_balance-amount.
+          ms_stmt-stmt-closing_bal = <ls_balance>-amount.
       ENDCASE.
     ENDLOOP.
   ENDMETHOD.
@@ -1083,8 +1084,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     " A92: details become lines only when they reconcile to the entry
     DATA(lv_problem) = detail_problem( ).
     IF lv_problem IS INITIAL AND split_by_transaction( ) = abap_true.
-      LOOP AT ms_entry-txs INTO DATA(ls_tx).
-        append_line( is_tx = ls_tx iv_amount = ls_tx-amount iv_currency = ls_tx-currency ).
+      LOOP AT ms_entry-txs ASSIGNING FIELD-SYMBOL(<ls_tx>).
+        append_line( is_tx = <ls_tx> iv_amount = <ls_tx>-amount iv_currency = <ls_tx>-currency ).
       ENDLOOP.
     ELSEIF lv_problem IS INITIAL.
       DATA(ls_first) = VALUE ty_tx( ms_entry-txs[ 1 ] OPTIONAL ).
@@ -1128,9 +1129,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lv_sum) = CONV ty_amount( 0 ).
-    LOOP AT ms_entry-txs INTO DATA(ls_tx) WHERE has_amount = abap_true.
-      lv_sum += ls_tx-amount.
-      IF ls_tx-currency IS NOT INITIAL AND ms_entry-currency IS NOT INITIAL AND ls_tx-currency <> ms_entry-currency.
+    LOOP AT ms_entry-txs ASSIGNING FIELD-SYMBOL(<ls_tx>) WHERE has_amount = abap_true.
+      lv_sum += <ls_tx>-amount.
+      IF <ls_tx>-currency IS NOT INITIAL AND ms_entry-currency IS NOT INITIAL AND <ls_tx>-currency <> ms_entry-currency.
         rv_check_code = gc_check-batch_mismatch.
         RETURN.
       ENDIF.

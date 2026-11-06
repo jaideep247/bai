@@ -21,6 +21,7 @@
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
 | **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
+| **Test after, file monitoring dashboard 2026-11-06** — CDS tests written against the drafted views (bucket table and SLA rule first in the doc, then views, then `cl_cds_test_environment` tests); not executed | `ZCL_CD_FMON_FLOW_CDS_TEST` (19: `ltc_flow` 12, `ltc_as_of` 5, `ltc_kpi` 2) | `Dashboard_File_Monitoring.md` §11 |
 | **Test first, payment trace 2026-11-06** — engine tests written against the draft before the review fixes (partner mismatch, history unavailable on reversal, cheque history unavailable, digest file reference); lint red until the code existed; not executed | `ZCL_CD_OPS_TRACE_ENGINE` (21), `ZCL_CD_OPS_TRACE_DAO` (8) | `Payment_Trace.md` §10 |
 | **Test first, core controls 2026-11-06** — test written before the code it drives; lint red until the code existed; not executed | `ZCL_CD_OPS_RUN_GUARD`, `ZCL_CD_OPS_PURGE`, `ZCL_CD_OPS_PURGE_DAO`, store carry-forward / `reconcile` (7 OSQL tests), engine lock and reconciliation tests (EBS 4, FMON 4, HCK 3), `injected_auth_is_returned` | `RAP_Apps_Design.md` §1–§4; commit history of 2026-11-06 |
 | **Test first, configuration apps** — red observed in abaplint (47 "not found") before the classes existed | `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE` | Phase 2 hand-over |
@@ -41,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 698 ABAP Unit methods in 55 test includes
+## 4. Coverage today — 754 ABAP Unit methods in 56 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -62,43 +63,46 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 8 | OSQL |
 | Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 21 | Application |
 | Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
-| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 16 | OSQL |
+| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 18 | OSQL |
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 20 | Domain |
-| EBS | ZCL_CD_EBS_CFG_DAO | 8 | OSQL |
-| EBS | ZCL_CD_EBS_ENGINE | 51 | Application |
-| EBS | ZCL_CD_EBS_FEB_DAO | 4 | OSQL |
+| EBS | ZCL_CD_EBS_CFG_DAO | 9 | OSQL |
+| EBS | ZCL_CD_EBS_ENGINE | 60 | Application |
+| EBS | ZCL_CD_EBS_FEB_DAO | 8 | OSQL |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 27 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 24 | Domain |
 | EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
 | EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 7 | Domain |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 28 rule classes) | 86 | Domain / Application |
-| EBS | ZCL_CD_EBS_SAP_DAO | 3 | OSQL |
-| EBS | ZCL_CD_EBS_SRC_FEB | 9 | Application |
+| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 28 rule classes) | 95 | Domain / Application |
+| EBS | ZCL_CD_EBS_SAP_DAO | 5 | OSQL |
+| EBS | ZCL_CD_EBS_SRC_FEB | 11 | Application |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 10 | Domain / Application |
-| FMON | ZCL_CD_FMON_DAO | 15 | OSQL |
-| FMON | ZCL_CD_FMON_ENGINE | 28 | Application |
-| FMON | ZCL_CD_FMON_LOT_READER | 5 | Application |
+| FMON | ZCL_CD_FMON_DAO | 17 | OSQL |
+| FMON | ZCL_CD_FMON_ENGINE | 29 | Application |
+| FMON | ZCL_CD_FMON_FLOW_CDS_TEST (file monitoring dashboard CDS views, `cl_cds_test_environment`) | 19 | CDS |
+| FMON | ZCL_CD_FMON_LOT_READER | 7 | Application |
 | FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 8 | Domain |
 | FMON | ZCL_CD_FMON_RULES | 44 | Domain |
 | FMON | ZCL_CD_FMON_STATUS | 15 | Domain |
-| HCK | ZCL_CD_HCK_AGG_QUERY | 12 | Domain |
+| FMON | ZCL_CD_FMON_UTIL (file-reference digest, A100) | 5 | Domain |
+| HCK | ZCL_CD_HCK_AGG_QUERY | 14 | Domain |
 | HCK | ZCL_CD_HCK_BUDGET | 3 | Domain |
 | HCK | ZCL_CD_HCK_CANONICAL | 3 | Domain |
+| HCK | ZCL_CD_HCK_C_VOLUME (expected groups measured zero, A103) | 2 | Application |
 | HCK | ZCL_CD_HCK_CYCLE_EVAL | 14 | Domain |
-| HCK | ZCL_CD_HCK_DAO | 14 | OSQL |
-| HCK | ZCL_CD_HCK_ENGINE | 19 | Application |
+| HCK | ZCL_CD_HCK_DAO | 16 | OSQL |
+| HCK | ZCL_CD_HCK_ENGINE | 20 | Application |
 | HCK | ZCL_CD_HCK_EXPORT | 3 | Domain |
 | HCK | ZCL_CD_HCK_PARAM | 3 | Domain |
 | HCK | ZCL_CD_HCK_PAYREQ_RULES (known-table rules: SPE, CANCELLED, ZECT_STATUS) | 8 | Domain |
-| HCK | ZCL_CD_HCK_REPORT_HTML | 7 | Domain |
+| HCK | ZCL_CD_HCK_REPORT_HTML | 8 | Domain |
 | HCK | ZCL_CD_HCK_SCORE | 6 | Domain |
 | HCK | ZCL_CD_HCK_STATS | 12 | Domain |
 | HCK | ZCL_CD_HCK_SUPPRESSION (suppression matcher, four-eyes) | 8 | Domain |
-| HCK | ZCL_CD_HCK_THRESHOLD | 14 | Domain |
+| HCK | ZCL_CD_HCK_THRESHOLD | 16 | Domain |
 | HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
 
 ### Master prompt acceptance tests mapped to proof
@@ -137,7 +141,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | 9 FMON check classes, 11 HCK check classes | Thin loops over pure rule classes | Rule tests + engine tests with every check configured |
 | ZCL_CD_HCK_DAO technical reads (TBTCO, BALHDR, SNAP, VBHDR, ENQUEUE_READ) | Standard tables / FMs with unverified fields | Pure evaluators + QA1 |
 | Reports ZCD_EBS_VALIDATE, ZCD_FMON_MONITOR, ZCD_MORNING_REPORT, ZCD_OPS_PURGE | Selection screen, authorisation and ALV | QA1 functional cases |
-| CDS views and DCL | Not parseable offline | ADT data preview in DV1; QA1 dashboard case |
+| CDS views and DCL (`cds/` analytics; the DCL `ZC_CD_FMONFLOW` and the UI annotations of the file monitoring dashboard) | `cds/` not in the lint scope; DCL and UI rendering not executable offline (the file monitoring dashboard views themselves are covered by `ZCL_CD_FMON_FLOW_CDS_TEST`) | ADT data preview in DV1; QA1 dashboard cases (HCK-QA-13, FMD-01 … FMD-13) |
 
 ## 6. What to run, and when
 

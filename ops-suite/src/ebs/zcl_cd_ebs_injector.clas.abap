@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | inject_release_dao (design 6.2).
+*& 2026-11-06 | Performance fix 1: inject_sap_dao( ) and reset( ) clear the rule-base check-register memo.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - test injector</p>
 CLASS zcl_cd_ebs_injector DEFINITION
@@ -54,6 +55,8 @@ CLASS zcl_cd_ebs_injector IMPLEMENTATION.
 
   METHOD inject_sap_dao.
     zcl_cd_ebs_factory=>go_sap_dao_double = io_dao.
+    " Register rows read through an earlier repository must not serve the new one
+    zcl_cd_ebs_rule_base=>clear_memo( ).
   ENDMETHOD.
 
 
@@ -73,6 +76,7 @@ CLASS zcl_cd_ebs_injector IMPLEMENTATION.
            zcl_cd_ebs_factory=>go_sap_dao_double,
            zcl_cd_ebs_factory=>go_parser_double,
            zcl_cd_ebs_factory=>go_release_dao_double.
+    zcl_cd_ebs_rule_base=>clear_memo( ).
   ENDMETHOD.
 
 ENDCLASS.
