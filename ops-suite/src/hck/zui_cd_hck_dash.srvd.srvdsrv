@@ -1,0 +1,14 @@
+@EndUserText.label: 'HCK health check dashboard (read-only)'
+@ObjectModel.leadingEntity.name: 'ZC_CD_HCKCHECK'
+// Binding to create in ADT: ZUI_CD_HCK_DASH_O4 (OData V4 - UI). Read-only: no behaviour definition.
+define service ZUI_CD_HCK_DASH {
+  expose ZC_CD_HckCheck    as HealthCheck;
+  expose ZC_CD_HckCategory as HealthCategory;
+  expose ZC_CD_HckRun      as HealthRun;
+  expose ZC_CD_HckMetric   as MetricHistory;
+  expose ZC_CD_HckFind     as HealthFinding;
+  expose ZC_CD_HckAsOf     as ReportAsOf;
+  // Tiles and the production-support overview page (KPI / list cards)
+  expose ZC_CD_HckKpi      as HealthKpi;
+  expose ZC_CD_HckRed      as RedCheck;
+}

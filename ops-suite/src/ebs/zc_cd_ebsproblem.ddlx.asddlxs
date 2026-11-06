@@ -1,0 +1,61 @@
+// UI annotations: EBS validation dashboard - latest problems
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Problem', typeNamePlural: 'Latest problems',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'ObjectKey' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'CreatedAt', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_EbsProblem with
+{
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Object type'
+  ObjectType;
+  @EndUserText.label: 'Statement / line'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  ObjectKey;
+  @UI.hidden: true
+  StmtObjectKey;
+  @EndUserText.label: 'Line'
+  LineNo;
+  @EndUserText.label: 'BAI / transaction code'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  BaiCode;
+  @EndUserText.label: 'Bank key'
+  BankKey;
+  @EndUserText.label: 'Rule'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RuleId;
+  @EndUserText.label: 'Rule text'
+  RuleText;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  CheckCode;
+  @EndUserText.label: 'Severity'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'SeverityCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Severity;
+  @UI.hidden: true
+  SeverityCriticality;
+  @EndUserText.label: 'Message'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  FindingMessage;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  Owner;
+  @EndUserText.label: 'Due date'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  DueDate;
+  @EndUserText.label: 'Created (UTC)'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  CreatedAt;
+  @EndUserText.label: 'Created on'
+  @UI.selectionField: [ { position: 30 } ]
+  CreatedDate;
+}

@@ -1,0 +1,106 @@
+// UI annotations: EBS validation dashboard - KPI per day
+// Overview-page cards: KPI card on data point Unevaluated / Failed, analytical card on
+// chart LinesByOutcome; selection variant Latest. VERIFY-ADT: card rendering.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Run date', typeNamePlural: 'Run dates',
+                  title: { type: #STANDARD, value: 'RunDate' } }
+@UI.chart: [ { qualifier: 'LinesByOutcome',
+               title: 'Lines by outcome (last run of the day)',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'RunDate' ],
+               measures: [ 'PassedLineCount', 'WarningLineCount', 'FailedLineCount', 'BlockedLineCount',
+                           'UnevaluatedLineCount' ],
+               dimensionAttributes: [ { dimension: 'RunDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'PassedLineCount', role: #AXIS_1 },
+                                    { measure: 'WarningLineCount', role: #AXIS_1 },
+                                    { measure: 'FailedLineCount', role: #AXIS_1 },
+                                    { measure: 'BlockedLineCount', role: #AXIS_1 },
+                                    { measure: 'UnevaluatedLineCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'RunDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'LinesByOutcome' },
+                                               { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Latest', text: 'Latest completed run', filter: 'IsLatest EQ X' } ]
+annotate entity ZC_CD_EbsKpi with
+{
+  @EndUserText.label: 'Run date'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RunDate;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Run variant'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  RunVariant;
+  @EndUserText.label: 'RAG'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'RagCriticality' } ]
+  RunRag;
+  @UI.hidden: true
+  RagCriticality;
+  @EndUserText.label: 'Run date is today'
+  IsToday;
+  @EndUserText.label: 'Latest run (as of)'
+  IsLatest;
+  @EndUserText.label: 'Completed runs that day'
+  CompletedRunCount;
+  @EndUserText.label: 'Validation as of'
+  @UI.lineItem: [ { position: 200, importance: #LOW } ]
+  AsOfAt;
+  @EndUserText.label: 'Validation age (minutes)'
+  @UI.dataPoint: { qualifier: 'ValidationAge', title: 'Validation age (minutes)', criticality: 'MonitorCriticality' }
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Validation stale'
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Lines validated'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Lines', title: 'Lines validated' }
+  LineCount;
+  @EndUserText.label: 'Passed'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  PassedLineCount;
+  @EndUserText.label: 'Warning'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  WarningLineCount;
+  @EndUserText.label: 'Failed'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Failed', title: 'Failed', criticality: 'DayCriticality' }
+  FailedLineCount;
+  @EndUserText.label: 'Blocked'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Blocked', title: 'Blocked', criticality: 'DayCriticality' }
+  BlockedLineCount;
+  @EndUserText.label: 'Not evaluated'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Unevaluated', title: 'Not evaluated' }
+  UnevaluatedLineCount;
+  @EndUserText.label: 'Findings'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  FindingCount;
+  @EndUserText.label: 'Block findings'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  BlockFindingCount;
+  @EndUserText.label: 'Error findings'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  ErrorFindingCount;
+  @EndUserText.label: 'Warning findings'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  WarningFindingCount;
+  @EndUserText.label: 'POSTING_INCOMPLETE (S13)'
+  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'PostingIncomplete', title: 'POSTING_INCOMPLETE (S13)' }
+  PostingIncompleteCount;
+  @EndUserText.label: 'Duplicates'
+  @UI.lineItem: [ { position: 150, importance: #MEDIUM } ]
+  DuplicateCount;
+  @EndUserText.label: 'Unmapped BAI codes'
+  @UI.lineItem: [ { position: 160, importance: #MEDIUM } ]
+  UnmappedCodeCount;
+  @EndUserText.label: 'Statements with findings'
+  @UI.lineItem: [ { position: 170, importance: #MEDIUM } ]
+  StatementsWithFindings;
+  @UI.hidden: true
+  DayCriticality;
+}

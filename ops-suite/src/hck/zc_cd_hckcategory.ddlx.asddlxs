@@ -1,0 +1,82 @@
+// UI annotations: HCK health check dashboard - scorecard per category
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Category', typeNamePlural: 'Scorecard',
+                  title: { type: #STANDARD, value: 'CategoryText' } }
+@UI.chart: [ { qualifier: 'Scorecard',
+               title: 'Scorecard: checks per category and status',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'CategoryText' ],
+               measures: [ 'RedCheckCount', 'AmberCheckCount', 'GreenCheckCount', 'WarmupCheckCount', 'NoResultCheckCount' ],
+               dimensionAttributes: [ { dimension: 'CategoryText', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RedCheckCount', role: #AXIS_1 },
+                                    { measure: 'AmberCheckCount', role: #AXIS_1 },
+                                    { measure: 'GreenCheckCount', role: #AXIS_1 },
+                                    { measure: 'WarmupCheckCount', role: #AXIS_1 },
+                                    { measure: 'NoResultCheckCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'Category', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Scorecard' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_HckCategory with
+{
+  @UI.facet: [ { id: 'Category', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Category', position: 10 },
+               { id: 'Checks', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Checks',
+                 label: 'Checks', position: 20 } ]
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Category;
+  @EndUserText.label: 'Category text'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  CategoryText;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  AsOfRunId;
+  @EndUserText.label: 'Morning report as of'
+  @UI.identification: [ { position: 30 } ]
+  AsOfAt;
+  @EndUserText.label: 'Report age (minutes)'
+  @UI.identification: [ { position: 40, criticality: 'MonitorCriticality' } ]
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Report stale'
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Category status'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.identification: [ { position: 50, criticality: 'StatusCriticality' } ]
+  @UI.dataPoint: { qualifier: 'CategoryStatus', title: 'Category status', criticality: 'StatusCriticality' }
+  CategoryStatus;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Checks'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  CheckCount;
+  @EndUserText.label: 'Red'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  RedCheckCount;
+  @EndUserText.label: 'Amber'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  AmberCheckCount;
+  @EndUserText.label: 'Green'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  GreenCheckCount;
+  @EndUserText.label: 'Warm-up'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  WarmupCheckCount;
+  @EndUserText.label: 'No result'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  NoResultCheckCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  OpenFindingCount;
+}

@@ -14,6 +14,8 @@ Built against `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (repository root) for the
 | **File monitoring** | `src/fmon` | File registry over the existing ZCD_* tables, SAP → PRISM → bank → SAP event chain, SLA / missing / NACK / ack-mismatch checks, returns & NOC completeness, report `ZCD_FMON_MONITOR` | Framework 2 |
 | **Health check & morning report** | `src/hck` | Check engine with categories A–E, baselines and outlier detection, job-cycle monitoring, volume KPIs, health of the health check, report `ZCD_MORNING_REPORT` (ALV + HTML e-mail), analytics CDS for the dashboard | Frameworks 1 and 4 (monitoring), dashboard |
 
+**Production-support dashboards (read-only, Fiori elements OData V4):** file monitoring (`src/fmon`, `ZUI_CD_FMON_FLOW`), EBS validation (`src/ebs`, `ZUI_CD_EBS_DASH`), health checks / morning report (`src/hck`, `ZUI_CD_HCK_DASH`), transactions in SAP (`src/core`, `ZUI_CD_TRX_DASH`, live and bounded; request side in `cds/`, `ZUI_CD_TRX_REQ`, after SE11), and the overview page (`src/core`, `ZUI_CD_OPS_OVERVIEW`) with the launchpad space *Production Support* (documented, created in the system).
+
 Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: it starts jobs, so it gets its own design review, authorization concept and CAB.
 
 ## Documentation (`docs/`)
@@ -41,6 +43,10 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `Performance_Review.md` | Developers, reviewers, Basis — the eight performance fixes (before / after access paths), sorted / hashed tables, field symbols, why no AMDP, deferred items, VERIFY-SE11 index list |
 | `Payment_Trace.md` | L1/L2 support, reviewers — read-only 360° payment trace: stages, statuses, FIN + source and reversed-item lookups, VERIFY-SE11 list, QA cases |
 | `Dashboard_File_Monitoring.md` | L1/L2 support, team leads — file monitoring dashboard (analytical list page, tiles, OVP-ready KPI): flow buckets, as-of / stale rule, SLA status, drill-down, coverage limits, QA cases |
+| `Dashboard_EBS_Validation.md` | L1/L2 support, treasury — EBS validation dashboard: statements / lines / findings, validation status, unevaluated lines, POSTING_INCOMPLETE, returns / NOC by reason, as of, QA cases |
+| `Dashboard_Health_Check.md` | L1/L2 support, team leads — health check dashboard: status per check and category, scorecard, warm-up, metric trends (DIM2 series), as of, QA cases |
+| `Dashboard_Transactions.md` | L1/L2 support, disbursement ops — transactions dashboard: live funnel posted → paid → settled / returned, payment runs, returns / NOC by reason, request side after SE11 (what lights up when), payment trace navigation, QA cases |
+| `Dashboard_Production_Support.md` | L1/L2 support, launchpad admins — overview page (cards, one-service design), monitor freshness, critical exceptions, space *Production Support*, catalogs, target mappings, roles |
 | `Class_Purpose_and_Modification_Log.md`, `Changed_Artifacts.csv`, `Coverage_Run_Register.csv`, `portable_checks.json` | Release evidence |
 
 ## Verify offline

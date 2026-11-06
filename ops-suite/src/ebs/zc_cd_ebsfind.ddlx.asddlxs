@@ -1,0 +1,150 @@
+// UI annotations: EBS validation dashboard - findings
+// Chart: findings by rule and severity (default), by BAI code and category.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Finding', typeNamePlural: 'Findings',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'ObjectKey' } }
+@UI.chart: [ { qualifier: 'ByRule',
+               title: 'Findings by rule and severity',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'RuleId', 'Severity' ],
+               measures: [ 'FindingCount' ],
+               dimensionAttributes: [ { dimension: 'RuleId', role: #CATEGORY },
+                                      { dimension: 'Severity', role: #SERIES } ],
+               measureAttributes: [ { measure: 'FindingCount', role: #AXIS_1 } ] },
+             { qualifier: 'ByCode',
+               title: 'Findings by BAI code and category',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'BaiCode', 'Category' ],
+               measures: [ 'FindingCount' ],
+               dimensionAttributes: [ { dimension: 'BaiCode', role: #CATEGORY },
+                                      { dimension: 'Category', role: #SERIES } ],
+               measureAttributes: [ { measure: 'FindingCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'CreatedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByRule' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'ByCode',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByCode' },
+                                               { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Open', text: 'Open findings', filter: 'IsOpen EQ X' } ]
+annotate entity ZC_CD_EbsFind with
+{
+  @UI.facet: [ { id: 'Finding', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Finding', position: 10 } ]
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Object type (STMT, LINE, FILE, RUN)'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  ObjectType;
+  @EndUserText.label: 'Object (statement / line key)'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  ObjectKey;
+  @EndUserText.label: 'Source (FEB imported, FILE before import)'
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  StatementSource;
+  @UI.hidden: true
+  StmtObjectKey;
+  @UI.hidden: true
+  LineObjectKey;
+  @EndUserText.label: 'Line'
+  @UI.identification: [ { position: 40 } ]
+  LineNo;
+  @EndUserText.label: 'BAI / transaction code'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  BaiCode;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Category;
+  @EndUserText.label: 'Bank key'
+  @UI.identification: [ { position: 70 } ]
+  BankKey;
+  @EndUserText.label: 'Bank account (masked)'
+  @UI.identification: [ { position: 80 } ]
+  AccountMasked;
+  @EndUserText.label: 'Rule'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 90 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RuleId;
+  @EndUserText.label: 'Rule text'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  RuleText;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 110 } ]
+  CheckCode;
+  @EndUserText.label: 'Severity'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'SeverityCriticality' } ]
+  @UI.identification: [ { position: 120, criticality: 'SeverityCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Severity;
+  @UI.hidden: true
+  SeverityCriticality;
+  @EndUserText.label: 'Action'
+  @UI.identification: [ { position: 130 } ]
+  FindingAction;
+  @EndUserText.label: 'Amount (signed, finding currency)'
+  @UI.identification: [ { position: 140 } ]
+  Amount;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 150 } ]
+  Currency;
+  @EndUserText.label: 'Reference'
+  @UI.identification: [ { position: 160 } ]
+  Reference;
+  @EndUserText.label: 'Message'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 170 } ]
+  FindingMessage;
+  @EndUserText.label: 'Disposition'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 180 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  Disposition;
+  @EndUserText.label: 'Open'
+  @UI.selectionField: [ { position: 80 } ]
+  IsOpen;
+  @EndUserText.label: 'POSTING_INCOMPLETE (S13)'
+  @UI.selectionField: [ { position: 90 } ]
+  IsPostingIncomplete;
+  @EndUserText.label: 'Duplicate (S07, R09, R22)'
+  @UI.selectionField: [ { position: 100 } ]
+  IsDuplicate;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 190 } ]
+  Owner;
+  @EndUserText.label: 'Due date'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 200 } ]
+  DueDate;
+  @EndUserText.label: 'First seen'
+  @UI.identification: [ { position: 210 } ]
+  FirstSeenAt;
+  @EndUserText.label: 'Occurrences'
+  @UI.identification: [ { position: 220 } ]
+  Occurrences;
+  @EndUserText.label: 'Created (UTC)'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 230 } ]
+  CreatedAt;
+  @EndUserText.label: 'Created on'
+  @UI.selectionField: [ { position: 110 } ]
+  CreatedDate;
+  @EndUserText.label: 'Findings'
+  FindingCount;
+  @EndUserText.label: 'Open findings'
+  OpenFindingCount;
+}

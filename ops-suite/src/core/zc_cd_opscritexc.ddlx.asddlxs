@@ -1,0 +1,83 @@
+// UI annotations: Production support - open critical exceptions
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Critical exception', typeNamePlural: 'Open critical exceptions',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'ObjectKey' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'DaysOverdue', direction: #DESC },
+                                          { by: 'CreatedAt', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Overdue', text: 'Overdue', filter: 'IsOverdue EQ X' } ]
+annotate entity ZC_CD_OpsCritExc with
+{
+  @UI.facet: [ { id: 'Exception', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Exception', position: 10 } ]
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  PaymentEngineArea;
+  @EndUserText.label: 'Object type'
+  @UI.identification: [ { position: 20 } ]
+  ObjectType;
+  @EndUserText.label: 'Object'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  ObjectKey;
+  @EndUserText.label: 'Interface / category / check'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  Detail;
+  @EndUserText.label: 'Rule'
+  @UI.identification: [ { position: 50 } ]
+  RuleId;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  CheckCode;
+  @EndUserText.label: 'Severity'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'SeverityCriticality' } ]
+  @UI.identification: [ { position: 70, criticality: 'SeverityCriticality' } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Severity;
+  @UI.hidden: true
+  SeverityCriticality;
+  @EndUserText.label: 'Message'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  FindingMessage;
+  @EndUserText.label: 'Disposition'
+  @UI.identification: [ { position: 90 } ]
+  Disposition;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Owner;
+  @EndUserText.label: 'Due date'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  DueDate;
+  @EndUserText.label: 'Overdue'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  IsOverdue;
+  @EndUserText.label: 'Days overdue'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  DaysOverdue;
+  @EndUserText.label: 'First seen'
+  @UI.identification: [ { position: 140 } ]
+  FirstSeenAt;
+  @EndUserText.label: 'Created (UTC)'
+  @UI.identification: [ { position: 150 } ]
+  CreatedAt;
+  @EndUserText.label: 'Critical exceptions'
+  @UI.dataPoint: { qualifier: 'CriticalExceptions', title: 'Open critical exceptions' }
+  ExceptionCount;
+}

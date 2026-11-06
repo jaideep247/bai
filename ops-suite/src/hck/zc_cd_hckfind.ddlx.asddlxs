@@ -1,0 +1,91 @@
+// UI annotations: HCK health check dashboard - findings
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Finding', typeNamePlural: 'Findings',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'ObjectKey' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'CreatedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Open', text: 'Open findings', filter: 'IsOpen EQ X' } ]
+annotate entity ZC_CD_HckFind with
+{
+  @UI.facet: [ { id: 'Finding', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Finding', position: 10 } ]
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  CheckId;
+  @EndUserText.label: 'Check text'
+  @UI.identification: [ { position: 20 } ]
+  CheckText;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Category;
+  @EndUserText.label: 'Check / metric / dimension 1'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  ObjectKey;
+  @EndUserText.label: 'Dimension 2 / reference'
+  @UI.identification: [ { position: 50 } ]
+  Reference;
+  @EndUserText.label: 'Check code'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CheckCode;
+  @EndUserText.label: 'Severity'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'SeverityCriticality' } ]
+  @UI.identification: [ { position: 70, criticality: 'SeverityCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Severity;
+  @UI.hidden: true
+  SeverityCriticality;
+  @EndUserText.label: 'Baseline warm-up'
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  IsWarmup;
+  @EndUserText.label: 'Message'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  FindingMessage;
+  @EndUserText.label: 'Disposition'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  Disposition;
+  @EndUserText.label: 'Open'
+  @UI.selectionField: [ { position: 70 } ]
+  IsOpen;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  Owner;
+  @EndUserText.label: 'Due date'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  DueDate;
+  @EndUserText.label: 'First seen'
+  @UI.identification: [ { position: 130 } ]
+  FirstSeenAt;
+  @EndUserText.label: 'Occurrences'
+  @UI.identification: [ { position: 140 } ]
+  Occurrences;
+  @EndUserText.label: 'Created (UTC)'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 150 } ]
+  CreatedAt;
+  @EndUserText.label: 'Created on'
+  @UI.selectionField: [ { position: 80 } ]
+  CreatedDate;
+  @EndUserText.label: 'Findings'
+  FindingCount;
+  @EndUserText.label: 'Open findings'
+  OpenFindingCount;
+}

@@ -14,7 +14,8 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | Artifact | Where | Step |
 |---|---|---|
 | Analytical CDS views and access control `ZI_CD_OpsAnalytics` in `ops-suite/cds/` (outside the import folder) | ADT, after the pull | 2.7 |
-| Service bindings `ZUI_*_O4` (in-scope apps only, incl. the file monitoring dashboard `ZUI_CD_FMON_FLOW_O4`) and FLP tiles | ADT / launchpad designer | 1a, 1b, 1d |
+| Service bindings `ZUI_*_O4` (in-scope apps only, incl. the dashboards `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4` and the overview `ZUI_CD_OPS_OVERVIEW_O4`), Fiori apps, launchpad space / pages / catalogs / tiles / target mappings | ADT / launchpad designer | 1a, 1b, 1d, 1e, 1f |
+| Request side of the transactions dashboard in `ops-suite/cds/` (`ZI_CD_TrxReqLog` … `ZUI_CD_TRX_REQ`, test class `ZCL_CD_TRX_REQ_CDS_TEST`) — VERIFY-SE11 placeholders | ADT, after SE11 | 1e.6 |
 | Authorization object `ZCD_OPS`, field `ZCD_PE_AREA`, roles incl. `S_TABU_NAM` | SU21 / PFCG | 0, 1c.3 |
 | Customizing rows (`config/*.csv`, `*_seed.md`) — the pull loads no data | Configuration apps / SM30, customizing request | 3 |
 | Job variants and Control-M jobs | SE38 / Control-M | 4 |
@@ -84,7 +85,31 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 | 1d.5 | Roles (PFCG): business role `ZCD_OPS_FMON_DISPLAY` with the business catalog, `S_SERVICE` for `ZUI_CD_FMON_FLOW_O4`, **ZCD_OPS ZCD_PE_AREA = FMON, ACTVT 03**; give it to L1/L2 and team leads (display only — the role grants no 02) | QA FMD-08: a user without FMON 03 sees no row |
 | 1d.6 | Optional: `cds/ZI_CD_FmonFlowCube`, `cds/ZC_CD_FmonFlowQry` with step 2.7 (grant in `ZI_CD_OpsAnalytics`) for Analysis for Office | Query opens in RSRT / Analysis for Office |
 
-Not in this step: navigation to the payment trace (proposed — the trace does not accept a file reference yet) and the overall overview page (later job, reuses `FileFlowKpi` and `LatestFailure`).
+Not in this step: navigation to the payment trace (proposed — the trace does not accept a file reference yet) the overview page reuses `FileFlowKpi` and `LatestFailure` (step 1f).
+
+## Step 1e — EBS validation, health check and transactions dashboards (read-only)
+
+Same pattern as 1d (`Dashboard_EBS_Validation.md`, `Dashboard_Health_Check.md`, `Dashboard_Transactions.md`). All CDS below comes with the abapGit pull; the order is the activation order abapGit follows (fallback: activate manually in this order).
+
+| # | Item | Done when |
+|---|---|---|
+| 1e.1 | **Shared (src/core):** `ZI_CD_ReturnItem` (DFKKRP + DFKKRK, RLGRD), `ZI_CD_NocItem` (DFKKNRP, FLGRD, INFOF). Confirm DFKKRP-RLGRD, DFKKNRP-FLGRD, the DFKKRP key and the INFOF format in SE11 first | Both active; SE16 sample matches |
+| 1e.2 | **EBS (src/ebs):** `ZI_CD_EbsRunLast` → `ZR_CD_EbsAsOf`; `ZI_CD_EbsRunBase`, `ZI_CD_EbsFinding` → `ZI_CD_EbsRunFind`, `ZI_CD_EbsRunDay`, `ZI_CD_EbsStmtExc`, `ZI_CD_EbsLineExc`; `ZI_CD_EbsStmtBase` → `ZI_CD_EbsLineBase` → `ZI_CD_EbsStmtLines`, `ZI_CD_EbsRetNocU`; roots `ZR_CD_EbsFind`, `ZR_CD_EbsRetNoc` → `ZR_CD_EbsLine` → `ZR_CD_EbsStmt`, `ZR_CD_EbsRun` → `ZR_CD_EbsKpi`, `ZR_CD_EbsProblem` → eight `ZC_CD_Ebs*` → DDLX → DCL `ZC_CD_EBSDASH` → SRVD `ZUI_CD_EBS_DASH`; class `ZCL_CD_EBS_DASH_CDS_TEST` (16 tests) | Active; tests green |
+| 1e.3 | **HCK (src/hck):** `ZI_CD_HckRunLast` → `ZR_CD_HckAsOf`; `ZI_CD_HckFinding` → `ZI_CD_HckCheckRes`, `ZI_CD_HckCheckOpen`, `ZI_CD_HckOpenSum`; `ZI_CD_HckMetricBase` → `ZI_CD_HckRunMetric`; roots `ZR_CD_HckFind`, `ZR_CD_HckMetric` → `ZR_CD_HckCheck` → `ZR_CD_HckCategory`, `ZR_CD_HckRed`; `ZR_CD_HckRun`, `ZR_CD_HckKpi` → eight `ZC_CD_Hck*` → DDLX → DCL `ZC_CD_HCKDASH` → SRVD `ZUI_CD_HCK_DASH`; class `ZCL_CD_HCK_DASH_CDS_TEST` (6 tests) | Active; tests green |
+| 1e.4 | **Transactions, SAP side (src/core):** `ZI_CD_TrxItem` → `ZI_CD_TrxItemPay`, `…Chq` → `…Enc`, `…Bank`, `…Ret`, `…Noc`, `ZI_CD_TrxRetNocU`; roots `ZR_CD_TrxPayRun`, `ZR_CD_TrxRetNoc` → `ZR_CD_TrxFlow` → `ZR_CD_TrxKpi`, `ZR_CD_TrxProblem` → five `ZC_CD_Trx*` → DDLX → DCL `ZC_CD_TRXDASH` → SRVD `ZUI_CD_TRX_DASH`; class `ZCL_CD_TRX_DASH_CDS_TEST` (8 tests). ST05 / PlanViz at peak (TXD-12) | Active; tests green; runtime recorded |
+| 1e.5 | Bindings (OData V4 – UI), activate and **Publish**: **`ZUI_CD_EBS_DASH_O4`**, **`ZUI_CD_HCK_DASH_O4`**, **`ZUI_CD_TRX_DASH_O4`**. Fiori elements apps (ALP): `ZCD_EBS_DASH` (main `EbsStatement`; second app on `EbsFinding`, list report on `EbsRun`), `ZCD_HCK_DASH` (main `HealthCheck`), `ZCD_TRX_DASH` (main `Transaction`; list report on `PaymentRun`) | `$metadata` shows `Aggregation.ApplySupported`; apps open |
+| 1e.6 | **After SE11** (transactions part B, `cds/`): replace the VERIFY-SE11 placeholders (`Dashboard_Transactions.md` §4) in `ZI_CD_TrxReqLog`, `ZI_CD_TrxAckU`, `ZI_CD_TrxChqStat`, `ZI_CD_TrxRtrv`; create in ADT `ZI_CD_TrxReqLog` → `ZI_CD_TrxRequest`; `ZI_CD_TrxAckU` → `ZI_CD_TrxAck`; `ZI_CD_TrxChqStat`, `ZI_CD_TrxRtrv`, `ZI_CD_TrxFinFlow` → `ZR_CD_TrxReqFlow` → `ZC_CD_TrxReqFlow` (+ DDLX) → DCL `ZC_CD_TRXREQ` → SRVD `ZUI_CD_TRX_REQ` → binding **`ZUI_CD_TRX_REQ_O4`**; class `ZCL_CD_TRX_REQ_CDS_TEST` (4 tests); app `ZCD_TRX_REQ` | Request funnel and *Errored requests* tile live |
+| 1e.7 | Roles: `ZCD_OPS_EBS_DISPLAY` (EBS 03), `ZCD_OPS_HCK_DISPLAY` (HCK 03), `ZCD_OPS_TRX_DISPLAY` (CORE 03 + BUKRS) with catalog and `S_SERVICE` (`config/auth_zcd_ops.md` §3a) | EBD-11, HCD-08, TXD-09 |
+
+## Step 1f — Production-support overview page and launchpad space (`Dashboard_Production_Support.md`)
+
+| # | Item | Done when |
+|---|---|---|
+| 1f.1 | Activate (pull, after 1d and 1e): `ZI_CD_OpsFreshU` → `ZR_CD_OpsFreshness`, `ZR_CD_OpsCritExc` → `ZC_CD_OpsFreshness`, `ZC_CD_OpsCritExc` → DDLX → DCL `ZC_CD_OPSOVERVIEW` → SRVD `ZUI_CD_OPS_OVERVIEW`; class `ZCL_CD_OPS_OVW_CDS_TEST` (5 tests) | Active; tests green |
+| 1f.2 | Binding **`ZUI_CD_OPS_OVERVIEW_O4`** (OData V4 – UI), publish | All ten entity sets in `$metadata` |
+| 1f.3 | Fiori elements **overview page** app `ZCD_OPS_OVW` (data source `ZUI_CD_OPS_OVERVIEW_O4`; cards as §1 of the doc); after 1e.6 add `ZUI_CD_TRX_REQ_O4` as second data source with the "Requests" card | Cards render; each card navigates |
+| 1f.4 | Launchpad: space **Production Support** (`ZCD_OPS_SP_PROD_SUPPORT`) with pages Overview, File monitoring, EBS validation, Health checks, Transactions, Exceptions; catalogs `ZCD_OPS_TC/BC_OVW`, `_EBS`, `_HCK`, `_TRX`; target mappings (`ZCDOpsOverview-display`, `ZCDEbsValidation-analyze`, `ZCDHealthCheck-analyze`, `ZCDTransaction-analyze`, `ZCDOpsException-manage`; `ZCDPaymentTrace-display` proposed); dynamic tiles of each doc | Space visible for the role; tiles count |
+| 1f.5 | Business role `ZCD_OPS_PROD_SUPPORT` (space, catalogs, all `S_SERVICE`, ZCD_OPS 03 for FMON / EBS / HCK / CORE + own BUKRS) | OVP-05 |
 
 ## Step 1e — PRISM status API (own approved change, switch S-PRISM; `PRISM_Status_API.md`)
 
@@ -110,7 +135,7 @@ Not in this step: navigation to the payment trace (proposed — the trace does n
 | 2.4 EBS | `ZIF_CD_EBS_TYPES` → other `ZIF_CD_EBS_*` → `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_BTC_RESOLVER`, DAOs, parsers → `ZCL_CD_EBS_FACTORY` + `ZCL_CD_EBS_INJECTOR` → `ZCL_CD_EBS_RULE_BASE` → 28 `ZCL_CD_EBS_R_*` → sources → `ZCL_CD_EBS_ENGINE` → report `ZCD_EBS_VALIDATE` |
 | 2.5 FMON | `ZIF_CD_FMON_TYPES` → other `ZIF_CD_FMON_*` → pure classes (status, rules, query, util) → DAO, DDIC describer, calendar, adapter, lot reader → factory + injector → 9 checks → engine → report `ZCD_FMON_MONITOR` |
 | 2.6 HCK | `ZIF_CD_HCK_TYPES` → other `ZIF_CD_HCK_*` → pure classes (stats, threshold, score, cycle_eval, agg_query, param, report_html) → DAO → factory + injector → 11 checks → engine → report `ZCD_MORNING_REPORT` |
-| 2.7 CDS | `cds/` (created in ADT, not via abapGit): basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` (incl. `ZI_CD_FmonFlowCube` / `ZC_CD_FmonFlowQry` after step 1d.1) |
+| 2.7 CDS | `cds/` (created in ADT, not via abapGit): basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` (incl. `ZI_CD_FmonFlowCube` / `ZC_CD_FmonFlowQry` after step 1d.1); the transactions request side (`ZI_CD_Trx*`, `ZR_/ZC_CD_TrxReqFlow`, `ZUI_CD_TRX_REQ`) only in step 1e.6, after SE11 |
 
 Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10), then the full package before releasing the transport.
 

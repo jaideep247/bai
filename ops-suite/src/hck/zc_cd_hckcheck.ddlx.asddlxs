@@ -1,0 +1,139 @@
+// UI annotations: HCK health check dashboard (analytical list page)
+// Charts: checks by category and status (default), open exceptions by category and check.
+// VERIFY-ADT: rendering in the V4 analytical list page.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Health check', typeNamePlural: 'Health checks',
+                  title: { type: #STANDARD, value: 'CheckId' },
+                  description: { type: #STANDARD, value: 'CheckText' } }
+@UI.chart: [ { qualifier: 'ByCategory',
+               title: 'Checks by category and status (last completed run)',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'Category' ],
+               measures: [ 'RedCheckCount', 'AmberCheckCount', 'GreenCheckCount', 'WarmupCheckCount', 'NoResultCheckCount' ],
+               dimensionAttributes: [ { dimension: 'Category', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RedCheckCount', role: #AXIS_1 },
+                                    { measure: 'AmberCheckCount', role: #AXIS_1 },
+                                    { measure: 'GreenCheckCount', role: #AXIS_1 },
+                                    { measure: 'WarmupCheckCount', role: #AXIS_1 },
+                                    { measure: 'NoResultCheckCount', role: #AXIS_1 } ] },
+             { qualifier: 'OpenByCheck',
+               title: 'Open exceptions by category and check',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'Category', 'CheckId' ],
+               measures: [ 'OpenRedCount', 'OpenAmberCount' ],
+               dimensionAttributes: [ { dimension: 'Category', role: #CATEGORY },
+                                      { dimension: 'CheckId', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'OpenRedCount', role: #AXIS_1 },
+                                    { measure: 'OpenAmberCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StatusOrder', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByCategory' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'Open',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'OpenByCheck' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_HckCheck with
+{
+  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'Check', position: 10 },
+               { id: 'Check', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Check', position: 10 },
+               { id: 'Measures', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Measures',
+                 label: 'Last run and open exceptions', position: 20 },
+               { id: 'AsOf', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'AsOf',
+                 label: 'Morning report as of', position: 30 },
+               { id: 'Metrics', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Metrics',
+                 label: 'Metric history (31 days)', position: 20 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Findings', position: 30 },
+               { id: 'HeaderStatus', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'CheckStatus',
+                 position: 10 },
+               { id: 'HeaderAsOf', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'ReportAge',
+                 position: 20 } ]
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CheckId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Check text'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  CheckText;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Category;
+  @EndUserText.label: 'Category text'
+  @UI.identification: [ { position: 40 } ]
+  CategoryText;
+  @EndUserText.label: 'Priority (H, M, L)'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Priority;
+  @EndUserText.label: 'Check class'
+  @UI.identification: [ { position: 60 } ]
+  ClassName;
+  @EndUserText.label: 'Status in the last run'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.identification: [ { position: 70, criticality: 'StatusCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  @UI.dataPoint: { qualifier: 'CheckStatus', title: 'Status in the last run', criticality: 'StatusCriticality' }
+  CheckStatus;
+  @UI.hidden: true
+  StatusCriticality;
+  @UI.hidden: true
+  StatusOrder;
+  @EndUserText.label: 'Oldest due date (open)'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  OldestDueDate;
+  @UI.hidden: true
+  AsOfRunId;
+  @EndUserText.label: 'Overall RAG of the run'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 5 } ]
+  AsOfRunRag;
+  @EndUserText.label: 'Morning report as of (last completed run)'
+  @UI.lineItem: [ { position: 200, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 10 } ]
+  AsOfAt;
+  @EndUserText.label: 'Report age (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 20, criticality: 'MonitorCriticality' } ]
+  @UI.dataPoint: { qualifier: 'ReportAge', title: 'Report age (minutes)', criticality: 'MonitorCriticality' }
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Report stale'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 30, criticality: 'MonitorCriticality' } ]
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Checks'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 10 } ]
+  CheckCount;
+  @EndUserText.label: 'Red checks'
+  RedCheckCount;
+  @EndUserText.label: 'Amber checks'
+  AmberCheckCount;
+  @EndUserText.label: 'Green checks'
+  GreenCheckCount;
+  @EndUserText.label: 'Checks in warm-up'
+  WarmupCheckCount;
+  @EndUserText.label: 'Checks without result'
+  NoResultCheckCount;
+  @EndUserText.label: 'Metric rows in the run'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 20 } ]
+  MetricCount;
+  @EndUserText.label: 'Findings in the run'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 30 } ]
+  RunFindingCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 40 } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Open red exceptions'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 50 } ]
+  OpenRedCount;
+  @EndUserText.label: 'Open amber exceptions'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 60 } ]
+  OpenAmberCount;
+}

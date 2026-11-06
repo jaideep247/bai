@@ -47,3 +47,17 @@ Permitted activities (SU21 → Activities):
 Segregation of duties: the same user must not hold 43 and 85 for the same payment engine area and company code; the apps additionally refuse an approval by the requester (four-eyes).
 
 **PRISM status API (2026-11-06, `docs/PRISM_Status_API.md` §9).** The API checks `ZCD_OPS` ACTVT **01** for FMON (it *creates* an evidence record in the suite's own store). Activity 01 / FMON is also in `Z_CD_OPS_CONFIG`; the endpoint is therefore additionally restricted by the SICF authorisation value `ZCD_PRISM` (`S_ICF`), which only `Z_CD_OPS_PRISM` carries — a configuration owner cannot post PRISM events. The role is created in DV1 and assigned in PS4 only at switch S-PRISM (`Implementation_Order.md` step 1e). The bgPF unit runs under the calling user and needs no further authorisation (suite tables only; VERIFY in QA1).
+
+## 3a. Dashboards (read-only, decision 2026-11-06)
+
+| Dashboard (service) | ZCD_PE_AREA | BUKRS | ACTVT | DCL |
+|---|---|---|---|---|
+| File monitoring (`ZUI_CD_FMON_FLOW`) | FMON | — | 03 | `ZC_CD_FMONFLOW` |
+| EBS validation (`ZUI_CD_EBS_DASH`) | EBS | — (area-wide, as the EBS run) | 03 | `ZC_CD_EBSDASH` |
+| Health checks (`ZUI_CD_HCK_DASH`) | HCK | — | 03 | `ZC_CD_HCKDASH` |
+| Transactions (`ZUI_CD_TRX_DASH`, `cds/ZUI_CD_TRX_REQ`) | **CORE** | **company code of the open item** (payment run rows: area only) | 03 | `ZC_CD_TRXDASH`, `ZC_CD_TRXREQ` |
+| Production-support overview (`ZUI_CD_OPS_OVERVIEW`) | the area of each card / row | as the area dashboard | 03 | the area DCLs + `ZC_CD_OPSOVERVIEW` |
+
+**Why CORE for transactions (no new value):** the transactions dashboard shows the same evidence as the 360° payment trace (request, open item, payment run, bank line, return), which is guarded by CORE 03 plus the company code of each item (`Payment_Trace.md` §6). One area keeps one rule for "may see payment evidence"; a new value (e.g. TRX) would need a domain change and a second grant for the same data. CORE 03 already covers the read-only alert / parameter apps — a user who should see neither gets no CORE. Company code is mapped in the DCL, so `Z_CD_OPS_OPERATOR` (own company codes) sees only its own transactions.
+
+Roles: `Z_CD_OPS_DISPLAY` (ZCD_PE_AREA *, 03, BUKRS *) covers all dashboards. Business roles per launchpad page (`Dashboard_Production_Support.md` §5) add the catalogs and `S_SERVICE` for the bindings; they grant no activity other than 03.
