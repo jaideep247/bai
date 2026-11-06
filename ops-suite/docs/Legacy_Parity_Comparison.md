@@ -3,7 +3,7 @@
 > **First principle:** business rules are copied from legacy, not reasoned out. Every difference is deliberate, listed here and covered by a test.
 > **Analogy:** moving house with an inventory list — every box that left the old house is ticked off in the new one, and anything thrown away is written down with the reason.
 
-**Baseline compared:** `BAI_Validators_ABAP75_Refactor_Pack_v4_FIX195_DOC1R`; conflicts with the first framework `jaideep247/src` are in §3a — (29 Dec 2025, latest validator logic) and `bai-validation-framework-COMPLETE (4)` (latest mass-validator framework). Earlier packs (COMPLETE 1–3, refactor v1–v3, `ZFIR_BANK_POST_VALIDATION_V2`) were read for intent only.
+**Baseline compared:** `BAI_Validators_ABAP75_Refactor_Pack_v4_FIX195_DOC1R` (29 Dec 2025, latest validator logic) and `bai-validation-framework-COMPLETE (4)` (latest mass-validator framework). Earlier packs (COMPLETE 1–3, refactor v1–v3, `ZFIR_BANK_POST_VALIDATION_V2`) were read for intent only. Conflicts with the first framework `jaideep247/src` are in §3a.
 
 **Status:** Draft — parity is proven by the unit tests named below (not yet executed in SAP) and must be confirmed by a shadow run in QA1 (§4).
 
