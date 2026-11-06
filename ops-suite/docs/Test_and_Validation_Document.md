@@ -197,6 +197,21 @@ ABAP Unit: `ZCL_CD_TRX_DASH_CDS_TEST` (8 CDS tests: flow bucket per evidence, pr
 
 ABAP Unit: `ZCL_CD_OPS_OVW_CDS_TEST` (5 CDS tests: one freshness row per monitor, stale by the area's threshold, open B / E exceptions only, overdue days, hidden bank-file message). QA1: **OVP-01 … OVP-08** (doc §7).
 
+### 6.13 Patterns — PCRE, complete value (`ZCD_OPS_PATTERN_CHECK`, `ZCD_OPS_PATTERN_MIGRATE`)
+
+| ID | Scenario | Configuration | Expected result | Actual / status |
+|---|---|---|---|---|
+| PAT-01 | Whole-value match | Job step `ZCD_PAYM_WIRE` (no `.*`); jobs ZCD_PAYM_WIRE and ZCD_PAYM_WIRE_CORP ran | Only ZCD_PAYM_WIRE is the step's instance; pattern check shows ZCD_PAYM_WIRE_CORP as NO_MATCH | pending |
+| PAT-02 | Case ignored | FMON pattern `ach_pnc_.*` | File ACH_PNC_20261106_01 resolved to the interface | pending |
+| PAT-03 | Invalid pattern refused on save | Alerting app: CHECK_PATTERN `(SLA` | Message 418 on the field, not saved | pending |
+| PAT-04 | Invalid pattern at runtime | ZCD_EBS_FLOW_PAT row `.*(COLL` inserted directly (SE16, test client) | Lines with XBLNR blocked FLOW_PATTERN_INVALID (B); FMON / HCK / alert equivalents: PATTERN_INVALID, E373, alert log F with 742 | pending |
+| PAT-05 | Pattern check | Area HCK_JOB, window last 7 days, ad-hoc `ZCD_PAYM_.*` | INVALID / NO_MATCH / UNUSED rows first, MATCHED rows with source; summary message 746 | pending |
+| PAT-06 | Migration test mode | CP rows `ACH*`, `ZCD_*`, `*SLA*`, `A*B*C*D*` in a 10-character field | Old → new: `ACH.*`, `ZCD_.*`, `.*SLA.*`; TOO_LONG for the last; nothing written | pending |
+| PAT-07 | Migration update mode | As PAT-06 with a customizing request | CONVERT rows WRITTEN, flow pattern re-keyed, change stamps, request holds the rows; rerun shows ALREADY_PCRE | pending |
+| PAT-08 | Capped value read | Pattern check with P_MAX 10 | Message 747; list from 10 values | pending |
+
+ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, trailing blanks, invalid, blank, literal count), `ZCL_CD_OPS_PATTERN_CHECK` (matched / no match / unused / invalid / overlap, conversion rule: wildcards, metacharacters, escapes, blank; plan), `ZCL_CD_OPS_PATTERN_DAO` (OSQL), and the converted call sites (resolver, FMON rules / engine, alert policy / router, HCK param / DAO / job checks / cycle / suppression). Offline: `tools/tests/test_no_cp_patterns.py`, `test_pattern_dao_fields.py`, `test_rap_generate.py`.
+
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 
 Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–D11 of that document.

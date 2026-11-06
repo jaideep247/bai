@@ -7,19 +7,25 @@ Legend: `‹SE11›` = field name of an existing custom table that is **not know
 
 ## ZCD_FMON_IFACE (interface definition)
 
+`NAME_PATTERN` is **PCRE matched to the complete file name, case ignored** (user decision 2026-11-06), e.g.
+`ACH_PNC_[0-9]{8}_.*\.txt` - escape a literal dot as `\.`; the row with the most literal characters wins. The
+configuration app refuses a pattern that does not compile (message 418). Before activating a pattern, run
+`ZCD_OPS_PATTERN_CHECK` (area FMON_FILE) with it as ad-hoc pattern: it lists the file names of the last days the
+pattern captures and the ones no pattern captures.
+
 | IFACE_ID | DIR | FILE_TYPE | SOURCE_SYS | TARGET_SYS | PAY_METHOD | LOB | BANK_KEY | NAME_PATTERN | MIN_BYTES | MAX_BYTES | ACK_EXPECTED | ACK_LEVEL | OWNER | ACTIVE |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ACH_PNC_DISB_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | X | PAYMENT | ‹team› | X |
-| WIRE_JPMC_OUT | O | PAYMENT | * | PRISM | WIRE | * | JPMC | `‹confirm pattern›` | 1 | 0 | X | PAYMENT | ‹team› | X |
+| ACH_PNC_DISB_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | X | PAYMENT | ‹team› | X |
+| WIRE_JPMC_OUT | O | PAYMENT | * | PRISM | WIRE | * | JPMC | `‹confirm PCRE›` | 1 | 0 | X | PAYMENT | ‹team› | X |
 | PAYREQ_PRISM_IN | I | API | PRISM | SAP | * | * | * | (blank: API calls, no file name) | 0 | 0 | | | ‹payment engine RTB› | X |
-| CHECK_POSPAY_OUT | O | POSPAY | * | PRISM | CHECK | * | ‹bank› | `‹confirm pattern›` | 1 | 0 | ‹confirm› | FILE | ‹team› | X |
-| ACH_COLL_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | X | FILE | ‹team› | X |
-| BLACKLINE_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm pattern›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
-| STRIPE_PAYOUT_IN | I | OTHER | * | SAP | CARD | * | | `‹confirm pattern›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
-| BAI_JPMC_IN | I | STATEMENT | * | SAP | | * | JPMC | `‹confirm pattern›` | 1 | 0 | | | ‹team› | X |
-| BAI_BOA_IN | I | STATEMENT | * | SAP | | * | BOA | `‹confirm pattern›` | 1 | 0 | | | ‹team› | X |
-| ACH_RET_PNC_IN | I | RETURNS | * | SAP | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | | | ‹team› | X |
-| NOC_PNC_IN | I | NOC | * | SAP | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | | | ‹team› | X |
+| CHECK_POSPAY_OUT | O | POSPAY | * | PRISM | CHECK | * | ‹bank› | `‹confirm PCRE›` | 1 | 0 | ‹confirm› | FILE | ‹team› | X |
+| ACH_COLL_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | X | FILE | ‹team› | X |
+| BLACKLINE_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
+| STRIPE_PAYOUT_IN | I | OTHER | * | SAP | CARD | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
+| BAI_JPMC_IN | I | STATEMENT | * | SAP | | * | JPMC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| BAI_BOA_IN | I | STATEMENT | * | SAP | | * | BOA | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| ACH_RET_PNC_IN | I | RETURNS | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| NOC_PNC_IN | I | NOC | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 
 Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL = PAYMENT`), collections per file (`FILE`); Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK (`ACK_EXPECTED` blank). A source-specific row (e.g. `SOURCE_SYS = PCLM`) is only needed when that source differs (other SLA, pattern or owner); otherwise the `*` row serves every source and LOB.
 
@@ -181,4 +187,4 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 
 ## Alerting
 
-FMON calls the core router (`ZIF_CD_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCD_OPS_ALRULE` (owned by core), e.g. payment engine area `FMON`, minimum severity `E`, group1 pattern `ACH_*`. FMON keeps no alert configuration of its own.
+FMON calls the core router (`ZIF_CD_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCD_OPS_ALRULE` (owned by core), e.g. payment engine area `FMON`, minimum severity `E`, group1 pattern `ACH_.*` (PCRE, complete value, case ignored). FMON keeps no alert configuration of its own.

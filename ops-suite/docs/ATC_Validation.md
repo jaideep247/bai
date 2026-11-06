@@ -9,7 +9,7 @@
 |---|---|---|---|
 | Syntax, typing, house rules | abaplint 2.x, ABAP 7.58, SAP stubs (`abaplint/deps`) and the suite's own abapGit table/message definitions | `ops-suite/abaplint.json` | **0 issues / 309 files** |
 | ATC-equivalent checks | abaplint rules mapped to SAP Code Inspector / SLIN / security / DDIC checks | `ops-suite/abaplint.atc.json` | **2 findings = 2 documented exemptions** (§4) |
-| House rules not in abaplint | `tools/portable_checks.py` | — | 21/21 checks passed (incl. `name_lengths`, `method_names`, `pcre_only`, `test_path_every_class`, `osql_doubles_complete`, `no_real_dao_in_tests`) |
+| House rules not in abaplint | `tools/portable_checks.py` | — | 22/22 checks passed (incl. `name_lengths`, `method_names`, `pcre_only`, `no_cp_patterns`, `test_path_every_class`, `osql_doubles_complete`, `no_real_dao_in_tests`) |
 | Continuous | GitHub Actions `.github/workflows/abaplint.yml` | both configs on every push | fails on any new finding |
 
 ## 2. ATC check categories covered offline

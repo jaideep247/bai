@@ -88,6 +88,20 @@ Kept as `INTO` (71 evaluated loops): the work area is changed as a local copy or
 2. **HANA table partitioning only as a Basis decision after gate 3 volumes.** Partitioning `ZCD_OPS_FINDING`, `ZCD_OPS_RUN`, `ZCD_FMON_EVENT` or `ZCD_HCK_METRIC` is considered only when the gate 3 (QA1 / production-like) volumes show row counts in the **hundreds of millions** for a table; the purge (`ZCD_OPS_PURGE`, retention days per table in ZCD_OPS_PARAM) is already packaged and keeps the tables at their retention size. Partitioning is a Basis / DBA decision (range on the date / run ID, re-partitioning effort), not an application change.
 3. **HCK date literals as host variables (low value).** A few HCK aggregate reads compare a date column with a literal computed in ABAP and embedded into the dynamic WHERE (escaped via `cl_abap_dyn_prg`). Binding them as host variables would let HANA reuse one statement plan per check instead of one per day — low value (one execution per check and day, statement cache absorbs it); noted, not built.
 
+## 6b. Patterns are matched in ABAP, not in SQL (PCRE, 2026-11-06)
+
+Configured patterns are PCRE matched to the complete value, case ignored. ABAP SQL `LIKE_REGEXPR( PCRE = …, VALUE = … )` was probed and **not used**: abaplint 2.120.92 does not parse it (the offline lint gate), and a regular expression on HANA cannot use an index either (the former `CP` range became `LIKE 'ZCD_%'`, which could). The reads stay bounded by their non-pattern conditions:
+
+| Read | Before (CP range in SQL) | After |
+|---|---|---|
+| TBTCO job runs (job cycle, technical jobs, job runtime) | `jobname IN @range` + date window, UP TO 5 000 | `SELECT DISTINCT jobname` of the date window (UP TO 20 000 names; at the cap message 747, the check fails loudly), PCRE in ABAP, runs of the matched names by FOR ALL ENTRIES + date window, sorted and capped at 5 000 as before |
+| TBTCO unresolved jobs | `jobname IN @range` + open statuses | distinct names of the open statuses, then as above (oldest first) |
+| BALHDR counters | `object IN @range` + day | grouped per object / subobject for the day (one row per pair), PCRE in ABAP |
+| Job cycles | `cycle_id IN @range` | active cycles (customizing rows), PCRE in ABAP |
+| Pattern check values | — | `SELECT DISTINCT` of the source column in the window, ORDER BY, UP TO P_MAX |
+
+Cost: the distinct-name read scans the date window of TBTCO instead of a name prefix — a few thousand names per day; measure at gate 3 together with the morning report runtime. `matches( )` caches compiled expressions per pattern.
+
 ## 7. VERIFY-ADT (first activation / ABAP Unit in DV1)
 
 - Fix 6: internal table as JOIN source (`INNER JOIN @it_requests`) — on HANA since 7.52; also inside `cl_osql_test_environment` with the ACDOCA double.

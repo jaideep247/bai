@@ -47,7 +47,7 @@ flowchart LR
 | Object | Role | Test level |
 |---|---|---|
 | ZIF_CD_OPS_ALERT | Port: `dispatch( run, findings )`, `send( route, subject, html )` | — |
-| ZCL_CD_OPS_ALERT_POLICY | Pure decisions (severity floor, CP patterns, run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
+| ZCL_CD_OPS_ALERT_POLICY | Pure decisions (severity floor, PCRE patterns (complete value, case ignored), run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
 | ZCL_CD_OPS_ALERT_ROUTER | Orchestration, logging, failure isolation | Application with doubles, 8 tests |
 | ZCL_CD_OPS_ALERT_DAO | ZCD_OPS_ALRULE / _CHN / _LOG | OSQL (QA1) |
 | ZCL_CD_OPS_CHN_EMAIL / _APPLOG / _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT | Integration (QA1); `ZCL_CD_OPS_CHN_HTTP=>to_json` / `dedup_key` are pure (9 domain tests) |
@@ -62,6 +62,10 @@ The router and its channels commit (BCS sends on commit, BAL saves to the databa
 `ZCD_OPS_PARAM`: `ALERT_<route>` and `ALERT_DEFAULT` recipient lists for `send( )`; `ALERT_ESCALATION_WINDOW_H` (default 24).
 
 Example rows: `config/alert_seed.md`.
+
+### Rule patterns (PCRE, user decision 2026-11-06)
+
+RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched to the **complete** rule ID / check code / group of the finding, case ignored; blank = any. `.*SLA.*` = every check code containing SLA; `NOC_AGING` = only that code (a partial pattern is no match). The alerting app refuses a pattern that does not compile (message 418). A rule whose stored pattern does not compile is **not applied and logged FAILED** in ZCD_OPS_ALLOG with message 742 — it shows in the morning report's alert-delivery check, never as a silent no-match. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, areas ALERT_RULE / ALERT_CHK / ALERT_GRP1 / ALERT_GRP2 (values of the findings of the window).
 
 ### Extension guide
 

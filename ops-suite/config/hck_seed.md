@@ -31,9 +31,16 @@
 
 Alert routing of findings (channels, recipients, throttling, quiet hours) is customizing of the core
 table `ZCD_OPS_ALRULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
-digest per run, rule/group pattern `*` (confirm with the core owner).
+digest per run, rule/group pattern blank = any (patterns are PCRE matched to the complete value,
+case ignored; `*` alone is not a valid PCRE - confirm with the core owner).
 
 ## 2. Check catalog — `ZCD_HCK_DEF`
+
+Pattern lists (PARAM1 of `B_JOB_RUNTIME` / `E_JOBS`, PARAM1-2 of `B_APPLOG`, PARAM2 of `B_CYCLE_*`) and the
+job names of `ZCD_JOB_STEP` are **PCRE matched to the complete value, case ignored** (user decision
+2026-11-06): `ZCD_.*` = every name starting with ZCD_, `ZCD_POST_GL` = exactly that job. List items are
+separated by `,` or `;` (an item cannot contain them, so no `{m,n}` quantifier). Check a pattern with
+`ZCD_OPS_PATTERN_CHECK` before saving it; an invalid pattern raises message 373 / a PATTERN_INVALID finding.
 
 | CHECK_ID | DESCRIPTION | CAT | CLASS_NAME | ACTIVE | SEQ | PRIO | PARAM1 | PARAM2 | PARAM3 | TIMEOUT_SEC |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -43,15 +50,15 @@ digest per run, rule/group pattern `*` (confirm with the core owner).
 A_GL_TRANSFER PARAM4 = BKPF-AWTYP of the transfer (default `FKKSU`, VERIFY-DDIC); a key counts as transferred
 per company code only with a non-reversed BKPF of that type (A43). Metric GL_MISSING_KEYS carries the
 uncapped count.
-| B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_*` | `1` (yesterday) | | 120 |
-| B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK*,ZCD*` (**confirm objects**) | | `1` | 120 |
+| B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_.*` | `1` (yesterday) | | 120 |
+| B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK.*,ZCD.*` (**confirm objects**) | | `1` | 120 |
 | B_VOLUME | Payment engine volumes (yesterday) | B | ZCL_CD_HCK_C_VOLUME | X | 50 | L | `1` (offset) | `1` (days) | | 300 |
 | B_CYCLE_TODAY | Job cycles of today (so far) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 60 | H | `0` | (blank = all) | | 60 |
 | B_CYCLE_PRIOR | Job cycles of yesterday (incl. after-midnight steps) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 61 | H | `1` | | | 60 |
 | C_OVERDUE_EXC | Owned exceptions past their due date | C | ZCL_CD_HCK_C_OVERDUE_EXC | X | 70 | H | | | | 60 |
 | C_PPO_BACKLOG | Postprocessing (PPO) backlog older than 3 days | C | ZCL_CD_HCK_C_GENERIC_AGG | X | 80 | M | | | | 120 |
 | D_CONFIG_DRIFT | Customizing drift vs golden baseline | D | ZCL_CD_HCK_C_CONFIG_DRIFT | X | 90 | M | | | | 120 |
-| E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_*` | `120` (min) | `30` (grace min) | 60 |
+| E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_.*` | `120` (min) | `30` (grace min) | 60 |
 | E_SYSTEM | Short dumps, update errors, locks | E | ZCL_CD_HCK_C_TECH_SYS | X | 110 | M | | | | 60 |
 | E_ALERT_DELIVERY | Alert delivery health (failed / throttled) | E | ZCL_CD_HCK_C_ALERT_HEALTH | X | 120 | M | `24` (hours) | | | 60 |
 | C_PRQ_NO_SPE | Payment request failed without SPE row (source never told) | C | ZCL_CD_HCK_C_PRQ_SPE | X | 72 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 request key›;STATUS=ZZ_STATUS;DATE=‹SE11 date›` | `FAIL=‹confirm failure values›;OK=SUCCESS;DAYS=3;MAX=200` | `TABLE=ZCD_SPE_EXCP_LOG;KEY=‹SE11 request key›;DATE=‹SE11 date›` | 120 |
@@ -173,26 +180,26 @@ After every approved transport: run `ZCD_MORNING_REPORT` with **Take config base
 
 | CYCLE_ID | STEP | DESCRIPTION | JOBNAME (pattern) | PROGRAM | PRED | DAY_OFFSET | WINDOW_FROM | WINDOW_TO | MAX_MIN | SKIPPABLE | CRITICAL |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| COLL_DAY | 010 | Stripe payout / chargeback | `ZSTRP_PAYOUT*` | | | 0 | 06:00 | 06:30 | 30 | | X |
-| COLL_DAY | 020 | BAI load JPMC + BOA | `ZBAI_FILE_LOAD*` | | | 0 | 08:20 | 08:50 | 45 | | X |
-| COLL_DAY | 030 | ACH PNC & PUB evening (first run) | `ZCOLL_PAY_EVE*` | RFKK_MA_SCHEDULER | | 0 | 21:15 | 21:45 | 45 | | |
-| DISB_DAY | 010 | Payment request cycle morning (first run) | `ZPAYM_REQ_MORN*` | RFKK_MA_SCHEDULER | | 0 | 04:00 | 04:30 | 30 | | X |
-| DISB_DAY | 020 | LifeCo wire / ACH morning | `ZPAYM_REQ_LIFE*` | RFKK_MA_SCHEDULER | 010 | 0 | 07:15 | 07:45 | 30 | | |
-| DISB_DAY | 030 | Regular payment cycle (first hourly run) | `ZPAYM_REQ_REG*` | RFKK_MA_SCHEDULER | | 0 | 10:00 | 10:30 | 30 | | |
-| DISB_DAY | 040 | Wire CORP payment | `ZPAYM_WIRE_CORP*` | RFKK_MA_SCHEDULER | | 0 | 13:30 | 14:00 | 30 | | X |
-| DISB_DAY | 050 | Wire acknowledgment | `ZPAYM_WIRE_ACK*` | | 040 | 0 | 14:00 | 18:00 | 30 | | |
-| DISB_DAY | 060 | ACH PNC & PUB evening (first run) | `ZPAYM_REQ_EVE*` | RFKK_MA_SCHEDULER | | 0 | 17:00 | 17:30 | 30 | | |
-| DISB_DAY | 070 | ECT check payment | `ZPAYM_CHECK_ECT*` | RFKK_MA_SCHEDULER | | 0 | 19:30 | 20:00 | 45 | | X |
-| DISB_DAY | 080 | ACH CORP payment | `ZPAYM_ACH_CORP*` | RFKK_MA_SCHEDULER | | 0 | 20:00 | 20:30 | 45 | | X |
-| DISB_DAY | 090 | ACH acknowledgment | `ZPAYM_ACH_ACK*` | | 080 | 0 | 20:30 | 23:59 | 30 | | |
-| RECON_EOD | 010 | Recon key close / transfer / GL OFSAA | `ZPOST_GL*` | | | 0 | 23:30 | 23:59 | 60 | | X |
-| RECON_EOD | 020 | BlackLine expense (LifeCo wire, ACH PNC, PUB) | `ZEXPENSE_GL*` | | 010 | 1 | 02:00 | 02:30 | 60 | | X |
+| COLL_DAY | 010 | Stripe payout / chargeback | `ZSTRP_PAYOUT.*` | | | 0 | 06:00 | 06:30 | 30 | | X |
+| COLL_DAY | 020 | BAI load JPMC + BOA | `ZBAI_FILE_LOAD.*` | | | 0 | 08:20 | 08:50 | 45 | | X |
+| COLL_DAY | 030 | ACH PNC & PUB evening (first run) | `ZCOLL_PAY_EVE.*` | RFKK_MA_SCHEDULER | | 0 | 21:15 | 21:45 | 45 | | |
+| DISB_DAY | 010 | Payment request cycle morning (first run) | `ZPAYM_REQ_MORN.*` | RFKK_MA_SCHEDULER | | 0 | 04:00 | 04:30 | 30 | | X |
+| DISB_DAY | 020 | LifeCo wire / ACH morning | `ZPAYM_REQ_LIFE.*` | RFKK_MA_SCHEDULER | 010 | 0 | 07:15 | 07:45 | 30 | | |
+| DISB_DAY | 030 | Regular payment cycle (first hourly run) | `ZPAYM_REQ_REG.*` | RFKK_MA_SCHEDULER | | 0 | 10:00 | 10:30 | 30 | | |
+| DISB_DAY | 040 | Wire CORP payment | `ZPAYM_WIRE_CORP.*` | RFKK_MA_SCHEDULER | | 0 | 13:30 | 14:00 | 30 | | X |
+| DISB_DAY | 050 | Wire acknowledgment | `ZPAYM_WIRE_ACK.*` | | 040 | 0 | 14:00 | 18:00 | 30 | | |
+| DISB_DAY | 060 | ACH PNC & PUB evening (first run) | `ZPAYM_REQ_EVE.*` | RFKK_MA_SCHEDULER | | 0 | 17:00 | 17:30 | 30 | | |
+| DISB_DAY | 070 | ECT check payment | `ZPAYM_CHECK_ECT.*` | RFKK_MA_SCHEDULER | | 0 | 19:30 | 20:00 | 45 | | X |
+| DISB_DAY | 080 | ACH CORP payment | `ZPAYM_ACH_CORP.*` | RFKK_MA_SCHEDULER | | 0 | 20:00 | 20:30 | 45 | | X |
+| DISB_DAY | 090 | ACH acknowledgment | `ZPAYM_ACH_ACK.*` | | 080 | 0 | 20:30 | 23:59 | 30 | | |
+| RECON_EOD | 010 | Recon key close / transfer / GL OFSAA | `ZPOST_GL.*` | | | 0 | 23:30 | 23:59 | 60 | | X |
+| RECON_EOD | 020 | BlackLine expense (LifeCo wire, ACH PNC, PUB) | `ZEXPENSE_GL.*` | | 010 | 1 | 02:00 | 02:30 | 60 | | X |
 
 Repeating schedules (auto express checks every 5 min, hourly regular cycle) are watched by `E_JOBS`
 (cancelled / late / long-running) — a cycle step models one expected instance.
 
 **Acceptance test 5 — add a step by customizing only:** insert one `ZCD_JOB_STEP` row, e.g.
-`DISB_DAY | 035 | LifeCo wire / ACH continuous (first run) | ZPAYM_REQ_REG2* | RFKK_MA_SCHEDULER | 030 | 0 | 10:15 | 10:45 | 30 | | ` —
+`DISB_DAY | 035 | LifeCo wire / ACH continuous (first run) | ZPAYM_REQ_REG2.* | RFKK_MA_SCHEDULER | 030 | 0 | 10:15 | 10:45 | 30 | | ` —
 the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no code, no transport of programs.
 
 ## 8. Messages — class `ZCD_OPS`, range 300–399 (merge into `config/zcd_ops_messages.md`)

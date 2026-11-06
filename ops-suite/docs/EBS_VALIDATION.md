@@ -189,11 +189,15 @@ Points of no return: the commit after each package (findings durable) and the al
 | ZCD_EBS_RULE_DEF | RULE_ID | Rule registry: level S/L, class, default severity/action, **BLOCKS_POSTING** default (A27), **NEEDS_POSTING** (rule reads posting evidence — not evaluated for a line expected to post but not posted, §A0) |
 | ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window, **BLOCKS_POSTING** override (blank = registry default, Y, N). RULE_ID **NONE** marks a group that intentionally has no code-specific rule (A03) |
 | ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | **ACCOUNT_NO = 10-character payment engine account as derived from FEBEP-XBLNR** (§A0a; upper case, no leading blank — the active rows are the scope of validation and dashboard), bank key, format, default flow, currency, bank G/L, ACTIVE |
-| ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG) |
+| ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG); PATTERN is PCRE, matched to the **complete value** (`matches( )` — never a partial `find`), **case ignored** (as the former CP wildcards), blank keeps its meaning at each place — see §B3a |
 | ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → payment engine return reason |
 | ZCD_EBS_LOOKUP | LOOKUP_ID | Generic lookups of rule R21: table, key field, key kind (DOCNO / ZTNUM / REFERENCE), key length, status field, allowed values, check codes |
 
 Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow → blank bank + `*`; ISO codes then fall back to the family row (`PMNT-ICDT`), then the proprietary code (BAI type codes in CAMT `Prtry` with issuer BAI reuse the BAI2 rows when `EBS_CAMT_BAI_FALLBACK` = X), then scheme PRTRY. Nothing found → X01.
+
+### B3a. Flow patterns (PCRE, user decision 2026-11-06)
+
+`ZCD_EBS_FLOW_PAT-PATTERN` is PCRE matched to the **complete XBLNR**, case ignored: `JPMC8XX1174412.*` captures every line of that account, `.*COLL.*` every XBLNR containing COLL; `COLL` alone captures only the XBLNR `COLL`. Active rows are tried by PRIORITY; the first match decides the flow, no match = the account default. A pattern that does not compile is refused by the EBS configuration app (message 418); if one is in the table anyway, a line that reaches it before a match is **blocked** with `FLOW_PATTERN_INVALID` (R14 family, severity B, message 547) — its flow is unknown, it is never guessed. The BAI issuer of CAMT proprietary codes is the constant `.*BAI.*`; the CAMT receiver path `MsgRcpt/Id/.*`. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area EBS_FLOW (FEBEP-XBLNR of the configured accounts in the window).
 
 ### B4. Rule catalog
 

@@ -10,7 +10,7 @@ define table zcd_ops_alrule {
   pe_area          : abap.char(4);
   // B, E, W or I - lowest severity that triggers
   min_severity    : abap.char(1);
-  // CP patterns on the finding; blank = any
+  // PCRE on the complete value of the finding, case ignored; blank = any
   rule_pattern    : abap.char(35);
   check_pattern   : abap.char(35);
   group1_pattern  : abap.char(35);

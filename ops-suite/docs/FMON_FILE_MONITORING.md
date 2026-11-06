@@ -179,7 +179,7 @@ Customizing (delivery class C, SM30) — `ddic/fmon/*.tabl.ddl`:
 
 | Table | Key | Purpose |
 |---|---|---|
-| ZCD_FMON_IFACE | IFACE_ID | Interface: direction, file type, source/target, payment method, LOB, bank, CP name pattern, min/max bytes, ack expected, ack level (FILE/PAYMENT), owner, active. Blank/`*` source and LOB = default row |
+| ZCD_FMON_IFACE | IFACE_ID | Interface: direction, file type, source/target, payment method, LOB, bank, name pattern (PCRE, complete file name, case ignored — §B1a), min/max bytes, ack expected, ack level (FILE/PAYMENT), owner, active. Blank/`*` source and LOB = default row |
 | ZCD_FMON_SLA | IFACE_ID, STAGE | Max minutes to reach a stage; BASIS P (from previous stage) or G (from generation / first event); severity |
 | ZCD_FMON_CAL | IFACE_ID, DAY_TYPE | Expected file count and window per NORMAL / MONTH_END / HOLIDAY / RETURNS_DAY; factory calendar ID |
 | ZCD_FMON_SRC | SRC_ID | Legacy source adapter: table name and the field names for file key, file name, date, time or timestamp, status, count, amount, size, checksum, source, LOB; default stage; adapter class (blank = generic) |
@@ -196,6 +196,10 @@ Application data (delivery class A):
 | ZCD_FMON_PRISM | EVENT_ID | PRISM status API events (one row per call, PRISM's ID as key): reference, interface, direction, milestone, occurredAt (UTC), counterparty, PRISM reference, count, total, error code / masked text, business date, receipt, PROCESSED_AT. Indexes UNP (PROCESSED_AT, RECEIVED_AT), REF, BDT. Read by `ZCL_CD_FMON_ADAPTER_PRISM` (`PRISM_Status_API.md`) |
 
 Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT, FMON_PRISM_THROTTLE_MIN, FMON_PRISM_THROTTLE_SCOPE, FMON_PRISM_THROTTLE_METHODS, FMON_PRISM_QUEUE_MAX (§A3a). Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
+
+## B1a. Interface name patterns (PCRE, user decision 2026-11-06)
+
+`ZCD_FMON_IFACE-NAME_PATTERN` is PCRE matched to the **complete file name**, case ignored (`ACH_PNC_.*` — every file starting with ACH_PNC_; `ACH_PNC_[0-9]{8}_.*\.txt` — a literal dot escaped). Blank = the interface is not resolved by name. Several matching rows: the one with the most literal characters wins (`ZCL_CD_OPS_UTIL=>PCRE_LITERALS`), then exact source, then LOB. The FMON configuration app refuses a pattern that does not compile (message 418); one already stored is reported every run as `PATTERN_INVALID` (object key `IFC:<interface>`, message 271) and resolves no file. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area FMON_FILE (file names of ZCD_FMON_FILE in the window, the interface patterns capturing each, names no pattern captures).
 
 ## B2. Class model
 

@@ -7,7 +7,7 @@ define table zcd_hck_suppress {
   key mandt             : abap.clnt not null;
   key suppress_uuid     : sysuuid_x16 not null;
   check_id              : abap.char(20);
-  // Pattern on the finding's object key (blank = every finding of the check), e.g. HCK_A01/*/US01
+  // PCRE on the complete object key, case ignored (blank = every finding of the check), e.g. HCK_A01/.*/US01
   key_pattern           : abap.char(70);
   // Company code the suppression is limited to (blank = all); matched inside the object key
   bukrs                 : abap.char(4);

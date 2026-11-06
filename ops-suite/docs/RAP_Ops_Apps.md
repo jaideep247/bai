@@ -35,7 +35,7 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 - **Posting gate** (`ZCL_CD_EBS_ENGINE->validate_for_posting`, enforce mode): an approved release turns exactly its block finding into information — still recorded, no longer blocking. A different block finding on the same line still blocks; run-level findings (PLUGIN_ERROR, VALIDATION_ERROR) are never releasable; if the release lookup fails, the gate stays closed.
 
 ### 2.3 Health check suppressions (design 6.3)
-- **Create** (02): check ID, optional object-key pattern (`HCK_C04/*/US01`) and company code, period, reason. Up to `HCK_SUPPRESS_MAX_DAYS` (default 7) the suppression is active at once; longer waits for a **second user** (85, *Approve*). *End now* stops it from the next run.
+- **Create** (02): check ID, optional object-key pattern (PCRE, complete key, case ignored: `HCK_C04/.*/US01`; refused with 418 when it does not compile) and company code, period, reason. Up to `HCK_SUPPRESS_MAX_DAYS` (default 7) the suppression is active at once; longer waits for a **second user** (85, *Approve*). *End now* stops it from the next run.
 - **Engine:** matching findings of the day become information "Suppressed until … by …" — listed on the report, not alerted, not scored; the check is not red or amber because of them. Expired and pending suppressions are ignored automatically.
 
 ### 2.4 Monitored files — manual status (design 6.4)

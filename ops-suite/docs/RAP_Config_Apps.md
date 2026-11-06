@@ -57,8 +57,8 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | EBS | BtcMap | Scheme BAI2/ISO/PRTRY; flow D/C/*; direction C/D/* or blank; action AUTO_POST / EXCEPTION / BLOCK / NOTIFY / ON_ACCOUNT or blank; **active non-BLOCK row needs a rule group (blank = category) with an active rule**, read across drafts of the same session | 413, 416 |
 | EBS | BtcRule | Severity B/E/W/I or blank; action as above | 413 |
 | EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action | 410, 413 |
-| EBS | HouseBankAcct, FlowPattern | Flow values | 413 |
-| FMON | FmonIface | Direction I/O | 413 |
+| EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
+| FMON | FmonIface | Direction I/O; **name pattern is valid PCRE** | 413, 418 |
 | FMON | FmonSla | Maximum minutes > 0; severity | 417, 413 |
 | FMON | FmonSource | Table exists; each of the 12 field-name columns exists in that table; adapter class implements `ZIF_CD_FMON_ADAPTER` | 411, 412, 410 |
 | FMON | FmonCheck | Class implements `ZIF_CD_FMON_CHECK`; severity | 410, 413 |
@@ -68,9 +68,11 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
 | HCK | HckDriftTable, HckWhitelist | Table exists | 411 |
-| HCK | JobStep | Window both times or neither | 414 |
-| CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither | 413, 414 |
+| HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
+| CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |
 | CORE | AlertChannel | Class implements `ZIF_CD_OPS_ALERT_CHANNEL` | 410 |
+
+**Pattern fields (user decision 2026-11-06).** Generator check `('pcre', field)` in `tools/rap_generate.py` → `ZCL_CD_OPS_UTIL=>PCRE_VALID` (the one helper also used at runtime): the pattern must compile as PCRE (it is matched to the complete value, case ignored; blank allowed), else message 418 on the field. The suppression operations app checks its key pattern the same way (`ZCL_CD_HCK_SUPPRESSION=>CHECK_REQUEST`). Pattern lists inside ZCD_HCK_DEF parameters are not validated by the app (the same PARAM columns hold numbers for other checks) — the check raises E373 at runtime and `ZCD_OPS_PATTERN_CHECK` shows them. VERIFY-ADT: validation messages on the draft in Prepare / Activate (no offline RAP runtime; the generator fixture tests cover the template and the list of validated fields).
 
 Names are checked for DDIC syntax (letters, digits, `_`, `/`) **before** the dictionary is asked, so no free text reaches RTTI. Keys are read-only after create; keys that may be blank (BTC map bank key = default row, flow-pattern priority, status value) are not mandatory.
 

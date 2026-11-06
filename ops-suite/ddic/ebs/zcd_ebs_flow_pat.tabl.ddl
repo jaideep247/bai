@@ -6,7 +6,7 @@
 define table zcd_ebs_flow_pat {
   key mandt    : abap.clnt not null;
   key priority : abap.int4 not null;
-  // CP pattern on FEBEP-XBLNR (ported from ZB_BAI_GL_CONFIG)
+  // PCRE on the complete FEBEP-XBLNR, case ignored (ported from ZB_BAI_GL_CONFIG), e.g. .*COLL.*
   key pattern  : abap.char(30) not null;
   flow_type    : abap.char(1);
   active       : abap_boolean;

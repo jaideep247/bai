@@ -142,6 +142,9 @@ check('no_real_dao_in_tests', test_checks.real_dao_failures(ROOT),
 check('pcre_only', name_checks.posix_regex_failures(ROOT),
       'Regular expressions use PCRE only (pcre = / PCRE); POSIX (regex =, FIND / REPLACE ... REGEX, '
       'CL_ABAP_REGEX POSIX) is obsolete since ABAP 7.55.')
+check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
+      'Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP '
+      "comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).")
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

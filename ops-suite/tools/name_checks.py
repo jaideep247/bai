@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Name checks of the ops suite (portable, no SAP system): SAP length limits and the house
-method naming rule. Used by tools/portable_checks.py (checks name_lengths, method_names).
+method naming rule. Used by tools/portable_checks.py (checks name_lengths, method_names,
+pcre_only, no_cp_patterns).
 
 Limits (SAP): object names, CDS entities, DDLS / SRVD / DCLS names, methods, attributes,
 types, local classes and local data 30; transparent tables 16; message classes 20; table
@@ -169,4 +170,43 @@ def posix_regex_failures(root):
         for no, line in _code_lines(_read(path)):
             if any(p.search(line) for p in _POSIX_PATTERNS):
                 failures.append(f'{os.path.relpath(path, root)}:{no}: {line.strip()[:80]}')
+    return failures
+
+
+# Patterns are PCRE matched to the complete value (user decision 2026-11-06): no CP / NP
+# wildcard comparison and no CP / NP range row in code (comments and literal contents ignored)
+_CP_COMPARE = re.compile(r'(?<![-~>\w])(CP|NP)(?![\w-])', re.I)
+_CP_OPTION = re.compile(r"\boption\s*=.*'(CP|NP)'", re.I)
+
+
+def _lines_without_comments(text):
+    """ABAP lines without full-line and end-of-line comments; literals kept."""
+    for no, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith('*'):
+            continue
+        out, in_lit = [], None
+        for ch in line:
+            if in_lit:
+                if ch == in_lit:
+                    in_lit = None
+            elif ch in "'`|":
+                in_lit = ch
+            elif ch == '"':
+                break
+            out.append(ch)
+        yield no, ''.join(out)
+
+
+def cp_pattern_failures(root):
+    """Files that compare with CP / NP or build a CP / NP range row (comments and literals ignored)."""
+    failures = []
+    for path in _walk(os.path.join(root, 'src'), '.abap'):
+        text = _read(path)
+        rel = os.path.relpath(path, root)
+        for no, line in _code_lines(text):
+            if _CP_COMPARE.search(line):
+                failures.append(f'{rel}:{no}: {line.strip()[:80]}')
+        for no, line in _lines_without_comments(text):
+            if _CP_OPTION.search(line):
+                failures.append(f'{rel}:{no}: {line.strip()[:80]}')
     return failures

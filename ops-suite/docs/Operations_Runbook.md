@@ -155,6 +155,19 @@ Since 2026-11-06 (user decision) `ZCD_EBS_VALIDATE` validates, and the EBS dashb
 
 `ZCD_OPS_PURGE` (monthly, native SAP job, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics, PRISM status events. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060). No other housekeeping job is needed for the suite's tables; expired application logs of object `ZCD_OPS` are deleted with the standard SLG2 job.
 
+## 5e. Patterns — check what a pattern captures before activating it (PCRE)
+
+All configured patterns (EBS flow, FMON file names, HCK job names and lists, suppression keys, alert rules) are **PCRE matched to the complete value, case ignored** (`DEVELOPMENT_STANDARDS.md` §3). Before saving or activating a pattern:
+
+1. Run **`ZCD_OPS_PATTERN_CHECK`** (authorisation ZCD_OPS display for the area): pattern area, optional **ad-hoc pattern** (the new one, before it is saved), date window (default last 7 days), maximum values read (default 5 000).
+2. The list shows problems first: **INVALID** patterns (do not compile), **NO_MATCH** values (real records of the window that no pattern captures — these would not come), **UNUSED** patterns (capture nothing in the window), then **MATCHED** rows (value, pattern, where it is maintained, count — a count above 1 means two patterns overlap).
+3. The message line gives values read, values not captured, unused patterns. A capped read (message 747) may hide values: narrow the window or raise the cap.
+4. Save the pattern only when the records that must be captured are MATCHED by it and nothing unwanted is.
+
+Sources per area: EBS_FLOW = FEBEP-XBLNR of the configured accounts (FEBKO-AZDAT in the window), FMON_FILE = file names of ZCD_FMON_FILE (business date), HCK_JOB = TBTCO job names (planned or started in the window), HCK_SUPPR = object keys of HCK findings, ALERT_* = rule IDs / check codes / groups of findings (runs started in the window).
+
+**Migration of existing rows (once, after the pull):** run **`ZCD_OPS_PATTERN_MIGRATE`** in **test mode** (default) in DV1: every pattern row with old → new and a status — CONVERT (CP wildcard → PCRE: metacharacters escaped, `*` → `.*`, `+` → `.`, `#x` → literal x), UNCHANGED (same in both), ALREADY_PCRE (left as it is — review it), INVALID / TOO_LONG (never written; shorten or rewrite the pattern in the app). Then run it in **update mode** with the customizing request: only CONVERT rows are written (change stamps set, customizing rows recorded on the request, one commit), the list shows WRITTEN. Transport the request to QA1 / PS4. ZCD_HCK_SUPPRESS (application data, not transported) is converted by running update mode in each system (ZCD_OPS change for HCK; the client must allow changes). Run `ZCD_OPS_PATTERN_CHECK` per area afterwards.
+
 ## 6. Who to call
 
 | Topic | Team |

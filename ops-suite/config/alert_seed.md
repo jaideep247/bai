@@ -13,14 +13,19 @@
 
 ## ZCD_OPS_ALRULE
 
+RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
+user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The
+configuration app refuses a pattern that does not compile (message 418); check what a pattern captures with
+`ZCD_OPS_PATTERN_CHECK` (areas ALERT_*). PE_AREA `*` is not a pattern (it means every area).
+
 | RULE_ID | PE_AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | EBS_BLOCK | EBS | B | | | | | EMAIL | payment-ops DL | X | 50 | 0 | — | 3 / RTB lead DL |
 | EBS_ERROR | EBS | E | | | A | X | EMAIL | payment-ops DL | X | 50 | 60 | 22:00–06:00 | — |
 | EBS_LOG | EBS | W | | | | | APPLOG | ZCD_OPS/EBS | X | 500 | 0 | — | — |
-| FMON_PART | FMON | E | | *PARTIAL* | | | EMAIL | returns-ops DL | X | 50 | 0 | — | 2 / RTB lead DL |
-| FMON_SLA | FMON | E | | *SLA* | | | EMAIL | payment-ops DL | X | 50 | 30 | — | 3 / RTB lead DL |
-| NOC_AGING | FMON | E | | NOC_AGING* | | | EMAIL | compliance DL | X | 100 | 1440 | — | — |
+| FMON_PART | FMON | E | | .*PARTIAL.* | | | EMAIL | returns-ops DL | X | 50 | 0 | — | 2 / RTB lead DL |
+| FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | payment-ops DL | X | 50 | 30 | — | 3 / RTB lead DL |
+| NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | compliance DL | X | 100 | 1440 | — | — |
 | HCK_RED | HCK | E | | | R | X | EMAIL | RTB support DL | X | 50 | 60 | 22:00–06:00 | 2 / RTB lead DL |
 | ALL_ABORT | * | B | | | | X | HTTP | ZCD_OPS_WEBHOOK | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | RTB support DL | | 10 | 60 | — | — |

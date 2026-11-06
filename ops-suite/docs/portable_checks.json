@@ -4,8 +4,8 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-06"
   },
-  "passed": 21,
-  "total": 21,
+  "passed": 22,
+  "total": 22,
   "abap_files": 319,
   "declared_unit_methods": 1147,
   "measured_coverage": null,
@@ -122,6 +122,12 @@
       "name": "pcre_only",
       "passed": true,
       "detail": "Regular expressions use PCRE only (pcre = / PCRE); POSIX (regex =, FIND / REPLACE ... REGEX, CL_ABAP_REGEX POSIX) is obsolete since ABAP 7.55.",
+      "failures": []
+    },
+    {
+      "name": "no_cp_patterns",
+      "passed": true,
+      "detail": "Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).",
       "failures": []
     },
     {

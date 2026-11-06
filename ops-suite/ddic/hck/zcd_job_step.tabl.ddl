@@ -8,7 +8,7 @@ define table zcd_job_step {
   key cycle_id    : abap.char(20) not null;
   key step_no     : abap.numc(3) not null;
   description     : abap.char(60);
-  // SM37 job name or pattern (* allowed), e.g. ZCD_PAYM_WIRE_*
+  // SM37 job name as PCRE on the complete name, case ignored, e.g. ZCD_PAYM_WIRE_.*
   jobname         : abap.char(32);
   // documentation now, used by the retrigger phase later
   program         : abap.char(40);

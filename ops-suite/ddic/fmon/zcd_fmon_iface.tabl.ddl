@@ -16,7 +16,7 @@ define table zcd_fmon_iface {
   pay_method   : abap.char(10);
   lob          : abap.char(10);
   bank_key     : abap.char(15);
-  // CP pattern on the file name, e.g. ACH_PNC_*  (most specific match wins)
+  // PCRE on the complete file name, case ignored, e.g. ACH_PNC_.*  (most literal characters win)
   name_pattern : abap.char(128);
   min_bytes    : abap.int8;
   // 0 = no upper bound
