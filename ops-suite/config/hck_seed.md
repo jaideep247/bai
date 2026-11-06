@@ -15,7 +15,7 @@
 |---|---|---|
 | HCK_WATCH_MODULES | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
 | HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
-| HCK_MAX_AGE_H_FMON | `2` | FMON runs every 15–30 min — stale after 2 h (confirm schedule) |
+| HCK_MAX_AGE_H_FMON | `1` | FMON runs every 5 min as a native SAP job (SM36) — stale after 1 h (the dashboard already turns red after 15 min) |
 | HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0; item-wise checks stop between items once it has passed (BUDGET_EXHAUSTED, A18) |
 | HCK_LOOKBACK_RUNS | `8` | Default baseline history points (one point per finished, non-test run — A59) |
 | HCK_MAX_RUN_MIN | `120` | A run of a watched area in status R longer than this is HUNG (red self-check, A06); per area `HCK_MAX_RUN_MIN_<AREA>` |

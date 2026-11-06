@@ -7,7 +7,7 @@
 
 1. Open the **morning report** e-mail (route MORNING) or run `ZCD_MORNING_REPORT` for today.
 2. Read the scorecard: overall score, RAG per category A–E, payment engine area status EBS / FMON / HCK, health of the health check.
-3. **Health of the health check red** → a payment engine area did not run or a run never closed (status R). Check the Control-M job and SM37 first; nothing else on the report can be trusted until this is green.
+3. **Health of the health check red** → a payment engine area did not run or a run never closed (status R). Check the job in SM37 first (native SAP jobs for FMON, the morning report and purge; the Control-M job for EBS); nothing else on the report can be trusted until this is green.
 4. Work the **top open exceptions** list (oldest due date first). Each row names payment engine area, object and check code — use the triage tables below.
 5. Check **alert delivery** (category E): failed deliveries mean someone was not told.
 
