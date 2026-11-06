@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Claim, repeat, consecutive escalation, escalation override, send failures (audit A17, A45, A46).
+*& 2026-11-06 | Delivered message carries the intent key and raise time (webhook de-duplication).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -488,6 +489,13 @@ CLASS ltc_alert_router IMPLEMENTATION.
                                             msg = 'The delivered alert is the claimed one' ).
         cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_claims[ 1 ]-intent_key
                                                  msg = 'The claim carries the alert intent' ).
+        " Webhook de-duplication: the channel receives the same intent key and raise time as the claim
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-intent_key
+                                            exp = mo_dao->mt_claims[ 1 ]-intent_key
+                                            msg = 'The delivered message carries the claimed intent key' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-occurred_at
+                                            exp = mo_dao->mt_claims[ 1 ]-sent_at
+                                            msg = 'The delivered message carries the claim time' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

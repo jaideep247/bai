@@ -52,7 +52,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_CFG_CHECKS (configuration apps: field validations) | 17 | Domain |
 | Core | ZCL_CD_OPS_CFG_GATE (configuration apps: features, transport, authorisation) | 7 | Application |
 | Core | ZCL_CD_OPS_CFG_POLICY (configuration apps: client policy) | 11 | Domain |
-| Core | ZCL_CD_OPS_CHN_HTTP (`TO_JSON` only) | 3 | Domain |
+| Core | ZCL_CD_OPS_CHN_HTTP (`TO_JSON`, `DEDUP_KEY`: webhook schema, escaping, de-duplication) | 9 | Domain |
 | Core | ZCL_CD_OPS_EXC_DAO (find open, resolve with history) | 2 | OSQL |
 | Core | ZCL_CD_OPS_EXC_POLICY (exceptions app: lifecycle, four-eyes) | 9 | Domain |
 | Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seams) | 11 | Domain |
