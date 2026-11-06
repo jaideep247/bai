@@ -20,6 +20,7 @@
 *&              (both directions), check codes and messages of the PRISM checks.
 *& 2026-11-06 | PRISM throttle (user 2026-11-06: ACH and wire files 2 min per file): queue
 *&              scope, throttle settings, queue entries in the check context, PRISM_QUEUE_LONG.
+*& 2026-11-06 | PRISM throttle queue per bank by default (scope C, user confirmation).
 *& 2026-11-06 | PCRE interface name patterns: check code PATTERN_INVALID, engine key IFC:, message 271.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
@@ -764,9 +765,9 @@ INTERFACE zif_cd_fmon_types
   CONSTANTS:
     BEGIN OF gc_param_default,
       factory_cal TYPE string VALUE `US`,
-      "! PRISM throttle (user 2026-11-06): 2 minutes per ACH / wire file, one queue to confirm
+      "! PRISM throttle (user 2026-11-06): 2 minutes per ACH / wire file, one queue per bank
       throttle_min     TYPE i VALUE 2,
-      throttle_scope   TYPE ty_queue_scope VALUE 'A',
+      throttle_scope   TYPE ty_queue_scope VALUE 'C',
       throttle_methods TYPE string VALUE `ACH,WIRE`,
       queue_max        TYPE i VALUE 30,
     END OF gc_param_default.
