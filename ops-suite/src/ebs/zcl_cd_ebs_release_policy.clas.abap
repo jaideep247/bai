@@ -11,6 +11,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Audit A03: RULE_GROUP_EMPTY / RULE_UNUSABLE are not releasable.
 *& 2026-11-06 | Audit A65: KEY_LENGTH_CONFIG is a configuration gap, never released.
+*& 2026-11-06 | Audit A98: MAP_CONFLICT is a configuration gap, never released.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - blocked-line release rules</p>
 CLASS zcl_cd_ebs_release_policy DEFINITION
@@ -126,6 +127,7 @@ CLASS zcl_cd_ebs_release_policy IMPLEMENTATION.
                           AND is_finding-check_code <> zif_cd_ebs_types=>gc_check_code-rule_group_empty
                           AND is_finding-check_code <> zif_cd_ebs_types=>gc_check_code-rule_unusable
                           AND is_finding-check_code <> zif_cd_ebs_types=>gc_check_code-key_length_config
+                          AND is_finding-check_code <> zif_cd_ebs_types=>gc_check_code-map_conflict
                           AND ( is_finding-severity = zif_cd_ops_types=>gc_severity-block
                              OR is_finding-action   = zif_cd_ops_types=>gc_action-block ) ).
   ENDMETHOD.

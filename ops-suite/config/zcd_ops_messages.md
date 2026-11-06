@@ -312,3 +312,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 531 | File &1: read error (return code &2) after line &3 - not validated |
 | 532 | Entry &1: &2 not found yet - statement within the &3 h in-flight window |
 | 533 | Kill switch &1: &2 - validation mode M (monitor) used |
+| 534 | ZCD_BTC_MAP rows for &1 &2 bank &3 flow &4 contradict each other (blank flow = *) |

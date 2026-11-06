@@ -16,6 +16,7 @@
 *& 2026-11-06 | Audit A85: posting disposition per line, precedence and monitor mode.
 *& 2026-11-06 | Audit A64: posting check refreshes the parameter snapshot.
 *& 2026-11-06 | Audit A91: kill switch missing, invalid, off and SQL failure (TEST-INJECTION tvarvc_read).
+*& 2026-11-06 | Audit A98: contradictory blank / * map rows block through the posting decision.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -302,6 +303,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS disposition_monitor_no_block FOR TESTING.
     METHODS disposition_awaiting_held    FOR TESTING.
     METHODS posting_check_refreshes_params FOR TESTING.
+    METHODS map_conflict_blocks_posting  FOR TESTING.
     METHODS kill_switch_missing_monitor  FOR TESTING.
     METHODS kill_switch_invalid_monitor  FOR TESTING.
     METHODS kill_switch_off_read         FOR TESTING.
@@ -1307,6 +1309,30 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'A failed read must be diagnosed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |read_mode must not raise: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A98: blank-flow and '*' rows with contradictory actions reach the posting decision as BLOCK
+  METHOD map_conflict_blocks_posting.
+    TRY.
+        sign_scenario( default_flags( ) ).
+        DATA(ls_blank) = mo_cfg->mt_map[ 1 ].
+        ls_blank-flow_type = space.
+        ls_blank-action    = zif_cd_ops_types=>gc_action-on_account.
+        INSERT ls_blank INTO TABLE mo_cfg->mt_map.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+                              iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+                              is_package = mo_source->mt_packages[ 1 ] ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block msg = 'Contradictory mapping must block posting' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = zif_cd_ebs_types=>gc_check_code-map_conflict ] ) )
+          msg = 'MAP_CONFLICT must be recorded' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( ls_decision-dispositions[ 1 ]-disposition OPTIONAL )
+                                            exp = zif_cd_ops_types=>gc_action-block
+                                            msg = 'The line disposition must be BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

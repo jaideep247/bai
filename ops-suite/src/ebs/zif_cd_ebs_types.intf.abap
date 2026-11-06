@@ -23,6 +23,7 @@
 *& 2026-11-06 | FS-CD review: in-flight grace (EBS_INFLIGHT_HOURS, AWAITING_LOT_TRANSFER).
 *& 2026-11-06 | Audit A62: plug-in interface names for the factory RTTI check.
 *& 2026-11-06 | Audit A91: kill switch fallback check code and message.
+*& 2026-11-06 | Audit A98: MAP_CONFLICT check code and message.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -466,6 +467,8 @@ INTERFACE zif_cd_ebs_types
       awaiting_lot_transfer          TYPE zif_cd_ops_types=>ty_check_code VALUE 'AWAITING_LOT_TRANSFER',
       "! A91: the kill switch could not be read or holds no valid mode - MONITOR used
       kill_switch_fallback           TYPE zif_cd_ops_types=>ty_check_code VALUE 'KILL_SWITCH_FALLBACK',
+      "! A98: ZCD_BTC_MAP rows that normalise to one key (blank flow = '*') but differ
+      map_conflict                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_CONFLICT',
       code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
       code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
       currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
@@ -650,6 +653,7 @@ INTERFACE zif_cd_ebs_types
       file_read_error             TYPE zif_cd_ops_types=>ty_msgno VALUE '531',
       awaiting_lot_transfer       TYPE zif_cd_ops_types=>ty_msgno VALUE '532',
       kill_switch_fallback        TYPE zif_cd_ops_types=>ty_msgno VALUE '533',
+      map_conflict                TYPE zif_cd_ops_types=>ty_msgno VALUE '534',
     END OF gc_msg.
 
 ENDINTERFACE.

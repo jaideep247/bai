@@ -10,6 +10,7 @@
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A25: imported statement gets its account number from ZCD_EBS_ACCT.
+*& 2026-11-06 | Audit A98: blank and * map rows - conflict blocks, identical rows are one.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -70,6 +71,8 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS flow_row_beats_any_flow_row  FOR TESTING.
     METHODS unmapped_btc_always_blocks   FOR TESTING.
     METHODS inactive_row_is_unmapped     FOR TESTING.
+    METHODS blank_and_star_conflict      FOR TESTING.
+    METHODS blank_and_star_identical_ok  FOR TESTING.
     METHODS iso_family_row_covers_subfam FOR TESTING.
     METHODS camt_bai_prtry_reuses_bai    FOR TESTING.
     METHODS bai_fallback_can_be_disabled FOR TESTING.
@@ -524,6 +527,44 @@ CLASS ltc_resolver IMPLEMENTATION.
         run_resolver( ).
         cl_abap_unit_assert=>assert_true( act = first_line( )-not_posted
                                           msg = 'A NOT_POSTED map row must mark the line as not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A98: a blank-flow row and a '*' row of the same code with contradictory actions are
+  " invalid customizing - MAP_CONFLICT blocks the line instead of the first row winning
+  METHOD blank_and_star_conflict.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_flow = space iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-auto_post ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-exception ).
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_true( act = first_line( )-blocked msg = 'A contradictory mapping must block the line' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( mt_findings[ 1 ]-check_code OPTIONAL ) exp = zif_cd_ebs_types=>gc_check_code-map_conflict
+          msg = 'The conflict must be reported as MAP_CONFLICT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A98: blank and '*' rows that say the same thing are one canonical row - no finding
+  METHOD blank_and_star_identical_ok.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_flow = space iv_category = gc_test-cat_d02 ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Identical normalised rows are not a conflict' ).
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-category exp = gc_test-cat_d02
+                                            msg = 'The canonical row maps the line' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
