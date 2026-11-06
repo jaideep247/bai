@@ -9,6 +9,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (instant PRISM processing, user decision 2026-11-06).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
+*& 2026-11-06 | PRISM throttle: the unit applies the same queue allowance as the batch run
+*&              (ACH queue, positive pay not counted, throttle 0, PRISM_QUEUE_LONG).
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -110,6 +112,14 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_reconciles TYPE i.
     "! FMON_PRISM_INSTANT as maintained (blank flag = default X)
     DATA mv_registry_only TYPE abap_bool.
+    TYPES:
+      BEGIN OF ty_param,
+        name  TYPE zif_cd_ops_types=>ty_param_name,
+        value TYPE string,
+      END OF ty_param.
+    TYPES tt_param TYPE HASHED TABLE OF ty_param WITH UNIQUE KEY name.
+    "! Maintained ZCD_OPS_PARAM values (others: the caller's default)
+    DATA mt_params TYPE tt_param.
 ENDCLASS.
 
 
@@ -133,6 +143,11 @@ CLASS ltd_store IMPLEMENTATION.
     mv_reconciles += 1.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
+    READ TABLE mt_params ASSIGNING FIELD-SYMBOL(<ls_param>) WITH TABLE KEY name = iv_name.
+    IF sy-subrc = 0.
+      rv_value = <ls_param>-value.
+      RETURN.
+    ENDIF.
     rv_value = COND #( WHEN iv_name = zif_cd_fmon_prism_types=>gc_param_instant AND mv_registry_only = abap_true
                        THEN ``
                        ELSE iv_default ).
@@ -189,6 +204,12 @@ CLASS ltc_proc DEFINITION FINAL
         processed     TYPE abap_bool,
         conflict      TYPE abap_bool,
         registry_only TYPE abap_bool,
+        "! ACH interface (throttled) with 4 ACH files and 1 positive pay file queued ahead
+        throttled     TYPE abap_bool,
+        "! FMON_PRISM_THROTTLE_MIN = 0
+        throttle_off  TYPE abap_bool,
+        "! FMON_PRISM_QUEUE_MAX maintained (0 = default)
+        queue_max     TYPE i,
       END OF ty_flags.
 
     CONSTANTS:
@@ -205,6 +226,25 @@ CLASS ltc_proc DEFINITION FINAL
         version   TYPE timestampl VALUE '20261106142100',
         sla_min   TYPE i VALUE 15,
       END OF gc_test.
+    "! Evening ACH cycle: 4 ACH files and a positive pay file reached PRISM before the file
+    "! (received 14:21); PRISM delivers one file every 2 minutes
+    CONSTANTS:
+      BEGIN OF gc_queue,
+        pospay_iface TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'CHECK_POSPAY_OUT',
+        ach          TYPE zif_cd_fmon_types=>ty_pay_method VALUE 'ACH',
+        check        TYPE zif_cd_fmon_types=>ty_pay_method VALUE 'CHECK',
+        bank         TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'PNC',
+        "! The ACH peers' receipts 14:20:10 .. 14:20:40, the positive pay file 14:20:50
+        first_peer   TYPE timestampl VALUE '20261106142010',
+        peer_step    TYPE i VALUE 10,
+        peers        TYPE i VALUE 4,
+        received_at  TYPE timestampl VALUE '20261106142100',
+        "! 9 / 14 minutes after the receipt
+        after_9_min  TYPE timestampl VALUE '20261106143000',
+        after_14_min TYPE timestampl VALUE '20261106143500',
+        base_min     TYPE i VALUE 5,
+        short_queue  TYPE i VALUE 3,
+      END OF gc_queue.
 
     DATA mo_dao TYPE REF TO ltd_fmon_dao.
     DATA mo_prism TYPE REF TO ltd_prism_dao.
@@ -246,6 +286,21 @@ CLASS ltc_proc DEFINITION FINAL
     METHODS conflict_left_to_batch_run FOR TESTING.
     METHODS processed_event_not_reapplied FOR TESTING.
     METHODS registry_only_without_instant FOR TESTING.
+    METHODS unit_allows_prism_queue FOR TESTING.
+    METHODS pospay_not_in_ach_queue FOR TESTING.
+    METHODS unit_throttle_off_is_late FOR TESTING.
+    METHODS unit_reports_long_queue FOR TESTING.
+
+    "! Throttled scenario: interfaces, SLA, check, the file's receipt and the queued peers
+    METHODS configure_queue
+      IMPORTING
+        is_flags TYPE ty_flags.
+
+    METHODS add_peer
+      IMPORTING
+        iv_no       TYPE i
+        iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id
+        iv_received TYPE timestampl.
 
 ENDCLASS.
 
@@ -361,6 +416,10 @@ CLASS ltc_proc IMPLEMENTATION.
     ls_event-src_key  = ls_file-file_ref.
     INSERT ls_event INTO TABLE mo_dao->mt_old_events.
 
+    IF is_flags-throttled = abap_true.
+      configure_queue( is_flags ).
+    ENDIF.
+
     mo_dao->mv_conflict_all     = is_flags-conflict.
     mo_store->mv_registry_only  = is_flags-registry_only.
 
@@ -379,6 +438,87 @@ CLASS ltc_proc IMPLEMENTATION.
 
   METHOD act.
     rs_outcome = NEW zcl_cd_fmon_prism_proc( )->process( gc_test-event_id ).
+  ENDMETHOD.
+
+
+  METHOD configure_queue.
+    DATA ls_iface TYPE zif_cd_fmon_types=>ty_iface.
+    DATA ls_sla TYPE zif_cd_fmon_types=>ty_sla.
+    DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
+
+    " The file's interface is an ACH interface to PNC: throttled (FMON_PRISM_THROTTLE_METHODS)
+    ASSIGN mo_dao->mt_ifaces[ iface_id = gc_test-iface ] TO FIELD-SYMBOL(<ls_iface>).
+    <ls_iface>-pay_method = gc_queue-ach.
+    <ls_iface>-bank_key   = gc_queue-bank.
+    ls_iface = <ls_iface>.
+    ls_iface-iface_id     = gc_queue-pospay_iface.
+    ls_iface-file_type    = zif_cd_fmon_types=>gc_file_type-pospay.
+    ls_iface-pay_method   = gc_queue-check.
+    ls_iface-name_pattern = 'POSPAY_*'.
+    INSERT ls_iface INTO TABLE mo_dao->mt_ifaces.
+
+    ls_sla-iface_id    = gc_test-iface.
+    ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_delivered.
+    ls_sla-max_minutes = gc_queue-base_min.
+    ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
+    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    INSERT ls_sla INTO TABLE mo_dao->mt_slas.
+    add_check( iv_check_id = 'F_PRISMDLV' iv_class = 'ZCL_CD_FMON_CHK_SLA' iv_params = 'STAGE=PRISM_DELIVERED' ).
+
+    " The file itself: PRISM received it at 14:21 (stored by an earlier unit)
+    ASSIGN mo_dao->mt_existing[ 1 ] TO FIELD-SYMBOL(<ls_file>).
+    <ls_file>-stage         = zif_cd_fmon_types=>gc_stage-prism_received.
+    <ls_file>-last_event_at = gc_queue-received_at.
+    ls_event-file_id  = <ls_file>-file_id.
+    ls_event-event_no = 2.
+    ls_event-stage    = zif_cd_fmon_types=>gc_stage-prism_received.
+    ls_event-event_at = gc_queue-received_at.
+    ls_event-src_id   = gc_test-src_id.
+    ls_event-src_key  = <ls_file>-file_ref.
+    INSERT ls_event INTO TABLE mo_dao->mt_old_events.
+
+    DO gc_queue-peers TIMES.
+      add_peer( iv_no       = sy-index
+                iv_iface_id = gc_test-iface
+                iv_received = cl_abap_tstmp=>add( tstmp = gc_queue-first_peer
+                                                  secs  = ( sy-index - 1 ) * gc_queue-peer_step ) ).
+    ENDDO.
+    add_peer( iv_no       = gc_queue-peers + 1
+              iv_iface_id = gc_queue-pospay_iface
+              iv_received = cl_abap_tstmp=>add( tstmp = gc_queue-first_peer
+                                                secs  = gc_queue-peers * gc_queue-peer_step ) ).
+
+    IF is_flags-throttle_off = abap_true.
+      INSERT VALUE #( name = zif_cd_fmon_types=>gc_param-throttle_min value = `0` ) INTO TABLE mo_store->mt_params.
+    ENDIF.
+    IF is_flags-queue_max > 0.
+      INSERT VALUE #( name = zif_cd_fmon_types=>gc_param-queue_max value = |{ is_flags-queue_max }| )
+             INTO TABLE mo_store->mt_params.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add_peer.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
+    ls_file-file_id        = CONV zif_cd_fmon_types=>ty_file_id( iv_no ).
+    ls_file-iface_id       = iv_iface_id.
+    ls_file-file_name      = |PEER_{ iv_no }|.
+    ls_file-file_ref       = zcl_cd_fmon_util=>normalize_ref( ls_file-file_name ).
+    ls_file-direction      = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_file-business_date  = gc_test-date.
+    ls_file-stage          = zif_cd_fmon_types=>gc_stage-prism_received.
+    ls_file-first_event_at = gc_test-sent_at.
+    ls_file-last_event_at  = iv_received.
+    ls_file-db_exists      = abap_true.
+    INSERT ls_file INTO TABLE mo_dao->mt_existing.
+    ls_event-file_id  = ls_file-file_id.
+    ls_event-event_no = 1.
+    ls_event-stage    = zif_cd_fmon_types=>gc_stage-prism_received.
+    ls_event-event_at = iv_received.
+    ls_event-src_id   = gc_test-src_id.
+    ls_event-src_key  = ls_file-file_ref.
+    INSERT ls_event INTO TABLE mo_dao->mt_old_events.
   ENDMETHOD.
 
 
@@ -505,6 +645,81 @@ CLASS ltc_proc IMPLEMENTATION.
         DATA(ls_outcome) = act( ).
         cl_abap_unit_assert=>assert_equals( act = |{ ls_outcome-attempts }/{ mo_dao->mv_save_calls }| exp = |0/0|
                                             msg = 'No engine run for a processed event' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM throttle, user 2026-11-06): PRISM delivers ACH files one every 2 minutes. The
+  " file had 4 ACH files ahead in PRISM's queue, so its delivery 9 minutes after PRISM's receipt
+  " is on time (SLA 5 + 4 x 2 = 13 min) - the unit applies the same rule as the batch run.
+  METHOD unit_allows_prism_queue.
+    TRY.
+        configure_scenario( VALUE #( throttled   = abap_true
+                                     milestone   = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                                     occurred_at = gc_queue-after_9_min ) ).
+        DATA(ls_outcome) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_saved[ 1 ]-stage
+                                            exp = zif_cd_fmon_types=>gc_stage-prism_delivered
+                                            msg = 'The delivery must be applied' ).
+        cl_abap_unit_assert=>assert_initial( act = codes( ls_outcome-result-findings )
+                                             msg = 'Delivered within the queue allowance: no finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: positive pay is not throttled, so the positive pay file queued with the ACH files does
+  " not extend the ACH allowance: delivery after 14 min (allowed 13) is late.
+  METHOD pospay_not_in_ach_queue.
+    TRY.
+        configure_scenario( VALUE #( throttled   = abap_true
+                                     milestone   = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                                     occurred_at = gc_queue-after_14_min ) ).
+        DATA(ls_outcome) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = codes( ls_outcome-result-findings )
+                                            exp = VALUE string_table( ( `PRISM_DELIVERED_LATE` ) )
+                                            msg = 'Only the 4 ACH files count: 14 min is late' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: FMON_PRISM_THROTTLE_MIN = 0 keeps today's behaviour - 9 minutes against SLA 5 is late.
+  METHOD unit_throttle_off_is_late.
+    TRY.
+        configure_scenario( VALUE #( throttled    = abap_true
+                                     throttle_off = abap_true
+                                     milestone    = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                                     occurred_at  = gc_queue-after_9_min ) ).
+        DATA(ls_outcome) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = codes( ls_outcome-result-findings )
+                                            exp = VALUE string_table( ( `PRISM_DELIVERED_LATE` ) )
+                                            msg = 'Throttle off: no queue allowance' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a queue longer than FMON_PRISM_QUEUE_MAX (here 3; the file is 5th) is reported as
+  " PRISM_QUEUE_LONG (W); the allowance stops at 2 files ahead (4 min), so 9 min is still on time.
+  METHOD unit_reports_long_queue.
+    TRY.
+        configure_scenario( VALUE #( throttled   = abap_true
+                                     queue_max   = gc_queue-short_queue
+                                     milestone   = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                                     occurred_at = gc_queue-after_9_min ) ).
+        DATA(ls_outcome) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = codes( ls_outcome-result-findings )
+                                            exp = VALUE string_table( ( `PRISM_QUEUE_LONG` ) )
+                                            msg = 'The long queue must be visible' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_outcome-result-findings[ 1 ]-severity
+                                            exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'PRISM_QUEUE_LONG is a warning' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
