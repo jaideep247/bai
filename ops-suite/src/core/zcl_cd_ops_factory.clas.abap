@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-05 | Alert router and alert DAO added.
+*& 2026-11-06 | Authorisation seam (ZCD_OPS) added.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -37,6 +38,10 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ops_alert_dao.
 
+    CLASS-METHODS get_auth
+      RETURNING
+        VALUE(ro_auth) TYPE REF TO zif_cd_ops_auth.
+
     "! Instantiate a configured plug-in class by name.
     "! An injected double for the same class name wins.
     "! @raising zcx_cd_ops_error | class does not exist or is not instantiable
@@ -60,6 +65,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_alert_double TYPE REF TO zif_cd_ops_alert.
     CLASS-DATA go_clock_double TYPE REF TO zif_cd_ops_clock.
     CLASS-DATA go_alert_dao_double TYPE REF TO zif_cd_ops_alert_dao.
+    CLASS-DATA go_auth_double TYPE REF TO zif_cd_ops_auth.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
     "! Per-session store instance so parameter reads are cached once per run
@@ -98,6 +104,12 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
   METHOD get_alert_dao.
     ro_dao = COND #( WHEN go_alert_dao_double IS BOUND THEN go_alert_dao_double
                      ELSE NEW zcl_cd_ops_alert_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_auth.
+    ro_auth = COND #( WHEN go_auth_double IS BOUND THEN go_auth_double
+                      ELSE NEW zcl_cd_ops_auth( ) ).
   ENDMETHOD.
 
 

@@ -14,6 +14,7 @@ cds/zi_cd_opsfindingcube.ddls.asddls,CDS,
 cds/zi_cd_opsrun.ddls.asddls,CDS,
 cds/zi_cd_opsruncube.ddls.asddls,CDS,
 config/alert_seed.md,Config,
+config/auth_zcd_ops.md,Config,
 config/fmon_seed.md,Config,
 config/hck_seed.md,Config,
 config/zcd_btc_map.csv,Config,
@@ -67,9 +68,11 @@ docs/HCK_MORNING_REPORT.md,Doc,
 docs/Implementation_Order.md,Doc,
 docs/Legacy_Parity_Comparison.md,Doc,
 docs/Operations_Runbook.md,Doc,
+docs/RAP_Apps_Design.md,Doc,
 docs/Review_Response_2026-11-06.md,Doc,
 docs/TDD_Approach_and_Coverage.md,Doc,
 docs/Test_and_Validation_Document.md,Doc,
+docs/USAA_Known_Tables.md,Doc,
 docs/portable_checks.json,Doc,
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
@@ -91,6 +94,8 @@ src/core/zcl_cd_ops_alert_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every module. Reads ZCD_OPS_ALERT_RULE and
 src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests of the alert router with LTD_* doubles for the alert DAO,"
 src/core/zcl_cd_ops_alert_router.clas.xml,abapGit,
+src/core/zcl_cd_ops_auth.clas.abap,ABAP,The only AUTHORITY-CHECK on object ZCD_OPS. Thin wrapper - deliberately
+src/core/zcl_cd_ops_auth.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
 src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
@@ -119,6 +124,8 @@ src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, 
 src/core/zif_cd_ops_alert_channel.intf.xml,abapGit,
 src/core/zif_cd_ops_alert_dao.intf.abap,ABAP,"Repository for alert configuration (ZCD_OPS_ALERT_RULE, ZCD_OPS_ALERT_CHN)"
 src/core/zif_cd_ops_alert_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_auth.intf.abap,ABAP,"Authorisation seam for the operations suite (object ZCD_OPS: ACTVT,"
+src/core/zif_cd_ops_auth.intf.xml,abapGit,
 src/core/zif_cd_ops_clock.intf.abap,ABAP,Operations suite - clock (injectable for tests)
 src/core/zif_cd_ops_clock.intf.xml,abapGit,
 src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all modules: run headers (ZCD_OPS_RUN),"

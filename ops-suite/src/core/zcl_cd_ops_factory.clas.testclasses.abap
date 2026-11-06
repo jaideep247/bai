@@ -8,6 +8,7 @@
 *& runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (TDD gap closure).
+*& 2026-11-06 | Authorisation seam: injected double is returned.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -27,6 +28,21 @@ CLASS ltd_clock IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_auth.
+ENDCLASS.
+
+CLASS ltd_auth IMPLEMENTATION.
+  METHOD zif_cd_ops_auth~is_allowed.
+    rv_allowed = abap_true.
+  ENDMETHOD.
+  METHOD zif_cd_ops_auth~check.
+    RETURN.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_factory DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -40,6 +56,7 @@ CLASS ltc_factory DEFINITION FINAL FOR TESTING
     METHODS real_class_is_created        FOR TESTING.
     METHODS class_name_case_insensitive  FOR TESTING.
     METHODS injected_clock_is_returned   FOR TESTING.
+    METHODS injected_auth_is_returned    FOR TESTING.
 ENDCLASS.
 
 
@@ -117,6 +134,15 @@ CLASS ltc_factory IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_clock( lo_double ).
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_clock( ) exp = lo_double
                                         msg = 'Injected clock must be returned' ).
+  ENDMETHOD.
+
+
+  " Every authorisation question goes through one seam, so consumers are testable
+  METHOD injected_auth_is_returned.
+    DATA(lo_double) = NEW ltd_auth( ).
+    zcl_cd_ops_injector=>inject_auth( lo_double ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_auth( ) exp = lo_double
+                                        msg = 'Injected authorisation double must be returned' ).
   ENDMETHOD.
 
 ENDCLASS.

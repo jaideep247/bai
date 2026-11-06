@@ -6,6 +6,7 @@
 *& board or the findings as ALV (CL_SALV_TABLE). No WRITE lists.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Authorisation ZCD_OPS activity 16 module FMON at start.
 *&---------------------------------------------------------------------*
 REPORT zcd_fmon_monitor.
 
@@ -32,6 +33,8 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
     TRY.
+        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+                                                iv_module   = zif_cd_ops_types=>gc_module-file_monitor ).
         DATA(ls_result) = zcl_cd_fmon_factory=>get_engine( )->run(
           iv_business_date = p_date
           iv_iface_id      = CONV #( to_upper( p_iface ) )

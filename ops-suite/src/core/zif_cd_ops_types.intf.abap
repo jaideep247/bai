@@ -6,6 +6,7 @@
 *& B = block (never post), E = error, W = warning, I = information
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Module CORE and exception dispositions.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -38,7 +39,22 @@ INTERFACE zif_cd_ops_types
       health_check TYPE ty_module VALUE 'HCK',
       file_monitor TYPE ty_module VALUE 'FMON',
       ebs          TYPE ty_module VALUE 'EBS',
+      "! Cross-module objects: alerting, parameters, purge (authorisation object ZCD_OPS)
+      core         TYPE ty_module VALUE 'CORE',
     END OF gc_module.
+
+  "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
+  TYPES ty_disposition TYPE c LENGTH 1.
+  CONSTANTS:
+    BEGIN OF gc_disposition,
+      open        TYPE ty_disposition VALUE 'O',
+      information TYPE ty_disposition VALUE 'I',
+      assigned    TYPE ty_disposition VALUE 'A',
+      resolved    TYPE ty_disposition VALUE 'R',
+      waived      TYPE ty_disposition VALUE 'W',
+      "! Replaced by the same exception in a later run (carry-forward)
+      superseded  TYPE ty_disposition VALUE 'S',
+    END OF gc_disposition.
 
   "! B = block (never post), E = error, W = warning, I = information
   CONSTANTS:

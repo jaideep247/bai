@@ -9,6 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation; replaces
 *&            | Z_BAI_MASS_VALIDATION / ZFIR_BANK_POST_VALIDATION_V2).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Authorisation ZCD_OPS activity 16 module EBS replaces S_PROGRAM.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -85,12 +86,8 @@ CLASS lcl_report IMPLEMENTATION.
 
   METHOD run.
     TRY.
-        AUTHORITY-CHECK OBJECT 'S_PROGRAM'
-          ID 'P_GROUP'  DUMMY
-          ID 'P_ACTION' FIELD 'SUBMIT'.
-        IF sy-subrc <> 0.
-          MESSAGE e041(zcd_ops) WITH 'ZCD_EBS_VALIDATE' 'SUBMIT'.
-        ENDIF.
+        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+                                                iv_module   = zif_cd_ops_types=>gc_module-ebs ).
         DATA(ls_result) = NEW zcl_cd_ebs_engine( )->run( io_source    = build_source( )
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).

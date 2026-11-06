@@ -6,8 +6,8 @@
   },
   "passed": 13,
   "total": 13,
-  "abap_files": 153,
-  "declared_unit_methods": 321,
+  "abap_files": 155,
+  "declared_unit_methods": 322,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,7 +79,7 @@
     {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 153 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 155 files.",
       "failures": []
     },
     {

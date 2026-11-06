@@ -5,6 +5,7 @@
 *& the scorecard and results in ALV, mails the HTML report, exports CSV.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Authorisation ZCD_OPS activity 16 module HCK at start.
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -138,6 +139,13 @@ CLASS lcl_app IMPLEMENTATION.
 
 
   METHOD run.
+    TRY.
+        zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
+                                                iv_module   = zif_cd_ops_types=>gc_module-health_check ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_auth).
+        MESSAGE lx_auth TYPE 'S' DISPLAY LIKE 'E'.
+        RETURN.
+    ENDTRY.
     IF p_base = abap_true.
       take_baseline( ).
       RETURN.
