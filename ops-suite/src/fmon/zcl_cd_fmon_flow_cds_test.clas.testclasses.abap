@@ -15,7 +15,7 @@
 *& 2026-11-06 | Initial version (FMON file monitoring dashboard).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
-CLASS lcl_rows DEFINITION FINAL FOR TESTING.
+CLASS ltd_rows DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     CONSTANTS gc_variant_all TYPE zif_cd_ops_types=>ty_variant VALUE 'ALL'.
     CONSTANTS gc_date TYPE d VALUE '20261105'.
@@ -62,7 +62,7 @@ CLASS lcl_rows DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 
-CLASS lcl_rows IMPLEMENTATION.
+CLASS ltd_rows IMPLEMENTATION.
 
   METHOD file.
     rs_file-file_id       = iv_id.
@@ -262,11 +262,11 @@ CLASS ltc_flow IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     CLEAR: mt_files, mt_ifaces, mt_findings, mt_runs, mt_expect, mv_next_id.
-    INSERT lcl_rows=>iface( iv_iface = gc_iface_ack iv_ack_expected = abap_true ) INTO TABLE mt_ifaces.
-    INSERT lcl_rows=>iface( iv_iface = gc_iface_noack iv_ack_expected = abap_false ) INTO TABLE mt_ifaces.
-    INSERT lcl_rows=>iface( iv_iface = gc_iface_in iv_ack_expected = abap_false ) INTO TABLE mt_ifaces.
+    INSERT ltd_rows=>iface( iv_iface = gc_iface_ack iv_ack_expected = abap_true ) INTO TABLE mt_ifaces.
+    INSERT ltd_rows=>iface( iv_iface = gc_iface_noack iv_ack_expected = abap_false ) INTO TABLE mt_ifaces.
+    INSERT ltd_rows=>iface( iv_iface = gc_iface_in iv_ack_expected = abap_false ) INTO TABLE mt_ifaces.
     " One completed full run: the cross join with the as-of view needs no row, but rows carry it
-    INSERT lcl_rows=>run( iv_run_id   = gc_run_id
+    INSERT ltd_rows=>run( iv_run_id   = gc_run_id
                           iv_status   = zif_cd_ops_types=>gc_run_status-success
                           iv_ended_at = gc_run_end ) INTO TABLE mt_runs.
   ENDMETHOD.
@@ -294,7 +294,7 @@ CLASS ltc_flow IMPLEMENTATION.
 
   METHOD add_file.
     rv_id = new_id( ).
-    DATA(ls_file) = lcl_rows=>file( iv_id        = rv_id
+    DATA(ls_file) = ltd_rows=>file( iv_id        = rv_id
                                     iv_iface     = iv_iface
                                     iv_direction = iv_direction
                                     iv_stage     = iv_stage
@@ -318,7 +318,7 @@ CLASS ltc_flow IMPLEMENTATION.
 
 
   METHOD add_finding.
-    INSERT lcl_rows=>finding( iv_file_id     = iv_file_id
+    INSERT ltd_rows=>finding( iv_file_id     = iv_file_id
                               iv_finding_no  = lines( mt_findings ) + 1
                               iv_code        = iv_code
                               iv_severity    = iv_severity
@@ -717,7 +717,7 @@ CLASS ltc_as_of DEFINITION FINAL
         iv_run_id    TYPE zif_cd_ops_types=>ty_run_id
         iv_status    TYPE zif_cd_ops_types=>ty_run_status
         iv_ended_at  TYPE timestampl
-        iv_variant   TYPE zif_cd_ops_types=>ty_variant DEFAULT lcl_rows=>gc_variant_all
+        iv_variant   TYPE zif_cd_ops_types=>ty_variant DEFAULT ltd_rows=>gc_variant_all
         iv_test_mode TYPE abap_bool DEFAULT abap_false.
     METHODS persist.
 ENDCLASS.
@@ -743,7 +743,7 @@ CLASS ltc_as_of IMPLEMENTATION.
 
 
   METHOD add_run.
-    INSERT lcl_rows=>run( iv_run_id    = iv_run_id
+    INSERT ltd_rows=>run( iv_run_id    = iv_run_id
                           iv_status    = iv_status
                           iv_ended_at  = iv_ended_at
                           iv_variant   = iv_variant
@@ -920,21 +920,21 @@ CLASS ltc_kpi IMPLEMENTATION.
     DATA lt_files TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
     DATA lt_ifaces TYPE STANDARD TABLE OF zcd_fmon_iface WITH EMPTY KEY.
 
-    INSERT lcl_rows=>iface( iv_iface = gc_iface iv_ack_expected = abap_true ) INTO TABLE lt_ifaces.
-    INSERT lcl_rows=>iface( iv_iface = gc_iface_in iv_ack_expected = abap_false ) INTO TABLE lt_ifaces.
-    INSERT lcl_rows=>file( iv_id        = gc_id-rejected
+    INSERT ltd_rows=>iface( iv_iface = gc_iface iv_ack_expected = abap_true ) INTO TABLE lt_ifaces.
+    INSERT ltd_rows=>iface( iv_iface = gc_iface_in iv_ack_expected = abap_false ) INTO TABLE lt_ifaces.
+    INSERT ltd_rows=>file( iv_id        = gc_id-rejected
                            iv_iface     = gc_iface
                            iv_direction = zif_cd_fmon_types=>gc_direction-outbound
                            iv_stage     = zif_cd_fmon_types=>gc_stage-nack
                            iv_outcome   = zif_cd_fmon_types=>gc_stage-nack
                            iv_date      = gc_day_1 ) INTO TABLE lt_files.
-    INSERT lcl_rows=>file( iv_id        = gc_id-acked
+    INSERT ltd_rows=>file( iv_id        = gc_id-acked
                            iv_iface     = gc_iface
                            iv_direction = zif_cd_fmon_types=>gc_direction-outbound
                            iv_stage     = zif_cd_fmon_types=>gc_stage-ack
                            iv_outcome   = zif_cd_fmon_types=>gc_stage-ack
                            iv_date      = gc_day_1 ) INTO TABLE lt_files.
-    DATA(ls_partial) = lcl_rows=>file( iv_id        = gc_id-partial
+    DATA(ls_partial) = ltd_rows=>file( iv_id        = gc_id-partial
                                        iv_iface     = gc_iface_in
                                        iv_direction = zif_cd_fmon_types=>gc_direction-inbound
                                        iv_stage     = zif_cd_fmon_types=>gc_stage-loaded
@@ -942,7 +942,7 @@ CLASS ltc_kpi IMPLEMENTATION.
                                        iv_date      = gc_day_1 ).
     ls_partial-unprocessed_count = gc_unprocessed.
     INSERT ls_partial INTO TABLE lt_files.
-    INSERT lcl_rows=>file( iv_id        = gc_id-sent
+    INSERT ltd_rows=>file( iv_id        = gc_id-sent
                            iv_iface     = gc_iface
                            iv_direction = zif_cd_fmon_types=>gc_direction-outbound
                            iv_stage     = zif_cd_fmon_types=>gc_stage-sent

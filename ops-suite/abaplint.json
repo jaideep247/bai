@@ -94,6 +94,64 @@
     "omit_preceding_zeros": true,
     "sql_value_conversion": true,
     "unnecessary_pragma": true,
-    "prefer_returning_to_exporting": true
+    "prefer_returning_to_exporting": true,
+    "method_parameter_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "ignoreExceptions": true,
+      "importing": "^I._.+$",
+      "exporting": "^E._.+$",
+      "changing": "^C._.+$",
+      "returning": "^R._.+$"
+    },
+    "class_attribute_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "ignoreExceptions": true,
+      "ignoreLocal": false,
+      "ignoreInterfaces": false,
+      "statics": "^G._.+$",
+      "instance": "^M._.+$",
+      "constants": "^GC_.+$"
+    },
+    "local_variable_names": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "expectedData": "^L._.+$",
+      "expectedConstant": "^LC_.+$",
+      "expectedFS": "^<L._.+>$"
+    },
+    "local_class_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "local": "^L(CL|HC|SC|TD)_.+$",
+      "exception": "^LCX_.+$",
+      "test": "^LT[CD]_.+$"
+    },
+    "types_naming": {
+      "pattern": "^T[YT]_.+$"
+    },
+    "selection_screen_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "parameter": "^P_.+$",
+      "selectOption": "^S_.+$",
+      "screenElement": "^SC_.+$"
+    },
+    "object_naming": {
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "clas": "^Z(CL|CX|BP)_",
+      "intf": "^ZIF_",
+      "prog": "^Z",
+      "tabl": "^Z",
+      "msag": "^Z"
+    }
   }
 }
