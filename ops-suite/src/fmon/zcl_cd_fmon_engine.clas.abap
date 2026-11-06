@@ -18,6 +18,10 @@
 *&              A40 events stored as applied, A41 unknown age, A49 file instance by
 *&              business date, A52 malformed rows quarantined.
 *& 2026-11-06 | Digest file references verified against the full file name in the registry (audit A100).
+*& 2026-11-06 | PRISM status API: direction fit and file-instance origin from ZCL_CD_FMON_STATUS
+*&              (PRISM_* stages in both directions; inbound PRISM evidence opens the instance).
+*& 2026-11-06 | run_event( ): single-event entry point of the instant PRISM unit (bgPF); the
+*&              batch path run( ) is unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -26,6 +30,10 @@
 "! A failing adapter, lot reader, calendar or check never aborts the run:
 "! it becomes a PLUGIN_ERROR finding (severity E). Test mode writes nothing,
 "! dispatches nothing and does not commit.
+"! run_event( ) applies the records of one PRISM event (instant unit, no run lock: overlap with
+"! the 5-minute run is safe through version-checked saves (A04) and the idempotent event insert):
+"! only files FMON already knows or inbound PRISM origins, no lots / calendar, only the checks
+"! the event can open or close (SLA, reject, PRISM file), no reconcile of earlier exceptions.
 CLASS zcl_cd_fmon_engine DEFINITION
   PUBLIC
   FINAL
@@ -43,7 +51,36 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
+    "! Instant processing of one PRISM event (bgPF unit). Business date = the records' date.
+    "! @parameter ev_deferred | an observation needs a file FMON does not know yet: nothing was
+    "!                         applied for it - the 5-minute run (all sources together) decides
+    METHODS run_event
+      IMPORTING
+        is_src           TYPE zif_cd_fmon_types=>ty_src
+        it_records       TYPE zif_cd_fmon_types=>tt_src_record
+      EXPORTING
+        ev_deferred      TYPE abap_bool
+      RETURNING
+        VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
+      RAISING
+        zcx_cd_ops_error.
+
   PRIVATE SECTION.
+    "! Run variant of the instant PRISM unit (run history; no lock is taken)
+    CONSTANTS gc_event_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PRISM'.
+    "! Checks an event can open or close for its file (the others need the batch context)
+    CONSTANTS:
+      BEGIN OF gc_event_check,
+        sla        TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_SLA',
+        reject     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REJECT',
+        prism_file TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_PRISM_FILE',
+      END OF gc_event_check.
+    "! Single-event mode (run_event): source and records given, no adapter read
+    DATA mv_single TYPE abap_bool.
+    DATA ms_single_src TYPE zif_cd_fmon_types=>ty_src.
+    DATA mt_single_records TYPE zif_cd_fmon_types=>tt_src_record.
+    DATA mv_deferred TYPE abap_bool.
+
     "! Lock variant: one monitor run at a time for all interfaces - the registry,
     "! event numbering and lots are shared (design: payment engine area + variant; FMON uses '*')
     CONSTANTS gc_lock_variant TYPE zif_cd_ops_types=>ty_variant VALUE '*'.
@@ -311,6 +348,25 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD run_event.
+    DATA lv_date TYPE d.
+    LOOP AT it_records ASSIGNING FIELD-SYMBOL(<ls_record>) WHERE business_date IS NOT INITIAL.
+      lv_date = nmax( val1 = lv_date val2 = <ls_record>-business_date ).
+    ENDLOOP.
+    IF lv_date IS INITIAL.
+      lv_date = zcl_cd_ops_factory=>get_clock( )->today( ).
+    ENDIF.
+    mv_single         = abap_true.
+    ms_single_src     = is_src.
+    mt_single_records = it_records.
+    CLEAR mv_deferred.
+    rs_result = execute( iv_business_date = lv_date
+                         iv_iface_id      = space
+                         iv_test_mode     = abap_false ).
+    ev_deferred = mv_deferred.
+  ENDMETHOD.
+
+
   METHOD reconcile_files.
     DATA lt_scope TYPE zif_cd_ops_types=>tt_object_key.
 
@@ -344,7 +400,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     DATA(ls_run) = mo_store->start_run(
       iv_pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
-      iv_variant   = COND #( WHEN iv_iface_id IS INITIAL THEN 'ALL' ELSE iv_iface_id )
+      iv_variant   = COND #( WHEN mv_single = abap_true THEN gc_event_variant
+                             WHEN iv_iface_id IS INITIAL THEN 'ALL' ELSE iv_iface_id )
       iv_test_mode = iv_test_mode ).
     IF mv_test_mode = abap_false.
       " Run header durable first: a later rollback of a failed registry save keeps the run
@@ -357,8 +414,11 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         load_config( ).
         sync_sources( ).
         load_registry( ).
-        derive_lot_outcomes( ).
-        build_expectations( ).
+        " Lots and calendar expectations need the whole day: batch run only
+        IF mv_single = abap_false.
+          derive_lot_outcomes( ).
+          build_expectations( ).
+        ENDIF.
         run_checks( ).
         IF mv_test_mode = abap_false.
           persist_registry( ).
@@ -419,7 +479,15 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ls_request-max_rows  = int_param( iv_name    = zif_cd_fmon_types=>gc_param-max_rows
                                       iv_default = 50000 ).
 
+    IF mv_single = abap_true.
+      lt_groups = aggregate( is_src     = ms_single_src
+                             it_records = mt_single_records ).
+    ENDIF.
     LOOP AT mt_srcs INTO DATA(ls_src).
+      " Single-event mode: the event's records are the only input
+      IF mv_single = abap_true.
+        EXIT.
+      ENDIF.
       IF mv_iface IS NOT INITIAL AND ls_src-iface_id IS NOT INITIAL AND ls_src-iface_id <> mv_iface.
         CONTINUE.
       ENDIF.
@@ -470,6 +538,11 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                              iv_v2    = ls_group-iface_id ) ).
         CONTINUE.
       ENDIF.
+      IF lv_file_id IS INITIAL.
+        " Single-event mode: no known file for a later stage - left to the 5-minute run
+        mv_deferred = abap_true.
+        CONTINUE.
+      ENDIF.
       DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
       apply_group( EXPORTING is_group = ls_group
                              is_iface = ls_iface
@@ -515,8 +588,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       IF mv_iface IS NOT INITIAL AND ls_iface-iface_id <> mv_iface.
         CONTINUE.
       ENDIF.
+      " PRISM_* stages fit both directions (PRISM status API)
       IF ls_record-stage IS INITIAL
-         OR zcl_cd_fmon_status=>direction_of( ls_record-stage ) <> ls_iface-direction.
+         OR zcl_cd_fmon_status=>fits_direction( iv_stage     = ls_record-stage
+                                                iv_direction = ls_iface-direction ) = abap_false.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-unmapped_status
                         iv_key      = |{ is_src-src_id }:{ ls_record-raw_status }|
                         iv_iface_id = ls_iface-iface_id
@@ -657,7 +732,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lv_count TYPE i.
 
     CLEAR: ev_file_id, ev_ambiguous.
-    DATA(lv_origin) = xsdbool( zcl_cd_fmon_status=>rank( is_group-stage ) = 1 ).
+    DATA(lv_origin) = zcl_cd_fmon_status=>is_origin( iv_stage     = is_group-stage
+                                                     iv_direction = is_iface-direction ).
     DATA(lv_date) = COND d( WHEN is_group-business_date IS NOT INITIAL THEN is_group-business_date
                             WHEN lv_origin = abap_true THEN mv_date ).
     LOOP AT mt_files INTO DATA(ls_file) USING KEY ref
@@ -688,6 +764,11 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         RETURN.
       ENDIF.
       ev_file_id = lv_best.
+      RETURN.
+    ENDIF.
+    IF mv_single = abap_true AND lv_origin = abap_false.
+      " A later stage of a file FMON does not know yet (e.g. PRISM faster than the generation
+      " read): never opened by one event alone - blank ID, the 5-minute run correlates it
       RETURN.
     ENDIF.
     ev_file_id = get_or_create( is_group = is_group
@@ -725,7 +806,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD apply_group.
-    IF zcl_cd_fmon_status=>rank( is_group-stage ) = 1.
+    DATA(lv_origin) = zcl_cd_fmon_status=>is_origin( iv_stage     = is_group-stage
+                                                     iv_direction = is_iface-direction ).
+    IF lv_origin = abap_true.
       " First stage (generated / received) carries the file's own attributes
       IF is_group-file_name IS NOT INITIAL.
         cs_file-file_name = is_group-file_name.
@@ -745,7 +828,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDIF.
 
     IF is_group-size_known = abap_true
-       AND ( cs_file-size_known = abap_false OR zcl_cd_fmon_status=>rank( is_group-stage ) = 1 ).
+       AND ( cs_file-size_known = abap_false OR lv_origin = abap_true ).
       cs_file-size_bytes = is_group-size_bytes.
       cs_file-size_known = abap_true.
     ENDIF.
@@ -800,10 +883,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lv_open_since TYPE d.
     lv_from       = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 ).
     lv_open_since = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-open_days iv_default = 30 ).
-    DATA(lt_db) = mo_dao->get_eval_files( iv_date_from  = lv_from
-                                          iv_date_to    = mv_date
-                                          iv_open_since = lv_open_since
-                                          iv_iface_id   = mv_iface ).
+    DATA lt_db TYPE zif_cd_fmon_types=>tt_file.
+    " Single-event mode: only the files of the event (prefetched by reference)
+    IF mv_single = abap_false.
+      lt_db = mo_dao->get_eval_files( iv_date_from  = lv_from
+                                      iv_date_to    = mv_date
+                                      iv_open_since = lv_open_since
+                                      iv_iface_id   = mv_iface ).
+    ENDIF.
     LOOP AT lt_db INTO DATA(ls_db).
       IF NOT line_exists( mt_files[ file_id = ls_db-file_id ] ).
         INSERT ls_db INTO TABLE mt_files.
@@ -1051,6 +1138,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA(ls_ctx) = build_context( ).
 
     LOOP AT mt_checks INTO DATA(ls_check) WHERE active = abap_true.
+      IF mv_single = abap_true
+         AND ls_check-class_name <> gc_event_check-sla
+         AND ls_check-class_name <> gc_event_check-reject
+         AND ls_check-class_name <> gc_event_check-prism_file.
+        CONTINUE.
+      ENDIF.
       TRY.
           lt_found = zcl_cd_fmon_factory=>get_check( ls_check-class_name )->execute( is_ctx   = ls_ctx
                                                                                       is_check = ls_check ).
@@ -1201,12 +1294,28 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                iv_v2    = cs_run-total_items
                                                iv_v3    = lines( mt_findings ) ).
 
-    mo_store->save_findings( EXPORTING it_findings = mt_findings
-                             CHANGING  cs_run      = cs_run ).
+    " Single-event mode with FMON_PRISM_INSTANT blank: registry only - findings and alerts
+    " come from the 5-minute run (which would otherwise see them as carried forward, not new)
+    DATA(lv_instant) = xsdbool( mv_single = abap_false
+                                OR mo_store->get_param( iv_name    = zif_cd_fmon_prism_types=>gc_param_instant
+                                                        iv_default = zif_cd_fmon_prism_types=>gc_default_instant )
+                                   IS NOT INITIAL ).
+    IF lv_instant = abap_true.
+      mo_store->save_findings( EXPORTING it_findings = mt_findings
+                               CHANGING  cs_run      = cs_run ).
+    ENDIF.
     mo_store->finish_run( cs_run ).
 
+    IF mv_test_mode = abap_false AND lv_instant = abap_false.
+      mo_store->commit( ).
+      RETURN.
+    ENDIF.
     IF mv_test_mode = abap_false.
-      reconcile_files( cs_run ).
+      " Reconcile closes exceptions by object key: a run with only some checks must not close
+      " the others' exceptions - single-event runs leave that to the 5-minute run
+      IF mv_single = abap_false.
+        reconcile_files( cs_run ).
+      ENDIF.
       " Results are durable before anyone is told (a channel may COMMIT WORK itself)
       mo_store->commit( ).
       " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALERT_RULE

@@ -19,7 +19,7 @@ ZCL_CD_FMON_LOT_READER,5,90,,Not run in target SAP
 ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
-ZCL_CD_FMON_STATUS,15,90,,Not run in target SAP
+ZCL_CD_FMON_STATUS,24,90,,Not run in target SAP
 ZCL_CD_FMON_UTIL,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,14,90,,Not run in target SAP
 ZCL_CD_HCK_BUDGET,3,90,,Not run in target SAP

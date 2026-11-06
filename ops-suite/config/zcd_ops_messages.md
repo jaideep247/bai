@@ -192,6 +192,25 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 247 | &1 of &2 &3 item(s) open |
 | 248 | Factory calendar &1: banking-day age unknown, no aging verdict: |
 | 249 | Field &1 of table &2 is not approved for file monitoring (ZCD_FMON_TABWL) |
+| 250 | Field &1 is required |
+| 251 | Field &1 has an invalid value |
+| 252 | Field &1 is longer than &2 characters |
+| 253 | Field &1 is sent more than once |
+| 254 | Field &1 must be a string, number or boolean |
+| 255 | Body is not valid JSON: |
+| 256 | Body must be one JSON object |
+| 257 | Method &1 is not allowed - use POST |
+| 258 | Content type &1 is not supported - use application/json |
+| 259 | Body of &1 bytes exceeds the limit of &2 bytes |
+| 260 | No authorization to record PRISM events (ZCD_OPS &1 &2) |
+| 261 | Event &1 is already recorded with a different payload |
+| 262 | Event &1 could not be stored - retry later |
+| 263 | Field &1 lies more than &2 minutes in the future |
+| 264 | Field &1 requires field &2 |
+| 265 | &1: PRISM could not process or deliver the file (direction &2) |
+| 266 | &1: reported by PRISM, but SAP has no generation record of it |
+| 267 | &1: delivered by PRISM &2 min ago, not yet received in SAP |
+| 268 | Event &1: instant processing could not be queued (bgPF) |
 | 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
 | 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |

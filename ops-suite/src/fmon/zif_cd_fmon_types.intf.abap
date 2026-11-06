@@ -14,11 +14,17 @@
 *& 2026-11-06 | gc_engine_key-registry.
 *& 2026-11-06 | Plug-in interface names for the core factory check (audit A62).
 *& 2026-11-06 | File reference digest for names longer than the key (audit A100).
+*& 2026-11-06 | PRISM status API: stages PRISM_RECEIVED / PRISM_DELIVERED / PRISM_FAILED
+*&              (both directions), check codes and messages of the PRISM checks.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
-"!   outbound  GENERATED_IN_SAP -> SENT_TO_PRISM -> FORWARDED_TO_BANK -> ACK_RECEIVED | NACK_REJECTED
-"!   inbound   FILE_RECEIVED -> FILE_LOADED -> FULLY_PROCESSED | PARTIALLY_PROCESSED | FAILED
+"!   outbound  GENERATED_IN_SAP -> SENT_TO_PRISM -> PRISM_RECEIVED -> PRISM_DELIVERED = FORWARDED_TO_BANK
+"!             -> ACK_RECEIVED | NACK_REJECTED
+"!   inbound   PRISM_RECEIVED -> PRISM_DELIVERED -> FILE_RECEIVED -> FILE_LOADED
+"!             -> FULLY_PROCESSED | PARTIALLY_PROCESSED | FAILED
+"! PRISM_* stages belong to both directions (PRISM status API); PRISM_FAILED is an outcome
+"! that later evidence of progress supersedes (PRISM retried successfully).
 "! Terminal outcomes are never overwritten, with one exception: on a re-run an inbound
 "! outcome may only improve (FAILED -> PARTIALLY_PROCESSED -> FULLY_PROCESSED).
 "! ACK_RECEIVED and NACK_REJECTED are final. See ZCL_CD_FMON_STATUS.
@@ -113,6 +119,11 @@ INTERFACE zif_cd_fmon_types
       fully     TYPE ty_stage VALUE 'FULLY_PROCESSED',
       partially TYPE ty_stage VALUE 'PARTIALLY_PROCESSED',
       failed    TYPE ty_stage VALUE 'FAILED',
+      "! PRISM status API (both directions): PRISM received the file from SAP / the bank,
+      "! IRIS or source; delivered it onward; could not process or deliver it
+      prism_received  TYPE ty_stage VALUE 'PRISM_RECEIVED',
+      prism_delivered TYPE ty_stage VALUE 'PRISM_DELIVERED',
+      prism_failed    TYPE ty_stage VALUE 'PRISM_FAILED',
     END OF gc_stage.
 
   "! Result of applying a status to a file
@@ -221,6 +232,12 @@ INTERFACE zif_cd_fmon_types
       plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
       persist_error    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_ERROR',
       alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
+      "! PRISM reported that it could not process or deliver the file
+      prism_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_FAILED',
+      "! Outbound: PRISM evidence for a file SAP has no generation / send record of
+      prism_unknown    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_UNKNOWN_FILE',
+      "! Inbound: PRISM delivered the file, SAP has not received it after the grace period
+      prism_not_loaded TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_NOT_LOADED',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCD_OPS_PARAM (defaults in brackets)
@@ -714,6 +731,9 @@ INTERFACE zif_cd_fmon_types
       database_error              TYPE zif_cd_ops_types=>ty_msgno VALUE '246',
       lot_items_open              TYPE zif_cd_ops_types=>ty_msgno VALUE '247',
       factory_calendar_age_unknwn TYPE zif_cd_ops_types=>ty_msgno VALUE '248',
+      prism_failed                TYPE zif_cd_ops_types=>ty_msgno VALUE '265',
+      prism_unknown_file          TYPE zif_cd_ops_types=>ty_msgno VALUE '266',
+      prism_not_loaded            TYPE zif_cd_ops_types=>ty_msgno VALUE '267',
     END OF gc_msg.
 
 ENDINTERFACE.

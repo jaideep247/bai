@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Adapter and check plug-ins created with the core interface check (audit A62).
+*& 2026-11-06 | get_prism_dao( ), get_prism_queue( ) for the PRISM status API.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - factory</p>
 "! Getters have no side effects and never read the database.
@@ -57,7 +58,19 @@ CLASS zcl_cd_fmon_factory DEFINITION
       RETURNING
         VALUE(ro_engine) TYPE REF TO zcl_cd_fmon_engine.
 
+    "! Repository of the PRISM status API (ZCD_FMON_PRISM)
+    CLASS-METHODS get_prism_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_fmon_prism_dao.
+
+    "! Queue of the instant processing of a PRISM event (bgPF)
+    CLASS-METHODS get_prism_queue
+      RETURNING
+        VALUE(ro_queue) TYPE REF TO zif_cd_fmon_prism_queue.
+
   PRIVATE SECTION.
+    CLASS-DATA go_prism_queue_double TYPE REF TO zif_cd_fmon_prism_queue.
+    CLASS-DATA go_prism_dao_double TYPE REF TO zif_cd_fmon_prism_dao.
     CLASS-DATA go_dao_double TYPE REF TO zif_cd_fmon_dao.
     CLASS-DATA go_ddic_double TYPE REF TO zif_cd_fmon_ddic.
     CLASS-DATA go_calendar_double TYPE REF TO zif_cd_fmon_calendar.
@@ -128,6 +141,18 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
 
   METHOD get_engine.
     ro_engine = NEW zcl_cd_fmon_engine( ).
+  ENDMETHOD.
+
+
+  METHOD get_prism_dao.
+    ro_dao = COND #( WHEN go_prism_dao_double IS BOUND THEN go_prism_dao_double
+                     ELSE NEW zcl_cd_fmon_prism_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_prism_queue.
+    ro_queue = COND #( WHEN go_prism_queue_double IS BOUND THEN go_prism_queue_double
+                       ELSE NEW zcl_cd_fmon_prism_queue( ) ).
   ENDMETHOD.
 
 ENDCLASS.

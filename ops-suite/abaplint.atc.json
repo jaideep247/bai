@@ -10,6 +10,10 @@
       "url": "https://github.com/abaplint/deps",
       "folder": "/deps",
       "files": "/src/**/*.*"
+    },
+    {
+      "folder": "/lint_stubs",
+      "files": "/**/*.*"
     }
   ],
   "syntax": {

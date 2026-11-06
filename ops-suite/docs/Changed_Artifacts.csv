@@ -68,6 +68,7 @@ ddic/fmon/zcd_fmon_event.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_file.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_iface.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_lotcfg.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_prism.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_prq_wa.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_sla.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_src.tabl.ddl,DDIC,
@@ -129,6 +130,8 @@ docs/text_elements/zcd_ops_payment_trace.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_purge.prog.texts.md,Doc,
 docs/text_elements/zcl_cd_hck_report_html.clas.texts.md,Doc,
 docs/text_elements/zcl_cd_ops_alert_policy.clas.texts.md,Doc,
+lint_stubs/if_bgmc_op_single_tx_uncontr.intf.abap,ABAP,
+lint_stubs/if_bgmc_op_single_tx_uncontr.intf.xml,abapGit,
 src/package.devc.xml,abapGit,
 src/core/package.devc.xml,abapGit,
 src/core/za_cd_excassign.ddls.asddls,CDS,
@@ -610,6 +613,7 @@ src/fmon/zcd_fmon_iface.tabl.xml,abapGit,
 src/fmon/zcd_fmon_lotcfg.tabl.xml,abapGit,
 src/fmon/zcd_fmon_monitor.prog.abap,ABAP,File monitoring run and file status board: runs ZCL_CD_FMON_ENGINE for
 src/fmon/zcd_fmon_monitor.prog.xml,abapGit,
+src/fmon/zcd_fmon_prism.tabl.xml,abapGit,
 src/fmon/zcd_fmon_prq_wa.tabl.xml,abapGit,
 src/fmon/zcd_fmon_sla.tabl.xml,abapGit,
 src/fmon/zcd_fmon_src.tabl.xml,abapGit,
@@ -618,6 +622,8 @@ src/fmon/zcd_fmon_tabwl.tabl.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_generic.clas.abap,ABAP,Generic legacy source adapter: maps an existing custom table (e.g.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.testclasses.abap,ABAP,ltc_mapping: pure tests (no doubles) of legacy row -> status record.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_adapter_prism.clas.abap,ABAP,Source adapter of ZCD_FMON_PRISM (PRISM status API) for the ZCD_FMON_SRC
+src/fmon/zcl_cd_fmon_adapter_prism.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function payment engine areas
 src/fmon/zcl_cd_fmon_calendar.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_ack_match.clas.abap,ABAP,Plug-in check ACK_COUNT_MISMATCH / ACK_AMOUNT_MISMATCH: the bank ack
@@ -632,6 +638,8 @@ src/fmon/zcl_cd_fmon_chk_missing.clas.abap,ABAP,Plug-in check FILE_MISSING / UNE
 src/fmon/zcl_cd_fmon_chk_missing.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_noc_aging.clas.abap,ABAP,"Plug-in check NOC_AGING (compliance, severity from config, E) when a"
 src/fmon/zcl_cd_fmon_chk_noc_aging.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_chk_prism_file.clas.abap,ABAP,Plug-in check: PRISM evidence (PRISM status API) that SAP's own evidence
+src/fmon/zcl_cd_fmon_chk_prism_file.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_reject.clas.abap,ABAP,Plug-in check NACK (bank rejected the file or payments of it) and
 src/fmon/zcl_cd_fmon_chk_reject.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_size.clas.abap,ABAP,Plug-in check ZERO_BYTE / SIZE_OUT_OF_BOUNDS against MIN_BYTES and
@@ -656,6 +664,20 @@ src/fmon/zcl_cd_fmon_lot_reader.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_ops_policy.clas.abap,ABAP,"File-monitoring operations rules, pure: a manual status (design 6.4) needs"
 src/fmon/zcl_cd_fmon_ops_policy.clas.testclasses.abap,ABAP,Pure tests of the file-monitoring operations rules: manual status needs a
 src/fmon/zcl_cd_fmon_ops_policy.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_api.clas.abap,ABAP,"PRISM status API service: every decision of one call - method, authority"
+src/fmon/zcl_cd_fmon_prism_api.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_dao.clas.abap,ABAP,All SQL of the PRISM status API: idempotent INSERT into ZCD_FMON_PRISM
+src/fmon/zcl_cd_fmon_prism_dao.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_event.clas.abap,ABAP,PRISM status API - pure domain logic: parse the JSON body (sXML JSON
+src/fmon/zcl_cd_fmon_prism_event.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_http.clas.abap,ABAP,"ICF handler of the PRISM status API (SICF node /sap/zcd_ops/prism_status,"
+src/fmon/zcl_cd_fmon_prism_http.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_op.clas.abap,ABAP,"bgPF operation (transactional, uncontrolled - the FMON store commits itself)"
+src/fmon/zcl_cd_fmon_prism_op.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_proc.clas.abap,ABAP,Instant processing of one stored PRISM event (body of the bgPF unit): read
+src/fmon/zcl_cd_fmon_prism_proc.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_prism_queue.clas.abap,ABAP,bgPF implementation of ZIF_CD_FMON_PRISM_QUEUE: one background process per
+src/fmon/zcl_cd_fmon_prism_queue.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_query.clas.abap,ABAP,Builds and validates reads of configured tables: every table and field
 src/fmon/zcl_cd_fmon_query.clas.testclasses.abap,ABAP,Pure unit tests (no doubles) for the DDIC validation of configured
 src/fmon/zcl_cd_fmon_query.clas.xml,abapGit,
@@ -682,6 +704,12 @@ src/fmon/zif_cd_fmon_ddic.intf.abap,ABAP,DDIC describer seam: returns the field 
 src/fmon/zif_cd_fmon_ddic.intf.xml,abapGit,
 src/fmon/zif_cd_fmon_lot_reader.intf.abap,ABAP,Returns / NOC lot completeness reader: counts processed and open items
 src/fmon/zif_cd_fmon_lot_reader.intf.xml,abapGit,
+src/fmon/zif_cd_fmon_prism_dao.intf.abap,ABAP,Repository of the PRISM status API: idempotent insert of one PRISM event
+src/fmon/zif_cd_fmon_prism_dao.intf.xml,abapGit,
+src/fmon/zif_cd_fmon_prism_queue.intf.abap,ABAP,Seam for queueing the instant processing of one stored PRISM event (real
+src/fmon/zif_cd_fmon_prism_queue.intf.xml,abapGit,
+src/fmon/zif_cd_fmon_prism_types.intf.abap,ABAP,Types and constants of the PRISM status API (POST /sap/zcd_ops/prism_status):
+src/fmon/zif_cd_fmon_prism_types.intf.xml,abapGit,
 src/fmon/zif_cd_fmon_types.intf.abap,ABAP,"File monitoring (FMON) types, status model, constants and the"
 src/fmon/zif_cd_fmon_types.intf.xml,abapGit,
 src/fmon/zr_cd_fmoncalendar.ddls.asddls,CDS,
