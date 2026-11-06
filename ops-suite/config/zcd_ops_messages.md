@@ -344,6 +344,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 543 | &1 lot &2 item of payment &3 has no reason |
 | 544 | &1 reason &2 of payment &3 is not a configured payment engine reason |
 | 545 | Payment &1: &2 lot items with different reasons (&3) |
+| 546 | &1 statements out of scope (lines not all payment engine accounts) |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

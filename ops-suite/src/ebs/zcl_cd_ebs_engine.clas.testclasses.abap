@@ -23,6 +23,9 @@
 *&            | POSTING_INCOMPLETE once per statement, never green, no reconciliation of skipped entries.
 *& 2026-11-06 | Return / NOC reason correction: R05 (NEEDS_POSTING) skips an entry that is not posted yet.
 *& 2026-11-06 | Performance: LTC_REGISTER_MEMO - the same statements validated twice read DFKKCR twice.
+*& 2026-11-06 | Payment engine account scope: LTD_CFG returns accounts; LTC_POSTING_STATE lines carry
+*&            | a payment engine XBLNR; LTC_PE_SCOPE - mixed statement skipped and counted, no findings,
+*&            | no reconciliation; all-PE statement validated.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -43,6 +46,8 @@ CLASS ltd_cfg DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_cfg_dao.
     DATA mt_map   TYPE zif_cd_ebs_types=>tt_btc_map.
     DATA mt_rules TYPE zif_cd_ebs_types=>tt_rule_cfg.
+    "! ZCD_EBS_ACCT rows (payment engine account scope)
+    DATA mt_accounts TYPE zif_cd_ebs_types=>tt_account_cfg.
     DATA mv_broken TYPE abap_bool.
 ENDCLASS.
 
@@ -57,7 +62,7 @@ CLASS ltd_cfg IMPLEMENTATION.
     rt_rules = mt_rules.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_accounts.
-    CLEAR rt_accounts.
+    rt_accounts = mt_accounts.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_flow_patterns.
     CLEAR rt_patterns.
@@ -1503,6 +1508,9 @@ CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
         s13_class   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S13_POSTED',
         s13_id      TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S13',
         stmt_key    TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00001001',
+        "! Payment engine account scope: every line carries an active configured account
+        pe_account  TYPE zif_cd_ebs_types=>ty_text35 VALUE '8XX1174412',
+        xblnr       TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412334',
       END OF gc_test.
 
     TYPES:
@@ -1620,6 +1628,11 @@ CLASS ltc_posting_state IMPLEMENTATION.
     DATA ls_package TYPE zif_cd_ebs_types=>ty_package.
     DATA ls_stmt    TYPE zif_cd_ebs_types=>ty_statement.
     DATA ls_line    TYPE zif_cd_ebs_types=>ty_line.
+    DATA ls_account TYPE zif_cd_ebs_types=>ty_account_cfg.
+
+    ls_account-account_no = gc_test-pe_account.
+    ls_account-active     = abap_true.
+    INSERT ls_account INTO TABLE mo_cfg->mt_accounts.
 
     ls_map-scheme      = zif_cd_ebs_types=>gc_scheme-bai2.
     ls_map-btc_code    = gc_test-code.
@@ -1662,6 +1675,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
       ls_line-amount        = '10.00'.
       ls_line-currency      = 'USD'.
       ls_line-reference     = |REF{ sy-index }|.
+      ls_line-xblnr         = gc_test-xblnr.
       ls_line-posting_state = is_flags-posting_state.
       INSERT ls_line INTO TABLE ls_package-lines.
     ENDDO.
@@ -2015,6 +2029,337 @@ CLASS ltc_register_memo IMPLEMENTATION.
         lo_cut->validate_package( CHANGING cs_package = ls_second ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_check_reads exp = 2
                                             msg = 'A second validation of the same statements must read DFKKCR again' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Payment engine account scope (user decision 2026-11-06): an imported statement is validated
+"! only when every line's XBLNR carries an active configured payment engine account. A mixed
+"! statement is skipped entirely - no statement or line rule, no finding (not even S04 or
+"! R14), no reconciliation of its earlier exceptions - and counted as out of scope in the
+"! result and the run message. Does not prove live SAP runtime behavior.
+CLASS ltc_pe_scope DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        group      TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'PESCOPE',
+        code       TYPE zif_cd_ebs_types=>ty_btc_code VALUE '987',
+        unmapped   TYPE zif_cd_ebs_types=>ty_btc_code VALUE '999',
+        line_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_LINE',
+        stmt_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_SCOPE_STMT',
+        s04_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S04_ACCOUNT',
+        s04_id     TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S04',
+        stmt_id    TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S99',
+        line_id    TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R99',
+        stmt_in    TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00002001',
+        stmt_mixed TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00002002',
+        pe_account TYPE zif_cd_ebs_types=>ty_text35 VALUE '8XX1174412',
+        xblnr_pe   TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412334',
+        xblnr_pe_2 TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412335',
+        xblnr_othr TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'BOA9999999999001',
+        bukrs      TYPE c LENGTH 4 VALUE 'US01',
+        hbkid      TYPE c LENGTH 5 VALUE 'JPMC1',
+        hktid      TYPE c LENGTH 5 VALUE 'DISB1',
+        other_hkt  TYPE c LENGTH 5 VALUE 'OTHR1',
+        currency   TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
+      END OF gc_test.
+
+    DATA mo_source    TYPE REF TO ltd_source.
+    DATA mo_cfg       TYPE REF TO ltd_cfg.
+    DATA mo_store     TYPE REF TO ltd_store.
+    DATA mo_line_rule TYPE REF TO ltd_probe_rule.
+    DATA mo_stmt_rule TYPE REF TO ltd_probe_rule.
+    DATA ms_result    TYPE zcl_cd_ebs_engine=>ty_result.
+
+    METHODS setup.
+    METHODS teardown.
+    "! One in-scope statement (every line a payment engine account) and, with iv_mixed, one
+    "! statement of another house bank account whose second line is not a payment engine account
+    "! and carries an unmapped code (would raise S04 and R14 if it were validated)
+    METHODS configure_scenario
+      IMPORTING
+        iv_mixed    TYPE abap_bool
+        iv_in_scope TYPE abap_bool DEFAULT abap_true.
+    METHODS add_statement
+      IMPORTING
+        iv_stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key
+        iv_hktid    TYPE clike
+      CHANGING
+        cs_package  TYPE zif_cd_ebs_types=>ty_package.
+    METHODS add_line
+      IMPORTING
+        iv_stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key
+        iv_xblnr    TYPE zif_cd_ebs_types=>ty_xblnr
+        iv_code     TYPE zif_cd_ebs_types=>ty_btc_code DEFAULT gc_test-code
+      CHANGING
+        cs_package  TYPE zif_cd_ebs_types=>ty_package.
+    METHODS run_engine.
+    METHODS findings_of
+      IMPORTING
+        iv_stmt_key     TYPE zif_cd_ebs_types=>ty_stmt_key
+      RETURNING
+        VALUE(rv_count) TYPE i.
+
+    METHODS all_pe_statement_validated   FOR TESTING.
+    METHODS mixed_statement_skipped      FOR TESTING.
+    METHODS mixed_statement_no_findings  FOR TESTING.
+    METHODS mixed_statement_counted      FOR TESTING.
+    METHODS mixed_statement_not_reconcil FOR TESTING.
+    METHODS only_mixed_run_not_no_data   FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_pe_scope IMPLEMENTATION.
+
+  METHOD setup.
+    mo_source    = NEW #( ).
+    mo_cfg       = NEW #( ).
+    mo_store     = NEW #( ).
+    mo_line_rule = NEW #( ).
+    mo_stmt_rule = NEW #( ).
+    zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
+    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-line_class io_instance = mo_line_rule ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
+    zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
+    zcl_cd_ebs_injector=>inject_release_dao( NEW ltd_release_dao( ) ).
+    CLEAR ms_result.
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+    zcl_cd_ebs_injector=>reset( ).
+    CLEAR: mo_source, mo_cfg, mo_store, mo_line_rule, mo_stmt_rule.
+  ENDMETHOD.
+
+
+  METHOD configure_scenario.
+    DATA ls_map     TYPE zif_cd_ebs_types=>ty_btc_map.
+    DATA ls_rule    TYPE zif_cd_ebs_types=>ty_rule_cfg.
+    DATA ls_account TYPE zif_cd_ebs_types=>ty_account_cfg.
+    DATA ls_package TYPE zif_cd_ebs_types=>ty_package.
+
+    " Configured payment engine account: house bank account JPMC1 / DISB1, account 8XX1174412
+    ls_account-bukrs      = gc_test-bukrs.
+    ls_account-hbkid      = gc_test-hbkid.
+    ls_account-hktid      = gc_test-hktid.
+    ls_account-account_no = gc_test-pe_account.
+    ls_account-currency   = gc_test-currency.
+    ls_account-active     = abap_true.
+    INSERT ls_account INTO TABLE mo_cfg->mt_accounts.
+
+    ls_map-scheme     = zif_cd_ebs_types=>gc_scheme-bai2.
+    ls_map-btc_code   = gc_test-code.
+    ls_map-flow_type  = zif_cd_ebs_types=>gc_flow-any.
+    ls_map-category   = 'D01'.
+    ls_map-rule_group = gc_test-group.
+    ls_map-exp_cdi    = zif_cd_ebs_types=>gc_cdi-credit.
+    ls_map-active     = abap_true.
+    INSERT ls_map INTO TABLE mo_cfg->mt_map.
+
+    " S04 (real rule: house bank account configured) and probes for statement and line rules
+    ls_rule-rule_group = zif_cd_ebs_types=>gc_rule_group_all.
+    ls_rule-rule_id    = gc_test-s04_id.
+    ls_rule-class_name = gc_test-s04_class.
+    ls_rule-level      = zif_cd_ebs_types=>gc_level-statement.
+    ls_rule-severity   = zif_cd_ops_types=>gc_severity-error.
+    ls_rule-active     = abap_true.
+    INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
+    ls_rule-rule_id    = gc_test-stmt_id.
+    ls_rule-class_name = gc_test-stmt_class.
+    INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
+    ls_rule-rule_group = gc_test-group.
+    ls_rule-rule_id    = gc_test-line_id.
+    ls_rule-class_name = gc_test-line_class.
+    ls_rule-level      = zif_cd_ebs_types=>gc_level-line.
+    INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
+
+    IF iv_in_scope = abap_true.
+      add_statement( EXPORTING iv_stmt_key = gc_test-stmt_in iv_hktid = gc_test-hktid CHANGING cs_package = ls_package ).
+      add_line( EXPORTING iv_stmt_key = gc_test-stmt_in iv_xblnr = gc_test-xblnr_pe CHANGING cs_package = ls_package ).
+      add_line( EXPORTING iv_stmt_key = gc_test-stmt_in iv_xblnr = gc_test-xblnr_pe_2 CHANGING cs_package = ls_package ).
+    ENDIF.
+    IF iv_mixed = abap_true.
+      add_statement( EXPORTING iv_stmt_key = gc_test-stmt_mixed iv_hktid = gc_test-other_hkt
+                     CHANGING  cs_package  = ls_package ).
+      add_line( EXPORTING iv_stmt_key = gc_test-stmt_mixed iv_xblnr = gc_test-xblnr_pe
+                CHANGING  cs_package  = ls_package ).
+      add_line( EXPORTING iv_stmt_key = gc_test-stmt_mixed iv_xblnr = gc_test-xblnr_othr iv_code = gc_test-unmapped
+                CHANGING  cs_package  = ls_package ).
+    ENDIF.
+    INSERT ls_package INTO TABLE mo_source->mt_packages.
+  ENDMETHOD.
+
+
+  METHOD add_statement.
+    DATA ls_stmt TYPE zif_cd_ebs_types=>ty_statement.
+    ls_stmt-stmt_key  = iv_stmt_key.
+    ls_stmt-source    = zif_cd_ebs_types=>gc_source-feb.
+    ls_stmt-bukrs     = gc_test-bukrs.
+    ls_stmt-hbkid     = gc_test-hbkid.
+    ls_stmt-hktid     = iv_hktid.
+    ls_stmt-currency  = gc_test-currency.
+    ls_stmt-stmt_date = '20261105'.
+    INSERT ls_stmt INTO TABLE cs_package-statements.
+  ENDMETHOD.
+
+
+  METHOD add_line.
+    DATA ls_line TYPE zif_cd_ebs_types=>ty_line.
+    ls_line-stmt_key  = iv_stmt_key.
+    ls_line-line_no   = lines( cs_package-lines ) + 1.
+    ls_line-scheme    = zif_cd_ebs_types=>gc_scheme-bai2.
+    ls_line-btc_code  = iv_code.
+    ls_line-cdi       = zif_cd_ebs_types=>gc_cdi-credit.
+    ls_line-amount    = '10.00'.
+    ls_line-currency  = gc_test-currency.
+    ls_line-reference = |REF{ ls_line-line_no }|.
+    ls_line-xblnr     = iv_xblnr.
+    INSERT ls_line INTO TABLE cs_package-lines.
+  ENDMETHOD.
+
+
+  METHOD run_engine.
+    TRY.
+        ms_result = NEW zcl_cd_ebs_engine( )->run( io_source = mo_source iv_variant = 'UNIT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Engine run raised: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD findings_of.
+    LOOP AT mo_store->mt_saved ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      IF <ls_finding>-object_key = iv_stmt_key OR <ls_finding>-object_key CP |{ iv_stmt_key }/*|.
+        rv_count += 1.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " Every line a payment engine account: statement and line rules run as before, green
+  METHOD all_pe_statement_validated.
+    TRY.
+        configure_scenario( abap_false ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_stmt_rule->mt_statements ) exp = 1
+                                            msg = 'The statement rule must validate the in-scope statement' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_line_rule->mt_lines ) exp = 2
+                                            msg = 'The line rule must validate both lines' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-out_of_scope exp = 0
+                                            msg = 'Nothing is out of scope' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 2
+                                            msg = 'Both lines pass' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+                                            msg = 'A clean in-scope statement closes green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A mixed statement reaches no statement rule and no line rule
+  METHOD mixed_statement_skipped.
+    TRY.
+        configure_scenario( abap_true ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_stmt_rule->mt_statements[ stmt_key = gc_test-stmt_mixed ] ) )
+          msg = 'A statement rule must not see the out-of-scope statement' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_line_rule->mt_lines[ stmt_key = gc_test-stmt_mixed ] ) )
+          msg = 'A line rule must not see a line of the out-of-scope statement' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_line_rule->mt_lines ) exp = 2
+                                            msg = 'The in-scope statement is still validated' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 2
+                                            msg = 'Lines of the out-of-scope statement are not counted as entries' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Its house bank account is not configured (S04) and one line has an unmapped code (R14):
+  " neither raises a finding - an out-of-scope statement is never an exception
+  METHOD mixed_statement_no_findings.
+    TRY.
+        configure_scenario( abap_true ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = findings_of( gc_test-stmt_mixed ) exp = 0
+                                            msg = 'No finding for an out-of-scope statement or its lines' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ms_result-findings[ check_code = zif_cd_ebs_types=>gc_check_code-account_not_configured ] ) )
+          msg = 'S04 must not report the skipped statement' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ms_result-findings[ check_code = zif_cd_ebs_types=>gc_check_code-unmapped_btc ] ) )
+          msg = 'R14 must not report a line of the skipped statement' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD mixed_statement_counted.
+    TRY.
+        configure_scenario( abap_true ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-out_of_scope exp = 1
+                                            msg = 'The mixed statement is counted as out of scope' ).
+        DATA(lv_text) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-out_of_scope iv_v1 = 1 ).
+        cl_abap_unit_assert=>assert_char_cp( act = ms_result-run-message exp = |*{ lv_text }*|
+                                             msg = 'The run message reports the out-of-scope statements' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-message exp = ms_result-run-message
+                                            msg = 'The saved run carries the same message' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Earlier exceptions of a skipped statement and its lines stay open: a statement that was
+  " not evaluated never resolves anything (as posting-open entries)
+  METHOD mixed_statement_not_reconcil.
+    TRY.
+        configure_scenario( abap_true ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+                                                                                gc_test-stmt_mixed ) ] ) )
+          msg = 'The out-of-scope statement must not be reconciled' ).
+        LOOP AT mo_store->mt_reconciled ASSIGNING FIELD-SYMBOL(<lv_key>).
+          cl_abap_unit_assert=>assert_char_np( act = <lv_key> exp = |{ gc_test-stmt_mixed }/*|
+                                               msg = 'No line of the out-of-scope statement may be reconciled' ).
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+                                                                               gc_test-stmt_in ) ] ) )
+          msg = 'The in-scope statement is reconciled as before' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A selection whose statements are all out of scope did select statements: not NO_DATA
+  METHOD only_mixed_run_not_no_data.
+    TRY.
+        configure_scenario( iv_mixed = abap_true iv_in_scope = abap_false ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-out_of_scope exp = 1
+                                            msg = 'The statement is counted as out of scope' ).
+        cl_abap_unit_assert=>assert_differs( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
+                                             msg = 'Statements were selected - the run is not NO_DATA' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_store->mt_saved msg = 'No finding is saved' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

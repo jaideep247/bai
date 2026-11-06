@@ -2,11 +2,12 @@ Object,ABAP Unit methods supplied,Required statement coverage percent,Measured s
 ZCL_CD_EBS_BTC_RESOLVER,20,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,9,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,18,90,,Not run in target SAP
-ZCL_CD_EBS_ENGINE,62,90,,Not run in target SAP
+ZCL_CD_EBS_ENGINE,68,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,7,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_BAI2,27,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_CAMT,24,90,,Not run in target SAP
+ZCL_CD_EBS_PE_SCOPE,17,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_DAO,1,90,,Not run in target SAP
 ZCL_CD_EBS_RELEASE_POLICY,7,90,,Not run in target SAP
 ZCL_CD_EBS_RULE_BASE,106,90,,Not run in target SAP

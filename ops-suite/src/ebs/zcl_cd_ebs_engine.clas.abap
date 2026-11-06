@@ -34,6 +34,10 @@
 *&            | of the kept findings hashed, read-only loops with field symbols; the check-register
 *&            | memo is cleared at the start of validate_package (same statements validated twice).
 *& 2026-11-06 | Package buffers released (FREE) once persisted, before the next package is read.
+*& 2026-11-06 | Payment engine account scope (user decision): before validation each package's imported
+*&            | statements whose lines are not all active payment engine accounts (account from
+*&            | FEBEP-XBLNR, ZCL_CD_EBS_PE_SCOPE) are removed with their lines - no rule, no finding, no
+*&            | reconciliation - and counted (result OUT_OF_SCOPE, run message 546).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -77,6 +81,10 @@ CLASS zcl_cd_ebs_engine DEFINITION
         "! Operating model 2026-11-06: imported entries expected to post but not posted whose
         "! posting-dependent rules (NEEDS_POSTING) were not evaluated - never passed, never failed
         posting_open TYPE i,
+        "! User decision 2026-11-06: imported statements not validated because not every line
+        "! carries an active payment engine account (XBLNR) - no finding; ZCD_OPS_RUN has no
+        "! field for it, the run message carries it (message 546)
+        out_of_scope TYPE i,
       END OF ty_result.
 
     "! A85: posting disposition of one line - AUTO_POST, EXCEPTION, ON_ACCOUNT, BLOCK or
@@ -240,6 +248,8 @@ CLASS zcl_cd_ebs_engine DEFINITION
                   WITH NON-UNIQUE SORTED KEY by_posting COMPONENTS needs_posting level unusable rule_group.
 
     DATA mo_resolver     TYPE REF TO zcl_cd_ebs_btc_resolver.
+    "! Payment engine account scope (active ZCD_EBS_ACCT accounts)
+    DATA mo_scope        TYPE REF TO zcl_cd_ebs_pe_scope.
     DATA mt_rules        TYPE tt_rule.
     DATA mt_plugins      TYPE tt_plugin.
     DATA mv_config_ready TYPE abap_bool.
@@ -314,6 +324,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
         iv_no_data      TYPE abap_bool DEFAULT abap_false
         iv_unevaluated  TYPE i DEFAULT 0
         iv_posting_open TYPE i DEFAULT 0
+        iv_out_of_scope TYPE i DEFAULT 0
       CHANGING
         cs_run          TYPE zif_cd_ops_types=>ty_run.
 
@@ -449,7 +460,17 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         EXIT.
       ENDIF.
 
+      " Statements selected (also those out of scope): a selection that found statements is
+      " never NO_DATA
       lv_statements += lines( ls_package-statements ).
+      " User decision 2026-11-06: only statements whose every line is a payment engine account
+      " are validated; the others leave the package before any rule, finding or reconciliation
+      load_configuration( ).
+      rs_result-out_of_scope += mo_scope->remove_out_of_scope( CHANGING cs_package = ls_package ).
+      IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
+        FREE ls_package.
+        CONTINUE.
+      ENDIF.
       DATA(lt_findings) = validate_package( CHANGING cs_package = ls_package ).
       DATA(ls_before) = rs_result-run.
       count_lines( EXPORTING it_lines        = ls_package-lines
@@ -541,6 +562,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                          iv_no_data      = lv_no_data
                          iv_unevaluated  = rs_result-unevaluated
                          iv_posting_open = rs_result-posting_open
+                         iv_out_of_scope = rs_result-out_of_scope
                CHANGING  cs_run          = rs_result-run ).
     lo_store->finish_run( rs_result-run ).
     IF iv_test_mode = abap_false.
@@ -854,10 +876,12 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA(lo_cfg) = zcl_cd_ebs_factory=>get_cfg_dao( ).
     DATA(lv_fallback) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = 'EBS_CAMT_BAI_FALLBACK'
                                                                     iv_default = `X` ).
+    DATA(lt_accounts) = lo_cfg->get_accounts( ).
     mo_resolver = NEW #( it_map          = lo_cfg->get_btc_map( )
                          it_patterns     = lo_cfg->get_flow_patterns( )
-                         it_accounts     = lo_cfg->get_accounts( )
+                         it_accounts     = lt_accounts
                          iv_bai_fallback = xsdbool( lv_fallback = abap_true ) ).
+    mo_scope = NEW #( lt_accounts ).
     mt_rules = lo_cfg->get_rules( ).
     DELETE mt_rules WHERE active = abap_false.
     SORT mt_rules BY level rule_group seq rule_id.
@@ -1038,6 +1062,11 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       cs_run-message = |{ cs_run-message } {
                           zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_unevaluated
                                                  iv_v1    = iv_posting_open ) }|.
+    ENDIF.
+    IF iv_out_of_scope > 0.
+      cs_run-message = |{ cs_run-message } {
+                          zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-out_of_scope
+                                                 iv_v1    = iv_out_of_scope ) }|.
     ENDIF.
   ENDMETHOD.
 

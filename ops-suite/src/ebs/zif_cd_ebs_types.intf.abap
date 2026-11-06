@@ -30,6 +30,8 @@
 *&            | EBS_FEB_POSTED_FIELDS, check code POSTING_INCOMPLETE, messages 541-542.
 *& 2026-11-06 | Return / NOC reason correction: EBS_FEB_REASON_FIELD removed (FEBEP has no reason);
 *&            | check code REASON_AMBIGUOUS, messages 543-545 (lot reasons DFKKRP-RLGRD / DFKKNRP-FLGRD).
+*& 2026-11-06 | Payment engine account scope (user decision): XBLNR / account types, derivation
+*&            | constants GC_PE_ACCOUNT (same literals as CDS ZI_CD_EbsLineAcct), message 546.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -53,6 +55,22 @@ INTERFACE zif_cd_ebs_types
   TYPES ty_bal_type   TYPE c LENGTH 4.
   TYPES ty_paymeth    TYPE c LENGTH 10.
   TYPES ty_source     TYPE c LENGTH 4.
+  "! Reference document number of a statement line (FEBEP-XBLNR)
+  TYPES ty_xblnr      TYPE c LENGTH 16.
+  "! Payment engine bank account as derived from FEBEP-XBLNR (ZCL_CD_EBS_PE_SCOPE)
+  TYPES ty_pe_account TYPE c LENGTH 10.
+
+  "! User decision 2026-11-06: FEBEP-XBLNR = bank text (letters, e.g. JPMC, BOA, PNC) + payment
+  "! engine bank account (10 characters) + counter, e.g. JPMC8XX1174412334 -> 8XX1174412.
+  "! The CDS view ZI_CD_EbsLineAcct derives the same account with the same pattern and length
+  "! as literals - a change here is a change there (docs/EBS_VALIDATION.md, section A0a)
+  CONSTANTS:
+    BEGIN OF gc_pe_account,
+      "! Leading bank text removed from XBLNR (PCRE)
+      bank_text_pcre TYPE string VALUE `^[A-Za-z]+`,
+      "! Characters of the account after the bank text
+      length         TYPE i VALUE 10,
+    END OF gc_pe_account.
 
   CONSTANTS:
     BEGIN OF gc_format,
@@ -187,7 +205,7 @@ INTERFACE zif_cd_ebs_types
       bank_ref      TYPE ty_text35,
       cust_ref      TYPE ty_text35,
       check_no      TYPE ty_text35,
-      xblnr         TYPE c LENGTH 16,
+      xblnr         TYPE ty_xblnr,
       "! NACHA return reason (R01..R85) or NOC code (C01..C07) from a bank file (parsers);
       "! blank from the FEB source - FEBEP carries no reason (R05 reads DFKKRP / DFKKNRP)
       return_reason TYPE c LENGTH 4,
@@ -701,6 +719,7 @@ INTERFACE zif_cd_ebs_types
       lot_reason_missing          TYPE zif_cd_ops_types=>ty_msgno VALUE '543',
       lot_reason_unmapped         TYPE zif_cd_ops_types=>ty_msgno VALUE '544',
       lot_reason_ambiguous        TYPE zif_cd_ops_types=>ty_msgno VALUE '545',
+      out_of_scope                TYPE zif_cd_ops_types=>ty_msgno VALUE '546',
     END OF gc_msg.
 
 ENDINTERFACE.

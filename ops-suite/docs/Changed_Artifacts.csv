@@ -552,6 +552,9 @@ src/ebs/zcl_cd_ebs_parser_bai2.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_parser_camt.clas.abap,ABAP,Parses ISO 20022 camt.053 (Stmt) and camt.054 (Ntfctn) XML with sXML into
 src/ebs/zcl_cd_ebs_parser_camt.clas.testclasses.abap,ABAP,"ABAP Unit tests for the camt.053/054 parser: statement, balances, entries,"
 src/ebs/zcl_cd_ebs_parser_camt.clas.xml,abapGit,
+src/ebs/zcl_cd_ebs_pe_scope.clas.abap,ABAP,Payment engine account scope (user decision 2026-11-06). FEBEP-XBLNR holds
+src/ebs/zcl_cd_ebs_pe_scope.clas.testclasses.abap,ABAP,Domain tests of the payment engine account scope: account derived from
+src/ebs/zcl_cd_ebs_pe_scope.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r01_sign.clas.abap,ABAP,R01: the credit/debit indicator must match the direction the BTC map
 src/ebs/zcl_cd_ebs_r_r01_sign.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r02_bounds.clas.abap,ABAP,R02: amount must lie between PARAM1 (minimum) and PARAM2 (maximum) of
