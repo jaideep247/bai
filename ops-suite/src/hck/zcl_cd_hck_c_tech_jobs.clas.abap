@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Unresolved jobs read regardless of the window; capped read reported (audit A44).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -53,9 +54,18 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
                                           iv_to       = is_context-report_date ).
     " A44: unfinished jobs are read independently of the window (an old stuck job stays visible)
     DATA(lt_unresolved) = lo_dao->get_unresolved_jobs( lt_patterns ).
-    LOOP AT lt_unresolved INTO DATA(ls_unresolved).
-      IF NOT line_exists( lt_runs[ jobname = ls_unresolved-jobname jobcount = ls_unresolved-jobcount ] ).
-        INSERT ls_unresolved INTO TABLE lt_runs.
+    " Sweep: job identities of the window by hash (was a scan of the runs per unresolved job)
+    TYPES:
+      BEGIN OF ty_job_key,
+        jobname  TYPE zif_cd_hck_types=>ty_job_run-jobname,
+        jobcount TYPE zif_cd_hck_types=>ty_job_run-jobcount,
+      END OF ty_job_key.
+    DATA lt_known TYPE HASHED TABLE OF ty_job_key WITH UNIQUE KEY jobname jobcount.
+    lt_known = CORRESPONDING #( lt_runs DISCARDING DUPLICATES ).
+    LOOP AT lt_unresolved ASSIGNING FIELD-SYMBOL(<ls_unresolved>).
+      INSERT CORRESPONDING ty_job_key( <ls_unresolved> ) INTO TABLE lt_known.
+      IF sy-subrc = 0.
+        INSERT <ls_unresolved> INTO TABLE lt_runs.
       ENDIF.
     ENDLOOP.
     " A44: a read that reached its cap is reported - the counts below may be incomplete

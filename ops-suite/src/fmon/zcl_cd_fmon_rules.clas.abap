@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A38-A41: SLA admissible evidence / INFERRED, reported ACK counts only,
 *&              truncated lots derive nothing, unknown age no verdict, receipt correction.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -345,7 +346,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT it_events INTO DATA(ls_event) WHERE file_id = is_file-file_id.
+    " Sweep: by key (the verdict does not depend on the order of the events)
+    LOOP AT it_events INTO DATA(ls_event) USING KEY by_file WHERE file_id = is_file-file_id.
       IF zcl_cd_fmon_status=>direction_of( ls_event-stage ) <> is_file-direction.
         CONTINUE.
       ENDIF.

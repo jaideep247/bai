@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Query keeps its definition (audit A56).
 *& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -230,9 +231,15 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     " A103: an expected group (e.g. company code) with no rows measured zero - a silent
     " company next to an active one stays visible to its lower-is-worse threshold
     CLEAR ls_metric-value.
+    " Sweep: measured groups by hash (was a scan of the metrics per expected group)
+    DATA lt_measured TYPE HASHED TABLE OF zif_cd_hck_types=>ty_dim WITH UNIQUE KEY table_line.
+    LOOP AT rt_metrics ASSIGNING FIELD-SYMBOL(<ls_measured>).
+      INSERT <ls_measured>-dim1 INTO TABLE lt_measured.
+    ENDLOOP.
     LOOP AT it_expected INTO DATA(lv_expected).
       ls_metric-dim1 = lv_expected.
-      IF NOT line_exists( rt_metrics[ dim1 = ls_metric-dim1 ] ).
+      INSERT ls_metric-dim1 INTO TABLE lt_measured.
+      IF sy-subrc = 0.
         INSERT ls_metric INTO TABLE rt_metrics.
       ENDIF.
     ENDLOOP.

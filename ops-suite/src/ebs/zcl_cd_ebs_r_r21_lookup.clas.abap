@@ -13,6 +13,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A65: reference checked against the width of the lookup key kind (no truncation).
 *& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R21 - configurable table lookup</p>
 CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
@@ -86,7 +87,7 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       CLEAR: lv_statuses, lv_found, lv_ok.
-      LOOP AT lt_rows INTO DATA(ls_row) WHERE lookup_key = lv_key.
+      LOOP AT lt_rows INTO DATA(ls_row) USING KEY by_key WHERE lookup_key = lv_key.
         lv_found = abap_true.
         IF ls_lookup-status_field IS INITIAL OR lt_allowed IS INITIAL
            OR in_list( iv_value = ls_row-status it_list = lt_allowed ) = abap_true.

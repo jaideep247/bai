@@ -18,6 +18,7 @@
 *&              A40 events stored as applied, A41 unknown age, A49 file instance by
 *&              business date, A52 malformed rows quarantined.
 *& 2026-11-06 | Digest file references verified against the full file name in the registry (audit A100).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -141,6 +142,21 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_lots TYPE zif_cd_fmon_types=>tt_lot_status.
     DATA mt_expects TYPE zif_cd_fmon_types=>tt_expect.
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+
+    "! Sweep: findings of one file reference - number, worst severity rank and the message of
+    "! the first finding of that rank (one pass instead of a scan per file)
+    TYPES:
+      BEGIN OF ty_ref_summary,
+        reference   TYPE zif_cd_ops_types=>ty_finding-reference,
+        count       TYPE i,
+        worst       TYPE i,
+        top_message TYPE zif_cd_ops_types=>ty_finding-message,
+      END OF ty_ref_summary.
+    TYPES tt_ref_summary TYPE HASHED TABLE OF ty_ref_summary WITH UNIQUE KEY reference.
+
+    METHODS findings_by_reference
+      RETURNING
+        VALUE(rt_summary) TYPE tt_ref_summary.
 
     METHODS init
       IMPORTING
@@ -814,7 +830,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       mt_events = mo_dao->get_events( VALUE #( FOR ls_file IN mt_files ( ls_file-file_id ) ) ).
     ENDIF.
     LOOP AT mt_new_events INTO DATA(ls_event).
-      IF NOT line_exists( mt_events[ file_id = ls_event-file_id
+      IF NOT line_exists( mt_events[ KEY by_file
+                                     file_id = ls_event-file_id
                                      src_id  = ls_event-src_id
                                      src_key = ls_event-src_key
                                      stage   = ls_event-stage ] ).
@@ -1123,21 +1140,21 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD build_board.
     DATA ls_row TYPE zif_cd_fmon_types=>ty_board.
 
-    LOOP AT mt_files INTO DATA(ls_file).
-      ls_row = CORRESPONDING #( ls_file ).
-      READ TABLE mt_ifaces INTO DATA(ls_iface) WITH TABLE KEY iface_id = ls_file-iface_id.
+    DATA(lt_by_ref) = findings_by_reference( ).
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      ls_row = CORRESPONDING #( <ls_file> ).
+      READ TABLE mt_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WITH TABLE KEY iface_id = <ls_file>-iface_id.
       IF sy-subrc = 0.
-        ls_row-owner = ls_iface-owner.
+        ls_row-owner = <ls_iface>-owner.
       ENDIF.
-      DATA(lv_ref) = zcl_cd_fmon_util=>file_hex( ls_file-file_id ).
       DATA(lv_worst) = 0.
-      LOOP AT mt_findings INTO DATA(ls_finding) WHERE reference = lv_ref.
-        ls_row-finding_count += 1.
-        IF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) > lv_worst.
-          lv_worst = zcl_cd_ops_util=>severity_rank( ls_finding-severity ).
-          ls_row-top_message = ls_finding-message.
-        ENDIF.
-      ENDLOOP.
+      READ TABLE lt_by_ref ASSIGNING FIELD-SYMBOL(<ls_ref>)
+           WITH TABLE KEY reference = zcl_cd_fmon_util=>file_hex( <ls_file>-file_id ).
+      IF sy-subrc = 0.
+        ls_row-finding_count = <ls_ref>-count.
+        ls_row-top_message   = <ls_ref>-top_message.
+        lv_worst             = <ls_ref>-worst.
+      ENDIF.
       ls_row-sla_status = COND #( WHEN lv_worst >= 3 THEN zif_cd_ops_types=>gc_rag-red
                                   WHEN lv_worst = 2 THEN zif_cd_ops_types=>gc_rag-amber
                                   ELSE zif_cd_ops_types=>gc_rag-green ).
@@ -1146,7 +1163,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDLOOP.
 
     " Expected-but-missing files and other interface-level findings get their own row
-    LOOP AT mt_findings INTO ls_finding WHERE reference IS INITIAL AND group1 IS NOT INITIAL.
+    LOOP AT mt_findings INTO DATA(ls_finding) WHERE reference IS INITIAL AND group1 IS NOT INITIAL.
       CLEAR ls_row.
       ls_row-iface_id      = ls_finding-group1.
       ls_row-business_date = mv_date.
@@ -1170,12 +1187,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD finish.
     DATA(lv_worst_run) = 0.
     cs_run-total_items = lines( mt_files ).
-    LOOP AT mt_files INTO DATA(ls_file).
-      DATA(lv_ref) = zcl_cd_fmon_util=>file_hex( ls_file-file_id ).
-      DATA(lv_worst) = 0.
-      LOOP AT mt_findings INTO DATA(ls_finding) WHERE reference = lv_ref.
-        lv_worst = nmax( val1 = lv_worst val2 = zcl_cd_ops_util=>severity_rank( ls_finding-severity ) ).
-      ENDLOOP.
+    DATA(lt_by_ref) = findings_by_reference( ).
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      DATA(lv_worst) = VALUE #( lt_by_ref[ reference = zcl_cd_fmon_util=>file_hex( <ls_file>-file_id ) ]-worst
+                                OPTIONAL ).
       CASE lv_worst.
         WHEN 4.
           cs_run-blocked_items += 1.
@@ -1237,6 +1252,23 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                                  iv_iface_id = is_iface-iface_id
                                                                  iv_lot_type = CONV #( is_iface-file_type ) )
                                  IS NOT INITIAL ).
+  ENDMETHOD.
+
+
+  METHOD findings_by_reference.
+    " In finding order: the first finding of the worst rank gives the message, as before
+    LOOP AT mt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE reference IS NOT INITIAL.
+      READ TABLE rt_summary ASSIGNING FIELD-SYMBOL(<ls_summary>) WITH TABLE KEY reference = <ls_finding>-reference.
+      IF sy-subrc <> 0.
+        INSERT VALUE #( reference = <ls_finding>-reference ) INTO TABLE rt_summary ASSIGNING <ls_summary>.
+      ENDIF.
+      <ls_summary>-count += 1.
+      DATA(lv_rank) = zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+      IF lv_rank > <ls_summary>-worst.
+        <ls_summary>-worst       = lv_rank.
+        <ls_summary>-top_message = <ls_finding>-message.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

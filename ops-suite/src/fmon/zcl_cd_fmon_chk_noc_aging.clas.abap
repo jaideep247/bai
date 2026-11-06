@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - NOC aging (NACHA banking days)</p>
 "! Rules: ZCL_CD_FMON_RULES=>NOC_AGING_CODE. Banking days come from the engine (calendar).
@@ -30,7 +31,7 @@ CLASS zcl_cd_fmon_chk_noc_aging IMPLEMENTATION.
       IF lv_code IS INITIAL.
         CONTINUE.
       ENDIF.
-      READ TABLE is_ctx-files INTO DATA(ls_file) WITH KEY file_id = ls_lot-file_id.
+      READ TABLE is_ctx-files INTO DATA(ls_file) WITH KEY by_id COMPONENTS file_id = ls_lot-file_id.
       IF sy-subrc <> 0.
         CONTINUE.
       ENDIF.

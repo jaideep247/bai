@@ -15,6 +15,7 @@
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Partner mismatch, history unavailable on reversal, FMON digest references and
 *&            | file date window, cheque history unavailable, test-first review fixes.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -629,7 +630,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       " itself was reversed (DFKKKO-STBEL) - both VERIFY-SE11
       DATA(lv_reversed) = xsdbool( ( ls_item-augrd IS NOT INITIAL AND in_list( iv_value = ls_item-augrd
                                                                                iv_list  = ms_cfg-reversal ) = abap_true )
-                                   OR VALUE zif_cd_ops_trace_types=>ty_docno( mt_headers[ opbel = ls_item-augbl ]-stbel
+                                   OR VALUE zif_cd_ops_trace_types=>ty_docno( mt_headers[ KEY by_opbel opbel = ls_item-augbl ]-stbel
                                                                               OPTIONAL ) IS NOT INITIAL ).
       DATA(ls_read) = read_source( is_source = ms_cfg-history is_key = VALUE #( key1 = ls_item-opbel ) ).
       DATA(ls_base) = VALUE ty_row( stage        = zif_cd_ops_trace_types=>gc_stage-history
@@ -1211,10 +1212,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     " not reversed)
     DATA(ls_gl) = VALUE ty_row( stage = zif_cd_ops_trace_types=>gc_stage-gl bukrs = is_attempt-bukrs
                                 source_table = zif_cd_ops_trace_types=>gc_table-dfkkko record_key = is_attempt-ref ).
-    IF NOT line_exists( mt_headers[ opbel = is_attempt-ref ] ).
+    IF NOT line_exists( mt_headers[ KEY by_opbel opbel = is_attempt-ref ] ).
       INSERT LINES OF mo_dao->get_doc_headers( VALUE #( ( is_attempt-ref ) ) ) INTO TABLE mt_headers.
     ENDIF.
-    DATA(lv_fikey) = VALUE zif_cd_ops_trace_types=>ty_doc_header-fikey( mt_headers[ opbel = is_attempt-ref ]-fikey OPTIONAL ).
+    DATA(lv_fikey) = VALUE zif_cd_ops_trace_types=>ty_doc_header-fikey( mt_headers[ KEY by_opbel opbel = is_attempt-ref ]-fikey OPTIONAL ).
     IF lv_fikey IS INITIAL.
       ls_gl-status = zif_cd_ops_trace_types=>gc_status-missing.
       ls_gl-reason = zif_cd_ops_trace_types=>gc_reason-no_fikey.

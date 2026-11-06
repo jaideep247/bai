@@ -15,6 +15,7 @@
 *& 2026-11-06 | Performance fix 3: get_febep_reasons / get_febep_posting moved into ZIF_CD_EBS_FEB_DAO get_items.
 *& 2026-11-06 | Performance fix 4: non-unique sorted secondary keys on the result tables (rules loop USING KEY).
 *& 2026-11-06 | Performance fix 6: get_gl_balances - one ACDOCA aggregate for all closing statements (was one per statement).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -124,7 +125,9 @@ INTERFACE zif_cd_ebs_sap_dao
       lookup_key TYPE ty_lookup_key,
       status     TYPE c LENGTH 40,
     END OF ty_lookup_row.
-  TYPES tt_lookup_row TYPE STANDARD TABLE OF ty_lookup_row WITH EMPTY KEY.
+  "! Sweep: secondary key BY_KEY - R21 reads the rows of one key per bank line
+  TYPES tt_lookup_row TYPE STANDARD TABLE OF ty_lookup_row WITH EMPTY KEY
+                      WITH NON-UNIQUE SORTED KEY by_key COMPONENTS lookup_key.
 
   "! Rows of the configured table for the keys (key field, status field). Table and field
   "! names are validated against the DDIC; an unknown name raises (rule fails closed).

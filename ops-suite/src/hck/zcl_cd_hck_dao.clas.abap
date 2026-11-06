@@ -20,6 +20,7 @@
 *& 2026-11-06 | Expected groups read from ZCD_HCK_AGGGRP; row cap on the interface (audit A103).
 *& 2026-11-06 | Performance fix 7: metric history - latest point per run by ROW_NUMBER( ) in a CTE, newest runs
 *&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -450,6 +451,15 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD add_step_program.
+    TYPES:
+      BEGIN OF ty_step,
+        jobname  TYPE zif_cd_hck_types=>ty_job_run-jobname,
+        jobcount TYPE zif_cd_hck_types=>ty_job_run-jobcount,
+        progname TYPE zif_cd_hck_types=>ty_job_run-progname,
+        variant  TYPE zif_cd_hck_types=>ty_job_run-variant,
+      END OF ty_step.
+    " Sweep: sorted key instead of SORT + BINARY SEARCH (one first step per job)
+    DATA lt_steps TYPE SORTED TABLE OF ty_step WITH NON-UNIQUE KEY jobname jobcount.
     CHECK ct_runs IS NOT INITIAL.
     "VERIFY-DDIC: TBTCP-JOBNAME, JOBCOUNT, STEPCOUNT, PROGNAME, VARIANT
     SELECT jobname, jobcount, progname, variant
@@ -458,14 +468,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       WHERE jobname   = @ct_runs-jobname
         AND jobcount  = @ct_runs-jobcount
         AND stepcount = @gc_first_step
-      INTO TABLE @DATA(lt_steps).
-    SORT lt_steps BY jobname jobcount.
+      INTO CORRESPONDING FIELDS OF TABLE @lt_steps.
     LOOP AT ct_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
-      READ TABLE lt_steps INTO DATA(ls_step) WITH KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount
-        BINARY SEARCH.
+      READ TABLE lt_steps ASSIGNING FIELD-SYMBOL(<ls_step>)
+           WITH TABLE KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount.
       IF sy-subrc = 0.
-        <ls_run>-progname = ls_step-progname.
-        <ls_run>-variant  = ls_step-variant.
+        <ls_run>-progname = <ls_step>-progname.
+        <ls_run>-variant  = <ls_step>-variant.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
