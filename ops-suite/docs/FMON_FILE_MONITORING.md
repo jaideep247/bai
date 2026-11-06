@@ -70,6 +70,8 @@ Report `ZCD_FMON_MONITOR` (selection: business date, interface, test mode, "show
 | First / last event | timestamps of the audit trail |
 | Findings, top message | number of findings and the worst one |
 
+**File monitoring dashboard** (launchpad, read-only, `Dashboard_File_Monitoring.md`): the same registry as an analytical list page with flow buckets, SLA status, tiles and the monitor *as of* — refreshed by every run of this report.
+
 Expected files that did not arrive appear as their own row (`<interface>/<date>`, FILE_MISSING or FILE_LATE). Schedule the report (or the engine) after each file window in Control-M with test mode off; online users run it in test mode (nothing saved, no alert).
 
 ## A4. NOC and returns completeness
