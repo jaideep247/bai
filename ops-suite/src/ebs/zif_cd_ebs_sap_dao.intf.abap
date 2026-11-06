@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A07: company code of the register row (optional, configured field).
 *& 2026-11-06 | Audit A28: get_febep_reasons (configured FEBEP field, DEFAULT IGNORE).
 *& 2026-11-06 | Audit A65: TY_DOCNO width is the document key width (VERIFY-DDIC OPBEL_KK / AUGBL_KK / DOC1R CHAR 12).
+*& 2026-11-06 | Operating model: get_febep_posting (FEBEP posting-area flags, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -65,6 +66,16 @@ INTERFACE zif_cd_ebs_sap_dao
     END OF ty_febep_reason.
   TYPES tt_febep_reason TYPE STANDARD TABLE OF ty_febep_reason WITH EMPTY KEY.
   TYPES tt_febep_kukey TYPE SORTED TABLE OF ty_febep_reason-kukey WITH UNIQUE KEY table_line.
+
+  "! Operating model 2026-11-06: posting state of a FEBEP item - POSTED = X when every
+  "! configured posting-area flag (EBS_FEB_POSTED_FIELDS, VERIFY-SE11 VB1OK / VB2OK) holds X
+  TYPES:
+    BEGIN OF ty_febep_posting,
+      kukey  TYPE n LENGTH 8,
+      esnum  TYPE n LENGTH 5,
+      posted TYPE abap_bool,
+    END OF ty_febep_posting.
+  TYPES tt_febep_posting TYPE SORTED TABLE OF ty_febep_posting WITH UNIQUE KEY kukey esnum.
 
   TYPES:
     BEGIN OF ty_check,
@@ -172,5 +183,18 @@ INTERFACE zif_cd_ebs_sap_dao
       iv_field          TYPE string
     RETURNING
       VALUE(rt_reasons) TYPE tt_febep_reason.
+
+  "! Operating model 2026-11-06: posting state of the items of the statements. it_fields
+  "! names the FEBEP posting-area completion flags (EBS_FEB_POSTED_FIELDS); each name is
+  "! validated against the DDIC - a name that is not a FEBEP field raises (configuration
+  "! error), it never turns every entry into 'not posted'
+  METHODS get_febep_posting DEFAULT IGNORE
+    IMPORTING
+      it_kukey          TYPE tt_febep_kukey
+      it_fields         TYPE string_table
+    RETURNING
+      VALUE(rt_posting) TYPE tt_febep_posting
+    RAISING
+      zcx_cd_ops_error.
 
 ENDINTERFACE.

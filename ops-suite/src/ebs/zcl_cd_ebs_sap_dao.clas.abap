@@ -12,6 +12,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A07: optional company-code field of DFKKCR (configured, DDIC-validated).
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
+*& 2026-11-06 | Operating model: posting state from the configured FEBEP posting-area flags.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -39,6 +40,11 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
     CONSTANTS gc_febep_table TYPE string VALUE `FEBEP`.
     CONSTANTS gc_reason_fields TYPE string VALUE `kukey, esnum, `.
     CONSTANTS gc_sql_as_reason TYPE string VALUE ` AS reason`.
+    "! Posting-area flag read (operating model 2026-11-06): keys, alias prefix FLAG<n>, at most
+    "! four flags (the components FLAG1..FLAG4 of the read structure)
+    CONSTANTS gc_febep_keys TYPE string VALUE `kukey, esnum`.
+    CONSTANTS gc_sql_as_flag TYPE string VALUE ` AS flag`.
+    CONSTANTS gc_max_posting_flags TYPE i VALUE 4.
 
     METHODS field_exists
       IMPORTING
@@ -171,6 +177,61 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
       FOR ALL ENTRIES IN @it_kukey
       WHERE kukey = @it_kukey-table_line
       INTO CORRESPONDING FIELDS OF TABLE @rt_reasons.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_sap_dao~get_febep_posting.
+    " One row per item with up to four posting-area flags (FLAG1..FLAG4), read in one statement
+    TYPES:
+      BEGIN OF ty_flags,
+        kukey TYPE n LENGTH 8,
+        esnum TYPE n LENGTH 5,
+        flag1 TYPE c LENGTH 1,
+        flag2 TYPE c LENGTH 1,
+        flag3 TYPE c LENGTH 1,
+        flag4 TYPE c LENGTH 1,
+      END OF ty_flags.
+    DATA lt_rows TYPE STANDARD TABLE OF ty_flags WITH EMPTY KEY.
+
+    CHECK it_kukey IS NOT INITIAL AND it_fields IS NOT INITIAL.
+    IF lines( it_fields ) > gc_max_posting_flags.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e051(zcd_ops) WITH lines( it_fields ) zif_cd_ebs_types=>gc_param-feb_posted_fields.
+    ENDIF.
+    " VERIFY-SE11: FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed) are the delivered
+    " default of EBS_FEB_POSTED_FIELDS. Every name is checked before it reaches the statement.
+    DATA(lv_select) = gc_febep_keys.
+    DATA(lv_flags) = 0.
+    LOOP AT it_fields INTO DATA(lv_name).
+      lv_flags += 1.
+      DATA(lv_field) = to_upper( condense( lv_name ) ).
+      IF field_exists( iv_table = gc_febep_table iv_field = lv_field ) = abap_false.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e051(zcd_ops) WITH lv_field zif_cd_ebs_types=>gc_param-feb_posted_fields.
+      ENDIF.
+      lv_select = |{ lv_select }{ gc_sql_separator }{ lv_field }{ gc_sql_as_flag }{ lv_flags }|.
+    ENDLOOP.
+
+    SELECT (lv_select)
+      FROM febep
+      FOR ALL ENTRIES IN @it_kukey
+      WHERE kukey = @it_kukey-table_line
+      INTO CORRESPONDING FIELDS OF TABLE @lt_rows.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      " Posted only when every configured posting area is complete
+      DATA(lv_posted) = abap_true.
+      DO lv_flags TIMES.
+        " components 1 and 2 are KUKEY and ESNUM
+        ASSIGN COMPONENT sy-index + 2 OF STRUCTURE ls_row TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc <> 0.
+          lv_posted = abap_false.
+        ELSEIF <lv_flag> <> abap_true.
+          lv_posted = abap_false.
+        ENDIF.
+      ENDDO.
+      INSERT VALUE #( kukey = ls_row-kukey esnum = ls_row-esnum posted = lv_posted ) INTO TABLE rt_posting.
+    ENDLOOP.
   ENDMETHOD.
 
 

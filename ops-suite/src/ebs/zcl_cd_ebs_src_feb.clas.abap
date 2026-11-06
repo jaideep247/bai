@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A34: unknown debit/credit indicator stays unknown.
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field (EBS_FEB_REASON_FIELD).
 *& 2026-11-06 | Audit A68: date range validated (check_selection) - an inverted range is an error, not an empty feed.
+*& 2026-11-06 | Operating model: posting state per entry from the FEBEP posting-area flags (EBS_FEB_POSTED_FIELDS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -42,6 +43,8 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
     DATA mv_next         TYPE i VALUE 1.
     DATA mv_debit_ind    TYPE c LENGTH 1.
     DATA mv_credit_ind   TYPE c LENGTH 1.
+    "! Operating model 2026-11-06: FEBEP posting-area flags; empty = posting state not read
+    DATA mt_posted_fields TYPE string_table.
 
     METHODS map_statement
       IMPORTING
@@ -94,6 +97,11 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_debit_ind ).
       mv_credit_ind = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_credit_ind
                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_credit_ind ).
+      DATA(lv_posted_fields) = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_posted_fields
+                                                    iv_default = zif_cd_ebs_types=>gc_param_default-feb_posted_fields ).
+      IF to_upper( condense( lv_posted_fields ) ) <> zif_cd_ebs_types=>gc_param_default-feb_posted_off.
+        mt_posted_fields = zcl_cd_ops_util=>split_list( lv_posted_fields ).
+      ENDIF.
       mt_headers = zcl_cd_ebs_factory=>get_feb_dao( )->get_headers( ms_selection ).
       mv_loaded = abap_true.
     ENDIF.
@@ -127,6 +135,24 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
       LOOP AT rs_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>).
         <ls_line>-return_reason = VALUE #( lt_reasons[ kukey = <ls_line>-kukey esnum = <ls_line>-esnum ]-reason
                                            OPTIONAL ).
+      ENDLOOP.
+    ENDIF.
+
+    " Operating model 2026-11-06 (post-posting control): posted = every posting-area flag
+    " complete (VERIFY-SE11 FEBEP-VB1OK / VB2OK); an item the read does not return stays unknown
+    IF mt_posted_fields IS NOT INITIAL.
+      DATA lt_posting_kukey TYPE zif_cd_ebs_sap_dao=>tt_febep_kukey.
+      lt_posting_kukey = lt_kukey.
+      DATA(lt_posting) = zcl_cd_ebs_factory=>get_sap_dao( )->get_febep_posting( it_kukey  = lt_posting_kukey
+                                                                                it_fields = mt_posted_fields ).
+      LOOP AT rs_package-lines ASSIGNING FIELD-SYMBOL(<ls_posted_line>).
+        READ TABLE lt_posting INTO DATA(ls_posting)
+             WITH TABLE KEY kukey = <ls_posted_line>-kukey esnum = <ls_posted_line>-esnum.
+        IF sy-subrc = 0.
+          <ls_posted_line>-posting_state = COND #( WHEN ls_posting-posted = abap_true
+                                                   THEN zif_cd_ebs_types=>gc_posting_state-posted
+                                                   ELSE zif_cd_ebs_types=>gc_posting_state-open ).
+        ENDIF.
       ENDLOOP.
     ENDIF.
   ENDMETHOD.

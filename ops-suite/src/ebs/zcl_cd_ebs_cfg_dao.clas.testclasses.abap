@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A03 / A27: unusable assignments and blocks-posting resolution.
+*& 2026-11-06 | Operating model: NEEDS_POSTING carried from the rule registry.
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -40,6 +41,7 @@ CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
     METHODS none_row_is_not_unusable     FOR TESTING.
     METHODS blocks_default_from_registry FOR TESTING.
     METHODS blocks_override_wins         FOR TESTING.
+    METHODS needs_posting_from_registry  FOR TESTING.
 ENDCLASS.
 
 
@@ -208,6 +210,34 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
                                            msg = 'N must make a blocking rule advisory for this group' ).
         cl_abap_unit_assert=>assert_true( act = VALUE #( lt_rules[ rule_group = 'G2' ]-blocks_posting OPTIONAL )
                                           msg = 'Y must make an advisory rule blocking for this group' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Operating model 2026-11-06: the registry flag NEEDS_POSTING reaches every assignment of
+  " the rule (the engine skips such a rule for an entry expected to post but not posted)
+  METHOD needs_posting_from_registry.
+    DATA lt_def TYPE STANDARD TABLE OF zcd_ebs_rule_def WITH EMPTY KEY.
+    DATA ls_def TYPE zcd_ebs_rule_def.
+    TRY.
+        ls_def-rule_id          = 'R19'.
+        ls_def-rule_level       = 'L'.
+        ls_def-class_name       = 'ZCL_CD_EBS_R_R19_FI_DOCUMENT'.
+        ls_def-default_severity = 'E'.
+        ls_def-default_action   = 'EXCEPTION'.
+        ls_def-active           = abap_true.
+        ls_def-needs_posting    = abap_true.
+        INSERT ls_def INTO TABLE lt_def.
+        go_env->insert_test_data( lt_def ).
+        insert_rule( iv_group = 'G1' iv_rule = 'R19' ).
+        insert_rule( iv_group = 'G1' iv_rule = 'R01' ).
+        DATA(lt_rules) = mo_cut->get_rules( ).
+        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_rules[ rule_id = 'R19' ]-needs_posting OPTIONAL )
+                                          msg = 'R19 must carry the registry flag NEEDS_POSTING' ).
+        cl_abap_unit_assert=>assert_false( act = VALUE #( lt_rules[ rule_id = 'R01' ]-needs_posting OPTIONAL )
+                                           msg = 'R01 has no NEEDS_POSTING flag in the registry' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

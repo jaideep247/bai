@@ -1895,6 +1895,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>541</MSGNR>
+     <TEXT>&amp;1 entries not posted yet (total &amp;2) - posting checks not evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>542</MSGNR>
+     <TEXT>&amp;1 entries not evaluated (posting not complete)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>

@@ -152,6 +152,7 @@ etag master LocalLastChangedAt
     Description = description;
     Active = active;
     BlocksPosting = blocks_posting;
+    NeedsPosting = needs_posting;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

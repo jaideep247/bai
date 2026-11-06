@@ -26,6 +26,10 @@
 *& 2026-11-06 | Audit A62/A64: rule plug-ins created with interface check; parameter snapshot refreshed per posting check.
 *& 2026-11-06 | Audit A91: kill switch read failure / missing / invalid value -> MONITOR with KILL_SWITCH_FALLBACK diagnostic.
 *& 2026-11-06 | NO_DATA status taken from the core run-status constants.
+*& 2026-11-06 | Operating model (post-posting detective control): an imported entry expected to
+*&            | post but not posted is POSTING_OPEN - rules flagged NEEDS_POSTING are not evaluated
+*&            | for it (or its statement), it is counted as unevaluated, kept out of the exception
+*&            | reconciliation, and the run is never green (rule S13 reports POSTING_INCOMPLETE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -63,8 +67,12 @@ CLASS zcl_cd_ebs_engine DEFINITION
         findings    TYPE zif_cd_ops_types=>tt_finding,
         "! Retained lines, exactly EBS_RESULT_MAX at most
         lines       TYPE zif_cd_ebs_types=>tt_line,
-        "! A66: lines not evaluated because a rule of their group could not run
-        unevaluated TYPE i,
+        "! A66: lines not evaluated because a rule of their group could not run, plus the
+        "! POSTING_OPEN lines below
+        unevaluated  TYPE i,
+        "! Operating model 2026-11-06: imported entries expected to post but not posted whose
+        "! posting-dependent rules (NEEDS_POSTING) were not evaluated - never passed, never failed
+        posting_open TYPE i,
       END OF ty_result.
 
     "! A85: posting disposition of one line - AUTO_POST, EXCEPTION, ON_ACCOUNT, BLOCK or
@@ -251,23 +259,51 @@ CLASS zcl_cd_ebs_engine DEFINITION
         VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
 
     "! Worst severity per line; A66: a line whose rule group (or a '*' rule) had a
-    "! PLUGIN_ERROR is not evaluated - counted as failed and in cv_unevaluated, never passed
+    "! PLUGIN_ERROR is not evaluated - counted as failed and in cv_unevaluated, never passed.
+    "! Operating model: a POSTING_OPEN line with a posting-dependent rule that was not
+    "! evaluated counts in cv_unevaluated and cv_posting_open - neither passed nor failed
+    "! (a B / E finding of a rule that did run still counts it as blocked / failed)
     METHODS count_lines
       IMPORTING
-        it_lines       TYPE zif_cd_ebs_types=>tt_line
-        it_findings    TYPE zif_cd_ops_types=>tt_finding
+        it_lines        TYPE zif_cd_ebs_types=>tt_line
+        it_findings     TYPE zif_cd_ops_types=>tt_finding
       CHANGING
-        cs_run         TYPE zif_cd_ops_types=>ty_run
-        cv_unevaluated TYPE i.
+        cs_run          TYPE zif_cd_ops_types=>ty_run
+        cv_unevaluated  TYPE i
+        cv_posting_open TYPE i.
+
+    "! Operating model 2026-11-06: an imported entry with posting state O that is not mapped
+    "! NOT_POSTED and not blocked is expected to post but is not posted (POSTING_OPEN)
+    CLASS-METHODS mark_posting_open
+      CHANGING
+        ct_lines TYPE zif_cd_ebs_types=>tt_line.
+
+    TYPES tt_stmt_key TYPE HASHED TABLE OF zif_cd_ebs_types=>ty_stmt_key WITH UNIQUE KEY table_line.
+
+    "! Operating model 2026-11-06: statements holding a POSTING_OPEN entry
+    CLASS-METHODS posting_open_statements
+      IMPORTING
+        it_lines             TYPE zif_cd_ebs_types=>tt_line
+      RETURNING
+        VALUE(rt_statements) TYPE tt_stmt_key.
+
+    "! Operating model 2026-11-06: does a rule flagged NEEDS_POSTING apply to the line - a
+    "! statement rule, or a line rule of its group or '*'
+    METHODS posting_rule_applies
+      IMPORTING
+        is_line       TYPE zif_cd_ebs_types=>ty_line
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
 
     METHODS close_run
       IMPORTING
-        iv_rag         TYPE zif_cd_ops_types=>ty_rag
-        iv_started     TYPE timestampl
-        iv_no_data     TYPE abap_bool DEFAULT abap_false
-        iv_unevaluated TYPE i DEFAULT 0
+        iv_rag          TYPE zif_cd_ops_types=>ty_rag
+        iv_started      TYPE timestampl
+        iv_no_data      TYPE abap_bool DEFAULT abap_false
+        iv_unevaluated  TYPE i DEFAULT 0
+        iv_posting_open TYPE i DEFAULT 0
       CHANGING
-        cs_run         TYPE zif_cd_ops_types=>ty_run.
+        cs_run          TYPE zif_cd_ops_types=>ty_run.
 
     "! A67: one entry per alert-relevant class of finding (rule, check code, groups,
     "! severity, action) with its count and first finding - complete, independent of the
@@ -347,10 +383,16 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     IF line_exists( it_findings[ check_code = gc_check_code-plugin_error ] ).
       RETURN.
     ENDIF.
+    " Operating model: an entry not posted yet, and its statement, were not fully evaluated -
+    " their open exceptions stay open until a run after the posting jobs evaluates them
+    DATA(lt_open_statements) = posting_open_statements( is_package-lines ).
     LOOP AT is_package-statements INTO DATA(ls_statement).
+      IF line_exists( lt_open_statements[ table_line = ls_statement-stmt_key ] ).
+        CONTINUE.
+      ENDIF.
       INSERT CONV zif_cd_ops_types=>ty_object_key( ls_statement-stmt_key ) INTO TABLE lt_scope.
     ENDLOOP.
-    LOOP AT is_package-lines INTO DATA(ls_line).
+    LOOP AT is_package-lines INTO DATA(ls_line) WHERE posting_open = abap_false.
       INSERT zcl_cd_ebs_finding=>line_key( ls_line ) INTO TABLE lt_scope.
     ENDLOOP.
     zcl_cd_ops_factory=>get_store( )->reconcile( is_run         = is_run
@@ -398,10 +440,11 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       lv_statements += lines( ls_package-statements ).
       DATA(lt_findings) = validate_package( CHANGING cs_package = ls_package ).
       DATA(ls_before) = rs_result-run.
-      count_lines( EXPORTING it_lines       = ls_package-lines
-                             it_findings    = lt_findings
-                   CHANGING  cs_run         = rs_result-run
-                             cv_unevaluated = rs_result-unevaluated ).
+      count_lines( EXPORTING it_lines        = ls_package-lines
+                             it_findings     = lt_findings
+                   CHANGING  cs_run          = rs_result-run
+                             cv_unevaluated  = rs_result-unevaluated
+                             cv_posting_open = rs_result-posting_open ).
       summarize( EXPORTING it_findings = lt_findings CHANGING ct_summary = lt_summary ).
 
       lo_store->save_findings( EXPORTING it_findings = lt_findings CHANGING cs_run = rs_result-run ).
@@ -473,11 +516,17 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       summarize( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING ct_summary = lt_summary ).
     ENDIF.
 
-    close_run( EXPORTING iv_rag         = lv_run_rag
-                         iv_started     = lv_started
-                         iv_no_data     = lv_no_data
-                         iv_unevaluated = rs_result-unevaluated
-               CHANGING  cs_run         = rs_result-run ).
+    " Operating model: a run that could not evaluate entries because posting is not complete
+    " is never green, whatever severity S13 is configured with
+    IF rs_result-posting_open > 0.
+      lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag iv_rag2 = zif_cd_ops_types=>gc_rag-amber ).
+    ENDIF.
+    close_run( EXPORTING iv_rag          = lv_run_rag
+                         iv_started      = lv_started
+                         iv_no_data      = lv_no_data
+                         iv_unevaluated  = rs_result-unevaluated
+                         iv_posting_open = rs_result-posting_open
+               CHANGING  cs_run          = rs_result-run ).
     lo_store->finish_run( rs_result-run ).
     IF iv_test_mode = abap_false.
       lo_store->commit( ).
@@ -502,6 +551,21 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     mo_resolver->enrich_statements( CHANGING ct_statements = cs_package-statements ).
     INSERT LINES OF mo_resolver->resolve( EXPORTING it_statements = cs_package-statements
                                           CHANGING  ct_lines      = cs_package-lines ) INTO TABLE rt_findings.
+    mark_posting_open( CHANGING ct_lines = cs_package-lines ).
+
+    " Operating model: statements without an entry that is expected to post but not posted,
+    " and their lines - the scope of statement rules flagged NEEDS_POSTING
+    DATA lt_posted_statements TYPE zif_cd_ebs_types=>tt_statement.
+    DATA lt_posted_stmt_lines TYPE zif_cd_ebs_types=>tt_line.
+    DATA(lt_open_statements) = posting_open_statements( cs_package-lines ).
+    LOOP AT cs_package-statements INTO DATA(ls_statement).
+      IF NOT line_exists( lt_open_statements[ table_line = ls_statement-stmt_key ] ).
+        INSERT ls_statement INTO TABLE lt_posted_statements.
+        LOOP AT cs_package-lines INTO DATA(ls_stmt_line) USING KEY stmt WHERE stmt_key = ls_statement-stmt_key.
+          INSERT ls_stmt_line INTO TABLE lt_posted_stmt_lines.
+        ENDLOOP.
+      ENDIF.
+    ENDLOOP.
 
     " 0. Configuration gaps (A03) - never a silent pass
     INSERT LINES OF configuration_gaps( cs_package-lines ) INTO TABLE rt_findings.
@@ -509,9 +573,15 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     " 1. Statement checks
     LOOP AT mt_rules INTO DATA(ls_stmt_rule) WHERE level = zif_cd_ebs_types=>gc_level-statement
                                                AND unusable = abap_false.
-      INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
-                                    it_statements = cs_package-statements
-                                    it_lines      = cs_package-lines ) INTO TABLE rt_findings.
+      IF ls_stmt_rule-needs_posting = abap_false.
+        INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
+                                      it_statements = cs_package-statements
+                                      it_lines      = cs_package-lines ) INTO TABLE rt_findings.
+      ELSEIF lt_posted_statements IS NOT INITIAL.
+        INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
+                                      it_statements = lt_posted_statements
+                                      it_lines      = lt_posted_stmt_lines ) INTO TABLE rt_findings.
+      ENDIF.
     ENDLOOP.
 
     " 2. Line rules per rule group; blocked lines are never validated as postable
@@ -519,18 +589,30 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DELETE lt_open WHERE blocked = abap_true.
     LOOP AT lt_open INTO DATA(ls_group_line) GROUP BY ls_group_line-rule_group INTO DATA(lv_group).
       DATA lt_group_lines TYPE zif_cd_ebs_types=>tt_line.
-      CLEAR lt_group_lines.
+      DATA lt_posted_lines TYPE zif_cd_ebs_types=>tt_line.
+      CLEAR: lt_group_lines, lt_posted_lines.
       LOOP AT GROUP lv_group INTO DATA(ls_member_line).
         INSERT ls_member_line INTO TABLE lt_group_lines.
+        IF ls_member_line-posting_open = abap_false.
+          INSERT ls_member_line INTO TABLE lt_posted_lines.
+        ENDIF.
       ENDLOOP.
       LOOP AT mt_rules INTO DATA(ls_line_rule)
            WHERE level = zif_cd_ebs_types=>gc_level-line
              AND unusable = abap_false
              AND rule_id <> zif_cd_ebs_types=>gc_rule_none
              AND ( rule_group = lv_group OR rule_group = zif_cd_ebs_types=>gc_rule_group_all ).
-        INSERT LINES OF execute_rule( is_rule       = ls_line_rule
-                                      it_statements = cs_package-statements
-                                      it_lines      = lt_group_lines ) INTO TABLE rt_findings.
+        " Operating model: a posting-dependent rule sees only entries that are posted (or
+        " not expected to post, or of unknown posting state - bank file)
+        IF ls_line_rule-needs_posting = abap_false.
+          INSERT LINES OF execute_rule( is_rule       = ls_line_rule
+                                        it_statements = cs_package-statements
+                                        it_lines      = lt_group_lines ) INTO TABLE rt_findings.
+        ELSEIF lt_posted_lines IS NOT INITIAL.
+          INSERT LINES OF execute_rule( is_rule       = ls_line_rule
+                                        it_statements = cs_package-statements
+                                        it_lines      = lt_posted_lines ) INTO TABLE rt_findings.
+        ENDIF.
       ENDLOOP.
     ENDLOOP.
   ENDMETHOD.
@@ -885,6 +967,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         cv_unevaluated += 1.
       ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-error.
         cs_run-failed_items += 1.
+      ELSEIF ls_line-posting_open = abap_true AND posting_rule_applies( ls_line ) = abap_true.
+        cv_unevaluated += 1.
+        cv_posting_open += 1.
       ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-warning.
         cs_run-warning_items += 1.
       ELSE.
@@ -922,10 +1007,41 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                   && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_2
                                             iv_v1    = cs_run-blocked_items
                                             iv_v2    = cs_run-warning_items ).
-    IF iv_unevaluated > 0.
+    IF iv_unevaluated > iv_posting_open.
       cs_run-message = cs_run-message && ` ` && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unevaluated
-                                                                      iv_v1    = iv_unevaluated ).
+                                                                      iv_v1    = iv_unevaluated - iv_posting_open ).
     ENDIF.
+    IF iv_posting_open > 0.
+      cs_run-message = cs_run-message && ` ` && zcl_cd_ops_util=>text(
+                                                  iv_msgno = zif_cd_ebs_types=>gc_msg-posting_unevaluated
+                                                  iv_v1    = iv_posting_open ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD mark_posting_open.
+    LOOP AT ct_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      <ls_line>-posting_open = xsdbool( <ls_line>-posting_state = zif_cd_ebs_types=>gc_posting_state-open
+                                        AND <ls_line>-not_posted = abap_false
+                                        AND <ls_line>-blocked = abap_false ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD posting_open_statements.
+    LOOP AT it_lines INTO DATA(ls_line) WHERE posting_open = abap_true.
+      INSERT ls_line-stmt_key INTO TABLE rt_statements.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD posting_rule_applies.
+    rv_yes = xsdbool(
+      line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-statement needs_posting = abap_true unusable = abap_false ] )
+      OR line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-line needs_posting = abap_true unusable = abap_false
+                                rule_group = is_line-rule_group ] )
+      OR line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-line needs_posting = abap_true unusable = abap_false
+                                rule_group = zif_cd_ebs_types=>gc_rule_group_all ] ) ).
   ENDMETHOD.
 
 

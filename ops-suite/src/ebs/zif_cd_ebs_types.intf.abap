@@ -26,6 +26,8 @@
 *& 2026-11-06 | Audit A98: MAP_CONFLICT check code and message.
 *& 2026-11-06 | Audit A96: message FUNDS_LAYOUT.
 *& 2026-11-06 | Audit A92-A94: CAMT entry status on the line; messages 536-540.
+*& 2026-11-06 | Operating model (post-posting): line posting state, rule flag NEEDS_POSTING,
+*&            | EBS_FEB_POSTED_FIELDS, check code POSTING_INCOMPLETE, messages 541-542.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -205,7 +207,21 @@ INTERFACE zif_cd_ebs_types
       map_action    TYPE zif_cd_ops_types=>ty_action,
       "! A93: CAMT entry status (Ntry/Sts or Ntry/Sts/Cd); only BOOK entries become lines
       entry_status  TYPE c LENGTH 4,
+      "! Operating model 2026-11-06: posting state of an imported entry from the FEBEP
+      "! posting-area flags (EBS_FEB_POSTED_FIELDS) - blank = unknown (bank file), P / O
+      posting_state TYPE c LENGTH 1,
+      "! Derived by the engine: state O, not NOT_POSTED and not blocked - the entry is
+      "! expected to post but is not posted; its posting-dependent rules are not evaluated
+      posting_open  TYPE abap_bool,
     END OF ty_line.
+  "! Posting state of an imported entry (ty_line-posting_state)
+  CONSTANTS:
+    BEGIN OF gc_posting_state,
+      unknown TYPE c LENGTH 1 VALUE ' ',
+      posted  TYPE c LENGTH 1 VALUE 'P',
+      open    TYPE c LENGTH 1 VALUE 'O',
+    END OF gc_posting_state.
+
   "! A35: secondary key STMT - statement rules read their statement's lines by key
   TYPES tt_line TYPE STANDARD TABLE OF ty_line WITH EMPTY KEY
                 WITH NON-UNIQUE SORTED KEY stmt COMPONENTS stmt_key.
@@ -287,6 +303,10 @@ INTERFACE zif_cd_ebs_types
       "! Findings of this assignment block posting in enforce mode (A27): rule default
       "! (ZCD_EBS_RULE_DEF-BLOCKS_POSTING) unless ZCD_BTC_RULE-BLOCKS_POSTING overrides
       blocks_posting TYPE abap_bool,
+      "! Operating model 2026-11-06 (ZCD_EBS_RULE_DEF-NEEDS_POSTING): the rule reads SAP
+      "! evidence of the posting or clearing - not evaluated for an entry expected to post
+      "! but not posted (line rules) or for a statement holding such an entry (statement rules)
+      needs_posting  TYPE abap_bool,
       "! Assignment is active but its rule definition is missing or inactive (A03)
       unusable    TYPE abap_bool,
     END OF ty_rule_cfg.
@@ -404,10 +424,17 @@ INTERFACE zif_cd_ebs_types
       empty_feed_ok      TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_EMPTY_FEED_OK',
       "! FS-CD review: in-flight grace in hours (0 = off) for not-found payment/lot lookups
       inflight_hours     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_INFLIGHT_HOURS',
+      "! Operating model 2026-11-06: FEBEP posting-area completion fields (comma list); an
+      "! entry is posted when every field holds X; NONE = posting state not read (unknown)
+      feb_posted_fields  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_POSTED_FIELDS',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
       feb_credit_ind TYPE string VALUE `H`,
+      "! VERIFY-SE11: FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed)
+      feb_posted_fields TYPE string VALUE `VB1OK,VB2OK`,
+      "! EBS_FEB_POSTED_FIELDS value that switches the posting-state read off
+      feb_posted_off    TYPE string VALUE `NONE`,
     END OF gc_param_default.
 
   "! Keywords of rule parameters in ZCD_BTC_RULE (PARAM1..PARAM3)
@@ -467,6 +494,8 @@ INTERFACE zif_cd_ebs_types
       circuit_breaker                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CIRCUIT_BREAKER',
       "! A68: the run selected no statement - nothing was evaluated
       no_data                        TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_DATA',
+      "! Operating model 2026-11-06: entries expected to post are not posted (rule S13)
+      posting_incomplete             TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE',
       "! FS-CD review: not found yet, statement within EBS_INFLIGHT_HOURS (W, NOTIFY)
       awaiting_lot_transfer          TYPE zif_cd_ops_types=>ty_check_code VALUE 'AWAITING_LOT_TRANSFER',
       "! A91: the kill switch could not be read or holds no valid mode - MONITOR used
@@ -664,6 +693,8 @@ INTERFACE zif_cd_ebs_types
       entry_not_booked            TYPE zif_cd_ops_types=>ty_msgno VALUE '538',
       batch_mismatch              TYPE zif_cd_ops_types=>ty_msgno VALUE '539',
       batch_detail_amount         TYPE zif_cd_ops_types=>ty_msgno VALUE '540',
+      posting_incomplete          TYPE zif_cd_ops_types=>ty_msgno VALUE '541',
+      posting_unevaluated         TYPE zif_cd_ops_types=>ty_msgno VALUE '542',
     END OF gc_msg.
 
 ENDINTERFACE.

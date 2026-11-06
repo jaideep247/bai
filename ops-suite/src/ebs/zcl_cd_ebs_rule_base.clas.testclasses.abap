@@ -18,6 +18,7 @@
 *& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
 *& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
 *& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
+*& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -1459,6 +1460,9 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s12_count_mismatch_reported  FOR TESTING.
     METHODS r18_gl_ne_closing_fails      FOR TESTING.
     METHODS r18_unmapped_gl_reported     FOR TESTING.
+    METHODS s13_open_entries_one_finding FOR TESTING.
+    METHODS s13_posted_statement_ok      FOR TESTING.
+    METHODS s13_file_statement_ignored   FOR TESTING.
 ENDCLASS.
 
 
@@ -1867,6 +1871,62 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
         assert_one_code( iv_check_code = 'GL_ACCOUNT_NOT_MAPPED'
                          iv_msg        = 'A statement without G/L account must be reported by R18' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Operating model 2026-11-06: entries the engine marked POSTING_OPEN (expected to post, not
+  " posted) give ONE POSTING_INCOMPLETE for their statement, with count and total
+  METHOD s13_open_entries_one_finding.
+    DATA lv_open_total TYPE zif_cd_ops_types=>ty_amount.
+    TRY.
+        lv_open_total = gc_test-amount * 2.
+        add_statement( ).
+        add_line( ).
+        add_line( ).
+        add_line( ).
+        mt_lines[ 1 ]-posting_open = abap_true.
+        mt_lines[ 2 ]-posting_open = abap_true.
+        run( iv_class = 'ZCL_CD_EBS_R_S13_POSTED' is_rule = rule( 'S13' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_incomplete
+                         iv_msg        = 'Unposted entries must give one POSTING_INCOMPLETE per statement' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-object_key
+                                            exp = CONV zif_cd_ops_types=>ty_object_key( gc_test-stmt_key )
+                                            msg = 'The finding names the statement' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-amount exp = lv_open_total
+                                            msg = 'The amount is the total of the unposted entries' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Severity comes from the rule configuration' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A statement whose entries are posted (or not expected to post) is complete
+  METHOD s13_posted_statement_ok.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_S13_POSTED' is_rule = rule( 'S13' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A statement without unposted entries must pass S13' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A bank file before import has no posting state - S13 never reports it
+  METHOD s13_file_statement_ignored.
+    TRY.
+        add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
+        add_line( ).
+        mt_lines[ 1 ]-posting_open = abap_true.
+        run( iv_class = 'ZCL_CD_EBS_R_S13_POSTED' is_rule = rule( 'S13' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'S13 must ignore a bank file statement' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
