@@ -6,6 +6,7 @@
 *& fails entries without a reason. Without any mapping only the format is checked.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R05 - valid return / NOC reason</p>
 CLASS zcl_cd_ebs_r_r05_reason DEFINITION
@@ -32,7 +33,8 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
         IF to_upper( condense( CONV string( is_rule-param1 ) ) ) = `REQUIRED`.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
                    is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_MISSING'
-                   iv_message = |Return/NOC reason missing for { ls_line-btc_code }| ) INTO TABLE rt_findings.
+                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_missing
+                                                       iv_v1    = ls_line-btc_code ) ) INTO TABLE rt_findings.
         ENDIF.
         CONTINUE.
       ENDIF.
@@ -40,13 +42,15 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
         IF NOT line_exists( lt_reasons[ reason = ls_line-return_reason ] ).
           INSERT zcl_cd_ebs_finding=>for_rule_line(
                    is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_UNMAPPED'
-                   iv_message = |Reason { ls_line-return_reason } not mapped to an payment engine return reason| )
+                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_unmapped
+                                                       iv_v1    = ls_line-return_reason ) )
             INTO TABLE rt_findings.
         ENDIF.
       ELSEIF NOT matches( val = ls_line-return_reason pcre = gc_reason_pattern ).
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_INVALID'
-                 iv_message = |Reason { ls_line-return_reason } is not R01-R85 or C01-C07| ) INTO TABLE rt_findings.
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_invalid
+                                                     iv_v1    = ls_line-return_reason ) ) INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

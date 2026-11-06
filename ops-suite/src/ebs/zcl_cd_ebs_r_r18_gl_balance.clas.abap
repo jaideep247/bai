@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Missing G/L account reported as GL_ACCOUNT_NOT_MAPPED instead of skipped (audit 2026-11-06).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check R18 - bank G/L balance = closing</p>
 CLASS zcl_cd_ebs_r_r18_gl_balance DEFINITION
@@ -34,7 +35,8 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
         " (an account missing from ZCD_EBS_ACCT altogether is S04's finding)
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'GL_ACCOUNT_NOT_MAPPED'
-                 iv_message = |Account { ls_statement-account_no }: no G/L account in ZCD_EBS_ACCT, closing not reconciled| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-gl_account_not_mapped
+                                                     iv_v1    = ls_statement-account_no ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -46,7 +48,10 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'GL_NE_CLOSING'
                  iv_amount = lv_balance - ls_statement-closing_bal
-                 iv_message = |G/L { lv_gl_account } balance { lv_balance } <> closing { ls_statement-closing_bal }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-gl_ne_closing
+                                                     iv_v1    = lv_gl_account
+                                                     iv_v2    = lv_balance
+                                                     iv_v3    = ls_statement-closing_bal ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

@@ -5,6 +5,7 @@
 *& must have reached the general ledger (DFKKSUMC/DFKKKO-FIKEY = AWKEY).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment engine to GL transfer completeness</p>
 "! PARAM1 = lag in days (keys younger than this are still open, default 1),
@@ -46,8 +47,10 @@ CLASS zcl_cd_hck_c_gl_transfer IMPLEMENTATION.
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
                       reference  = ls_gap-fikey
-                      message    = |Reconciliation key { ls_gap-fikey } has totals records but no GL document | &&
-                                   |({ lv_from DATE = ISO } - { lv_to DATE = ISO })| ) INTO TABLE rs_result-findings.
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-reconciliation_key_has_tota
+                                                          iv_v1    = ls_gap-fikey
+                                                          iv_v2    = |{ lv_from DATE = ISO }|
+                                                          iv_v3    = |{ lv_to DATE = ISO }| ) ) INTO TABLE rs_result-findings.
     ENDLOOP.
     IF lines( lt_gaps ) >= lv_max.
       rs_result-summary = |At least { lv_max } reconciliation keys without GL document (list capped)|.

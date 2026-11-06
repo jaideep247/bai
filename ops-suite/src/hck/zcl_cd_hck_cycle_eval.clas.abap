@@ -5,6 +5,7 @@
 *& instances, start window, max runtime and predecessor; build its findings.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle step state rules (pure)</p>
 "! Step date = cycle date + DAY_OFFSET. The step's job instance is the
@@ -128,7 +129,11 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
     ls_finding-object_key  = |{ is_status-cycle_id }/{ is_status-step_no }|.
     ls_finding-reference   = is_status-jobname.
     ls_finding-action      = zif_cd_ops_types=>gc_action-notify.
-    ls_finding-message     = |Cycle { is_status-cycle_id } step { is_status-step_no } ({ is_status-jobname }): { is_status-state }|.
+    ls_finding-message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-cycle_step
+                                                    iv_v1    = is_status-cycle_id
+                                                    iv_v2    = is_status-step_no
+                                                    iv_v3    = is_status-jobname
+                                                    iv_v4    = is_status-state ).
 
     CASE is_status-state.
       WHEN zif_cd_hck_types=>gc_step_state-missed.
@@ -143,21 +148,29 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
       WHEN zif_cd_hck_types=>gc_step_state-stuck.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_stuck.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
-        ls_finding-message    = |{ ls_finding-message } after { is_status-runtime_min } min (max { is_step-max_runtime_min })|.
+        ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-after_min_max
+                                                       iv_v1    = ls_finding-message
+                                                       iv_v2    = is_status-runtime_min
+                                                       iv_v3    = is_step-max_runtime_min ).
       WHEN zif_cd_hck_types=>gc_step_state-completed.
         IF is_status-overrun = abap_false.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_overrun.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-        ls_finding-message    = |{ ls_finding-message } in { is_status-runtime_min } min (max { is_step-max_runtime_min })|.
+        ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-in_min_max
+                                                       iv_v1    = ls_finding-message
+                                                       iv_v2    = is_status-runtime_min
+                                                       iv_v3    = is_step-max_runtime_min ).
       WHEN OTHERS.
         IF is_status-blocked = abap_false.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_blocked.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-        ls_finding-message    = |{ ls_finding-message }, blocked by predecessor { is_step-pred_step }|.
+        ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-blocked_by_predecessor
+                                                       iv_v1    = ls_finding-message
+                                                       iv_v2    = is_step-pred_step ).
     ENDCASE.
     INSERT ls_finding INTO TABLE rt_findings.
   ENDMETHOD.

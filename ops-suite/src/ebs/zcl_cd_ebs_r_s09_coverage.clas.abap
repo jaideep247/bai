@@ -6,6 +6,7 @@
 *& own R14 block. Pure.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S09 - 100 % BTC mapping coverage</p>
 CLASS zcl_cd_ebs_r_s09_coverage DEFINITION
@@ -36,7 +37,9 @@ CLASS zcl_cd_ebs_r_s09_coverage IMPLEMENTATION.
       IF lv_unmapped > 0.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'BTC_COVERAGE'
-                 iv_message = |{ lv_unmapped } of { lv_total } entries have an unmapped transaction code| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-btc_coverage
+                                                     iv_v1    = lv_unmapped
+                                                     iv_v2    = lv_total ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

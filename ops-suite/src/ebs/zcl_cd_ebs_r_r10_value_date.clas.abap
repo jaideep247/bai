@@ -6,6 +6,7 @@
 *& categories with their own window. Pure.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R10 - value date window</p>
 CLASS zcl_cd_ebs_r_r10_value_date DEFINITION
@@ -31,8 +32,10 @@ CLASS zcl_cd_ebs_r_r10_value_date IMPLEMENTATION.
       IF abs( ls_line-value_date - ls_line-booking_date ) > lv_window.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'VALUE_DATE_WINDOW'
-                 iv_message = |Value date { ls_line-value_date DATE = ISO } more than { lv_window } days |
-                           && |from booking date { ls_line-booking_date DATE = ISO }| ) INTO TABLE rt_findings.
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-value_date_window
+                                                     iv_v1    = |{ ls_line-value_date DATE = ISO }|
+                                                     iv_v2    = lv_window
+                                                     iv_v3    = |{ ls_line-booking_date DATE = ISO }| ) ) INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

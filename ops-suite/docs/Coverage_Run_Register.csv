@@ -45,4 +45,4 @@ ZCL_CD_OPS_PURGE,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,7,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,4,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,13,90,,Not run in target SAP
-ZCL_CD_OPS_UTIL,12,90,,Not run in target SAP
+ZCL_CD_OPS_UTIL,13,90,,Not run in target SAP

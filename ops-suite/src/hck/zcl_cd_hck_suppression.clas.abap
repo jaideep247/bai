@@ -9,6 +9,7 @@
 *& user; the creator cannot approve.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression of known findings</p>
 CLASS zcl_cd_hck_suppression DEFINITION
@@ -78,8 +79,10 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
         ENDIF.
         <ls_finding>-severity = zif_cd_ops_types=>gc_severity-info.
         <ls_finding>-action   = zif_cd_ops_types=>gc_action-notify.
-        <ls_finding>-message  = |Suppressed until { ls_suppression-valid_to DATE = ISO } by |
-                             && |{ ls_suppression-created_by }: { <ls_finding>-message }|.
+        <ls_finding>-message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-suppressed_until_by
+                                                       iv_v1    = |{ ls_suppression-valid_to DATE = ISO }|
+                                                       iv_v2    = ls_suppression-created_by
+                                                       iv_v3    = <ls_finding>-message ).
         EXIT.
       ENDLOOP.
     ENDLOOP.

@@ -5,6 +5,7 @@
 *& cancelled, run too long or did not start on time (TBTCO).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -56,8 +57,10 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
           lv_cancelled = lv_cancelled + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_cancelled.
           ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
-          ls_finding-message    = |Job { ls_run-jobname } cancelled (started { ls_run-strtdate DATE = ISO } | &&
-                                  |{ ls_run-strttime TIME = ISO })|.
+          ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_cancelled_started
+                                                         iv_v1    = ls_run-jobname
+                                                         iv_v2    = |{ ls_run-strtdate DATE = ISO }|
+                                                         iv_v3    = |{ ls_run-strttime TIME = ISO }| ).
         WHEN zif_cd_hck_types=>gc_job_status-running.
           DATA(lv_minutes) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = ls_run-strtdate
                                                                      iv_from_time = ls_run-strttime
@@ -69,7 +72,10 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
           lv_long = lv_long + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_long_running.
           ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-          ls_finding-message    = |Job { ls_run-jobname } active for { lv_minutes } min (limit { lv_long_min })|.
+          ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_active_for_min_limit
+                                                         iv_v1    = ls_run-jobname
+                                                         iv_v2    = lv_minutes
+                                                         iv_v3    = lv_long_min ).
         WHEN zif_cd_hck_types=>gc_job_status-released OR zif_cd_hck_types=>gc_job_status-ready.
           DATA(lv_late_min) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = ls_run-sdlstrtdt
                                                                       iv_from_time = ls_run-sdlstrttm
@@ -81,8 +87,10 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
           lv_late = lv_late + 1.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-job_late_start.
           ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-          ls_finding-message    = |Job { ls_run-jobname } planned { ls_run-sdlstrtdt DATE = ISO } | &&
-                                  |{ ls_run-sdlstrttm TIME = ISO } has not started|.
+          ls_finding-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_planned_has_not_started
+                                                         iv_v1    = ls_run-jobname
+                                                         iv_v2    = |{ ls_run-sdlstrtdt DATE = ISO }|
+                                                         iv_v3    = |{ ls_run-sdlstrttm TIME = ISO }| ).
         WHEN OTHERS.
           CONTINUE.
       ENDCASE.

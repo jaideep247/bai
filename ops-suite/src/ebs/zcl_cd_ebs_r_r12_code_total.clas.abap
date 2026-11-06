@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | Totals skipped with HOUSE_BANK_AMBIGUOUS when accounts cannot be separated; count definition documented (audit 2026-11-06).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R12 - code total vs register total</p>
 CLASS zcl_cd_ebs_r_r12_code_total DEFINITION
@@ -65,7 +66,8 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
         " Totals would mix accounts: report instead of comparing
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'HOUSE_BANK_AMBIGUOUS'
-                 iv_message = |Group { is_rule-rule_group }: statement has no house bank, totals not comparable| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-house_bank_ambiguous_2
+                                                     iv_v1    = is_rule-rule_group ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -73,13 +75,19 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'CODE_TOTAL_MISMATCH'
                  iv_amount = lv_bank_total - lv_reg_total
-                 iv_message = |Group { is_rule-rule_group }: bank total { lv_bank_total }, register { lv_reg_total }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-code_total_mismatch
+                                                     iv_v1    = is_rule-rule_group
+                                                     iv_v2    = lv_bank_total
+                                                     iv_v3    = lv_reg_total ) )
           INTO TABLE rt_findings.
       ENDIF.
       IF lv_bank_count <> lv_reg_count.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'CODE_COUNT_MISMATCH'
-                 iv_message = |Group { is_rule-rule_group }: { lv_bank_count } bank entries, { lv_reg_count } in register| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-code_count_mismatch
+                                                     iv_v1    = is_rule-rule_group
+                                                     iv_v2    = lv_bank_count
+                                                     iv_v3    = lv_reg_count ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

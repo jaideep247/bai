@@ -6,6 +6,7 @@
 *& interface with the same name or checksum (FMON_DUP_DAYS history).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - duplicate file</p>
 "! Rules: ZCL_CD_FMON_RULES=>IS_DUPLICATE_OF. Params: ORIGIN_ROWS=Y|N
@@ -37,7 +38,9 @@ CLASS zcl_cd_fmon_chk_duplicate IMPLEMENTATION.
                  is_file    = ls_file
                  is_check   = is_check
                  iv_code    = zif_cd_fmon_types=>gc_check_code-duplicate
-                 iv_message = |{ ls_file-file_name }: reported { ls_file-origin_rows } times by the source| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-reported_times_by_the_sourc
+                                                     iv_v1    = ls_file-file_name
+                                                     iv_v2    = ls_file-origin_rows ) )
                INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -47,8 +50,10 @@ CLASS zcl_cd_fmon_chk_duplicate IMPLEMENTATION.
                    is_file    = ls_file
                    is_check   = is_check
                    iv_code    = zif_cd_fmon_types=>gc_check_code-duplicate
-                   iv_message = |{ ls_file-file_name }: same name/checksum as { ls_other-file_name } | &&
-                                |of { ls_other-business_date }| ) INTO TABLE rt_findings.
+                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-same_name_checksum_as_of
+                                                       iv_v1    = ls_file-file_name
+                                                       iv_v2    = ls_other-file_name
+                                                       iv_v3    = ls_other-business_date ) ) INTO TABLE rt_findings.
           EXIT.
         ENDIF.
       ENDLOOP.

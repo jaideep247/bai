@@ -6,6 +6,7 @@
 *& nothing may silently stay in limbo. Pure.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S10 - every entry accounted for</p>
 CLASS zcl_cd_ebs_r_s10_complete DEFINITION
@@ -36,7 +37,9 @@ CLASS zcl_cd_ebs_r_s10_complete IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'ENTRIES_NOT_ACCOUNTED'
                  iv_amount = lv_amount
-                 iv_message = |{ lv_open } entries neither posted nor blocked (total { lv_amount })| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-entries_not_accounted
+                                                     iv_v1    = lv_open
+                                                     iv_v2    = lv_amount ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

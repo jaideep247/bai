@@ -6,6 +6,7 @@
 *& Non-numeric numbers (some CAMT banks) are not checked.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S03 - statement number continuity</p>
 CLASS zcl_cd_ebs_r_s03_sequence DEFINITION
@@ -45,12 +46,17 @@ CLASS zcl_cd_ebs_r_s03_sequence IMPLEMENTATION.
       IF lv_actual > lv_expected.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_NO_GAP'
-                 iv_message = |Statement { lv_actual } follows { lv_prior }: { lv_actual - lv_expected } missing| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_no_gap
+                                                     iv_v1    = lv_actual
+                                                     iv_v2    = lv_prior
+                                                     iv_v3    = lv_actual - lv_expected ) )
           INTO TABLE rt_findings.
       ELSEIF lv_actual < lv_expected.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_NO_REPEAT'
-                 iv_message = |Statement { lv_actual } not after last imported { lv_prior }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_no_repeat
+                                                     iv_v1    = lv_actual
+                                                     iv_v2    = lv_prior ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

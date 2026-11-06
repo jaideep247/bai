@@ -6,6 +6,8 @@
 *& Worst severity in a finding list (blank when empty)
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | text( ): user-facing texts are ZCD_OPS messages (phase 5, remove hardcoding).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -15,6 +17,20 @@ CLASS zcl_cd_ops_util DEFINITION
   CREATE PRIVATE.
 
   PUBLIC SECTION.
+
+    "! Text of message ZCD_OPS / iv_msgno with up to four variables. The one place where
+    "! the suite builds a user-facing text: texts are T100 text elements (SE91,
+    "! translatable), never literals in code. Variables keep string-template formatting
+    "! and are cut at 50 characters (message variable length).
+    CLASS-METHODS text
+      IMPORTING
+        iv_msgno       TYPE zif_cd_ops_types=>ty_msgno
+        iv_v1          TYPE simple OPTIONAL
+        iv_v2          TYPE simple OPTIONAL
+        iv_v3          TYPE simple OPTIONAL
+        iv_v4          TYPE simple OPTIONAL
+      RETURNING
+        VALUE(rv_text) TYPE string.
 
     "! B=4, E=3, W=2, I=1, other=0
     CLASS-METHODS severity_rank
@@ -101,6 +117,28 @@ ENDCLASS.
 
 
 CLASS zcl_cd_ops_util IMPLEMENTATION.
+
+  METHOD text.
+    DATA lv_v1 TYPE zif_cd_ops_types=>ty_msgv.
+    DATA lv_v2 TYPE zif_cd_ops_types=>ty_msgv.
+    DATA lv_v3 TYPE zif_cd_ops_types=>ty_msgv.
+    DATA lv_v4 TYPE zif_cd_ops_types=>ty_msgv.
+    IF iv_v1 IS SUPPLIED.
+      lv_v1 = |{ iv_v1 }|.
+    ENDIF.
+    IF iv_v2 IS SUPPLIED.
+      lv_v2 = |{ iv_v2 }|.
+    ENDIF.
+    IF iv_v3 IS SUPPLIED.
+      lv_v3 = |{ iv_v3 }|.
+    ENDIF.
+    IF iv_v4 IS SUPPLIED.
+      lv_v4 = |{ iv_v4 }|.
+    ENDIF.
+    MESSAGE ID zif_cd_ops_types=>gc_message_class TYPE zif_cd_ops_types=>gc_msgty_info NUMBER iv_msgno
+            WITH lv_v1 lv_v2 lv_v3 lv_v4 INTO rv_text.
+  ENDMETHOD.
+
 
   METHOD severity_rank.
     rv_rank = SWITCH #( iv_severity

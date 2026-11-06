@@ -5,6 +5,7 @@
 *& MAX_BYTES of the interface (only when a source reports the size).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - zero-byte / size out of bounds</p>
 "! Rules: ZCL_CD_FMON_RULES=>SIZE_CODE
@@ -36,8 +37,11 @@ CLASS zcl_cd_fmon_chk_size IMPLEMENTATION.
                is_file    = ls_file
                is_check   = is_check
                iv_code    = lv_code
-               iv_message = |{ ls_file-file_name }: { ls_file-size_bytes } bytes | &&
-                            |(min { ls_iface-min_bytes }, max { ls_iface-max_bytes })| ) INTO TABLE rt_findings.
+               iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-bytes_min_max
+                                                   iv_v1    = ls_file-file_name
+                                                   iv_v2    = ls_file-size_bytes
+                                                   iv_v3    = ls_iface-min_bytes
+                                                   iv_v4    = ls_iface-max_bytes ) ) INTO TABLE rt_findings.
     ENDLOOP.
   ENDMETHOD.
 

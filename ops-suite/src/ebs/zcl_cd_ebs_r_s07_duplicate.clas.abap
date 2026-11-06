@@ -5,6 +5,7 @@
 *& file not yet imported, not already in FEBKO (same account, number, date).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S07 - duplicate statement</p>
 CLASS zcl_cd_ebs_r_s07_duplicate DEFINITION
@@ -39,7 +40,9 @@ CLASS zcl_cd_ebs_r_s07_duplicate IMPLEMENTATION.
       IF sy-subrc <> 0.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_DUPLICATE_IN_FILE'
-                 iv_message = |Statement { ls_statement-stmt_no } of { ls_statement-account_no } appears twice| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_duplicate_in_file
+                                                     iv_v1    = ls_statement-stmt_no
+                                                     iv_v2    = ls_statement-account_no ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -49,7 +52,9 @@ CLASS zcl_cd_ebs_r_s07_duplicate IMPLEMENTATION.
                                            iv_azdat = ls_statement-stmt_date ) = abap_true.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_ALREADY_IMPORTED'
-                 iv_message = |Statement { ls_statement-stmt_no } of { ls_statement-stmt_date DATE = ISO } already imported| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_already_imported
+                                                     iv_v1    = ls_statement-stmt_no
+                                                     iv_v2    = |{ ls_statement-stmt_date DATE = ISO }| ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

@@ -5,6 +5,7 @@
 *& statement currency must equal the configured account currency.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S04 - account and currency valid</p>
 CLASS zcl_cd_ebs_r_s04_account DEFINITION
@@ -33,12 +34,15 @@ CLASS zcl_cd_ebs_r_s04_account IMPLEMENTATION.
       IF ls_account IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'ACCOUNT_NOT_CONFIGURED'
-                 iv_message = |Account { ls_statement-account_no } not active in ZCD_EBS_ACCT| ) INTO TABLE rt_findings.
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_not_configured
+                                                     iv_v1    = ls_statement-account_no ) ) INTO TABLE rt_findings.
       ELSEIF ls_account-currency IS NOT INITIAL AND ls_statement-currency IS NOT INITIAL
              AND ls_account-currency <> ls_statement-currency.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'ACCOUNT_CURRENCY'
-                 iv_message = |Statement in { ls_statement-currency }, account in { ls_account-currency }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_currency
+                                                     iv_v1    = ls_statement-currency
+                                                     iv_v2    = ls_account-currency ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

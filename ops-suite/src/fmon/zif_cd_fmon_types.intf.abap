@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | gc_manual_src_id (design 6.4).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -568,5 +569,36 @@ INTERFACE zif_cd_fmon_types
       board    TYPE tt_board,
       findings TYPE zif_cd_ops_types=>tt_finding,
     END OF ty_result.
+
+  "! Message numbers (class ZCD_OPS) of this area's user-facing texts
+  CONSTANTS:
+    BEGIN OF gc_msg,
+      record_s_sent_ack_nack      TYPE zif_cd_ops_types=>ty_msgno VALUE '207',
+      control_total_acknowledged  TYPE zif_cd_ops_types=>ty_msgno VALUE '210',
+      reported_times_by_the_sourc TYPE zif_cd_ops_types=>ty_msgno VALUE '212',
+      same_name_checksum_as_of    TYPE zif_cd_ops_types=>ty_msgno VALUE '213',
+      first_event_after_the_windo TYPE zif_cd_ops_types=>ty_msgno VALUE '214',
+      window_closed_of_file_s     TYPE zif_cd_ops_types=>ty_msgno VALUE '215',
+      loaded_but_no_lot_found     TYPE zif_cd_ops_types=>ty_msgno VALUE '216',
+      of_expected_file_s_received TYPE zif_cd_ops_types=>ty_msgno VALUE '217',
+      file_s_on_a_day             TYPE zif_cd_ops_types=>ty_msgno VALUE '218',
+      noc_entr_ies_open_after     TYPE zif_cd_ops_types=>ty_msgno VALUE '219',
+      rejected_by_the_bank_record TYPE zif_cd_ops_types=>ty_msgno VALUE '221',
+      processing_failed           TYPE zif_cd_ops_types=>ty_msgno VALUE '222',
+      bytes_min_max               TYPE zif_cd_ops_types=>ty_msgno VALUE '223',
+      after_min_sla_min           TYPE zif_cd_ops_types=>ty_msgno VALUE '224',
+      source                      TYPE zif_cd_ops_types=>ty_msgno VALUE '225',
+      reference_of_reused_on_conf TYPE zif_cd_ops_types=>ty_msgno VALUE '226',
+      source_no_interface_matches TYPE zif_cd_ops_types=>ty_msgno VALUE '227',
+      source_status_has_no_stage  TYPE zif_cd_ops_types=>ty_msgno VALUE '228',
+      lot_reader                  TYPE zif_cd_ops_types=>ty_msgno VALUE '229',
+      factory_calendar_calendar_d TYPE zif_cd_ops_types=>ty_msgno VALUE '231',
+      factory_calendar_normal_day TYPE zif_cd_ops_types=>ty_msgno VALUE '233',
+      check                       TYPE zif_cd_ops_types=>ty_msgno VALUE '234',
+      registry_not_saved          TYPE zif_cd_ops_types=>ty_msgno VALUE '235',
+      file_s_finding_s            TYPE zif_cd_ops_types=>ty_msgno VALUE '236',
+      alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '237',
+      lot_unprocessed             TYPE zif_cd_ops_types=>ty_msgno VALUE '238',
+    END OF gc_msg.
 
 ENDINTERFACE.

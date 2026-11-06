@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | HOUSE_BANK_AMBIGUOUS reported when the account cannot be determined (audit 2026-11-06).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R08 - check amount vs register</p>
 CLASS zcl_cd_ebs_r_r08_check_amount DEFINITION
@@ -42,7 +43,8 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
       IF house_bank_ambiguous( it_checks = lt_checks is_line = ls_line it_statements = it_statements ) = abap_true.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'HOUSE_BANK_AMBIGUOUS'
-                 iv_message = |Check { lv_ztnum }: statement has no house bank, check exists in several accounts| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-house_bank_ambiguous
+                                                     iv_v1    = lv_ztnum ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -50,7 +52,9 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
       IF lt_line_checks IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_NOT_FOUND'
-                 iv_message = |Check { lv_ztnum } not in the check register| ) INTO TABLE rt_findings.
+                 iv_message =
+                   zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_not_found
+                                          iv_v1 = lv_ztnum ) ) INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
       DATA(lv_register) = REDUCE zif_cd_ops_types=>ty_amount(
@@ -60,7 +64,10 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
       IF abs( lv_register - ls_line-amount ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_AMOUNT_MISMATCH'
-                 iv_message = |Check { lv_ztnum }: bank { ls_line-amount }, register { lv_register }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_amount_mismatch
+                                                     iv_v1    = lv_ztnum
+                                                     iv_v2    = ls_line-amount
+                                                     iv_v3    = lv_register ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

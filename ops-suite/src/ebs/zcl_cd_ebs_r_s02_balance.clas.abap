@@ -6,6 +6,7 @@
 *& declared totals must balance too. Pure.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S02 - opening + credits - debits = closing</p>
 CLASS zcl_cd_ebs_r_s02_balance DEFINITION
@@ -41,8 +42,11 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = 'BALANCE_ARITHMETIC'
                  iv_amount = lv_difference
-                 iv_message = |Opening { ls_statement-opening_bal } + { lv_credits } - { lv_debits } |
-                           && |<> closing { ls_statement-closing_bal }| ) INTO TABLE rt_findings.
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-balance_arithmetic
+                                                     iv_v1    = ls_statement-opening_bal
+                                                     iv_v2    = lv_credits
+                                                     iv_v3    = lv_debits
+                                                     iv_v4    = ls_statement-closing_bal ) ) INTO TABLE rt_findings.
       ENDIF.
       IF ls_statement-has_totals = abap_true.
         DATA lv_declared TYPE zif_cd_ops_types=>ty_amount.
@@ -52,7 +56,8 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
           INSERT zcl_cd_ebs_finding=>for_rule_statement(
                    is_rule = is_rule is_statement = ls_statement iv_check_code = 'DECLARED_TOTALS'
                    iv_amount = lv_declared
-                   iv_message = |Declared totals do not balance: difference { lv_declared }| ) INTO TABLE rt_findings.
+                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-declared_totals
+                                                       iv_v1    = lv_declared ) ) INTO TABLE rt_findings.
         ENDIF.
       ENDIF.
     ENDLOOP.

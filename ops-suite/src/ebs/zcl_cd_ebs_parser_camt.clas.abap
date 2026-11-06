@@ -6,6 +6,7 @@
 *& It never posts, never reads the database and uses no XPath/XSLT.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).
@@ -505,7 +506,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-block
-                   iv_message  = |File { file_key( ) } is empty: expected camt.053/054 XML, found no content| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_is_empty_expected_camt
+                                                        iv_v1    = file_key( ) ) ).
       rs_file = ms_file.
       RETURN.
     ENDIF.
@@ -514,7 +516,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-block
-                   iv_message  = |File { file_key( ) }: expected at least one Stmt/Ntfctn, found none| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_at_least_on_2
+                                                        iv_v1    = file_key( ) ) ).
     ENDIF.
     rs_file = ms_file.
   ENDMETHOD.
@@ -786,7 +789,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       add_finding( is_check    = stmt_check( gc_check-no_entries )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-warning
-                   iv_message  = |Statement { ms_stmt-stmt-stmt_id }: expected entries (Ntry), found none| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-statement_expected_entries
+                                                        iv_v1    = ms_stmt-stmt-stmt_id ) ).
     ENDIF.
     APPEND ms_stmt-stmt TO ms_file-statements.
     APPEND LINES OF ms_stmt-lines TO ms_file-lines.
@@ -1102,7 +1106,10 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-control_total
                  iv_severity = zif_cd_ops_types=>gc_severity-block
-                 iv_message  = |{ is_check-label }: expected { iv_expected }, found { iv_found } (entries)|
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_entries
+                                                      iv_v1    = is_check-label
+                                                      iv_v2    = iv_expected
+                                                      iv_v3    = iv_found )
                  iv_amount   = lv_difference ).
   ENDMETHOD.
 
@@ -1114,7 +1121,10 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-count
                  iv_severity = zif_cd_ops_types=>gc_severity-error
-                 iv_message  = |{ is_check-label }: expected { iv_expected }, found { iv_found } entries| ).
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_entries_2
+                                                      iv_v1    = is_check-label
+                                                      iv_v2    = iv_expected
+                                                      iv_v3    = iv_found ) ).
   ENDMETHOD.
 
 
@@ -1166,8 +1176,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     add_finding( is_check    = current_check( gc_check-invalid_amount )
                  iv_rule_id  = gc_rule-structure
                  iv_severity = zif_cd_ops_types=>gc_severity-error
-                 iv_message  = |Element { concat_lines_of( table = mt_path sep = gc_path_separator ) }: | &&
-                               |expected decimal amount, found '{ iv_value }'; 0 used| ).
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-element_expected_decimal_am
+                                                      iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
+                                                      iv_v2    = iv_value ) ).
   ENDMETHOD.
 
 
@@ -1194,8 +1205,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       add_finding( is_check    = current_check( gc_check-invalid_date )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Element { concat_lines_of( table = mt_path sep = gc_path_separator ) }: | &&
-                                 |expected date YYYY-MM-DD, found '{ iv_value }'| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-element_expected_date_yyyy
+                                                        iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
+                                                        iv_v2    = iv_value ) ).
     ENDIF.
   ENDMETHOD.
 

@@ -167,6 +167,306 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Code &amp;1 &amp;2 bank &amp;3 flow &amp;4 not in ZCD_BTC_MAP: blocked, never suspense</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Category &amp;1 is configured never to post</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Run stopped: &amp;1 consecutive packages above &amp;2 % failures</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Validation could not run: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>104</MSGNR>
+     <TEXT>Rule &amp;1 (&amp;2) failed: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>105</MSGNR>
+     <TEXT>File &amp;1 is empty: expected BAI2 records, found none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>106</MSGNR>
+     <TEXT>Type code &amp;1 in line &amp;2 is non-monetary information; no line created</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>107</MSGNR>
+     <TEXT>Type code '&amp;1' in line &amp;2 is not a detail code; expected 100-699</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>108</MSGNR>
+     <TEXT>Account &amp;1: expected account trailer 49, found none before line &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>109</MSGNR>
+     <TEXT>Account &amp;1: statement without detail entries (16)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>File &amp;1: expected file trailer 99 as last record, found none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>File &amp;1: expected at least one account record 03, found none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>112</MSGNR>
+     <TEXT>&amp;1: expected &amp;2, found &amp;3 (records)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>113</MSGNR>
+     <TEXT>&amp;1: expected &amp;2, found &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>114</MSGNR>
+     <TEXT>Line &amp;1: expected amount of digits with optional sign, found '&amp;2'; 0 used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>115</MSGNR>
+     <TEXT>Line &amp;1: expected date YYMMDD, found '&amp;2'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>116</MSGNR>
+     <TEXT>Line &amp;1: expected time HHMM, found '&amp;2'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>117</MSGNR>
+     <TEXT>File &amp;1 is empty: expected camt.053/054 XML, found no content</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>118</MSGNR>
+     <TEXT>File &amp;1: expected at least one Stmt/Ntfctn, found none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>119</MSGNR>
+     <TEXT>Statement &amp;1: expected entries (Ntry), found none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>120</MSGNR>
+     <TEXT>&amp;1: expected &amp;2, found &amp;3 (entries)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>121</MSGNR>
+     <TEXT>&amp;1: expected &amp;2, found &amp;3 entries</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>122</MSGNR>
+     <TEXT>Element &amp;1: expected decimal amount, found '&amp;2'; 0 used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>123</MSGNR>
+     <TEXT>Element &amp;1: expected date YYYY-MM-DD, found '&amp;2'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>124</MSGNR>
+     <TEXT>&amp;1 expects &amp;2, bank sent &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>125</MSGNR>
+     <TEXT>Amount &amp;1 below minimum &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>126</MSGNR>
+     <TEXT>Amount &amp;1 above maximum &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>127</MSGNR>
+     <TEXT>Entry in &amp;1, statement in &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>128</MSGNR>
+     <TEXT>Required reference &amp;1 missing for &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>129</MSGNR>
+     <TEXT>Reference &amp;1 is not alphanumeric</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>130</MSGNR>
+     <TEXT>Return/NOC reason missing for &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>131</MSGNR>
+     <TEXT>Reason &amp;1 not mapped to an payment engine return reason</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>132</MSGNR>
+     <TEXT>Reason &amp;1 is not R01-R85 or C01-C07</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>133</MSGNR>
+     <TEXT>No payment run entry (DPAYH) for document &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>134</MSGNR>
+     <TEXT>Payment &amp;1 status &amp;2, expected &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>135</MSGNR>
+     <TEXT>Check &amp;1: statement has no house bank, check exists in several accounts</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>136</MSGNR>
+     <TEXT>Check &amp;1 not in the check register</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>137</MSGNR>
+     <TEXT>Check &amp;1 has register status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>138</MSGNR>
+     <TEXT>No ACH retrieval log for document &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>139</MSGNR>
+     <TEXT>Retrieval &amp;1 status &amp;2, expected &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>140</MSGNR>
+     <TEXT>Payment &amp;1 is in no returns lot</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>141</MSGNR>
+     <TEXT>Returns lot(s) of &amp;1 have status &amp;2, expected &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>142</MSGNR>
+     <TEXT>Check &amp;1: bank &amp;2, register &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>143</MSGNR>
+     <TEXT>Duplicate of an earlier entry with reference &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>144</MSGNR>
+     <TEXT>Value date &amp;1 more than &amp;2 days from booking date &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>145</MSGNR>
+     <TEXT>Group &amp;1: statement has no house bank, totals not comparable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>146</MSGNR>
+     <TEXT>Group &amp;1: bank total &amp;2, register &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>147</MSGNR>
+     <TEXT>Group &amp;1: &amp;2 bank entries, &amp;3 in register</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>148</MSGNR>
+     <TEXT>No posting rule in ZCD_BTC_MAP for &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>149</MSGNR>
+     <TEXT>Posted with &amp;1, map prescribes &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>150</MSGNR>
      <TEXT>Content is not a BAI2 file: first record &amp;1 (expected type 01)</TEXT>
     </T100>
@@ -185,6 +485,48 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>153</MSGNR>
+     <TEXT>Account &amp;1: no G/L account in ZCD_EBS_ACCT, closing not reconciled</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>154</MSGNR>
+     <TEXT>G/L &amp;1 balance &amp;2 &lt;&gt; closing &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>155</MSGNR>
+     <TEXT>Entry &amp;1 &amp;2 has no FI document</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>156</MSGNR>
+     <TEXT>FI document &amp;1 &amp;2 &amp;3 not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>157</MSGNR>
+     <TEXT>FI document &amp;1 &amp;2 is not cleared</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>158</MSGNR>
+     <TEXT>&amp;1 must not be posted, found FI document &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>159</MSGNR>
+     <TEXT>Opening &amp;1 &lt;&gt; prior closing &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>160</MSGNR>
      <TEXT>Release is not waiting for approval (status &amp;1)</TEXT>
     </T100>
@@ -193,6 +535,114 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>161</MSGNR>
      <TEXT>Line (object key) and check code are required for a release</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>162</MSGNR>
+     <TEXT>Opening &amp;1 + &amp;2 - &amp;3 &lt;&gt; closing &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>163</MSGNR>
+     <TEXT>Declared totals do not balance: difference &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>164</MSGNR>
+     <TEXT>Statement &amp;1 follows &amp;2: &amp;3 missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>165</MSGNR>
+     <TEXT>Statement &amp;1 not after last imported &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>166</MSGNR>
+     <TEXT>Account &amp;1 not active in ZCD_EBS_ACCT</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>167</MSGNR>
+     <TEXT>Statement in &amp;1, account in &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>168</MSGNR>
+     <TEXT>Statement dated &amp;1 is in the future</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>169</MSGNR>
+     <TEXT>Statement dated &amp;1 is older than &amp;2 days</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>170</MSGNR>
+     <TEXT>Statement &amp;1 of &amp;2 appears twice</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>171</MSGNR>
+     <TEXT>Statement &amp;1 of &amp;2 already imported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>172</MSGNR>
+     <TEXT>&amp;1 of &amp;2 entries have an unmapped transaction code</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>173</MSGNR>
+     <TEXT>&amp;1 entries neither posted nor blocked (total &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>174</MSGNR>
+     <TEXT>Header declares &amp;1 entries, &amp;2 read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>175</MSGNR>
+     <TEXT>&amp;1 entries: &amp;2 passed, &amp;3 failed,</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>176</MSGNR>
+     <TEXT>&amp;1 blocked, &amp;2 warnings</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>177</MSGNR>
+     <TEXT>Unknown record &amp;1 in line &amp;2 ignored (valid: 01 02 03 16 49 88 98 99)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>178</MSGNR>
+     <TEXT>Group &amp;1 (originator &amp;2): no group trailer 98 before line &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>179</MSGNR>
+     <TEXT>Released by &amp;1 (requested by &amp;2):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -239,6 +689,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>207</MSGNR>
+     <TEXT>&amp;1: &amp;2 record(s) sent, &amp;3 ACK + &amp;4 NACK</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>208</MSGNR>
      <TEXT>Lot configuration &amp;1 &amp;2: field &amp;3 missing</TEXT>
     </T100>
@@ -251,8 +707,62 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>210</MSGNR>
+     <TEXT>&amp;1: control total &amp;2, acknowledged &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>211</MSGNR>
      <TEXT>File ID could not be generated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>212</MSGNR>
+     <TEXT>&amp;1: reported &amp;2 times by the source</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>213</MSGNR>
+     <TEXT>&amp;1: same name/checksum as &amp;2 of &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>214</MSGNR>
+     <TEXT>&amp;1: first event after the window end</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>215</MSGNR>
+     <TEXT>&amp;1: window closed, &amp;2 of &amp;3 file(s) received</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>216</MSGNR>
+     <TEXT>&amp;1: loaded, but no &amp;2 lot found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>217</MSGNR>
+     <TEXT>&amp;1: &amp;2 of &amp;3 expected file(s) received (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>218</MSGNR>
+     <TEXT>&amp;1: &amp;2 file(s) on a &amp;3 day that expects none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>219</MSGNR>
+     <TEXT>&amp;1: &amp;2 NOC entr(ies) open after &amp;3 banking day(s) (NACHA limit &amp;4)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -263,14 +773,110 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>221</MSGNR>
+     <TEXT>&amp;1: rejected by the bank (&amp;2 record(s) NACK)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>222</MSGNR>
+     <TEXT>&amp;1: processing FAILED</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>223</MSGNR>
+     <TEXT>&amp;1: &amp;2 bytes (min &amp;3, max &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>224</MSGNR>
+     <TEXT>&amp;1: &amp;2 after &amp;3 min (SLA &amp;4 min)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>225</MSGNR>
+     <TEXT>Source &amp;1 (&amp;2): &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>226</MSGNR>
+     <TEXT>Reference &amp;1 of &amp;2 reused on &amp;3: configure a unique FILE_KEY_FIELD</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>227</MSGNR>
+     <TEXT>Source &amp;1: no interface matches file &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>228</MSGNR>
+     <TEXT>Source &amp;1: status '&amp;2' has no &amp;3 stage in ZCD_FMON_SRCMAP</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>229</MSGNR>
+     <TEXT>Lot reader &amp;1 (&amp;2): &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>230</MSGNR>
      <TEXT>Stage &amp;1 cannot be set by hand on file &amp;2 (current stage &amp;3)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>231</MSGNR>
+     <TEXT>Factory calendar &amp;1: &amp;2; calendar days used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>232</MSGNR>
      <TEXT>PRISM request, handling reference and reason are required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>233</MSGNR>
+     <TEXT>Factory calendar &amp;1: &amp;2; NORMAL day used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>234</MSGNR>
+     <TEXT>Check &amp;1 (&amp;2): &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>235</MSGNR>
+     <TEXT>Registry not saved: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>236</MSGNR>
+     <TEXT>&amp;1: &amp;2 file(s), &amp;3 finding(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>237</MSGNR>
+     <TEXT>Alert dispatch failed: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>238</MSGNR>
+     <TEXT>&amp;1: &amp;2 of &amp;3 &amp;4 transaction(s) unprocessed</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -389,6 +995,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>319</MSGNR>
+     <TEXT>Cheque &amp;1: status &amp;2 -&gt; &amp;3 is not allowed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>320</MSGNR>
      <TEXT>Suppression period is invalid (from &amp;1 to &amp;2)</TEXT>
     </T100>
@@ -409,6 +1021,96 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>323</MSGNR>
      <TEXT>Value query on table &amp;1 has no date restriction (DATE parameter)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>324</MSGNR>
+     <TEXT>Table &amp;1 has no configuration baseline yet</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>325</MSGNR>
+     <TEXT>Reconciliation key &amp;1 has totals records but no GL document (&amp;2 - &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>326</MSGNR>
+     <TEXT>Payment request &amp;1 is CANCELLED but its open item is cleared (paid)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>327</MSGNR>
+     <TEXT>Payment request &amp;1 failed without SPE row: the source is never told</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>328</MSGNR>
+     <TEXT>Job &amp;1 cancelled (started &amp;2 &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>329</MSGNR>
+     <TEXT>Job &amp;1 active for &amp;2 min (limit &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>330</MSGNR>
+     <TEXT>Job &amp;1 planned &amp;2 &amp;3 has not started</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>331</MSGNR>
+     <TEXT>Cycle &amp;1 step &amp;2 (&amp;3): &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>332</MSGNR>
+     <TEXT>&amp;1 after &amp;2 min (max &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>333</MSGNR>
+     <TEXT>&amp;1 in &amp;2 min (max &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>334</MSGNR>
+     <TEXT>&amp;1, blocked by predecessor &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>335</MSGNR>
+     <TEXT>Check &amp;1 ran &amp;2 ms, timeout &amp;3 s</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>336</MSGNR>
+     <TEXT>Health score &amp;1/100, &amp;2 red, &amp;3 amber</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>337</MSGNR>
+     <TEXT>Suppressed until &amp;1 by &amp;2: &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>338</MSGNR>
+     <TEXT>Table &amp;1 changed since baseline of &amp;2 by &amp;3 (rows &amp;4)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

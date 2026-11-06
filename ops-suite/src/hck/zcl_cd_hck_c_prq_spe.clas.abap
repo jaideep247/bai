@@ -8,6 +8,7 @@
 *& against the DDIC and the whitelist (VERIFY-SE11 in config/hck_seed.md).
 *& Modification log:
 *& 2026-11-06 | Initial version (USAA known tables, phase 3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment request failed without SPE row</p>
 "! PARAM1 TABLE=ZCD_PAYM_REQ_LOG;KEY=..;STATUS=ZZ_STATUS;DATE=..
@@ -90,7 +91,8 @@ CLASS zcl_cd_hck_c_prq_spe IMPLEMENTATION.
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
                       reference  = lv_request
-                      message    = |Payment request { lv_request } failed without SPE row: the source is never told| )
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-payment_request_failed_with
+                                                          iv_v1    = lv_request ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
   ENDMETHOD.

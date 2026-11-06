@@ -6,6 +6,7 @@
 *& NOC_DUE_TODAY (W) on the last allowed banking day.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - NOC aging (NACHA banking days)</p>
 "! Rules: ZCL_CD_FMON_RULES=>NOC_AGING_CODE. Banking days come from the engine (calendar).
@@ -39,8 +40,11 @@ CLASS zcl_cd_fmon_chk_noc_aging IMPLEMENTATION.
                iv_code     = lv_code
                iv_severity = COND #( WHEN lv_code = zif_cd_fmon_types=>gc_check_code-noc_due_today
                                      THEN zif_cd_ops_types=>gc_severity-warning )
-               iv_message  = |{ ls_file-file_name }: { ls_lot-open_items } NOC entr(ies) open after | &&
-                             |{ ls_lot-age_days } banking day(s) (NACHA limit { ls_lot-sla_days })| )
+               iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-noc_entr_ies_open_after
+                                                    iv_v1    = ls_file-file_name
+                                                    iv_v2    = ls_lot-open_items
+                                                    iv_v3    = ls_lot-age_days
+                                                    iv_v4    = ls_lot-sla_days ) )
              INTO TABLE rt_findings.
     ENDLOOP.
   ENDMETHOD.

@@ -8,6 +8,7 @@
 *& check code and reason.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - blocked-line release rules</p>
 CLASS zcl_cd_ebs_release_policy DEFINITION
@@ -76,8 +77,10 @@ CLASS zcl_cd_ebs_release_policy IMPLEMENTATION.
       <ls_finding>-severity  = zif_cd_ops_types=>gc_severity-info.
       <ls_finding>-action    = zif_cd_ops_types=>gc_action-notify.
       <ls_finding>-reference = |{ ls_release-release_uuid }|.
-      <ls_finding>-message   = |Released by { ls_release-approved_by } (requested by { ls_release-requested_by }): |
-                            && <ls_finding>-message.
+      <ls_finding>-message   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-released_by
+                                                      iv_v1    = ls_release-approved_by
+                                                      iv_v2    = ls_release-requested_by )
+                            && ` ` && <ls_finding>-message.
     ENDLOOP.
   ENDMETHOD.
 

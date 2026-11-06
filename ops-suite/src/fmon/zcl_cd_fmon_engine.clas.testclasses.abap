@@ -9,6 +9,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: evaluated files reconciled; skipped after a check failure.
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -592,7 +593,12 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_finding-severity    = zif_cd_ops_types=>gc_severity-error.
     ls_finding-action      = zif_cd_ops_types=>gc_action-exception.
     ls_finding-reference   = zcl_cd_fmon_util=>file_hex( ls_file-file_id ).
-    ls_finding-message     = |{ gc_ret_file }: 1 of 3 RETURNS transaction(s) unprocessed (L1/3)|.
+    " Same text element as the check: message number and variables are what is asserted
+    ls_finding-message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_unprocessed
+                                                    iv_v1    = gc_ret_file
+                                                    iv_v2    = 1
+                                                    iv_v3    = 3
+                                                    iv_v4    = 'RETURNS' ) && | (L1/3)|.
     INSERT ls_finding INTO TABLE rt_findings.
   ENDMETHOD.
 

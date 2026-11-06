@@ -6,6 +6,7 @@
 *& never reads the database and derives no engine fields (flow, category).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -555,7 +556,8 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-block
-                   iv_message  = |File { file_key( ) } is empty: expected BAI2 records, found none| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_is_empty_expected_bai2
+                                                        iv_v1    = file_key( ) ) ).
       rs_file = ms_file.
       RETURN.
     ENDIF.
@@ -899,12 +901,16 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = stmt_check( gc_check-info_skipped )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-info
-                   iv_message  = |Type code { iv_code } in line { iv_line_no } is non-monetary information; no line created| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-type_code_in_line_is
+                                                        iv_v1    = iv_code
+                                                        iv_v2    = iv_line_no ) ).
     ELSE.
       add_finding( is_check    = stmt_check( gc_check-invalid_code )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Type code '{ iv_code }' in line { iv_line_no } is not a detail code; expected 100-699| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-type_code_in_line_is_2
+                                                        iv_v1    = iv_code
+                                                        iv_v2    = iv_line_no ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1041,8 +1047,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     add_finding( is_check    = current_check( gc_check-unknown_record )
                  iv_rule_id  = gc_rule-structure
                  iv_severity = zif_cd_ops_types=>gc_severity-error
-                 iv_message  = |Unknown record { excerpt( is_record-raw ) } in line { is_record-line_no } ignored; | &&
-                               |expected 01, 02, 03, 16, 49, 88, 98 or 99| ).
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unknown_record
+                                                      iv_v1    = excerpt( is_record-raw )
+                                                      iv_v2    = is_record-line_no ) ).
   ENDMETHOD.
 
 
@@ -1064,15 +1071,17 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = stmt_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Account { ms_account-stmt-account_no }: expected account trailer 49, | &&
-                                 |found none before line { mv_line_no }| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_expected_account_tr
+                                                        iv_v1    = ms_account-stmt-account_no
+                                                        iv_v2    = mv_line_no ) ).
     ENDIF.
     check_statement_totals( ).
     IF ms_account-lines IS INITIAL.
       add_finding( is_check    = stmt_check( gc_check-no_entries )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-warning
-                   iv_message  = |Account { ms_account-stmt-account_no }: statement without detail entries (16)| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_statement_without_d
+                                                        iv_v1    = ms_account-stmt-account_no ) ).
     ENDIF.
     ms_group-child_total += COND ty_amount( WHEN iv_has_trailer = abap_true THEN iv_trailer_total
                                             ELSE ms_account-computed_total ).
@@ -1122,8 +1131,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Group { ms_group-group_no } (originator { ms_group-originator }): | &&
-                                 |expected group trailer 98, found none before line { mv_line_no }| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_missing
+                                                        iv_v1    = ms_group-group_no
+                                                        iv_v2    = ms_group-originator
+                                                        iv_v3    = mv_line_no ) ).
     ENDIF.
     mv_file_total += COND ty_amount( WHEN iv_has_trailer = abap_true THEN iv_trailer_total
                                      ELSE ms_group-child_total ).
@@ -1138,13 +1149,15 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |File { file_key( ) }: expected file trailer 99 as last record, found none| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_file_trailer
+                                                        iv_v1    = file_key( ) ) ).
     ENDIF.
     IF ms_file-statements IS INITIAL.
       add_finding( is_check    = file_check( gc_check-empty_file )
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-block
-                   iv_message  = |File { file_key( ) }: expected at least one account record 03, found none| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_at_least_one
+                                                        iv_v1    = file_key( ) ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1158,7 +1171,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-control_total
                  iv_severity = zif_cd_ops_types=>gc_severity-block
-                 iv_message  = |{ is_check-label }: expected { iv_expected }, found { iv_found } (records)|
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found_records
+                                                      iv_v1    = is_check-label
+                                                      iv_v2    = iv_expected
+                                                      iv_v3    = iv_found )
                  iv_amount   = lv_difference ).
   ENDMETHOD.
 
@@ -1170,7 +1186,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     add_finding( is_check    = is_check
                  iv_rule_id  = gc_rule-count
                  iv_severity = zif_cd_ops_types=>gc_severity-error
-                 iv_message  = |{ is_check-label }: expected { iv_expected }, found { iv_found }| ).
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-expected_found
+                                                      iv_v1    = is_check-label
+                                                      iv_v2    = iv_expected
+                                                      iv_v3    = iv_found ) ).
   ENDMETHOD.
 
 
@@ -1293,8 +1312,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = current_check( gc_check-invalid_amount )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Line { mv_line_no }: expected amount of digits with optional sign, | &&
-                                 |found '{ lv_value }'; 0 used| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_amount_of_dig
+                                                        iv_v1    = mv_line_no
+                                                        iv_v2    = lv_value ) ).
       RETURN.
     ENDIF.
     rv_amount = lv_sign * CONV decfloat34( lv_digits ) / gc_implied_divisor.
@@ -1324,7 +1344,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       add_finding( is_check    = current_check( gc_check-invalid_date )
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-error
-                   iv_message  = |Line { mv_line_no }: expected date YYMMDD, found '{ iv_value }'| ).
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_date_yymmdd_f
+                                                        iv_v1    = mv_line_no
+                                                        iv_v2    = iv_value ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1349,7 +1371,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     add_finding( is_check    = current_check( gc_check-invalid_date )
                  iv_rule_id  = gc_rule-structure
                  iv_severity = zif_cd_ops_types=>gc_severity-error
-                 iv_message  = |Line { mv_line_no }: expected time HHMM, found '{ iv_value }'| ).
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-line_expected_time_hhmm_fou
+                                                      iv_v1    = mv_line_no
+                                                      iv_v2    = iv_value ) ).
   ENDMETHOD.
 
 

@@ -5,6 +5,7 @@
 *& the window has closed and the file is still inside the grace period.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - file late</p>
 "! Rules: ZCL_CD_FMON_RULES=>ARRIVED_LATE / EXPECTATION_CODE. Params: GRACE_MIN=60
@@ -36,7 +37,8 @@ CLASS zcl_cd_fmon_chk_late IMPLEMENTATION.
                    is_file    = ls_file
                    is_check   = is_check
                    iv_code    = zif_cd_fmon_types=>gc_check_code-file_late
-                   iv_message = |{ ls_file-file_name }: first event after the window end| ) INTO TABLE rt_findings.
+                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-first_event_after_the_windo
+                                                       iv_v1    = ls_file-file_name ) ) INTO TABLE rt_findings.
         ENDIF.
       ENDLOOP.
       IF zcl_cd_fmon_rules=>expectation_code( is_expect    = ls_expect
@@ -48,8 +50,10 @@ CLASS zcl_cd_fmon_chk_late IMPLEMENTATION.
                  iv_object_key = |{ ls_expect-iface_id }/{ is_ctx-business_date }|
                  is_check      = is_check
                  iv_code       = zif_cd_fmon_types=>gc_check_code-file_late
-                 iv_message    = |{ ls_expect-iface_id }: window closed, { lv_received } of | &&
-                                 |{ ls_expect-expected_count } file(s) received| ) INTO TABLE rt_findings.
+                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-window_closed_of_file_s
+                                                        iv_v1    = ls_expect-iface_id
+                                                        iv_v2    = lv_received
+                                                        iv_v3    = ls_expect-expected_count ) ) INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

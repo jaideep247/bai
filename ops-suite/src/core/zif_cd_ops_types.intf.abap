@@ -8,6 +8,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Payment engine area CORE and exception dispositions.
 *& 2026-11-06 | Object-key and group sets (reconciliation scope).
+*& 2026-11-06 | Message class constant and message number / variable types (texts as messages).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -26,6 +28,14 @@ INTERFACE zif_cd_ops_types
   TYPES ty_group       TYPE c LENGTH 35.
   TYPES ty_reference   TYPE c LENGTH 35.
   TYPES ty_message     TYPE c LENGTH 255.
+  "! Number of a message of class ZCD_OPS (every user-facing text of the suite is one)
+  TYPES ty_msgno       TYPE n LENGTH 3.
+  "! Message variable (&1 .. &4)
+  TYPES ty_msgv        TYPE c LENGTH 50.
+  "! Message class holding every text of the suite (translatable, SE91)
+  CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
+  "! Message type used when a text is only built, never shown
+  CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
   TYPES ty_action      TYPE c LENGTH 10.
   TYPES ty_param_name  TYPE c LENGTH 30.
   TYPES ty_param_value TYPE c LENGTH 255.

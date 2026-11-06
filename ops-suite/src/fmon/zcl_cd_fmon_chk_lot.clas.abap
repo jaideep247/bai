@@ -5,6 +5,7 @@
 *& yet accounted for) and LOT_NOT_FOUND (loaded file without any lot).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - returns/NOC not fully processed</p>
 "! A file is processed only when zero transactions are unaccounted for.
@@ -33,8 +34,12 @@ CLASS zcl_cd_fmon_chk_lot IMPLEMENTATION.
                  is_file    = ls_file
                  is_check   = is_check
                  iv_code    = zif_cd_fmon_types=>gc_check_code-lot_unprocessed
-                 iv_message = |{ ls_file-file_name }: { ls_lot-open_items } of { ls_lot-total_items } | &&
-                              |{ ls_lot-lot_type } transaction(s) unprocessed ({ ls_lot-open_keys })| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_unprocessed
+                                                     iv_v1    = ls_file-file_name
+                                                     iv_v2    = ls_lot-open_items
+                                                     iv_v3    = ls_lot-total_items
+                                                     iv_v4    = ls_lot-lot_type )
+                              && | ({ ls_lot-open_keys })| )
                INTO TABLE rt_findings.
       ELSEIF ls_lot-found = abap_false
              AND zcl_cd_fmon_status=>rank( ls_file-stage ) >= zcl_cd_fmon_status=>rank( zif_cd_fmon_types=>gc_stage-loaded ).
@@ -43,7 +48,9 @@ CLASS zcl_cd_fmon_chk_lot IMPLEMENTATION.
                  is_check    = is_check
                  iv_code     = zif_cd_fmon_types=>gc_check_code-lot_not_found
                  iv_severity = zif_cd_ops_types=>gc_severity-warning
-                 iv_message  = |{ ls_file-file_name }: loaded, but no { ls_lot-lot_type } lot found| )
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-loaded_but_no_lot_found
+                                                      iv_v1    = ls_file-file_name
+                                                      iv_v2    = ls_lot-lot_type ) )
                INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

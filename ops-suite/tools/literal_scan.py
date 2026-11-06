@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""
+Artifact: tools/literal_scan.py
+Purpose:  Inventory of every literal in the suite's ABAP production code (test includes
+          excluded) and its classification:
+            1 TEXT   user-facing text (finding / run / alert messages, labels, output)
+            2 VALUE  technical value (check codes, statuses, names, defaults, thresholds)
+            3 OK     legitimate (CONSTANTS / types interfaces, separators, syntax-required
+                     names such as CALL FUNCTION / AUTHORITY-CHECK, allow-listed lines)
+          Used by tools/portable_checks.py (check no_inline_texts) and to write
+          docs/Hardcoding_Inventory.md.
+Usage:    python3 tools/literal_scan.py            -> summary per category
+          python3 tools/literal_scan.py --list     -> every category 1/2 literal
+          python3 tools/literal_scan.py --md FILE  -> write the inventory document
+Modification log:
+2026-11-06 | Initial version (phase 5: remove hardcoding).
+"""
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, 'src')
+ALLOW = os.path.join(ROOT, 'tools', 'literal_allowlist.txt')
+
+# Statement starts whose literals are declarations (the place where values belong)
+DECL = re.compile(r'^\s*(CONSTANTS|TYPES|DATA|CLASS-DATA|STATICS|PARAMETERS|SELECT-OPTIONS|'
+                  r'SELECTION-SCREEN)\b', re.I)
+# Syntax that requires a literal or a name: kept, but listed as legitimate
+SYNTAX = [
+    re.compile(r"CALL\s+FUNCTION\s*$", re.I),
+    re.compile(r"AUTHORITY-CHECK\s+OBJECT\s*$", re.I),
+    re.compile(r"\bID\s*$", re.I),
+    re.compile(r"\bCALL\s+TRANSFORMATION\s*$", re.I),
+    re.compile(r"\bSET\s+PF-STATUS\s*$", re.I),
+    re.compile(r"\bSET\s+TITLEBAR\s*$", re.I),
+    re.compile(r"\bTYPE\s*$", re.I),            # MESSAGE ... TYPE 'E'
+    re.compile(r"\bDISPLAY\s+LIKE\s*$", re.I),
+    re.compile(r"\bFORMAT\s*$", re.I),
+]
+SEPARATOR = re.compile(r"^[\s,;:/\-–()\[\]\.=<>|#%+*&]*$")
+WORDS = re.compile(r"[A-Za-z]{2,}[a-z][A-Za-z]*\s+\S|[a-z]{3,}")
+
+
+def load_allow():
+    entries = []
+    if os.path.exists(ALLOW):
+        for line in open(ALLOW, encoding='utf-8'):
+            line = line.split('#', 1)[0].strip()
+            if line:
+                path, _, pattern = line.partition(' ')
+                entries.append((path.strip(), pattern.strip()))
+    return entries
+
+
+def statements(text):
+    """Yield (line_no, statement_text, [(literal, kind, line_no, prefix)]) per ABAP statement."""
+    stmt, lits, start = '', [], None
+    for no, raw in enumerate(text.split('\n'), 1):
+        if raw.lstrip().startswith('*'):
+            continue
+        i, n = 0, len(raw)
+        if start is None:
+            start = no
+        while i < n:
+            c = raw[i]
+            if c == '"':
+                break
+            if c in "'`":
+                j = i + 1
+                while j < n:
+                    if raw[j] == c and j + 1 < n and raw[j + 1] == c:
+                        j += 2
+                        continue
+                    if raw[j] == c:
+                        break
+                    j += 1
+                lits.append((raw[i + 1:j], c, no, stmt))
+                stmt += c + c
+                i = j + 1
+                continue
+            if c == '|':
+                j, depth, buf = i + 1, 0, ''
+                while j < n:
+                    d = raw[j]
+                    if depth == 0 and d == '\\' and j + 1 < n:
+                        buf += raw[j + 1]
+                        j += 2
+                        continue
+                    if d == '{':
+                        if depth == 0 and buf:
+                            lits.append((buf, '|', no, stmt))
+                            buf = ''
+                        depth += 1
+                    elif d == '}':
+                        depth -= 1
+                    elif d == '|' and depth == 0:
+                        break
+                    elif depth == 0:
+                        buf += d
+                    j += 1
+                if buf:
+                    lits.append((buf, '|', no, stmt))
+                stmt += '||'
+                i = j + 1
+                continue
+            stmt += c
+            if c == '.':
+                yield start, stmt, lits
+                stmt, lits, start = '', [], None
+            i += 1
+        stmt += ' '
+    if stmt.strip():
+        yield start, stmt, lits
+
+
+def classify(path, stmt, lit, kind, prefix, allow):
+    rel = os.path.relpath(path, ROOT)
+    name = os.path.basename(path)
+    if re.match(r'zif_cd_\w*types\.intf\.abap$', name):
+        return 3, 'types interface'
+    head = stmt.lstrip()
+    if DECL.match(head) or re.match(r'^\s*(BEGIN|END)\s+OF\b', head, re.I):
+        return 3, 'declaration'
+    for path_pat, pattern in allow:
+        if (path_pat == '*' or rel.endswith(path_pat)) and pattern and pattern in lit:
+            return 3, 'allow-list'
+    if any(rx.search(prefix.rstrip()) for rx in SYNTAX):
+        return 3, 'syntax'
+    if lit == '' or SEPARATOR.match(lit):
+        return 3, 'separator'
+    if kind == '|' or WORDS.search(lit):
+        return (1, 'text') if re.search(r'[A-Za-z]', lit) else (3, 'format')
+    return 2, 'value'
+
+
+def scan():
+    allow = load_allow()
+    rows = []
+    for d, _, files in os.walk(SRC):
+        for f in sorted(files):
+            if not f.endswith('.abap') or 'testclasses' in f:
+                continue
+            p = os.path.join(d, f)
+            text = open(p, encoding='utf-8').read()
+            for _, stmt, lits in statements(text):
+                for lit, kind, no, prefix in lits:
+                    cat, why = classify(p, stmt, lit, kind, prefix, allow)
+                    rows.append((os.path.relpath(p, ROOT), no, cat, why, kind, lit))
+    return rows
+
+
+def main():
+    rows = scan()
+    if '--list' in sys.argv:
+        for r in rows:
+            if r[2] in (1, 2):
+                print(f'{r[0]}:{r[1]} [{r[2]} {r[3]}] {r[4]}{r[5]}{r[4]}')
+    cats = {1: 0, 2: 0, 3: 0}
+    for r in rows:
+        cats[r[2]] += 1
+    print(f'literals: {len(rows)}  text(1)={cats[1]}  value(2)={cats[2]}  legitimate(3)={cats[3]}')
+    if '--md' in sys.argv:
+        target = sys.argv[sys.argv.index('--md') + 1]
+        per = {}
+        for r in rows:
+            per.setdefault(r[0], {1: 0, 2: 0, 3: 0})[r[2]] += 1
+        before = sys.argv[sys.argv.index('--before') + 1] if '--before' in sys.argv else ''
+        with open(target, 'w', encoding='utf-8') as fh:
+            fh.write('# Hardcoding inventory (generated by tools/literal_scan.py)\n\n')
+            fh.write('> **First principle:** a value the business may change is configuration; a text a user reads is a '
+                     'text element; a value fixed by a standard or by SAP syntax is a named constant.\n\n')
+            if before:
+                fh.write('## Before / after\n\n' + before + '\n\n')
+            fh.write(f'## Now\n\nLiterals in production ABAP: **{len(rows)}** — user-facing text (1): **{cats[1]}**, '
+                     f'technical value (2): **{cats[2]}**, legitimate (3): **{cats[3]}**.\n\n')
+            fh.write('Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfaces), '
+                     'separators and format characters, names SAP syntax requires as literals (CALL FUNCTION, '
+                     'AUTHORITY-CHECK OBJECT / ID, MESSAGE TYPE), and allow-listed lines (`tools/literal_allowlist.txt`, '
+                     'each with its reason).\n\n')
+            fh.write('| File | Text (1) | Value (2) | Legitimate (3) |\n|---|---|---|---|\n')
+            for f in sorted(per):
+                c = per[f]
+                if c[1] or c[2]:
+                    fh.write(f'| `{f}` | {c[1]} | {c[2]} | {c[3]} |\n')
+            fh.write('\nFiles not listed have no category 1 or 2 literal.\n')
+            left = [r for r in rows if r[2] in (1, 2)]
+            if left:
+                fh.write('\n## Remaining category 1 / 2 literals\n\n| File:line | Category | Literal |\n|---|---|---|\n')
+                for r in left:
+                    fh.write(f'| `{r[0]}:{r[1]}` | {r[2]} | `{r[5][:60]}` |\n')
+    return cats
+
+
+if __name__ == '__main__':
+    main()

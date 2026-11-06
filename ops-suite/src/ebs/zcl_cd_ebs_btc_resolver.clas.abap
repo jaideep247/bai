@@ -7,6 +7,7 @@
 *& ever left to post to suspense. Pure logic over configuration passed in.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -149,8 +150,11 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
                  iv_check_code = 'UNMAPPED_BTC'
                  iv_severity   = zif_cd_ops_types=>gc_severity-block
                  iv_action     = zif_cd_ops_types=>gc_action-block
-                 iv_message    = |Code { <ls_line>-scheme } { <ls_line>-btc_code } bank { ls_statement-bank_key } |
-                              && |flow { <ls_line>-flow_type } not in ZCD_BTC_MAP: blocked, never suspense| )
+                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unmapped_btc
+                                                        iv_v1    = <ls_line>-scheme
+                                                        iv_v2    = <ls_line>-btc_code
+                                                        iv_v3    = ls_statement-bank_key
+                                                        iv_v4    = <ls_line>-flow_type ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
@@ -170,7 +174,8 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
                  iv_check_code = 'MAP_ACTION_BLOCK'
                  iv_severity   = zif_cd_ops_types=>gc_severity-info
                  iv_action     = zif_cd_ops_types=>gc_action-block
-                 iv_message    = |Category { ls_map-category } is configured never to post| )
+                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-map_action_block
+                                                        iv_v1    = ls_map-category ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

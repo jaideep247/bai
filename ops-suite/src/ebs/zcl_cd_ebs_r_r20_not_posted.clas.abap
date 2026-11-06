@@ -5,6 +5,7 @@
 *& 275/575 are not posted by EBS). Legacy parity: v4 275D/575D BELNR_NOT_EMPTY.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R20 - entry must not be posted</p>
 CLASS zcl_cd_ebs_r_r20_not_posted DEFINITION
@@ -26,7 +27,9 @@ CLASS zcl_cd_ebs_r_r20_not_posted IMPLEMENTATION.
     LOOP AT it_lines INTO DATA(ls_line) WHERE belnr IS NOT INITIAL.
       INSERT zcl_cd_ebs_finding=>for_rule_line(
                is_rule = is_rule is_line = ls_line iv_check_code = 'POSTED_UNEXPECTEDLY'
-               iv_message = |{ ls_line-btc_code } must not be posted, found FI document { ls_line-belnr }| )
+               iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posted_unexpectedly
+                                                   iv_v1    = ls_line-btc_code
+                                                   iv_v2    = ls_line-belnr ) )
         INTO TABLE rt_findings.
     ENDLOOP.
   ENDMETHOD.

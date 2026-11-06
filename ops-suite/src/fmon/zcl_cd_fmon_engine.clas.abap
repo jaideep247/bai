@@ -11,6 +11,7 @@
 *&              failed registry save rolled back; READ TABLE replaces OPTIONAL + sy-subrc.
 *& 2026-11-06 | Run lock for the whole payment engine area (shared registry); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: evaluated files reconciled before the commit.
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -373,12 +374,18 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         CATCH zcx_cd_ops_error INTO DATA(lx_ops).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = |SRC:{ ls_src-src_id }|
-                          iv_message = |Source { ls_src-src_id } ({ ls_src-table_name }): { lx_ops->get_text( ) }| ).
+                          iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
+                                                              iv_v1    = ls_src-src_id
+                                                              iv_v2    = ls_src-table_name
+                                                              iv_v3    = lx_ops->get_text( ) ) ).
           CONTINUE.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = |SRC:{ ls_src-src_id }|
-                          iv_message = |Source { ls_src-src_id } ({ ls_src-table_name }): { lx_root->get_text( ) }| ).
+                          iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
+                                                              iv_v1    = ls_src-src_id
+                                                              iv_v2    = ls_src-table_name
+                                                              iv_v3    = lx_root->get_text( ) ) ).
           CONTINUE.
       ENDTRY.
 
@@ -404,8 +411,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                         iv_key      = |{ ls_group-src_id }:{ ls_group-file_ref }|
                         iv_iface_id = ls_group-iface_id
                         iv_severity = zif_cd_ops_types=>gc_severity-warning
-                        iv_message  = |Reference { ls_group-file_ref } of { ls_file-business_date DATE = ISO } | &&
-                                      |reused on { ls_group-business_date DATE = ISO }: configure a unique FILE_KEY_FIELD| ).
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-reference_of_reused_on_conf
+                                                             iv_v1    = ls_group-file_ref
+                                                             iv_v2    = |{ ls_file-business_date DATE = ISO }|
+                                                             iv_v3    = |{ ls_group-business_date DATE = ISO }| ) ).
         CONTINUE.
       ENDIF.
       apply_group( EXPORTING is_group = ls_group
@@ -431,7 +440,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-unmapped_file
                         iv_key      = |{ is_src-src_id }:{ ls_record-file_ref }|
                         iv_severity = zif_cd_ops_types=>gc_severity-warning
-                        iv_message  = |Source { is_src-src_id }: no interface matches file { ls_record-file_name }| ).
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source_no_interface_matches
+                                                             iv_v1    = is_src-src_id
+                                                             iv_v2    = ls_record-file_name ) ).
         CONTINUE.
       ENDIF.
       IF mv_iface IS NOT INITIAL AND ls_iface-iface_id <> mv_iface.
@@ -443,8 +454,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                         iv_key      = |{ is_src-src_id }:{ ls_record-raw_status }|
                         iv_iface_id = ls_iface-iface_id
                         iv_severity = zif_cd_ops_types=>gc_severity-warning
-                        iv_message  = |Source { is_src-src_id }: status '{ ls_record-raw_status }' has no | &&
-                                      |{ ls_iface-direction } stage in ZCD_FMON_SRCMAP| ).
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source_status_has_no_stage
+                                                             iv_v1    = is_src-src_id
+                                                             iv_v2    = ls_record-raw_status
+                                                             iv_v3    = ls_iface-direction ) ).
         CONTINUE.
       ENDIF.
 
@@ -691,7 +704,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = |LOT:{ ls_cfg-iface_id }:{ ls_cfg-lot_type }|
-                          iv_message = |Lot reader { ls_cfg-lot_type } ({ ls_cfg-item_table }): { lx_root->get_text( ) }| ).
+                          iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_reader
+                                                              iv_v1    = ls_cfg-lot_type
+                                                              iv_v2    = ls_cfg-item_table
+                                                              iv_v3    = lx_root->get_text( ) ) ).
           CONTINUE.
       ENDTRY.
 
@@ -754,7 +770,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       CATCH zcx_cd_ops_error INTO DATA(lx_cal).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                         iv_key     = |CAL:{ lv_cal }|
-                        iv_message = |Factory calendar { lv_cal }: { lx_cal->get_text( ) }; calendar days used| ).
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_calendar_d
+                                                            iv_v1    = lv_cal
+                                                            iv_v2    = lx_cal->get_text( ) ) ).
         rv_days = nmax( val1 = 0 val2 = mv_date - is_file-business_date ).
     ENDTRY.
   ENDMETHOD.
@@ -811,7 +829,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       CATCH zcx_cd_ops_error INTO DATA(lx_cal).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                         iv_key     = |CAL:{ iv_calendar_id }|
-                        iv_message = |Factory calendar { iv_calendar_id }: { lx_cal->get_text( ) }; NORMAL day used| ).
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_normal_day
+                                                            iv_v1    = iv_calendar_id
+                                                            iv_v2    = lx_cal->get_text( ) ) ).
         rv_day_type = zif_cd_fmon_types=>gc_day_type-normal.
     ENDTRY.
   ENDMETHOD.
@@ -872,7 +892,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = |CHK:{ ls_check-check_id }|
-                          iv_message = |Check { ls_check-check_id } ({ ls_check-class_name }): { lx_root->get_text( ) }| ).
+                          iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-check
+                                                              iv_v1    = ls_check-check_id
+                                                              iv_v2    = ls_check-class_name
+                                                              iv_v3    = lx_root->get_text( ) ) ).
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.
@@ -901,7 +924,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         mo_store->rollback( ).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = 'ZCD_FMON_FILE'
-                        iv_message = |Registry not saved: { lx_ops->get_text( ) }| ).
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-registry_not_saved
+                                                            iv_v1    = lx_ops->get_text( ) ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -982,8 +1006,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     cs_run-ended_at   = mo_clock->now( ).
     cs_run-runtime_ms = zcl_cd_ops_util=>elapsed_ms( iv_from = cs_run-started_at
                                                      iv_to   = cs_run-ended_at ).
-    cs_run-message    = |{ mv_date DATE = ISO }: { cs_run-total_items } file(s), | &&
-                        |{ lines( mt_findings ) } finding(s)|.
+    cs_run-message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-file_s_finding_s
+                                               iv_v1    = |{ mv_date DATE = ISO }|
+                                               iv_v2    = cs_run-total_items
+                                               iv_v3    = lines( mt_findings ) ).
 
     mo_store->save_findings( EXPORTING it_findings = mt_findings
                              CHANGING  cs_run      = cs_run ).
@@ -1003,7 +1029,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                 iv_object_key = 'ALERT'
                 is_check      = VALUE #( check_id = zif_cd_fmon_types=>gc_engine_rule )
                 iv_code       = zif_cd_fmon_types=>gc_check_code-alert_failed
-                iv_message    = |Alert dispatch failed: { lx_alert->get_text( ) }| ) ) ).
+                iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-alert_dispatch_failed
+                                                       iv_v1    = lx_alert->get_text( ) ) ) ) ).
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
           APPEND LINES OF lt_alert_error TO mt_findings.

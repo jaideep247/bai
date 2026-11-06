@@ -15,6 +15,7 @@
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: each package's lines and statements reconciled.
 *& 2026-11-06 | Posting gate honours approved blocked-line releases (design 6.2).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -301,7 +302,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
           check_code  = 'CIRCUIT_BREAKER'
           severity    = zif_cd_ops_types=>gc_severity-error
           action      = zif_cd_ops_types=>gc_action-notify
-          message     = |Run stopped: { lv_bad_packages } consecutive packages above { lv_cb_percent } % failures| ).
+          message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-circuit_breaker
+                                               iv_v1    = lv_bad_packages
+                                               iv_v2    = lv_cb_percent ) ).
         lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING cs_run = rs_result-run ).
         INSERT ls_breaker INTO TABLE lt_all_findings.
         lv_run_rag = zif_cd_ops_types=>gc_rag-red.
@@ -378,7 +381,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         check_code  = gc_check_code-validation_error
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
-                        message     = |Validation could not run: { lx_error->get_text( ) }| )
+                        message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-validation_could_not_run
+                                                             iv_v1    = lx_error->get_text( ) ) )
           INTO TABLE rs_decision-findings.
     ENDTRY.
     rs_decision-findings = apply_releases( rs_decision-findings ).
@@ -468,7 +472,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         check_code  = gc_check_code-plugin_error
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
-                        message     = |Rule { is_rule-rule_id } ({ is_rule-class_name }) failed: { lx_error->get_text( ) }| )
+                        message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_failed
+                                                             iv_v1    = is_rule-rule_id
+                                                             iv_v2    = is_rule-class_name
+                                                             iv_v3    = lx_error->get_text( ) ) )
           INTO TABLE rt_findings.
     ENDTRY.
   ENDMETHOD.
@@ -516,8 +523,14 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     ELSE.
       cs_run-rag = zif_cd_ops_types=>gc_rag-red.
     ENDIF.
-    cs_run-message = |{ cs_run-total_items } entries: { cs_run-passed_items } passed, { cs_run-failed_items } failed, |
-                  && |{ cs_run-blocked_items } blocked, { cs_run-warning_items } warnings|.
+    cs_run-message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_1
+                                            iv_v1    = cs_run-total_items
+                                            iv_v2    = cs_run-passed_items
+                                            iv_v3    = cs_run-failed_items )
+                  && ` `
+                  && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_2
+                                            iv_v1    = cs_run-blocked_items
+                                            iv_v2    = cs_run-warning_items ).
   ENDMETHOD.
 
 

@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -540,5 +541,26 @@ INTERFACE zif_cd_hck_types
       pe_areas        TYPE tt_pe_area_status,
       exceptions     TYPE tt_open_exception,
     END OF ty_report.
+
+  "! Message numbers (class ZCD_OPS) of this area's user-facing texts
+  CONSTANTS:
+    BEGIN OF gc_msg,
+      cheque_status_is_not_allowe TYPE zif_cd_ops_types=>ty_msgno VALUE '319',
+      table_has_no_configuration  TYPE zif_cd_ops_types=>ty_msgno VALUE '324',
+      reconciliation_key_has_tota TYPE zif_cd_ops_types=>ty_msgno VALUE '325',
+      payment_request_is_cancelle TYPE zif_cd_ops_types=>ty_msgno VALUE '326',
+      payment_request_failed_with TYPE zif_cd_ops_types=>ty_msgno VALUE '327',
+      job_cancelled_started       TYPE zif_cd_ops_types=>ty_msgno VALUE '328',
+      job_active_for_min_limit    TYPE zif_cd_ops_types=>ty_msgno VALUE '329',
+      job_planned_has_not_started TYPE zif_cd_ops_types=>ty_msgno VALUE '330',
+      cycle_step                  TYPE zif_cd_ops_types=>ty_msgno VALUE '331',
+      after_min_max               TYPE zif_cd_ops_types=>ty_msgno VALUE '332',
+      in_min_max                  TYPE zif_cd_ops_types=>ty_msgno VALUE '333',
+      blocked_by_predecessor      TYPE zif_cd_ops_types=>ty_msgno VALUE '334',
+      check_ran_ms_timeout_s      TYPE zif_cd_ops_types=>ty_msgno VALUE '335',
+      health_score_100_red_amber  TYPE zif_cd_ops_types=>ty_msgno VALUE '336',
+      suppressed_until_by         TYPE zif_cd_ops_types=>ty_msgno VALUE '337',
+      config_drift                TYPE zif_cd_ops_types=>ty_msgno VALUE '338',
+    END OF gc_msg.
 
 ENDINTERFACE.

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Any returns lot with an allowed status passes (audit 2026-11-06).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07R - returns lot item and lot status</p>
 CLASS zcl_cd_ebs_r_r07r_return_lot DEFINITION
@@ -48,11 +49,16 @@ CLASS zcl_cd_ebs_r_r07r_return_lot IMPLEMENTATION.
       IF lv_found = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'RETURN_ITEM_NOT_FOUND'
-                 iv_message = |Payment { lv_key } is in no returns lot| ) INTO TABLE rt_findings.
+                 iv_message =
+                   zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-return_item_not_found
+                                          iv_v1 = lv_key ) ) INTO TABLE rt_findings.
       ELSEIF lv_ok = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'RETURN_LOT_STATUS'
-                 iv_message = |Returns lot(s) of { lv_key } have status { lv_statuses }, expected { is_rule-param1 }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-return_lot_status
+                                                     iv_v1    = lv_key
+                                                     iv_v2    = lv_statuses
+                                                     iv_v3    = is_rule-param1 ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

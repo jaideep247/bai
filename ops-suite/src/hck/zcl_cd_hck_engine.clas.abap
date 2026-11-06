@@ -10,6 +10,7 @@
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: executed checks reconciled by check ID.
 *& 2026-11-06 | Active suppressions applied per check result (design 6.3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -395,7 +396,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-timeout
                       severity   = zif_cd_ops_types=>gc_severity-warning
                       action     = zif_cd_ops_types=>gc_action-notify
-                      message    = |Check { is_def-check_id } ran { rs_result-runtime_ms } ms, timeout { lv_timeout_sec } s| )
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-check_ran_ms_timeout_s
+                                                          iv_v1    = is_def-check_id
+                                                          iv_v2    = rs_result-runtime_ms
+                                                          iv_v3    = lv_timeout_sec ) )
         INTO TABLE rs_result-findings.
     ENDIF.
 
@@ -694,8 +698,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     cs_report-run-ended_at    = mo_clock->now( ).
     cs_report-run-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = cs_report-run-started_at
                                                              iv_to   = cs_report-run-ended_at ).
-    cs_report-run-message     = |Health score { cs_report-score }/100, { cs_report-critical_count } red, |
-                             && |{ cs_report-high_count } amber|.
+    cs_report-run-message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-health_score_100_red_amber
+                                                       iv_v1    = cs_report-score
+                                                       iv_v2    = cs_report-critical_count
+                                                       iv_v3    = cs_report-high_count ).
   ENDMETHOD.
 
 

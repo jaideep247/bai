@@ -8,6 +8,7 @@
 *& and date fields of ZCD_PAYM_REQ_LOG).
 *& Modification log:
 *& 2026-11-06 | Initial version (USAA known tables, phase 3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - paid payment request left CANCELLED</p>
 "! PARAM1 TABLE=ZCD_PAYM_REQ_LOG;KEY=<FIN number>;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=..
@@ -88,7 +89,8 @@ CLASS zcl_cd_hck_c_prq_cancel IMPLEMENTATION.
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
                       reference  = lv_fin
-                      message    = |Payment request { lv_fin } is CANCELLED but its open item is cleared (paid)| )
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-payment_request_is_cancelle
+                                                          iv_v1    = lv_fin ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
   ENDMETHOD.

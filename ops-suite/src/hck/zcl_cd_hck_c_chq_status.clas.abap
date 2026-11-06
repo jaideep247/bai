@@ -8,6 +8,7 @@
 *& (VERIFY-SE11 for key / sequence / status / date fields).
 *& Modification log:
 *& 2026-11-06 | Initial version (USAA known tables, phase 3).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cheque status regression (ZECT_STATUS)</p>
 "! PARAM1 TABLE=ZCD_CHECK_HIST;KEY=..;SEQ=..;STATUS=..;DATE=..
@@ -67,7 +68,10 @@ CLASS zcl_cd_hck_c_chq_status IMPLEMENTATION.
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
                       reference  = ls_found-key
-                      message    = |Cheque { ls_found-key }: status { ls_found-from_status } -> { ls_found-to_status } is not allowed| )
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-cheque_status_is_not_allowe
+                                                          iv_v1    = ls_found-key
+                                                          iv_v2    = ls_found-from_status
+                                                          iv_v3    = ls_found-to_status ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
   ENDMETHOD.

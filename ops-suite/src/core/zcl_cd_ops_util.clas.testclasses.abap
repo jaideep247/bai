@@ -6,6 +6,8 @@
 *& conversion. No doubles. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Test text_fills_message_vars (texts as ZCD_OPS messages).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -24,6 +26,7 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS markup_is_escaped            FOR TESTING.
     METHODS elapsed_crosses_minute       FOR TESTING.
     METHODS bad_decimal_gives_default    FOR TESTING.
+    METHODS text_fills_message_vars      FOR TESTING.
 ENDCLASS.
 
 
@@ -139,6 +142,22 @@ CLASS ltc_util IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>to_decimal( iv_value = 'abc' iv_default = 7 )
                                         exp = CONV decfloat34( 7 )
                                         msg = 'Bad number must give the default' ).
+  ENDMETHOD.
+
+
+  " Texts are T100 text elements: message 000 (&1 &2 &3 &4) with the variables filled
+  " in order; numbers keep their template formatting
+  METHOD text_fills_message_vars.
+    TRY.
+        DATA(lv_text) = zcl_cd_ops_util=>text( iv_msgno = '000'
+                                               iv_v1    = `A`
+                                               iv_v2    = 42
+                                               iv_v3    = `C` ).
+        cl_abap_unit_assert=>assert_equals( act = condense( lv_text ) exp = `A 42 C`
+                                            msg = 'Variables must replace &1 to &3 in order' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

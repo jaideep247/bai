@@ -6,6 +6,7 @@
 *& Entries without reference are not compared. Pure.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R09 - duplicate entry</p>
 CLASS zcl_cd_ebs_r_r09_duplicate DEFINITION
@@ -46,7 +47,8 @@ CLASS zcl_cd_ebs_r_r09_duplicate IMPLEMENTATION.
       IF sy-subrc <> 0.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'DUPLICATE_ENTRY'
-                 iv_message = |Duplicate of an earlier entry with reference { ls_line-reference }| )
+                 iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-duplicate_entry
+                                                     iv_v1    = ls_line-reference ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
