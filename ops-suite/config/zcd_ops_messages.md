@@ -320,3 +320,39 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 538 | Entry &1 (&2 &3) has status '&4' - not booked, not posted |
 | 539 | Entry &1: transaction details &2 do not reconcile to the entry &3 (&4) |
 | 540 | Entry &1: a transaction detail has no amount - the batch stays one entry line |
+| 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
+| 701 | Request &1 source &2 counter &3 status &4 |
+| 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
+| 703 | Source not configured: parameter &1 in ZCD_OPS_PARAM |
+| 704 | Source &1 could not be read: |
+| 705 | Not authorised to display company code &1 (ZCD_OPS 03) |
+| 706 | Item &1 partner &2 company &3 amount &4 |
+| 707 | Items of FIN &1 belong to &2 partners - review the candidates |
+| 708 | Earlier clearing &1 of item &2 reset on &3 (&4) |
+| 709 | Item &1 reversed or reset (&2) but no history row in &3 |
+| 710 | No earlier clearing reference for item &1 in &2 |
+| 711 | Payment run &1 / &2 status &3 for document &4 |
+| 712 | Cheque &1 house bank &2 / &3 status &4 |
+| 713 | File &1 generated for payment run &2 / &3 |
+| 714 | File &1 interface &2: &3 at &4 |
+| 715 | File &1 is not registered in file monitoring |
+| 716 | Payment-level ACK &1 status &2 |
+| 717 | Bank line &1 / &2 reference &3 posted &4 |
+| 718 | Returned: returns lot document &1 status &2 |
+| 719 | Retrieval logged for &1 status &2 |
+| 720 | Cheque &1 status &2 |
+| 721 | Item &1 cleared by &2 on &3 |
+| 722 | Clearing &1 of item &2 was reset on &3 |
+| 723 | G/L document &1 / &2 / &3 for FIKEY &4 |
+| 724 | FIKEY &1 has no non-reversed G/L document (AWTYP &2) |
+| 725 | Document &1 has no FIKEY |
+| 726 | Not applicable: &1 |
+| 727 | No link key - earlier stage &1 not verified |
+| 728 | Row cap &1 reached reading &2 - result may be incomplete |
+| 729 | Nothing found for FIN &1 source &2 document &3 cheque &4 |
+| 730 | G/L line &1 / &2 account &3 XREF2 &4 |
+| 731 | Enter a FIN ID, a clearing document or a cheque number |
+| 732 | FIKEY &1 has no summary record in DFKKSUMC |
+| 733 | No &1 evidence found for &2 |
+| 737 | Partner &1 found by external number without source (legacy) |
+| 738 | Request partner &1 owns none of the items of FIN &2 - review the link |

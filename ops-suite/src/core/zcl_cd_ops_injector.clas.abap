@@ -10,6 +10,7 @@
 *& 2026-11-06 | inject_lock added.
 *& 2026-11-06 | inject_purge_dao added.
 *& 2026-11-06 | inject_exc_dao added (operations apps).
+*& 2026-11-06 | inject_trace_dao added (360 degree payment trace).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -53,6 +54,10 @@ CLASS zcl_cd_ops_injector DEFINITION
     CLASS-METHODS inject_exc_dao
       IMPORTING
         io_dao TYPE REF TO zif_cd_ops_exc_dao.
+
+    CLASS-METHODS inject_trace_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_ops_trace_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -107,6 +112,11 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_trace_dao.
+    zcl_cd_ops_factory=>go_trace_dao_double = io_dao.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = to_upper( condense( CONV string( iv_class_name ) ) ).
     DELETE zcl_cd_ops_factory=>gt_plugin_double
@@ -125,6 +135,7 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_lock_double,
            zcl_cd_ops_factory=>go_purge_dao_double,
            zcl_cd_ops_factory=>go_exc_dao_double,
+           zcl_cd_ops_factory=>go_trace_dao_double,
            zcl_cd_ops_factory=>gt_plugin_double,
            zcl_cd_ops_factory=>go_store.
   ENDMETHOD.

@@ -1892,6 +1892,222 @@
      <MSGNR>540</MSGNR>
      <TEXT>Entry &amp;1: a transaction detail has no amount - the batch stays one entry </TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>700</MSGNR>
+     <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>701</MSGNR>
+     <TEXT>Request &amp;1 source &amp;2 counter &amp;3 status &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>702</MSGNR>
+     <TEXT>No SUCCESS row for FIN &amp;1 source &amp;2 (&amp;3 row(s) read)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>703</MSGNR>
+     <TEXT>Source not configured: parameter &amp;1 in ZCD_OPS_PARAM</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>704</MSGNR>
+     <TEXT>Source &amp;1 could not be read:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>705</MSGNR>
+     <TEXT>Not authorised to display company code &amp;1 (ZCD_OPS 03)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>706</MSGNR>
+     <TEXT>Item &amp;1 partner &amp;2 company &amp;3 amount &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>707</MSGNR>
+     <TEXT>Items of FIN &amp;1 belong to &amp;2 partners - review the candidates</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>708</MSGNR>
+     <TEXT>Earlier clearing &amp;1 of item &amp;2 reset on &amp;3 (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>709</MSGNR>
+     <TEXT>Item &amp;1 reversed or reset (&amp;2) but no history row in &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>710</MSGNR>
+     <TEXT>No earlier clearing reference for item &amp;1 in &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>711</MSGNR>
+     <TEXT>Payment run &amp;1 / &amp;2 status &amp;3 for document &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>712</MSGNR>
+     <TEXT>Cheque &amp;1 house bank &amp;2 / &amp;3 status &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>713</MSGNR>
+     <TEXT>File &amp;1 generated for payment run &amp;2 / &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>714</MSGNR>
+     <TEXT>File &amp;1 interface &amp;2: &amp;3 at &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>715</MSGNR>
+     <TEXT>File &amp;1 is not registered in file monitoring</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>716</MSGNR>
+     <TEXT>Payment-level ACK &amp;1 status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>717</MSGNR>
+     <TEXT>Bank line &amp;1 / &amp;2 reference &amp;3 posted &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>718</MSGNR>
+     <TEXT>Returned: returns lot document &amp;1 status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>719</MSGNR>
+     <TEXT>Retrieval logged for &amp;1 status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>720</MSGNR>
+     <TEXT>Cheque &amp;1 status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>721</MSGNR>
+     <TEXT>Item &amp;1 cleared by &amp;2 on &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>722</MSGNR>
+     <TEXT>Clearing &amp;1 of item &amp;2 was reset on &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>723</MSGNR>
+     <TEXT>G/L document &amp;1 / &amp;2 / &amp;3 for FIKEY &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>724</MSGNR>
+     <TEXT>FIKEY &amp;1 has no non-reversed G/L document (AWTYP &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>725</MSGNR>
+     <TEXT>Document &amp;1 has no FIKEY</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>726</MSGNR>
+     <TEXT>Not applicable: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>727</MSGNR>
+     <TEXT>No link key - earlier stage &amp;1 not verified</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>728</MSGNR>
+     <TEXT>Row cap &amp;1 reached reading &amp;2 - result may be incomplete</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>729</MSGNR>
+     <TEXT>Nothing found for FIN &amp;1 source &amp;2 document &amp;3 cheque &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>730</MSGNR>
+     <TEXT>G/L line &amp;1 / &amp;2 account &amp;3 XREF2 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>731</MSGNR>
+     <TEXT>Enter a FIN ID, a clearing document or a cheque number</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>732</MSGNR>
+     <TEXT>FIKEY &amp;1 has no summary record in DFKKSUMC</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>733</MSGNR>
+     <TEXT>No &amp;1 evidence found for &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>737</MSGNR>
+     <TEXT>Partner &amp;1 found by external number without source (legacy)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>738</MSGNR>
+     <TEXT>Request partner &amp;1 owns none of the items of FIN &amp;2 - review the link</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

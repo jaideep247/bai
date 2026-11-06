@@ -12,6 +12,7 @@
 *& 2026-11-06 | Retention purge DAO seam added.
 *& 2026-11-06 | Exception repository seam added (operations apps).
 *& 2026-11-06 | Required plug-in interface checked by RTTI before CREATE OBJECT (audit A62).
+*& 2026-11-06 | Payment trace read repository seam added (360 degree payment trace).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -59,6 +60,11 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ops_exc_dao.
 
+    "! Read repository of the payment trace (read-only)
+    CLASS-METHODS get_trace_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_ops_trace_dao.
+
     "! Instantiate a configured plug-in class by name.
     "! An injected double for the same class name wins.
     "! With iv_interface the class (or the double) must implement that interface; this is
@@ -92,6 +98,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_lock_double TYPE REF TO zif_cd_ops_lock.
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_cd_ops_purge_dao.
     CLASS-DATA go_exc_dao_double TYPE REF TO zif_cd_ops_exc_dao.
+    CLASS-DATA go_trace_dao_double TYPE REF TO zif_cd_ops_trace_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
     CLASS-METHODS describe_interface
@@ -162,6 +169,12 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
   METHOD get_exc_dao.
     ro_dao = COND #( WHEN go_exc_dao_double IS BOUND THEN go_exc_dao_double
                      ELSE NEW zcl_cd_ops_exc_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_trace_dao.
+    ro_dao = COND #( WHEN go_trace_dao_double IS BOUND THEN go_trace_dao_double
+                     ELSE NEW zcl_cd_ops_trace_dao( ) ).
   ENDMETHOD.
 
 
