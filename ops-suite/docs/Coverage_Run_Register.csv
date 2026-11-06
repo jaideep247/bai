@@ -1,4 +1,12 @@
 Object,ABAP Unit methods supplied,Required statement coverage percent,Measured statement coverage percent,Status
+ZBP_R_CD_EBSCFGALL,2,90,,Not run in target SAP
+ZBP_R_CD_EBSRELEASE,2,90,,Not run in target SAP
+ZBP_R_CD_FMONCFGALL,2,90,,Not run in target SAP
+ZBP_R_CD_FMONFILE,2,90,,Not run in target SAP
+ZBP_R_CD_FMONPRQWA,2,90,,Not run in target SAP
+ZBP_R_CD_HCKCFGALL,2,90,,Not run in target SAP
+ZBP_R_CD_HCKSUPPRESS,2,90,,Not run in target SAP
+ZBP_R_CD_OPSCFGALL,2,90,,Not run in target SAP
 ZCL_CD_EBS_BTC_RESOLVER,20,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,15,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,21,90,,Not run in target SAP

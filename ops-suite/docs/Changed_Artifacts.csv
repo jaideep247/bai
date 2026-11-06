@@ -165,6 +165,7 @@ src/core/za_cd_excwaiver.ddls.asddls,CDS,
 src/core/za_cd_excwaiver.ddls.xml,abapGit,
 src/core/zbp_r_cd_opscfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_OpsCfgAll (Alerting and parameters). Handlers and
 src/core/zbp_r_cd_opscfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of Alerting and parameters: ZCD_OPS authorisation, create /"
+src/core/zbp_r_cd_opscfgall.clas.testclasses.abap,ABAP,Permission tests of the Alerting and parameters behaviour pool through EML
 src/core/zbp_r_cd_opscfgall.clas.xml,abapGit,
 src/core/zbp_r_cd_opsexception.clas.abap,ABAP,"Behaviour pool of ZR_CD_OpsException (exceptions app, design 6.1)."
 src/core/zbp_r_cd_opsexception.clas.locals_imp.abap,ABAP,Handler of the exceptions app: instance authorisation (ZCD_OPS 02 per
@@ -436,9 +437,11 @@ src/core/zui_cd_trx_dash.srvd.xml,abapGit,
 src/ebs/package.devc.xml,abapGit,
 src/ebs/zbp_r_cd_ebscfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_EbsCfgAll (EBS rules and mapping). Handlers and
 src/ebs/zbp_r_cd_ebscfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of EBS rules and mapping: ZCD_OPS authorisation, create /"
+src/ebs/zbp_r_cd_ebscfgall.clas.testclasses.abap,ABAP,Permission tests of the EBS rules and mapping behaviour pool through EML
 src/ebs/zbp_r_cd_ebscfgall.clas.xml,abapGit,
 src/ebs/zbp_r_cd_ebsrelease.clas.abap,ABAP,"Behaviour pool of ZR_CD_EbsRelease (blocked-line release, design 6.2)."
 src/ebs/zbp_r_cd_ebsrelease.clas.locals_imp.abap,ABAP,"Handler and saver of the blocked-line release app: ZCD_OPS 43 to request,"
+src/ebs/zbp_r_cd_ebsrelease.clas.testclasses.abap,ABAP,Authorization tests of the blocked-line release behaviour pool through EML
 src/ebs/zbp_r_cd_ebsrelease.clas.xml,abapGit,
 src/ebs/zc_cd_btcmap.ddls.asddls,CDS,
 src/ebs/zc_cd_btcmap.ddls.xml,abapGit,
@@ -737,12 +740,15 @@ src/fmon/za_cd_fmonmanual.ddls.asddls,CDS,
 src/fmon/za_cd_fmonmanual.ddls.xml,abapGit,
 src/fmon/zbp_r_cd_fmoncfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_FmonCfgAll (File monitoring setup). Handlers and
 src/fmon/zbp_r_cd_fmoncfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of File monitoring setup: ZCD_OPS authorisation, create /"
+src/fmon/zbp_r_cd_fmoncfgall.clas.testclasses.abap,ABAP,Permission tests of the File monitoring setup behaviour pool through EML
 src/fmon/zbp_r_cd_fmoncfgall.clas.xml,abapGit,
 src/fmon/zbp_r_cd_fmonfile.clas.abap,ABAP,"Behaviour pool of ZR_CD_FmonFile (FMON manual status, design 6.4)."
 src/fmon/zbp_r_cd_fmonfile.clas.locals_imp.abap,ABAP,Handler and saver of the FMON manual-status app: ZCD_OPS 02 (FMON); the
+src/fmon/zbp_r_cd_fmonfile.clas.testclasses.abap,ABAP,Authorization tests of the FMON manual status behaviour pool through EML
 src/fmon/zbp_r_cd_fmonfile.clas.xml,abapGit,
 src/fmon/zbp_r_cd_fmonprqwa.clas.abap,ABAP,Behaviour pool of ZR_CD_FmonPrqWa (PRISM payment request handled
 src/fmon/zbp_r_cd_fmonprqwa.clas.locals_imp.abap,ABAP,Handler and saver of the PRISM handled-manually app: ZCD_OPS 02 (FMON) to
+src/fmon/zbp_r_cd_fmonprqwa.clas.testclasses.abap,ABAP,Authorization tests of the PRISM handled-manually behaviour pool through EML
 src/fmon/zbp_r_cd_fmonprqwa.clas.xml,abapGit,
 src/fmon/zc_cd_fmonasof.ddls.asddls,CDS,
 src/fmon/zc_cd_fmonasof.ddls.xml,abapGit,
@@ -1008,9 +1014,11 @@ src/fmon/zui_cd_fmon_prq.srvd.xml,abapGit,
 src/hck/package.devc.xml,abapGit,
 src/hck/zbp_r_cd_hckcfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_HckCfgAll (Health check setup). Handlers and
 src/hck/zbp_r_cd_hckcfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of Health check setup: ZCD_OPS authorisation, create /"
+src/hck/zbp_r_cd_hckcfgall.clas.testclasses.abap,ABAP,Permission tests of the Health check setup behaviour pool through EML
 src/hck/zbp_r_cd_hckcfgall.clas.xml,abapGit,
 src/hck/zbp_r_cd_hcksuppress.clas.abap,ABAP,"Behaviour pool of ZR_CD_HckSuppress (health-check suppression, design"
 src/hck/zbp_r_cd_hcksuppress.clas.locals_imp.abap,ABAP,"Handler of the suppression app: ZCD_OPS 02 (HCK) to create and end, 85 to"
+src/hck/zbp_r_cd_hcksuppress.clas.testclasses.abap,ABAP,Authorization tests of the HCK suppression behaviour pool through EML
 src/hck/zbp_r_cd_hcksuppress.clas.xml,abapGit,
 src/hck/zc_cd_hckagggroup.ddls.asddls,CDS,
 src/hck/zc_cd_hckagggroup.ddls.xml,abapGit,
@@ -1297,3 +1305,4 @@ tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_modernize.py,Other,
 tools/tests/test_name_checks.py,Other,
 tools/tests/test_pcre_only.py,Other,
+tools/tests/test_rap_generate.py,Other,
