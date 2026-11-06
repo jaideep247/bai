@@ -5,7 +5,7 @@
 
 Status 2026-11-06: written and statically checked offline (abaplint: CDS parsed, 0 issues; ATC-equivalent set: only the 3 documented exemptions). **Not activated in SAP, ABAP Unit not executed** — the first DV1 import is the test. Items marked **VERIFY-ADT** are release-dependent and are confirmed at activation.
 
-This is one of four area dashboards (file monitoring, EBS validation, morning report / health checks, transactions in SAP) that a later step combines into the production-support **overview page (OVP)** and the "Production Support" launchpad space. Its KPI and latest-failures entities (§6) are shaped for those cards.
+This is one of four area dashboards (file monitoring, EBS validation `Dashboard_EBS_Validation.md`, morning report / health checks `Dashboard_Health_Check.md`, transactions in SAP `Dashboard_Transactions.md`) combined in the production-support **overview page (OVP)** and the "Production Support" launchpad space (`Dashboard_Production_Support.md`). Its KPI and latest-failures entities (§6) are shaped for those cards.
 
 ## 1. What the support team sees
 

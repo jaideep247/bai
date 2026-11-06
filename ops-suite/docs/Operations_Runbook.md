@@ -3,6 +3,18 @@
 > **First principle:** check the effect, not the job status — a green job that validated nothing is a failure.
 > **Analogy:** a pilot's checklist — the same steps in the same order every morning, so nothing depends on memory.
 
+## 0. Start of every shift — the production-support overview page (L1 / L2)
+
+Launchpad space **Production Support** → page *Overview* → *Production support overview* (read-only; `Dashboard_Production_Support.md`). Always in this order:
+
+1. **Monitor freshness card first.** One row per batch monitor: FMON (stale after 45 min), EBS (26 h), HCK (26 h). A **red** row means that area's cards show old numbers — do not report "nothing failed" for it. Check the Control-M / SM37 job of that monitor (`ZCD_FMON_MONITOR_ALL`, `ZCD_EBS_VALIDATE`, `ZCD_MORNING_REPORT`), escalate to the batch owner, then continue with the other areas. The transactions cards are live and never stale.
+2. **Open critical exceptions card.** Open / assigned B and E exceptions of every area, overdue first. Tap → owned-exceptions app: assign an owner the same shift; overdue ones go to the team lead.
+3. **Health checks card.** Overall RAG of the last morning report and the red / amber checks → §1 below and the health check dashboard (category → check → metric history → findings).
+4. **Files card** (rejected, unprocessed, breached, latest failures) → §4b.
+5. **EBS card** (failed / blocked lines, lines not evaluated, POSTING_INCOMPLETE, latest problems) → EBS validation dashboard: statement → lines → findings / returns and NOCs; POSTING_INCOMPLETE → §5c.
+6. **Transactions card** (funnel posted → paid → settled, returned, open) and *errored / stuck* list → transactions dashboard → transaction → payment runs / returns and NOC lot items → payment trace (§4a) with the FIN (or clearing document). Returns are reported by DFKKRP reason, NOCs by DFKKNRP reason.
+7. **Hand off** per area as in §4a / §4b: area, as of, object keys, check code, owner. The page and the dashboards change nothing — recovery stays with the owning team under its runbook.
+
 ## 1. Every morning (by 7:00)
 
 1. Open the **morning report** e-mail (route MORNING) or run `ZCD_MORNING_REPORT` for today.
@@ -15,9 +27,10 @@
 
 | Payment engine area | Where to look | Playbook |
 |---|---|---|
-| EBS validation | `ZCD_EBS_VALIDATE` (test mode to re-check), FEBAN/FPB7 for posting | `EBS_VALIDATION.md` §A3 |
+| EBS validation | EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`); `ZCD_EBS_VALIDATE` (test mode to re-check), FEBAN/FPB7 for posting | `EBS_VALIDATION.md` §A3, `Dashboard_EBS_Validation.md` |
 | File monitoring | File monitoring dashboard (launchpad, `ZUI_CD_FMON_FLOW_O4`) — §4b; `ZCD_FMON_MONITOR` file board | `FMON_FILE_MONITORING.md` part A, `Dashboard_File_Monitoring.md` |
-| Health checks | Morning report drill-down | `HCK_MORNING_REPORT.md` part A |
+| Health checks | Health check dashboard (`ZUI_CD_HCK_DASH_O4`); morning report drill-down | `HCK_MORNING_REPORT.md` part A, `Dashboard_Health_Check.md` |
+| Transactions | Transactions dashboard (`ZUI_CD_TRX_DASH_O4`, live); payment trace §4a | `Dashboard_Transactions.md` |
 | Alerts | SE16 ZCD_OPS_ALERT_LOG by rule | `ALERTING.md` part A |
 
 ## 3. Owned exceptions

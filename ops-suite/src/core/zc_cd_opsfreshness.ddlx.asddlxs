@@ -1,0 +1,40 @@
+// UI annotations: Production support - monitor freshness per area
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Monitor', typeNamePlural: 'Monitor freshness',
+                  title: { type: #STANDARD, value: 'AreaText' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StaleCriticality', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_OpsFreshness with
+{
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  PaymentEngineArea;
+  @EndUserText.label: 'Monitor'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  AreaText;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Last completed run ended (UTC)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  AsOfAt;
+  @EndUserText.label: 'Run status'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  RunStatus;
+  @EndUserText.label: 'Age (minutes)'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.dataPoint: { qualifier: 'MonitorAge', title: 'Monitor age (minutes)', criticality: 'StaleCriticality' }
+  AgeMinutes;
+  @EndUserText.label: 'Stale after (minutes)'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  StaleAfterMinutes;
+  @EndUserText.label: 'Stale'
+  @UI.lineItem: [ { position: 70, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+  @EndUserText.label: 'Stale monitors'
+  @UI.dataPoint: { qualifier: 'StaleMonitors', title: 'Stale monitors' }
+  StaleMonitorCount;
+}
