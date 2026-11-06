@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
 *& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
+*& 2026-11-06 | Performance fix 4: register rows by sorted secondary key (USING KEY); field symbols.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION
@@ -34,37 +35,37 @@ CLASS zcl_cd_ebs_r_r07_payment IMPLEMENTATION.
     DATA lv_statuses TYPE string.
     DATA lv_found TYPE abap_bool.
     DATA lv_ok TYPE abap_bool.
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(ls_rejection) = docno_rejection( is_rule = is_rule is_line = ls_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(ls_rejection) = docno_rejection( is_rule = is_rule is_line = <ls_line> ).
       IF ls_rejection IS NOT INITIAL.
         INSERT ls_rejection INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
-      DATA(lv_key) = docno_key( line_reference( ls_line ) ).
+      DATA(lv_key) = docno_key( line_reference( <ls_line> ) ).
       IF lv_key IS INITIAL.
         CONTINUE.
       ENDIF.
       " Several productive runs can carry the document: any run with an allowed status
       " satisfies the rule; the first row returned is not authoritative
       CLEAR: lv_statuses, lv_found, lv_ok.
-      LOOP AT lt_payments INTO DATA(ls_payment) WHERE doc1r = lv_key.
+      LOOP AT lt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>) USING KEY by_doc1r WHERE doc1r = lv_key.
         lv_found = abap_true.
-        IF lt_allowed IS INITIAL OR in_list( iv_value = ls_payment-status it_list = lt_allowed ) = abap_true.
+        IF lt_allowed IS INITIAL OR in_list( iv_value = <ls_payment>-status it_list = lt_allowed ) = abap_true.
           lv_ok = abap_true.
           EXIT.
         ENDIF.
-        lv_statuses = condense( |{ lv_statuses } { ls_payment-status }| ).
+        lv_statuses = condense( |{ lv_statuses } { <ls_payment>-status }| ).
       ENDLOOP.
       IF lv_found = abap_false.
         INSERT not_found_finding(
-                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 is_rule = is_rule is_line = <ls_line> it_statements = it_statements
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-payment_not_found
                                           iv_v1 = lv_key ) ) INTO TABLE rt_findings.
       ELSEIF lv_ok = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-payment_status
                                                      iv_v1    = lv_key
                                                      iv_v2    = lv_statuses

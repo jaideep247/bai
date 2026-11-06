@@ -20,6 +20,7 @@
 *& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
 *& 2026-11-06 | Performance fix 1: register memo (one read per package, new package re-reads, no key leak), zero flag parity.
 *& 2026-11-06 | Performance fix 2: R22 history once per account per package, statement windows kept apart.
+*& 2026-11-06 | Performance fix 4: rows of a key found by secondary key wherever they sit in the result.
 *& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
@@ -676,6 +677,7 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r08_bank_zeros_register_none FOR TESTING.
     METHODS r12_equal_total_other_count  FOR TESTING.
     METHODS r12_register_row_not_reused  FOR TESTING.
+    METHODS r07_rows_by_doc_key_parity   FOR TESTING.
     METHODS r08_zero_flag_off_rows_apart FOR TESTING.
     METHODS r08_zero_flag_on_rows_merged FOR TESTING.
     METHODS register_read_once_package   FOR TESTING.
@@ -847,6 +849,37 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( iv_rule_id = 'R07' iv_param1 = 'RETURNED' ) ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings
                                              msg = 'A RETURNED run among several must satisfy R07' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 4 parity: the payment rows of a document are found through the secondary key even when
+  " rows of another document sit between them - document 12345 has a PAID run, 67890 has none
+  METHOD r07_rows_by_doc_key_parity.
+    DATA ls_payment TYPE zif_cd_ebs_sap_dao=>ty_payment.
+    TRY.
+        ls_payment-doc1r  = gc_test-docno.
+        ls_payment-laufi  = 'RUN3'.
+        ls_payment-status = 'RETURNED'.
+        INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+        ls_payment-doc1r  = '000000067890'.
+        ls_payment-laufi  = 'RUN2'.
+        INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+        ls_payment-doc1r  = gc_test-docno.
+        ls_payment-laufi  = 'RUN1'.
+        ls_payment-status = 'PAID'.
+        INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+        add_statement( ).
+        add_line( ).
+        add_line( iv_reference = '67890' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( iv_rule_id = 'R07' iv_param1 = 'PAID' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
+                         iv_msg        = 'Only the document without a PAID run may fail' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-object_key
+                                            exp = zcl_cd_ebs_finding=>line_key( mt_lines[ 2 ] )
+                                            msg = 'The finding belongs to the line of document 67890' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

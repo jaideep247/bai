@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A65: TY_DOCNO width is the document key width (VERIFY-DDIC OPBEL_KK / AUGBL_KK / DOC1R CHAR 12).
 *& 2026-11-06 | Operating model: get_febep_posting (FEBEP posting-area flags, DEFAULT IGNORE).
 *& 2026-11-06 | Performance fix 3: get_febep_reasons / get_febep_posting moved into ZIF_CD_EBS_FEB_DAO get_items.
+*& 2026-11-06 | Performance fix 4: non-unique sorted secondary keys on the result tables (rules loop USING KEY).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -37,7 +38,9 @@ INTERFACE zif_cd_ebs_sap_dao
       "! Returns lot status (DFKKRK-STARS via DFKKRP-OPBEL, as in legacy v4)
       lot_stars TYPE ty_status,
     END OF ty_return_item.
-  TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_SELW1 - rules read the items of one payment document by key
+  TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY
+                       WITH NON-UNIQUE SORTED KEY by_selw1 COMPONENTS selw1.
 
   "! Payment header (DPAYH) by payment document DOC1R
   TYPES:
@@ -47,7 +50,9 @@ INTERFACE zif_cd_ebs_sap_dao
       laufi  TYPE c LENGTH 6,
       status TYPE ty_status,
     END OF ty_payment.
-  TYPES tt_payment TYPE STANDARD TABLE OF ty_payment WITH EMPTY KEY.
+  "! Fix 4: primary order stays newest run first; secondary key BY_DOC1R for the rule lookup
+  TYPES tt_payment TYPE STANDARD TABLE OF ty_payment WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_doc1r COMPONENTS doc1r.
 
   "! ACH retrieval log (ZCD_ACH_RTRV_LOG) by clearing document
   TYPES:
@@ -55,7 +60,9 @@ INTERFACE zif_cd_ebs_sap_dao
       augbl  TYPE ty_docno,
       status TYPE ty_status,
     END OF ty_retrieval.
-  TYPES tt_retrieval TYPE STANDARD TABLE OF ty_retrieval WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_AUGBL - attempts of one clearing document in read order
+  TYPES tt_retrieval TYPE STANDARD TABLE OF ty_retrieval WITH EMPTY KEY
+                     WITH NON-UNIQUE SORTED KEY by_augbl COMPONENTS augbl.
 
   "! Check register (DFKKCR) by check number
 
@@ -92,7 +99,9 @@ INTERFACE zif_cd_ebs_sap_dao
       hkont TYPE c LENGTH 10,
       augbl TYPE c LENGTH 10,
     END OF ty_fi_line.
-  TYPES tt_fi_line TYPE STANDARD TABLE OF ty_fi_line WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_DOCUMENT - lines of one FI document
+  TYPES tt_fi_line TYPE STANDARD TABLE OF ty_fi_line WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_document COMPONENTS bukrs belnr gjahr.
 
   METHODS get_return_items
     IMPORTING
