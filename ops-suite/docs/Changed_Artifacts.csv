@@ -124,6 +124,7 @@ docs/portable_checks.json,Doc,
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
 docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_payment_trace.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_purge.prog.texts.md,Doc,
 docs/text_elements/zcl_cd_hck_report_html.clas.texts.md,Doc,
 docs/text_elements/zcl_cd_ops_alert_policy.clas.texts.md,Doc,
@@ -181,6 +182,8 @@ src/core/zcd_ops_exc_hist.tabl.xml,abapGit,
 src/core/zcd_ops_finding.tabl.xml,abapGit,
 src/core/zcd_ops_lock.tabl.xml,abapGit,
 src/core/zcd_ops_param.tabl.xml,abapGit,
+src/core/zcd_ops_payment_trace.prog.abap,ABAP,360 degree payment trace for L1 / L2 support (read-only): enter a FIN
+src/core/zcd_ops_payment_trace.prog.xml,abapGit,
 src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's history (ZCL_CD_OPS_PURGE):
 src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
@@ -251,6 +254,7 @@ src/core/zcl_cd_ops_store.clas.abap,ABAP,Repository for the shared result/except
 src/core/zcl_cd_ops_store.clas.testclasses.abap,ABAP,"OSQL tests of the shared store: test-mode runs write nothing, findings of"
 src/core/zcl_cd_ops_store.clas.xml,abapGit,
 src/core/zcl_cd_ops_trace_dao.clas.abap,ABAP,SQL of the 360 degree payment trace. Standard tables are read only along
+src/core/zcl_cd_ops_trace_dao.clas.testclasses.abap,ABAP,OSQL tests of the payment trace read repository (standard-table key
 src/core/zcl_cd_ops_trace_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_trace_engine.clas.abap,ABAP,Read-only 360 degree payment trace: from FIN ID + source (or clearing
 src/core/zcl_cd_ops_trace_engine.clas.testclasses.abap,ABAP,Tests of the 360 degree payment trace with an LTD read-repository double
