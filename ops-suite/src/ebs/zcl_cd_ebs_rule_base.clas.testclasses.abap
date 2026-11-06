@@ -18,6 +18,7 @@
 *& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
 *& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
 *& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
+*& 2026-11-06 | Performance fix 1: register memo (one read per package, new package re-reads, no key leak), zero flag parity.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -80,6 +81,7 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
     DATA mt_ztnum_seen TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
+    DATA mv_check_reads TYPE i.
     DATA mt_lookup_rows TYPE zif_cd_ebs_sap_dao=>tt_lookup_row.
     DATA ms_lookup_used TYPE zif_cd_ebs_types=>ty_lookup_cfg.
 ENDCLASS.
@@ -111,6 +113,7 @@ CLASS ltd_sap_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_sap_dao~get_checks.
     mt_ztnum_seen = it_ztnum.
+    mv_check_reads = mv_check_reads + 1.
     LOOP AT mt_checks INTO DATA(ls_check).
       IF line_exists( it_ztnum[ table_line = ls_check-ztnum ] ).
         INSERT ls_check INTO TABLE rt_checks.
@@ -666,6 +669,12 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r08_bank_zeros_register_none FOR TESTING.
     METHODS r12_equal_total_other_count  FOR TESTING.
     METHODS r12_register_row_not_reused  FOR TESTING.
+    METHODS r08_zero_flag_off_rows_apart FOR TESTING.
+    METHODS r08_zero_flag_on_rows_merged FOR TESTING.
+    METHODS register_read_once_package   FOR TESTING.
+    METHODS register_new_package_rereads FOR TESTING.
+    METHODS register_memo_keys_not_leak  FOR TESTING.
+    METHODS add_zero_pair.
     METHODS r21_missing_record_reported  FOR TESTING.
     METHODS r21_any_allowed_status_ok    FOR TESTING.
     METHODS r21_status_not_allowed       FOR TESTING.
@@ -1342,6 +1351,135 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-code_count_mismatch
                          iv_msg        = 'One bank entry against two register rows must fail on count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 1 arrange: register rows 12345 and 012345 of the same account; bank lines 12345 and 012345
+  METHOD add_zero_pair.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    ls_check-ztnum  = gc_test-ref.
+    ls_check-hbkid  = gc_test-hbkid.
+    ls_check-hktid  = gc_test-hktid.
+    ls_check-amount = gc_test-amount.
+    INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+    ls_check-ztnum  = |0{ gc_test-ref }|.
+    INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+    add_statement( ).
+    add_line( ).
+    add_line( iv_reference = |0{ gc_test-ref }| ).
+  ENDMETHOD.
+
+
+  " Fix 1 parity: EBS_ZTNUM_IGNORE_ZEROS off - 12345 and 012345 stay two checks in the index
+  METHOD r08_zero_flag_off_rows_apart.
+    TRY.
+        INSERT VALUE #( name = 'EBS_ZTNUM_IGNORE_ZEROS' value = space ) INTO TABLE mo_store->mt_params.
+        add_zero_pair( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Zeros significant: each line must match only its own row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 1 parity: EBS_ZTNUM_IGNORE_ZEROS on (default) - both rows are the same check for both lines
+  METHOD r08_zero_flag_on_rows_merged.
+    TRY.
+        add_zero_pair( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 2
+                                            msg = 'Zeros ignored: each line must sum both rows (mismatch twice)' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-check_code
+                                            exp = zif_cd_ebs_types=>gc_check_code-check_amount_mismatch
+                                            msg = 'The doubled register amount must be an amount mismatch' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 1: R07C and R08 on the same lines of one package read DFKKCR once
+  METHOD register_read_once_package.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum    = gc_test-ref.
+        ls_check-hbkid    = gc_test-hbkid.
+        ls_check-hktid    = gc_test-hktid.
+        ls_check-amount   = gc_test-amount.
+        ls_check-crstatus = '99'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07C_CHECK' is_rule = rule( 'R07C' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-check_status
+                         iv_msg        = 'R07C must still see the cancelled register row' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'R08 must see the same register row (amount equal)' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mv_check_reads exp = 1
+                                            msg = 'The second check rule of the package must not read DFKKCR again' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 1: a new package (other statement key) never reuses the register rows of the previous one
+  METHOD register_new_package_rereads.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'First package: amounts equal' ).
+        " Next package: other statement, register amount changed in the meantime
+        LOOP AT mt_stmts ASSIGNING FIELD-SYMBOL(<ls_stmt>).
+          <ls_stmt>-stmt_key = 'S0002'.
+        ENDLOOP.
+        LOOP AT mt_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+          <ls_line>-stmt_key = 'S0002'.
+        ENDLOOP.
+        LOOP AT mo_sap_dao->mt_checks ASSIGNING FIELD-SYMBOL(<ls_row>).
+          <ls_row>-amount = '1.00'.
+        ENDLOOP.
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-check_amount_mismatch
+                         iv_msg        = 'A new package must read the register again (changed amount)' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mv_check_reads exp = 2
+                                            msg = 'One register read per package' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 1 parity of keys: rows read for one rule group never reach a line of another group
+  " whose own query keys would not have read them (012345 is not a query key of line 12345)
+  METHOD register_memo_keys_not_leak.
+    TRY.
+        add_zero_pair( ).
+        DATA(lt_all) = mt_lines.
+        " Group 1: line 012345 - its keys read both rows (012345 and canonical 12345)
+        DELETE mt_lines WHERE reference = gc_test-ref.
+        run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
+        " Group 2: line 12345 alone - one read today returns only row 12345
+        mt_lines = lt_all.
+        DELETE mt_lines WHERE reference <> gc_test-ref.
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Line 12345 must sum only the rows of its own query keys' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mv_check_reads exp = 1
+                                            msg = 'Key 12345 was read with group 1 and must come from the memo' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
