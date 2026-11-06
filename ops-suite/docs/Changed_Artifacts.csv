@@ -698,10 +698,13 @@ src/fmon/zcl_cd_fmon_ops_policy.clas.abap,ABAP,"File-monitoring operations rules
 src/fmon/zcl_cd_fmon_ops_policy.clas.testclasses.abap,ABAP,Pure tests of the file-monitoring operations rules: manual status needs a
 src/fmon/zcl_cd_fmon_ops_policy.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_api.clas.abap,ABAP,"PRISM status API service: every decision of one call - method, authority"
+src/fmon/zcl_cd_fmon_prism_api.clas.testclasses.abap,ABAP,Application tests of the PRISM status API service with LTD_* doubles (PRISM
 src/fmon/zcl_cd_fmon_prism_api.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_dao.clas.abap,ABAP,All SQL of the PRISM status API: idempotent INSERT into ZCD_FMON_PRISM
+src/fmon/zcl_cd_fmon_prism_dao.clas.testclasses.abap,ABAP,SQL tests of the PRISM event repository on a cl_osql_test_environment
 src/fmon/zcl_cd_fmon_prism_dao.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_event.clas.abap,ABAP,PRISM status API - pure domain logic: parse the JSON body (sXML JSON
+src/fmon/zcl_cd_fmon_prism_event.clas.testclasses.abap,ABAP,"Pure unit tests of the PRISM status API event logic: parsing, field rules,"
 src/fmon/zcl_cd_fmon_prism_event.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_http.clas.abap,ABAP,"ICF handler of the PRISM status API (SICF node /sap/zcd_ops/prism_status,"
 src/fmon/zcl_cd_fmon_prism_http.clas.xml,abapGit,

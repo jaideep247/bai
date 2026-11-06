@@ -18,6 +18,9 @@ ZCL_CD_FMON_ENGINE,29,90,,Not run in target SAP
 ZCL_CD_FMON_FLOW_CDS_TEST,19,90,,Not run in target SAP
 ZCL_CD_FMON_LOT_READER,7,90,,Not run in target SAP
 ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_API,11,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_DAO,5,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_EVENT,20,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,24,90,,Not run in target SAP

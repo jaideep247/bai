@@ -6,8 +6,8 @@
   },
   "passed": 15,
   "total": 15,
-  "abap_files": 258,
-  "declared_unit_methods": 763,
+  "abap_files": 261,
+  "declared_unit_methods": 799,
   "measured_coverage": null,
   "checks": [
     {
@@ -91,13 +91,13 @@
     {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 258 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 261 files.",
       "failures": []
     },
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 858 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 861 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]
