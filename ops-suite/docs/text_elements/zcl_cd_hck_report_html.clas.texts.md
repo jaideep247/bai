@@ -16,6 +16,7 @@ Labels of the morning report e-mail (HTML). Sentences with values are messages o
 | Text symbol | 009 | No open exceptions. |
 | Text symbol | 010 | No checks were selected or active. |
 | Text symbol | 011 | never |
+| Text symbol | 012 | Grey WARM-UP: the baseline is still collecting history - no verdict yet, not scored. |
 | Text symbol | C01 | Category |
 | Text symbol | C02 | Status |
 | Text symbol | C03 | Checks |
@@ -36,6 +37,7 @@ Labels of the morning report e-mail (HTML). Sentences with values are messages o
 | Text symbol | C18 | Owner |
 | Text symbol | C19 | Due |
 | Text symbol | C20 | Age (d) |
+| Text symbol | C21 | Warm-up |
 | Text symbol | K01 | Financial integrity |
 | Text symbol | K02 | Mass-run and job health |
 | Text symbol | K03 | Exception queues |
@@ -46,3 +48,4 @@ Labels of the morning report e-mail (HTML). Sentences with values are messages o
 | Text symbol | R02 | AMBER |
 | Text symbol | R03 | GREEN |
 | Text symbol | R04 | N/A |
+| Text symbol | R05 | WARM-UP |

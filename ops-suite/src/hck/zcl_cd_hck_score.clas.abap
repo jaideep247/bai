@@ -5,11 +5,13 @@
 *& category A-E and critical/high counts from a list of check results.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Baseline warm-up checks counted apart, not scored (audit A102).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - scorecard rules (pure, no DB)</p>
 "! Score = sum(weight(priority) * points(RAG)) / sum(weight), rounded.
 "! Overall RAG from score bands; any red high-priority check forces RED and
 "! any red check at least AMBER (an average must not hide a failure).
+"! A check in baseline warm-up (A102) is counted per category, not scored.
 CLASS zcl_cd_hck_score DEFINITION
   PUBLIC
   FINAL
@@ -77,6 +79,17 @@ CLASS zcl_cd_hck_score IMPLEMENTATION.
     ENDDO.
 
     LOOP AT it_results INTO DATA(ls_result).
+      " A102: a check in baseline warm-up is listed and counted, not scored (no verdict yet)
+      IF ls_result-warmup = abap_true.
+        rs_summary-warmup_count = rs_summary-warmup_count + 1.
+        READ TABLE rs_summary-categories ASSIGNING FIELD-SYMBOL(<ls_warm>)
+          WITH KEY category = ls_result-category.
+        IF sy-subrc = 0.
+          <ls_warm>-check_count  = <ls_warm>-check_count + 1.
+          <ls_warm>-warmup_count = <ls_warm>-warmup_count + 1.
+        ENDIF.
+        CONTINUE.
+      ENDIF.
       DATA(lv_weight) = weight( iv_priority = ls_result-priority
                                 is_rules    = is_rules ).
       lv_weights  = lv_weights + lv_weight.

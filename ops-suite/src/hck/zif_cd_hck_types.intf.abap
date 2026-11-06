@@ -188,6 +188,8 @@ INTERFACE zif_cd_hck_types
       job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
       baseline_outdated TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
       budget_exhausted TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
+      "! Baseline has fewer than the minimum history runs: no baseline verdict yet (A102)
+      baseline_warmup  TYPE zif_cd_ops_types=>ty_check_code VALUE 'BASELINE_WARMUP',
     END OF gc_code.
 
   CONSTANTS:
@@ -532,6 +534,8 @@ INTERFACE zif_cd_hck_types
       metrics      TYPE tt_metric,
       findings     TYPE zif_cd_ops_types=>tt_finding,
       step_status  TYPE tt_step_status,
+      "! A baseline-only metric is still warming up: the check is grey, not GREEN (A102)
+      warmup       TYPE abap_bool,
     END OF ty_check_result.
   TYPES tt_check_result TYPE STANDARD TABLE OF ty_check_result WITH EMPTY KEY.
 
@@ -543,6 +547,7 @@ INTERFACE zif_cd_hck_types
       red_count   TYPE i,
       amber_count TYPE i,
       green_count TYPE i,
+      warmup_count TYPE i,
     END OF ty_category_status.
   TYPES tt_category_status TYPE STANDARD TABLE OF ty_category_status WITH EMPTY KEY.
 
@@ -553,6 +558,8 @@ INTERFACE zif_cd_hck_types
       overall_rag    TYPE zif_cd_ops_types=>ty_rag,
       critical_count TYPE i,
       high_count     TYPE i,
+      "! Checks in baseline warm-up: listed, not scored (A102)
+      warmup_count   TYPE i,
       categories     TYPE tt_category_status,
     END OF ty_summary.
 
@@ -597,6 +604,7 @@ INTERFACE zif_cd_hck_types
       overall_rag    TYPE zif_cd_ops_types=>ty_rag,
       critical_count TYPE i,
       high_count     TYPE i,
+      warmup_count   TYPE i,
       categories     TYPE tt_category_status,
       results        TYPE tt_check_result,
       pe_areas        TYPE tt_pe_area_status,
@@ -662,6 +670,7 @@ INTERFACE zif_cd_hck_types
       gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
       baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
       budget_exhausted            TYPE zif_cd_ops_types=>ty_msgno VALUE '369',
+      baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
     END OF gc_msg.
 
 ENDINTERFACE.

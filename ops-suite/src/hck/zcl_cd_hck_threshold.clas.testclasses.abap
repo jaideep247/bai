@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Flat-baseline tests (audit A59).
+*& 2026-11-06 | Baseline warm-up is explicit, never GREEN (audit A102).
 *&---------------------------------------------------------------------*
 CLASS ltc_threshold DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -28,6 +29,8 @@ CLASS ltc_threshold DEFINITION FINAL FOR TESTING
     METHODS zero_red_disabled_when_higher FOR TESTING.
     METHODS zscore_outlier_turns_amber FOR TESTING.
     METHODS short_history_no_baseline FOR TESTING.
+    METHODS warmup_keeps_static_red FOR TESTING.
+    METHODS warmup_with_static_green FOR TESTING.
     METHODS iqr_outlier_turns_amber FOR TESTING.
     METHODS flat_unchanged_passes FOR TESTING.
     METHODS flat_adverse_change_flagged FOR TESTING.
@@ -334,15 +337,70 @@ CLASS ltc_threshold IMPLEMENTATION.
         DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 0 iv_red = 0 ).
         ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
         ls_row-z_limit       = 1.
-        ls_exp-rag    = zif_cd_ops_types=>gc_rag-green.
-        ls_exp-points = 2.
-        ls_exp-mean   = 3.
+        " A102: baseline-only and too little history -> explicit warm-up, grey (not evaluated)
+        ls_exp-rag        = zif_cd_ops_types=>gc_rag-grey.
+        ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
+        ls_exp-points     = 2.
+        ls_exp-mean       = 3.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_threshold=>evaluate( iv_value     = 100
                                                 is_threshold = ls_row
                                                 it_history   = lt_history )
           exp = ls_exp
-          msg = 'Two history points are not a baseline' ).
+          msg = 'Two history points are a warm-up, not GREEN' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A102): a static limit is evaluated independently - warm-up never hides RED
+  METHOD warmup_keeps_static_red.
+    DATA lt_history TYPE zif_cd_hck_types=>tt_value.
+    DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        lv_value = 2.
+        INSERT lv_value INTO TABLE lt_history.
+        DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 10 iv_red = 50 ).
+        ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
+        ls_row-z_limit       = 1.
+        ls_exp-rag        = zif_cd_ops_types=>gc_rag-red.
+        ls_exp-check_code = zif_cd_hck_types=>gc_code-threshold_red.
+        ls_exp-points     = 1.
+        ls_exp-mean       = 2.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_threshold=>evaluate( iv_value     = 100
+                                                is_threshold = ls_row
+                                                it_history   = lt_history )
+          exp = ls_exp
+          msg = 'Static RED stands while the baseline warms up' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A102): static limits passed -> GREEN from the static evidence, warm-up still reported
+  METHOD warmup_with_static_green.
+    DATA lt_history TYPE zif_cd_hck_types=>tt_value.
+    DATA ls_exp TYPE zif_cd_hck_types=>ty_evaluation.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        lv_value = 2.
+        INSERT lv_value INTO TABLE lt_history.
+        DATA(ls_row) = threshold_row( iv_bukrs = gc_bukrs iv_amber = 10 iv_red = 50 ).
+        ls_row-baseline_mode = zif_cd_hck_types=>gc_baseline-iqr.
+        ls_exp-rag        = zif_cd_ops_types=>gc_rag-green.
+        ls_exp-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
+        ls_exp-points     = 1.
+        ls_exp-mean       = 2.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_threshold=>evaluate( iv_value     = 5
+                                                is_threshold = ls_row
+                                                it_history   = lt_history )
+          exp = ls_exp
+          msg = 'Static GREEN kept, baseline warm-up still visible' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

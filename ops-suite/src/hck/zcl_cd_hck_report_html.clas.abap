@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Labels as class text symbols, sentences as ZCD_OPS messages, markup as constants.
+*& 2026-11-06 | Baseline warm-up: own grey chip, per-category and scorecard count (audit A102).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - morning report renderer (HTML, CSV)</p>
 "! No database, no SAP GUI: input is the report structure built by the
@@ -27,6 +28,8 @@ CLASS zcl_cd_hck_report_html DEFINITION
     CLASS-METHODS rag_chip
       IMPORTING
         iv_rag         TYPE zif_cd_ops_types=>ty_rag
+        "! A102: baseline warm-up - grey chip labelled WARM-UP instead of N/A
+        iv_warmup      TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rv_html) TYPE string.
 
@@ -188,7 +191,8 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
            && section_pe_areas( is_report )
            && section_checks( is_report )
            && section_exceptions( is_report )
-           && gc_html-legend_open && esc( TEXT-002 ) && ` ` && esc( TEXT-003 ) && gc_html-p_close
+           && gc_html-legend_open && esc( TEXT-002 ) && ` ` && esc( TEXT-012 ) && ` ` && esc( TEXT-003 )
+           && gc_html-p_close
            && gc_html-page_close.
   ENDMETHOD.
 
@@ -199,7 +203,10 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
                                      WHEN zif_cd_ops_types=>gc_rag-amber THEN gc_colour-amber
                                      WHEN zif_cd_ops_types=>gc_rag-green THEN gc_colour-green
                                      ELSE gc_colour-grey ).
-    rv_html = gc_html-chip_open && lv_colour && gc_html-attr_close && rag_text( iv_rag ) && gc_html-span_close.
+    DATA(lv_label) = COND string( WHEN iv_warmup = abap_true AND iv_rag = zif_cd_ops_types=>gc_rag-grey
+                                  THEN TEXT-r05
+                                  ELSE rag_text( iv_rag ) ).
+    rv_html = gc_html-chip_open && lv_colour && gc_html-attr_close && lv_label && gc_html-span_close.
   ENDMETHOD.
 
 
@@ -292,18 +299,20 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
            && gc_html-counts_open
            && esc( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-html_score_counts
                                           iv_v1    = is_report-critical_count
-                                          iv_v2    = is_report-high_count ) )
+                                          iv_v2    = is_report-high_count
+                                          iv_v3    = is_report-warmup_count ) )
            && gc_html-score_close
            && gc_h2 && esc( TEXT-005 ) && gc_html-h2_close && gc_table
            && header_row( VALUE #( ( CONV #( TEXT-c01 ) ) ( CONV #( TEXT-c02 ) ) ( CONV #( TEXT-c03 ) )
-                                   ( CONV #( TEXT-c04 ) ) ( CONV #( TEXT-c05 ) ) ) ).
+                                   ( CONV #( TEXT-c04 ) ) ( CONV #( TEXT-c05 ) ) ( CONV #( TEXT-c21 ) ) ) ).
     LOOP AT is_report-categories INTO DATA(ls_category).
       rv_html = rv_html && gc_html-tr_open
              && cell( esc( |{ ls_category-category } - { category_text( ls_category-category ) }| ) )
              && cell( rag_chip( ls_category-rag ) )
              && cell( esc( ls_category-check_count ) )
              && cell( esc( ls_category-red_count ) )
-             && cell( esc( ls_category-amber_count ) ) && gc_html-tr_close.
+             && cell( esc( ls_category-amber_count ) )
+             && cell( esc( ls_category-warmup_count ) ) && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
   ENDMETHOD.
@@ -346,7 +355,8 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
                       && esc( ls_result-description ) )
              && cell( esc( ls_result-category ) )
              && cell( esc( ls_result-priority ) )
-             && cell( rag_chip( ls_result-rag ) )
+             && cell( rag_chip( iv_rag    = ls_result-rag
+                                iv_warmup = ls_result-warmup ) )
              && cell( esc( ls_result-summary ) ) && gc_html-tr_close.
     ENDLOOP.
     IF is_report-results IS INITIAL.

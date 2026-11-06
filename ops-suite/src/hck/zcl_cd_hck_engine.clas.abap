@@ -19,6 +19,7 @@
 *& 2026-11-06 | Baseline refreshes the parameter snapshot; runs get it from start_run (audit A64).
 *& 2026-11-06 | Metric kind and weight passed to the history (audit A88).
 *& 2026-11-06 | Baseline history requested per series incl. DIM2 (audit A101).
+*& 2026-11-06 | Baseline warm-up: info finding, check grey not GREEN, not scored (audit A102).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -360,6 +361,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_report-overall_rag    = ls_summary-overall_rag.
     rs_report-critical_count = ls_summary-critical_count.
     rs_report-high_count     = ls_summary-high_count.
+    rs_report-warmup_count   = ls_summary-warmup_count.
     rs_report-categories     = ls_summary-categories.
     IF is_selection-test_mode = abap_false.
       " before the exception list is read, so it shows only what is still open
@@ -517,6 +519,23 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       IF ls_evaluation-check_code IS INITIAL.
         CONTINUE.
       ENDIF.
+      " A102: warm-up is information; without a static limit the check has no verdict (grey)
+      IF ls_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
+        IF ls_evaluation-rag = zif_cd_ops_types=>gc_rag-grey.
+          cs_result-warmup = abap_true.
+        ENDIF.
+        INSERT VALUE #( object_key = |{ cs_result-check_id }/{ ls_metric-metric }/{ ls_metric-dim1 }|
+                        check_code = ls_evaluation-check_code
+                        severity   = zif_cd_ops_types=>gc_severity-info
+                        reference  = ls_metric-dim2
+                        message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-baseline_warmup
+                                                            iv_v1    = ls_metric-metric
+                                                            iv_v2    = ls_metric-dim1
+                                                            iv_v3    = ls_evaluation-points
+                                                            iv_v4    = zcl_cd_hck_threshold=>gc_min_points ) )
+               INTO TABLE cs_result-findings.
+        CONTINUE.
+      ENDIF.
       DATA(lv_message) = COND string(
         WHEN ls_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_outlier
         THEN |{ ls_metric-metric } { ls_metric-dim1 }: { value_text( ls_metric-value ) } is a baseline outlier |
@@ -562,8 +581,19 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     IF cs_result-plugin_error = abap_true.
       cs_result-rag = zif_cd_ops_types=>gc_rag-red.
     ENDIF.
+    " A102: a baseline still warming up proves nothing - grey, never an inherited GREEN
+    IF cs_result-warmup = abap_true AND cs_result-rag = zif_cd_ops_types=>gc_rag-green.
+      cs_result-rag = zif_cd_ops_types=>gc_rag-grey.
+    ELSE.
+      cs_result-warmup = abap_false.
+    ENDIF.
 
     DATA(lv_worst) = zcl_cd_ops_util=>worst_severity( cs_result-findings ).
+    IF cs_result-warmup = abap_true.
+      cs_result-summary = VALUE #( cs_result-findings[ check_code = zif_cd_hck_types=>gc_code-baseline_warmup ]-message
+                                   OPTIONAL ).
+      RETURN.
+    ENDIF.
     IF lv_worst IS INITIAL OR lv_worst = zif_cd_ops_types=>gc_severity-info.
       IF cs_result-summary IS INITIAL.
         cs_result-summary = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-summary_ok iv_v1 = lines( cs_result-metrics ) ).
@@ -801,6 +831,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD close_run.
     LOOP AT cs_report-results INTO DATA(ls_result).
+      " A102: warm-up is neither passed nor failed (counted in total_items only)
+      IF ls_result-warmup = abap_true.
+        CONTINUE.
+      ENDIF.
       CASE ls_result-rag.
         WHEN zif_cd_ops_types=>gc_rag-green.
           cs_report-run-passed_items = cs_report-run-passed_items + 1.

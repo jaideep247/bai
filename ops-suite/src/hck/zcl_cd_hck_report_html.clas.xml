@@ -81,6 +81,12 @@
     </item>
     <item>
      <ID>I</ID>
+     <KEY>012</KEY>
+     <ENTRY>Grey WARM-UP: the baseline is still collecting history - no verdict yet, not scored.</ENTRY>
+     <LENGTH>84</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
      <KEY>C01</KEY>
      <ENTRY>Category</ENTRY>
      <LENGTH>8</LENGTH>
@@ -201,6 +207,12 @@
     </item>
     <item>
      <ID>I</ID>
+     <KEY>C21</KEY>
+     <ENTRY>Warm-up</ENTRY>
+     <LENGTH>7</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
      <KEY>K01</KEY>
      <ENTRY>Financial integrity</ENTRY>
      <LENGTH>19</LENGTH>
@@ -258,6 +270,12 @@
      <KEY>R04</KEY>
      <ENTRY>N/A</ENTRY>
      <LENGTH>3</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>R05</KEY>
+     <ENTRY>WARM-UP</ENTRY>
+     <LENGTH>7</LENGTH>
     </item>
    </TPOOL>
   </asx:values>

@@ -224,6 +224,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_red_check  TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_RED',
+      gc_warm_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_WARM',
       gc_fail_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_FAIL',
       gc_metric     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVERDUE',
       gc_dim        TYPE zif_cd_hck_types=>ty_dim VALUE 'EBS',
@@ -244,6 +245,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         ebs_never_ran   TYPE abap_bool,
         fmon_hung       TYPE abap_bool,
         own_run_running TYPE abap_bool,
+        warmup_metric   TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_store TYPE REF TO ltd_store.
@@ -275,6 +277,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS empty_selection_is_red FOR TESTING.
     METHODS self_check_alone_not_green FOR TESTING.
     METHODS check_receives_time_budget FOR TESTING.
+    METHODS warmup_check_is_not_green FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -368,6 +371,20 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_threshold-red             = 10.
       ls_threshold-higher_is_worse = abap_true.
       ls_threshold-baseline_mode   = zif_cd_hck_types=>gc_baseline-none.
+      INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
+    ENDIF.
+
+    " baseline-only metric (no static limit), no history yet (ltd_dao returns none)
+    IF is_flags-warmup_metric = abap_true.
+      DATA(lo_warm) = add_check( iv_check_id = gc_warm_check iv_category = 'D' iv_priority = 'H' ).
+      lo_warm->ms_result-rag = gc_green.
+      INSERT VALUE #( metric = gc_metric dim1 = gc_dim value = 7 ) INTO TABLE lo_warm->ms_result-metrics.
+      CLEAR ls_threshold.
+      ls_threshold-check_id        = gc_warm_check.
+      ls_threshold-metric          = gc_metric.
+      ls_threshold-bukrs           = zif_cd_hck_types=>gc_default_key.
+      ls_threshold-higher_is_worse = abap_true.
+      ls_threshold-baseline_mode   = zif_cd_hck_types=>gc_baseline-zscore.
       INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
     ENDIF.
 
@@ -577,6 +594,32 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-categories exp = lt_exp msg = 'RAG per category A-E' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 40 msg = '(2*100 + 3*0) / 5 = 40' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-overall_rag exp = gc_red msg = 'Red H check forces RED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A102): a baseline-only check without enough history is BASELINE_WARMUP (grey),
+  " never GREEN; it is listed as information, counted apart and left out of the score
+  METHOD warmup_check_is_not_green.
+    TRY.
+        configure_scenario( VALUE #( green_checks = 1 warmup_metric = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_result) = ls_report-results[ check_id = gc_warm_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_result-rag exp = gc_grey msg = 'Warm-up must not be GREEN' ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-warmup msg = 'Warm-up must be flagged' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1 msg = 'One warm-up finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-check_code
+                                            exp = zif_cd_hck_types=>gc_code-baseline_warmup
+                                            msg = 'Finding code BASELINE_WARMUP' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity
+                                            exp = zif_cd_ops_types=>gc_severity-info
+                                            msg = 'Warm-up is information, not an exception' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-warmup_count exp = 1 msg = 'Warm-up counted apart' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 100 msg = 'Warm-up is not scored' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-categories[ category = 'D' ]-warmup_count exp = 1
+                                            msg = 'Category shows the warm-up' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

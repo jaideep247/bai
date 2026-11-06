@@ -5,6 +5,7 @@
 *& empty sections and CSV quoting; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Baseline warm-up chip (audit A102).
 *&---------------------------------------------------------------------*
 CLASS ltc_report_html DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -25,6 +26,7 @@ CLASS ltc_report_html DEFINITION FINAL FOR TESTING
     METHODS grey_chip_for_unknown_rag FOR TESTING.
     METHODS empty_exceptions_say_none FOR TESTING.
     METHODS category_row_has_chip FOR TESTING.
+    METHODS warmup_check_shown_apart FOR TESTING.
     METHODS csv_quotes_and_neutralises FOR TESTING.
 
 ENDCLASS.
@@ -127,6 +129,24 @@ CLASS ltc_report_html IMPLEMENTATION.
         cl_abap_unit_assert=>assert_char_cp( act = zcl_cd_hck_report_html=>render( ms_report )
                                              exp = '*A - Financial integrity</td>*>RED</span>*'
                                              msg = 'Category A row must carry its name and red chip' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A102): a check in baseline warm-up carries its own grey WARM-UP chip, not N/A or GREEN
+  METHOD warmup_check_shown_apart.
+    TRY.
+        ms_report-results[ 1 ]-rag    = zif_cd_ops_types=>gc_rag-grey.
+        ms_report-results[ 1 ]-warmup = abap_true.
+        DATA(lv_html) = zcl_cd_hck_report_html=>render( ms_report ).
+        cl_abap_unit_assert=>assert_char_cp( act = lv_html
+                                             exp = '*background:##6b7280;">WARM-UP</span>*'
+                                             msg = 'Warm-up check must show a WARM-UP chip' ).
+        cl_abap_unit_assert=>assert_equals( act = find( val = lv_html sub = `">N/A</span>` )
+                                            exp = -1
+                                            msg = 'Warm-up is not shown as N/A' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

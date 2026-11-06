@@ -6,12 +6,15 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Flat baseline: adverse deviation beyond a tolerance is an outlier (audit A59).
+*& 2026-11-06 | Too little history is BASELINE_WARMUP, never an inherited GREEN (audit A102).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - threshold resolution and evaluation</p>
 "! Static limits: higher is worse -> a zero limit is "not set";
 "! lower is worse -> both limits apply as maintained (red 0 = zero is red),
 "! unless both are zero. Baseline (ZSCORE / IQR) needs at least
-"! GC_MIN_POINTS history values; an outlier is at least AMBER.
+"! GC_MIN_POINTS history values; an outlier is at least AMBER. With fewer
+"! values the result is BASELINE_WARMUP: a static RED / AMBER stands, a static
+"! GREEN stays GREEN, and without static limits the RAG is grey (not evaluated).
 CLASS zcl_cd_hck_threshold DEFINITION
   PUBLIC
   FINAL
@@ -45,6 +48,13 @@ CLASS zcl_cd_hck_threshold DEFINITION
         VALUE(rs_evaluation) TYPE zif_cd_hck_types=>ty_evaluation.
 
   PRIVATE SECTION.
+
+    "! Static AMBER or RED limit maintained (both zero = baseline only)
+    CLASS-METHODS has_static_limit
+      IMPORTING
+        is_threshold   TYPE zif_cd_hck_types=>ty_threshold
+      RETURNING
+        VALUE(rv_set)  TYPE abap_bool.
 
     CLASS-METHODS static_rag
       IMPORTING
@@ -112,6 +122,13 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
     rs_evaluation-points = lines( it_history ).
     rs_evaluation-mean   = zcl_cd_hck_stats=>mean( it_history ).
     IF rs_evaluation-points < gc_min_points.
+      " A102: no baseline verdict yet - never an inherited GREEN
+      IF rs_evaluation-rag = zif_cd_ops_types=>gc_rag-green.
+        rs_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_warmup.
+        IF has_static_limit( is_threshold ) = abap_false.
+          rs_evaluation-rag = zif_cd_ops_types=>gc_rag-grey.
+        ENDIF.
+      ENDIF.
       RETURN.
     ENDIF.
 
@@ -126,6 +143,11 @@ CLASS zcl_cd_hck_threshold IMPLEMENTATION.
       rs_evaluation-rag        = zif_cd_ops_types=>gc_rag-amber.
       rs_evaluation-check_code = zif_cd_hck_types=>gc_code-baseline_outlier.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD has_static_limit.
+    rv_set = xsdbool( is_threshold-amber <> 0 OR is_threshold-red <> 0 ).
   ENDMETHOD.
 
 

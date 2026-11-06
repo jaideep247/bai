@@ -1368,7 +1368,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>340</MSGNR>
-     <TEXT>&amp;1 red (critical), &amp;2 amber (high)</TEXT>
+     <TEXT>&amp;1 red (critical), &amp;2 amber (high), &amp;3 baseline warm-up</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1543,6 +1543,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>369</MSGNR>
      <TEXT>Check &amp;1 stopped after &amp;2 of &amp;3 item(s): time budget of &amp;4 s used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>370</MSGNR>
+     <TEXT>&amp;1 &amp;2: baseline warm-up, &amp;3 of &amp;4 history run(s) - no verdict yet</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
