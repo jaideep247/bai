@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Capped job read reported (audit A44).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle monitor (ZCD_JOB_CYCLE/STEP)</p>
 "! PARAM1 = cycle date offset in days (default 0 = report date),
@@ -58,6 +59,17 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
     DATA(lt_runs) = lo_dao->get_job_runs( it_jobnames = lt_patterns
                                           iv_from     = lv_cycle_date
                                           iv_to       = CONV d( lv_cycle_date + lv_max_offset ) ).
+    " A44: a capped read can hide attempts - reported, never silently
+    IF lines( lt_runs ) >= zif_cd_hck_types=>gc_max_job_rows.
+      INSERT VALUE #( object_key = is_def-check_id
+                      check_code = zif_cd_hck_types=>gc_code-job_read_capped
+                      severity   = zif_cd_ops_types=>gc_severity-warning
+                      action     = zif_cd_ops_types=>gc_action-notify
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_read_capped
+                                                          iv_v1    = zif_cd_hck_types=>gc_max_job_rows
+                                                          iv_v2    = is_def-check_id ) )
+        INTO TABLE rs_result-findings.
+    ENDIF.
 
     LOOP AT lt_steps INTO ls_step GROUP BY ls_step-cycle_id INTO DATA(lt_cycle_group).
       " ls_step is the first step of the cycle: calendar is a cycle attribute

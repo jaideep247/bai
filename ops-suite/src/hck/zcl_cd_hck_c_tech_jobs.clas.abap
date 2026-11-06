@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Unresolved jobs read regardless of the window; capped read reported (audit A44).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -46,9 +47,29 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
     DATA(lv_long_min)  = zcl_cd_hck_param=>int( iv_value = is_def-param2 iv_default = 120 ).
     DATA(lv_grace_min) = zcl_cd_hck_param=>int( iv_value = is_def-param3 iv_default = 30 ).
 
-    DATA(lt_runs) = zcl_cd_hck_factory=>get_dao( )->get_job_runs( it_jobnames = lt_patterns
-                                                                   iv_from     = CONV d( is_context-report_date - 1 )
-                                                                   iv_to       = is_context-report_date ).
+    DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
+    DATA(lt_runs) = lo_dao->get_job_runs( it_jobnames = lt_patterns
+                                          iv_from     = CONV d( is_context-report_date - 1 )
+                                          iv_to       = is_context-report_date ).
+    " A44: unfinished jobs are read independently of the window (an old stuck job stays visible)
+    DATA(lt_unresolved) = lo_dao->get_unresolved_jobs( lt_patterns ).
+    LOOP AT lt_unresolved INTO DATA(ls_unresolved).
+      IF NOT line_exists( lt_runs[ jobname = ls_unresolved-jobname jobcount = ls_unresolved-jobcount ] ).
+        INSERT ls_unresolved INTO TABLE lt_runs.
+      ENDIF.
+    ENDLOOP.
+    " A44: a read that reached its cap is reported - the counts below may be incomplete
+    IF lines( lt_runs ) >= zif_cd_hck_types=>gc_max_job_rows
+       OR lines( lt_unresolved ) >= zif_cd_hck_types=>gc_max_job_rows.
+      INSERT VALUE #( object_key = is_def-check_id
+                      check_code = zif_cd_hck_types=>gc_code-job_read_capped
+                      severity   = zif_cd_ops_types=>gc_severity-warning
+                      action     = zif_cd_ops_types=>gc_action-notify
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_read_capped
+                                                          iv_v1    = zif_cd_hck_types=>gc_max_job_rows
+                                                          iv_v2    = is_def-check_id ) )
+        INTO TABLE rs_result-findings.
+    ENDIF.
     LOOP AT lt_runs INTO DATA(ls_run).
       DATA(ls_finding) = VALUE zif_cd_ops_types=>ty_finding( object_key = |{ ls_run-jobname }/{ ls_run-jobcount }|
                                                              reference  = ls_run-jobname

@@ -1427,6 +1427,30 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>363</MSGNR>
+     <TEXT>retried: &amp;1 attempt(s), completed attempt started &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>364</MSGNR>
+     <TEXT>completed attempt started &amp;1, after window end &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>365</MSGNR>
+     <TEXT>Job read capped at &amp;1 rows for &amp;2 - result may be incomplete</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>366</MSGNR>
+     <TEXT>&amp;1 reconciliation key(s) / company code(s) without GL document, &amp;2 listed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>

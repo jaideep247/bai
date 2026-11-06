@@ -7,6 +7,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | only_active_suppressions (design 6.3).
 *& 2026-11-06 | History by distinct completed runs, as-of bound (audit A58).
+*& 2026-11-06 | job_run_carries_variant, unresolved_jobs_any_date (audit A42, A44).
+*& 2026-11-06 | gl_gap_per_company_and_type (audit A43).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -38,6 +40,9 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_one_point_per_run FOR TESTING.
     METHODS history_skips_unfinished_runs FOR TESTING.
     METHODS history_as_of_excludes_later FOR TESTING.
+    METHODS job_run_carries_variant FOR TESTING.
+    METHODS unresolved_jobs_any_date FOR TESTING.
+    METHODS gl_gap_per_company_and_type FOR TESTING.
 
     METHODS add_metric
       IMPORTING
@@ -67,6 +72,11 @@ CLASS ltc_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_HCK_METRIC' )
                                                                             ( 'ZCD_OPS_FINDING' )
                                                                             ( 'ZCD_OPS_RUN' )
+                                                                            ( 'TBTCO' )
+                                                                            ( 'TBTCP' )
+                                                                            ( 'DFKKSUMC' )
+                                                                            ( 'DFKKKO' )
+                                                                            ( 'BKPF' )
                                                                             ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
 
@@ -321,6 +331,125 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                               iv_as_of    = '20261103000000.0000000' )
                                             exp = lt_exp
                                             msg = 'History after the as-of time must not be used' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A42: a job run carries program and variant of its first step
+  METHOD job_run_carries_variant.
+    DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
+    DATA ls_job TYPE tbtco.
+    DATA lt_steps TYPE STANDARD TABLE OF tbtcp WITH EMPTY KEY.
+    DATA ls_step TYPE tbtcp.
+    DATA lt_names TYPE zif_cd_hck_types=>tt_jobname_range.
+    TRY.
+        ls_job-jobname  = gc_job.
+        ls_job-jobcount = '13300001'.
+        ls_job-status   = zif_cd_hck_types=>gc_job_status-finished.
+        ls_job-strtdate = gc_today.
+        INSERT ls_job INTO TABLE lt_jobs.
+        go_env->insert_test_data( lt_jobs ).
+        ls_step-jobname   = gc_job.
+        ls_step-jobcount  = '13300001'.
+        ls_step-stepcount = 1.
+        ls_step-progname  = 'RFKK_MA_SCHEDULER'.
+        ls_step-variant   = 'ZDISB_WIRE'.
+        INSERT ls_step INTO TABLE lt_steps.
+        go_env->insert_test_data( lt_steps ).
+        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_job ) INTO TABLE lt_names.
+        DATA(lt_runs) = mo_cut->get_job_runs( it_jobnames = lt_names iv_from = gc_today iv_to = gc_today ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1 msg = 'One job run' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-variant exp = 'ZDISB_WIRE'
+                                            msg = 'The variant of step 1 must be returned' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-progname exp = 'RFKK_MA_SCHEDULER'
+                                            msg = 'The program of step 1 must be returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A44: unresolved jobs are read whatever their date - an old stuck job stays visible
+  METHOD unresolved_jobs_any_date.
+    DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
+    DATA ls_job TYPE tbtco.
+    DATA lt_names TYPE zif_cd_hck_types=>tt_jobname_range.
+    TRY.
+        ls_job-jobname  = gc_job.
+        ls_job-jobcount = '00000001'.
+        ls_job-status   = zif_cd_hck_types=>gc_job_status-running.
+        ls_job-strtdate = '20261020'.
+        INSERT ls_job INTO TABLE lt_jobs.
+        ls_job-jobcount = '00000002'.
+        ls_job-status   = zif_cd_hck_types=>gc_job_status-finished.
+        INSERT ls_job INTO TABLE lt_jobs.
+        go_env->insert_test_data( lt_jobs ).
+        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_job ) INTO TABLE lt_names.
+        DATA(lt_runs) = mo_cut->get_unresolved_jobs( lt_names ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1 msg = 'Only the unfinished job' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-jobcount exp = '00000001'
+                                            msg = 'The job running since October must be found' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A43: a GL document only closes the gap for its company code, of the transfer
+  " reference type, unreversed; the total count ignores the display cap
+  METHOD gl_gap_per_company_and_type.
+    DATA lt_sumc TYPE STANDARD TABLE OF dfkksumc WITH EMPTY KEY.
+    DATA ls_sumc TYPE dfkksumc.
+    DATA lt_kko TYPE STANDARD TABLE OF dfkkko WITH EMPTY KEY.
+    DATA ls_kko TYPE dfkkko.
+    DATA lt_bkpf TYPE STANDARD TABLE OF bkpf WITH EMPTY KEY.
+    DATA ls_bkpf TYPE bkpf.
+    CONSTANTS lc_awtyp TYPE awtyp VALUE 'FKKSU'.
+    TRY.
+        " K1 transferred for US01 only; K2 only by a document of another type; K3 reversed
+        ls_sumc-fikey = 'K1'.
+        ls_sumc-bukrs = 'US01'.
+        INSERT ls_sumc INTO TABLE lt_sumc.
+        ls_sumc-bukrs = 'US02'.
+        INSERT ls_sumc INTO TABLE lt_sumc.
+        ls_sumc-fikey = 'K2'.
+        ls_sumc-bukrs = 'US01'.
+        INSERT ls_sumc INTO TABLE lt_sumc.
+        ls_sumc-fikey = 'K3'.
+        INSERT ls_sumc INTO TABLE lt_sumc.
+        go_env->insert_test_data( lt_sumc ).
+        ls_kko-budat = gc_today.
+        ls_kko-fikey = 'K1'.
+        INSERT ls_kko INTO TABLE lt_kko.
+        ls_kko-fikey = 'K2'.
+        INSERT ls_kko INTO TABLE lt_kko.
+        ls_kko-fikey = 'K3'.
+        INSERT ls_kko INTO TABLE lt_kko.
+        go_env->insert_test_data( lt_kko ).
+        ls_bkpf-bukrs = 'US01'.
+        ls_bkpf-belnr = '0100000001'.
+        ls_bkpf-awtyp = lc_awtyp.
+        ls_bkpf-awkey = 'K1'.
+        INSERT ls_bkpf INTO TABLE lt_bkpf.
+        ls_bkpf-belnr = '0100000002'.
+        ls_bkpf-awtyp = 'BKPF'.
+        ls_bkpf-awkey = 'K2'.
+        INSERT ls_bkpf INTO TABLE lt_bkpf.
+        ls_bkpf-belnr = '0100000003'.
+        ls_bkpf-awtyp = lc_awtyp.
+        ls_bkpf-awkey = 'K3'.
+        ls_bkpf-stblg = '0100000009'.
+        INSERT ls_bkpf INTO TABLE lt_bkpf.
+        go_env->insert_test_data( lt_bkpf ).
+        DATA(lt_gaps) = mo_cut->get_fikeys_without_gl( iv_from = gc_today iv_to = gc_today
+                                                       iv_max_rows = 1 iv_awtyp = lc_awtyp ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_gaps ) exp = 1 msg = 'Display is capped at one gap' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->count_fikeys_without_gl( iv_from = gc_today iv_to = gc_today
+                                                                                   iv_awtyp = lc_awtyp )
+                                            exp = 3
+                                            msg = 'K1/US02, K2/US01 and K3/US01 are gaps' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

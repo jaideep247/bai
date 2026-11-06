@@ -242,6 +242,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 360 | Payment engine area &1: &2 run(s) still running after &3 min |
 | 361 | No business check selected or active - the report proves nothing |
 | 362 | Health check configuration (selected and active checks) |
+| 363 | retried: &1 attempt(s), completed attempt started &2 |
+| 364 | completed attempt started &1, after window end &2 |
+| 365 | Job read capped at &1 rows for &2 - result may be incomplete |
+| 366 | &1 reconciliation key(s) / company code(s) without GL document, &2 listed |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | RUN_HUNG, CHECKS_NOT_CONFIGURED, hung runs and check counts (audit A06, A60).
+*& 2026-11-06 | Job step program/variant, retries and late start; job read cap (audit A42, A44).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -165,6 +166,9 @@ INTERFACE zif_cd_hck_types
       no_baseline      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_NO_BASELINE',
       run_hung         TYPE zif_cd_ops_types=>ty_check_code VALUE 'RUN_HUNG',
       no_checks        TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECKS_NOT_CONFIGURED',
+      step_retried     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_RETRIED',
+      step_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_LATE',
+      job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
     END OF gc_code.
 
   CONSTANTS:
@@ -198,6 +202,8 @@ INTERFACE zif_cd_hck_types
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
   "! Result row raised when no business check is selected / active (audit A60)
   CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
+  "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
+  CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
 
   "! ZCD_HCK_DEF
   TYPES:
@@ -352,6 +358,9 @@ INTERFACE zif_cd_hck_types
       strttime  TYPE t,
       enddate   TYPE d,
       endtime   TYPE t,
+      "! Program and variant of the job's first step (TBTCP) - audit A42
+      progname  TYPE ty_program,
+      variant   TYPE ty_job_variant,
     END OF ty_job_run.
   TYPES tt_job_run TYPE STANDARD TABLE OF ty_job_run WITH EMPTY KEY.
 
@@ -369,6 +378,11 @@ INTERFACE zif_cd_hck_types
       runtime_min TYPE i,
       overrun     TYPE abap_bool,
       blocked     TYPE abap_bool,
+      "! Matching attempts in the window; a later success after an abort = retried (A42)
+      attempts    TYPE i,
+      retried     TYPE abap_bool,
+      "! The deciding attempt started after WINDOW_TO
+      late_start  TYPE abap_bool,
     END OF ty_step_status.
   TYPES tt_step_status TYPE STANDARD TABLE OF ty_step_status WITH EMPTY KEY.
 
@@ -416,6 +430,8 @@ INTERFACE zif_cd_hck_types
   TYPES:
     BEGIN OF ty_fikey_gap,
       fikey TYPE ty_fikey,
+      "! A gap is per company code: a partial transfer leaves the other company open (A43)
+      bukrs TYPE bukrs,
     END OF ty_fikey_gap.
   TYPES tt_fikey_gap TYPE STANDARD TABLE OF ty_fikey_gap WITH EMPTY KEY.
 
@@ -604,6 +620,10 @@ INTERFACE zif_cd_hck_types
       area_runs_hung              TYPE zif_cd_ops_types=>ty_msgno VALUE '360',
       no_business_checks          TYPE zif_cd_ops_types=>ty_msgno VALUE '361',
       config_check_text           TYPE zif_cd_ops_types=>ty_msgno VALUE '362',
+      step_retried                TYPE zif_cd_ops_types=>ty_msgno VALUE '363',
+      step_started_late           TYPE zif_cd_ops_types=>ty_msgno VALUE '364',
+      job_read_capped             TYPE zif_cd_ops_types=>ty_msgno VALUE '365',
+      gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
     END OF gc_msg.
 
 ENDINTERFACE.

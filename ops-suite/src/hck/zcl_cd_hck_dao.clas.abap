@@ -11,6 +11,8 @@
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Metric history by distinct completed runs, as-of bound (audit A58).
+*& 2026-11-06 | Job runs with first-step program/variant; unresolved jobs regardless of date (audit A42, A44).
+*& 2026-11-06 | G/L transfer gaps by AWTYP, company code, unreversed document; uncapped count (audit A43).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -31,11 +33,16 @@ CLASS zcl_cd_hck_dao DEFINITION
     "! Query kind named in message 308 for a value (not aggregate) query
     CONSTANTS gc_query_kind_values TYPE string VALUE `VALUES`.
     CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
-    CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
+    CONSTANTS gc_first_step TYPE i VALUE 1.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
     "! Metric points scanned to find the last N distinct runs (A58)
     CONSTANTS gc_max_history_points TYPE i VALUE 5000.
     CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
+
+    "! Program and variant of the first job step (TBTCP) into the job runs (A42)
+    METHODS add_step_program
+      CHANGING
+        ct_runs TYPE zif_cd_hck_types=>tt_job_run.
 
     METHODS sha256
       IMPORTING
@@ -382,7 +389,49 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
            OR strtdate  BETWEEN @iv_from AND @iv_to )
       ORDER BY jobname, jobcount
       INTO CORRESPONDING FIELDS OF TABLE @rt_runs
-      UP TO @gc_max_job_rows ROWS.
+      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+    add_step_program( CHANGING ct_runs = rt_runs ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~get_unresolved_jobs.
+    IF it_jobnames IS INITIAL.
+      RETURN.
+    ENDIF.
+    "VERIFY-DDIC: TBTCO-STATUS values R running, Y ready, Z active, S released
+    SELECT jobname, jobcount, status, sdlstrtdt, sdlstrttm, strtdate, strttime, enddate, endtime
+      FROM tbtco
+      WHERE jobname IN @it_jobnames
+        AND status IN ( @zif_cd_hck_types=>gc_job_status-running,
+                        @zif_cd_hck_types=>gc_job_status-ready,
+                        @zif_cd_hck_types=>gc_job_status-put_activ,
+                        @zif_cd_hck_types=>gc_job_status-released )
+      ORDER BY sdlstrtdt, sdlstrttm, jobname, jobcount
+      INTO CORRESPONDING FIELDS OF TABLE @rt_runs
+      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+    add_step_program( CHANGING ct_runs = rt_runs ).
+  ENDMETHOD.
+
+
+  METHOD add_step_program.
+    CHECK ct_runs IS NOT INITIAL.
+    "VERIFY-DDIC: TBTCP-JOBNAME, JOBCOUNT, STEPCOUNT, PROGNAME, VARIANT
+    SELECT jobname, jobcount, progname, variant
+      FROM tbtcp
+      FOR ALL ENTRIES IN @ct_runs
+      WHERE jobname   = @ct_runs-jobname
+        AND jobcount  = @ct_runs-jobcount
+        AND stepcount = @gc_first_step
+      INTO TABLE @DATA(lt_steps).
+    SORT lt_steps BY jobname jobcount.
+    LOOP AT ct_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      READ TABLE lt_steps INTO DATA(ls_step) WITH KEY jobname = <ls_run>-jobname jobcount = <ls_run>-jobcount
+        BINARY SEARCH.
+      IF sy-subrc = 0.
+        <ls_run>-progname = ls_step-progname.
+        <ls_run>-variant  = ls_step-variant.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -430,20 +479,42 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_fikeys_without_gl.
-    " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY; the header BKPF-AWKEY
-    " carries the same reference key and is indexed (AWTYP/AWKEY), BSEG-AWKEY is not.
-    "VERIFY-DDIC: DFKKKO-BUDAT (posting date of the payment engine document header)
-    "VERIFY-DDIC: BKPF-AWKEY holds the reconciliation key (FIKEY) for the payment engine transfer
-    SELECT DISTINCT s~fikey
+    " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY. A43: the GL document must be
+    " of the transfer reference type, for the same company code, and not reversed - an
+    " unrelated document or the transfer of another company code no longer hides a gap.
+    "VERIFY-DDIC: DFKKSUMC-BUKRS, DFKKKO-BUDAT, BKPF-AWTYP / AWKEY / BUKRS / STBLG
+    "VERIFY-DDIC: AWTYP of the payment engine GL transfer (PARAM4, default FKKSU)
+    SELECT DISTINCT s~fikey, s~bukrs
       FROM dfkksumc AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko
                        WHERE fikey = s~fikey
                          AND budat BETWEEN @iv_from AND @iv_to )
         AND NOT EXISTS ( SELECT awkey FROM bkpf
-                           WHERE awkey = s~fikey )
-      ORDER BY s~fikey
+                           WHERE awtyp = @iv_awtyp
+                             AND awkey = s~fikey
+                             AND bukrs = s~bukrs
+                             AND stblg = @space )
+      ORDER BY s~fikey, s~bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_gaps
       UP TO @iv_max_rows ROWS.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~count_fikeys_without_gl.
+    " same population as get_fikeys_without_gl, without the display cap (keys only)
+    SELECT DISTINCT s~fikey, s~bukrs
+      FROM dfkksumc AS s
+      WHERE EXISTS ( SELECT fikey FROM dfkkko
+                       WHERE fikey = s~fikey
+                         AND budat BETWEEN @iv_from AND @iv_to )
+        AND NOT EXISTS ( SELECT awkey FROM bkpf
+                           WHERE awtyp = @iv_awtyp
+                             AND awkey = s~fikey
+                             AND bukrs = s~bukrs
+                             AND stblg = @space )
+      ORDER BY s~fikey, s~bukrs
+      INTO TABLE @DATA(lt_keys).
+    rv_count = lines( lt_keys ).
   ENDMETHOD.
 
 
