@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A51: S_TABU_NAM display check for the dynamic reader.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC describer (RTTI)</p>
 CLASS zcl_cd_fmon_ddic DEFINITION
@@ -81,12 +82,12 @@ CLASS zcl_cd_fmon_ddic IMPLEMENTATION.
         MESSAGE e200(zcd_ops) WITH iv_table.
     ENDIF.
 
-    LOOP AT lt_dfies INTO DATA(ls_dfies).
+    LOOP AT lt_dfies ASSIGNING FIELD-SYMBOL(<ls_dfies>).
       CLEAR ls_field.
-      ls_field-fieldname = ls_dfies-fieldname.
-      ls_field-inttype   = ls_dfies-inttype.
-      ls_field-leng      = ls_dfies-leng.
-      ls_field-keyflag   = xsdbool( ls_dfies-keyflag = abap_true ).
+      ls_field-fieldname = <ls_dfies>-fieldname.
+      ls_field-inttype   = <ls_dfies>-inttype.
+      ls_field-leng      = <ls_dfies>-leng.
+      ls_field-keyflag   = xsdbool( <ls_dfies>-keyflag = abap_true ).
       INSERT ls_field INTO TABLE rt_fields.
     ENDLOOP.
   ENDMETHOD.

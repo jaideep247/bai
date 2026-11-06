@@ -10,6 +10,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A03 / A27: unusable assignments returned (LEFT OUTER JOIN), blocks-posting flag resolved.
 *& 2026-11-06 | Operating model: NEEDS_POSTING of the rule registry carried on the assignment.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - customizing repository</p>
 CLASS zcl_cd_ebs_cfg_dao DEFINITION
@@ -50,19 +51,19 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
       ORDER BY r~rule_group, r~seq, r~rule_id
       INTO TABLE @DATA(lt_rows).
 
-    LOOP AT lt_rows INTO DATA(ls_row).
-      DATA(ls_rule) = CORRESPONDING zif_cd_ebs_types=>ty_rule_cfg( ls_row ).
-      ls_rule-unusable = xsdbool( ls_row-rule_id <> zif_cd_ebs_types=>gc_rule_none
-                                  AND ( ls_row-class_name IS INITIAL OR ls_row-def_active = abap_false ) ).
-      ls_rule-blocks_posting = SWITCH #( ls_row-blocks_override
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      DATA(ls_rule) = CORRESPONDING zif_cd_ebs_types=>ty_rule_cfg( <ls_row> ).
+      ls_rule-unusable = xsdbool( <ls_row>-rule_id <> zif_cd_ebs_types=>gc_rule_none
+                                  AND ( <ls_row>-class_name IS INITIAL OR <ls_row>-def_active = abap_false ) ).
+      ls_rule-blocks_posting = SWITCH #( <ls_row>-blocks_override
                                          WHEN zif_cd_ebs_types=>gc_blocks_override-yes THEN abap_true
                                          WHEN zif_cd_ebs_types=>gc_blocks_override-no  THEN abap_false
-                                         ELSE ls_row-default_blocks ).
+                                         ELSE <ls_row>-default_blocks ).
       IF ls_rule-severity IS INITIAL.
-        ls_rule-severity = ls_row-default_severity.
+        ls_rule-severity = <ls_row>-default_severity.
       ENDIF.
       IF ls_rule-action IS INITIAL.
-        ls_rule-action = ls_row-default_action.
+        ls_rule-action = <ls_row>-default_action.
       ENDIF.
       INSERT ls_rule INTO TABLE rt_rules.
     ENDLOOP.

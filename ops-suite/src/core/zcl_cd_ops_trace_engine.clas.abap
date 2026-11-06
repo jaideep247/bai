@@ -16,6 +16,7 @@
 *& 2026-11-06 | Partner mismatch, history unavailable on reversal, FMON digest references and
 *&            | file date window, cheque history unavailable, test-first review fixes.
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -427,20 +428,20 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
         INSERT is_input-clearing_doc INTO TABLE lt_docno.
       ELSEIF is_input-check_no IS NOT INITIAL.
         LOOP AT mo_dao->get_checks_by_number( iv_ztnum = is_input-check_no iv_max_rows = ms_cfg-max_rows )
-             INTO DATA(ls_check).
-          INSERT ls_check-doc1r INTO TABLE lt_docno.
+             ASSIGNING FIELD-SYMBOL(<ls_check>).
+          INSERT <ls_check>-doc1r INTO TABLE lt_docno.
         ENDLOOP.
       ENDIF.
-      LOOP AT lt_docno INTO DATA(lv_docno).
-        INSERT LINES OF mo_dao->get_items_by_clearing( iv_augbl = lv_docno iv_max_rows = ms_cfg-max_rows )
+      LOOP AT lt_docno ASSIGNING FIELD-SYMBOL(<lv_docno>).
+        INSERT LINES OF mo_dao->get_items_by_clearing( iv_augbl = <lv_docno> iv_max_rows = ms_cfg-max_rows )
           INTO TABLE mt_items.
       ENDLOOP.
       " The request of each FIN on the items (source unknown: every source is a candidate)
-      LOOP AT mt_items INTO DATA(ls_item) WHERE fin IS NOT INITIAL.
-        INSERT ls_item-fin INTO TABLE lt_fins.
+      LOOP AT mt_items ASSIGNING FIELD-SYMBOL(<ls_item>) WHERE fin IS NOT INITIAL.
+        INSERT <ls_item>-fin INTO TABLE lt_fins.
       ENDLOOP.
-      LOOP AT lt_fins INTO DATA(lv_fin).
-        trace_request( iv_fin = lv_fin iv_source = space ).
+      LOOP AT lt_fins ASSIGNING FIELD-SYMBOL(<lv_fin>).
+        trace_request( iv_fin = <lv_fin> iv_source = space ).
       ENDLOOP.
     ENDIF.
     check_items( iv_partner = lv_partner iv_without_source = lv_without_source iv_fin = is_input-fin ).
@@ -662,20 +663,20 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                     iv_v2    = ms_cfg-history-table_name ).
         add_row( is_row = ls_base ).
       ENDIF.
-      LOOP AT ls_read-rows INTO DATA(ls_hist).
+      LOOP AT ls_read-rows ASSIGNING FIELD-SYMBOL(<ls_hist>).
         ls_base-status        = zif_cd_ops_trace_types=>gc_status-verified.
         ls_base-reason        = zif_cd_ops_trace_types=>gc_reason-earlier_found.
-        ls_base-record_key    = key_text( iv_part1 = ls_hist-key1 iv_part2 = ls_hist-ref ).
-        ls_base-evidence_date = to_date( ls_hist-ev_date ).
-        ls_base-evidence_time = to_time( ls_hist-ev_time ).
+        ls_base-record_key    = key_text( iv_part1 = <ls_hist>-key1 iv_part2 = <ls_hist>-ref ).
+        ls_base-evidence_date = to_date( <ls_hist>-ev_date ).
+        ls_base-evidence_time = to_time( <ls_hist>-ev_time ).
         ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-history_found
-                                                       iv_v1    = ls_hist-ref
+                                                       iv_v1    = <ls_hist>-ref
                                                        iv_v2    = ls_item-opbel
                                                        iv_v3    = ls_base-evidence_date
                                                        iv_v4    = ms_cfg-history-table_name ).
         add_row( is_row = ls_base ).
         INSERT VALUE #( kind       = zif_cd_ops_trace_types=>gc_attempt-historical
-                        ref        = CONV #( ls_hist-ref )
+                        ref        = CONV #( <ls_hist>-ref )
                         item_opbel = ls_item-opbel
                         bukrs      = ls_item-bukrs
                         pymet      = ls_item-pymet
@@ -797,14 +798,14 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       ls_base-source_table = zif_cd_ops_trace_types=>gc_table-dfkkcr.
       ls_base-reason = COND #( WHEN ls_base-reason IS INITIAL
                                THEN zif_cd_ops_trace_types=>gc_reason-cheque_issued ELSE ls_base-reason ).
-      LOOP AT et_checks INTO DATA(ls_check).
-        ls_base-record_key    = key_text( iv_part1 = ls_check-ztnum iv_part2 = ls_check-hbkid iv_part3 = ls_check-hktid ).
+      LOOP AT et_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+        ls_base-record_key    = key_text( iv_part1 = <ls_check>-ztnum iv_part2 = <ls_check>-hbkid iv_part3 = <ls_check>-hktid ).
         ls_base-evidence_date = VALUE #( et_runs[ 1 ]-laufd OPTIONAL ).
         ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-cheque_row
-                                                       iv_v1    = ls_check-ztnum
-                                                       iv_v2    = ls_check-hbkid
-                                                       iv_v3    = ls_check-hktid
-                                                       iv_v4    = ls_check-crstatus ).
+                                                       iv_v1    = <ls_check>-ztnum
+                                                       iv_v2    = <ls_check>-hbkid
+                                                       iv_v3    = <ls_check>-hktid
+                                                       iv_v4    = <ls_check>-crstatus ).
         add_row( is_attempt = is_attempt is_row = ls_base ).
       ENDLOOP.
     ELSE.
@@ -815,14 +816,14 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       ls_base-source_table = zif_cd_ops_trace_types=>gc_table-dpayh.
       ls_base-reason = COND #( WHEN ls_base-reason IS INITIAL
                                THEN zif_cd_ops_trace_types=>gc_reason-payment_run ELSE ls_base-reason ).
-      LOOP AT et_runs INTO DATA(ls_run).
-        ls_base-record_key    = key_text( iv_part1 = ls_run-laufd iv_part2 = ls_run-laufi iv_part3 = ls_run-doc1r ).
-        ls_base-evidence_date = ls_run-laufd.
+      LOOP AT et_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+        ls_base-record_key    = key_text( iv_part1 = <ls_run>-laufd iv_part2 = <ls_run>-laufi iv_part3 = <ls_run>-doc1r ).
+        ls_base-evidence_date = <ls_run>-laufd.
         ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-payment_run
-                                                       iv_v1    = ls_run-laufd
-                                                       iv_v2    = ls_run-laufi
-                                                       iv_v3    = ls_run-status
-                                                       iv_v4    = ls_run-doc1r ).
+                                                       iv_v1    = <ls_run>-laufd
+                                                       iv_v2    = <ls_run>-laufi
+                                                       iv_v3    = <ls_run>-status
+                                                       iv_v4    = <ls_run>-doc1r ).
         add_row( is_attempt = is_attempt is_row = ls_base ).
       ENDLOOP.
     ENDIF.
@@ -848,9 +849,9 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     DATA(lt_rows) = VALUE zif_cd_ops_trace_types=>tt_cfg_row( ).
     " Payment run LAUFD / LAUFI -> generated file, only through the configured register
     " (ZCDT_REGUT field names VERIFY-SE11); not configured = UNAVAILABLE, never VERIFIED
-    LOOP AT it_runs INTO DATA(ls_run).
+    LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
       DATA(ls_read) = read_source( is_source = ms_cfg-regut
-                                   is_key    = VALUE #( key1 = ls_run-laufd key2 = ls_run-laufi ) ).
+                                   is_key    = VALUE #( key1 = <ls_run>-laufd key2 = <ls_run>-laufi ) ).
       IF ls_read-status <> zif_cd_ops_trace_types=>gc_status-verified.
         ls_base-status = ls_read-status.
         ls_base-reason = ls_read-reason.
@@ -873,17 +874,17 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     ENDIF.
     ls_base-reason = COND #( WHEN ls_base-reason IS INITIAL
                              THEN zif_cd_ops_trace_types=>gc_reason-file_generated ELSE ls_base-reason ).
-    LOOP AT lt_rows INTO DATA(ls_row).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       " Same correlation key as file monitoring (long references: digest, audit A100)
-      INSERT VALUE #( ref  = zcl_cd_fmon_util=>normalize_ref( ls_row-ref )
-                      name = zcl_cd_fmon_util=>canonical_name( ls_row-ref ) ) INTO TABLE et_links.
-      ls_base-record_key    = key_text( iv_part1 = ls_row-ref iv_part2 = ls_row-key1 iv_part3 = ls_row-key2 ).
-      ls_base-evidence_date = to_date( ls_row-ev_date ).
-      ls_base-evidence_time = to_time( ls_row-ev_time ).
+      INSERT VALUE #( ref  = zcl_cd_fmon_util=>normalize_ref( <ls_row>-ref )
+                      name = zcl_cd_fmon_util=>canonical_name( <ls_row>-ref ) ) INTO TABLE et_links.
+      ls_base-record_key    = key_text( iv_part1 = <ls_row>-ref iv_part2 = <ls_row>-key1 iv_part3 = <ls_row>-key2 ).
+      ls_base-evidence_date = to_date( <ls_row>-ev_date ).
+      ls_base-evidence_time = to_time( <ls_row>-ev_time ).
       ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-file_row
-                                                     iv_v1    = ls_row-ref
-                                                     iv_v2    = ls_row-key1
-                                                     iv_v3    = ls_row-key2 ).
+                                                     iv_v1    = <ls_row>-ref
+                                                     iv_v2    = <ls_row>-key1
+                                                     iv_v3    = <ls_row>-key2 ).
       add_row( is_attempt = is_attempt is_row = ls_base ).
     ENDLOOP.
   ENDMETHOD.
@@ -895,8 +896,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     DATA lv_to TYPE d.
 
     CLEAR: et_files, et_events.
-    LOOP AT it_links INTO DATA(ls_link) WHERE ref IS NOT INITIAL.
-      INSERT ls_link-ref INTO TABLE lt_refs.
+    LOOP AT it_links ASSIGNING FIELD-SYMBOL(<ls_link>) WHERE ref IS NOT INITIAL.
+      INSERT <ls_link>-ref INTO TABLE lt_refs.
     ENDLOOP.
     IF lt_refs IS INITIAL.
       add_no_link( is_attempt = is_attempt iv_stage = zif_cd_ops_trace_types=>gc_stage-prism
@@ -906,9 +907,9 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     DATA(ls_base) = VALUE ty_row( stage = zif_cd_ops_trace_types=>gc_stage-prism bukrs = is_attempt-bukrs
                                   source_table = zif_cd_ops_trace_types=>gc_table-fmon time_zone = zif_cd_ops_trace_types=>gc_utc ).
     " Business date of the file around the payment run date (index BDT)
-    LOOP AT it_runs INTO DATA(ls_run).
-      lv_from = COND #( WHEN lv_from IS INITIAL OR ls_run-laufd < lv_from THEN ls_run-laufd ELSE lv_from ).
-      lv_to   = COND #( WHEN ls_run-laufd > lv_to THEN ls_run-laufd ELSE lv_to ).
+    LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      lv_from = COND #( WHEN lv_from IS INITIAL OR <ls_run>-laufd < lv_from THEN <ls_run>-laufd ELSE lv_from ).
+      lv_to   = COND #( WHEN <ls_run>-laufd > lv_to THEN <ls_run>-laufd ELSE lv_to ).
     ENDLOOP.
     lv_from = lv_from - ms_cfg-lookback.
     lv_to   = lv_to + ms_cfg-lookback.
@@ -949,16 +950,16 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     ENDIF.
     ls_base-reason = COND #( WHEN ls_base-reason IS INITIAL
                              THEN zif_cd_ops_trace_types=>gc_reason-sent_to_prism ELSE ls_base-reason ).
-    LOOP AT lt_sent INTO DATA(ls_event).
-      DATA(ls_file) = VALUE zif_cd_ops_trace_types=>ty_fmon_file( et_files[ file_id = ls_event-file_id ] OPTIONAL ).
-      CONVERT TIME STAMP ls_event-event_at TIME ZONE zif_cd_ops_trace_types=>gc_utc
+    LOOP AT lt_sent ASSIGNING FIELD-SYMBOL(<ls_event>).
+      DATA(ls_file) = VALUE zif_cd_ops_trace_types=>ty_fmon_file( et_files[ file_id = <ls_event>-file_id ] OPTIONAL ).
+      CONVERT TIME STAMP <ls_event>-event_at TIME ZONE zif_cd_ops_trace_types=>gc_utc
         INTO DATE ls_base-evidence_date TIME ls_base-evidence_time.
-      ls_base-record_key = key_text( iv_part1 = ls_file-file_ref iv_part2 = ls_event-stage iv_part3 = ls_event-src_id ).
+      ls_base-record_key = key_text( iv_part1 = ls_file-file_ref iv_part2 = <ls_event>-stage iv_part3 = <ls_event>-src_id ).
       ls_base-detail     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-fmon_event
                                                   iv_v1    = ls_file-file_ref
                                                   iv_v2    = ls_file-iface_id
-                                                  iv_v3    = ls_event-stage
-                                                  iv_v4    = ls_event-event_at ).
+                                                  iv_v3    = <ls_event>-stage
+                                                  iv_v4    = <ls_event>-event_at ).
       add_row( is_attempt = is_attempt is_row = ls_base ).
     ENDLOOP.
   ENDMETHOD.
@@ -990,18 +991,18 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
         add_row( is_attempt = is_attempt is_row = ls_base ).
         RETURN.
       ENDIF.
-      LOOP AT ls_read-rows INTO DATA(ls_ack).
-        DATA(lv_nack) = in_list( iv_value = ls_ack-status iv_list = ms_cfg-nack_values ).
+      LOOP AT ls_read-rows ASSIGNING FIELD-SYMBOL(<ls_ack>).
+        DATA(lv_nack) = in_list( iv_value = <ls_ack>-status iv_list = ms_cfg-nack_values ).
         ls_base-status        = COND #( WHEN lv_nack = abap_true THEN zif_cd_ops_trace_types=>gc_status-failed
                                         ELSE zif_cd_ops_trace_types=>gc_status-verified ).
         ls_base-reason        = COND #( WHEN lv_nack = abap_true THEN zif_cd_ops_trace_types=>gc_reason-nack
                                         ELSE zif_cd_ops_trace_types=>gc_reason-ack_payment ).
-        ls_base-record_key    = key_text( iv_part1 = ls_ack-key1 iv_part2 = ls_ack-ref ).
-        ls_base-evidence_date = to_date( ls_ack-ev_date ).
-        ls_base-evidence_time = to_time( ls_ack-ev_time ).
+        ls_base-record_key    = key_text( iv_part1 = <ls_ack>-key1 iv_part2 = <ls_ack>-ref ).
+        ls_base-evidence_date = to_date( <ls_ack>-ev_date ).
+        ls_base-evidence_time = to_time( <ls_ack>-ev_time ).
         ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-ack_row
-                                                       iv_v1    = ls_ack-key1
-                                                       iv_v2    = ls_ack-status ).
+                                                       iv_v1    = <ls_ack>-key1
+                                                       iv_v2    = <ls_ack>-status ).
         add_row( is_attempt = is_attempt is_row = ls_base ).
       ENDLOOP.
       IF ls_read-rows IS NOT INITIAL.
@@ -1018,25 +1019,25 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lv_found) = abap_false.
-    LOOP AT it_events INTO DATA(ls_event)
+    LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>)
          WHERE stage = zif_cd_fmon_types=>gc_stage-ack OR stage = zif_cd_fmon_types=>gc_stage-nack.
       lv_found = abap_true.
-      DATA(ls_file) = VALUE zif_cd_ops_trace_types=>ty_fmon_file( it_files[ file_id = ls_event-file_id ] OPTIONAL ).
-      ls_base-status = COND #( WHEN ls_event-stage = zif_cd_fmon_types=>gc_stage-nack
+      DATA(ls_file) = VALUE zif_cd_ops_trace_types=>ty_fmon_file( it_files[ file_id = <ls_event>-file_id ] OPTIONAL ).
+      ls_base-status = COND #( WHEN <ls_event>-stage = zif_cd_fmon_types=>gc_stage-nack
                                THEN zif_cd_ops_trace_types=>gc_status-failed
                                WHEN lines( it_files ) > 1 THEN zif_cd_ops_trace_types=>gc_status-ambiguous
                                ELSE zif_cd_ops_trace_types=>gc_status-verified ).
-      ls_base-reason = COND #( WHEN ls_event-stage = zif_cd_fmon_types=>gc_stage-nack THEN zif_cd_ops_trace_types=>gc_reason-nack
+      ls_base-reason = COND #( WHEN <ls_event>-stage = zif_cd_fmon_types=>gc_stage-nack THEN zif_cd_ops_trace_types=>gc_reason-nack
                                WHEN lines( it_files ) > 1 THEN zif_cd_ops_trace_types=>gc_reason-multiple
                                ELSE zif_cd_ops_trace_types=>gc_reason-ack_file_level ).
-      CONVERT TIME STAMP ls_event-event_at TIME ZONE zif_cd_ops_trace_types=>gc_utc
+      CONVERT TIME STAMP <ls_event>-event_at TIME ZONE zif_cd_ops_trace_types=>gc_utc
         INTO DATE ls_base-evidence_date TIME ls_base-evidence_time.
-      ls_base-record_key = key_text( iv_part1 = ls_file-file_ref iv_part2 = ls_event-stage iv_part3 = ls_event-src_id ).
+      ls_base-record_key = key_text( iv_part1 = ls_file-file_ref iv_part2 = <ls_event>-stage iv_part3 = <ls_event>-src_id ).
       ls_base-detail     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-fmon_event
                                                   iv_v1    = ls_file-file_ref
                                                   iv_v2    = ls_file-iface_id
-                                                  iv_v3    = ls_event-stage
-                                                  iv_v4    = ls_event-event_at ).
+                                                  iv_v3    = <ls_event>-stage
+                                                  iv_v4    = <ls_event>-event_at ).
       add_row( is_attempt = is_attempt is_row = ls_base ).
     ENDLOOP.
     IF lv_found = abap_false.
@@ -1089,20 +1090,20 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
     IF iv_cheque = abap_true.
       " Cheque status (ZCD_CHECK_HIST): terminal 3 failed / 4 rejected / 9 returned
-      LOOP AT it_checks INTO DATA(ls_check).
-        INSERT ls_check-ztnum INTO TABLE lt_ref.
-        DATA(ls_read) = read_source( is_source = ms_cfg-chq_hist is_key = VALUE #( key1 = ls_check-ztnum ) ).
+      LOOP AT it_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+        INSERT <ls_check>-ztnum INTO TABLE lt_ref.
+        DATA(ls_read) = read_source( is_source = ms_cfg-chq_hist is_key = VALUE #( key1 = <ls_check>-ztnum ) ).
         IF ls_read-status <> zif_cd_ops_trace_types=>gc_status-verified.
           add_row( is_attempt = is_attempt
                    is_row     = VALUE #( BASE ls_base status = ls_read-status
                                          reason       = ls_read-reason
                                          source_table = ms_cfg-chq_hist-table_name
-                                         record_key   = ls_check-ztnum
+                                         record_key   = <ls_check>-ztnum
                                          detail       = ls_read-text ) ).
         ENDIF.
-        LOOP AT ls_read-rows INTO DATA(ls_hist)
+        LOOP AT ls_read-rows ASSIGNING FIELD-SYMBOL(<ls_hist>)
              WHERE status IS NOT INITIAL.
-          DATA(lv_terminal) = in_list( iv_value = ls_hist-status iv_list = ms_cfg-chq_failed ).
+          DATA(lv_terminal) = in_list( iv_value = <ls_hist>-status iv_list = ms_cfg-chq_failed ).
           add_row( is_attempt = is_attempt
                    is_row     = VALUE #( BASE ls_base
                                          status        = COND #( WHEN lv_terminal = abap_true
@@ -1112,13 +1113,13 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                                  THEN zif_cd_ops_trace_types=>gc_reason-cheque_terminal
                                                                  ELSE zif_cd_ops_trace_types=>gc_reason-cheque_status )
                                          source_table  = ms_cfg-chq_hist-table_name
-                                         record_key    = key_text( iv_part1 = ls_hist-key1 iv_part2 = ls_hist-ref )
-                                         evidence_date = to_date( ls_hist-ev_date )
-                                         evidence_time = to_time( ls_hist-ev_time )
+                                         record_key    = key_text( iv_part1 = <ls_hist>-key1 iv_part2 = <ls_hist>-ref )
+                                         evidence_date = to_date( <ls_hist>-ev_date )
+                                         evidence_time = to_time( <ls_hist>-ev_time )
                                          detail        = zcl_cd_ops_util=>text(
                                                            iv_msgno = zif_cd_ops_trace_types=>gc_msg-cheque_status
-                                                           iv_v1    = ls_hist-key1
-                                                           iv_v2    = ls_hist-status ) ) ).
+                                                           iv_v1    = <ls_hist>-key1
+                                                           iv_v2    = <ls_hist>-status ) ) ).
         ENDLOOP.
       ENDLOOP.
     ELSE.
@@ -1153,14 +1154,14 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     ls_base-reason = COND #( WHEN ls_base-reason IS NOT INITIAL THEN ls_base-reason
                              WHEN iv_cheque = abap_true THEN zif_cd_ops_trace_types=>gc_reason-encashed
                              ELSE zif_cd_ops_trace_types=>gc_reason-settled ).
-    LOOP AT lt_lines INTO DATA(ls_line).
-      ls_base-record_key    = key_text( iv_part1 = ls_line-kukey iv_part2 = ls_line-esnum iv_part3 = ls_line-chect ).
-      ls_base-evidence_date = ls_line-budat.
+    LOOP AT lt_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      ls_base-record_key    = key_text( iv_part1 = <ls_line>-kukey iv_part2 = <ls_line>-esnum iv_part3 = <ls_line>-chect ).
+      ls_base-evidence_date = <ls_line>-budat.
       ls_base-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-bank_line
-                                                     iv_v1    = ls_line-kukey
-                                                     iv_v2    = ls_line-esnum
-                                                     iv_v3    = ls_line-chect
-                                                     iv_v4    = ls_line-budat ).
+                                                     iv_v1    = <ls_line>-kukey
+                                                     iv_v2    = <ls_line>-esnum
+                                                     iv_v3    = <ls_line>-chect
+                                                     iv_v4    = <ls_line>-budat ).
       add_row( is_attempt = is_attempt is_row = ls_base ).
     ENDLOOP.
   ENDMETHOD.
@@ -1246,17 +1247,17 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       add_row( is_attempt = is_attempt is_row = ls_gl ).
       RETURN.
     ENDIF.
-    LOOP AT lt_docs INTO DATA(ls_doc).
-      INSERT VALUE #( bukrs = ls_doc-bukrs belnr = ls_doc-belnr gjahr = ls_doc-gjahr ) INTO TABLE lt_keys.
+    LOOP AT lt_docs ASSIGNING FIELD-SYMBOL(<ls_doc>).
+      INSERT VALUE #( bukrs = <ls_doc>-bukrs belnr = <ls_doc>-belnr gjahr = <ls_doc>-gjahr ) INTO TABLE lt_keys.
       ls_gl-status        = zif_cd_ops_trace_types=>gc_status-verified.
       ls_gl-reason        = zif_cd_ops_trace_types=>gc_reason-transferred.
-      ls_gl-record_key    = key_text( iv_part1 = ls_doc-bukrs iv_part2 = ls_doc-belnr iv_part3 = ls_doc-gjahr ).
-      ls_gl-evidence_date = ls_doc-cpudt.
-      ls_gl-evidence_time = ls_doc-cputm.
+      ls_gl-record_key    = key_text( iv_part1 = <ls_doc>-bukrs iv_part2 = <ls_doc>-belnr iv_part3 = <ls_doc>-gjahr ).
+      ls_gl-evidence_date = <ls_doc>-cpudt.
+      ls_gl-evidence_time = <ls_doc>-cputm.
       ls_gl-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-gl_doc
-                                                   iv_v1    = ls_doc-bukrs
-                                                   iv_v2    = ls_doc-belnr
-                                                   iv_v3    = ls_doc-gjahr
+                                                   iv_v1    = <ls_doc>-bukrs
+                                                   iv_v2    = <ls_doc>-belnr
+                                                   iv_v3    = <ls_doc>-gjahr
                                                    iv_v4    = lv_fikey ).
       add_row( is_attempt = is_attempt is_row = ls_gl ).
     ENDLOOP.
@@ -1279,20 +1280,20 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       add_row( is_attempt = is_attempt is_row = ls_fica ).
       RETURN.
     ENDIF.
-    LOOP AT lt_lines INTO DATA(ls_line).
+    LOOP AT lt_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
       ls_fica-status        = zif_cd_ops_trace_types=>gc_status-verified.
-      ls_fica-record_key    = key_text( iv_part1 = ls_line-belnr iv_part2 = ls_line-buzei iv_part3 = ls_line-augbl ).
+      ls_fica-record_key    = key_text( iv_part1 = <ls_line>-belnr iv_part2 = <ls_line>-buzei iv_part3 = <ls_line>-augbl ).
       " Entry date of the G/L document that carries the line (BSEG has no own entry date)
-      DATA(ls_line_doc) = VALUE zif_cd_ops_trace_types=>ty_gl_doc( lt_docs[ bukrs = ls_line-bukrs
-                                                                             belnr = ls_line-belnr
-                                                                             gjahr = ls_line-gjahr ] OPTIONAL ).
+      DATA(ls_line_doc) = VALUE zif_cd_ops_trace_types=>ty_gl_doc( lt_docs[ bukrs = <ls_line>-bukrs
+                                                                             belnr = <ls_line>-belnr
+                                                                             gjahr = <ls_line>-gjahr ] OPTIONAL ).
       ls_fica-evidence_date = ls_line_doc-cpudt.
       ls_fica-evidence_time = ls_line_doc-cputm.
       ls_fica-detail        = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-gl_line
-                                                     iv_v1    = ls_line-belnr
-                                                     iv_v2    = ls_line-buzei
-                                                     iv_v3    = ls_line-hkont
-                                                     iv_v4    = ls_line-xref2 ).
+                                                     iv_v1    = <ls_line>-belnr
+                                                     iv_v2    = <ls_line>-buzei
+                                                     iv_v3    = <ls_line>-hkont
+                                                     iv_v4    = <ls_line>-xref2 ).
       add_row( is_attempt = is_attempt is_row = ls_fica ).
     ENDLOOP.
   ENDMETHOD.
@@ -1422,8 +1423,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   METHOD in_list.
     DATA(lv_value) = condense( CONV string( iv_value ) ).
     SPLIT iv_list AT zif_cd_ops_trace_types=>gc_list_sep INTO TABLE DATA(lt_values).
-    LOOP AT lt_values INTO DATA(lv_entry).
-      IF condense( lv_entry ) = lv_value.
+    LOOP AT lt_values ASSIGNING FIELD-SYMBOL(<lv_entry>).
+      IF condense( <lv_entry> ) = lv_value.
         rv_in = abap_true.
         RETURN.
       ENDIF.

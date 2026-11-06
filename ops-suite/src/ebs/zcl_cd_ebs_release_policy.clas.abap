@@ -12,6 +12,7 @@
 *& 2026-11-06 | Audit A03: RULE_GROUP_EMPTY / RULE_UNUSABLE are not releasable.
 *& 2026-11-06 | Audit A65: KEY_LENGTH_CONFIG is a configuration gap, never released.
 *& 2026-11-06 | Audit A98: MAP_CONFLICT is a configuration gap, never released.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - blocked-line release rules</p>
 CLASS zcl_cd_ebs_release_policy DEFINITION
@@ -89,9 +90,9 @@ CLASS zcl_cd_ebs_release_policy IMPLEMENTATION.
 
 
   METHOD releasable_keys.
-    LOOP AT it_findings INTO DATA(ls_finding).
-      IF is_releasable( ls_finding ) = abap_true.
-        INSERT ls_finding-object_key INTO TABLE rt_keys.
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      IF is_releasable( <ls_finding> ) = abap_true.
+        INSERT <ls_finding>-object_key INTO TABLE rt_keys.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

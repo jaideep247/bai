@@ -13,6 +13,7 @@
 *&              A51 approved tables + S_TABU_NAM at the read boundary, A52 half-open range.
 *& 2026-11-06 | Performance fix 8: count_legacy - GROUP BY the query fields with COUNT(*) on the same
 *&            | validated path as read_legacy (shared select_legacy).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -532,12 +533,12 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
   METHOD field_list.
     DATA lt_names TYPE SORTED TABLE OF zif_cd_fmon_types=>ty_fieldname WITH UNIQUE KEY table_line.
-    LOOP AT is_query-fields INTO DATA(ls_field).
-      IF zcl_cd_fmon_query=>is_valid_name( ls_field-field ) = abap_false.
+    LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+      IF zcl_cd_fmon_query=>is_valid_name( <ls_field>-field ) = abap_false.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e202(zcd_ops) WITH ls_field-field.
+          MESSAGE e202(zcd_ops) WITH <ls_field>-field.
       ENDIF.
-      INSERT ls_field-field INTO TABLE lt_names.
+      INSERT <ls_field>-field INTO TABLE lt_names.
     ENDLOOP.
     rv_fields = concat_lines_of( table = lt_names sep = `, ` ).
   ENDMETHOD.

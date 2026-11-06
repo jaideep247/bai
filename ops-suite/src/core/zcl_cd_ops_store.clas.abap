@@ -15,6 +15,7 @@
 *& 2026-11-06 | Parameter cache is run-scoped: start_run takes a fresh snapshot (audit A64).
 *& 2026-11-06 | Performance fix 5: carry-forward reads by (OBJECT_TYPE, OBJECT_KEY) pairs; earlier rows found
 *&            | by binary search on the sorted read (newest first kept), not a nested WHERE scan.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -140,33 +141,33 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     DATA(lv_now)   = lo_clock->now( ).
     DATA(lv_seq)   = cs_run-finding_count.
 
-    LOOP AT it_findings INTO DATA(ls_finding).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       lv_seq += 1.
       CLEAR ls_db.
       ls_db-run_id      = cs_run-run_id.
       ls_db-finding_no  = lv_seq.
       ls_db-pe_area      = cs_run-pe_area.
-      ls_db-object_type = ls_finding-object_type.
-      ls_db-object_key  = ls_finding-object_key.
-      ls_db-group1      = ls_finding-group1.
-      ls_db-group2      = ls_finding-group2.
-      ls_db-rule_id     = ls_finding-rule_id.
-      ls_db-check_code  = ls_finding-check_code.
-      ls_db-severity    = ls_finding-severity.
-      ls_db-action      = ls_finding-action.
-      ls_db-amount      = ls_finding-amount.
-      ls_db-currency    = ls_finding-currency.
-      ls_db-reference   = ls_finding-reference.
-      ls_db-message     = ls_finding-message.
-      ls_db-details     = ls_finding-details.
+      ls_db-object_type = <ls_finding>-object_type.
+      ls_db-object_key  = <ls_finding>-object_key.
+      ls_db-group1      = <ls_finding>-group1.
+      ls_db-group2      = <ls_finding>-group2.
+      ls_db-rule_id     = <ls_finding>-rule_id.
+      ls_db-check_code  = <ls_finding>-check_code.
+      ls_db-severity    = <ls_finding>-severity.
+      ls_db-action      = <ls_finding>-action.
+      ls_db-amount      = <ls_finding>-amount.
+      ls_db-currency    = <ls_finding>-currency.
+      ls_db-reference   = <ls_finding>-reference.
+      ls_db-message     = <ls_finding>-message.
+      ls_db-details     = <ls_finding>-details.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
       ls_db-first_seen_at = lv_now.
       ls_db-occurrences   = 1.
-      IF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) >= 2.
+      IF zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ) >= 2.
         ls_db-disposition = gc_disposition-open.
         ls_db-due_date    = lv_today + sla_days( iv_pe_area   = cs_run-pe_area
-                                                 iv_severity = ls_finding-severity ).
+                                                 iv_severity = <ls_finding>-severity ).
       ELSE.
         ls_db-disposition = gc_disposition-information.
       ENDIF.
@@ -359,10 +360,10 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     DATA lt_resolved TYPE tt_db_update.
     DATA ls_resolved TYPE ty_db_update.
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    LOOP AT lt_open INTO DATA(ls_open).
+    LOOP AT lt_open ASSIGNING FIELD-SYMBOL(<ls_open>).
       CLEAR ls_resolved.
-      ls_resolved-run_id              = ls_open-run_id.
-      ls_resolved-finding_no          = ls_open-finding_no.
+      ls_resolved-run_id              = <ls_open>-run_id.
+      ls_resolved-finding_no          = <ls_open>-finding_no.
       ls_resolved-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
       ls_resolved-resolved_by         = sy-uname.
       ls_resolved-resolved_at         = lv_now.
@@ -453,8 +454,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
         AND run_id    <> @iv_exclude_run
       ORDER BY started_at, run_id
       INTO TABLE @DATA(lt_db).
-    LOOP AT lt_db INTO DATA(ls_db).
-      DATA(ls_full) = CORRESPONDING zcd_ops_run( ls_db ).
+    LOOP AT lt_db ASSIGNING FIELD-SYMBOL(<ls_db>).
+      DATA(ls_full) = CORRESPONDING zcd_ops_run( <ls_db> ).
       INSERT map_run_from_db( ls_full ) INTO TABLE rt_runs.
     ENDLOOP.
   ENDMETHOD.
@@ -470,8 +471,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
         AND started_at >= @iv_since
       ORDER BY started_at
       INTO TABLE @DATA(lt_db).
-    LOOP AT lt_db INTO DATA(ls_db).
-      DATA(ls_full) = CORRESPONDING zcd_ops_run( ls_db ).
+    LOOP AT lt_db ASSIGNING FIELD-SYMBOL(<ls_db>).
+      DATA(ls_full) = CORRESPONDING zcd_ops_run( <ls_db> ).
       INSERT map_run_from_db( ls_full ) INTO TABLE rt_runs.
     ENDLOOP.
   ENDMETHOD.

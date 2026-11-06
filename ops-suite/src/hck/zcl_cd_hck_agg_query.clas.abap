@@ -10,6 +10,7 @@
 *& 2026-11-06 | Query keeps its definition (audit A56).
 *& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -218,13 +219,13 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT it_rows INTO DATA(ls_row).
-      ls_metric-dim1  = COND #( WHEN is_def-group_field IS INITIAL OR ls_row-group_value IS INITIAL
+    LOOP AT it_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      ls_metric-dim1  = COND #( WHEN is_def-group_field IS INITIAL OR <ls_row>-group_value IS INITIAL
                                 THEN zif_cd_hck_types=>gc_default_key
-                                ELSE ls_row-group_value ).
+                                ELSE <ls_row>-group_value ).
       ls_metric-value = COND #( WHEN to_upper( is_def-agg_func ) = zif_cd_hck_types=>gc_agg_func-sum
-                                THEN ls_row-total
-                                ELSE ls_row-row_count ).
+                                THEN <ls_row>-total
+                                ELSE <ls_row>-row_count ).
       INSERT ls_metric INTO TABLE rt_metrics.
     ENDLOOP.
 
@@ -236,8 +237,8 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     LOOP AT rt_metrics ASSIGNING FIELD-SYMBOL(<ls_measured>).
       INSERT <ls_measured>-dim1 INTO TABLE lt_measured.
     ENDLOOP.
-    LOOP AT it_expected INTO DATA(lv_expected).
-      ls_metric-dim1 = lv_expected.
+    LOOP AT it_expected ASSIGNING FIELD-SYMBOL(<lv_expected>).
+      ls_metric-dim1 = <lv_expected>.
       INSERT ls_metric-dim1 INTO TABLE lt_measured.
       IF sy-subrc = 0.
         INSERT ls_metric INTO TABLE rt_metrics.
@@ -315,8 +316,8 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     DATA(lv_operator) = to_upper( iv_operator ).
 
     IF lv_operator = zif_cd_hck_types=>gc_operator-in_set.
-      LOOP AT zcl_cd_ops_util=>split_list( iv_value ) INTO DATA(lv_token).
-        INSERT literal( iv_value = lv_token iv_field = lv_field iv_kind = lv_kind ) INTO TABLE lt_literals.
+      LOOP AT zcl_cd_ops_util=>split_list( iv_value ) ASSIGNING FIELD-SYMBOL(<lv_token>).
+        INSERT literal( iv_value = <lv_token> iv_field = lv_field iv_kind = lv_kind ) INTO TABLE lt_literals.
       ENDLOOP.
       IF lt_literals IS INITIAL.
         RAISE EXCEPTION TYPE zcx_cd_ops_error

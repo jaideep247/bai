@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A05: technical database error of the event insert ends the save.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 CLASS lcl_buffer DEFINITION FINAL.
   PUBLIC SECTION.
@@ -115,14 +116,14 @@ CLASS lsc_fmonfile IMPLEMENTATION.
     DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
     DATA(lo_dao) = zcl_cd_fmon_factory=>get_dao( ).
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    LOOP AT lcl_buffer=>gt_manual INTO DATA(ls_manual).
+    LOOP AT lcl_buffer=>gt_manual ASSIGNING FIELD-SYMBOL(<ls_manual>).
       CLEAR ls_event.
-      ls_event-file_id    = ls_manual-file_id.
-      ls_event-stage      = ls_manual-stage.
+      ls_event-file_id    = <ls_manual>-file_id.
+      ls_event-stage      = <ls_manual>-stage.
       ls_event-event_at   = lv_now.
       ls_event-src_id     = zif_cd_fmon_types=>gc_manual_src_id.
-      ls_event-src_key    = ls_manual-evidence.
-      ls_event-info       = ls_manual-reason.
+      ls_event-src_key    = <ls_manual>-evidence.
+      ls_event-info       = <ls_manual>-reason.
       ls_event-created_by = sy-uname.
       ls_event-created_at = lv_now.
       TRY.

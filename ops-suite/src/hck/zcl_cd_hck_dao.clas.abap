@@ -21,6 +21,7 @@
 *& 2026-11-06 | Performance fix 7: metric history - latest point per run by ROW_NUMBER( ) in a CTE, newest runs
 *&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -152,10 +153,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e303(zcd_ops) WITH lv_name.
     ENDIF.
-    LOOP AT lt_ddic INTO DATA(ls_ddic).
-      INSERT VALUE #( fieldname = ls_ddic-fieldname
-                      type_kind = ls_ddic-inttype
-                      keyflag   = ls_ddic-keyflag ) INTO TABLE rt_fields.
+    LOOP AT lt_ddic ASSIGNING FIELD-SYMBOL(<ls_ddic>).
+      INSERT VALUE #( fieldname = <ls_ddic>-fieldname
+                      type_kind = <ls_ddic>-inttype
+                      keyflag   = <ls_ddic>-keyflag ) INTO TABLE rt_fields.
     ENDLOOP.
   ENDMETHOD.
 
@@ -249,19 +250,19 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     IF it_metrics IS INITIAL.
       RETURN.
     ENDIF.
-    LOOP AT it_metrics INTO DATA(ls_metric).
+    LOOP AT it_metrics ASSIGNING FIELD-SYMBOL(<ls_metric>).
       CLEAR ls_db.
-      ls_db-run_id      = ls_metric-run_id.
-      ls_db-check_id    = ls_metric-check_id.
-      ls_db-metric      = ls_metric-metric.
-      ls_db-dim1        = ls_metric-dim1.
-      ls_db-dim2        = ls_metric-dim2.
-      ls_db-value       = ls_metric-value.
-      ls_db-measured_at = ls_metric-measured_at.
+      ls_db-run_id      = <ls_metric>-run_id.
+      ls_db-check_id    = <ls_metric>-check_id.
+      ls_db-metric      = <ls_metric>-metric.
+      ls_db-dim1        = <ls_metric>-dim1.
+      ls_db-dim2        = <ls_metric>-dim2.
+      ls_db-value       = <ls_metric>-value.
+      ls_db-measured_at = <ls_metric>-measured_at.
       " A88: the analytics aggregate by kind - an unclassified metric is a volume
-      ls_db-kind        = COND #( WHEN ls_metric-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
-                                  ELSE ls_metric-kind ).
-      ls_db-weight      = ls_metric-weight.
+      ls_db-kind        = COND #( WHEN <ls_metric>-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
+                                  ELSE <ls_metric>-kind ).
+      ls_db-weight      = <ls_metric>-weight.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " a duplicate key inside one run is a repeated measurement: keep the first
@@ -301,8 +302,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
 
     DATA(lt_fields) = zif_cd_hck_dao~get_table_fields( iv_tabname ).
-    LOOP AT lt_fields INTO DATA(ls_field).
-      INSERT CONV string( ls_field-fieldname ) INTO TABLE lt_names.
+    LOOP AT lt_fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+      INSERT CONV string( <ls_field>-fieldname ) INTO TABLE lt_names.
     ENDLOOP.
     lv_select = concat_lines_of( table = lt_names sep = `, ` ).
     DATA(lv_from) = to_upper( condense( CONV string( iv_tabname ) ) ).
@@ -358,14 +359,14 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~save_baselines.
     DATA lt_db TYPE STANDARD TABLE OF zcd_hck_baseline WITH EMPTY KEY.
     DATA ls_db TYPE zcd_hck_baseline.
-    LOOP AT it_baselines INTO DATA(ls_baseline).
+    LOOP AT it_baselines ASSIGNING FIELD-SYMBOL(<ls_baseline>).
       CLEAR ls_db.
-      ls_db-tabname   = ls_baseline-tabname.
-      ls_db-hash      = ls_baseline-hash.
-      ls_db-row_count = ls_baseline-row_count.
-      ls_db-taken_at  = ls_baseline-taken_at.
-      ls_db-taken_by  = ls_baseline-taken_by.
-      ls_db-hash_version = ls_baseline-hash_version.
+      ls_db-tabname   = <ls_baseline>-tabname.
+      ls_db-hash      = <ls_baseline>-hash.
+      ls_db-row_count = <ls_baseline>-row_count.
+      ls_db-taken_at  = <ls_baseline>-taken_at.
+      ls_db-taken_by  = <ls_baseline>-taken_by.
+      ls_db-hash_version = <ls_baseline>-hash_version.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     MODIFY zcd_hck_baseline FROM TABLE @lt_db.
@@ -605,9 +606,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     ENDIF.
     rs_stat-lock_entries = lv_number.
     "VERIFY-DDIC: SEQG3-GTDATE / GTTIME (date and time the lock was set)
-    LOOP AT lt_enq INTO DATA(ls_enq).
-      DATA(lv_age) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = ls_enq-gtdate
-                                                             iv_from_time = ls_enq-gttime
+    LOOP AT lt_enq ASSIGNING FIELD-SYMBOL(<ls_enq>).
+      DATA(lv_age) = zcl_cd_hck_cycle_eval=>minutes_between( iv_from_date = <ls_enq>-gtdate
+                                                             iv_from_time = <ls_enq>-gttime
                                                              iv_to_date   = iv_now_date
                                                              iv_to_time   = iv_now_time ).
       rs_stat-lock_max_age_min = nmax( val1 = rs_stat-lock_max_age_min

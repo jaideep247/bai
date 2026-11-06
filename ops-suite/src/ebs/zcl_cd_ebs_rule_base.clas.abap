@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A65: document keys checked against the DDIC key width and format before conversion (no truncation).
 *& 2026-11-06 | FS-CD review: in-flight grace - not found within EBS_INFLIGHT_HOURS is AWAITING_LOT_TRANSFER (W, NOTIFY).
 *& 2026-11-06 | Perf fix 1: DFKKCR read once per package (memo for R07C/R08/R12), rows canonicalised once (sorted index).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -557,8 +558,8 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD docno_keys.
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(lv_reference) = line_reference( ls_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(lv_reference) = line_reference( <ls_line> ).
       IF lv_reference IS NOT INITIAL.
         INSERT docno_key( lv_reference ) INTO TABLE rt_keys.
       ENDIF.

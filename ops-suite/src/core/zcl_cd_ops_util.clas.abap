@@ -9,6 +9,7 @@
 *& 2026-11-06 | text( ): user-facing texts are ZCD_OPS messages (phase 5, remove hardcoding).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -158,11 +159,11 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
 
   METHOD worst_severity.
     DATA lv_best_rank TYPE i.
-    LOOP AT it_findings INTO DATA(ls_finding).
-      DATA(lv_rank) = severity_rank( ls_finding-severity ).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      DATA(lv_rank) = severity_rank( <ls_finding>-severity ).
       IF lv_rank > lv_best_rank.
         lv_best_rank = lv_rank.
-        rv_severity  = ls_finding-severity.
+        rv_severity  = <ls_finding>-severity.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

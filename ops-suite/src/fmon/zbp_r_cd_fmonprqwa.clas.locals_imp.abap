@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 CLASS lhc_handled DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -54,13 +55,13 @@ CLASS lhc_handled IMPLEMENTATION.
     READ ENTITIES OF zr_cd_fmonprqwa IN LOCAL MODE
       ENTITY Handled FIELDS ( RequestRef Reference Reason ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
-    LOOP AT lt_rows INTO DATA(ls_row).
-      DATA(ls_decision) = zcl_cd_fmon_ops_policy=>check_handled( iv_request_ref = ls_row-RequestRef
-                                                                 iv_reference   = ls_row-Reference
-                                                                 iv_reason      = ls_row-Reason ).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      DATA(ls_decision) = zcl_cd_fmon_ops_policy=>check_handled( iv_request_ref = <ls_row>-RequestRef
+                                                                 iv_reference   = <ls_row>-Reference
+                                                                 iv_reason      = <ls_row>-Reason ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-handled.
-        APPEND VALUE #( %tky = ls_row-%tky
+        APPEND VALUE #( %tky = <ls_row>-%tky ) TO failed-handled.
+        APPEND VALUE #( %tky = <ls_row>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error ) )
           TO reported-handled.
@@ -87,19 +88,19 @@ CLASS lsc_handled IMPLEMENTATION.
       RESULT DATA(lt_rows).
     DATA(lo_exc_dao) = zcl_cd_ops_factory=>get_exc_dao( ).
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    LOOP AT lt_rows INTO DATA(ls_row).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       TRY.
           lo_exc_dao->resolve( it_keys      = lo_exc_dao->find_open(
                                                 iv_pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor
-                                                iv_object_key = to_upper( ls_row-RequestRef ) )
+                                                iv_object_key = to_upper( <ls_row>-RequestRef ) )
                                iv_action    = zif_cd_ops_exc_types=>gc_action-manual
-                               iv_reason    = ls_row-Reason
-                               iv_reference = ls_row-Reference
+                               iv_reason    = <ls_row>-Reason
+                               iv_reference = <ls_row>-Reference
                                iv_user      = sy-uname
                                iv_at        = lv_now ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the record itself is saved; the exception stays open and visible in the exceptions app
-          APPEND VALUE #( %tky = ls_row-%tky
+          APPEND VALUE #( %tky = <ls_row>-%tky
                           %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
                                               v1 = lx_error->get_text( ) ) ) TO reported-handled.

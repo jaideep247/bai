@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Query keeps its specification (audit A56).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - value queries for known tables</p>
 CLASS zcl_cd_hck_value_query DEFINITION
@@ -114,8 +115,8 @@ CLASS zcl_cd_hck_value_query IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e323(zcd_ops) WITH iv_tabname.
     ENDIF.
 
-    LOOP AT it_return INTO DATA(lv_return) FROM 1 TO 3.
-      DATA(lv_field) = CONV zif_cd_hck_types=>ty_fieldname( to_upper( condense( lv_return ) ) ).
+    LOOP AT it_return ASSIGNING FIELD-SYMBOL(<lv_return>) FROM 1 TO 3.
+      DATA(lv_field) = CONV zif_cd_hck_types=>ty_fieldname( to_upper( condense( <lv_return> ) ) ).
       DATA(ls_field) = VALUE #( it_fields[ fieldname = lv_field ] OPTIONAL ).
       IF ls_field IS INITIAL.
         RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e304(zcd_ops) WITH lv_field iv_tabname.
@@ -128,10 +129,10 @@ CLASS zcl_cd_hck_value_query IMPLEMENTATION.
       INSERT CONV string( lv_field ) INTO TABLE lt_order.
     ENDLOOP.
 
-    LOOP AT it_conditions INTO DATA(ls_condition).
-      INSERT zcl_cd_hck_agg_query=>condition( iv_field    = ls_condition-field
-                                              iv_operator = ls_condition-operator
-                                              iv_value    = ls_condition-value
+    LOOP AT it_conditions ASSIGNING FIELD-SYMBOL(<ls_condition>).
+      INSERT zcl_cd_hck_agg_query=>condition( iv_field    = <ls_condition>-field
+                                              iv_operator = <ls_condition>-operator
+                                              iv_value    = <ls_condition>-value
                                               iv_tabname  = iv_tabname
                                               it_fields   = it_fields ) INTO TABLE lt_where.
     ENDLOOP.
@@ -165,8 +166,8 @@ CLASS zcl_cd_hck_value_query IMPLEMENTATION.
 
 
   METHOD keys.
-    LOOP AT it_rows INTO DATA(ls_row).
-      INSERT ls_row-v1 INTO TABLE rt_keys.
+    LOOP AT it_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT <ls_row>-v1 INTO TABLE rt_keys.
     ENDLOOP.
   ENDMETHOD.
 

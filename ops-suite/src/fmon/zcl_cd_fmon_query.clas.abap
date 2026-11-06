@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A51: CHECK_APPROVED against ZCD_FMON_TABWL.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC validation of configured reads</p>
 CLASS zcl_cd_fmon_query DEFINITION
@@ -94,9 +95,9 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
         MESSAGE e202(zcd_ops) WITH is_query-table_name.
     ENDIF.
 
-    LOOP AT is_query-fields INTO DATA(ls_qfield).
+    LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_qfield>).
       check_field( iv_table  = is_query-table_name
-                   iv_field  = ls_qfield-field
+                   iv_field  = <ls_qfield>-field
                    it_fields = it_fields ).
     ENDLOOP.
 
@@ -149,8 +150,8 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
     IF line_exists( lt_table_rows[ field_name = zif_cd_fmon_types=>gc_wildcard ] ).
       RETURN.
     ENDIF.
-    LOOP AT is_query-fields INTO DATA(ls_field).
-      INSERT to_upper( condense( ls_field-field ) ) INTO TABLE lt_used.
+    LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+      INSERT to_upper( condense( <ls_field>-field ) ) INTO TABLE lt_used.
     ENDLOOP.
     IF is_query-date_field IS NOT INITIAL.
       INSERT to_upper( condense( is_query-date_field ) ) INTO TABLE lt_used.
@@ -158,10 +159,10 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
     IF is_query-in_field IS NOT INITIAL.
       INSERT to_upper( condense( is_query-in_field ) ) INTO TABLE lt_used.
     ENDIF.
-    LOOP AT lt_used INTO DATA(lv_field).
-      IF NOT line_exists( lt_table_rows[ field_name = lv_field ] ).
+    LOOP AT lt_used ASSIGNING FIELD-SYMBOL(<lv_field>).
+      IF NOT line_exists( lt_table_rows[ field_name = <lv_field> ] ).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e249(zcd_ops) WITH lv_field lv_table.
+          MESSAGE e249(zcd_ops) WITH <lv_field> lv_table.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

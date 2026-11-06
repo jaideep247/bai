@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A32: imported entry without posting rule reported (POSTING_RULE_UNRESOLVED).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R15 - posting rule resolves</p>
 CLASS zcl_cd_ebs_r_r15_posting_rule DEFINITION
@@ -28,28 +29,28 @@ CLASS zcl_cd_ebs_r_r15_posting_rule IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     DATA lt_statements TYPE tt_stmt_hash.
     lt_statements = it_statements.
-    LOOP AT it_lines INTO DATA(ls_line).
-      IF ls_line-map_posting IS INITIAL.
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      IF <ls_line>-map_posting IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_missing
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_missing
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_rule_missing
-                                                     iv_v1    = ls_line-btc_code ) ) INTO TABLE rt_findings.
-      ELSEIF ls_line-posting_rule IS INITIAL.
+                                                     iv_v1    = <ls_line>-btc_code ) ) INTO TABLE rt_findings.
+      ELSEIF <ls_line>-posting_rule IS INITIAL.
         " A32: an imported entry FF_5 could not interpret (no VGINT) is reported; a parsed
         " file has no posting rule yet
-        IF VALUE #( lt_statements[ stmt_key = ls_line-stmt_key ]-source OPTIONAL ) = zif_cd_ebs_types=>gc_source-feb.
+        IF VALUE #( lt_statements[ stmt_key = <ls_line>-stmt_key ]-source OPTIONAL ) = zif_cd_ebs_types=>gc_source-feb.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_unresolved
+                   is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_unresolved
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_rule_unresolved
-                                                       iv_v1    = zcl_cd_ebs_finding=>line_key( ls_line )
-                                                       iv_v2    = ls_line-map_posting ) ) INTO TABLE rt_findings.
+                                                       iv_v1    = zcl_cd_ebs_finding=>line_key( <ls_line> )
+                                                       iv_v2    = <ls_line>-map_posting ) ) INTO TABLE rt_findings.
         ENDIF.
-      ELSEIF ls_line-posting_rule <> ls_line-map_posting.
+      ELSEIF <ls_line>-posting_rule <> <ls_line>-map_posting.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_mismatch
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_mismatch
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_rule_mismatch
-                                                     iv_v1    = ls_line-posting_rule
-                                                     iv_v2    = ls_line-map_posting ) )
+                                                     iv_v1    = <ls_line>-posting_rule
+                                                     iv_v2    = <ls_line>-map_posting ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.

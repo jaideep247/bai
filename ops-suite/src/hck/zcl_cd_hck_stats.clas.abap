@@ -5,6 +5,7 @@
 *& standard deviation, percentile, z-score and IQR outlier test.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - statistics (pure, no DB)</p>
 "! Empty input never dumps: every function returns 0 / abap_false.
@@ -79,8 +80,8 @@ CLASS zcl_cd_hck_stats IMPLEMENTATION.
     IF it_values IS INITIAL.
       RETURN.
     ENDIF.
-    LOOP AT it_values INTO DATA(lv_value).
-      lv_sum = lv_sum + lv_value.
+    LOOP AT it_values ASSIGNING FIELD-SYMBOL(<lv_value>).
+      lv_sum = lv_sum + <lv_value>.
     ENDLOOP.
     rv_value = lv_sum / lines( it_values ).
   ENDMETHOD.
@@ -99,8 +100,8 @@ CLASS zcl_cd_hck_stats IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lv_mean) = mean( it_values ).
-    LOOP AT it_values INTO DATA(lv_value).
-      lv_sum_sq = lv_sum_sq + ( lv_value - lv_mean ) ** 2.
+    LOOP AT it_values ASSIGNING FIELD-SYMBOL(<lv_value>).
+      lv_sum_sq = lv_sum_sq + ( <lv_value> - lv_mean ) ** 2.
     ENDLOOP.
     rv_value = sqrt( lv_sum_sq / ( lv_count - 1 ) ).
   ENDMETHOD.

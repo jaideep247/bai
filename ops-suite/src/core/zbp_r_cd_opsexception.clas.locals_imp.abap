@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! Content IDs of the history rows created by each action (one per action)
 INTERFACE lif_c.
@@ -58,17 +59,17 @@ CLASS lhc_exception IMPLEMENTATION.
       ENTITY Exception
         FIELDS ( PaymentEngineArea ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_exceptions).
-    LOOP AT lt_exceptions INTO DATA(ls_exception).
+    LOOP AT lt_exceptions ASSIGNING FIELD-SYMBOL(<ls_exception>).
       DATA(lv_change) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-change
-                                                         iv_pe_area   = ls_exception-PaymentEngineArea ) = abap_true
+                                                         iv_pe_area   = <ls_exception>-PaymentEngineArea ) = abap_true
                                 THEN if_abap_behv=>auth-allowed
                                 ELSE if_abap_behv=>auth-unauthorized ).
       DATA(lv_approve) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-approve
-                                                          iv_pe_area   = ls_exception-PaymentEngineArea ) = abap_true
+                                                          iv_pe_area   = <ls_exception>-PaymentEngineArea ) = abap_true
                                  THEN if_abap_behv=>auth-allowed
                                  ELSE if_abap_behv=>auth-unauthorized ).
       " answer only what the framework asked for
-      APPEND VALUE #( %tky                     = ls_exception-%tky
+      APPEND VALUE #( %tky                     = <ls_exception>-%tky
                       %action-assignOwner      = COND #( WHEN requested_authorizations-%action-assignOwner = if_abap_behv=>mk-on
                                                          THEN lv_change )
                       %action-resolveException = COND #( WHEN requested_authorizations-%action-resolveException = if_abap_behv=>mk-on

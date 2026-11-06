@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (USAA known tables, phase 3).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - paid payment request left CANCELLED</p>
 "! PARAM1 TABLE=ZCD_PAYM_REQ_LOG;KEY=<FIN number>;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=..
@@ -104,14 +105,14 @@ CLASS zcl_cd_hck_c_prq_cancel IMPLEMENTATION.
                                                                   it_paid      = lt_paid_keys ).
     INSERT VALUE #( metric = gc_metric dim1 = zif_cd_hck_types=>gc_default_key value = lines( lt_found ) )
       INTO TABLE rs_result-metrics.
-    LOOP AT lt_found INTO DATA(lv_fin) FROM 1 TO lv_max.
-      INSERT VALUE #( object_key = lv_fin
+    LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<lv_fin>) FROM 1 TO lv_max.
+      INSERT VALUE #( object_key = <lv_fin>
                       check_code = gc_code
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
-                      reference  = lv_fin
+                      reference  = <lv_fin>
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-payment_request_is_cancelle
-                                                          iv_v1    = lv_fin ) )
+                                                          iv_v1    = <lv_fin> ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
   ENDMETHOD.
