@@ -398,3 +398,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 745 | Pattern migration: &1 converted, &2 refused, &3 unchanged; test mode &4 |
 | 746 | &1 value(s) read, &2 matched by no pattern, &3 pattern(s) match nothing |
 | 747 | Row cap &1 reached reading the values of &2 - list may be incomplete |
+| 748 | Configuration cannot be changed in this client - run the migration in DV1 |

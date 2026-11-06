@@ -2360,6 +2360,12 @@
      <MSGNR>747</MSGNR>
      <TEXT>Row cap &amp;1 reached reading the values of &amp;2 - list may be incomplete</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>748</MSGNR>
+     <TEXT>Configuration cannot be changed in this client - run the migration in DV1</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

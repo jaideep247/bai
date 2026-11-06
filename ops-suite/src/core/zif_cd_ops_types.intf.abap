@@ -330,6 +330,7 @@ INTERFACE zif_cd_ops_types
       pattern_migration           TYPE zif_cd_ops_types=>ty_msgno VALUE '745',
       pattern_check_summary       TYPE zif_cd_ops_types=>ty_msgno VALUE '746',
       pattern_values_capped       TYPE zif_cd_ops_types=>ty_msgno VALUE '747',
+      pattern_not_changeable      TYPE zif_cd_ops_types=>ty_msgno VALUE '748',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -149,6 +149,8 @@ docs/portable_checks.json,Doc,
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
 docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_pattern_check.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_pattern_migrate.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_payment_trace.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_purge.prog.texts.md,Doc,
 docs/text_elements/zcl_cd_hck_report_html.clas.texts.md,Doc,
@@ -242,6 +244,10 @@ src/core/zcd_ops_exc_hist.tabl.xml,abapGit,
 src/core/zcd_ops_finding.tabl.xml,abapGit,
 src/core/zcd_ops_lock.tabl.xml,abapGit,
 src/core/zcd_ops_param.tabl.xml,abapGit,
+src/core/zcd_ops_pattern_check.prog.abap,ABAP,"Pattern check (read-only, user decision 2026-11-06): for one pattern area"
+src/core/zcd_ops_pattern_check.prog.xml,abapGit,
+src/core/zcd_ops_pattern_migrate.prog.abap,ABAP,One-off migration of the configured CP wildcard patterns to PCRE (user
+src/core/zcd_ops_pattern_migrate.prog.xml,abapGit,
 src/core/zcd_ops_payment_trace.prog.abap,ABAP,360 degree payment trace for L1 / L2 support (read-only): enter a FIN
 src/core/zcd_ops_payment_trace.prog.xml,abapGit,
 src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's history (ZCL_CD_OPS_PURGE):
@@ -310,6 +316,12 @@ src/core/zcl_cd_ops_lock.clas.xml,abapGit,
 src/core/zcl_cd_ops_ovw_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the production-support overview page
 src/core/zcl_cd_ops_ovw_cds_test.clas.testclasses.abap,ABAP,CDS tests of the production-support overview page on
 src/core/zcl_cd_ops_ovw_cds_test.clas.xml,abapGit,
+src/core/zcl_cd_ops_pattern_check.clas.abap,ABAP,Pure pattern logic behind the reports ZCD_OPS_PATTERN_CHECK and
+src/core/zcl_cd_ops_pattern_check.clas.testclasses.abap,ABAP,Domain tests of the pattern check and the CP-to-PCRE conversion rule:
+src/core/zcl_cd_ops_pattern_check.clas.xml,abapGit,
+src/core/zcl_cd_ops_pattern_dao.clas.abap,ABAP,All SQL of the pattern check and the pattern migration. Reads configured
+src/core/zcl_cd_ops_pattern_dao.clas.testclasses.abap,ABAP,OSQL tests of the pattern check and migration repository: active patterns
+src/core/zcl_cd_ops_pattern_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_plugin_probe.clas.abap,ABAP,Test support for ZCL_CD_OPS_FACTORY=>GET_PLUGIN (audit A62): a class that
 src/core/zcl_cd_ops_plugin_probe.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge.clas.abap,ABAP,"Retention purge of the suite's own history: runs with their findings, alert"
@@ -386,6 +398,10 @@ src/core/zif_cd_ops_exc_types.intf.abap,ABAP,"Types and constants of the excepti
 src/core/zif_cd_ops_exc_types.intf.xml,abapGit,
 src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per payment engine area + variant at a time. The lock survives COMMIT WORK
 src/core/zif_cd_ops_lock.intf.xml,abapGit,
+src/core/zif_cd_ops_pattern_dao.intf.abap,ABAP,Repository of the pattern check and the pattern migration: configured
+src/core/zif_cd_ops_pattern_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_pattern_types.intf.abap,ABAP,Types and constants of the pattern check and the pattern migration
+src/core/zif_cd_ops_pattern_types.intf.xml,abapGit,
 src/core/zif_cd_ops_purge_dao.intf.abap,ABAP,"SQL for the retention purge: count and delete, one package at a time, the"
 src/core/zif_cd_ops_purge_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),"
@@ -1303,17 +1319,12 @@ tools/test_checks.py,Other,
 tools/test_path_register.csv,Doc,
 tools/__pycache__/literal_scan.cpython-313.pyc,Other,
 tools/__pycache__/name_checks.cpython-313.pyc,Other,
-tools/__pycache__/rap_generate.cpython-313.pyc,Other,
 tools/__pycache__/test_checks.cpython-313.pyc,Other,
 tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_modernize.py,Other,
 tools/tests/test_name_checks.py,Other,
+tools/tests/test_pattern_dao_fields.py,Other,
 tools/tests/test_pcre_only.py,Other,
 tools/tests/test_rap_generate.py,Other,
 tools/tests/test_test_checks.py,Other,
-tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_modernize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_name_checks.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_pcre_only.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_rap_generate.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_test_checks.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_pattern_dao_fields.cpython-313.pyc,Other,
