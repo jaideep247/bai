@@ -6,6 +6,7 @@
 *& terminal outcomes are final except the inbound re-run improvement.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | manual_allowed( ) for the manual-status app (design 6.4).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - file status state machine</p>
 "! Rules (also in FMON_FILE_MONITORING.md):
@@ -52,6 +53,15 @@ CLASS zcl_cd_fmon_status DEFINITION
         cs_file          TYPE zif_cd_fmon_types=>ty_file
       RETURNING
         VALUE(rv_result) TYPE zif_cd_fmon_types=>ty_transition.
+
+    "! Manual status (design 6.4): allowed only where APPLY would advance or update
+    "! the file. Works on a copy - the file passed in is not changed.
+    CLASS-METHODS manual_allowed
+      IMPORTING
+        iv_stage          TYPE zif_cd_fmon_types=>ty_stage
+        is_file           TYPE zif_cd_fmon_types=>ty_file
+      RETURNING
+        VALUE(rv_allowed) TYPE abap_bool.
 
   PRIVATE SECTION.
 
@@ -153,6 +163,16 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
                          iv_unprocessed = iv_unprocessed
                CHANGING  cs_file        = cs_file ).
     rv_result = zif_cd_fmon_types=>gc_transition-advanced.
+  ENDMETHOD.
+
+
+  METHOD manual_allowed.
+    DATA(ls_copy) = is_file.
+    DATA(lv_result) = apply( EXPORTING iv_stage       = iv_stage
+                                       iv_unprocessed = is_file-unprocessed_count
+                             CHANGING  cs_file        = ls_copy ).
+    rv_allowed = xsdbool( lv_result = zif_cd_fmon_types=>gc_transition-advanced
+                       OR lv_result = zif_cd_fmon_types=>gc_transition-updated ).
   ENDMETHOD.
 
 

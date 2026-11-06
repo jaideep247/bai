@@ -6,6 +6,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | PRISM SUCCESS rule and manual status tests (design 6.4, 6.5).
 *&---------------------------------------------------------------------*
 CLASS ltc_status DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -43,6 +44,10 @@ CLASS ltc_status DEFINITION FINAL
     METHODS partial_count_is_updated FOR TESTING.
     METHODS wrong_direction_is_rejected FOR TESTING.
     METHODS unknown_stage_is_rejected FOR TESTING.
+    METHODS success_wins_over_later_fail FOR TESTING.
+    METHODS success_after_fail_wins FOR TESTING.
+    METHODS manual_forward_is_allowed FOR TESTING.
+    METHODS manual_backward_is_refused FOR TESTING.
 
 ENDCLASS.
 
@@ -233,6 +238,74 @@ CLASS ltc_status IMPLEMENTATION.
         DATA(lv_result) = act( 'SOMETHING_ELSE' ).
         cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-rejected
                                             msg = 'Unknown stage must be rejected' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM payment requests, ZCD_PAYM_REQ_LOG): a request with a SUCCESS row is
+  " FULLY_PROCESSED; a failed attempt written later must not downgrade it.
+  METHOD success_wins_over_later_fail.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true
+                                     stage   = zif_cd_fmon_types=>gc_stage-fully
+                                     outcome = zif_cd_fmon_types=>gc_stage-fully ) ).
+        DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-failed ).
+        cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'A later FAILED row must be ignored' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-fully
+                                            msg = 'The request must stay FULLY_PROCESSED' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM): a SUCCESS row after failed attempts makes the request FULLY_PROCESSED.
+  METHOD success_after_fail_wins.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true
+                                     stage   = zif_cd_fmon_types=>gc_stage-failed
+                                     outcome = zif_cd_fmon_types=>gc_stage-failed ) ).
+        DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-fully ).
+        cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'SUCCESS after FAILED must advance' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-fully
+                                            msg = 'The request must become FULLY_PROCESSED' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (manual status, design 6.4): operations may set a stage by hand only where
+  " the state machine itself would move the file; the file is not changed by the check.
+  METHOD manual_forward_is_allowed.
+    TRY.
+        configure_scenario( VALUE #( stage = zif_cd_fmon_types=>gc_stage-sent ) ).
+        DATA(lv_allowed) = zcl_cd_fmon_status=>manual_allowed( iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                                                               is_file  = ms_file ).
+        cl_abap_unit_assert=>assert_true( act = lv_allowed msg = 'SENT -> ACK_RECEIVED must be allowed by hand' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-sent
+                                            msg = 'The check must not change the file' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (manual status): going back, or overwriting a final outcome, is refused.
+  METHOD manual_backward_is_refused.
+    TRY.
+        configure_scenario( VALUE #( stage   = zif_cd_fmon_types=>gc_stage-ack
+                                     outcome = zif_cd_fmon_types=>gc_stage-ack ) ).
+        cl_abap_unit_assert=>assert_false(
+          act = zcl_cd_fmon_status=>manual_allowed( iv_stage = zif_cd_fmon_types=>gc_stage-sent is_file = ms_file )
+          msg = 'ACK_RECEIVED -> SENT must be refused' ).
+        cl_abap_unit_assert=>assert_false(
+          act = zcl_cd_fmon_status=>manual_allowed( iv_stage = zif_cd_fmon_types=>gc_stage-nack is_file = ms_file )
+          msg = 'A final ACK must not be overwritten by hand' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
