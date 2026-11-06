@@ -1,0 +1,86 @@
+// UI annotations: EBS validation dashboard - returns / NOC by reason
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Return / NOC item', typeNamePlural: 'Returns / NOC items',
+                  title: { type: #STANDARD, value: 'LotItemKey' },
+                  description: { type: #STANDARD, value: 'Reason' } }
+@UI.chart: [ { qualifier: 'ByReason',
+               title: 'Returns and NOCs by reason',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'Reason', 'LotKind' ],
+               measures: [ 'LotItemCount' ],
+               dimensionAttributes: [ { dimension: 'Reason', role: #CATEGORY },
+                                      { dimension: 'LotKind', role: #SERIES } ],
+               measureAttributes: [ { measure: 'LotItemCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BookingDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByReason' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_EbsRetNoc with
+{
+  @UI.facet: [ { id: 'Item', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Lot item', position: 10 } ]
+  @EndUserText.label: 'Statement short key (KUKEY)'
+  @UI.identification: [ { position: 10 } ]
+  Kukey;
+  @EndUserText.label: 'Line (ESNUM)'
+  @UI.identification: [ { position: 20 } ]
+  Esnum;
+  @EndUserText.label: 'Kind (RETURN, NOC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  LotKind;
+  @EndUserText.label: 'Lot item (return document / NOC lot/item)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  LotItemKey;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Reason (RLGRD / FLGRD)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Reason;
+  @EndUserText.label: 'Returns lot status'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 60 } ]
+  LotStatus;
+  @UI.hidden: true
+  LineObjectKey;
+  @EndUserText.label: 'Company code'
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'House bank'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  HouseBank;
+  @EndUserText.label: 'Statement date'
+  @UI.identification: [ { position: 90 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  StatementDate;
+  @EndUserText.label: 'Booking date'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  BookingDate;
+  @EndUserText.label: 'BAI / transaction code'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  BaiCode;
+  @EndUserText.label: 'Payment document / reference'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  BankReference;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 130 } ]
+  Currency;
+  @EndUserText.label: 'Line amount'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 140 } ]
+  Amount;
+  @EndUserText.label: 'Lot items'
+  LotItemCount;
+  @EndUserText.label: 'Returns'
+  ReturnCount;
+  @EndUserText.label: 'NOCs'
+  NocCount;
+}
