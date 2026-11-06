@@ -58,6 +58,17 @@ Exclude business-data updates, posting hooks or enforcement, new payment APIs or
 - Keep queries bounded and use approved tables, fields, and access paths. Enforce organizational access for scheduled and interactive users. Mask sensitive values in reports and alerts. Version operational configuration, preserve an audit trail, and retain evidence under the approved retention policy.
 - Keep findings actionable. Include severity, business impact, affected scope, supporting references, owner, and the next step in the existing runbook. Support shift handover with unresolved critical findings and their latest verified status.
 
+## Incident triage capabilities
+
+New production support functionality is encouraged when it improves investigation using existing evidence. The normal triage path is search → correlate → inspect → hand off. Build it into the existing reports or a shared support view.
+
+- **Search and correlate.** Accept an incident's available identifier, such as a file reference, job and variant, source and financial transaction ID, SAP document, check or trace number, or reconciliation key. Show the matched business date, organizational scope and related identifiers. Present competing matches for review and preserve access checks on drilldowns.
+- **Build an evidence timeline.** For each relevant stage show what was expected, what was observed, when it was last checked and where the evidence came from. Highlight the first missing or failed milestone and the affected population. Distinguish a confirmed failure from an unavailable source, stale evidence or an ambiguous match.
+- **Guide investigation.** Show the likely failure category with the evidence behind it, the next diagnostic check, the responsible team and the existing runbook link. For a missing acknowledgement, distinguish SAP generation, PRISM receipt and bank acknowledgement. For a failed job, identify the affected interval, latest attempt and relevant log. For a reconciliation break, separate timing differences from unexplained amounts and show the underlying keys.
+- **Prepare shift handover.** Provide a copyable, masked summary with business impact, evidence references, checks already performed, outstanding questions, owner and next action. Allow authorized support staff to record notes and dispositions in the suite's own findings. Keep refresh and notification actions scoped to the suite.
+
+Accept each feature only after L1/L2 can reproduce the triage path on a representative incident and verify the evidence and access controls. Confirm that searching, refreshing, drilling down and handing off leave business data, job schedules, processing decisions and external interfaces unchanged. Operators carry out recovery under the existing runbook.
+
 ## Insurance production support roadmap
 
 Add these capabilities through the existing reports and operational stores. Use existing evidence from policy, claims and reinsurance interfaces where it is available and approved. Treat missing cross-system evidence as unknown.
