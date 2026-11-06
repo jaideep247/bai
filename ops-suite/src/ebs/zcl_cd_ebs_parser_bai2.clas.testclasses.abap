@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A86: negative fixtures for empty 49/98/99 trailer fields (TRAILER_FIELD_MISSING).
+*& 2026-11-06 | Audit A95/A96: missing 49/98 block, missing-99 expectation B; funds-type layout negatives.
 *&---------------------------------------------------------------------*
 CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -87,6 +88,26 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
     METHODS trailer_98_fields_missing FOR TESTING.
     METHODS trailer_99_fields_missing FOR TESTING.
     METHODS trailer_zero_is_declared FOR TESTING.
+    METHODS missing_49_blocks FOR TESTING.
+    METHODS missing_98_blocks FOR TESTING.
+    METHODS funds_type_unsupported FOR TESTING.
+    METHODS distribution_count_missing FOR TESTING.
+    METHODS distribution_count_oversized FOR TESTING.
+
+    "! Removes the first occurrence of iv_text from the scenario (a record with its newline)
+    METHODS drop
+      IMPORTING
+        iv_text TYPE string.
+
+    "! Replaces the first 16 record (code 165) of the scenario by iv_detail
+    METHODS with_detail
+      IMPORTING
+        iv_detail TYPE string.
+
+    "! Layout finding present and no line with the code
+    METHODS assert_layout_rejected
+      IMPORTING
+        iv_code TYPE zif_cd_ebs_types=>ty_btc_code.
 
     "! Findings as OBJECT_TYPE/RULE_ID/CHECK_CODE/SEVERITY
     METHODS finding_codes
@@ -430,15 +451,15 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
-  " BAI2 99: a file without file trailer is structurally incomplete (S00 MISSING_TRAILER, E)
+  " BAI2 99: a file without file trailer is structurally incomplete (S00 MISSING_TRAILER, B - A95)
   METHOD missing_99_is_s00.
     TRY.
         configure_scenario( VALUE #( no_file_trailer = abap_true ) ).
         DATA(lt_findings) = parse( )-findings.
         cl_abap_unit_assert=>assert_equals(
           act = VALUE string_table( FOR f IN lt_findings ( |{ f-object_type }/{ f-rule_id }/{ f-check_code }/{ f-severity }| ) )
-          exp = VALUE string_table( ( |FILE/S00/{ gc_check-missing_trl }/E| ) )
-          msg = 'Missing 99 must give exactly one S00 MISSING_TRAILER finding' ).
+          exp = VALUE string_table( ( |FILE/S00/{ gc_check-missing_trl }/B| ) )
+          msg = 'Missing 99 must give exactly one blocking S00 MISSING_TRAILER finding (A95)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
@@ -549,6 +570,78 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD drop.
+    REPLACE FIRST OCCURRENCE OF iv_text IN mv_content WITH ``.
+  ENDMETHOD.
+
+  METHOD with_detail.
+    REPLACE FIRST OCCURRENCE OF `16,165,1500000,0,BR0001,INV20261103,ACH CREDIT ACME CORP/` IN mv_content WITH iv_detail.
+  ENDMETHOD.
+
+  METHOD assert_layout_rejected.
+    TRY.
+        DATA(ls_file) = parse( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_file-findings[ check_code = 'FUNDS_LAYOUT'
+                                                        severity   = zif_cd_ops_types=>gc_severity-block ] ) )
+          msg = 'A funds-type layout that cannot be read must give a blocking FUNDS_LAYOUT finding' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_file-lines[ btc_code = iv_code ] ) )
+                                           msg = 'No line with shifted or blank references may be emitted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A95 BAI2 49: an account without its trailer is blocked (S00 MISSING_TRAILER, B)
+  METHOD missing_49_blocks.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        drop( |49,+604000000,5/\n| ).
+        DATA(lt_codes) = finding_codes( parse( )-findings ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_codes[ table_line = |STMT/S00/{ gc_check-missing_trl }/B| ] ) )
+          msg = 'A missing 49 must give a blocking MISSING_TRAILER finding on the statement' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A95 BAI2 98: a group without its trailer is blocked (S00 MISSING_TRAILER, B)
+  METHOD missing_98_blocks.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        drop( `98,+604000000,1,7/` ).
+        DATA(lt_codes) = finding_codes( parse( )-findings ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_codes[ table_line = |FILE/S00/{ gc_check-missing_trl }/B| ] ) )
+          msg = 'A missing 98 must give a blocking MISSING_TRAILER finding on the file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A96: funds type X is not a BAI2 funds type - the entry is not read with guessed positions
+  METHOD funds_type_unsupported.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,X,BR0001,INV20261103,ACH CREDIT ACME CORP/` ).
+    assert_layout_rejected( '165' ).
+  ENDMETHOD.
+
+  " A96: funds type D without a distribution count would shift every reference
+  METHOD distribution_count_missing.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,D,,BR0001,INV20261103/` ).
+    assert_layout_rejected( '165' ).
+  ENDMETHOD.
+
+  " A96: a distribution count larger than the record (9 pairs announced, 1 present)
+  METHOD distribution_count_oversized.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,D,9,1,1500000,BR0001/` ).
+    assert_layout_rejected( '165' ).
   ENDMETHOD.
 
 ENDCLASS.

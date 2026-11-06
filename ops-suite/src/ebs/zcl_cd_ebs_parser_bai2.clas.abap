@@ -9,6 +9,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A86: an empty total/count of a present 49/98/99 trailer is TRAILER_FIELD_MISSING, never the computed value.
+*& 2026-11-06 | Audit A95/A96: missing 49/98/99 blocks (B); funds-type layout validated before references are read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -128,6 +129,16 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         detailed    TYPE ty_funds_type VALUE 'D',
       END OF gc_funds.
 
+    "! A96: supported one-character funds types besides blank (BAI2: 0, 1, 2, Z, V, S, D)
+    CONSTANTS gc_funds_codes TYPE string VALUE `012ZVSD`.
+    "! A96: why a funds-type layout cannot be read (message variable)
+    CONSTANTS:
+      BEGIN OF gc_layout,
+        funds_type   TYPE string VALUE `FUNDS_TYPE`,
+        distribution TYPE string VALUE `DISTRIBUTION_COUNT`,
+        fields       TYPE string VALUE `FIELD_COUNT`,
+      END OF gc_layout.
+
     "! Fields used by a funds-type block (funds type field included)
     CONSTANTS:
       BEGIN OF gc_funds_fields,
@@ -195,6 +206,8 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         info_skipped     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
         "! A86: a required total/count of a present 49/98/99 trailer is empty
         trailer_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
+        "! A96: funds type not supported, distribution count malformed or fields missing
+        funds_layout     TYPE zif_cd_ops_types=>ty_check_code VALUE 'FUNDS_LAYOUT',
       END OF gc_check.
 
     CONSTANTS:
@@ -344,6 +357,15 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
       IMPORTING
         is_record TYPE ty_record
         it_fields TYPE string_table.
+
+    "! A96: blank when the funds-type block of a 16 record can be read; otherwise the
+    "! reason (unsupported funds type, malformed distribution count, fields missing) -
+    "! references are never taken from a shifted position
+    METHODS funds_layout_problem
+      IMPORTING
+        it_fields        TYPE string_table
+      RETURNING
+        VALUE(rv_reason) TYPE string.
 
     METHODS append_line
       IMPORTING
@@ -874,6 +896,17 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       skip_detail( iv_code = lv_code iv_line_no = is_record-line_no ).
       RETURN.
     ENDIF.
+    DATA(lv_layout) = funds_layout_problem( it_fields ).
+    IF lv_layout IS NOT INITIAL.
+      add_finding( is_check    = stmt_check( gc_check-funds_layout )
+                   iv_rule_id  = gc_rule-structure
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-funds_layout
+                                                        iv_v1    = lv_code
+                                                        iv_v2    = is_record-line_no
+                                                        iv_v3    = lv_layout ) ).
+      RETURN.
+    ENDIF.
     append_line( it_fields = it_fields
                  iv_code   = lv_code
                  iv_cdi    = lv_cdi
@@ -1083,9 +1116,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF iv_has_trailer = abap_false.
+      " A95: a missing mandatory trailer blocks - totals and counts of the account are unproven
       add_finding( is_check    = stmt_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_expected_account_tr
                                                         iv_v1    = ms_account-stmt-account_no
                                                         iv_v2    = mv_line_no ) ).
@@ -1150,7 +1184,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF iv_has_trailer = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_missing
                                                         iv_v1    = ms_group-group_no
                                                         iv_v2    = ms_group-originator
@@ -1168,7 +1202,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF mv_file_closed = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_file_trailer
                                                         iv_v1    = file_key( ) ) ).
     ENDIF.
@@ -1316,6 +1350,29 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
   METHOD field.
     rv_value = condense( VALUE string( it_fields[ iv_index ] OPTIONAL ) ).
+  ENDMETHOD.
+
+
+  METHOD funds_layout_problem.
+    DATA(lv_type) = to_upper( condense( field( it_fields = it_fields iv_index = gc_pos-dtl_funds_type ) ) ).
+    IF lv_type IS NOT INITIAL AND ( strlen( lv_type ) <> 1 OR lv_type CN gc_funds_codes ).
+      rv_reason = gc_layout-funds_type.
+      RETURN.
+    ENDIF.
+    IF lv_type = gc_funds-detailed.
+      DATA(lv_count) = condense( field( it_fields = it_fields iv_index = gc_pos-dtl_funds_type + 1 ) ).
+      IF lv_count IS INITIAL OR lv_count CN gc_digits OR strlen( lv_count ) > gc_max_count_digits
+         OR CONV i( lv_count ) = 0.
+        rv_reason = gc_layout-distribution.
+        RETURN.
+      ENDIF.
+    ENDIF.
+    " Every field of the funds-type block must be present (trailing empty references may be
+    " dropped by the record split, so they are not required)
+    DATA(ls_funds) = funds_info( it_fields = it_fields iv_index = gc_pos-dtl_funds_type ).
+    IF lines( it_fields ) < gc_pos-dtl_funds_type + ls_funds-field_count - 1.
+      rv_reason = gc_layout-fields.
+    ENDIF.
   ENDMETHOD.
 
 

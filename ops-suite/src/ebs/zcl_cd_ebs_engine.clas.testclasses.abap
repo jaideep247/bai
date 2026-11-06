@@ -17,6 +17,7 @@
 *& 2026-11-06 | Audit A64: posting check refreshes the parameter snapshot.
 *& 2026-11-06 | Audit A91: kill switch missing, invalid, off and SQL failure (TEST-INJECTION tvarvc_read).
 *& 2026-11-06 | Audit A98: contradictory blank / * map rows block through the posting decision.
+*& 2026-11-06 | Audit A95: missing 99 blocks through the posting decision (parsed BAI2 file).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -304,6 +305,22 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS disposition_awaiting_held    FOR TESTING.
     METHODS posting_check_refreshes_params FOR TESTING.
     METHODS map_conflict_blocks_posting  FOR TESTING.
+    METHODS missing_99_blocks_posting    FOR TESTING.
+    "! A95/A97: package of a BAI2 file parsed by ZCL_CD_EBS_PARSER_BAI2 (file source)
+    METHODS file_package
+      IMPORTING
+        iv_content        TYPE string
+      RETURNING
+        VALUE(rs_package) TYPE zif_cd_ebs_types=>ty_package.
+    "! A95/A97: a small consistent BAI2 file with one 165 credit; iv_extra is inserted before
+    "! the 49 (its amount counted in the trailers), iv_no_99 drops the file trailer
+    METHODS small_bai2
+      IMPORTING
+        iv_extra          TYPE string OPTIONAL
+        iv_extra_amount   TYPE i DEFAULT 0
+        iv_no_99          TYPE abap_bool DEFAULT abap_false
+      RETURNING
+        VALUE(rv_content) TYPE string.
     METHODS kill_switch_missing_monitor  FOR TESTING.
     METHODS kill_switch_invalid_monitor  FOR TESTING.
     METHODS kill_switch_off_read         FOR TESTING.
@@ -1331,6 +1348,50 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = VALUE #( ls_decision-dispositions[ 1 ]-disposition OPTIONAL )
                                             exp = zif_cd_ops_types=>gc_action-block
                                             msg = 'The line disposition must be BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD file_package.
+    TRY.
+        rs_package = NEW zcl_cd_ebs_src_file( iv_content   = iv_content
+                                              iv_format    = zif_cd_ebs_types=>gc_format-bai2
+                                              iv_file_name = `UNIT.BAI` )->zif_cd_ebs_source~next_package( ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Parsing raised: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD small_bai2.
+    " 49 control total = 03 amounts + 16 amounts; record counts are physical records
+    DATA(lv_extra_records) = COND i( WHEN iv_extra IS INITIAL THEN 0 ELSE 1 ).
+    DATA(lv_total) = 300000 + iv_extra_amount.
+    rv_content = |01,BANKSNDR,CUSTRCVR,261104,0630,1104U,80,,2/\n| &&
+                 |02,CUSTRCVR,999000001,1,261103,2400,USD,2/\n| &&
+                 |03,000123456789,USD,010,+100000,,,015,+150000,,/\n| &&
+                 |16,165,50000,0,BR0001,INV0001,ACH CREDIT/\n| &&
+                 COND string( WHEN iv_extra IS NOT INITIAL THEN |{ iv_extra }\n| ) &&
+                 |49,+{ lv_total },{ 3 + lv_extra_records }/\n| &&
+                 |98,+{ lv_total },1,{ 5 + lv_extra_records }/| &&
+                 COND string( WHEN iv_no_99 = abap_false THEN |\n99,+{ lv_total },1,{ 7 + lv_extra_records }/| ).
+  ENDMETHOD.
+
+
+  " A95: a BAI2 file without 99 is blocked through the final ENFORCE decision
+  METHOD missing_99_blocks_posting.
+    TRY.
+        sign_scenario( default_flags( ) ).
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+                              iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+                              is_package = file_package( small_bai2( iv_no_99 = abap_true ) ) ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A file without its 99 trailer must not be posted' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_decision-dispositions[ disposition = zif_cd_ops_types=>gc_action-auto_post ] ) )
+          msg = 'No parsed line may be released for posting' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -1850,6 +1850,12 @@
      <MSGNR>534</MSGNR>
      <TEXT>ZCD_BTC_MAP rows for &amp;1 &amp;2 bank &amp;3 flow &amp;4 contradict each other (blank f</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>535</MSGNR>
+     <TEXT>Entry type &amp;1 in line &amp;2: funds-type layout invalid (&amp;3) - entry not read</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
