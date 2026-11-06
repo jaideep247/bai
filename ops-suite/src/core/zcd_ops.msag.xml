@@ -119,6 +119,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>060</MSGNR>
+     <TEXT>Purge &amp;1: &amp;2 row(s) older than &amp;3 (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>150</MSGNR>
      <TEXT>Content is not a BAI2 file: first record &amp;1 (expected type 01)</TEXT>
     </T100>

@@ -23,6 +23,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 042 | Lock service failed for &1 &2 (run not started) |
 | 050 | Configuration missing: &1 &2 |
 | 051 | Configuration value &1 for &2 is invalid |
+| 060 | Purge &1: &2 row(s) older than &3 (&4) |
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |
 | 151 | XML content could not be parsed: &1 |
 | 152 | Unsupported XML message &1/&2; expected camt.053 or camt.054 |

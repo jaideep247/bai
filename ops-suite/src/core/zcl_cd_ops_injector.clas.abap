@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | inject_auth added.
 *& 2026-11-06 | inject_lock added.
+*& 2026-11-06 | inject_purge_dao added.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -43,6 +44,10 @@ CLASS zcl_cd_ops_injector DEFINITION
     CLASS-METHODS inject_lock
       IMPORTING
         io_lock TYPE REF TO zif_cd_ops_lock.
+
+    CLASS-METHODS inject_purge_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_ops_purge_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -87,6 +92,11 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_purge_dao.
+    zcl_cd_ops_factory=>go_purge_dao_double = io_dao.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = to_upper( condense( CONV string( iv_class_name ) ) ).
     DELETE zcl_cd_ops_factory=>gt_plugin_double
@@ -103,6 +113,7 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_alert_dao_double,
            zcl_cd_ops_factory=>go_auth_double,
            zcl_cd_ops_factory=>go_lock_double,
+           zcl_cd_ops_factory=>go_purge_dao_double,
            zcl_cd_ops_factory=>gt_plugin_double,
            zcl_cd_ops_factory=>go_store.
   ENDMETHOD.

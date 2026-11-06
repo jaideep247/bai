@@ -78,6 +78,7 @@ docs/portable_checks.json,Doc,
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,
 docs/text_elements/zcd_fmon_monitor.prog.texts.md,Doc,
 docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
+docs/text_elements/zcd_ops_purge.prog.texts.md,Doc,
 src/package.devc.xml,abapGit,
 src/core/package.devc.xml,abapGit,
 src/core/zcd_ops.msag.xml,abapGit,
@@ -87,6 +88,8 @@ src/core/zcd_ops_alert_rule.tabl.xml,abapGit,
 src/core/zcd_ops_finding.tabl.xml,abapGit,
 src/core/zcd_ops_lock.tabl.xml,abapGit,
 src/core/zcd_ops_param.tabl.xml,abapGit,
+src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's history (ZCL_CD_OPS_PURGE):
+src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (module or '*'), channels and the delivery"
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
@@ -114,6 +117,12 @@ src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so 
 src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_lock.clas.abap,ABAP,Run lock over the standard generic lock object E_TABLE with table
 src/core/zcl_cd_ops_lock.clas.xml,abapGit,
+src/core/zcl_cd_ops_purge.clas.abap,ABAP,"Retention purge of the suite's own history: runs with their findings, alert"
+src/core/zcl_cd_ops_purge.clas.testclasses.abap,ABAP,Tests of the retention purge rules and orchestration with a DAO double:
+src/core/zcl_cd_ops_purge.clas.xml,abapGit,
+src/core/zcl_cd_ops_purge_dao.clas.abap,ABAP,All SQL of the retention purge. A run is purgeable when it started before
+src/core/zcl_cd_ops_purge_dao.clas.testclasses.abap,ABAP,OSQL tests of the purge SQL: old runs without blocking exceptions are
+src/core/zcl_cd_ops_purge_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_run_guard.clas.abap,ABAP,What a run does when the run lock is held by another run: nothing is
 src/core/zcl_cd_ops_run_guard.clas.testclasses.abap,ABAP,Tests of the refused run: a second run while the lock is held becomes an
 src/core/zcl_cd_ops_run_guard.clas.xml,abapGit,
@@ -137,6 +146,8 @@ src/core/zif_cd_ops_clock.intf.abap,ABAP,Operations suite - clock (injectable fo
 src/core/zif_cd_ops_clock.intf.xml,abapGit,
 src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per module + variant at a time. The lock survives COMMIT WORK
 src/core/zif_cd_ops_lock.intf.xml,abapGit,
+src/core/zif_cd_ops_purge_dao.intf.abap,ABAP,"SQL for the retention purge: count and delete, one package at a time, the"
+src/core/zif_cd_ops_purge_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all modules: run headers (ZCD_OPS_RUN),"
 src/core/zif_cd_ops_store.intf.xml,abapGit,
 src/core/zif_cd_ops_types.intf.abap,ABAP,"Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS)."

@@ -32,3 +32,15 @@ Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUT
 - Throttled (T) and quiet-hour (Q) decisions are logged in ZCD_OPS_ALERT_LOG — nothing is silently dropped.
 - A failing channel is logged as F and never aborts the run; the morning report's "alert delivery health" check counts F rows.
 - Test-mode runs never alert.
+
+## Core parameters — `ZCD_OPS_PARAM` (retention purge, `ZCD_OPS_PURGE`)
+
+| PARAM_NAME | PARAM_VALUE | Meaning |
+|---|---|---|
+| RETENTION_DAYS_RUN | `400` | Runs and their findings older than this are purged — never a run that still holds an open, assigned or validly waived exception |
+| RETENTION_DAYS_ALERT_LOG | `180` | Alert log rows (by send time) |
+| RETENTION_DAYS_FMON_EVENT | `400` | FMON file events (by creation time) |
+| RETENTION_DAYS_HCK_METRIC | `400` | HCK metric history (by measurement time; baselines need the history) |
+| PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package |
+
+Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`).

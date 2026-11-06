@@ -30,6 +30,8 @@ ZCL_CD_OPS_ALERT_POLICY,14,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_ROUTER,8,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_HTTP,3,90,,Not run in target SAP
 ZCL_CD_OPS_FACTORY,7,90,,Not run in target SAP
+ZCL_CD_OPS_PURGE,5,90,,Not run in target SAP
+ZCL_CD_OPS_PURGE_DAO,7,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,4,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,12,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,12,90,,Not run in target SAP
