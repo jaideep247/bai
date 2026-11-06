@@ -42,5 +42,27 @@ class BpTestsTemplateTest(unittest.TestCase):
         self.assertEqual(len(names), len(rap_generate.SPEC))
 
 
+class PcreCheckTemplateTest(unittest.TestCase):
+    """Pattern fields of the configuration apps are validated on save as PCRE (message 418)."""
+
+    TABLE = dict(alias='FlowPattern', fields=[dict(name='pattern', el='Pattern')])
+
+    def test_pcre_check_calls_the_one_helper(self):
+        lines = rap_generate.abap_check(self.TABLE, ('pcre', 'pattern'), 'EbsCfgAll')
+        text = chr(10).join(lines)
+        self.assertIn('zcl_cd_ops_util=>pcre_valid( ls_row-Pattern ) = abap_false', text)
+        self.assertIn('gc_msg-pattern_invalid', text)
+        self.assertIn('element = lif_c=>gc_el-pattern', text)
+
+    def test_every_pattern_field_is_validated(self):
+        expected = {('ebs', 'zcd_ebs_flow_pat', 'pattern'), ('fmon', 'zcd_fmon_iface', 'name_pattern'),
+                    ('hck', 'zcd_job_step', 'jobname'), ('core', 'zcd_ops_alrule', 'rule_pattern'),
+                    ('core', 'zcd_ops_alrule', 'check_pattern'), ('core', 'zcd_ops_alrule', 'group1_pattern'),
+                    ('core', 'zcd_ops_alrule', 'group2_pattern')}
+        found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
+                 for c in t[6] if c[0] == 'pcre'}
+        self.assertEqual(found, expected)
+
+
 if __name__ == '__main__':
     unittest.main()

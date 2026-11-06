@@ -6,6 +6,7 @@
 *& state, messages. No logic.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-06 | Message 418: a pattern field is not valid PCRE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -142,6 +143,7 @@ INTERFACE zif_cd_ops_cfg_types
       thresholds_order   TYPE ty_msg_number VALUE '415',
       rule_group_empty   TYPE ty_msg_number VALUE '416',
       not_positive       TYPE ty_msg_number VALUE '417',
+      pattern_invalid    TYPE ty_msg_number VALUE '418',
     END OF gc_msg.
 
 ENDINTERFACE.
