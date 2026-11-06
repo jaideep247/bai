@@ -1451,6 +1451,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>367</MSGNR>
+     <TEXT>Baseline of &amp;1 uses hash version &amp;2 (current &amp;3): take a new baseline</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>368</MSGNR>
+     <TEXT>Export file &amp;1 could not be written completely - no partial file kept</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>

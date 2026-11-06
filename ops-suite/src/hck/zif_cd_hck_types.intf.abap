@@ -10,6 +10,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | RUN_HUNG, CHECKS_NOT_CONFIGURED, hung runs and check counts (audit A06, A60).
 *& 2026-11-06 | Job step program/variant, retries and late start; job read cap (audit A42, A44).
+*& 2026-11-06 | Aggregate query carries its definition for re-validation at the DAO (audit A56).
+*& 2026-11-06 | Baseline hash version; CONFIG_BASELINE_OUTDATED (audit A57).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -32,6 +34,8 @@ INTERFACE zif_cd_hck_types
   TYPES ty_value         TYPE decfloat34.
   TYPES tt_value         TYPE STANDARD TABLE OF ty_value WITH EMPTY KEY.
   TYPES ty_baseline_mode TYPE c LENGTH 6.
+  "! Version of the drift-hash serialization (ZCL_CD_HCK_CANONICAL=>GC_HASH_VERSION)
+  TYPES ty_hash_version  TYPE c LENGTH 2.
   TYPES ty_tabname       TYPE c LENGTH 30.
   TYPES ty_fieldname     TYPE c LENGTH 30.
   TYPES ty_agg_id        TYPE c LENGTH 10.
@@ -169,6 +173,7 @@ INTERFACE zif_cd_hck_types
       step_retried     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_RETRIED',
       step_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_LATE',
       job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
+      baseline_outdated TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
     END OF gc_code.
 
   CONSTANTS:
@@ -282,6 +287,10 @@ INTERFACE zif_cd_hck_types
       sum_field    TYPE ty_fieldname,
       group_field  TYPE ty_fieldname,
       where_clause TYPE string,
+      "! Source of the query: the DAO rebuilds the SQL from it and ignores the strings
+      "! above (audit A56 - validation is enforced at the SQL boundary)
+      def          TYPE ty_agg_def,
+      ref_date     TYPE d,
     END OF ty_agg_query.
 
   TYPES:
@@ -446,11 +455,12 @@ INTERFACE zif_cd_hck_types
   "! ZCD_HCK_BASELINE (and a freshly computed hash)
   TYPES:
     BEGIN OF ty_baseline,
-      tabname   TYPE ty_tabname,
-      hash      TYPE ty_hash,
-      row_count TYPE i,
-      taken_at  TYPE timestampl,
-      taken_by  TYPE syuname,
+      tabname      TYPE ty_tabname,
+      hash         TYPE ty_hash,
+      row_count    TYPE i,
+      taken_at     TYPE timestampl,
+      taken_by     TYPE syuname,
+      hash_version TYPE ty_hash_version,
     END OF ty_baseline.
   TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY.
 
@@ -624,6 +634,7 @@ INTERFACE zif_cd_hck_types
       step_started_late           TYPE zif_cd_ops_types=>ty_msgno VALUE '364',
       job_read_capped             TYPE zif_cd_ops_types=>ty_msgno VALUE '365',
       gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
+      baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
     END OF gc_msg.
 
 ENDINTERFACE.

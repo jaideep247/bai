@@ -776,15 +776,23 @@ src/hck/zcl_cd_hck_c_tech_sys.clas.abap,ABAP,"Technical health: short dumps of t
 src/hck/zcl_cd_hck_c_tech_sys.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_volume.clas.abap,ABAP,Payment engine volume KPIs: counts per day and source/LOB from ZCD_HCK_AGG
 src/hck/zcl_cd_hck_c_volume.clas.xml,abapGit,
+src/hck/zcl_cd_hck_canonical.clas.abap,ABAP,Pure canonical serialization of a table row for the configuration-drift
+src/hck/zcl_cd_hck_canonical.clas.testclasses.abap,ABAP,Unit tests of the canonical row serialization used by the drift hash;
+src/hck/zcl_cd_hck_canonical.clas.xml,abapGit,
 src/hck/zcl_cd_hck_cycle_eval.clas.abap,ABAP,Pure job-cycle rules: derive the state of a cycle step from TBTCO job
 src/hck/zcl_cd_hck_cycle_eval.clas.testclasses.abap,ABAP,"Unit tests of job-cycle step state derivation (NOT_STARTED, RUNNING,"
 src/hck/zcl_cd_hck_cycle_eval.clas.xml,abapGit,
 src/hck/zcl_cd_hck_dao.clas.abap,ABAP,"All SQL of the health check payment engine area: customizing, metric history, drift"
 src/hck/zcl_cd_hck_dao.clas.testclasses.abap,ABAP,SQL tests of the HCK DAO on cl_osql_test_environment doubles: metric
 src/hck/zcl_cd_hck_dao.clas.xml,abapGit,
+src/hck/zcl_cd_hck_dataset.clas.abap,ABAP,ZIF_CD_HCK_FILE over OPEN / TRANSFER / CLOSE / DELETE DATASET (application
+src/hck/zcl_cd_hck_dataset.clas.xml,abapGit,
 src/hck/zcl_cd_hck_engine.clas.abap,ABAP,"Health check engine: runs the configured checks, guards each one,"
 src/hck/zcl_cd_hck_engine.clas.testclasses.abap,ABAP,Unit tests of the health check engine through run( ) with LTD doubles for
 src/hck/zcl_cd_hck_engine.clas.xml,abapGit,
+src/hck/zcl_cd_hck_export.clas.abap,ABAP,Writes a complete report file or none (audit A61): the content goes to a
+src/hck/zcl_cd_hck_export.clas.testclasses.abap,ABAP,Unit tests of the complete-or-nothing export with an LTD file double;
+src/hck/zcl_cd_hck_export.clas.xml,abapGit,
 src/hck/zcl_cd_hck_factory.clas.abap,ABAP,Single resolution point of the HCK data access object and engine;
 src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
@@ -819,6 +827,8 @@ src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One 
 src/hck/zif_cd_hck_check.intf.xml,abapGit,
 src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check payment engine area: customizing, metric history,"
 src/hck/zif_cd_hck_dao.intf.xml,abapGit,
+src/hck/zif_cd_hck_file.intf.abap,ABAP,"Application-server file access used by the morning-report export, behind an"
+src/hck/zif_cd_hck_file.intf.xml,abapGit,
 src/hck/zif_cd_hck_suppress_types.intf.abap,ABAP,Types and constants of the health-check suppression (design 6.3):
 src/hck/zif_cd_hck_suppress_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_types.intf.abap,ABAP,"Types and constants of the health check (HCK) payment engine area: customizing rows,"

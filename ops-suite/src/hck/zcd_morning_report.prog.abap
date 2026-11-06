@@ -8,6 +8,7 @@
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area HCK at start.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Export through ZCL_CD_HCK_EXPORT: complete file or none (audit A61).
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -386,18 +387,13 @@ CLASS lcl_app IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    " A61: complete file or none - temporary file first, target replaced only afterwards
     TRY.
-        OPEN DATASET lv_file FOR OUTPUT IN TEXT MODE ENCODING UTF-8.
-        IF sy-subrc <> 0.
-          MESSAGE s316(zcd_ops) WITH lv_file DISPLAY LIKE 'E'.
-          RETURN.
-        ENDIF.
-        LOOP AT zcl_cd_hck_report_html=>render_csv( ms_report ) INTO DATA(lv_line).
-          TRANSFER lv_line TO lv_file.
-        ENDLOOP.
-        CLOSE DATASET lv_file.
+        zcl_cd_hck_export=>write( iv_file  = lv_file
+                                  it_lines = zcl_cd_hck_report_html=>render_csv( ms_report )
+                                  io_file  = NEW zcl_cd_hck_dataset( ) ).
         MESSAGE s315(zcd_ops) WITH lv_file.
-      CATCH cx_sy_file_access_error INTO DATA(lx_file).
+      CATCH zcx_cd_ops_error INTO DATA(lx_file).
         MESSAGE lx_file TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
   ENDMETHOD.

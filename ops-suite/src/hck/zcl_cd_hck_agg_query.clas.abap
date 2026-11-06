@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | condition( ) and date_literal( ) public for ZCL_CD_HCK_VALUE_QUERY.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Query keeps its definition (audit A56).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -132,6 +133,8 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
         MESSAGE e303(zcd_ops) WITH is_def-tabname.
     ENDIF.
 
+    rs_query-def      = is_def.
+    rs_query-ref_date = iv_ref_date.
     rs_query-agg_id   = is_def-agg_id.
     rs_query-tabname  = to_upper( is_def-tabname ).
     rs_query-agg_func = to_upper( is_def-agg_func ).

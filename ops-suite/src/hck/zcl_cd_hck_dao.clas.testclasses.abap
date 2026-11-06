@@ -9,6 +9,7 @@
 *& 2026-11-06 | History by distinct completed runs, as-of bound (audit A58).
 *& 2026-11-06 | job_run_carries_variant, unresolved_jobs_any_date (audit A42, A44).
 *& 2026-11-06 | gl_gap_per_company_and_type (audit A43).
+*& 2026-11-06 | raw_aggregate_is_rejected, raw_value_query_is_rejected (audit A56).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -43,6 +44,8 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS job_run_carries_variant FOR TESTING.
     METHODS unresolved_jobs_any_date FOR TESTING.
     METHODS gl_gap_per_company_and_type FOR TESTING.
+    METHODS raw_aggregate_is_rejected FOR TESTING.
+    METHODS raw_value_query_is_rejected FOR TESTING.
 
     METHODS add_metric
       IMPORTING
@@ -77,6 +80,7 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                             ( 'DFKKSUMC' )
                                                                             ( 'DFKKKO' )
                                                                             ( 'BKPF' )
+                                                                            ( 'ZCD_HCK_TABWL' )
                                                                             ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
 
@@ -452,6 +456,42 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'K1/US02, K2/US01 and K3/US01 are gaps' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A56: a query built outside the builder (raw WHERE, table not on the whitelist)
+  " is rejected at the SQL boundary - the raw strings are never executed
+  METHOD raw_aggregate_is_rejected.
+    DATA ls_query TYPE zif_cd_hck_types=>ty_agg_query.
+    ls_query-tabname        = 'ZCD_OPS_FINDING'.
+    ls_query-where_clause   = `1 = 1`.
+    ls_query-agg_func       = zif_cd_hck_types=>gc_agg_func-count.
+    ls_query-def-tabname    = 'ZCD_OPS_FINDING'.
+    ls_query-def-agg_func   = zif_cd_hck_types=>gc_agg_func-count.
+    TRY.
+        mo_cut->aggregate( ls_query ).
+        cl_abap_unit_assert=>fail( msg = 'A table that is not whitelisted must be rejected by the DAO' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
+                                            msg = 'Message 302 (not whitelisted) expected' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A56: the same for a value query passed directly to the DAO
+  METHOD raw_value_query_is_rejected.
+    DATA ls_query TYPE zif_cd_hck_value_types=>ty_value_query.
+    ls_query-tabname      = 'ZCD_OPS_FINDING'.
+    ls_query-field_list   = `MESSAGE AS V1`.
+    ls_query-where_clause = `1 = 1`.
+    ls_query-date_field   = 'DUE_DATE'.
+    TRY.
+        mo_cut->select_values( is_query = ls_query iv_max_rows = 10 ).
+        cl_abap_unit_assert=>fail( msg = 'A table that is not whitelisted must be rejected by the DAO' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
+                                            msg = 'Message 302 (not whitelisted) expected' ).
     ENDTRY.
   ENDMETHOD.
 

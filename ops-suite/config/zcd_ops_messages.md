@@ -246,6 +246,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 364 | completed attempt started &1, after window end &2 |
 | 365 | Job read capped at &1 rows for &2 - result may be incomplete |
 | 366 | &1 reconciliation key(s) / company code(s) without GL document, &2 listed |
+| 367 | Baseline of &1 uses hash version &2 (current &3): take a new baseline |
+| 368 | Export file &1 could not be written completely - no partial file kept |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

@@ -13,6 +13,8 @@
 *& 2026-11-06 | Metric history by distinct completed runs, as-of bound (audit A58).
 *& 2026-11-06 | Job runs with first-step program/variant; unresolved jobs regardless of date (audit A42, A44).
 *& 2026-11-06 | G/L transfer gaps by AWTYP, company code, unreversed document; uncapped count (audit A43).
+*& 2026-11-06 | Aggregate and value queries rebuilt and re-validated at the SQL boundary (audit A56).
+*& 2026-11-06 | Drift hash over canonical typed fields, version 2; cursor closed on all paths (audit A57).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -146,16 +148,26 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~aggregate.
-    " names in is_query were checked against the DDIC by ZCL_CD_HCK_AGG_QUERY=>BUILD
-    DATA(lv_select) = COND string( WHEN is_query-group_field IS NOT INITIAL
-                                   THEN |{ is_query-group_field } AS group_value, | ).
-    lv_select = lv_select && `COUNT(*) AS row_count`.
-    IF is_query-agg_func = zif_cd_hck_types=>gc_agg_func-sum.
-      lv_select = |{ lv_select }, SUM( { is_query-sum_field } ) AS total|.
+    DATA lt_fields TYPE zif_cd_hck_types=>tt_field.
+    " A56: the SQL boundary trusts no caller-built string. The query is rebuilt from its
+    " definition - whitelist, DDIC field names, quoted literals - and only that runs.
+    DATA(lv_whitelisted) = zif_cd_hck_dao~is_table_whitelisted( is_query-def-tabname ).
+    IF lv_whitelisted = abap_true.
+      lt_fields = zif_cd_hck_dao~get_table_fields( is_query-def-tabname ).
     ENDIF.
-    DATA(lv_from)  = CONV string( is_query-tabname ).
-    DATA(lv_where) = is_query-where_clause.
-    DATA(lv_group) = CONV string( is_query-group_field ).
+    DATA(ls_query) = zcl_cd_hck_agg_query=>build( is_def         = is_query-def
+                                                  it_fields      = lt_fields
+                                                  iv_whitelisted = lv_whitelisted
+                                                  iv_ref_date    = is_query-ref_date ).
+    DATA(lv_select) = COND string( WHEN ls_query-group_field IS NOT INITIAL
+                                   THEN |{ ls_query-group_field } AS group_value, | ).
+    lv_select = lv_select && `COUNT(*) AS row_count`.
+    IF ls_query-agg_func = zif_cd_hck_types=>gc_agg_func-sum.
+      lv_select = |{ lv_select }, SUM( { ls_query-sum_field } ) AS total|.
+    ENDIF.
+    DATA(lv_from)  = CONV string( ls_query-tabname ).
+    DATA(lv_where) = ls_query-where_clause.
+    DATA(lv_group) = CONV string( ls_query-group_field ).
 
     TRY.
         IF lv_group IS INITIAL.
@@ -175,7 +187,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         ENDIF.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e308(zcd_ops) WITH is_query-tabname is_query-agg_id
+          MESSAGE e308(zcd_ops) WITH ls_query-tabname ls_query-agg_id
           EXPORTING
             previous = lx_sql.
     ENDTRY.
@@ -253,7 +265,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_baselines.
-    SELECT tabname, hash, row_count, taken_at, taken_by
+    SELECT tabname, hash, row_count, taken_at, taken_by, hash_version
       FROM zcd_hck_baseline
       ORDER BY tabname
       INTO CORRESPONDING FIELDS OF TABLE @rt_baselines.
@@ -265,10 +277,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA lt_names TYPE string_table.
     DATA lv_package TYPE string.
     DATA lv_cursor TYPE cursor.
+    DATA lv_open TYPE abap_bool.
     " used in the dynamic OPEN CURSOR select list (not seen by static checks)
     DATA lv_select TYPE string ##NEEDED.
     FIELD-SYMBOLS <lt_rows> TYPE STANDARD TABLE.
-    FIELD-SYMBOLS <lv_field> TYPE any.
 
     DATA(lt_fields) = zif_cd_hck_dao~get_table_fields( iv_tabname ).
     LOOP AT lt_fields INTO DATA(ls_field).
@@ -277,7 +289,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     lv_select = concat_lines_of( table = lt_names sep = `, ` ).
     DATA(lv_from) = to_upper( condense( CONV string( iv_tabname ) ) ).
 
-    rs_hash-tabname = lv_from.
+    rs_hash-tabname      = lv_from.
+    rs_hash-hash_version = zcl_cd_hck_canonical=>gc_hash_version.
     TRY.
         CREATE DATA lr_table TYPE STANDARD TABLE OF (lv_from).
         ASSIGN lr_table->* TO <lt_rows>.
@@ -285,6 +298,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           SELECT (lv_select)
             FROM (lv_from)
             ORDER BY PRIMARY KEY.
+        lv_open = abap_true.
         DO.
           FETCH NEXT CURSOR @lv_cursor INTO CORRESPONDING FIELDS OF TABLE @<lt_rows> PACKAGE SIZE @gc_hash_package.
           IF sy-subrc <> 0.
@@ -292,25 +306,29 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           ENDIF.
           " chained hash: H(n) = SHA256( H(n-1) || rows of package n ), deterministic by primary key
           lv_package = rs_hash-hash.
+          " A57: canonical, length-prefixed typed fields - no separator ambiguity
           LOOP AT <lt_rows> ASSIGNING FIELD-SYMBOL(<ls_row>).
-            DO.
-              ASSIGN COMPONENT sy-index OF STRUCTURE <ls_row> TO <lv_field>.
-              IF sy-subrc <> 0.
-                EXIT.
-              ENDIF.
-              lv_package = |{ lv_package }{ <lv_field> }\||.
-            ENDDO.
-            lv_package = lv_package && cl_abap_char_utilities=>newline.
+            lv_package = lv_package && zcl_cd_hck_canonical=>row( <ls_row> ) && cl_abap_char_utilities=>newline.
           ENDLOOP.
           rs_hash-row_count = rs_hash-row_count + lines( <lt_rows> ).
           rs_hash-hash = sha256( lv_package ).
         ENDDO.
         CLOSE CURSOR @lv_cursor.
+        lv_open = abap_false.
       CATCH cx_sy_dynamic_osql_error cx_sy_create_data_error INTO DATA(lx_sql).
+        " A57: the cursor is closed on every path, also after an SQL error
+        IF lv_open = abap_true.
+          CLOSE CURSOR @lv_cursor.
+        ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
           MESSAGE e311(zcd_ops) WITH lv_from
           EXPORTING
             previous = lx_sql.
+      CLEANUP.
+        " any other exception leaving the method (e.g. a hash error) also closes the cursor
+        IF lv_open = abap_true.
+          CLOSE CURSOR @lv_cursor.
+        ENDIF.
     ENDTRY.
     IF rs_hash-hash IS INITIAL.
       " empty table: hash of the empty string, so 'emptied' is detected as drift
@@ -329,6 +347,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       ls_db-row_count = ls_baseline-row_count.
       ls_db-taken_at  = ls_baseline-taken_at.
       ls_db-taken_by  = ls_baseline-taken_by.
+      ls_db-hash_version = ls_baseline-hash_version.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     MODIFY zcd_hck_baseline FROM TABLE @lt_db.
@@ -612,11 +631,23 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~select_values.
-    " names in is_query were checked against the DDIC and the whitelist by ZCL_CD_HCK_VALUE_QUERY
-    DATA(lv_fields) = is_query-field_list.
-    DATA(lv_from)   = CONV string( is_query-tabname ).
-    DATA(lv_where)  = is_query-where_clause.
-    DATA(lv_order)  = is_query-order_by.
+    DATA lt_fields TYPE zif_cd_hck_types=>tt_field.
+    " A56: rebuilt from its specification at the SQL boundary (whitelist, DDIC, quoting)
+    DATA(lv_whitelisted) = zif_cd_hck_dao~is_table_whitelisted( is_query-tabname ).
+    IF lv_whitelisted = abap_true.
+      lt_fields = zif_cd_hck_dao~get_table_fields( is_query-tabname ).
+    ENDIF.
+    DATA(ls_query) = zcl_cd_hck_value_query=>build( iv_tabname     = is_query-tabname
+                                                    it_return      = is_query-returns
+                                                    it_conditions  = is_query-conditions
+                                                    iv_date_field  = is_query-date_field
+                                                    iv_date_from   = is_query-date_from
+                                                    it_fields      = lt_fields
+                                                    iv_whitelisted = lv_whitelisted ).
+    DATA(lv_fields) = ls_query-field_list.
+    DATA(lv_from)   = CONV string( ls_query-tabname ).
+    DATA(lv_where)  = ls_query-where_clause.
+    DATA(lv_order)  = ls_query-order_by.
     TRY.
         SELECT (lv_fields)
           FROM (lv_from)
@@ -626,7 +657,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
           UP TO @iv_max_rows ROWS.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e308(zcd_ops) WITH is_query-tabname gc_query_kind_values
+          MESSAGE e308(zcd_ops) WITH ls_query-tabname gc_query_kind_values
           EXPORTING
             previous = lx_sql.
     ENDTRY.
