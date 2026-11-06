@@ -30,6 +30,9 @@
 *&            | post but not posted is POSTING_OPEN - rules flagged NEEDS_POSTING are not evaluated
 *&            | for it (or its statement), it is counted as unevaluated, kept out of the exception
 *&            | reconciliation, and the run is never green (rule S13 reports POSTING_INCOMPLETE).
+*& 2026-11-06 | Performance: rule lookups per line / finding by sorted secondary keys, alert classes
+*&            | of the kept findings hashed, read-only loops with field symbols; the check-register
+*&            | memo is cleared at the start of validate_package (same statements validated twice).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -227,8 +230,16 @@ CLASS zcl_cd_ebs_engine DEFINITION
       END OF ty_plugin.
     TYPES tt_plugin TYPE HASHED TABLE OF ty_plugin WITH UNIQUE KEY class_name.
 
+    "! Active rules in execution order (level, rule group, sequence, rule ID - primary index).
+    "! Sorted secondary keys for the lookups per finding (BY_RULE) and per line (BY_GROUP,
+    "! BY_POSTING); rows of one key keep the primary order
+    TYPES tt_rule TYPE STANDARD TABLE OF zif_cd_ebs_types=>ty_rule_cfg WITH EMPTY KEY
+                  WITH NON-UNIQUE SORTED KEY by_rule COMPONENTS rule_id blocks_posting unusable
+                  WITH NON-UNIQUE SORTED KEY by_group COMPONENTS rule_group unusable
+                  WITH NON-UNIQUE SORTED KEY by_posting COMPONENTS needs_posting level unusable rule_group.
+
     DATA mo_resolver     TYPE REF TO zcl_cd_ebs_btc_resolver.
-    DATA mt_rules        TYPE zif_cd_ebs_types=>tt_rule_cfg.
+    DATA mt_rules        TYPE tt_rule.
     DATA mt_plugins      TYPE tt_plugin.
     DATA mv_config_ready TYPE abap_bool.
 
@@ -386,14 +397,14 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     " Operating model: an entry not posted yet, and its statement, were not fully evaluated -
     " their open exceptions stay open until a run after the posting jobs evaluates them
     DATA(lt_open_statements) = posting_open_statements( is_package-lines ).
-    LOOP AT is_package-statements INTO DATA(ls_statement).
-      IF line_exists( lt_open_statements[ table_line = ls_statement-stmt_key ] ).
+    LOOP AT is_package-statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
+      IF line_exists( lt_open_statements[ table_line = <ls_statement>-stmt_key ] ).
         CONTINUE.
       ENDIF.
-      INSERT CONV zif_cd_ops_types=>ty_object_key( ls_statement-stmt_key ) INTO TABLE lt_scope.
+      INSERT CONV zif_cd_ops_types=>ty_object_key( <ls_statement>-stmt_key ) INTO TABLE lt_scope.
     ENDLOOP.
-    LOOP AT is_package-lines INTO DATA(ls_line) WHERE posting_open = abap_false.
-      INSERT zcl_cd_ebs_finding=>line_key( ls_line ) INTO TABLE lt_scope.
+    LOOP AT is_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE posting_open = abap_false.
+      INSERT zcl_cd_ebs_finding=>line_key( <ls_line> ) INTO TABLE lt_scope.
     ENDLOOP.
     zcl_cd_ops_factory=>get_store( )->reconcile( is_run         = is_run
                                                  it_object_keys = lt_scope ).
@@ -456,12 +467,12 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       ENDIF.
       lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
                                                iv_rag2 = zcl_cd_ops_util=>rag_from_findings( lt_findings ) ).
-      LOOP AT lt_findings INTO DATA(ls_keep) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
-        INSERT ls_keep INTO TABLE lt_all_findings.
+      LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_keep>) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
+        INSERT <ls_keep> INTO TABLE lt_all_findings.
       ENDLOOP.
       " A67: the retention bound is exact - never a whole package over the cap
-      LOOP AT ls_package-lines INTO DATA(ls_keep_line) FROM 1 TO lv_keep_max - lines( rs_result-lines ).
-        INSERT ls_keep_line INTO TABLE rs_result-lines.
+      LOOP AT ls_package-lines ASSIGNING FIELD-SYMBOL(<ls_keep_line>) FROM 1 TO lv_keep_max - lines( rs_result-lines ).
+        INSERT <ls_keep_line> INTO TABLE rs_result-lines.
       ENDLOOP.
 
       " Circuit breaker: consecutive packages with a failure rate above the limit, or with
@@ -544,6 +555,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
 
   METHOD validate_package.
+    " Performance fix 1 note: the DFKKCR memo of the cheque rules is bound to the statement
+    " keys - validating the same statement set twice in one session must read it again
+    zcl_cd_ebs_rule_base=>clear_memo( ).
     load_configuration( ).
     INSERT LINES OF cs_package-findings INTO TABLE rt_findings.
     apply_blocking_flags( CHANGING ct_findings = rt_findings ).
@@ -558,11 +572,12 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA lt_posted_statements TYPE zif_cd_ebs_types=>tt_statement.
     DATA lt_posted_stmt_lines TYPE zif_cd_ebs_types=>tt_line.
     DATA(lt_open_statements) = posting_open_statements( cs_package-lines ).
-    LOOP AT cs_package-statements INTO DATA(ls_statement).
-      IF NOT line_exists( lt_open_statements[ table_line = ls_statement-stmt_key ] ).
-        INSERT ls_statement INTO TABLE lt_posted_statements.
-        LOOP AT cs_package-lines INTO DATA(ls_stmt_line) USING KEY stmt WHERE stmt_key = ls_statement-stmt_key.
-          INSERT ls_stmt_line INTO TABLE lt_posted_stmt_lines.
+    LOOP AT cs_package-statements ASSIGNING FIELD-SYMBOL(<ls_statement>).
+      IF NOT line_exists( lt_open_statements[ table_line = <ls_statement>-stmt_key ] ).
+        INSERT <ls_statement> INTO TABLE lt_posted_statements.
+        LOOP AT cs_package-lines ASSIGNING FIELD-SYMBOL(<ls_stmt_line>) USING KEY stmt
+             WHERE stmt_key = <ls_statement>-stmt_key.
+          INSERT <ls_stmt_line> INTO TABLE lt_posted_stmt_lines.
         ENDLOOP.
       ENDIF.
     ENDLOOP.
@@ -571,14 +586,14 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     INSERT LINES OF configuration_gaps( cs_package-lines ) INTO TABLE rt_findings.
 
     " 1. Statement checks
-    LOOP AT mt_rules INTO DATA(ls_stmt_rule) WHERE level = zif_cd_ebs_types=>gc_level-statement
-                                               AND unusable = abap_false.
-      IF ls_stmt_rule-needs_posting = abap_false.
-        INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
+    LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_stmt_rule>) WHERE level = zif_cd_ebs_types=>gc_level-statement
+                                                              AND unusable = abap_false.
+      IF <ls_stmt_rule>-needs_posting = abap_false.
+        INSERT LINES OF execute_rule( is_rule       = <ls_stmt_rule>
                                       it_statements = cs_package-statements
                                       it_lines      = cs_package-lines ) INTO TABLE rt_findings.
       ELSEIF lt_posted_statements IS NOT INITIAL.
-        INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
+        INSERT LINES OF execute_rule( is_rule       = <ls_stmt_rule>
                                       it_statements = lt_posted_statements
                                       it_lines      = lt_posted_stmt_lines ) INTO TABLE rt_findings.
       ENDIF.
@@ -591,25 +606,26 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       DATA lt_group_lines TYPE zif_cd_ebs_types=>tt_line.
       DATA lt_posted_lines TYPE zif_cd_ebs_types=>tt_line.
       CLEAR: lt_group_lines, lt_posted_lines.
-      LOOP AT GROUP lv_group INTO DATA(ls_member_line).
-        INSERT ls_member_line INTO TABLE lt_group_lines.
-        IF ls_member_line-posting_open = abap_false.
-          INSERT ls_member_line INTO TABLE lt_posted_lines.
+      LOOP AT GROUP lv_group ASSIGNING FIELD-SYMBOL(<ls_member_line>).
+        INSERT <ls_member_line> INTO TABLE lt_group_lines.
+        IF <ls_member_line>-posting_open = abap_false.
+          INSERT <ls_member_line> INTO TABLE lt_posted_lines.
         ENDIF.
       ENDLOOP.
-      LOOP AT mt_rules INTO DATA(ls_line_rule)
+      " Execution order is the primary order of the rules (once per rule group, not per line)
+      LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_line_rule>)
            WHERE level = zif_cd_ebs_types=>gc_level-line
              AND unusable = abap_false
              AND rule_id <> zif_cd_ebs_types=>gc_rule_none
              AND ( rule_group = lv_group OR rule_group = zif_cd_ebs_types=>gc_rule_group_all ).
         " Operating model: a posting-dependent rule sees only entries that are posted (or
         " not expected to post, or of unknown posting state - bank file)
-        IF ls_line_rule-needs_posting = abap_false.
-          INSERT LINES OF execute_rule( is_rule       = ls_line_rule
+        IF <ls_line_rule>-needs_posting = abap_false.
+          INSERT LINES OF execute_rule( is_rule       = <ls_line_rule>
                                         it_statements = cs_package-statements
                                         it_lines      = lt_group_lines ) INTO TABLE rt_findings.
         ELSEIF lt_posted_lines IS NOT INITIAL.
-          INSERT LINES OF execute_rule( is_rule       = ls_line_rule
+          INSERT LINES OF execute_rule( is_rule       = <ls_line_rule>
                                         it_statements = cs_package-statements
                                         it_lines      = lt_posted_lines ) INTO TABLE rt_findings.
         ENDIF.
@@ -662,25 +678,26 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     IF iv_mode = gc_mode-off.
       RETURN.
     ENDIF.
-    LOOP AT it_findings INTO DATA(ls_finding).
-      DATA(lv_contribution) = finding_disposition( ls_finding ).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      DATA(lv_contribution) = finding_disposition( <ls_finding> ).
       IF lv_contribution IS INITIAL.
         CONTINUE.
       ENDIF.
-      CASE ls_finding-object_type.
+      CASE <ls_finding>-object_type.
         WHEN zcl_cd_ebs_finding=>gc_object_type-line.
-          READ TABLE lt_lines ASSIGNING FIELD-SYMBOL(<ls_line_scope>) WITH TABLE KEY object_key = ls_finding-object_key.
+          READ TABLE lt_lines ASSIGNING FIELD-SYMBOL(<ls_line_scope>) WITH TABLE KEY object_key = <ls_finding>-object_key.
           IF sy-subrc = 0.
             <ls_line_scope>-disposition = stronger( iv_current = <ls_line_scope>-disposition iv_candidate = lv_contribution ).
           ELSE.
-            INSERT VALUE #( object_key = ls_finding-object_key disposition = lv_contribution ) INTO TABLE lt_lines.
+            INSERT VALUE #( object_key = <ls_finding>-object_key disposition = lv_contribution ) INTO TABLE lt_lines.
           ENDIF.
         WHEN zcl_cd_ebs_finding=>gc_object_type-statement.
-          READ TABLE lt_statements ASSIGNING FIELD-SYMBOL(<ls_stmt_scope>) WITH TABLE KEY object_key = ls_finding-object_key.
+          READ TABLE lt_statements ASSIGNING FIELD-SYMBOL(<ls_stmt_scope>)
+               WITH TABLE KEY object_key = <ls_finding>-object_key.
           IF sy-subrc = 0.
             <ls_stmt_scope>-disposition = stronger( iv_current = <ls_stmt_scope>-disposition iv_candidate = lv_contribution ).
           ELSE.
-            INSERT VALUE #( object_key = ls_finding-object_key disposition = lv_contribution ) INTO TABLE lt_statements.
+            INSERT VALUE #( object_key = <ls_finding>-object_key disposition = lv_contribution ) INTO TABLE lt_statements.
           ENDIF.
         WHEN OTHERS.
           " Run / file: the whole package
@@ -688,31 +705,31 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       ENDCASE.
     ENDLOOP.
 
-    LOOP AT is_package-lines INTO DATA(ls_line).
-      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( ls_line ).
+    LOOP AT is_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( <ls_line> ).
       " Map row: AUTO_POST unless it says otherwise
       DATA(lv_disposition) = COND zif_cd_ops_types=>ty_action(
-        WHEN ls_line-not_posted = abap_true THEN zif_cd_ebs_types=>gc_disposition-not_posted
-        WHEN ls_line-map_action = zif_cd_ops_types=>gc_action-exception
-          OR ls_line-map_action = zif_cd_ops_types=>gc_action-on_account THEN ls_line-map_action
+        WHEN <ls_line>-not_posted = abap_true THEN zif_cd_ebs_types=>gc_disposition-not_posted
+        WHEN <ls_line>-map_action = zif_cd_ops_types=>gc_action-exception
+          OR <ls_line>-map_action = zif_cd_ops_types=>gc_action-on_account THEN <ls_line>-map_action
         ELSE zif_cd_ops_types=>gc_action-auto_post ).
       " A blocked line whose block was released is still not auto-postable (no usable mapping)
-      IF ls_line-blocked = abap_true.
+      IF <ls_line>-blocked = abap_true.
         lv_disposition = stronger( iv_current = lv_disposition iv_candidate = zif_cd_ops_types=>gc_action-exception ).
       ENDIF.
       lv_disposition = stronger( iv_current   = lv_disposition
                                  iv_candidate = VALUE #( lt_lines[ object_key = lv_key ]-disposition OPTIONAL ) ).
       lv_disposition = stronger( iv_current   = lv_disposition
                                  iv_candidate = VALUE #( lt_statements[ object_key = CONV zif_cd_ops_types=>ty_object_key(
-                                                                                       ls_line-stmt_key ) ]-disposition OPTIONAL ) ).
+                                                                                       <ls_line>-stmt_key ) ]-disposition OPTIONAL ) ).
       lv_disposition = stronger( iv_current = lv_disposition iv_candidate = lv_package ).
       IF iv_mode <> gc_mode-enforce AND lv_disposition = zif_cd_ops_types=>gc_action-block.
         " Monitor mode never blocks: the line is handed over as an exception
         lv_disposition = zif_cd_ops_types=>gc_action-exception.
       ENDIF.
       INSERT VALUE #( line_key    = lv_key
-                      stmt_key    = ls_line-stmt_key
-                      line_no     = ls_line-line_no
+                      stmt_key    = <ls_line>-stmt_key
+                      line_no     = <ls_line>-line_no
                       disposition = lv_disposition ) INTO TABLE rt_dispositions.
     ENDLOOP.
   ENDMETHOD.
@@ -846,7 +863,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD apply_blocking_flags.
     LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE action IS INITIAL.
-      IF line_exists( mt_rules[ rule_id = <ls_finding>-rule_id blocks_posting = abap_true unusable = abap_false ] ).
+      IF line_exists( mt_rules[ KEY by_rule rule_id = <ls_finding>-rule_id blocks_posting = abap_true unusable = abap_false ] ).
         <ls_finding>-action = zif_cd_ops_types=>gc_action-block.
       ENDIF.
     ENDLOOP.
@@ -854,47 +871,49 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
 
   METHOD configuration_gaps.
-    LOOP AT mt_rules INTO DATA(ls_run_rule) WHERE unusable = abap_true
-                                              AND rule_group = zif_cd_ebs_types=>gc_rule_group_all.
+    LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_run_rule>) USING KEY by_group
+         WHERE rule_group = zif_cd_ebs_types=>gc_rule_group_all AND unusable = abap_true.
       INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
-                      object_key  = ls_run_rule-rule_id
-                      group2      = ls_run_rule-rule_group
-                      rule_id     = ls_run_rule-rule_id
+                      object_key  = <ls_run_rule>-rule_id
+                      group2      = <ls_run_rule>-rule_group
+                      rule_id     = <ls_run_rule>-rule_id
                       check_code  = zif_cd_ebs_types=>gc_check_code-rule_unusable
                       severity    = zif_cd_ops_types=>gc_severity-error
                       action      = zif_cd_ops_types=>gc_action-block
                       message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
-                                                           iv_v1    = ls_run_rule-rule_id
-                                                           iv_v2    = ls_run_rule-rule_group ) )
+                                                           iv_v1    = <ls_run_rule>-rule_id
+                                                           iv_v2    = <ls_run_rule>-rule_group ) )
         INTO TABLE rt_findings.
     ENDLOOP.
 
-    LOOP AT it_lines INTO DATA(ls_line) WHERE blocked = abap_false.
-      IF ls_line-rule_group IS INITIAL OR ls_line-rule_group = zif_cd_ebs_types=>gc_rule_group_all.
+    " Per line: the rules of its group by key BY_GROUP (was a scan of every rule per line)
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE blocked = abap_false.
+      IF <ls_line>-rule_group IS INITIAL OR <ls_line>-rule_group = zif_cd_ebs_types=>gc_rule_group_all.
         CONTINUE.
       ENDIF.
-      LOOP AT mt_rules INTO DATA(ls_rule) WHERE rule_group = ls_line-rule_group AND unusable = abap_true.
+      LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>) USING KEY by_group
+           WHERE rule_group = <ls_line>-rule_group AND unusable = abap_true.
         INSERT zcl_cd_ebs_finding=>for_line(
-                 is_line       = ls_line
-                 iv_rule_id    = ls_rule-rule_id
+                 is_line       = <ls_line>
+                 iv_rule_id    = <ls_rule>-rule_id
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_unusable
                  iv_severity   = zif_cd_ops_types=>gc_severity-error
                  iv_action     = zif_cd_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
-                                                        iv_v1    = ls_rule-rule_id
-                                                        iv_v2    = ls_rule-rule_group ) )
+                                                        iv_v1    = <ls_rule>-rule_id
+                                                        iv_v2    = <ls_rule>-rule_group ) )
           INTO TABLE rt_findings.
       ENDLOOP.
       " a usable rule or an explicit NONE row (group intentionally without own rules)
-      IF NOT line_exists( mt_rules[ rule_group = ls_line-rule_group unusable = abap_false ] ).
+      IF NOT line_exists( mt_rules[ KEY by_group rule_group = <ls_line>-rule_group unusable = abap_false ] ).
         INSERT zcl_cd_ebs_finding=>for_line(
-                 is_line       = ls_line
+                 is_line       = <ls_line>
                  iv_rule_id    = zif_cd_ebs_types=>gc_engine-rule_id
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty
                  iv_severity   = zif_cd_ops_types=>gc_severity-error
                  iv_action     = zif_cd_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_group_empty
-                                                        iv_v1    = ls_line-rule_group ) )
+                                                        iv_v1    = <ls_line>-rule_group ) )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
@@ -904,9 +923,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   METHOD execute_rule.
     DATA lo_rule TYPE REF TO zif_cd_ebs_rule.
     TRY.
-        READ TABLE mt_plugins INTO DATA(ls_plugin) WITH TABLE KEY class_name = is_rule-class_name.
+        READ TABLE mt_plugins ASSIGNING FIELD-SYMBOL(<ls_plugin>) WITH TABLE KEY class_name = is_rule-class_name.
         IF sy-subrc = 0.
-          lo_rule = ls_plugin-rule.
+          lo_rule = <ls_plugin>-rule.
         ELSE.
           " A62: the factory checks the interface by RTTI before CREATE OBJECT
           lo_rule = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin(
@@ -942,32 +961,32 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA lt_worst TYPE tt_worst.
     DATA lt_unevaluated TYPE zif_cd_ops_types=>tt_group.
 
-    LOOP AT it_findings INTO DATA(ls_error) WHERE check_code = gc_check_code-plugin_error.
-      INSERT ls_error-group2 INTO TABLE lt_unevaluated.
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_error>) WHERE check_code = gc_check_code-plugin_error.
+      INSERT <ls_error>-group2 INTO TABLE lt_unevaluated.
     ENDLOOP.
     DATA(lv_all_unevaluated) = xsdbool( line_exists( lt_unevaluated[ table_line = zif_cd_ebs_types=>gc_rule_group_all ] ) ).
 
-    LOOP AT it_findings INTO DATA(ls_finding) WHERE object_type = zcl_cd_ebs_finding=>gc_object_type-line.
-      READ TABLE lt_worst ASSIGNING FIELD-SYMBOL(<ls_worst>) WITH TABLE KEY object_key = ls_finding-object_key.
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE object_type = zcl_cd_ebs_finding=>gc_object_type-line.
+      READ TABLE lt_worst ASSIGNING FIELD-SYMBOL(<ls_worst>) WITH TABLE KEY object_key = <ls_finding>-object_key.
       IF sy-subrc <> 0.
-        INSERT ls_finding INTO TABLE lt_worst.
-      ELSEIF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) > zcl_cd_ops_util=>severity_rank( <ls_worst>-severity ).
-        <ls_worst>-severity = ls_finding-severity.
+        INSERT <ls_finding> INTO TABLE lt_worst.
+      ELSEIF zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ) > zcl_cd_ops_util=>severity_rank( <ls_worst>-severity ).
+        <ls_worst>-severity = <ls_finding>-severity.
       ENDIF.
     ENDLOOP.
 
-    LOOP AT it_lines INTO DATA(ls_line).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
       cs_run-total_items += 1.
-      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( ls_line ).
+      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( <ls_line> ).
       DATA(lv_severity) = VALUE #( lt_worst[ object_key = lv_key ]-severity OPTIONAL ).
-      IF ls_line-blocked = abap_true OR lv_severity = zif_cd_ops_types=>gc_severity-block.
+      IF <ls_line>-blocked = abap_true OR lv_severity = zif_cd_ops_types=>gc_severity-block.
         cs_run-blocked_items += 1.
-      ELSEIF lv_all_unevaluated = abap_true OR line_exists( lt_unevaluated[ table_line = ls_line-rule_group ] ).
+      ELSEIF lv_all_unevaluated = abap_true OR line_exists( lt_unevaluated[ table_line = <ls_line>-rule_group ] ).
         cs_run-failed_items += 1.
         cv_unevaluated += 1.
       ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-error.
         cs_run-failed_items += 1.
-      ELSEIF ls_line-posting_open = abap_true AND posting_rule_applies( ls_line ) = abap_true.
+      ELSEIF <ls_line>-posting_open = abap_true AND posting_rule_applies( <ls_line> ) = abap_true.
         cv_unevaluated += 1.
         cv_posting_open += 1.
       ELSEIF lv_severity = zif_cd_ops_types=>gc_severity-warning.
@@ -1029,59 +1048,76 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
 
   METHOD posting_open_statements.
-    LOOP AT it_lines INTO DATA(ls_line) WHERE posting_open = abap_true.
-      INSERT ls_line-stmt_key INTO TABLE rt_statements.
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE posting_open = abap_true.
+      INSERT <ls_line>-stmt_key INTO TABLE rt_statements.
     ENDLOOP.
   ENDMETHOD.
 
 
   METHOD posting_rule_applies.
     rv_yes = xsdbool(
-      line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-statement needs_posting = abap_true unusable = abap_false ] )
-      OR line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-line needs_posting = abap_true unusable = abap_false
-                                rule_group = is_line-rule_group ] )
-      OR line_exists( mt_rules[ level = zif_cd_ebs_types=>gc_level-line needs_posting = abap_true unusable = abap_false
-                                rule_group = zif_cd_ebs_types=>gc_rule_group_all ] ) ).
+      line_exists( mt_rules[ KEY by_posting needs_posting = abap_true
+                                            level         = zif_cd_ebs_types=>gc_level-statement
+                                            unusable      = abap_false ] )
+      OR line_exists( mt_rules[ KEY by_posting needs_posting = abap_true
+                                               level         = zif_cd_ebs_types=>gc_level-line
+                                               unusable      = abap_false
+                                               rule_group    = is_line-rule_group ] )
+      OR line_exists( mt_rules[ KEY by_posting needs_posting = abap_true
+                                               level         = zif_cd_ebs_types=>gc_level-line
+                                               unusable      = abap_false
+                                               rule_group    = zif_cd_ebs_types=>gc_rule_group_all ] ) ).
   ENDMETHOD.
 
 
   METHOD summarize.
-    LOOP AT it_findings INTO DATA(ls_finding).
+    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
       READ TABLE ct_summary ASSIGNING FIELD-SYMBOL(<ls_summary>)
-           WITH TABLE KEY rule_id    = ls_finding-rule_id
-                          check_code = ls_finding-check_code
-                          group1     = ls_finding-group1
-                          group2     = ls_finding-group2
-                          severity   = ls_finding-severity
-                          action     = ls_finding-action.
+           WITH TABLE KEY rule_id    = <ls_finding>-rule_id
+                          check_code = <ls_finding>-check_code
+                          group1     = <ls_finding>-group1
+                          group2     = <ls_finding>-group2
+                          severity   = <ls_finding>-severity
+                          action     = <ls_finding>-action.
       IF sy-subrc = 0.
         <ls_summary>-count += 1.
       ELSE.
-        INSERT VALUE #( rule_id    = ls_finding-rule_id
-                        check_code = ls_finding-check_code
-                        group1     = ls_finding-group1
-                        group2     = ls_finding-group2
-                        severity   = ls_finding-severity
-                        action     = ls_finding-action
+        INSERT VALUE #( rule_id    = <ls_finding>-rule_id
+                        check_code = <ls_finding>-check_code
+                        group1     = <ls_finding>-group1
+                        group2     = <ls_finding>-group2
+                        severity   = <ls_finding>-severity
+                        action     = <ls_finding>-action
                         count      = 1
-                        sample     = ls_finding ) INTO TABLE ct_summary.
+                        sample     = <ls_finding> ) INTO TABLE ct_summary.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
 
 
   METHOD alert_findings.
+    DATA lt_kept_classes TYPE tt_summary.
     rt_findings = it_kept.
-    LOOP AT it_summary INTO DATA(ls_summary).
-      IF line_exists( it_kept[ rule_id    = ls_summary-rule_id
-                               check_code = ls_summary-check_code
-                               group1     = ls_summary-group1
-                               group2     = ls_summary-group2
-                               severity   = ls_summary-severity
-                               action     = ls_summary-action ] ).
+    " Classes of the kept findings in one pass (was a scan of up to EBS_RESULT_MAX findings
+    " per summarised class)
+    LOOP AT it_kept ASSIGNING FIELD-SYMBOL(<ls_kept>).
+      INSERT VALUE #( rule_id    = <ls_kept>-rule_id
+                      check_code = <ls_kept>-check_code
+                      group1     = <ls_kept>-group1
+                      group2     = <ls_kept>-group2
+                      severity   = <ls_kept>-severity
+                      action     = <ls_kept>-action ) INTO TABLE lt_kept_classes.
+    ENDLOOP.
+    LOOP AT it_summary ASSIGNING FIELD-SYMBOL(<ls_summary>).
+      IF line_exists( lt_kept_classes[ rule_id    = <ls_summary>-rule_id
+                                       check_code = <ls_summary>-check_code
+                                       group1     = <ls_summary>-group1
+                                       group2     = <ls_summary>-group2
+                                       severity   = <ls_summary>-severity
+                                       action     = <ls_summary>-action ] ).
         CONTINUE.
       ENDIF.
-      INSERT ls_summary-sample INTO TABLE rt_findings.
+      INSERT <ls_summary>-sample INTO TABLE rt_findings.
     ENDLOOP.
   ENDMETHOD.
 

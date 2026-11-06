@@ -22,6 +22,7 @@
 *& 2026-11-06 | Operating model: LTC_POSTING_STATE - posted / unposted / NOT_POSTED entries, file source,
 *&            | POSTING_INCOMPLETE once per statement, never green, no reconciliation of skipped entries.
 *& 2026-11-06 | Return / NOC reason correction: R05 (NEEDS_POSTING) skips an entry that is not posted yet.
+*& 2026-11-06 | Performance: LTC_REGISTER_MEMO - the same statements validated twice read DFKKCR twice.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -150,9 +151,9 @@ CLASS ltd_release_dao IMPLEMENTATION.
   METHOD zif_cd_ebs_release_dao~get_approved.
     mv_calls += 1.
     CHECK mv_check_code IS NOT INITIAL.
-    LOOP AT it_object_keys INTO DATA(lv_key).
+    LOOP AT it_object_keys ASSIGNING FIELD-SYMBOL(<lv_key>).
       INSERT VALUE #( release_uuid = '000000000000000000000000000000A1'
-                      object_key   = lv_key
+                      object_key   = <lv_key>
                       check_code   = mv_check_code
                       status       = zif_cd_ebs_release_types=>gc_status-approved
                       requested_by = 'REQUESTER'
@@ -1894,6 +1895,126 @@ CLASS ltc_posting_state IMPLEMENTATION.
           act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
                                                                                 gc_test-stmt_key ) ] ) )
           msg = 'A statement with an unposted entry must not be reconciled' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Check-register reads of the cheque rules counted (DFKKCR double)
+CLASS ltd_register_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ebs_sap_dao PARTIALLY IMPLEMENTED.
+    DATA mv_check_reads TYPE i.
+ENDCLASS.
+
+CLASS ltd_register_dao IMPLEMENTATION.
+  METHOD zif_cd_ebs_sap_dao~get_checks.
+    mv_check_reads += 1.
+    CLEAR rt_checks.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! Performance fix 1 note: the DFKKCR memo of R07C / R08 / R12 is bound to the statement keys
+"! of a package. validate_package( ) clears it first, so validating the same statement set a
+"! second time in one session reads the register again (no stale rows). Does not prove live
+"! SAP runtime behavior.
+CLASS ltc_register_memo DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        group    TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'CHEQUES',
+        code     TYPE zif_cd_ebs_types=>ty_btc_code VALUE '475',
+        r07c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R07C_CHECK',
+        stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001',
+      END OF gc_test.
+
+    DATA mo_cfg TYPE REF TO ltd_cfg.
+    DATA mo_dao TYPE REF TO ltd_register_dao.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS package
+      RETURNING
+        VALUE(rs_package) TYPE zif_cd_ebs_types=>ty_package.
+
+    METHODS same_statements_reread      FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_register_memo IMPLEMENTATION.
+
+  METHOD setup.
+    DATA ls_map TYPE zif_cd_ebs_types=>ty_btc_map.
+    DATA ls_rule TYPE zif_cd_ebs_types=>ty_rule_cfg.
+    mo_cfg = NEW #( ).
+    mo_dao = NEW #( ).
+    zcl_cd_ops_injector=>inject_store( NEW ltd_store( ) ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
+    zcl_cd_ebs_injector=>inject_sap_dao( mo_dao ).
+    ls_map-scheme     = zif_cd_ebs_types=>gc_scheme-bai2.
+    ls_map-btc_code   = gc_test-code.
+    ls_map-flow_type  = zif_cd_ebs_types=>gc_flow-any.
+    ls_map-category   = 'D03'.
+    ls_map-rule_group = gc_test-group.
+    ls_map-exp_cdi    = zif_cd_ebs_types=>gc_cdi-debit.
+    ls_map-active     = abap_true.
+    INSERT ls_map INTO TABLE mo_cfg->mt_map.
+    ls_rule-rule_group = gc_test-group.
+    ls_rule-rule_id    = 'R07C'.
+    ls_rule-class_name = gc_test-r07c.
+    ls_rule-level      = zif_cd_ebs_types=>gc_level-line.
+    ls_rule-severity   = zif_cd_ops_types=>gc_severity-error.
+    ls_rule-action     = zif_cd_ops_types=>gc_action-exception.
+    ls_rule-active     = abap_true.
+    INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+    zcl_cd_ebs_injector=>reset( ).
+    CLEAR: mo_cfg, mo_dao.
+  ENDMETHOD.
+
+
+  METHOD package.
+    DATA ls_stmt TYPE zif_cd_ebs_types=>ty_statement.
+    DATA ls_line TYPE zif_cd_ebs_types=>ty_line.
+    ls_stmt-stmt_key  = gc_test-stmt_key.
+    ls_stmt-source    = zif_cd_ebs_types=>gc_source-file.
+    ls_stmt-currency  = 'USD'.
+    ls_stmt-stmt_date = '20261105'.
+    INSERT ls_stmt INTO TABLE rs_package-statements.
+    ls_line-stmt_key  = gc_test-stmt_key.
+    ls_line-line_no   = 1.
+    ls_line-scheme    = zif_cd_ebs_types=>gc_scheme-bai2.
+    ls_line-btc_code  = gc_test-code.
+    ls_line-cdi       = zif_cd_ebs_types=>gc_cdi-debit.
+    ls_line-amount    = '10.00'.
+    ls_line-currency  = 'USD'.
+    ls_line-reference = '10045'.
+    INSERT ls_line INTO TABLE rs_package-lines.
+  ENDMETHOD.
+
+
+  " The same statement set validated twice in one session: the register is read each time
+  METHOD same_statements_reread.
+    TRY.
+        DATA(lo_cut) = NEW zcl_cd_ebs_engine( ).
+        DATA(ls_first) = package( ).
+        lo_cut->validate_package( CHANGING cs_package = ls_first ).
+        DATA(ls_second) = package( ).
+        lo_cut->validate_package( CHANGING cs_package = ls_second ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_check_reads exp = 2
+                                            msg = 'A second validation of the same statements must read DFKKCR again' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
