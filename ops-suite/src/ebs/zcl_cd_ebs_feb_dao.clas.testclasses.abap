@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A14: recent items of an account (R22 history).
 *& 2026-11-06 | Performance fix 2: recent items carry the statement date FEBKO-AZDAT.
 *& 2026-11-06 | Performance fix 3: one item read with reason field and posting flags (tests moved from the SAP DAO).
+*& 2026-11-06 | Return reason correction: FEBEP carries no return reason - reason-field tests removed.
 *&---------------------------------------------------------------------*
 CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -31,8 +32,7 @@ CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
     METHODS same_day_lower_number_prior  FOR TESTING.
     METHODS imported_statement_exists    FOR TESTING.
     METHODS recent_items_of_account      FOR TESTING.
-    METHODS items_with_reason_and_flags  FOR TESTING.
-    METHODS unknown_reason_field_ignored FOR TESTING.
+    METHODS items_with_posting_flags     FOR TESTING.
     METHODS posting_unknown_field_raises FOR TESTING.
     METHODS posting_empty_keys_nothing   FOR TESTING.
 ENDCLASS.
@@ -142,10 +142,9 @@ CLASS ltc_feb_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Fix 3: one FEBEP read returns the items with the configured reason field and the posting
-  " state (posted only when every flag is X). VGINT stands in for the landscape's reason field;
-  " VERIFY-SE11 FEBEP-VB1OK / VB2OK
-  METHOD items_with_reason_and_flags.
+  " Fix 3: one FEBEP read returns the items with their posting state (posted only when every
+  " flag is X). VERIFY-SE11 FEBEP-VB1OK / VB2OK
+  METHOD items_with_posting_flags.
     DATA lt_febep TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
     DATA ls_febep TYPE febep.
     DATA ls_extras TYPE zif_cd_ebs_feb_dao=>ty_item_extras.
@@ -161,42 +160,19 @@ CLASS ltc_feb_dao IMPLEMENTATION.
         ls_febep-vb2ok = abap_false.
         INSERT ls_febep INTO TABLE lt_febep.
         go_env->insert_test_data( lt_febep ).
-        ls_extras-reason_field = `vgint`.
         INSERT `VB1OK` INTO TABLE ls_extras-posted_fields.
         INSERT `VB2OK` INTO TABLE ls_extras-posted_fields.
         DATA(lt_items) = mo_cut->get_items( it_kukey  = VALUE #( ( '00000002' ) )
                                             is_extras = ls_extras ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 2 msg = 'Both items of the statement' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-reason exp = 'R01'
-                                            msg = 'The reason must come from the configured field' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-vgint exp = 'R01'
+                                            msg = 'The item fields must be read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-posted exp = abap_true
                                             msg = 'Both posting areas complete: posted' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 2 ]-posted exp = abap_false
                                             msg = 'One posting area open: not posted' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 2 ]-chect exp = ls_febep-chect
                                             msg = 'The item fields are read in the same pass' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " A28 parity: a reason field that is not a FEBEP field is never named in the statement -
-  " the items are read, without reason
-  METHOD unknown_reason_field_ignored.
-    DATA lt_febep TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
-    DATA ls_febep TYPE febep.
-    DATA ls_extras TYPE zif_cd_ebs_feb_dao=>ty_item_extras.
-    TRY.
-        ls_febep-kukey = '00000002'.
-        ls_febep-esnum = 1.
-        INSERT ls_febep INTO TABLE lt_febep.
-        go_env->insert_test_data( lt_febep ).
-        ls_extras-reason_field = `ZZ_NOT_A_FEBEP_FIELD`.
-        DATA(lt_items) = mo_cut->get_items( it_kukey  = VALUE #( ( '00000002' ) )
-                                            is_extras = ls_extras ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 1 msg = 'The item must still be read' ).
-        cl_abap_unit_assert=>assert_initial( act = lt_items[ 1 ]-reason msg = 'No reason from an unknown field' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

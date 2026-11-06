@@ -23,6 +23,8 @@
 *& 2026-11-06 | Performance fix 4: rows of a key found by secondary key wherever they sit in the result.
 *& 2026-11-06 | Performance fix 6: LTD_SAP_DAO answers get_gl_balances (balance per request, reads counted).
 *& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
+*& 2026-11-06 | Return / NOC reason correction: R05 bank-file tests on the file source; LTC_R05_LOT_REASON
+*&            | (FEB source: returns lot DFKKRP-RLGRD, NOC lot DFKKNRP-FLGRD by INFOF).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -90,6 +92,8 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mv_check_reads TYPE i.
     DATA mt_lookup_rows TYPE zif_cd_ebs_sap_dao=>tt_lookup_row.
     DATA ms_lookup_used TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    DATA mt_noc_items TYPE zif_cd_ebs_sap_dao=>tt_noc_item.
+    DATA mt_infof_seen TYPE zif_cd_ebs_sap_dao=>tt_infof.
 ENDCLASS.
 
 CLASS ltd_sap_dao IMPLEMENTATION.
@@ -98,6 +102,14 @@ CLASS ltd_sap_dao IMPLEMENTATION.
     LOOP AT mt_items INTO DATA(ls_item).
       IF line_exists( it_docno[ table_line = ls_item-selw1 ] ).
         INSERT ls_item INTO TABLE rt_items.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_sap_dao~get_noc_items.
+    mt_infof_seen = it_infof.
+    LOOP AT mt_noc_items ASSIGNING FIELD-SYMBOL(<ls_noc>).
+      IF line_exists( it_infof[ table_line = <ls_noc>-infof ] ).
+        INSERT <ls_noc> INTO TABLE rt_items.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -526,13 +538,13 @@ CLASS ltc_line_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " R05: a return reason not mapped to an payment engine reason fails
+  " R05 (bank file before import): a return reason not mapped to an payment engine reason fails
   METHOD r05_unknown_reason_fails.
     DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
     ls_reason-reason      = 'R01'.
     ls_reason-fica_reason = '001'.
     INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
-    add_statement( ).
+    add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
     add_line( ).
     mt_lines[ 1 ]-return_reason = 'R99'.
     run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
@@ -546,7 +558,7 @@ CLASS ltc_line_rules IMPLEMENTATION.
     ls_reason-reason      = 'R01'.
     ls_reason-fica_reason = '001'.
     INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
-    add_statement( ).
+    add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
     add_line( ).
     mt_lines[ 1 ]-return_reason = 'R01'.
     run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
@@ -561,7 +573,7 @@ CLASS ltc_line_rules IMPLEMENTATION.
         ls_reason-reason      = 'R01'.
         ls_reason-fica_reason = '<PE'.
         INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
-        add_statement( ).
+        add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
         add_line( ).
         mt_lines[ 1 ]-return_reason = 'R01'.
         run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
@@ -581,7 +593,7 @@ CLASS ltc_line_rules IMPLEMENTATION.
         ls_reason-fica_reason = '051'.
         ls_reason-is_noc      = abap_true.
         INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
-        add_statement( ).
+        add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
         add_line( ).
         mt_lines[ 1 ]-return_reason = 'C01'.
         run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param2 = 'RETURN' ) ).
@@ -596,7 +608,7 @@ CLASS ltc_line_rules IMPLEMENTATION.
   " A28: a required reason cannot be validated without any mapping - incomplete configuration
   METHOD r05_required_without_map.
     TRY.
-        add_statement( ).
+        add_statement( iv_source = zif_cd_ebs_types=>gc_source-file ).
         add_line( ).
         mt_lines[ 1 ]-return_reason = 'R01'.
         run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param1 = 'REQUIRED' ) ).
@@ -1594,6 +1606,283 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
     add_line( iv_belnr = '1400000001' ).
     run( iv_class = 'ZCL_CD_EBS_R_R19_FI_DOCUMENT' is_rule = rule( 'R19' ) ).
     assert_one_code( iv_check_code = 'FI_DOC_NOT_FOUND' iv_msg = 'Missing FI document must fail R19' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Return / NOC reason correction 2026-11-06 (FEB source): FEBEP carries no reason - R05
+"! checks the reason of the returns lot item (DFKKRP-RLGRD by SELW1 = payment document) and
+"! of the NOC lot item (DFKKNRP-FLGRD by INFOF = payment document or payment reference)
+CLASS ltc_r05_lot_reason DEFINITION FINAL FOR TESTING
+  INHERITING FROM ltc_rule_fixture
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_r05,
+        class      TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_R05_REASON',
+        id         TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R05',
+        ret_reason TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '001',
+        ret_other  TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '002',
+        noc_reason TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '051',
+        noc_other  TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '052',
+        unknown    TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE '999',
+        noc_lot    TYPE c LENGTH 12 VALUE 'NOC000000001',
+      END OF gc_r05.
+
+    METHODS setup.
+    METHODS teardown.
+    "! Map rows: R01 -> return reason 001, R02 -> placeholder, C01 -> NOC reason 051
+    METHODS add_reason_map.
+    METHODS add_return_item
+      IMPORTING
+        iv_rlgrd TYPE zif_cd_ebs_sap_dao=>ty_lot_reason
+        iv_opbel TYPE zif_cd_ebs_sap_dao=>ty_docno DEFAULT '000000000001'.
+    METHODS add_noc_item
+      IMPORTING
+        iv_infof TYPE zif_cd_ebs_sap_dao=>ty_infof
+        iv_flgrd TYPE zif_cd_ebs_sap_dao=>ty_lot_reason
+        iv_posna TYPE zif_cd_ebs_sap_dao=>ty_noc_item-posna DEFAULT 1.
+    METHODS run_r05
+      IMPORTING
+        iv_param1 TYPE clike OPTIONAL
+        iv_param2 TYPE clike OPTIONAL.
+
+    METHODS return_valid_reason_passes   FOR TESTING.
+    METHODS return_blank_reason_missing  FOR TESTING.
+    METHODS return_unknown_reason_fails  FOR TESTING.
+    METHODS return_placeholder_unmapped  FOR TESTING.
+    METHODS return_two_reasons_ambiguous FOR TESTING.
+    METHODS no_lot_item_not_evaluated    FOR TESTING.
+    METHODS noc_found_by_payment_doc     FOR TESTING.
+    METHODS noc_found_by_reference       FOR TESTING.
+    METHODS noc_return_reason_unmapped   FOR TESTING.
+    METHODS noc_two_reasons_ambiguous    FOR TESTING.
+    METHODS file_source_reads_no_lots    FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_r05_lot_reason IMPLEMENTATION.
+
+  METHOD setup.
+    prepare_fixture( ).
+    add_reason_map( ).
+    add_statement( ).
+    add_line( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    clear_fixture( ).
+  ENDMETHOD.
+
+
+  METHOD add_reason_map.
+    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
+    ls_reason-reason      = 'R01'.
+    ls_reason-fica_reason = gc_r05-ret_reason.
+    INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+    ls_reason-reason      = 'R02'.
+    ls_reason-fica_reason = '<PE'.
+    INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+    ls_reason-reason      = 'C01'.
+    ls_reason-fica_reason = gc_r05-noc_reason.
+    ls_reason-is_noc      = abap_true.
+    INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+  ENDMETHOD.
+
+
+  METHOD add_return_item.
+    DATA ls_item TYPE zif_cd_ebs_sap_dao=>ty_return_item.
+    ls_item-selw1     = gc_test-docno.
+    ls_item-opbel     = iv_opbel.
+    ls_item-lot_stars = '5'.
+    ls_item-rlgrd     = iv_rlgrd.
+    INSERT ls_item INTO TABLE mo_sap_dao->mt_items.
+  ENDMETHOD.
+
+
+  METHOD add_noc_item.
+    DATA ls_item TYPE zif_cd_ebs_sap_dao=>ty_noc_item.
+    ls_item-keyn1 = gc_r05-noc_lot.
+    ls_item-posna = iv_posna.
+    ls_item-infof = iv_infof.
+    ls_item-flgrd = iv_flgrd.
+    INSERT ls_item INTO TABLE mo_sap_dao->mt_noc_items.
+  ENDMETHOD.
+
+
+  METHOD run_r05.
+    run( iv_class = gc_r05-class
+         is_rule  = rule( iv_rule_id = gc_r05-id iv_param1 = iv_param1 iv_param2 = iv_param2 ) ).
+  ENDMETHOD.
+
+
+  " A returns lot item for the payment document with a configured return reason passes
+  METHOD return_valid_reason_passes.
+    TRY.
+        add_return_item( gc_r05-ret_reason ).
+        run_r05( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'A configured RLGRD must pass R05' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_sap_dao->mt_docno_seen[ table_line = gc_test-docno ] ) )
+                                          msg = 'The returns lot must be read by the payment document' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " RLGRD blank: the return was processed without a reason - REASON_MISSING
+  METHOD return_blank_reason_missing.
+    TRY.
+        add_return_item( space ).
+        run_r05( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_missing
+                         iv_msg        = 'A returns lot item without RLGRD must be REASON_MISSING' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " RLGRD not among the configured payment engine return reasons - REASON_UNMAPPED
+  METHOD return_unknown_reason_fails.
+    TRY.
+        add_return_item( gc_r05-unknown ).
+        run_r05( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
+                         iv_msg        = 'An unconfigured RLGRD must be REASON_UNMAPPED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A seeded placeholder is no configured reason; a NOC reason is no return reason
+  METHOD return_placeholder_unmapped.
+    TRY.
+        add_return_item( '<PE' ).
+        run_r05( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
+                         iv_msg        = 'A placeholder RLGRD must be REASON_UNMAPPED' ).
+        CLEAR: mt_findings, mo_sap_dao->mt_items.
+        add_return_item( gc_r05-noc_reason ).
+        run_r05( iv_param2 = zif_cd_ebs_types=>gc_rule_keyword-return ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
+                         iv_msg        = 'A NOC reason on a returns lot item must be REASON_UNMAPPED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Two returns lot items of one payment with different reasons - REASON_AMBIGUOUS, once
+  METHOD return_two_reasons_ambiguous.
+    TRY.
+        add_return_item( gc_r05-ret_reason ).
+        add_return_item( iv_rlgrd = gc_r05-ret_other iv_opbel = '000000000002' ).
+        run_r05( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_ambiguous
+                         iv_msg        = 'Different RLGRD for one payment must be REASON_AMBIGUOUS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " No returns / NOC lot item: R07R / S13 own that - R05 is not evaluated (even REQUIRED)
+  METHOD no_lot_item_not_evaluated.
+    TRY.
+        run_r05( iv_param1 = zif_cd_ebs_types=>gc_rule_keyword-required ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Without a lot item R05 must not report the line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " NOC lot item whose INFOF holds the payment document (AUGBL) with a configured NOC reason
+  " passes; an unconfigured FLGRD is REASON_UNMAPPED; a NOC assignment never reads DFKKRP
+  METHOD noc_found_by_payment_doc.
+    TRY.
+        add_noc_item( iv_infof = CONV #( gc_test-docno ) iv_flgrd = gc_r05-noc_reason ).
+        run_r05( iv_param2 = zif_cd_ebs_types=>gc_rule_keyword-noc ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'A configured FLGRD must pass R05' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_sap_dao->mt_docno_seen
+                                             msg = 'A NOC assignment must not read the returns lot' ).
+        CLEAR mo_sap_dao->mt_noc_items.
+        add_noc_item( iv_infof = CONV #( gc_test-docno ) iv_flgrd = gc_r05-unknown ).
+        run_r05( iv_param2 = zif_cd_ebs_types=>gc_rule_keyword-noc ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
+                         iv_msg        = 'An unconfigured FLGRD must be REASON_UNMAPPED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " NOC lot item whose INFOF holds the payment reference as the bank delivered it (not the
+  " 12-character document key): found and matched; a blank FLGRD is REASON_MISSING
+  METHOD noc_found_by_reference.
+    TRY.
+        add_noc_item( iv_infof = CONV #( gc_test-ref ) iv_flgrd = gc_r05-noc_reason ).
+        run_r05( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'A NOC item found by the reference must pass' ).
+        mo_sap_dao->mt_noc_items[ 1 ]-flgrd = space.
+        run_r05( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_missing
+                         iv_msg        = 'A NOC item without FLGRD must be REASON_MISSING' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A return reason on a NOC lot item is no NOC reason (returns and NOCs stay distinct)
+  METHOD noc_return_reason_unmapped.
+    TRY.
+        add_noc_item( iv_infof = CONV #( gc_test-docno ) iv_flgrd = gc_r05-ret_reason ).
+        run_r05( iv_param2 = zif_cd_ebs_types=>gc_rule_keyword-noc ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
+                         iv_msg        = 'A return reason as FLGRD must be REASON_UNMAPPED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Two NOC items of one payment (by document and by reference) with different FLGRD
+  METHOD noc_two_reasons_ambiguous.
+    TRY.
+        add_noc_item( iv_infof = CONV #( gc_test-docno ) iv_flgrd = gc_r05-noc_reason ).
+        add_noc_item( iv_infof = CONV #( gc_test-ref ) iv_flgrd = gc_r05-noc_other iv_posna = 2 ).
+        run_r05( iv_param2 = zif_cd_ebs_types=>gc_rule_keyword-noc ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_ambiguous
+                         iv_msg        = 'Different FLGRD for one payment must be REASON_AMBIGUOUS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Bank file before import: the reason of the file is checked as before - no lot is read
+  METHOD file_source_reads_no_lots.
+    TRY.
+        mt_stmts[ 1 ]-source = zif_cd_ebs_types=>gc_source-file.
+        mt_lines[ 1 ]-return_reason = 'R01'.
+        add_return_item( gc_r05-unknown ).
+        run_r05( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'The mapped file reason must pass' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_sap_dao->mt_docno_seen
+                                             msg = 'The file source must not read the returns lot' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_sap_dao->mt_infof_seen
+                                             msg = 'The file source must not read the NOC lot' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

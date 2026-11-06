@@ -28,6 +28,8 @@
 *& 2026-11-06 | Audit A92-A94: CAMT entry status on the line; messages 536-540.
 *& 2026-11-06 | Operating model (post-posting): line posting state, rule flag NEEDS_POSTING,
 *&            | EBS_FEB_POSTED_FIELDS, check code POSTING_INCOMPLETE, messages 541-542.
+*& 2026-11-06 | Return / NOC reason correction: EBS_FEB_REASON_FIELD removed (FEBEP has no reason);
+*&            | check code REASON_AMBIGUOUS, messages 543-545 (lot reasons DFKKRP-RLGRD / DFKKNRP-FLGRD).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -186,7 +188,8 @@ INTERFACE zif_cd_ebs_types
       cust_ref      TYPE ty_text35,
       check_no      TYPE ty_text35,
       xblnr         TYPE c LENGTH 16,
-      "! NACHA return reason (R01..R85) or NOC code (C01..C07)
+      "! NACHA return reason (R01..R85) or NOC code (C01..C07) from a bank file (parsers);
+      "! blank from the FEB source - FEBEP carries no reason (R05 reads DFKKRP / DFKKNRP)
       return_reason TYPE c LENGTH 4,
       addtl_info    TYPE c LENGTH 255,
       "! Posting result (post-import source only)
@@ -418,8 +421,6 @@ INTERFACE zif_cd_ebs_types
       keylen_docno       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_DOCNO',
       "! A14: look-back days of R22 when the rule row has no WINDOW_DAYS
       dup_lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DUP_LOOKBACK_DAYS',
-      "! A28: FEBEP field holding the NACHA return / NOC reason (blank = not stored; VERIFY-DDIC)
-      feb_reason_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_REASON_FIELD',
       "! A68: X = a run without statements is an intentionally empty feed (closes green)
       empty_feed_ok      TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_EMPTY_FEED_OK',
       "! FS-CD review: in-flight grace in hours (0 = off) for not-found payment/lot lookups
@@ -525,6 +526,8 @@ INTERFACE zif_cd_ebs_types
       posting_rule_mismatch          TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISMATCH',
       posting_rule_missing           TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISSING',
       posting_rule_unresolved        TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_UNRESOLVED',
+      "! Return / NOC reason correction: lot items of one payment with different reasons
+      reason_ambiguous               TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_AMBIGUOUS',
       reason_invalid                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_INVALID',
       reason_missing                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_MISSING',
       reason_kind                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_KIND',
@@ -695,6 +698,9 @@ INTERFACE zif_cd_ebs_types
       batch_detail_amount         TYPE zif_cd_ops_types=>ty_msgno VALUE '540',
       posting_incomplete          TYPE zif_cd_ops_types=>ty_msgno VALUE '541',
       posting_unevaluated         TYPE zif_cd_ops_types=>ty_msgno VALUE '542',
+      lot_reason_missing          TYPE zif_cd_ops_types=>ty_msgno VALUE '543',
+      lot_reason_unmapped         TYPE zif_cd_ops_types=>ty_msgno VALUE '544',
+      lot_reason_ambiguous        TYPE zif_cd_ops_types=>ty_msgno VALUE '545',
     END OF gc_msg.
 
 ENDINTERFACE.

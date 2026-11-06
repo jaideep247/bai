@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A68: inverted date range raises.
 *& 2026-11-06 | Operating model: posting state from the FEBEP posting-area flags; NONE switches it off.
 *& 2026-11-06 | Performance fix 3: reason and posting flags come with the items (one FEBEP read); reads counted.
+*& 2026-11-06 | Return reason correction: FEBEP carries no return reason - the line reason stays blank.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -117,7 +118,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
     METHODS lines_keyed_to_statement     FOR TESTING.
     METHODS packages_follow_size         FOR TESTING.
     METHODS unknown_epvoz_has_no_sign    FOR TESTING.
-    METHODS reason_from_configured_field FOR TESTING.
+    METHODS no_return_reason_from_febep  FOR TESTING.
     METHODS inverted_date_range_raises   FOR TESTING.
     METHODS posting_state_from_febep     FOR TESTING.
     METHODS posting_state_off_with_none  FOR TESTING.
@@ -309,22 +310,17 @@ CLASS ltc_src_feb IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A28: where the landscape stores the NACHA reason in a FEBEP field (EBS_FEB_REASON_FIELD,
-  " VERIFY-DDIC), the FEB source fills the line's return reason from it
-  METHOD reason_from_configured_field.
+  " Return reason correction: FEBEP carries no return reason - the FEB source leaves the line's
+  " reason blank (R05 reads it from the returns lot item DFKKRP-RLGRD) and still reads once
+  METHOD no_return_reason_from_febep.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-feb_reason_field value = 'ZZRETURN_REASON' )
-          INTO TABLE mo_store->mt_params.
         add_header( gc_test-kukey1 ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
-        mo_dao->mt_items[ 1 ]-reason = 'R01'.
         DATA(ls_package) = new_source( )->next_package( ).
-        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ 1 ]-return_reason exp = 'R01'
-                                            msg = 'The reason must come from the configured FEBEP field' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_dao->ms_extras-reason_field exp = 'ZZRETURN_REASON'
-                                            msg = 'The configured field must be read' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_package-lines[ 1 ]-return_reason
+                                             msg = 'FEBEP has no return reason - the line reason stays blank' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_item_reads exp = 1
-                                            msg = 'Items, reason and posting flags must come in one FEBEP read' ).
+                                            msg = 'Items and posting flags must come in one FEBEP read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

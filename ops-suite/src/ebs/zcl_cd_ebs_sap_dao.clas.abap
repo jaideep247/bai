@@ -15,6 +15,7 @@
 *& 2026-11-06 | Operating model: posting state from the configured FEBEP posting-area flags.
 *& 2026-11-06 | Performance fix 3: FEBEP reason / posting-flag reads moved into ZCL_CD_EBS_FEB_DAO get_items (one pass).
 *& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
+*& 2026-11-06 | Return / NOC reason correction: DFKKRP-RLGRD in the returns lot read; get_noc_items (DFKKNRP by INFOF).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -56,12 +57,28 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     CHECK it_docno IS NOT INITIAL.
     " Confirmed: DFKKRP-SELW1 = DFKKOP-AUGBL (= FEBEP-CHECT).
     " VERIFY-DDIC: DFKKRK-STARS joined via OPBEL as in legacy v4 (ZCL_BAI_168_DISB)
-    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars
+    " Return reason correction 2026-11-06: the return reason is DFKKRP-RLGRD (VERIFY-SE11) -
+    " read in the same statement, FEBEP carries no return reason
+    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd
       FROM dfkkrp AS rp
       LEFT OUTER JOIN dfkkrk AS rk ON rk~opbel = rp~opbel
       FOR ALL ENTRIES IN @it_docno
       WHERE rp~selw1 = @it_docno-table_line
       INTO CORRESPONDING FIELDS OF TABLE @rt_items.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_sap_dao~get_noc_items.
+    CHECK it_infof IS NOT INITIAL.
+    " Confirmed 2026-11-06: DFKKNRP-FLGRD = NOC reason, DFKKNRP-INFOF = payment document (AUGBL)
+    " or payment reference. VERIFY-SE11: FLGRD, INFOF content; INFOF is not a key field -
+    " an index on DFKKNRP-INFOF is needed for volume (Performance_Review.md section 8)
+    SELECT keyn1, posna, infof, flgrd
+      FROM dfkknrp
+      FOR ALL ENTRIES IN @it_infof
+      WHERE infof = @it_infof-table_line
+      INTO CORRESPONDING FIELDS OF TABLE @rt_items.
+    SORT rt_items BY keyn1 posna.
   ENDMETHOD.
 
 

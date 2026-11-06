@@ -9,6 +9,8 @@
 *& 2026-11-06 | Performance fix 2: TY_ITEM-AZDAT (statement date, filled by get_recent_items only).
 *& 2026-11-06 | Performance fix 3: get_items reads the configured return-reason field and posting-area flags
 *&            | in the same FEBEP pass (was get_febep_reasons / get_febep_posting of the SAP DAO).
+*& 2026-11-06 | Return reason correction: FEBEP carries no return reason - reason field removed
+*&            | (the reason comes from the returns lot item DFKKRP-RLGRD, ZIF_CD_EBS_SAP_DAO).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - imported bank statements (FEBKO/FEBEP)</p>
 "! Raw reads only; conversion to the format-neutral model happens in
@@ -70,9 +72,6 @@ INTERFACE zif_cd_ebs_feb_dao
       "! FEBKO-AZDAT of the item's statement - get_recent_items only (R22 applies the
       "! look-back window per statement in ABAP); initial from get_items
       azdat TYPE d,
-      "! A28: NACHA return reason from the configured FEBEP field (get_items with
-      "! is_extras-reason_field); blank when the field is not configured or not a FEBEP field
-      reason TYPE c LENGTH 4,
       "! Operating model: X when every configured posting-area flag (is_extras-posted_fields,
       "! VERIFY-SE11 VB1OK / VB2OK) holds X; only meaningful when posted_fields were given
       posted TYPE abap_bool,
@@ -82,8 +81,6 @@ INTERFACE zif_cd_ebs_feb_dao
   "! Performance fix 3: optional FEBEP fields read in the same statement as the items
   TYPES:
     BEGIN OF ty_item_extras,
-      "! EBS_FEB_REASON_FIELD - ignored when blank or not a FEBEP field (DDIC check)
-      reason_field  TYPE string,
       "! EBS_FEB_POSTED_FIELDS - at most four names, each a FEBEP field (DDIC check); an
       "! unknown name raises (configuration error), it never turns every entry into 'not posted'
       posted_fields TYPE string_table,
@@ -96,8 +93,8 @@ INTERFACE zif_cd_ebs_feb_dao
     RETURNING
       VALUE(rt_headers) TYPE tt_header.
 
-  "! Items of the statements, ordered by KUKEY / ESNUM; with is_extras also the return
-  "! reason and the posting state of every item - one FEBEP read per package
+  "! Items of the statements, ordered by KUKEY / ESNUM; with is_extras also the posting
+  "! state of every item - one FEBEP read per package (FEBEP carries no return reason)
   METHODS get_items
     IMPORTING
       it_kukey        TYPE tt_kukey

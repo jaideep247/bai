@@ -14,7 +14,7 @@ R01,L,ZCL_CD_EBS_R_R01_SIGN,E,EXCEPTION,Amount sign vs expected direction,X,,
 R02,L,ZCL_CD_EBS_R_R02_BOUNDS,W,EXCEPTION,Amount bounds (also R11 fee tolerance),X,,
 R03,L,ZCL_CD_EBS_R_R03_CURRENCY,E,EXCEPTION,Currency match,X,,
 R04,L,ZCL_CD_EBS_R_R04_REFERENCE,E,EXCEPTION,Required reference present,X,,
-R05,L,ZCL_CD_EBS_R_R05_REASON,E,EXCEPTION,"Valid NACHA return / NOC reason, mapped",X,,
+R05,L,ZCL_CD_EBS_R_R05_REASON,E,EXCEPTION,Return / NOC reason valid (file code; FEB lot RLGRD / FLGRD),X,,X
 R07,L,ZCL_CD_EBS_R_R07_PAYMENT,E,EXCEPTION,Match to payment run (DPAYH) and status,X,X,X
 R07C,L,ZCL_CD_EBS_R_R07C_CHECK,E,EXCEPTION,"Match to check register, not cancelled",X,X,
 R07L,L,ZCL_CD_EBS_R_R07L_RETRIEVAL,E,EXCEPTION,ACH retrieval log status,X,X,X

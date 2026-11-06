@@ -42,12 +42,13 @@ It **reports findings and never stops a posting**: by the time it runs every lin
 | R07 | DPAYH status such as RETURNED is set by the return / clearing processing | X |
 | R07L | the 166D chain needs the returns-lot item created when the return is posted (PARAM3 LOT); AF statuses follow the bank confirmation | X |
 | R07R | returns lot item and lot status come from posting the return | X |
+| R05 | FEB source: the return / NOC reason is read from the returns lot (DFKKRP-RLGRD) / NOC lot (DFKKNRP-FLGRD), created by return / NOC processing (bank file: the file's own code, unchanged) | X |
 | R19 | FI document (FEBEP-BELNR) exists / is cleared | X |
 | R18 | the bank G/L balance contains the statement only after posting | X |
 | R21 | a configured lookup may read posting evidence — conservative default; set blank in the registry for a lookup on pre-posting data | X |
 | S10 | judges completeness from the FI document number | X |
 | R07C, R08, R12 | read the cheque register (DFKKCR), written by the payment run before the statement | — |
-| S01–S05, S07, S09, S12, R01–R05, R09, R10, R15, R22 | structure, balances, duplicates, sign, value date, mapping, import interpretation | — |
+| S01–S05, S07, S09, S12, R01–R04, R09, R10, R15, R22 | structure, balances, duplicates, sign, value date, mapping, import interpretation | — |
 
 For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not receive the line; a statement rule does not receive the statement that holds it). The line is counted as **unevaluated** — never passed, never failed (a B / E finding of a rule that did run still counts it as blocked / failed) — and reported in the run message (message 542). Rule **S13** raises **one POSTING_INCOMPLETE per statement** with the number and total of those lines (seed W / NOTIFY). A run with such lines is **never green** (at least amber, whatever S13 is configured with), and the exception carry-forward leaves the open exceptions of those lines and their statement untouched — a check that did not run never resolves anything. Every rule that does not depend on the posting still runs on the line.
 
@@ -186,7 +187,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | R02 | L | …_R02_BOUNDS | Min/max (also R11 fee tolerance) |
 | R03 | L | …_R03_CURRENCY | Currency |
 | R04 | L | …_R04_REFERENCE | Reference present / alphanumeric |
-| R05 | L | …_R05_REASON | Return / NOC reason valid and mapped |
+| R05 | L | …_R05_REASON | Return / NOC reason: bank file — NACHA code mapped; FEB source — returns lot DFKKRP-RLGRD / NOC lot DFKKNRP-FLGRD filled, unambiguous, configured (NEEDS_POSTING) |
 | R06, R16 | FMON | NOC lot reader | NOC 6-banking-day SLA, master data applied |
 | R07 | L | …_R07_PAYMENT | DPAYH by DOC1R, status |
 | R07C | L | …_R07C_CHECK | Check register, status |
@@ -208,7 +209,9 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 
 **Blocking flag (A27) and configuration gaps (A03).** A failed check of a rule whose blocks-posting flag is on carries action BLOCK (blocks in enforce mode, releasable per line); a rule with the flag off records its finding with the configured action. Seeded ON: S02, S04, S07, S12, R07, R07C, R07L, R07R, R08, R12, R19, R21. A mapped rule group without usable rule, or an assignment whose definition is missing or inactive, is a configuration gap (BLOCK, never released).
 
-**Posting-dependent rules (operating model 2026-11-06).** Seeded NEEDS_POSTING: R07, R07L, R07R, R18, R19, R21, S10 (reasons in §A0). For an imported entry expected to post but not posted they are not evaluated; S13 reports the statement.
+**R05 — return / NOC reason (correction 2026-11-06).** FEBEP carries **no** return or NOC reason. *Bank file before import* (BAI2 / CAMT): the NACHA code delivered in the file (R01–R85, C01–C07) must be mapped in ZCD_EBS_RSN_MAP — unchanged (A28: placeholder = REASON_MAP_INCOMPLETE, NOC vs return = REASON_KIND, PARAM1 REQUIRED, format check without mapping). *Imported statement (FEB source)*: the reason is read from the lot the return / NOC processing created — returns: **DFKKRP-RLGRD** of the returns lot items with SELW1 = payment document (FEBEP-CHECT, methods E G H I J K L; the same read as R07R); NOC: **DFKKNRP-FLGRD** of the NOC lot items whose **INFOF** (CHAR 50) holds the payment document (AUGBL) or the payment reference — read with every form the reference can take (as delivered, without leading zeros, as 12-digit document key) and matched after condensing and removing leading zeros of all-digit values (`EBS_ZTNUM_IGNORE_ZEROS`); exact INFOF content VERIFY-SE11. The reason must be filled (else REASON_MISSING), one and the same for all items of the payment (else REASON_AMBIGUOUS, listing the reasons) and a configured payment engine reason of its kind — FICA_REASON of a ZCD_EBS_RSN_MAP return row for RLGRD, of a NOC row (C01–C07) for FLGRD, never a placeholder (else REASON_UNMAPPED). PARAM2 RETURN reads only the returns lot, NOC only the NOC lot, blank both. A payment without lot item is **not evaluated** by R05 (R07R / S13 own a missing lot — no second failure). R05 is seeded **NEEDS_POSTING**: the lots exist only after return / NOC processing, so an entry that is not posted yet is never judged.
+
+**Posting-dependent rules (operating model 2026-11-06).** Seeded NEEDS_POSTING: R05, R07, R07L, R07R, R18, R19, R21, S10 (reasons in §A0). For an imported entry expected to post but not posted they are not evaluated; S13 reports the statement.
 
 **In-flight grace (FS-CD review).** With `EBS_INFLIGHT_HOURS` > 0 a not-found of R07, R07L, R07R or R21 for a statement younger than the window is AWAITING_LOT_TRANSFER (W, NOTIFY, original message in DETAILS). Age from the statement's creation date/time, else from the start of the statement date.
 
@@ -221,7 +224,6 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | EBS_ZTNUM_IGNORE_ZEROS | X | Leading zeros of all-digit check numbers are not significant |
 | EBS_DFKKCR_BUKRS_FIELD | blank | DFKKCR field holding the company code (VERIFY-DDIC); blank = house bank only |
 | EBS_DUP_LOOKBACK_DAYS | 5 | R22 look-back when the rule row has no WINDOW_DAYS |
-| EBS_FEB_REASON_FIELD | blank | FEBEP field holding the NACHA return / NOC reason (VERIFY-DDIC) |
 | EBS_FEB_POSTED_FIELDS | VB1OK,VB2OK | FEBEP posting-area completion flags (comma list, at most 4; VERIFY-SE11); an entry is posted when every flag is X; a name not in FEBEP stops the run (message 051); `NONE` = posting state not read (rules as before). If posting area 2 is not used and its flag stays blank on posted items, set `VB1OK` |
 | EBS_EMPTY_FEED_OK | blank | X = a run without statements is an intentionally empty feed (green); blank = NO_DATA (grey) |
 | EBS_INFLIGHT_HOURS | 0 | In-flight grace window in hours; 0 = off |

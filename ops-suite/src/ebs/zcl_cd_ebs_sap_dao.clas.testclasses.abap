@@ -9,6 +9,7 @@
 *& 2026-11-06 | Operating model: posting-area flag names are DDIC-validated (unknown name raises).
 *& 2026-11-06 | Performance fix 3: posting-flag tests moved to ZCL_CD_EBS_FEB_DAO (read joined the item read).
 *& 2026-11-06 | Performance fix 6: G/L balances of several statements in one aggregate (ACDOCA double).
+*& 2026-11-06 | Return / NOC reason correction: RLGRD with the returns lot item; NOC items by INFOF (DFKKNRP double).
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -19,6 +20,10 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
       BEGIN OF gc_test,
         payment TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000012345',
         lot_doc TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000099999',
+        noc_lot TYPE c LENGTH 12 VALUE 'NOC000000001',
+        rlgrd   TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE 'R01',
+        flgrd   TYPE zif_cd_ebs_sap_dao=>ty_lot_reason VALUE 'C01',
+        other_ref TYPE zif_cd_ebs_sap_dao=>ty_infof VALUE 'OTHER-REF',
       END OF gc_test.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -33,6 +38,8 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
     METHODS payment_found_by_doc1r       FOR TESTING.
     METHODS gl_balances_per_request      FOR TESTING.
     METHODS gl_balances_empty_requests   FOR TESTING.
+    METHODS noc_item_found_by_infof      FOR TESTING.
+    METHODS noc_empty_keys_read_nothing  FOR TESTING.
 ENDCLASS.
 
 
@@ -40,7 +47,8 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DPAYH' ) ( 'ACDOCA' ) ( 'ZCD_OPS_PARAM' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DFKKNRP' ) ( 'DPAYH' ) ( 'ACDOCA' )
+                                  ( 'ZCD_OPS_PARAM' ) ) ).
   ENDMETHOD.
 
 
@@ -56,10 +64,13 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     DATA ls_rk TYPE dfkkrk.
     DATA lt_payh TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
     DATA ls_payh TYPE dpayh.
+    DATA lt_nrp TYPE STANDARD TABLE OF dfkknrp WITH EMPTY KEY.
+    DATA ls_nrp TYPE dfkknrp.
 
     go_env->clear_doubles( ).
     ls_rp-opbel = gc_test-lot_doc.
     ls_rp-selw1 = gc_test-payment.
+    ls_rp-rlgrd = gc_test-rlgrd.
     INSERT ls_rp INTO TABLE lt_rp.
     go_env->insert_test_data( lt_rp ).
     ls_rk-opbel = gc_test-lot_doc.
@@ -71,6 +82,16 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     ls_payh-laufi = 'PCLM01'.
     INSERT ls_payh INTO TABLE lt_payh.
     go_env->insert_test_data( lt_payh ).
+    " NOC lot: one item carries the payment document, one an unrelated reference
+    ls_nrp-keyn1 = gc_test-noc_lot.
+    ls_nrp-posna = 1.
+    ls_nrp-infof = gc_test-payment.
+    ls_nrp-flgrd = gc_test-flgrd.
+    INSERT ls_nrp INTO TABLE lt_nrp.
+    ls_nrp-posna = 2.
+    ls_nrp-infof = gc_test-other_ref.
+    INSERT ls_nrp INTO TABLE lt_nrp.
+    go_env->insert_test_data( lt_nrp ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
   ENDMETHOD.
 
@@ -82,6 +103,8 @@ CLASS ltc_sap_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 1 msg = 'One returns item expected' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-lot_stars exp = '5'
                                             msg = 'Lot status must come from DFKKRK of the item OPBEL' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-rlgrd exp = gc_test-rlgrd
+                                            msg = 'The return reason must come from DFKKRP-RLGRD' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -183,6 +206,32 @@ CLASS ltc_sap_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_payments ) exp = 1 msg = 'One payment expected' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-laufi exp = 'PCLM01'
                                             msg = 'Payment run id must be returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Return / NOC reason correction 2026-11-06: NOC lot items are found by INFOF (payment
+  " document or payment reference) with their NOC reason FLGRD; other items are not returned
+  METHOD noc_item_found_by_infof.
+    TRY.
+        DATA(lt_items) = mo_cut->get_noc_items( VALUE #( ( CONV #( gc_test-payment ) ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 1 msg = 'One NOC item expected' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-flgrd exp = gc_test-flgrd
+                                            msg = 'The NOC reason must come from DFKKNRP-FLGRD' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-keyn1 exp = gc_test-noc_lot
+                                            msg = 'The NOC lot key must be returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FOR ALL ENTRIES guard: an empty INFOF list must not read the whole NOC item table
+  METHOD noc_empty_keys_read_nothing.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_noc_items( VALUE #( ) )
+                                             msg = 'Empty INFOF list must return nothing' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

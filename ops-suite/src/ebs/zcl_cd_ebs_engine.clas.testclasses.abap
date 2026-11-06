@@ -21,6 +21,7 @@
 *& 2026-11-06 | Audit A97: end-to-end parser-to-engine tests (configuration-only code, informational code); dispatch test commented.
 *& 2026-11-06 | Operating model: LTC_POSTING_STATE - posted / unposted / NOT_POSTED entries, file source,
 *&            | POSTING_INCOMPLETE once per statement, never green, no reconciliation of skipped entries.
+*& 2026-11-06 | Return / NOC reason correction: R05 (NEEDS_POSTING) skips an entry that is not posted yet.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -1557,6 +1558,7 @@ CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
     METHODS not_posted_map_no_finding    FOR TESTING.
     METHODS file_source_rules_unchanged  FOR TESTING.
     METHODS open_entry_not_reconciled    FOR TESTING.
+    METHODS r05_skips_unposted_entry     FOR TESTING.
 ENDCLASS.
 
 
@@ -1804,6 +1806,29 @@ CLASS ltc_posting_state IMPLEMENTATION.
                                             msg = 'An independent rule must still validate the unposted entry' ).
         cl_abap_unit_assert=>assert_true( act = mo_ind_rule->mt_lines[ 1 ]-posting_open
                                           msg = 'The engine marks the entry as expected to post but not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Return / NOC reason correction: on the FEB source R05 reads the returns / NOC lot, which
+  " exists only after return processing - seeded NEEDS_POSTING (config/zcd_ebs_rule_def.csv),
+  " so an entry expected to post but not posted never reaches R05 (no false REASON_*)
+  METHOD r05_skips_unposted_entry.
+    DATA(lo_r05) = NEW ltd_probe_rule( ).
+    TRY.
+        zcl_cd_ops_injector=>inject_plugin( iv_class_name = 'ZCL_CD_EBS_R_R05_REASON' io_instance = lo_r05 ).
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        configure_scenario( ls_flags ).
+        add_rule( iv_group = gc_test-group iv_id = 'R05' iv_class = 'ZCL_CD_EBS_R_R05_REASON'
+                  iv_level = zif_cd_ebs_types=>gc_level-line iv_needs_posting = abap_true ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_initial( act = lo_r05->mt_lines
+                                             msg = 'R05 must not see an entry whose posting is not complete' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-posting_open exp = 1
+                                            msg = 'The entry is counted as not evaluated' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

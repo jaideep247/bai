@@ -23,7 +23,7 @@ Verdict key: **Confirmed** = the defect existed in the code as described; **Deci
 | A14 cross-statement duplicates | Decision (look back N days) | New rule R22 `ZCL_CD_EBS_R_R22_DUP_HISTORY`: same reference, amount, sign, code in another imported statement of the house bank account within WINDOW_DAYS, else `EBS_DUP_LOOKBACK_DAYS` (5); FEB DAO `get_recent_items`; seeded `*` R22 | `r22_entry_in_earlier_stmt`, `r22_own_statement_ignored`, `r22_other_amount_not_dup`, `r22_window_from_rule`, `recent_items_of_account` (OSQL) | Statements without house bank identity are not checked by R22 (R09 still checks within the statement) |
 | A25 canonical account identity | Confirmed | `account_key( )` = BUKRS/HBKID/HKTID else account number; S01, S04, S07, R18 use it; resolver fills the account number of imported statements | `s01_other_account_not_prior`, `s07_two_accounts_same_number`, `r18_gl_by_house_bank`, `s04_house_bank_preferred`, `imported_stmt_gets_account` | — |
 | A26 sweeps NOT_POSTED | Confirmed | ZCD_BTC_MAP-DISPOSITION; 275 / 575 = NOT_POSTED; S10 accepts them unposted; A85 disposition NOT_POSTED | `s10_unposted_sweep_ok`, `not_posted_disposition_taken`, `disposition_not_posted` | — |
-| A28 R05 return reasons | Confirmed | FEB source reads the reason from `EBS_FEB_REASON_FIELD` (DDIC-validated); placeholders rejected; REASON_MAP_INCOMPLETE; REASON_KIND (NOC vs return); required reason without map fails | `r05_placeholder_rejected`, `r05_noc_on_return_entry`, `r05_required_without_map`, `reason_from_configured_field` | FEBEP reason field VERIFY-DDIC |
+| A28 R05 return reasons | Confirmed — FEB part **superseded 2026-11-06** (user correction: FEBEP carries no reason) | FEB source: reason from the returns lot DFKKRP-RLGRD / NOC lot DFKKNRP-FLGRD (EBS_VALIDATION B4, `EBS_FEB_REASON_FIELD` removed); bank file: placeholders rejected; REASON_MAP_INCOMPLETE; REASON_KIND (NOC vs return); required reason without map fails | `r05_placeholder_rejected`, `r05_noc_on_return_entry`, `r05_required_without_map`, `ltc_r05_lot_reason` (11 tests), `no_return_reason_from_febep` | DFKKRP-RLGRD, DFKKNRP-FLGRD / INFOF VERIFY-SE11 |
 | A32 R15 on imported data | Confirmed | POSTING_RULE_UNRESOLVED for an imported line without posting rule where the map prescribes one | `r15_imported_without_rule` | — |
 | A33 R03 / S04 blanks | Confirmed | Missing currency is a finding (CURRENCY_MISSING, ACCOUNT_CURRENCY_MISSING), never a pass | `r03_missing_currency`, `s04_missing_currency` | — |
 | A34 unknown sign, gross totals | Confirmed | FEB source keeps the sign unknown unless EPVOZ is a configured indicator; S02 reports CDI_UNKNOWN and compares gross credits / debits with the declared totals | `unknown_epvoz_has_no_sign`, `s02_unknown_cdi_reported`, `s02_gross_totals_compared` | — |
@@ -53,7 +53,7 @@ Verdict key: **Confirmed** = the defect existed in the code as described; **Deci
 ## 2. VERIFY markers added in this stream
 
 - `EBS_DFKKCR_BUKRS_FIELD` — DFKKCR company-code field (A07).
-- `EBS_FEB_REASON_FIELD` — FEBEP reason field (A28); FEBEP-VORGC / VGEXT / EPVOZ in `get_recent_items` (A14).
+- DFKKRP-RLGRD, DFKKNRP-FLGRD / INFOF — lot reasons (A28 as corrected 2026-11-06; `EBS_FEB_REASON_FIELD` removed); FEBEP-VORGC / VGEXT / EPVOZ in `get_recent_items` (A14).
 - `TY_DOCNO` = CHAR 12 for OPBEL_KK / AUGBL_KK / DPAYH-DOC1R (A65).
 - READ DATASET return code 4 on an unterminated last line (A69).
 - Time zone of statement creation times (in-flight grace).
@@ -65,7 +65,7 @@ For the coordinator — shared documents this stream does not own:
 - **Core run status (A68):** add `gc_run_status-no_data = 'N'` to `ZIF_CD_OPS_TYPES` and let the morning report / alert policy treat N with RAG grey; the engine uses `zcl_cd_ebs_engine=>gc_status_no_data` until then.
 - **Core run counters (A66):** `ty_run` has no unevaluated counter; EBS reports it in `ty_result-unevaluated` and the run message. Add `unevaluated_items` to `ty_run` / ZCD_OPS_RUN if wanted.
 - **README / Class_Purpose_and_Modification_Log:** new class `ZCL_CD_EBS_R_R22_DUP_HISTORY` (rule R22); changed purpose of `ZCL_CD_EBS_ENGINE` (dispositions, NO_DATA, unevaluated, alert summaries, kill-switch diagnostic) and of both parsers (A86, A92–A96).
-- **Implementation_Order / Operations_Runbook:** new parameters `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_REASON_FIELD`, `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS`; seeds ZCD_EBS_RULE_DEF (BLOCKS_POSTING, R22), ZCD_BTC_RULE (BLOCKS_POSTING, NONE rows, BAI166D chain, `*` R22), ZCD_BTC_MAP (DISPOSITION).
+- **Implementation_Order / Operations_Runbook:** new parameters `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS`; seeds ZCD_EBS_RULE_DEF (BLOCKS_POSTING, R22), ZCD_BTC_RULE (BLOCKS_POSTING, NONE rows, BAI166D chain, `*` R22), ZCD_BTC_MAP (DISPOSITION).
 - **TDD_Approach_and_Coverage / Test_and_Validation:** acceptance test 3 is now proved end to end by `e2e_config_only_code_posts`; `new_code_needs_config_only` is engine dispatch only. Test method count after this stream: 648 (portable checks, whole suite incl. merged streams).
 - **ATC_Validation:** no new exemptions; the three ATC-equivalent issues come from the FMON / HCK streams.
 - **Review_Response:** point to this document for the EBS findings.

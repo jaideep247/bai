@@ -14,9 +14,9 @@ Facts below were confirmed in production work in 2026 (payment engine reference)
 | `ZCD_CHECK_HIST` (IRIS cheque status via PRISM) | Status domain `ZECT_STATUS`: terminal **3 failed, 4 rejected, 9 returned**; mailed **10 → 9** allowed; otherwise a higher status may overwrite a lower one, **never the reverse**. PRISM translates IRIS "confirmed" to mailed | — |
 | `DPAYH` | `ZZ_PAYMENT_STATUS` (live payment status); `LAUFD` + `LAUFI` give the cumulation group where `DOC1R` is not initial | `DFKKCR-DOC1R = DFKKOP-AUGBL` |
 | `DFKKOP` | `ZZ_FIN_TRANS_NUM`; `ZZ_BILLPLANID` directly on DFKKOP (no DFKKNRK join) | — |
-| `DFKKNRK` / `DFKKNRP` (NOC lots) | `DFKKNRP` keys `MANDT`, `KEYN1` (lot), `POSNA` (item); `INFOF` CHAR 50. Not an AML source | — |
-| `DFKKRP` / `DFKKRAPT` | Exist (returns / clearing) | `DFKKRP-SELW1 = DFKKOP-AUGBL` |
-| `FEBEP` | `BUDAT` always populated; `XBLNR` never blank for BAI 452 | `FEBEP-CHECT = BSEG-XREF2 = DFKKOP-AUGBL` (methods E G H I J K L); `DFKKCR-ZTNUM = FEBEP-CHECT` (method C) |
+| `DFKKNRK` / `DFKKNRP` (NOC lots) | `DFKKNRP` keys `MANDT`, `KEYN1` (lot), `POSNA` (item); `INFOF` CHAR 50 = the payment document (AUGBL) **or** the payment reference; **`FLGRD` = NOC reason** (confirmed by the user 2026-11-06; exact INFOF content and FLGRD length VERIFY-SE11). INFOF is not a key field (index VERIFY-SE11). Not an AML source | `DFKKNRP-INFOF` = `DFKKOP-AUGBL` / payment reference (R05, payment trace) |
+| `DFKKRP` / `DFKKRAPT` | Exist (returns / clearing); **`DFKKRP-RLGRD` = return reason** (confirmed by the user 2026-11-06; VERIFY-SE11 length) | `DFKKRP-SELW1 = DFKKOP-AUGBL` |
+| `FEBEP` | `BUDAT` always populated; `XBLNR` never blank for BAI 452; **carries no return / NOC reason** (confirmed 2026-11-06 — the reason is in DFKKRP-RLGRD / DFKKNRP-FLGRD) | `FEBEP-CHECT = BSEG-XREF2 = DFKKOP-AUGBL` (methods E G H I J K L); `DFKKCR-ZTNUM = FEBEP-CHECT` (method C) |
 | `DFKKSUMC` / `DFKKKO` / `BSEG` | — | `DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY` |
 | `TFK042Z` | `XEINZ` separates collections from disbursements | — |
 | `TFK033D` | Wildcard `*` does **not** work — enumerate | — |

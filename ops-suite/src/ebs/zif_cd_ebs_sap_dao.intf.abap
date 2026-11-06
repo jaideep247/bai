@@ -16,6 +16,8 @@
 *& 2026-11-06 | Performance fix 4: non-unique sorted secondary keys on the result tables (rules loop USING KEY).
 *& 2026-11-06 | Performance fix 6: get_gl_balances - one ACDOCA aggregate for all closing statements (was one per statement).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Return / NOC reason correction: TY_RETURN_ITEM-RLGRD (DFKKRP return reason, same read);
+*&            | get_noc_items - NOC lot items (DFKKNRP) by INFOF with their NOC reason FLGRD.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -31,6 +33,12 @@ INTERFACE zif_cd_ebs_sap_dao
   TYPES ty_ztnum TYPE c LENGTH 35.
   TYPES tt_ztnum TYPE SORTED TABLE OF ty_ztnum WITH UNIQUE KEY table_line.
   TYPES ty_status TYPE c LENGTH 20.
+  "! Payment engine return / NOC reason of a lot item (DFKKRP-RLGRD, DFKKNRP-FLGRD; VERIFY-SE11
+  "! length 3 as ZCD_EBS_RSN_MAP-FICA_REASON)
+  TYPES ty_lot_reason TYPE c LENGTH 3.
+  "! DFKKNRP-INFOF (CHAR 50): the payment document (AUGBL) or the payment reference
+  TYPES ty_infof TYPE c LENGTH 50.
+  TYPES tt_infof TYPE SORTED TABLE OF ty_infof WITH UNIQUE KEY table_line.
 
   "! Returns lot item (DFKKRP) found by the payment document in SELW1
   TYPES:
@@ -39,10 +47,24 @@ INTERFACE zif_cd_ebs_sap_dao
       opbel     TYPE ty_docno,
       "! Returns lot status (DFKKRK-STARS via DFKKRP-OPBEL, as in legacy v4)
       lot_stars TYPE ty_status,
+      "! Return reason of the item (DFKKRP-RLGRD, VERIFY-SE11) - FEBEP carries no return reason
+      rlgrd     TYPE ty_lot_reason,
     END OF ty_return_item.
   "! Fix 4: secondary key BY_SELW1 - rules read the items of one payment document by key
   TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY
                        WITH NON-UNIQUE SORTED KEY by_selw1 COMPONENTS selw1.
+
+  "! NOC lot item (DFKKNRP: KEYN1 lot, POSNA item) found by its INFOF - confirmed 2026-11-06:
+  "! INFOF holds the payment document (AUGBL) or the payment reference (exact content VERIFY-SE11)
+  TYPES:
+    BEGIN OF ty_noc_item,
+      keyn1 TYPE c LENGTH 12,
+      posna TYPE n LENGTH 6,
+      infof TYPE ty_infof,
+      "! NOC reason of the item (DFKKNRP-FLGRD, VERIFY-SE11)
+      flgrd TYPE ty_lot_reason,
+    END OF ty_noc_item.
+  TYPES tt_noc_item TYPE STANDARD TABLE OF ty_noc_item WITH EMPTY KEY.
 
   "! Payment header (DPAYH) by payment document DOC1R
   TYPES:
@@ -110,6 +132,14 @@ INTERFACE zif_cd_ebs_sap_dao
       it_docno        TYPE tt_docno
     RETURNING
       VALUE(rt_items) TYPE tt_return_item.
+
+  "! NOC lot items whose INFOF is one of the given values (exact forms - the caller passes
+  "! every form a payment document / reference can take); empty list = nothing read
+  METHODS get_noc_items DEFAULT IGNORE
+    IMPORTING
+      it_infof        TYPE tt_infof
+    RETURNING
+      VALUE(rt_items) TYPE tt_noc_item.
 
   METHODS get_payments
     IMPORTING

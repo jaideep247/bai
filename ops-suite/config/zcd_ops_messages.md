@@ -322,6 +322,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 540 | Entry &1: a transaction detail has no amount - the batch stays one entry line |
 | 541 | &1 entries not posted yet (total &2) - posting checks not evaluated |
 | 542 | &1 entries not evaluated (posting not complete) |
+| 543 | &1 lot &2 item of payment &3 has no reason |
+| 544 | &1 reason &2 of payment &3 is not a configured payment engine reason |
+| 545 | Payment &1: &2 lot items with different reasons (&3) |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

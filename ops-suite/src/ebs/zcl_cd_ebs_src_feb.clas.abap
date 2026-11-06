@@ -14,6 +14,8 @@
 *& 2026-11-06 | Operating model: posting state per entry from the FEBEP posting-area flags (EBS_FEB_POSTED_FIELDS).
 *& 2026-11-06 | Performance fix 3: one FEBEP read per package (items with reason and posting flags);
 *&            | headers by HASHED key KUKEY for the currency lookup.
+*& 2026-11-06 | Return reason correction: no FEBEP reason field (EBS_FEB_REASON_FIELD removed) - FEBEP
+*&            | carries no return reason; R05 reads it from the returns lot item DFKKRP-RLGRD.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -44,8 +46,6 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
     DATA mt_headers      TYPE zif_cd_ebs_feb_dao=>tt_header.
     "! Fix 3: header currency by statement key (was a linear search per item)
     DATA mt_currency     TYPE HASHED TABLE OF zif_cd_ebs_feb_dao=>ty_header WITH UNIQUE KEY kukey.
-    "! Fix 3: return-reason field (EBS_FEB_REASON_FIELD), read once
-    DATA mv_reason_field TYPE string.
     DATA mv_loaded       TYPE abap_bool.
     DATA mv_next         TYPE i VALUE 1.
     DATA mv_debit_ind    TYPE c LENGTH 1.
@@ -109,8 +109,6 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
       IF to_upper( condense( lv_posted_fields ) ) <> zif_cd_ebs_types=>gc_param_default-feb_posted_off.
         mt_posted_fields = zcl_cd_ops_util=>split_list( lv_posted_fields ).
       ENDIF.
-      " A28: the NACHA return reason, where the landscape stores it in a FEBEP field
-      mv_reason_field = lo_store->get_param( iv_name = zif_cd_ebs_types=>gc_param-feb_reason_field ).
       mt_headers = zcl_cd_ebs_factory=>get_feb_dao( )->get_headers( ms_selection ).
       " Duplicate KUKEYs cannot occur (FEBKO key); the first one wins without a dump
       LOOP AT mt_headers ASSIGNING FIELD-SYMBOL(<ls_currency>).
@@ -131,19 +129,15 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " Fix 3: one FEBEP read - items, the configured reason field (A28) and, operating model
-    " 2026-11-06 (post-posting control), the posting-area flags (VERIFY-SE11 FEBEP-VB1OK / VB2OK):
-    " posted = every posting-area flag complete
+    " Fix 3: one FEBEP read - items and, operating model 2026-11-06 (post-posting control), the
+    " posting-area flags (VERIFY-SE11 FEBEP-VB1OK / VB2OK): posted = every posting-area flag
+    " complete. FEBEP carries no return reason: R05 reads it from the returns lot (DFKKRP-RLGRD)
     DATA(lt_items) = zcl_cd_ebs_factory=>get_feb_dao( )->get_items(
                        it_kukey  = lt_kukey
-                       is_extras = VALUE #( reason_field  = mv_reason_field
-                                            posted_fields = mt_posted_fields ) ).
+                       is_extras = VALUE #( posted_fields = mt_posted_fields ) ).
     LOOP AT lt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
       DATA(lv_currency) = VALUE #( mt_currency[ kukey = <ls_item>-kukey ]-waers OPTIONAL ).
       DATA(ls_line) = map_line( is_item = <ls_item> iv_currency = CONV #( lv_currency ) ).
-      IF mv_reason_field IS NOT INITIAL.
-        ls_line-return_reason = <ls_item>-reason.
-      ENDIF.
       IF mt_posted_fields IS NOT INITIAL.
         ls_line-posting_state = COND #( WHEN <ls_item>-posted = abap_true
                                         THEN zif_cd_ebs_types=>gc_posting_state-posted

@@ -11,6 +11,7 @@
 *& 2026-11-06 | Performance fix 2: get_recent_items returns FEBKO-AZDAT (one read per account, window in ABAP).
 *& 2026-11-06 | Performance fix 3: get_items reads return reason and posting-area flags in the same FEBEP pass
 *&            | (names DDIC-validated as before in the SAP DAO).
+*& 2026-11-06 | Return reason correction: no FEBEP reason field (FEBEP carries no return reason).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION
@@ -27,7 +28,6 @@ CLASS zcl_cd_ebs_feb_dao DEFINITION
     CONSTANTS gc_item_fields TYPE string
       VALUE `kukey, esnum, vorgc, vgext, vgint, epvoz, kwbtr, kwaer, budat, valut, chect, xblnr, belnr, gjahr`.
     CONSTANTS gc_sql_separator TYPE string VALUE `, `.
-    CONSTANTS gc_sql_as_reason TYPE string VALUE ` AS reason`.
     "! Posting-area flags: alias FLAG<n>, at most four (components FLAG1..FLAG4 of ty_item_row)
     CONSTANTS gc_sql_as_flag TYPE string VALUE ` AS flag`.
     CONSTANTS gc_max_posting_flags TYPE i VALUE 4.
@@ -44,8 +44,8 @@ CLASS zcl_cd_ebs_feb_dao DEFINITION
         flag4 TYPE c LENGTH 1,
       END OF ty_item_row.
 
-    "! Field list of the item read: item fields, the reason field when it is a FEBEP
-    "! field, the posting-area flags (each must be a FEBEP field, else raises)
+    "! Field list of the item read: item fields and the posting-area flags (each must be
+    "! a FEBEP field, else raises)
     METHODS item_select
       IMPORTING
         is_extras        TYPE zif_cd_ebs_feb_dao=>ty_item_extras
@@ -85,7 +85,7 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
     DATA ls_item TYPE zif_cd_ebs_feb_dao=>ty_item.
     CHECK it_kukey IS NOT INITIAL.
     " VERIFY-DDIC: FEBEP-VORGC (BAI type code used by the legacy validators), VGEXT, EPVOZ, KWAER
-    " Fix 3: one FEBEP pass for items, return reason (A28) and posting-area flags
+    " Fix 3: one FEBEP pass for items and posting-area flags (FEBEP has no return reason)
     DATA(lv_select) = item_select( is_extras ).
     DATA(lv_flags) = lines( is_extras-posted_fields ).
     TRY.
@@ -122,11 +122,6 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
 
   METHOD item_select.
     rv_select = gc_item_fields.
-    " A28: only a field that exists in FEBEP is ever named in the statement (else no reason)
-    DATA(lv_reason) = to_upper( condense( is_extras-reason_field ) ).
-    IF lv_reason IS NOT INITIAL AND field_exists( iv_table = gc_febep_table iv_field = lv_reason ) = abap_true.
-      rv_select = rv_select && gc_sql_separator && lv_reason && gc_sql_as_reason.
-    ENDIF.
     " Operating model: VERIFY-SE11 FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed) are the
     " delivered default of EBS_FEB_POSTED_FIELDS. Every name is checked before it reaches the statement.
     IF lines( is_extras-posted_fields ) > gc_max_posting_flags.

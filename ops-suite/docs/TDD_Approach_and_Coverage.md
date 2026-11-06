@@ -42,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 754 ABAP Unit methods in 56 test includes
+## 4. Coverage today — 767 ABAP Unit methods in 56 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -67,15 +67,15 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 20 | Domain |
 | EBS | ZCL_CD_EBS_CFG_DAO | 9 | OSQL |
-| EBS | ZCL_CD_EBS_ENGINE | 60 | Application |
-| EBS | ZCL_CD_EBS_FEB_DAO | 8 | OSQL |
+| EBS | ZCL_CD_EBS_ENGINE | 61 | Application |
+| EBS | ZCL_CD_EBS_FEB_DAO | 7 | OSQL |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 27 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 24 | Domain |
 | EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
 | EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 7 | Domain |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 28 rule classes) | 95 | Domain / Application |
-| EBS | ZCL_CD_EBS_SAP_DAO | 5 | OSQL |
+| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_R05_LOT_REASON, LTC_STMT_RULES — all 28 rule classes) | 106 | Domain / Application |
+| EBS | ZCL_CD_EBS_SAP_DAO | 7 | OSQL |
 | EBS | ZCL_CD_EBS_SRC_FEB | 11 | Application |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 10 | Domain / Application |

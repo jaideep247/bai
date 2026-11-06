@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-754 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+767 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 754 / 754 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 767 / 767 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -71,6 +71,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-05 | BAI2 file with wrong 49 account control total | — | Parser S06 BAI2_ACCT_CTRL_TOTAL (B) | pending |
 | EBS-06 | CAMT.053 with TxsSummry sum not matching entries | — | S06 CAMT_SUM_MISMATCH (B), S12 if counts differ | pending |
 | EBS-07 | CAMT.054 returns with RtrInf R01 and an unmapped R99 | ZCD_EBS_RSN_MAP R01 only | R05 REASON_UNMAPPED on the R99 line only | pending |
+| EBS-07a | Imported statement (FEB source, posted): a 168 return whose returns lot item has RLGRD = a configured reason, one with RLGRD blank, one with an unmapped RLGRD, one payment with two items of different RLGRD; a NOC (C01) whose DFKKNRP item carries the AUGBL in INFOF, one carrying the payment reference; one payment without lot | ZCD_EBS_RSN_MAP R01 → return reason, C01 → NOC reason; R05 NEEDS_POSTING = X | Pass; REASON_MISSING; REASON_UNMAPPED; REASON_AMBIGUOUS (once); both NOC lines pass with their FLGRD; no R05 finding for the payment without lot (R07R reports it); an unposted entry is not judged by R05 (S13) — VERIFY-SE11 RLGRD, FLGRD, INFOF content | pending |
 | EBS-08 | CAMT line with Prtry code 168 issuer BAI | `EBS_CAMT_BAI_FALLBACK` = X | Maps to BAI2 168 rules; with blank parameter → R14 | pending |
 | EBS-09 | Imported statement (FEB source), 168 on disbursement account, payment not RETURNED in DPAYH | Seed group BAI168D | R07 PAYMENT_STATUS | pending |
 | EBS-10 | 581 checks paid with one register amount off by 1.00 | Seed group BAI581D | R08 CHECK_AMOUNT_MISMATCH on that check, R12 CODE_TOTAL_MISMATCH on the statement | pending |

@@ -423,7 +423,7 @@ src/ebs/zcl_cd_ebs_r_r03_currency.clas.abap,ABAP,R03: every entry must be in the
 src/ebs/zcl_cd_ebs_r_r03_currency.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r04_reference.clas.abap,ABAP,R04: the reference used for matching must be present. PARAM1 selects it:
 src/ebs/zcl_cd_ebs_r_r04_reference.clas.xml,abapGit,
-src/ebs/zcl_cd_ebs_r_r05_reason.clas.abap,ABAP,R05: a NACHA return reason (R01-R85) or NOC code (C01-C07) must be mapped
+src/ebs/zcl_cd_ebs_r_r05_reason.clas.abap,ABAP,R05: return / NOC reason. Bank file (before import): the NACHA return reason
 src/ebs/zcl_cd_ebs_r_r05_reason.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r07_payment.clas.abap,ABAP,R07: the payment document behind the bank reference must exist in the
 src/ebs/zcl_cd_ebs_r_r07_payment.clas.xml,abapGit,
