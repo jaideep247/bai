@@ -19,6 +19,7 @@
 *& 2026-11-06 | Audit A65: key width check codes, messages and EBS_KEYLEN_DOCNO constant.
 *& 2026-11-06 | Audit A66/A68: NO_DATA check code, EBS_EMPTY_FEED_OK, messages 527-529.
 *& 2026-11-06 | Audit A69: messages for server file encoding and read errors.
+*& 2026-11-06 | Audit A85: map action carried on the line.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -194,6 +195,8 @@ INTERFACE zif_cd_ebs_types
       blocked       TYPE abap_bool,
       "! A26: the map row expects the entry not to be posted (disposition NOT_POSTED)
       not_posted    TYPE abap_bool,
+      "! A85: action of the map row (AUTO_POST / EXCEPTION / ON_ACCOUNT / BLOCK)
+      map_action    TYPE zif_cd_ops_types=>ty_action,
     END OF ty_line.
   "! A35: secondary key STMT - statement rules read their statement's lines by key
   TYPES tt_line TYPE STANDARD TABLE OF ty_line WITH EMPTY KEY

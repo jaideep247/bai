@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A27 / A03: blocking flag, empty and unusable rule groups.
 *& 2026-11-06 | Audit A27/A86: parser (package) findings honour the blocks-posting flag.
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker, alert after cap, exact line cap, NO_DATA run.
+*& 2026-11-06 | Audit A85: posting disposition per line, precedence and monitor mode.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -226,6 +227,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         packages          TYPE i,
         lines_per_package TYPE i,
         test_mode         TYPE abap_bool,
+        "! A85: action and disposition of the map row of the new code
+        map_action        TYPE zif_cd_ops_types=>ty_action,
+        map_disposition   TYPE zif_cd_ebs_types=>ty_btc_map-disposition,
       END OF ty_flags.
 
     DATA mo_source TYPE REF TO ltd_source.
@@ -282,6 +286,23 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS failed_rule_skips_reconcile  FOR TESTING.
     METHODS blocking_rule_blocks_posting FOR TESTING.
     METHODS parser_count_flag_blocks FOR TESTING.
+    METHODS disposition_auto_post        FOR TESTING.
+    METHODS disposition_block            FOR TESTING.
+    METHODS disposition_not_posted       FOR TESTING.
+    METHODS disposition_exception        FOR TESTING.
+    METHODS disposition_on_account       FOR TESTING.
+    METHODS disposition_block_wins       FOR TESTING.
+    METHODS disposition_monitor_no_block FOR TESTING.
+    "! A85: disposition of the first line of the first package (ENFORCE)
+    METHODS first_disposition
+      IMPORTING
+        iv_mode               TYPE zcl_cd_ebs_engine=>ty_mode DEFAULT zcl_cd_ebs_engine=>gc_mode-enforce
+      RETURNING
+        VALUE(rv_disposition) TYPE zif_cd_ops_types=>ty_action.
+    "! A85: scenario with the new code mapped and its group running R01
+    METHODS sign_scenario
+      IMPORTING
+        is_flags TYPE ty_flags.
     METHODS plugin_error_unevaluated     FOR TESTING.
     METHODS plugin_error_trips_breaker   FOR TESTING.
     METHODS blocker_after_cap_alerts     FOR TESTING.
@@ -361,6 +382,8 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_map-rule_group = gc_test-group_new.
       ls_map-exp_cdi    = zif_cd_ebs_types=>gc_cdi-credit.
       ls_map-active     = abap_true.
+      ls_map-action      = is_flags-map_action.
+      ls_map-disposition = is_flags-map_disposition.
       INSERT ls_map INTO TABLE mo_cfg->mt_map.
     ENDIF.
     IF is_flags-assign_sign_rule = abap_true.
@@ -1055,6 +1078,123 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_cd_ebs_types=>gc_check_code-no_data ] ) )
           msg = 'No NO_DATA finding with the opt-in' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD first_disposition.
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting( iv_mode    = iv_mode
+                                                                             is_package = mo_source->mt_packages[ 1 ] ).
+        rv_disposition = VALUE #( ls_decision-dispositions[ 1 ]-disposition OPTIONAL ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Posting check raised: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD sign_scenario.
+    DATA(ls_flags) = is_flags.
+    ls_flags-assign_sign_rule = abap_true.
+    configure_scenario( ls_flags ).
+  ENDMETHOD.
+
+
+  " A85: a mapped line that passed every rule is AUTO_POST
+  METHOD disposition_auto_post.
+    TRY.
+        sign_scenario( default_flags( ) ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-auto_post
+                                            msg = 'A clean mapped line must be AUTO_POST' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85: an unmapped line (resolver BLOCK) is BLOCK in ENFORCE
+  METHOD disposition_block.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-line_code = gc_test-code_unmap.
+        configure_scenario( ls_flags ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-block
+                                            msg = 'An unmapped line must be BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85: a map row with disposition NOT_POSTED (sweep) gives NOT_POSTED
+  METHOD disposition_not_posted.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-map_disposition = zif_cd_ebs_types=>gc_disposition-not_posted.
+        sign_scenario( ls_flags ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ebs_types=>gc_disposition-not_posted
+                                            msg = 'A sweep line must be NOT_POSTED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85: an advisory rule failure (action EXCEPTION, flag off) gives EXCEPTION - not BLOCK
+  METHOD disposition_exception.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-wrong_sign = abap_true.
+        sign_scenario( ls_flags ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-exception
+                                            msg = 'An advisory failure must route the line to EXCEPTION' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85: a map row with action ON_ACCOUNT gives ON_ACCOUNT when no finding is stronger
+  METHOD disposition_on_account.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-map_action = zif_cd_ops_types=>gc_action-on_account.
+        sign_scenario( ls_flags ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-on_account
+                                            msg = 'An ON_ACCOUNT map row must give ON_ACCOUNT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85/A27: a failed blocking rule wins over NOT_POSTED (precedence BLOCK first)
+  METHOD disposition_block_wins.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-map_disposition = zif_cd_ebs_types=>gc_disposition-not_posted.
+        ls_flags-wrong_sign      = abap_true.
+        sign_scenario( ls_flags ).
+        mo_cfg->mt_rules[ rule_id = 'R01' ]-blocks_posting = abap_true.
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-block
+                                            msg = 'BLOCK must take precedence over NOT_POSTED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A85: MONITOR never blocks - a would-be BLOCK line is handed over as EXCEPTION
+  METHOD disposition_monitor_no_block.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-line_code = gc_test-code_unmap.
+        configure_scenario( ls_flags ).
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( zcl_cd_ebs_engine=>gc_mode-monitor )
+                                            exp = zif_cd_ops_types=>gc_action-exception
+                                            msg = 'Monitor mode must never return BLOCK' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -21,6 +21,7 @@
 *& 2026-11-06 | Audit A27/A86: package (parser) findings honour the blocks-posting flag of their rule.
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker; alerts over complete summaries;
 *&            | exact line cap; NO_DATA run.
+*& 2026-11-06 | Audit A85: typed posting disposition per line (BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -62,11 +63,25 @@ CLASS zcl_cd_ebs_engine DEFINITION
         unevaluated TYPE i,
       END OF ty_result.
 
+    "! A85: posting disposition of one line - AUTO_POST, EXCEPTION, ON_ACCOUNT, BLOCK or
+    "! NOT_POSTED. Precedence BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST
+    "! (docs/EBS_VALIDATION.md, section 'Posting disposition')
+    TYPES:
+      BEGIN OF ty_disposition,
+        line_key    TYPE zif_cd_ops_types=>ty_object_key,
+        stmt_key    TYPE zif_cd_ebs_types=>ty_stmt_key,
+        line_no     TYPE i,
+        disposition TYPE zif_cd_ops_types=>ty_action,
+      END OF ty_disposition.
+    TYPES tt_disposition TYPE SORTED TABLE OF ty_disposition WITH UNIQUE KEY line_key.
+
     TYPES:
       BEGIN OF ty_decision,
-        block    TYPE abap_bool,
-        findings TYPE zif_cd_ops_types=>tt_finding,
-        package  TYPE zif_cd_ebs_types=>ty_package,
+        block        TYPE abap_bool,
+        findings     TYPE zif_cd_ops_types=>tt_finding,
+        package      TYPE zif_cd_ebs_types=>ty_package,
+        "! A85: one disposition per line (empty in mode OFF)
+        dispositions TYPE tt_disposition,
       END OF ty_decision.
 
     "! Validate every package of a source and persist the run (unless test mode)
@@ -114,6 +129,40 @@ CLASS zcl_cd_ebs_engine DEFINITION
         VALUE(rv_mode) TYPE ty_mode.
 
   PRIVATE SECTION.
+    "! A85: disposition per line from the released findings (line, statement and package
+    "! scope), the map row (NOT_POSTED, action) and the mode. A finding contributes BLOCK
+    "! (severity B or action BLOCK - the A27 flag sets the latter), EXCEPTION (action
+    "! EXCEPTION, or blank action with severity E) or ON_ACCOUNT (its action); NOTIFY and
+    "! released findings contribute nothing. Outside ENFORCE a BLOCK becomes EXCEPTION.
+    METHODS dispositions
+      IMPORTING
+        iv_mode                TYPE ty_mode
+        is_package             TYPE zif_cd_ebs_types=>ty_package
+        it_findings            TYPE zif_cd_ops_types=>tt_finding
+      RETURNING
+        VALUE(rt_dispositions) TYPE tt_disposition.
+
+    "! A85: what one finding contributes to the disposition of the lines in its scope
+    CLASS-METHODS finding_disposition
+      IMPORTING
+        is_finding            TYPE zif_cd_ops_types=>ty_finding
+      RETURNING
+        VALUE(rv_disposition) TYPE zif_cd_ops_types=>ty_action.
+
+    "! A85: the stronger of two dispositions by precedence
+    CLASS-METHODS stronger
+      IMPORTING
+        iv_current            TYPE zif_cd_ops_types=>ty_action
+        iv_candidate          TYPE zif_cd_ops_types=>ty_action
+      RETURNING
+        VALUE(rv_disposition) TYPE zif_cd_ops_types=>ty_action.
+
+    CLASS-METHODS disposition_rank
+      IMPORTING
+        iv_disposition TYPE zif_cd_ops_types=>ty_action
+      RETURNING
+        VALUE(rv_rank) TYPE i.
+
     "! Approved blocked-line releases applied to the findings of a posting check
     METHODS apply_releases
       IMPORTING
@@ -493,6 +542,108 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     ENDTRY.
     rs_decision-findings = apply_releases( rs_decision-findings ).
     rs_decision-block = must_block( iv_mode = iv_mode it_findings = rs_decision-findings ).
+    rs_decision-dispositions = dispositions( iv_mode     = iv_mode
+                                             is_package  = rs_decision-package
+                                             it_findings = rs_decision-findings ).
+  ENDMETHOD.
+
+
+  METHOD dispositions.
+    TYPES:
+      BEGIN OF ty_scope,
+        object_key  TYPE zif_cd_ops_types=>ty_object_key,
+        disposition TYPE zif_cd_ops_types=>ty_action,
+      END OF ty_scope.
+    TYPES tt_scope TYPE HASHED TABLE OF ty_scope WITH UNIQUE KEY object_key.
+    DATA lt_lines TYPE tt_scope.
+    DATA lt_statements TYPE tt_scope.
+    DATA lv_package TYPE zif_cd_ops_types=>ty_action.
+
+    IF iv_mode = gc_mode-off.
+      RETURN.
+    ENDIF.
+    LOOP AT it_findings INTO DATA(ls_finding).
+      DATA(lv_contribution) = finding_disposition( ls_finding ).
+      IF lv_contribution IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      CASE ls_finding-object_type.
+        WHEN zcl_cd_ebs_finding=>gc_object_type-line.
+          READ TABLE lt_lines ASSIGNING FIELD-SYMBOL(<ls_line_scope>) WITH TABLE KEY object_key = ls_finding-object_key.
+          IF sy-subrc = 0.
+            <ls_line_scope>-disposition = stronger( iv_current = <ls_line_scope>-disposition iv_candidate = lv_contribution ).
+          ELSE.
+            INSERT VALUE #( object_key = ls_finding-object_key disposition = lv_contribution ) INTO TABLE lt_lines.
+          ENDIF.
+        WHEN zcl_cd_ebs_finding=>gc_object_type-statement.
+          READ TABLE lt_statements ASSIGNING FIELD-SYMBOL(<ls_stmt_scope>) WITH TABLE KEY object_key = ls_finding-object_key.
+          IF sy-subrc = 0.
+            <ls_stmt_scope>-disposition = stronger( iv_current = <ls_stmt_scope>-disposition iv_candidate = lv_contribution ).
+          ELSE.
+            INSERT VALUE #( object_key = ls_finding-object_key disposition = lv_contribution ) INTO TABLE lt_statements.
+          ENDIF.
+        WHEN OTHERS.
+          " Run / file: the whole package
+          lv_package = stronger( iv_current = lv_package iv_candidate = lv_contribution ).
+      ENDCASE.
+    ENDLOOP.
+
+    LOOP AT is_package-lines INTO DATA(ls_line).
+      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( ls_line ).
+      " Map row: AUTO_POST unless it says otherwise
+      DATA(lv_disposition) = COND zif_cd_ops_types=>ty_action(
+        WHEN ls_line-not_posted = abap_true THEN zif_cd_ebs_types=>gc_disposition-not_posted
+        WHEN ls_line-map_action = zif_cd_ops_types=>gc_action-exception
+          OR ls_line-map_action = zif_cd_ops_types=>gc_action-on_account THEN ls_line-map_action
+        ELSE zif_cd_ops_types=>gc_action-auto_post ).
+      " A blocked line whose block was released is still not auto-postable (no usable mapping)
+      IF ls_line-blocked = abap_true.
+        lv_disposition = stronger( iv_current = lv_disposition iv_candidate = zif_cd_ops_types=>gc_action-exception ).
+      ENDIF.
+      lv_disposition = stronger( iv_current   = lv_disposition
+                                 iv_candidate = VALUE #( lt_lines[ object_key = lv_key ]-disposition OPTIONAL ) ).
+      lv_disposition = stronger( iv_current   = lv_disposition
+                                 iv_candidate = VALUE #( lt_statements[ object_key = CONV zif_cd_ops_types=>ty_object_key(
+                                                                                       ls_line-stmt_key ) ]-disposition OPTIONAL ) ).
+      lv_disposition = stronger( iv_current = lv_disposition iv_candidate = lv_package ).
+      IF iv_mode <> gc_mode-enforce AND lv_disposition = zif_cd_ops_types=>gc_action-block.
+        " Monitor mode never blocks: the line is handed over as an exception
+        lv_disposition = zif_cd_ops_types=>gc_action-exception.
+      ENDIF.
+      INSERT VALUE #( line_key    = lv_key
+                      stmt_key    = ls_line-stmt_key
+                      line_no     = ls_line-line_no
+                      disposition = lv_disposition ) INTO TABLE rt_dispositions.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD finding_disposition.
+    rv_disposition = COND #(
+      WHEN is_finding-severity = zif_cd_ops_types=>gc_severity-block
+        OR is_finding-action   = zif_cd_ops_types=>gc_action-block      THEN zif_cd_ops_types=>gc_action-block
+      WHEN is_finding-action   = zif_cd_ops_types=>gc_action-exception
+        OR ( is_finding-action IS INITIAL
+             AND is_finding-severity = zif_cd_ops_types=>gc_severity-error ) THEN zif_cd_ops_types=>gc_action-exception
+      WHEN is_finding-action   = zif_cd_ops_types=>gc_action-on_account THEN zif_cd_ops_types=>gc_action-on_account ).
+  ENDMETHOD.
+
+
+  METHOD stronger.
+    rv_disposition = COND #( WHEN disposition_rank( iv_candidate ) > disposition_rank( iv_current )
+                             THEN iv_candidate
+                             ELSE iv_current ).
+  ENDMETHOD.
+
+
+  METHOD disposition_rank.
+    rv_rank = SWITCH #( iv_disposition
+                        WHEN zif_cd_ops_types=>gc_action-block           THEN 5
+                        WHEN zif_cd_ebs_types=>gc_disposition-not_posted THEN 4
+                        WHEN zif_cd_ops_types=>gc_action-exception       THEN 3
+                        WHEN zif_cd_ops_types=>gc_action-on_account      THEN 2
+                        WHEN zif_cd_ops_types=>gc_action-auto_post       THEN 1
+                        ELSE 0 ).
   ENDMETHOD.
 
 

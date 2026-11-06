@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A25: imported statement gets the account number of its house bank account.
 *& 2026-11-06 | Audit A26: map disposition NOT_POSTED reaches the line.
+*& 2026-11-06 | Audit A85: map action carried onto the line for the posting disposition.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -175,6 +176,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
       <ls_line>-pay_method  = ls_map-pay_method.
       <ls_line>-map_posting = ls_map-posting_rule.
       <ls_line>-not_posted  = xsdbool( ls_map-disposition = zif_cd_ebs_types=>gc_disposition-not_posted ).
+      <ls_line>-map_action  = ls_map-action.
 
       IF ls_map-action = zif_cd_ops_types=>gc_action-block.
         <ls_line>-blocked = abap_true.
