@@ -6,6 +6,7 @@
 *& (DFKKCR). Legacy parity: v4 581D TOTAL_SUM_MISMATCH / TOTAL_COUNT_MISMATCH.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R12 - code total vs register total</p>
 CLASS zcl_cd_ebs_r_r12_code_total DEFINITION
@@ -43,11 +44,11 @@ CLASS zcl_cd_ebs_r_r12_code_total IMPLEMENTATION.
       LOOP AT GROUP lv_stmt_key INTO DATA(ls_line).
         lv_bank_total += ls_line-amount.
         lv_bank_count += 1.
-        DATA(lv_ztnum) = ztnum_key( line_reference( ls_line ) ).
-        LOOP AT lt_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
+        DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
+        LOOP AT lt_line_checks INTO DATA(ls_check).
           lv_reg_total += abs( ls_check-amount ).
         ENDLOOP.
-        IF line_exists( lt_checks[ ztnum = lv_ztnum ] ).
+        IF lt_line_checks IS NOT INITIAL.
           lv_reg_count += 1.
         ENDIF.
       ENDLOOP.

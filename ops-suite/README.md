@@ -28,7 +28,8 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `Legacy_Parity_Comparison.md` | Reviewers — every difference to the legacy validators |
 | `TDD_Approach_and_Coverage.md` | Developers / reviewers — test levels, what is and is not unit tested |
 | `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1) |
-| `Implementation_Order.md` | Basis / developers — activation and transport order |
+| `Implementation_Order.md` | Basis / developers — abapGit import, activation and transport order |
+| `Review_Response_2026-11-06.md` | Reviewers — answers to the principal consultant review |
 | `Operations_Runbook.md` | IT support |
 | `Class_Purpose_and_Modification_Log.md`, `Changed_Artifacts.csv`, `Coverage_Run_Register.csv`, `portable_checks.json` | Release evidence |
 

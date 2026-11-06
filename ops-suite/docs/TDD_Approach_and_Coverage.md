@@ -33,7 +33,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 314 ABAP Unit methods in 33 test includes
+## 4. Coverage today — 316 ABAP Unit methods in 33 test includes
 
 | Module | Object (test include) | Methods | Level |
 |---|---|---|---|
@@ -46,11 +46,11 @@
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 13 | Domain |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 26 rule classes) | 35 | Domain / Application |
+| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 26 rule classes) | 36 | Domain / Application |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 17 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 14 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FEB | 6 | Application |
-| EBS | ZCL_CD_EBS_ENGINE | 11 | Application |
+| EBS | ZCL_CD_EBS_ENGINE | 12 | Application |
 | EBS | ZCL_CD_EBS_CFG_DAO / _FEB_DAO / _SAP_DAO | 3 + 3 + 3 | OSQL |
 | FMON | ZCL_CD_FMON_STATUS | 11 | Domain |
 | FMON | ZCL_CD_FMON_RULES | 35 | Domain |

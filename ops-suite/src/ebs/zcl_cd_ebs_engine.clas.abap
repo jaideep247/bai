@@ -10,6 +10,7 @@
 *& switch ZCD_EBS_VALIDATION_MODE (E enforce / M monitor / O off).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Findings kept in memory capped at EBS_RESULT_MAX; RAG accumulated per package (review 3.5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -122,7 +123,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
 
     METHODS close_run
       IMPORTING
-        it_findings TYPE zif_cd_ops_types=>tt_finding
+        iv_rag      TYPE zif_cd_ops_types=>ty_rag
         iv_started  TYPE timestampl
       CHANGING
         cs_run      TYPE zif_cd_ops_types=>ty_run.
@@ -141,7 +142,10 @@ ENDCLASS.
 CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD run.
+    " Findings kept in memory are capped (EBS_RESULT_MAX); every finding is still saved
+    " per package, and the run RAG is accumulated over all of them (review 3.5)
     DATA lt_all_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA lv_run_rag      TYPE zif_cd_ops_types=>ty_rag.
     DATA lv_bad_packages TYPE i.
 
     DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
@@ -173,7 +177,11 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       IF iv_test_mode = abap_false.
         lo_store->commit( ).
       ENDIF.
-      INSERT LINES OF lt_findings INTO TABLE lt_all_findings.
+      lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
+                                               iv_rag2 = zcl_cd_ops_util=>rag_from_findings( lt_findings ) ).
+      LOOP AT lt_findings INTO DATA(ls_keep) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
+        INSERT ls_keep INTO TABLE lt_all_findings.
+      ENDLOOP.
       IF lines( rs_result-lines ) < lv_keep_max.
         INSERT LINES OF ls_package-lines INTO TABLE rs_result-lines.
       ENDIF.
@@ -198,13 +206,15 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
           message     = |Run stopped: { lv_bad_packages } consecutive packages above { lv_cb_percent } % failures| ).
         lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING cs_run = rs_result-run ).
         INSERT ls_breaker INTO TABLE lt_all_findings.
+        lv_run_rag = zif_cd_ops_types=>gc_rag-red.
         rs_result-run-status = zif_cd_ops_types=>gc_run_status-aborted.
         EXIT.
       ENDIF.
     ENDDO.
 
-    close_run( EXPORTING it_findings = lt_all_findings iv_started = lv_started
-               CHANGING  cs_run      = rs_result-run ).
+    close_run( EXPORTING iv_rag     = lv_run_rag
+                         iv_started = lv_started
+               CHANGING  cs_run     = rs_result-run ).
     lo_store->finish_run( rs_result-run ).
     IF iv_test_mode = abap_false.
       lo_store->commit( ).
@@ -214,9 +224,6 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
           " Alert configuration unreadable: the run result is already persisted;
           " the morning report's alert-delivery check surfaces the gap.
       ENDTRY.
-    ENDIF.
-    IF lines( lt_all_findings ) > lv_keep_max.
-      DELETE lt_all_findings FROM lv_keep_max + 1.
     ENDIF.
     rs_result-findings = lt_all_findings.
   ENDMETHOD.
@@ -370,7 +377,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   METHOD close_run.
     cs_run-ended_at   = zcl_cd_ops_factory=>get_clock( )->now( ).
     cs_run-runtime_ms = zcl_cd_ops_util=>elapsed_ms( iv_from = iv_started iv_to = cs_run-ended_at ).
-    cs_run-rag        = zcl_cd_ops_util=>rag_from_findings( it_findings ).
+    cs_run-rag        = COND #( WHEN iv_rag IS INITIAL THEN zif_cd_ops_types=>gc_rag-green ELSE iv_rag ).
     IF cs_run-status <> zif_cd_ops_types=>gc_run_status-aborted.
       cs_run-status = SWITCH #( cs_run-rag
                                 WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_ops_types=>gc_run_status-error

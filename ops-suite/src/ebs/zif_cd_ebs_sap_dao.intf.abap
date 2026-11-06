@@ -6,6 +6,7 @@
 *& empty key list (FOR ALL ENTRIES guard lives here).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | TY_CHECK carries HBKID/HKTID (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -52,6 +53,9 @@ INTERFACE zif_cd_ebs_sap_dao
   TYPES:
     BEGIN OF ty_check,
       ztnum    TYPE ty_ztnum,
+      "! House bank / account: ZTNUM is unique only within them (review 3.2)
+      hbkid    TYPE c LENGTH 5,
+      hktid    TYPE c LENGTH 5,
       doc1r    TYPE ty_docno,
       amount   TYPE zif_cd_ops_types=>ty_amount,
       crstatus TYPE ty_status,

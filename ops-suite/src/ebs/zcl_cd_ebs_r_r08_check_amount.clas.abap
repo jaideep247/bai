@@ -6,6 +6,7 @@
 *& Legacy parity: v4 581D per-check AMOUNT_MISMATCH.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R08 - check amount vs register</p>
 CLASS zcl_cd_ebs_r_r08_check_amount DEFINITION
@@ -37,7 +38,8 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
       IF lv_ztnum IS INITIAL.
         CONTINUE.
       ENDIF.
-      IF NOT line_exists( lt_checks[ ztnum = lv_ztnum ] ).
+      DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
+      IF lt_line_checks IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_NOT_FOUND'
                  iv_message = |Check { lv_ztnum } not in the check register| ) INTO TABLE rt_findings.
@@ -45,7 +47,7 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
       ENDIF.
       DATA(lv_register) = REDUCE zif_cd_ops_types=>ty_amount(
         INIT lv_sum = CONV zif_cd_ops_types=>ty_amount( 0 )
-        FOR ls_check IN lt_checks WHERE ( ztnum = lv_ztnum )
+        FOR ls_check IN lt_line_checks
         NEXT lv_sum = lv_sum + abs( ls_check-amount ) ).
       IF abs( lv_register - ls_line-amount ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_line(

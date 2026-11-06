@@ -6,6 +6,7 @@
 *& Legacy parity: v4 255D.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07C - check in register, not cancelled</p>
 CLASS zcl_cd_ebs_r_r07c_check DEFINITION
@@ -38,7 +39,8 @@ CLASS zcl_cd_ebs_r_r07c_check IMPLEMENTATION.
       IF lv_ztnum IS INITIAL.
         CONTINUE.
       ENDIF.
-      DATA(ls_check) = VALUE #( lt_checks[ ztnum = lv_ztnum ] OPTIONAL ).
+      DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
+      DATA(ls_check) = VALUE #( lt_line_checks[ 1 ] OPTIONAL ).
       IF ls_check IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_NOT_FOUND'

@@ -6,6 +6,7 @@
 *& parameter lists and statement lookup. Abstract: no behaviour of its own.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -87,6 +88,16 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rv_tolerance) TYPE zif_cd_ops_types=>ty_amount.
 
+    "! Check register rows of one check number, scoped to the house bank account of the
+    "! line's statement when both sides carry it (ZTNUM is unique only per account)
+    METHODS checks_for_line
+      IMPORTING
+        it_checks        TYPE zif_cd_ebs_sap_dao=>tt_check
+        is_line          TYPE zif_cd_ebs_types=>ty_line
+        it_statements    TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rt_checks) TYPE zif_cd_ebs_sap_dao=>tt_check.
+
     METHODS line_reference
       IMPORTING
         is_line             TYPE zif_cd_ebs_types=>ty_line
@@ -159,6 +170,22 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
   METHOD tolerance.
     rv_tolerance = abs( is_rule-tolerance ).
+  ENDMETHOD.
+
+
+  METHOD checks_for_line.
+    DATA(lv_ztnum) = ztnum_key( line_reference( is_line ) ).
+    IF lv_ztnum IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
+    LOOP AT it_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
+      IF ls_statement-hbkid IS NOT INITIAL AND ls_check-hbkid IS NOT INITIAL
+         AND ( ls_check-hbkid <> ls_statement-hbkid OR ls_check-hktid <> ls_statement-hktid ).
+        CONTINUE.
+      ENDIF.
+      INSERT ls_check INTO TABLE rt_checks.
+    ENDLOOP.
   ENDMETHOD.
 
 

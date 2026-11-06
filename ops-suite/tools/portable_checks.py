@@ -125,7 +125,8 @@ with open(os.path.join(docs, 'Changed_Artifacts.csv'), 'w', newline='') as fh:
             continue
         for f in sorted(fs):
             p = os.path.relpath(os.path.join(d, f), ROOT)
-            kind = ('ABAP' if f.endswith('.abap') else 'DDIC' if f.endswith('.ddl') else
+            kind = ('ABAP' if f.endswith('.abap') else 'abapGit' if f.endswith('.xml') else
+                    'DDIC' if f.endswith('.ddl') else
                     'CDS' if f.endswith('.asddls') else 'Config' if p.startswith('config') else
                     'Doc' if f.endswith(('.md', '.csv', '.json')) else 'Other')
             purpose = ''

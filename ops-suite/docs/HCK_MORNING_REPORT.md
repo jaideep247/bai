@@ -301,7 +301,7 @@ Findings: MISSED → E if critical, I if skippable, else W; FAILED → E if crit
 >
 > **Analogy:** the scoreboard and the referee's notebook record the same match.
 
-Sources in `src/hck/cds/` (ADT text sources; release-dependent annotations marked *verify on target release*):
+Sources in `cds/` (ADT text sources; release-dependent annotations marked *verify on target release*):
 
 | View | Type | Content |
 |---|---|---|

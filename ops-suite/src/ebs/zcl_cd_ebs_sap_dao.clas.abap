@@ -7,6 +7,7 @@
 *& that is not confirmed is marked VERIFY-DDIC. Read-only.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -57,11 +58,15 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     ENDIF.
     " Confirmed: DPAYH LAUFD/LAUFI by DOC1R; live status DPAYH-ZZ_PAYMENT_STATUS
     " (legacy v4 used ZZPAYMENT_STATUS - see Legacy_Parity_Comparison.md)
+    " DOC1R is not unique in DPAYH (re-runs, proposal runs): proposal rows are excluded and
+    " the result is a standard table, never a unique-keyed one (review 3.2). VERIFY-DDIC: XVORL
     SELECT doc1r, laufd, laufi, zz_payment_status AS status
       FROM dpayh
       FOR ALL ENTRIES IN @it_docno
       WHERE doc1r = @it_docno-table_line
+        AND xvorl = @space
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments.
+    SORT rt_payments BY doc1r laufd DESCENDING laufi DESCENDING.
   ENDMETHOD.
 
 
@@ -93,8 +98,9 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
       RETURN.
     ENDIF.
     " Confirmed: DFKKCR-ZTNUM = FEBEP-CHECT, DFKKCR-DOC1R = DFKKOP-AUGBL.
-    " VERIFY-DDIC: DFKKCR-RWBTR (amount) and CRSTATUS as used by legacy v4 581/255
-    SELECT ztnum, doc1r, rwbtr AS amount, crstatus
+    " VERIFY-DDIC: DFKKCR-RWBTR (amount) and CRSTATUS as used by legacy v4 581/255;
+    " HBKID/HKTID returned so rules scope a check number to its house bank account
+    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_ztnum
       WHERE ztnum = @it_ztnum-table_line

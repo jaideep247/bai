@@ -199,6 +199,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS test_mode_saves_nothing      FOR TESTING.
     METHODS run_dispatches_alert_once    FOR TESTING.
     METHODS circuit_breaker_aborts_run   FOR TESTING.
+    METHODS kept_findings_are_capped     FOR TESTING.
     METHODS enforce_mode_blocks_posting  FOR TESTING.
     METHODS monitor_mode_never_blocks    FOR TESTING.
     METHODS off_mode_validates_nothing   FOR TESTING.
@@ -452,6 +453,27 @@ CLASS ltc_engine IMPLEMENTATION.
                                         msg = 'Three failing packages must abort the run' ).
     cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 6
                                         msg = 'Only the first three packages may be processed' ).
+  ENDMETHOD.
+
+
+  " Review 3.5: findings kept in memory are capped (EBS_RESULT_MAX); counts and RAG still cover every line
+  METHOD kept_findings_are_capped.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-line_code         = gc_test-code_unmap.
+    ls_flags-lines_per_package = 3.
+    configure_scenario( ls_flags ).
+    INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '1' ) INTO TABLE mo_store->mt_params.
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_equals( act = lines( ms_result-findings ) exp = 1
+                                        msg = 'Only EBS_RESULT_MAX findings may be kept in memory' ).
+    cl_abap_unit_assert=>assert_equals( act = ms_result-run-blocked_items exp = 3
+                                        msg = 'Counts must still cover every line' ).
+    cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-red
+                                        msg = 'RAG must reflect findings that were not kept' ).
+    cl_abap_unit_assert=>assert_equals( act = lines( mo_store->mt_saved ) exp = 3
+                                        msg = 'Every finding must still be saved' ).
   ENDMETHOD.
 
 

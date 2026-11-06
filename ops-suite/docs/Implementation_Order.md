@@ -3,7 +3,9 @@
 > **First principle:** activate what others depend on first, and ship each module as one object set — a runtime switch cannot protect against an inactive class.
 > **Analogy:** building a house — foundation (DDIC), walls (interfaces), wiring (classes), then switching the power on (customizing and jobs).
 
-Landscape DV1 → QA1 → PS4. Package suggestion: `ZCD_OPS` (core) with sub-packages `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`. Import the code with abapGit (folder logic PREFIX, starting folder `/ops-suite/src/`) or copy object by object in ADT.
+Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`.
+
+**abapGit import (recommended).** The repository carries `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and full abapGit metadata: packages, classes, interfaces, programs, **all 30 tables** and the message class `ZCD_OPS`. Create package `ZCD_OPS` in DV1, link the repository in abapGit, pull. abapGit activates in dependency order, which replaces most of Steps 1–2 below; use them as the manual fallback and as the checklist for what must be active. Metadata is regenerated with `python3 tools/abapgit_serialize.py`.
 
 ## Step 0 — Pre-checks (blocking)
 
@@ -22,7 +24,8 @@ Landscape DV1 → QA1 → PS4. Package suggestion: `ZCD_OPS` (core) with sub-pac
 3. FMON: `ZCD_FMON_IFACE`, `_SLA`, `_CAL`, `_SRC`, `_SRCMAP`, `_LOTCFG`, `_CHK`, `ZCD_FMON_FILE` (+ unique index IFACE_ID/FILE_REF), `ZCD_FMON_EVENT` (+ unique index SRC_ID/SRC_KEY/STAGE).
 4. HCK: `ZCD_HCK_DEF`, `_THRESH`, `_AGG`, `_TABWL`, `_DRIFT`, `ZCD_JOB_CYCLE`, `ZCD_JOB_STEP`, `ZCD_HCK_METRIC`, `ZCD_HCK_BASELINE`.
 5. Table maintenance generator (SM30) for every delivery-class-C table; authorization group `ZCD_OPS`.
-6. Message class `ZCD_OPS` from `config/zcd_ops_messages.md` (50 messages).
+6. Message class `ZCD_OPS` (50 messages) — included in the abapGit pull; manual fallback from `config/zcd_ops_messages.md`.
+7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are not in the abapGit XML — create them from the comments in `ddic/*/*.tabl.ddl`.
 7. Application log object/subobject `ZCD_OPS` / `ALERT` (SLG0) for the APPLOG channel.
 8. Authorization object `ZCD_OPS` (used by the CDS access role `ZI_CD_OpsAnalytics`).
 
@@ -36,7 +39,7 @@ Landscape DV1 → QA1 → PS4. Package suggestion: `ZCD_OPS` (core) with sub-pac
 | 2.4 EBS | `ZIF_CD_EBS_TYPES` → other `ZIF_CD_EBS_*` → `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_BTC_RESOLVER`, DAOs, parsers → `ZCL_CD_EBS_FACTORY` + `ZCL_CD_EBS_INJECTOR` → `ZCL_CD_EBS_RULE_BASE` → 26 `ZCL_CD_EBS_R_*` → sources → `ZCL_CD_EBS_ENGINE` → report `ZCD_EBS_VALIDATE` |
 | 2.5 FMON | `ZIF_CD_FMON_TYPES` → other `ZIF_CD_FMON_*` → pure classes (status, rules, query, util) → DAO, DDIC describer, calendar, adapter, lot reader → factory + injector → 9 checks → engine → report `ZCD_FMON_MONITOR` |
 | 2.6 HCK | `ZIF_CD_HCK_TYPES` → other `ZIF_CD_HCK_*` → pure classes (stats, threshold, score, cycle_eval, agg_query, param, report_html) → DAO → factory + injector → 11 checks → engine → report `ZCD_MORNING_REPORT` |
-| 2.7 CDS | `src/hck/cds`: basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` |
+| 2.7 CDS | `cds/` (created in ADT, not via abapGit): basic views → cubes → queries → access control `ZI_CD_OpsAnalytics` |
 
 Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10), then the full package before releasing the transport.
 

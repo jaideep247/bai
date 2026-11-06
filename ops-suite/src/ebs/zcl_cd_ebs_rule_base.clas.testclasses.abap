@@ -522,6 +522,7 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r07r_lot_status_not_5_fails  FOR TESTING.
     METHODS r08_check_amount_mismatch    FOR TESTING.
     METHODS r08_within_tolerance_passes  FOR TESTING.
+    METHODS r08_other_house_bank_ignored FOR TESTING.
     METHODS r12_code_total_mismatch      FOR TESTING.
     METHODS r19_uncleared_doc_fails      FOR TESTING.
     METHODS r19_missing_doc_fails        FOR TESTING.
@@ -635,6 +636,26 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
     add_line( ).
     run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( iv_rule_id = 'R08' iv_tolerance = '0.01' ) ).
     cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Difference 0.01 within tolerance must pass' ).
+  ENDMETHOD.
+
+
+  " Review 3.2: ZTNUM is unique only per house bank; a register row of another bank must not be summed
+  METHOD r08_other_house_bank_ignored.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    ls_check-ztnum  = gc_test-ref.
+    ls_check-hbkid  = gc_test-hbkid.
+    ls_check-hktid  = gc_test-hktid.
+    ls_check-amount = gc_test-amount.
+    INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+    ls_check-hbkid  = 'BOFA1'.
+    ls_check-hktid  = 'COLL1'.
+    ls_check-amount = '999.00'.
+    INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+    add_statement( ).
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+    cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                         msg = 'Same check number at another house bank must be ignored' ).
   ENDMETHOD.
 
 
