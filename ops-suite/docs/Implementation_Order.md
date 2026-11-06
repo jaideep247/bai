@@ -12,10 +12,11 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | # | Check | Where | Done when |
 |---|---|---|---|
 | 0.1 | Every `VERIFY-DDIC` marker confirmed or the field adjusted | SE11 — `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_FMON_CALENDAR`, `ZCL_CD_HCK_DAO` | Each marker answered in the review record |
-| 0.2 | ZCD_ACH_RTRV_LOG status field name (ZZ_RTRV_STATUS vs ZZRETRIEVAL_STATUS) | SE11 | `EBS_RTRV_STATUS_FIELD` value decided |
+| 0.2 | ZCD_ACH_RTRV_LOG status field name (ZZ_RTRV_STATUS / ZZRETRIEVAL_STATUS / ZZ_RTRVL_STATUS — see parity C4) | SE11 | `EBS_RTRV_STATUS_FIELD` value decided |
 | 0.3 | Structures of ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_STRP_POUT_LOG | SE11 export | ZCD_FMON_SRC / _SRCMAP rows filled (no `‹SE11›` left in `config/fmon_seed.md`) |
 | 0.4 | BAdI FIEB_CHANGE_BS_DATA method signature | SE18 | Copied into the BAdI design (not delivered here) |
 | 0.5 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
+| 0.6 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
 
 ## Step 1 — DDIC (SE11 / ADT)
 

@@ -167,8 +167,11 @@ for module in ('core', 'ebs', 'fmon', 'hck'):
                 '   <DD09L>\n' + tag('TABNAME', tab) + tag('AS4LOCAL', 'A') + tag('TABKAT', '0') +
                 tag('TABART', 'APPL2' if customizing else 'APPL1') +
                 # Review 3.5: customizing tables fully buffered by the kernel, not cached in ABAP
-                tag('BUFALLOW', 'X' if customizing else 'N') +
-                (tag('PUFFERUNG', 'X') if customizing else '') + '   </DD09L>\n'
+                (tag('PUFFERUNG', 'X') if customizing else '') +
+                # SOX: changes to rules, maps, thresholds and alert routing are logged (SCU3);
+                # needs profile parameter rec/client set by Basis
+                (tag('PROTOKOLL', 'X') if customizing else '') +
+                tag('BUFALLOW', 'X' if customizing else 'N') + '   </DD09L>\n'
                 '   <DD03P_TABLE>\n' + ''.join(fields) + '   </DD03P_TABLE>\n')
         target = os.path.join(SRC, module, f.replace('.tabl.ddl', '.tabl.xml'))
         changed += write(target, wrap('LCL_OBJECT_TABL', body))

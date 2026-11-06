@@ -77,6 +77,33 @@ Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git hi
 - **Confirms** D3: `src` also joins DFKKRP by **SELW1** (not OPBEL), and uses parameterised status values — both already in ops-suite.
 - **Not taken:** the TTL cache (stale data inside a financial validation; ops-suite reads per package), global `*_TD` test-double classes (ops-suite uses local `LTD_*`), exceptions for business outcomes (`ZCX_BANK_VAL_*_ERROR` per failed line — ops-suite writes findings), the 195 placeholder.
 
+### Capability comparison by folder (`src` vs ops-suite)
+
+| `src` folder | What it holds | ops-suite | Verdict |
+|---|---|---|---|
+| validator, dao, helper, cfg, config, types | Code-specific validators, DAOs, key normalisation, constants | Rule engine, BTC map, `ZCL_CD_EBS_SAP_DAO`, parameters | Covered — conflicts C1–C7 above |
+| cache | TTL cache (300 s) | Kernel table buffering of customizing; no ABAP cache | Not taken (stale data in a financial check) |
+| exc | One exception class per failed check | Findings; `ZCX_CD_OPS_ERROR` for technical failure only | Not taken (review 3.7) |
+| factory (12), injector | A factory per concern | One factory + injector per module | Covered |
+| log, msg, util (BAL wrapper, message wrapper) | Application log, messages | APPLOG channel, message class ZCD_OPS | Covered |
+| util — notification service | E-mail, Teams, Slack, critical / health / performance alerts | Alert router: rules, throttle, quiet hours, escalation; EMAIL, APPLOG, HTTP webhook (Teams via SM59) | Covered, more configurable |
+| util — parameter loader, SQL utilities, query builder | ZZCD_PARAMS by area; dynamic query builder | ZCD_OPS_PARAM; DDIC-validated, whitelisted dynamic SQL with injection tests | Covered |
+| monitor — health check | Tables exist (DD02L), parameters present, authorisation, performance | HCK module, health of the health check | Covered for runtime health. Configuration completeness is covered by R14 (unmapped codes) and DDIC validation at run time, not by a separate check |
+| monitor — metrics, performance profiler | Timers per step, statistics | Run runtime, HCK runtime per check with timeout guard | Covered at run / check level; no per-rule timing (add only if QA1 performance needs it) |
+| report — job / dump monitor | TBTCO, dumps, mail | HCK job cycle, SNAP, TBTCO checks, morning report | Covered |
+| report — business report | Result list | ALV in the three reports, CDS analytics | Covered |
+| job — daily job, scheduler | `JOB_OPEN` / `JOB_CLOSE` from ABAP | Control-M schedules the reports | Not taken (landscape standard is Control-M) |
+| **job — archive job, processor `archive_old_results`** | **Deletes results older than N days (dry run, retention parameter)** | **No retention for any ops-suite table** | **Gap G1** |
+| audit | Audit entries kept in an internal table, never saved | Run and findings in ZCD_OPS_RUN / ZCD_OPS_FINDING; alert log | Not taken (not persisted). Related gap closed: customizing tables now carry the change-log flag (SCU3) |
+| **rap** | Behaviour pool with action `validateBankStatements` and 2 CDS views; no service definition or binding, so not usable | **Read-only CDS analytics; no way to assign, resolve or waive an exception** | **Gap G2** (the runbook asks operations to do it) |
+| **security** | Custom authorisation object with activity and company code | `S_PROGRAM` in `ZCD_EBS_VALIDATE`, `S_TABU_NAM` for baselines; nothing in FMON / HCK reports; no company-code restriction | **Gap G3** |
+| test — integration (CRITICAL), performance (DANGEROUS) | End-to-end, archive, notification; batch sizes, concurrency | QA1 functional, parity and performance cases (Test and Validation §11) | Covered as QA1 cases, not as unit tests |
+| test — security | Assertions are `assert_true( abap_true )` — they always pass | Real tests: injected names rejected, quotes escaped, whitelist | Not taken |
+| database, ddic | Result, summary, audit, parameter tables; CDS on FEBEP | 30 tables, 11 CDS | Covered |
+| docs, improvements, operations (79 md) | Design notes | Archived in `legacy/framework_v1_docs` | — |
+
+**Gaps to close (proposed):** G1 retention — a purge report for runs, findings, alert log, FMON events and HCK metrics, with retention days per table in ZCD_OPS_PARAM and a test mode. G2 exception maintenance — assign, resolve and waive with reason, history and authorisation (ALV report, or a RAP business object with a Fiori elements app). G3 authorisation — object `ZCD_OPS` (activity, module, company code) used by the three reports and by G2.
+
 ## 4. How parity is confirmed before go-live (QA1)
 
 1. Run legacy `Z_BAI_MASS_VALIDATION` (v4 validators, with defect D1 corrected locally so they actually check) and `ZCD_EBS_VALIDATE` in **test mode** on the same FEBKO/FEBEP date range.
