@@ -71,6 +71,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 320 | Suppression period is invalid (from &1 to &2) |
 | 321 | Suppression is not waiting for approval (status &1) |
 | 322 | A check ID is required for a suppression |
+| 323 | Value query on table &1 has no date restriction (DATE parameter) |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

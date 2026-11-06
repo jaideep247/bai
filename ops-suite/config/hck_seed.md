@@ -48,8 +48,13 @@ digest per run, rule/group pattern `*` (confirm with the core owner).
 | E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_*` | `120` (min) | `30` (grace min) | 60 |
 | E_SYSTEM | Short dumps, update errors, locks | E | ZCL_CD_HCK_C_TECH_SYS | X | 110 | M | | | | 60 |
 | E_ALERT_DELIVERY | Alert delivery health (failed / throttled) | E | ZCL_CD_HCK_C_ALERT_HEALTH | X | 120 | M | `24` (hours) | | | 60 |
+| C_PRQ_NO_SPE | Payment request failed without SPE row (source never told) | C | ZCL_CD_HCK_C_PRQ_SPE | X | 72 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 request key›;STATUS=ZZ_STATUS;DATE=‹SE11 date›` | `FAIL=‹confirm failure values›;OK=SUCCESS;DAYS=3;MAX=200` | `TABLE=ZCD_SPE_EXCP_LOG;KEY=‹SE11 request key›;DATE=‹SE11 date›` | 120 |
+| C_CHQ_STATUS | Cheque status went backwards (ZECT_STATUS) | C | ZCL_CD_HCK_C_CHQ_STATUS | X | 74 | M | `TABLE=ZCD_CHECK_HIST;KEY=‹SE11 cheque›;SEQ=‹SE11 counter/time›;STATUS=‹SE11 status›;DATE=‹SE11 date›` | `TERMINAL=3,4,9;ALLOWED=10>9;DAYS=7;MAX=200` | | 120 |
+| C_PRQ_CANCEL | Paid payment request left CANCELLED (PCLM) | C | ZCL_CD_HCK_C_PRQ_CANCEL | X | 76 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 FIN number›;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=‹SE11 date›` | `CANCELLED=CANCELLED;SRC=PCLM;DAYS=7;MAX=200` | `TABLE=DFKKOP;KEY=ZZ_FIN_TRANS_NUM;PAID=AUGBL;DATE=AUGDT` | 300 |
 
 `HCK_SELF` (health of the health check) is built in — no row needed.
+
+**Known-table checks (USAA reference, `docs/USAA_Known_Tables.md`).** Confirmed: `ZZ_STATUS` with `SUCCESS` (never the highest `COUNTER`), `SOURCE`, `ZCD_SPE_EXCP_LOG` needed for every failure, `ZECT_STATUS` 3 / 4 / 9 terminal and 10 → 9 allowed, `DFKKOP-ZZ_FIN_TRANS_NUM`. Every `‹SE11›` name is validated against the DDIC at run time — a wrong name gives a `PLUGIN_ERROR` (message 304), never a wrong count. `AUGDT` (clearing date) on DFKKOP: VERIFY-SE11. Each value query is limited by its `DATE` field (message 323) and by `ROWS` (default 50 000).
 
 ## 3. Thresholds — `ZCD_HCK_THRESH` (`*` = default row; company-code rows override)
 
@@ -58,6 +63,9 @@ digest per run, rule/group pattern `*` (confirm with the core owner).
 | A_RET_AGED | RET_AGED | * | 1 | 25 | X | NONE | | |
 | A_RET_AGED | RET_AGED | `<bukrs, confirm>` | 10 | 100 | X | NONE | | |
 | A_GL_TRANSFER | GL_MISSING_KEYS | * | 1 | 5 | X | NONE | | |
+| C_PRQ_NO_SPE | PRQ_FAILED_NO_SPE | * | 1 | 1 | X | NONE | | |
+| C_CHQ_STATUS | CHEQUE_REGRESSION | * | 1 | 5 | X | NONE | | |
+| C_PRQ_CANCEL | PRQ_PAID_CANCELLED | * | 1 | 1 | X | NONE | | |
 | B_JOB_RUNTIME | DURATION_MIN | * | 0 | 240 | X | ZSCORE | 3 | 8 |
 | B_APPLOG | ERR_RATE_PCT | * | 5 | 20 | X | NONE | | |
 | B_APPLOG | ERR_MESSAGES | * | 0 | 0 | X | IQR | 1.5 | 20 |
@@ -106,7 +114,9 @@ Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
 | DFKKOP | FI-CA open items (aging) | X | `<security reviewer>` |
 | DFKKRP | FI-CA returns items | X | `<security reviewer>` |
 | FEBKO | Bank statement headers (volume) | X | `<security reviewer>` |
-| ZCD_PAYM_REQ_LOG | Payment request log (volume) | X | `<security reviewer>` |
+| ZCD_PAYM_REQ_LOG | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
+| ZCD_SPE_EXCP_LOG | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
+| ZCD_CHECK_HIST | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
 | /SAPPO/ORDER_HDR | Postprocessing orders (backlog) | X | `<security reviewer>` |
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the

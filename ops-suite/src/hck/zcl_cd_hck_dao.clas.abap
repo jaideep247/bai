@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | get_suppressions: active suppressions of the day (design 6.3).
+*& 2026-11-06 | select_values: validated value queries (known-table checks).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -506,6 +507,27 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
         AND valid_to   >= @iv_today
       ORDER BY check_id, suppress_uuid
       INTO CORRESPONDING FIELDS OF TABLE @rt_suppressions.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~select_values.
+    " names in is_query were checked against the DDIC and the whitelist by ZCL_CD_HCK_VALUE_QUERY
+    DATA(lv_fields) = is_query-field_list.
+    DATA(lv_from)   = CONV string( is_query-tabname ).
+    DATA(lv_where)  = is_query-where_clause.
+    DATA(lv_order)  = is_query-order_by.
+    TRY.
+        SELECT (lv_fields)
+          FROM (lv_from)
+          WHERE (lv_where)
+          ORDER BY (lv_order)
+          INTO CORRESPONDING FIELDS OF TABLE @rt_rows
+          UP TO @iv_max_rows ROWS.
+      CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e308(zcd_ops) WITH is_query-tabname 'VALUES'
+          EXPORTING
+            previous = lx_sql.
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

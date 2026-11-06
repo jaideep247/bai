@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | get_suppressions (design 6.3), DEFAULT IGNORE for existing doubles.
+*& 2026-11-06 | select_values for the known-table checks (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK module that issues SQL, calls DDIC runtime
@@ -195,12 +196,22 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_stat) TYPE zif_cd_hck_types=>tt_alert_stat.
 
+  "! Run a validated value query (ZCL_CD_HCK_VALUE_QUERY): rows of up to three
+  "! character-like fields, ordered, at most iv_max_rows
+  METHODS select_values DEFAULT IGNORE
+    IMPORTING
+      is_query       TYPE zif_cd_hck_value_types=>ty_value_query
+      iv_max_rows    TYPE i
+    RETURNING
+      VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
+    RAISING
+      zcx_cd_ops_error.
+
   "! Active suppressions (status A, today within the period) - design 6.3
-  METHODS get_suppressions
+  METHODS get_suppressions DEFAULT IGNORE
     IMPORTING
       iv_today               TYPE d
     RETURNING
-      VALUE(rt_suppressions) TYPE zif_cd_hck_suppress_types=>tt_suppression
-    DEFAULT IGNORE.
+      VALUE(rt_suppressions) TYPE zif_cd_hck_suppress_types=>tt_suppression.
 
 ENDINTERFACE.

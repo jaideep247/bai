@@ -28,6 +28,15 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 
 - Tables that **exist**: DFKKNRK, DFKKNRP (NOC lots: KEYN1 lot, POSNA item, INFOF CHAR50), DFKKRAPT. Tables that **do not exist**: DFKKRNIT, DFKKRAFT.
 - ZCD_PAYM_REQ_LOG: select ZZ_STATUS = SUCCESS, never the highest COUNTER.
+- More confirmed facts (full list and sources: `USAA_Known_Tables.md` §1):
+  - Request → open item: ZCD_PAYM_REQ_LOG FIN number = DFKKOP-ZZ_FIN_TRANS_NUM; request → partner: ZZ_MEMBER_NO = BUT000-BPEXT, read **with** SOURCE first, then without (legacy PCLM partners).
+  - ZCD_SPE_EXCP_LOG: every payment-request failure needs an SPE row, or the hourly status job never reports it.
+  - Cheque status domain ZECT_STATUS: 3 failed, 4 rejected, 9 returned are terminal; mailed 10 → returned 9 allowed; otherwise higher may overwrite lower, never the reverse.
+  - PCLM cancellation: CANCELLED = money will not leave; a paid request must never be left CANCELLED.
+  - DPAYH-ZZ_PAYMENT_STATUS is the live payment status; DFKKOP-ZZ_BILLPLANID sits on DFKKOP (no DFKKNRK join).
+  - FEBEP-BUDAT is always filled; FEBEP-XBLNR is never blank for BAI 452. BAI 143 / 452 are known unmapped codes (R14 blocks them until Treasury confirms a mapping).
+  - TFK033D wildcard `*` does not work (enumerate); TVARVC refuses two type-P rows with the same name.
+  - FPY1 locks EFKKCLEGPI per partner interval (GPART_V..GPART_B, one RUNKEY + BUKRS, _SCOPE 3) — design concurrency around partner ranges.
 - FPY1 locks per partner interval; F.13 is not run for disbursement clearing accounts.
 - ACK tables confirm payment-run files per pay cycle; Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK. Disbursements ACK per payment, collections per file.
 - Control-M schedules `JQ4SP*`; SAP jobs `ZCD_<function>_<ENTITY>`; most run `RFKK_MA_SCHEDULER` or `ZICD_CALL_SM69_COMMAND_NEW`.

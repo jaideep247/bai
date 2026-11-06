@@ -11,6 +11,7 @@ Legend: `‹SE11›` = field name of an existing custom table that is **not know
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | ACH_PNC_DISB_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | X | PAYMENT | ‹team› | X |
 | WIRE_JPMC_OUT | O | PAYMENT | * | PRISM | WIRE | * | JPMC | `‹confirm pattern›` | 1 | 0 | X | PAYMENT | ‹team› | X |
+| PAYREQ_PRISM_IN | I | API | PRISM | SAP | * | * | * | (blank: API calls, no file name) | 0 | 0 | | | ‹payment engine RTB› | X |
 | CHECK_POSPAY_OUT | O | POSPAY | * | PRISM | CHECK | * | ‹bank› | `‹confirm pattern›` | 1 | 0 | ‹confirm› | FILE | ‹team› | X |
 | ACH_COLL_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm pattern›` | 1 | 0 | X | FILE | ‹team› | X |
 | BLACKLINE_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm pattern›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
@@ -27,6 +28,7 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | IFACE_ID | STAGE | MAX_MINUTES | BASIS | SEVERITY | Note |
 |---|---|---|---|---|---|
 | ACH_PNC_DISB_OUT | SENT_TO_PRISM | 30 | P | E | PRISM pick-up after generation |
+| PAYREQ_PRISM_IN | FULLY_PROCESSED | 60 | P | E | request received but no SUCCESS row within an hour ‹confirm› |
 | ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | 60 | P | W | only if a source reports the forward |
 | ACH_PNC_DISB_OUT | ACK_RECEIVED | 240 | G | E | ‹confirm with bank cut-off› |
 | WIRE_JPMC_OUT | ACK_RECEIVED | 30 | G | E | master prompt: "wire ack within 30 minutes" |
@@ -54,6 +56,9 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | CHKHIST | CHECK_POSPAY_OUT | ZCD_CHECK_HIST | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | | | | (blank) |
 | ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | (blank) |
 | STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | (blank) |
+| PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | FILE_RECEIVED | (blank) |
+
+**PRISM payment requests (USAA reference).** Each request is one monitored "file" of interface `PAYREQ_PRISM_IN` keyed by the request reference (`FILE_KEY_FIELD`; the FMON object key is that reference in upper case — the PRISM handled-manually app resolves the exception by it). Confirmed: status field `ZZ_STATUS`, processed = `SUCCESS`, and the highest `COUNTER` is never used — the state machine makes `FULLY_PROCESSED` final, so a failed attempt written after the success cannot downgrade the request (tests `success_wins_over_later_fail`, `success_after_fail_wins`). The `SOURCE` field separates PCLM, ORCI, … — partition by a `ZCD_FMON_SRC` row per source with a condition on `SOURCE` when the adapter supports it, otherwise one interface per source ‹confirm›.
 
 `FILE_KEY_FIELD` must be **unique per file over time** and identical in every table of the same file (e.g. a run/file ID). If the only common value is a constant file name, the engine raises `FILE_REF_REUSED` instead of merging days.
 
@@ -69,6 +74,9 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | ACHRTRV | ‹value: received› | FILE_RECEIVED |
 | ACHRTRV | ‹value: loaded› | FILE_LOADED |
 | ACHRTRV | ‹value: error› | FAILED |
+| PAYREQ | SUCCESS | FULLY_PROCESSED |
+| PAYREQ | ‹confirm failure values› | FAILED |
+| PAYREQ | `*` | FILE_RECEIVED (any other status: request arrived, not yet processed) |
 
 ## ZCD_FMON_LOTCFG
 

@@ -5,6 +5,7 @@
 *& field list, building a dynamic WHERE from checked names and quoted literals.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | condition( ) and date_literal( ) public for ZCL_CD_HCK_VALUE_QUERY.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -54,6 +55,25 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RAISING
         zcx_cd_ops_error.
 
+    "! One DDIC-checked condition (EQ NE GT LT GE LE IN) with a quoted literal;
+    "! also used by ZCL_CD_HCK_VALUE_QUERY (USAA known-table checks)
+    CLASS-METHODS condition
+      IMPORTING
+        iv_field      TYPE zif_cd_hck_types=>ty_fieldname
+        iv_operator   TYPE zif_cd_hck_types=>ty_operator
+        iv_value      TYPE zif_cd_hck_types=>ty_cond_value
+        iv_tabname    TYPE zif_cd_hck_types=>ty_tabname
+        it_fields     TYPE zif_cd_hck_types=>tt_field
+      RETURNING
+        VALUE(rv_sql) TYPE string
+      RAISING
+        zcx_cd_ops_error.
+    "! Quoted DATS literal for a WHERE clause
+    CLASS-METHODS date_literal
+      IMPORTING
+        iv_date           TYPE d
+      RETURNING
+        VALUE(rv_literal) TYPE string.
   PRIVATE SECTION.
 
     CLASS-METHODS field_kind
@@ -82,23 +102,7 @@ CLASS zcl_cd_hck_agg_query DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    CLASS-METHODS condition
-      IMPORTING
-        iv_field      TYPE zif_cd_hck_types=>ty_fieldname
-        iv_operator   TYPE zif_cd_hck_types=>ty_operator
-        iv_value      TYPE zif_cd_hck_types=>ty_cond_value
-        iv_tabname    TYPE zif_cd_hck_types=>ty_tabname
-        it_fields     TYPE zif_cd_hck_types=>tt_field
-      RETURNING
-        VALUE(rv_sql) TYPE string
-      RAISING
-        zcx_cd_ops_error.
 
-    CLASS-METHODS date_literal
-      IMPORTING
-        iv_date           TYPE d
-      RETURNING
-        VALUE(rv_literal) TYPE string.
 
     CLASS-METHODS reference_day
       IMPORTING
