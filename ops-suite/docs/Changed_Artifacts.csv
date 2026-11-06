@@ -1105,30 +1105,43 @@ src/hck/zcl_cd_hck_budget.clas.abap,ABAP,Time budget of a running check (audit A
 src/hck/zcl_cd_hck_budget.clas.testclasses.abap,ABAP,Unit tests of the check time budget with an LTD clock;
 src/hck/zcl_cd_hck_budget.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_alert_health.clas.abap,ABAP,Technical health: alert delivery of the suite - failed and throttled
+src/hck/zcl_cd_hck_c_alert_health.clas.testclasses.abap,ABAP,Unit tests of the alert delivery health check: failed and throttled
 src/hck/zcl_cd_hck_c_alert_health.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_applog.clas.abap,ABAP,Mass-run health: application-log (SLG1) error rate per object/subobject
+src/hck/zcl_cd_hck_c_applog.clas.testclasses.abap,ABAP,Unit tests of the application log error-rate check: rate and error count
 src/hck/zcl_cd_hck_c_applog.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_chq_status.clas.abap,ABAP,Check: cheque status went backwards in ZCD_CHECK_HIST (IRIS status via
+src/hck/zcl_cd_hck_c_chq_status.clas.testclasses.abap,ABAP,Unit tests of the cheque status regression check: a terminal status that
 src/hck/zcl_cd_hck_c_chq_status.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_config_drift.clas.abap,ABAP,Configuration drift: SHA-256 of every table listed in ZCD_HCK_DRIFT
+src/hck/zcl_cd_hck_c_config_drift.clas.testclasses.abap,ABAP,"Unit tests of the configuration drift check: changed hash, missing"
 src/hck/zcl_cd_hck_c_config_drift.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_generic_agg.clas.abap,ABAP,"Generic aggregate check: COUNT/SUM with aging, grouping and up to three"
+src/hck/zcl_cd_hck_c_generic_agg.clas.testclasses.abap,ABAP,"Unit tests of the generic aggregate check: one metric per group value,"
 src/hck/zcl_cd_hck_c_generic_agg.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_gl_transfer.clas.abap,ABAP,Financial integrity: every payment engine reconciliation key with totals records
+src/hck/zcl_cd_hck_c_gl_transfer.clas.testclasses.abap,ABAP,Unit tests of the payment engine to GL transfer check: one owned exception
 src/hck/zcl_cd_hck_c_gl_transfer.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_job_cycle.clas.abap,ABAP,"Job cycle monitor (Control-M fallback, monitoring only): state of each"
+src/hck/zcl_cd_hck_c_job_cycle.clas.testclasses.abap,ABAP,Unit tests of the job cycle check: completed and missed steps counted per
 src/hck/zcl_cd_hck_c_job_cycle.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_job_runtime.clas.abap,ABAP,Mass-run health: duration of finished background jobs (Control-M jobs
+src/hck/zcl_cd_hck_c_job_runtime.clas.testclasses.abap,ABAP,Unit tests of the job duration check: duration in minutes per finished
 src/hck/zcl_cd_hck_c_job_runtime.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_overdue_exc.clas.abap,ABAP,Exception queues: owned exceptions of every suite payment engine area (ZCD_OPS_FINDING)
+src/hck/zcl_cd_hck_c_overdue_exc.clas.testclasses.abap,ABAP,Unit tests of the overdue exceptions check: count and oldest age per
 src/hck/zcl_cd_hck_c_overdue_exc.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_cancel.clas.abap,ABAP,Check: paid payment request left CANCELLED (PCLM). CANCELLED means money
+src/hck/zcl_cd_hck_c_prq_cancel.clas.testclasses.abap,ABAP,Unit tests of the paid-but-cancelled payment request check: a cancelled
 src/hck/zcl_cd_hck_c_prq_cancel.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_spe.clas.abap,ABAP,Check: PRISM payment request failed without an SPE row. Every failure
+src/hck/zcl_cd_hck_c_prq_spe.clas.testclasses.abap,ABAP,Unit tests of the failed-request-without-SPE check: a failed request
 src/hck/zcl_cd_hck_c_prq_spe.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_tech_jobs.clas.abap,ABAP,Technical health: background jobs of configured name patterns that were
+src/hck/zcl_cd_hck_c_tech_jobs.clas.testclasses.abap,ABAP,"Unit tests of the technical job check: cancelled, long-running and late"
 src/hck/zcl_cd_hck_c_tech_jobs.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_tech_sys.clas.abap,ABAP,"Technical health: short dumps of the day, update requests in error and"
+src/hck/zcl_cd_hck_c_tech_sys.clas.testclasses.abap,ABAP,"Unit tests of the technical system check: short dumps, update errors and"
 src/hck/zcl_cd_hck_c_tech_sys.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_volume.clas.abap,ABAP,Payment engine volume KPIs: counts per day and source/LOB from ZCD_HCK_AGG
 src/hck/zcl_cd_hck_c_volume.clas.testclasses.abap,ABAP,Unit tests of the volume check: expected group set (a silent company
@@ -1146,6 +1159,7 @@ src/hck/zcl_cd_hck_dash_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of 
 src/hck/zcl_cd_hck_dash_cds_test.clas.testclasses.abap,ABAP,CDS tests of the health check dashboard on cl_cds_test_environment
 src/hck/zcl_cd_hck_dash_cds_test.clas.xml,abapGit,
 src/hck/zcl_cd_hck_dataset.clas.abap,ABAP,ZIF_CD_HCK_FILE over OPEN / TRANSFER / CLOSE / DELETE DATASET (application
+src/hck/zcl_cd_hck_dataset.clas.testclasses.abap,ABAP,Unit tests of the application server file wrapper on its error paths
 src/hck/zcl_cd_hck_dataset.clas.xml,abapGit,
 src/hck/zcl_cd_hck_engine.clas.abap,ABAP,"Health check engine: runs the configured checks, guards each one,"
 src/hck/zcl_cd_hck_engine.clas.testclasses.abap,ABAP,Unit tests of the health check engine through run( ) with LTD doubles for
@@ -1269,3 +1283,7 @@ tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_modernize.py,Other,
 tools/tests/test_name_checks.py,Other,
 tools/tests/test_pcre_only.py,Other,
+tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_modernize.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_name_checks.cpython-313.pyc,Other,
+tools/tests/__pycache__/test_pcre_only.cpython-313.pyc,Other,
