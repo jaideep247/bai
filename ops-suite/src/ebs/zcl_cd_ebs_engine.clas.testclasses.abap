@@ -15,6 +15,7 @@
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker, alert after cap, exact line cap, NO_DATA run.
 *& 2026-11-06 | Audit A85: posting disposition per line, precedence and monitor mode.
 *& 2026-11-06 | Audit A64: posting check refreshes the parameter snapshot.
+*& 2026-11-06 | Audit A91: kill switch missing, invalid, off and SQL failure (TEST-INJECTION tvarvc_read).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -301,6 +302,11 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS disposition_monitor_no_block FOR TESTING.
     METHODS disposition_awaiting_held    FOR TESTING.
     METHODS posting_check_refreshes_params FOR TESTING.
+    METHODS kill_switch_missing_monitor  FOR TESTING.
+    METHODS kill_switch_invalid_monitor  FOR TESTING.
+    METHODS kill_switch_off_read         FOR TESTING.
+    "! A91: a database error is injected into the TVARVC read (TEST-INJECTION tvarvc_read)
+    METHODS kill_switch_sql_failure      FOR TESTING RAISING cx_sy_open_sql_db.
     "! A85: disposition of the first line of the first package (ENFORCE)
     METHODS first_disposition
       IMPORTING
@@ -1237,6 +1243,70 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'One parameter refresh per posting check' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A91: no TVARVC row - MONITOR with a KILL_SWITCH_FALLBACK diagnostic
+  METHOD kill_switch_missing_monitor.
+    DATA ls_diagnostic TYPE zif_cd_ops_types=>ty_finding.
+    TEST-INJECTION tvarvc_read.
+      lv_subrc = 4.
+    END-TEST-INJECTION.
+    DATA(lv_mode) = zcl_cd_ebs_engine=>read_mode( IMPORTING es_diagnostic = ls_diagnostic ).
+    cl_abap_unit_assert=>assert_equals( act = lv_mode exp = zcl_cd_ebs_engine=>gc_mode-monitor
+                                        msg = 'A missing switch must give MONITOR' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_diagnostic-check_code
+                                        exp = zif_cd_ebs_types=>gc_check_code-kill_switch_fallback
+                                        msg = 'A missing switch must be diagnosed' ).
+  ENDMETHOD.
+
+
+  " A91: a value that is not E / M / O - MONITOR with a diagnostic
+  METHOD kill_switch_invalid_monitor.
+    DATA ls_diagnostic TYPE zif_cd_ops_types=>ty_finding.
+    TEST-INJECTION tvarvc_read.
+      lv_low = 'X'.
+      lv_subrc = 0.
+    END-TEST-INJECTION.
+    DATA(lv_mode) = zcl_cd_ebs_engine=>read_mode( IMPORTING es_diagnostic = ls_diagnostic ).
+    cl_abap_unit_assert=>assert_equals( act = lv_mode exp = zcl_cd_ebs_engine=>gc_mode-monitor
+                                        msg = 'An invalid value must give MONITOR' ).
+    cl_abap_unit_assert=>assert_not_initial( act = ls_diagnostic msg = 'An invalid value must be diagnosed' ).
+  ENDMETHOD.
+
+
+  " A91: OFF is read as OFF, without diagnostic
+  METHOD kill_switch_off_read.
+    DATA ls_diagnostic TYPE zif_cd_ops_types=>ty_finding.
+    TEST-INJECTION tvarvc_read.
+      lv_low = 'O'.
+      lv_subrc = 0.
+    END-TEST-INJECTION.
+    DATA(lv_mode) = zcl_cd_ebs_engine=>read_mode( IMPORTING es_diagnostic = ls_diagnostic ).
+    cl_abap_unit_assert=>assert_equals( act = lv_mode exp = zcl_cd_ebs_engine=>gc_mode-off
+                                        msg = 'A maintained OFF must be honoured' ).
+    cl_abap_unit_assert=>assert_initial( act = ls_diagnostic msg = 'A valid value needs no diagnostic' ).
+  ENDMETHOD.
+
+
+  " A91: a database error on the read - MONITOR with a diagnostic, never a dump
+  METHOD kill_switch_sql_failure.
+    DATA ls_diagnostic TYPE zif_cd_ops_types=>ty_finding.
+    TEST-INJECTION tvarvc_read.
+      IF lv_subrc = 0.
+        RAISE EXCEPTION TYPE cx_sy_open_sql_db.
+      ENDIF.
+    END-TEST-INJECTION.
+    TRY.
+        DATA(lv_mode) = zcl_cd_ebs_engine=>read_mode( IMPORTING es_diagnostic = ls_diagnostic ).
+        cl_abap_unit_assert=>assert_equals( act = lv_mode exp = zcl_cd_ebs_engine=>gc_mode-monitor
+                                            msg = 'A failed read must give MONITOR' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_diagnostic-check_code
+                                            exp = zif_cd_ebs_types=>gc_check_code-kill_switch_fallback
+                                            msg = 'A failed read must be diagnosed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |read_mode must not raise: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 

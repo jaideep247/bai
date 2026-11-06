@@ -24,6 +24,7 @@
 *& 2026-11-06 | Audit A85: typed posting disposition per line (BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST).
 *& 2026-11-06 | In-flight grace: AWAITING_LOT_TRANSFER lines are EXCEPTION in the posting disposition.
 *& 2026-11-06 | Audit A62/A64: rule plug-ins created with interface check; parameter snapshot refreshed per posting check.
+*& 2026-11-06 | Audit A91: kill switch read failure / missing / invalid value -> MONITOR with KILL_SWITCH_FALLBACK diagnostic.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -125,8 +126,12 @@ CLASS zcl_cd_ebs_engine DEFINITION
         VALUE(rv_block) TYPE abap_bool.
 
     "! Kill switch. Read directly (no factory, no cache) so the emergency path
-    "! depends only on this class and one TVARVC row. Failed read = MONITOR.
+    "! depends only on this class and one TVARVC row. A91: a missing row, a value that is
+    "! not E / M / O, or a failed read (database error) gives MONITOR and an operational
+    "! diagnostic in es_diagnostic (KILL_SWITCH_FALLBACK, W) for the caller to log.
     CLASS-METHODS read_mode
+      EXPORTING
+        es_diagnostic  TYPE zif_cd_ops_types=>ty_finding
       RETURNING
         VALUE(rv_mode) TYPE ty_mode.
 
@@ -165,6 +170,13 @@ CLASS zcl_cd_ebs_engine DEFINITION
         iv_disposition TYPE zif_cd_ops_types=>ty_action
       RETURNING
         VALUE(rv_rank) TYPE i.
+
+    "! A91: diagnostic of a kill-switch fallback to MONITOR
+    CLASS-METHODS mode_fallback
+      IMPORTING
+        iv_reason            TYPE clike
+      RETURNING
+        VALUE(rs_diagnostic) TYPE zif_cd_ops_types=>ty_finding.
 
     "! Approved blocked-line releases applied to the findings of a posting check
     METHODS apply_releases
@@ -683,15 +695,51 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   METHOD read_mode.
     " Deliberate exception to the DAO rule (engine-redesign kill switch): read
     " straight from TVARVC, bypassing the buffer, in the entry method only.
-    SELECT SINGLE low
-      FROM tvarvc BYPASSING BUFFER
-      WHERE name = @gc_switch_name
-        AND type = @zif_cd_ebs_types=>gc_tvarvc-type_parameter
-        AND numb = @zif_cd_ebs_types=>gc_tvarvc-numb_single
-      INTO @DATA(lv_low).
-    rv_mode = COND #( WHEN sy-subrc <> 0 THEN gc_mode-monitor
-                      WHEN lv_low = gc_mode-enforce OR lv_low = gc_mode-off THEN lv_low
-                      ELSE gc_mode-monitor ).
+    DATA lv_low TYPE tvarvc-low.
+    DATA lv_subrc TYPE sysubrc.
+    CLEAR es_diagnostic.
+    rv_mode = gc_mode-monitor.
+    TRY.
+        TEST-SEAM tvarvc_read.
+          SELECT SINGLE low
+            FROM tvarvc BYPASSING BUFFER
+            WHERE name = @gc_switch_name
+              AND type = @zif_cd_ebs_types=>gc_tvarvc-type_parameter
+              AND numb = @zif_cd_ebs_types=>gc_tvarvc-numb_single
+            INTO @lv_low.
+          lv_subrc = sy-subrc.
+        END-TEST-SEAM.
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        es_diagnostic = mode_fallback( lx_sql->get_text( ) ).
+        RETURN.
+      CATCH cx_root INTO DATA(lx_error).
+        " Deliberately broad: the emergency path must always answer (documented MONITOR)
+        es_diagnostic = mode_fallback( lx_error->get_text( ) ).
+        RETURN.
+    ENDTRY.
+    IF lv_subrc <> 0.
+      es_diagnostic = mode_fallback( zif_cd_ebs_types=>gc_tvarvc-type_parameter ).
+      RETURN.
+    ENDIF.
+    DATA(lv_value) = condense( CONV string( lv_low ) ).
+    IF lv_value = gc_mode-enforce OR lv_value = gc_mode-monitor OR lv_value = gc_mode-off.
+      rv_mode = lv_value.
+    ELSE.
+      es_diagnostic = mode_fallback( lv_value ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD mode_fallback.
+    rs_diagnostic = VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
+                             object_key  = gc_switch_name
+                             rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
+                             check_code  = zif_cd_ebs_types=>gc_check_code-kill_switch_fallback
+                             severity    = zif_cd_ops_types=>gc_severity-warning
+                             action      = zif_cd_ops_types=>gc_action-notify
+                             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-kill_switch_fallback
+                                                                  iv_v1    = gc_switch_name
+                                                                  iv_v2    = iv_reason ) ).
   ENDMETHOD.
 
 
