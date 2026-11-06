@@ -1568,6 +1568,18 @@
      <MSGNR>510</MSGNR>
      <TEXT>Enter the bank file path (P_PATH) to validate a file</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>511</MSGNR>
+     <TEXT>Lookup &amp;1: &amp;2 not found in &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>512</MSGNR>
+     <TEXT>Lookup &amp;1: &amp;2 has status &amp;3, expected &amp;4</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

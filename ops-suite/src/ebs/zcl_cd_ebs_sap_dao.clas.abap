@@ -9,6 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -66,6 +67,41 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
         AND xvorl = @space
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments.
     SORT rt_payments BY doc1r laufd DESCENDING laufi DESCENDING.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_sap_dao~get_lookup_rows.
+    CHECK it_keys IS NOT INITIAL.
+    " Table and field names come from ZCD_EBS_LOOKUP; each is validated against the DDIC
+    " before it reaches the statement (no unchecked dynamic SQL). Keys are bound host data.
+    DATA(lv_table)  = to_upper( condense( CONV string( is_lookup-table_name ) ) ).
+    DATA(lv_key)    = to_upper( condense( CONV string( is_lookup-key_field ) ) ).
+    DATA(lv_status) = to_upper( condense( CONV string( is_lookup-status_field ) ) ).
+    IF field_exists( iv_table = lv_table iv_field = lv_key ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e051(zcd_ops) WITH lv_key zif_cd_ebs_types=>gc_lookup_table.
+    ENDIF.
+    IF lv_status IS NOT INITIAL AND field_exists( iv_table = lv_table iv_field = lv_status ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e051(zcd_ops) WITH lv_status zif_cd_ebs_types=>gc_lookup_table.
+    ENDIF.
+    DATA(lv_select) = COND string( WHEN lv_status IS INITIAL THEN |{ lv_key } AS LOOKUP_KEY|
+                                   ELSE |{ lv_key } AS LOOKUP_KEY, { lv_status } AS STATUS| ).
+    " VERIFY-ADT: dynamic WHERE referring to the FOR ALL ENTRIES table (@IT_KEYS-TABLE_LINE,
+    " strict mode) - confirm at first activation; fallback: one SELECT per key package
+    DATA(lv_where) = |{ lv_key } = @IT_KEYS-TABLE_LINE|.
+    TRY.
+        SELECT (lv_select)
+          FROM (lv_table)
+          FOR ALL ENTRIES IN @it_keys
+          WHERE (lv_where)
+          INTO CORRESPONDING FIELDS OF TABLE @rt_rows.
+      CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e012(zcd_ops) WITH lv_table
+          EXPORTING
+            previous = lx_sql.
+    ENDTRY.
   ENDMETHOD.
 
 

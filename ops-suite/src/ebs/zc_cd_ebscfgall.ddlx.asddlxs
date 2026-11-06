@@ -19,7 +19,9 @@ annotate entity ZC_CD_EbsCfgAll with
     { id: 'FlowPattern', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Flow patterns (XBLNR)', position: 60, targetElement: '_FlowPattern' },
     { id: 'ReasonMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Return / NOC reasons', position: 70, targetElement: '_ReasonMap' }
+      label: 'Return / NOC reasons', position: 70, targetElement: '_ReasonMap' },
+    { id: 'EbsLookup', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Lookups (rule R21)', position: 80, targetElement: '_EbsLookup' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

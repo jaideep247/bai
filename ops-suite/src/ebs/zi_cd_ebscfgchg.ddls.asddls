@@ -32,3 +32,8 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zcd_ebs_lookup
+  {
+    last_changed_at as LastChangedAt
+  }

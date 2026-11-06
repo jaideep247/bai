@@ -265,3 +265,5 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 508 | EBS validation &1 - status &2 RAG &3 |
 | 509 | Saved as run, &1 findings |
 | 510 | Enter the bank file path (P_PATH) to validate a file |
+| 511 | Lookup &1: &2 not found in &3 |
+| 512 | Lookup &1: &2 has status &3, expected &4 |

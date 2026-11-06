@@ -9,6 +9,7 @@ define root view entity ZR_CD_EbsCfgAll
   composition [0..*] of ZR_CD_HouseBankAcct as _HouseBankAcct
   composition [0..*] of ZR_CD_FlowPattern as _FlowPattern
   composition [0..*] of ZR_CD_ReasonMap as _ReasonMap
+  composition [0..*] of ZR_CD_EbsLookup as _EbsLookup
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -19,7 +20,8 @@ define root view entity ZR_CD_EbsCfgAll
       _RuleDef,
       _HouseBankAcct,
       _FlowPattern,
-      _ReasonMap
+      _ReasonMap,
+      _EbsLookup
 }
 where
   I_Language.Language = $session.system_language

@@ -1,0 +1,57 @@
+// UI annotations: EBS rules and mapping - Lookups (rule R21)
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Lookup (rule R21)',
+                     typeNamePlural: 'Lookups (rule R21)',
+                     title: { type: #STANDARD, value: 'LookupId' } } }
+annotate entity ZC_CD_EbsLookup with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  LookupId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  TableName;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  KeyField;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  KeyKind;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  KeyLength;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  StatusField;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  AllowedValues;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  NotFoundCode;
+
+  @UI.identification: [{ position: 90 }]
+  StatusCode;
+
+  @UI.identification: [{ position: 100 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

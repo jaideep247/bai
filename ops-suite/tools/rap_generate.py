@@ -52,6 +52,9 @@ SPEC = {
             ('zcd_ebs_flow_pat', 'FlowPattern', 'zcd_d_flowpat', 'Flow pattern', 'Flow patterns (XBLNR)',
              ['priority'], [('enum', 'flow_type', 'D,C')]),
             ('zcd_ebs_rsn_map', 'ReasonMap', 'zcd_d_rsnmap', 'Return reason', 'Return / NOC reasons', [], []),
+            ('zcd_ebs_lookup', 'EbsLookup', 'zcd_d_ebslkp', 'Lookup (rule R21)', 'Lookups (rule R21)', [],
+             [('enum', 'key_kind', 'DOCNO,ZTNUM,REFERENCE'), ('table', 'table_name'),
+              ('field', 'key_field', 'table_name'), ('field', 'status_field', 'table_name')]),
         ]),
     'fmon': dict(
         folder='fmon', pe_area='FMON', root='FmonCfgAll', draft='zcd_d_fmoncfg', service='ZUI_CD_FMON_CFG',

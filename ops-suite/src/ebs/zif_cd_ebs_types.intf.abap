@@ -9,6 +9,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -298,6 +299,35 @@ INTERFACE zif_cd_ebs_types
     END OF ty_reason_map.
   TYPES tt_reason_map TYPE SORTED TABLE OF ty_reason_map WITH UNIQUE KEY reason.
 
+  "! Generic lookup of rule R21 (ZCD_EBS_LOOKUP): a new validation is configuration, not code
+  TYPES:
+    BEGIN OF ty_lookup_cfg,
+      lookup_id      TYPE c LENGTH 10,
+      table_name     TYPE c LENGTH 30,
+      key_field      TYPE c LENGTH 30,
+      "! DOCNO (payment document, padded), ZTNUM (check number), REFERENCE (as delivered)
+      key_kind       TYPE c LENGTH 10,
+      "! 0 = as delivered; > 0 = right-aligned with leading zeros to this length (REFERENCE)
+      key_length     TYPE i,
+      "! blank = the key must exist; otherwise one row needs an allowed status
+      status_field   TYPE c LENGTH 30,
+      allowed_values TYPE c LENGTH 255,
+      not_found_code TYPE zif_cd_ops_types=>ty_check_code,
+      status_code    TYPE zif_cd_ops_types=>ty_check_code,
+      active         TYPE abap_bool,
+    END OF ty_lookup_cfg.
+  TYPES tt_lookup_cfg TYPE SORTED TABLE OF ty_lookup_cfg WITH UNIQUE KEY lookup_id.
+
+  "! Key kinds of a lookup (ZCD_EBS_LOOKUP-KEY_KIND)
+  CONSTANTS:
+    BEGIN OF gc_lookup_key,
+      docno     TYPE c LENGTH 10 VALUE 'DOCNO',
+      ztnum     TYPE c LENGTH 10 VALUE 'ZTNUM',
+      reference TYPE c LENGTH 10 VALUE 'REFERENCE',
+    END OF gc_lookup_key.
+  "! Customizing table of rule R21 (named in configuration messages)
+  CONSTANTS gc_lookup_table TYPE c LENGTH 30 VALUE 'ZCD_EBS_LOOKUP'.
+
   "! Parameters (ZCD_OPS_PARAM) read by EBS and their delivered defaults
   CONSTANTS:
     BEGIN OF gc_param,
@@ -343,6 +373,8 @@ INTERFACE zif_cd_ebs_types
   "! Check codes of the EBS rules (finding CHECK_CODE)
   CONSTANTS:
     BEGIN OF gc_check_code,
+      lookup_not_found               TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOOKUP_NOT_FOUND',
+      lookup_status                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOOKUP_STATUS',
       account_currency               TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_CURRENCY',
       account_not_configured         TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_NOT_CONFIGURED',
       amount_above_max               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_ABOVE_MAX',
@@ -502,6 +534,8 @@ INTERFACE zif_cd_ebs_types
       report_header               TYPE zif_cd_ops_types=>ty_msgno VALUE '508',
       report_saved                TYPE zif_cd_ops_types=>ty_msgno VALUE '509',
       report_path_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '510',
+      lookup_not_found            TYPE zif_cd_ops_types=>ty_msgno VALUE '511',
+      lookup_status               TYPE zif_cd_ops_types=>ty_msgno VALUE '512',
     END OF gc_msg.
 
 ENDINTERFACE.

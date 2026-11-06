@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - customizing repository</p>
 CLASS zcl_cd_ebs_cfg_dao DEFINITION
@@ -78,6 +79,15 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
     SELECT reason, fica_reason, is_noc
       FROM zcd_ebs_rsn_map
       INTO CORRESPONDING FIELDS OF TABLE @rt_reasons.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_cfg_dao~get_lookups.
+    SELECT lookup_id, table_name, key_field, key_kind, key_length, status_field, allowed_values,
+           not_found_code, status_code, active
+      FROM zcd_ebs_lookup
+      WHERE active = @abap_true
+      INTO CORRESPONDING FIELDS OF TABLE @rt_lookups.
   ENDMETHOD.
 
 ENDCLASS.

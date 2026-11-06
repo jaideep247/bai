@@ -18,6 +18,7 @@ define behavior for ZC_CD_EbsCfgAll alias EbsCfgAll
   use association _HouseBankAcct { create; with draft; }
   use association _FlowPattern { create; with draft; }
   use association _ReasonMap { create; with draft; }
+  use association _EbsLookup { create; with draft; }
 }
 
 define behavior for ZC_CD_BtcMap alias BtcMap
@@ -66,6 +67,15 @@ use etag
 }
 
 define behavior for ZC_CD_ReasonMap alias ReasonMap
+use etag
+{
+  use update;
+  use delete;
+
+  use association _EbsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_EbsLookup alias EbsLookup
 use etag
 {
   use update;

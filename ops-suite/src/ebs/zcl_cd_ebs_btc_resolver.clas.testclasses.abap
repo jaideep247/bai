@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -77,6 +78,8 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS group_defaults_to_category   FOR TESTING.
     METHODS statement_gets_account_cfg   FOR TESTING.
     METHODS sweep_275_575_not_validated  FOR TESTING.
+    METHODS bai143_collections_only      FOR TESTING.
+    METHODS bai452_validated_as_468      FOR TESTING.
 ENDCLASS.
 
 
@@ -443,6 +446,51 @@ CLASS ltc_resolver IMPLEMENTATION.
                                                 msg = |{ ls_line-btc_code } must have no code-specific rule group| ).
           ENDLOOP.
         ENDLOOP.
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Business decision 2026-11-06: 143 is validated like 166 on collection accounts only;
+  " on a disbursement account it has no map row and is blocked by R14
+  METHOD bai143_collections_only.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = '143'
+                     iv_flow   = zif_cd_ebs_types=>gc_flow-collection
+                     iv_category = 'C01' iv_group = 'BAI166C' ).
+        mt_accounts[ 1 ]-flow_default = zif_cd_ebs_types=>gc_flow-collection.
+        add_line( iv_code = '143' ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-rule_group exp = 'BAI166C'
+                                            msg = '143 on a collection account must run the 166C rules' ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = '143 on a collection account is mapped' ).
+
+        CLEAR: mt_lines, mt_findings.
+        mt_accounts[ 1 ]-flow_default = zif_cd_ebs_types=>gc_flow-disbursement.
+        add_line( iv_code = '143' ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_true( act = first_line( )-blocked
+                                          msg = '143 on a disbursement account must be blocked' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( mt_findings[ 1 ]-rule_id OPTIONAL ) exp = 'R14'
+                                            msg = '143 on a disbursement account is unmapped (R14)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Business decision 2026-11-06: 452 is validated like 468 (rule group BAI468D)
+  METHOD bai452_validated_as_468.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = '452'
+                     iv_flow   = zif_cd_ebs_types=>gc_flow-disbursement
+                     iv_category = 'D02' iv_group = 'BAI468D' ).
+        add_line( iv_code = '452' ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-rule_group exp = 'BAI468D'
+                                            msg = '452 must run the 468D rules' ).
+        cl_abap_unit_assert=>assert_false( act = first_line( )-blocked msg = '452 must not be blocked' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

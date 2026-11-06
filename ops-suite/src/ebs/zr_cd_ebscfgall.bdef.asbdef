@@ -21,6 +21,7 @@ authorization master ( global )
   association _HouseBankAcct { create ( features : global ); with draft; }
   association _FlowPattern { create ( features : global ); with draft; }
   association _ReasonMap { create ( features : global ); with draft; }
+  association _EbsLookup { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -39,6 +40,8 @@ authorization master ( global )
     validation FlowPattern ~ validateFields;
     validation FlowPattern ~ validateTransport;
     validation ReasonMap ~ validateTransport;
+    validation EbsLookup ~ validateFields;
+    validation EbsLookup ~ validateTransport;
   }
 }
 
@@ -237,6 +240,41 @@ etag master LocalLastChangedAt
     Reason = reason;
     FicaReason = fica_reason;
     IsNoc = is_noc;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_EbsLookup alias EbsLookup
+persistent table zcd_ebs_lookup
+with additional save
+draft table zcd_d_ebslkp
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) LookupId;
+  field ( mandatory : create ) LookupId;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ebs_lookup
+  {
+    LookupId = lookup_id;
+    TableName = table_name;
+    KeyField = key_field;
+    KeyKind = key_kind;
+    KeyLength = key_length;
+    StatusField = status_field;
+    AllowedValues = allowed_values;
+    NotFoundCode = not_found_code;
+    StatusCode = status_code;
+    Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

@@ -20,14 +20,19 @@ INTERFACE lif_c.
       expcdi                         TYPE string VALUE `EXPCDI`,
       flowdefault                    TYPE string VALUE `FLOWDEFAULT`,
       flowtype                       TYPE string VALUE `FLOWTYPE`,
+      keyfield                       TYPE string VALUE `KEYFIELD`,
+      keykind                        TYPE string VALUE `KEYKIND`,
       rulegroup                      TYPE string VALUE `RULEGROUP`,
       rulelevel                      TYPE string VALUE `RULELEVEL`,
       scheme                         TYPE string VALUE `SCHEME`,
       severity                       TYPE string VALUE `SEVERITY`,
+      statusfield                    TYPE string VALUE `STATUSFIELD`,
+      tablename                      TYPE string VALUE `TABLENAME`,
     END OF gc_el,
     BEGIN OF gc_ent,
       btcmap                         TYPE string VALUE `BtcMap`,
       btcrule                        TYPE string VALUE `BtcRule`,
+      ebslookup                      TYPE string VALUE `EbsLookup`,
       flowpattern                    TYPE string VALUE `FlowPattern`,
       housebankacct                  TYPE string VALUE `HouseBankAcct`,
       reasonmap                      TYPE string VALUE `ReasonMap`,
@@ -39,6 +44,7 @@ INTERFACE lif_c.
     BEGIN OF gc_tab,
       btcmap                         TYPE string VALUE `ZCD_BTC_MAP`,
       btcrule                        TYPE string VALUE `ZCD_BTC_RULE`,
+      ebslookup                      TYPE string VALUE `ZCD_EBS_LOOKUP`,
       flowpattern                    TYPE string VALUE `ZCD_EBS_FLOW_PAT`,
       housebankacct                  TYPE string VALUE `ZCD_EBS_ACCT`,
       reasonmap                      TYPE string VALUE `ZCD_EBS_RSN_MAP`,
@@ -51,6 +57,7 @@ INTERFACE lif_c.
       btcmap_scheme                  TYPE string VALUE `BAI2,ISO,PRTRY`,
       btcrule_actioncode             TYPE string VALUE `,AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
       btcrule_severity               TYPE string VALUE `,B,E,W,I`,
+      ebslookup_keykind              TYPE string VALUE `DOCNO,ZTNUM,REFERENCE`,
       flowpattern_flowtype           TYPE string VALUE `D,C`,
       housebankacct_flowdefault      TYPE string VALUE `,D,C`,
       ruledef_defaultaction          TYPE string VALUE `AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
@@ -112,6 +119,9 @@ CLASS lhc_ebscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_ReasonMap = if_abap_behv=>mk-on.
       result-%assoc-_ReasonMap = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_EbsLookup = if_abap_behv=>mk-on.
+      result-%assoc-_EbsLookup = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -736,6 +746,123 @@ CLASS lhc_reasonmap IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_ebslookup DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR EbsLookup RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR EbsLookup~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR EbsLookup~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_ebslookup IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
+      ENTITY EbsLookup
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-ebslookup.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-KeyKind )
+                                        iv_list  = lif_c=>gc_val-ebslookup_keykind ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-KeyKind
+                        v2 = lif_c=>gc_el-keykind v3 = lif_c=>gc_val-ebslookup_keykind
+                        element = lif_c=>gc_el-keykind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-TableName ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-TableName
+                        element = lif_c=>gc_el-tablename ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-KeyField IS NOT INITIAL AND ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-TableName )
+                                                  iv_field = CONV #( ls_row-KeyField ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-KeyField v2 = ls_row-TableName
+                        element = lif_c=>gc_el-keyfield ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-StatusField IS NOT INITIAL AND ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-TableName )
+                                                  iv_field = CONV #( ls_row-StatusField ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-StatusField v2 = ls_row-TableName
+                        element = lif_c=>gc_el-statusfield ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-ebslookup.
+        APPEND INITIAL LINE TO reported-ebslookup ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-ebscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-ebscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
+      ENTITY EbsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-ebslookup.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-ebslookup.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
+                                             ebscfgall-SingletonID = 1 ) )
+        TO reported-ebslookup.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_cd_ebscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -759,7 +886,8 @@ CLASS lsc_zr_cd_ebscfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-ruledef table = lif_c=>gc_tab-ruledef )
             ( entity = lif_c=>gc_ent-housebankacct table = lif_c=>gc_tab-housebankacct )
             ( entity = lif_c=>gc_ent-flowpattern table = lif_c=>gc_tab-flowpattern )
-            ( entity = lif_c=>gc_ent-reasonmap table = lif_c=>gc_tab-reasonmap ) )
+            ( entity = lif_c=>gc_ent-reasonmap table = lif_c=>gc_tab-reasonmap )
+            ( entity = lif_c=>gc_ent-ebslookup table = lif_c=>gc_tab-ebslookup ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

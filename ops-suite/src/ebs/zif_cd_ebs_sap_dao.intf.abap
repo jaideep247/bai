@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | TY_CHECK carries HBKID/HKTID (review 3.2).
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -93,6 +94,27 @@ INTERFACE zif_cd_ebs_sap_dao
       it_docno           TYPE tt_docno
     RETURNING
       VALUE(rt_payments) TYPE tt_payment.
+
+  "! Generic lookup (rule R21): key of a configured table, as text
+  TYPES ty_lookup_key TYPE c LENGTH 70.
+  TYPES tt_lookup_key TYPE SORTED TABLE OF ty_lookup_key WITH UNIQUE KEY table_line.
+  TYPES:
+    BEGIN OF ty_lookup_row,
+      lookup_key TYPE ty_lookup_key,
+      status     TYPE c LENGTH 40,
+    END OF ty_lookup_row.
+  TYPES tt_lookup_row TYPE STANDARD TABLE OF ty_lookup_row WITH EMPTY KEY.
+
+  "! Rows of the configured table for the keys (key field, status field). Table and field
+  "! names are validated against the DDIC; an unknown name raises (rule fails closed).
+  METHODS get_lookup_rows
+    IMPORTING
+      is_lookup      TYPE zif_cd_ebs_types=>ty_lookup_cfg
+      it_keys        TYPE tt_lookup_key
+    RETURNING
+      VALUE(rt_rows) TYPE tt_lookup_row
+    RAISING
+      zcx_cd_ops_error.
 
   METHODS get_retrievals
     IMPORTING

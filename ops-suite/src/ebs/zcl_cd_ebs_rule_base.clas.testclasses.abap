@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
+*& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -70,6 +71,8 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mt_fi_lines   TYPE zif_cd_ebs_sap_dao=>tt_fi_line.
     DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
+    DATA mt_lookup_rows TYPE zif_cd_ebs_sap_dao=>tt_lookup_row.
+    DATA ms_lookup_used TYPE zif_cd_ebs_types=>ty_lookup_cfg.
 ENDCLASS.
 
 CLASS ltd_sap_dao IMPLEMENTATION.
@@ -114,6 +117,14 @@ CLASS ltd_sap_dao IMPLEMENTATION.
   METHOD zif_cd_ebs_sap_dao~get_gl_balance.
     rv_balance = mv_gl_balance.
   ENDMETHOD.
+  METHOD zif_cd_ebs_sap_dao~get_lookup_rows.
+    ms_lookup_used = is_lookup.
+    LOOP AT mt_lookup_rows INTO DATA(ls_row).
+      IF line_exists( it_keys[ table_line = ls_row-lookup_key ] ).
+        INSERT ls_row INTO TABLE rt_rows.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
 ENDCLASS.
 
 CLASS ltd_feb_dao DEFINITION FINAL FOR TESTING.
@@ -143,6 +154,7 @@ CLASS ltd_cfg_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_cfg_dao.
     DATA mt_accounts TYPE zif_cd_ebs_types=>tt_account_cfg.
     DATA mt_reasons  TYPE zif_cd_ebs_types=>tt_reason_map.
+    DATA mt_lookups  TYPE zif_cd_ebs_types=>tt_lookup_cfg.
 ENDCLASS.
 
 CLASS ltd_cfg_dao IMPLEMENTATION.
@@ -160,6 +172,9 @@ CLASS ltd_cfg_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_reason_map.
     rt_reasons = mt_reasons.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_cfg_dao~get_lookups.
+    rt_lookups = mt_lookups.
   ENDMETHOD.
 ENDCLASS.
 
@@ -524,6 +539,13 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r07c_any_cancelled_row_fails FOR TESTING.
     METHODS r08_unknown_bank_ambiguous   FOR TESTING.
     METHODS r08_unknown_bank_single_ok   FOR TESTING.
+    METHODS r21_missing_record_reported  FOR TESTING.
+    METHODS r21_any_allowed_status_ok    FOR TESTING.
+    METHODS r21_status_not_allowed       FOR TESTING.
+    METHODS r21_unknown_lookup_raises    FOR TESTING.
+    METHODS add_lookup
+      IMPORTING
+        iv_allowed TYPE clike DEFAULT 'OK'.
 ENDCLASS.
 
 
@@ -785,6 +807,98 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Generic lookup R21 (new BAI codes need configuration only): PARAM1 names a ZCD_EBS_LOOKUP
+  " row - table, key field, key kind, status field, allowed values
+  METHOD add_lookup.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    ls_lookup-lookup_id      = 'TESTLKP'.
+    ls_lookup-table_name     = 'ZCD_TEST_LOG'.
+    ls_lookup-key_field      = 'DOCNO'.
+    ls_lookup-key_kind       = zif_cd_ebs_types=>gc_lookup_key-docno.
+    ls_lookup-status_field   = 'STATUS'.
+    ls_lookup-allowed_values = iv_allowed.
+    ls_lookup-active         = abap_true.
+    INSERT ls_lookup INTO TABLE mo_cfg_dao->mt_lookups.
+  ENDMETHOD.
+
+
+  " R21: a line whose key is not in the configured table is reported (default check code)
+  METHOD r21_missing_record_reported.
+    TRY.
+        add_lookup( ).
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-lookup_not_found
+                         iv_msg        = 'A key missing in the lookup table must fail R21' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->ms_lookup_used-table_name exp = 'ZCD_TEST_LOG'
+                                            msg = 'The configured table must be read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " R21: like R07, any matching row with an allowed status satisfies the rule
+  METHOD r21_any_allowed_status_ok.
+    DATA ls_row TYPE zif_cd_ebs_sap_dao=>ty_lookup_row.
+    TRY.
+        add_lookup( ).
+        ls_row-lookup_key = gc_test-docno.
+        ls_row-status     = 'ER'.
+        INSERT ls_row INTO TABLE mo_sap_dao->mt_lookup_rows.
+        ls_row-status     = 'OK'.
+        INSERT ls_row INTO TABLE mo_sap_dao->mt_lookup_rows.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'An allowed status among several rows must satisfy R21' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " R21: found, but no row has an allowed status
+  METHOD r21_status_not_allowed.
+    DATA ls_row TYPE zif_cd_ebs_sap_dao=>ty_lookup_row.
+    TRY.
+        add_lookup( 'OK,DONE' ).
+        ls_row-lookup_key = gc_test-docno.
+        ls_row-status     = 'ER'.
+        INSERT ls_row INTO TABLE mo_sap_dao->mt_lookup_rows.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-lookup_status
+                         iv_msg        = 'A status outside the allowed values must fail R21' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " R21: an unknown or inactive lookup ID is a configuration error - raised, so the engine
+  " records PLUGIN_ERROR with action BLOCK (fail closed), never a silent pass
+  METHOD r21_unknown_lookup_raises.
+    DATA lx_expected TYPE REF TO zcx_cd_ops_error.
+    add_statement( ).
+    add_line( ).
+    TRY.
+        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R21_LOOKUP' ) ).
+        lo_rule->execute( is_rule       = rule( iv_rule_id = 'R21' iv_param1 = 'NOSUCH' )
+                          it_statements = mt_stmts
+                          it_lines      = mt_lines ).
+      CATCH zcx_cd_ops_error INTO lx_expected.
+        cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'Unknown lookup must raise' ).
+      CATCH cx_root INTO DATA(lx_other).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_other->get_text( ) }| ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'An unknown lookup ID must raise ZCX_CD_OPS_ERROR' ).
   ENDMETHOD.
 
 
