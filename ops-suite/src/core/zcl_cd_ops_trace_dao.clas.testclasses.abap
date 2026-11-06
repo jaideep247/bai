@@ -11,6 +11,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Return / NOC reasons: NOC lot items by INFOF through the shared EBS read, capped.
+*& 2026-11-06 | ltc_trace_dao_reads: partners, clearing items, headers, file events, method kind (gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -324,6 +325,222 @@ CLASS ltc_trace_dao IMPLEMENTATION.
                                             msg = 'The NOC reason must come from DFKKNRP-FLGRD' ).
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_noc_items( it_infof = VALUE #( ) iv_max_rows = 50 )
                                              msg = 'No NOC items without an INFOF value' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! OSQL tests of the partner, clearing, header, file-event and payment-method reads (BUT000,
+"! DFKKOP, DFKKKO, ZCD_FMON_EVENT, TFK042Z and T001 doubled). The source-specific partner
+"! read through the approved FMON reader is tested in ZCL_CD_FMON_DAO.
+CLASS ltc_trace_dao_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        bpext     TYPE zif_cd_ops_trace_types=>ty_key_value VALUE 'M0012345',
+        partner_1 TYPE c LENGTH 10 VALUE '1000000001',
+        partner_2 TYPE c LENGTH 10 VALUE '1000000002',
+        other     TYPE c LENGTH 10 VALUE '1000000009',
+        augbl     TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000012345',
+        opbel_1   TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000101',
+        opbel_2   TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000102',
+        stbel     TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000000201',
+        fikey     TYPE c LENGTH 12 VALUE 'FK2026110501',
+        file_1    TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '000000000000000000000000000000F1',
+        file_2    TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '000000000000000000000000000000F2',
+        stage_snt TYPE c LENGTH 20 VALUE 'SENT',
+        stage_ack TYPE c LENGTH 20 VALUE 'ACK',
+        bukrs     TYPE zif_cd_ops_trace_types=>ty_bukrs VALUE 'US01',
+        land1     TYPE c LENGTH 3 VALUE 'US',
+        pymet_col TYPE zif_cd_ops_trace_types=>ty_pymet VALUE 'D',
+        pymet_dis TYPE zif_cd_ops_trace_types=>ty_pymet VALUE 'C',
+        pymet_unk TYPE zif_cd_ops_trace_types=>ty_pymet VALUE 'Z',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_ops_trace_dao.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS partners_by_bpext_capped FOR TESTING.
+    METHODS items_by_clearing_document FOR TESTING.
+    METHODS headers_by_document FOR TESTING.
+    METHODS fmon_events_sorted_by_file FOR TESTING.
+    METHODS method_kind_from_tfk042z FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_trace_dao_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'BUT000' ) ( 'DFKKOP' ) ( 'DFKKKO' ) ( 'ZCD_FMON_EVENT' )
+                                   ( 'TFK042Z' ) ( 'T001' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    mo_cut = NEW zcl_cd_ops_trace_dao( ).
+  ENDMETHOD.
+
+
+  " Rule: partners by external number (BPEXT) without source field, ordered and capped
+  METHOD partners_by_bpext_capped.
+    DATA lt_rows TYPE STANDARD TABLE OF but000 WITH EMPTY KEY.
+    DATA ls_row TYPE but000.
+    TRY.
+        ls_row-partner = gc_test-partner_2.
+        ls_row-bpext   = gc_test-bpext.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-partner = gc_test-partner_1.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-partner = gc_test-other.
+        CLEAR ls_row-bpext.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_partners) = mo_cut->get_partners( iv_bpext = gc_test-bpext iv_max_rows = 10 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_partners ) exp = 2 msg = 'Both partners of the number' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_partners[ 1 ] exp = gc_test-partner_1
+                                            msg = 'Ordered by partner' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_partners( iv_bpext    = gc_test-bpext
+                                                                                iv_max_rows = 1 ) )
+                                            exp = 1
+                                            msg = 'Capped at the maximum' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: items cleared by the payment document (AUGBL), others not
+  METHOD items_by_clearing_document.
+    DATA lt_rows TYPE STANDARD TABLE OF dfkkop WITH EMPTY KEY.
+    DATA ls_row TYPE dfkkop.
+    TRY.
+        ls_row-opbel = gc_test-opbel_1.
+        ls_row-augbl = gc_test-augbl.
+        ls_row-bukrs = gc_test-bukrs.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-opbel = gc_test-opbel_2.
+        CLEAR ls_row-augbl.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_items) = mo_cut->get_items_by_clearing( iv_augbl = gc_test-augbl iv_max_rows = 10 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 1 msg = 'Only the cleared item' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-opbel exp = gc_test-opbel_1
+                                            msg = 'Cleared item returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: headers (FIKEY, reversal) by document key; empty key list reads nothing
+  METHOD headers_by_document.
+    DATA lt_rows TYPE STANDARD TABLE OF dfkkko WITH EMPTY KEY.
+    DATA ls_row TYPE dfkkko.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    TRY.
+        ls_row-opbel = gc_test-opbel_1.
+        ls_row-fikey = gc_test-fikey.
+        ls_row-stbel = gc_test-stbel.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-opbel = gc_test-opbel_2.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        INSERT gc_test-opbel_1 INTO TABLE lt_docno.
+        DATA(lt_headers) = mo_cut->get_doc_headers( lt_docno ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_headers ) exp = 1 msg = 'Only the asked document' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_headers[ 1 ]-fikey exp = gc_test-fikey msg = 'FIKEY returned' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_headers[ 1 ]-stbel exp = gc_test-stbel
+                                            msg = 'Reversal document returned' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_doc_headers( VALUE #( ) )
+                                             msg = 'Empty key list reads nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: events of the asked files, sorted by file and event number
+  METHOD fmon_events_sorted_by_file.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_event WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_event.
+    DATA lt_files TYPE zif_cd_ops_trace_types=>tt_file_id.
+    TRY.
+        ls_row-file_id  = gc_test-file_1.
+        ls_row-event_no = 2.
+        ls_row-stage    = gc_test-stage_ack.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-event_no = 1.
+        ls_row-stage    = gc_test-stage_snt.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-file_id  = gc_test-file_2.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        INSERT gc_test-file_1 INTO TABLE lt_files.
+        DATA(lt_events) = mo_cut->get_fmon_events( lt_files ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_events ) exp = 2 msg = 'Events of the asked file' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_events[ 1 ]-stage exp = gc_test-stage_snt
+                                            msg = 'Sorted by event number' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_fmon_events( VALUE #( ) )
+                                             msg = 'Empty key list reads nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (confirmed): TFK042Z-XEINZ of the company code's country separates collections from
+  " disbursements; an unknown or blank method is unknown
+  METHOD method_kind_from_tfk042z.
+    DATA lt_t001 TYPE STANDARD TABLE OF t001 WITH EMPTY KEY.
+    DATA ls_t001 TYPE t001.
+    DATA lt_z TYPE STANDARD TABLE OF tfk042z WITH EMPTY KEY.
+    DATA ls_z TYPE tfk042z.
+    TRY.
+        ls_t001-bukrs = gc_test-bukrs.
+        ls_t001-land1 = gc_test-land1.
+        INSERT ls_t001 INTO TABLE lt_t001.
+        go_env->insert_test_data( lt_t001 ).
+        ls_z-land1 = gc_test-land1.
+        ls_z-zlsch = gc_test-pymet_col.
+        ls_z-xeinz = abap_true.
+        INSERT ls_z INTO TABLE lt_z.
+        ls_z-zlsch = gc_test-pymet_dis.
+        ls_z-xeinz = abap_false.
+        INSERT ls_z INTO TABLE lt_z.
+        go_env->insert_test_data( lt_z ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_method_kind( iv_bukrs = gc_test-bukrs
+                                                                          iv_pymet = gc_test-pymet_col )
+                                            exp = zif_cd_ops_trace_types=>gc_kind-collection
+                                            msg = 'XEINZ set: collection' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_method_kind( iv_bukrs = gc_test-bukrs
+                                                                          iv_pymet = gc_test-pymet_dis )
+                                            exp = zif_cd_ops_trace_types=>gc_kind-disbursement
+                                            msg = 'XEINZ blank: disbursement' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_method_kind( iv_bukrs = gc_test-bukrs
+                                                                          iv_pymet = gc_test-pymet_unk )
+                                            exp = zif_cd_ops_trace_types=>gc_kind-unknown
+                                            msg = 'Method not configured: unknown' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_method_kind( iv_bukrs = gc_test-bukrs
+                                                                          iv_pymet = space )
+                                            exp = zif_cd_ops_trace_types=>gc_kind-unknown
+                                            msg = 'No method: unknown' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A03 / A27: unusable assignments and blocks-posting resolution.
 *& 2026-11-06 | Operating model: NEEDS_POSTING carried from the rule registry.
+*& 2026-11-06 | ltc_cfg_reads: BTC map, accounts, flow patterns, reason map, lookups (coverage gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -238,6 +239,198 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
                                           msg = 'R19 must carry the registry flag NEEDS_POSTING' ).
         cl_abap_unit_assert=>assert_false( act = VALUE #( lt_rules[ rule_id = 'R01' ]-needs_posting OPTIONAL )
                                            msg = 'R01 has no NEEDS_POSTING flag in the registry' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! OSQL tests of the plain customizing reads (every table they read is doubled)
+CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        scheme     TYPE c LENGTH 5 VALUE 'BAI2',
+        code_low   TYPE c LENGTH 35 VALUE '165',
+        code_high  TYPE c LENGTH 35 VALUE '475',
+        bukrs      TYPE bukrs VALUE 'US01',
+        hbkid      TYPE c LENGTH 5 VALUE 'JPMC',
+        hktid_1    TYPE c LENGTH 5 VALUE 'ACH01',
+        hktid_2    TYPE c LENGTH 5 VALUE 'CHK01',
+        pattern_1  TYPE c LENGTH 30 VALUE 'ACH*',
+        pattern_2  TYPE c LENGTH 30 VALUE '*CHECK*',
+        flow_coll  TYPE c LENGTH 1 VALUE 'C',
+        reason_noc TYPE c LENGTH 4 VALUE 'C01',
+        reason_ret TYPE c LENGTH 4 VALUE 'R01',
+        lookup_on  TYPE c LENGTH 10 VALUE 'PAYREQ',
+        lookup_off TYPE c LENGTH 10 VALUE 'OLDLOG',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_ebs_cfg_dao.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS btc_map_sorted_by_key FOR TESTING.
+    METHODS btc_map_empty_without_rows FOR TESTING.
+    METHODS accounts_all_rows_sorted FOR TESTING.
+    METHODS flow_patterns_active_by_prio FOR TESTING.
+    METHODS reason_map_keyed_by_reason FOR TESTING.
+    METHODS lookups_only_active FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_cfg_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'ZCD_BTC_MAP' ) ( 'ZCD_EBS_ACCT' ) ( 'ZCD_EBS_FLOW_PAT' )
+                                   ( 'ZCD_EBS_RSN_MAP' ) ( 'ZCD_EBS_LOOKUP' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    mo_cut = NEW zcl_cd_ebs_cfg_dao( ).
+  ENDMETHOD.
+
+
+  " Rule: the BTC map is returned completely, ordered by scheme, code, bank, flow
+  METHOD btc_map_sorted_by_key.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_btc_map WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_btc_map.
+    TRY.
+        ls_row-scheme   = gc_test-scheme.
+        ls_row-btc_code = gc_test-code_high.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-btc_code = gc_test-code_low.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_map) = mo_cut->get_btc_map( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_map ) exp = 2 msg = 'Inactive codes are read too' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_map[ 1 ]-btc_code exp = gc_test-code_low
+                                            msg = 'Ordered by code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Boundary: no customizing row - empty map, no exception
+  METHOD btc_map_empty_without_rows.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_btc_map( ) msg = 'Empty map' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every account row (active or not) ordered by company code, bank, account ID
+  METHOD accounts_all_rows_sorted.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ebs_acct WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ebs_acct.
+    TRY.
+        ls_row-bukrs  = gc_test-bukrs.
+        ls_row-hbkid  = gc_test-hbkid.
+        ls_row-hktid  = gc_test-hktid_2.
+        ls_row-active = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-hktid  = gc_test-hktid_1.
+        ls_row-active = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_accounts) = mo_cut->get_accounts( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_accounts ) exp = 2 msg = 'Both accounts' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_accounts[ 1 ]-hktid exp = gc_test-hktid_1
+                                            msg = 'Ordered by account ID' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active flow patterns, lowest priority number first
+  METHOD flow_patterns_active_by_prio.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ebs_flow_pat WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ebs_flow_pat.
+    TRY.
+        ls_row-priority  = 20.
+        ls_row-pattern   = gc_test-pattern_2.
+        ls_row-flow_type = gc_test-flow_coll.
+        ls_row-active    = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-priority  = 10.
+        ls_row-pattern   = gc_test-pattern_1.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-priority  = 5.
+        ls_row-active    = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_patterns) = mo_cut->get_flow_patterns( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_patterns ) exp = 2 msg = 'Inactive pattern excluded' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_patterns[ 1 ]-pattern exp = gc_test-pattern_1
+                                            msg = 'Lowest priority number first' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the reason map carries the NOC flag per bank reason
+  METHOD reason_map_keyed_by_reason.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ebs_rsn_map WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ebs_rsn_map.
+    TRY.
+        ls_row-reason = gc_test-reason_noc.
+        ls_row-is_noc = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-reason = gc_test-reason_ret.
+        ls_row-is_noc = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_reasons) = mo_cut->get_reason_map( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_reasons ) exp = 2 msg = 'Both reasons' ).
+        cl_abap_unit_assert=>assert_true( act = lt_reasons[ reason = gc_test-reason_noc ]-is_noc
+                                          msg = 'C01 is a NOC' ).
+        cl_abap_unit_assert=>assert_false( act = lt_reasons[ reason = gc_test-reason_ret ]-is_noc
+                                           msg = 'R01 is a return' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (R21): only active lookups are configured
+  METHOD lookups_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ebs_lookup WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ebs_lookup.
+    TRY.
+        ls_row-lookup_id = gc_test-lookup_on.
+        ls_row-active    = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-lookup_id = gc_test-lookup_off.
+        ls_row-active    = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_lookups) = mo_cut->get_lookups( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lookups ) exp = 1 msg = 'Only the active lookup' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lookups[ 1 ]-lookup_id exp = gc_test-lookup_on
+                                            msg = 'Active lookup returned' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

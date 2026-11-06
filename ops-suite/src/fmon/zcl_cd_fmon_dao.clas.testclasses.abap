@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A04/A05/A49/A50/A51: version check, per-instance events, window bounds, approved tables.
 *& 2026-11-06 | Performance fix 8: grouped count of a configured table (COUNT(*) per value combination).
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
+*& 2026-11-06 | ltc_cfg_reads: interfaces, SLAs, calendars, sources, maps, lot configs, checks (coverage gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -549,3 +550,213 @@ CLASS ltc_dao IMPLEMENTATION.
 
 ENDCLASS.
 
+
+
+"! OSQL tests of the FMON customizing reads (every table they read is doubled): active
+"! filter where the read has one, all rows where it has none
+CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        iface_on  TYPE c LENGTH 20 VALUE 'ACH_OUT_JPMC',
+        iface_off TYPE c LENGTH 20 VALUE 'OLD_IFACE',
+        stage_ack TYPE c LENGTH 20 VALUE 'ACK',
+        stage_snt TYPE c LENGTH 20 VALUE 'SENT',
+        day_work  TYPE c LENGTH 12 VALUE 'WORKDAY',
+        src_on    TYPE c LENGTH 10 VALUE 'PRISM',
+        src_off   TYPE c LENGTH 10 VALUE 'LEGACY',
+        status_ok TYPE c LENGTH 40 VALUE 'DELIVERED',
+        status_ko TYPE c LENGTH 40 VALUE 'REJECTED',
+        lot_type  TYPE c LENGTH 10 VALUE 'RETURNS',
+        lot_off   TYPE c LENGTH 10 VALUE 'NOC',
+        check_on  TYPE c LENGTH 10 VALUE 'LATE',
+        check_off TYPE c LENGTH 10 VALUE 'SIZE',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_fmon_dao.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS ifaces_only_active FOR TESTING.
+    METHODS slas_all_rows FOR TESTING.
+    METHODS calendars_all_rows FOR TESTING.
+    METHODS sources_only_active FOR TESTING.
+    METHODS source_maps_all_rows FOR TESTING.
+    METHODS lot_configs_only_active FOR TESTING.
+    METHODS checks_only_active FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_cfg_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'ZCD_FMON_IFACE' ) ( 'ZCD_FMON_SLA' ) ( 'ZCD_FMON_CAL' )
+                                   ( 'ZCD_FMON_SRC' ) ( 'ZCD_FMON_SRCMAP' ) ( 'ZCD_FMON_LOTCFG' )
+                                   ( 'ZCD_FMON_CHK' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    mo_cut = NEW zcl_cd_fmon_dao( ).
+  ENDMETHOD.
+
+
+  " Rule: only active interfaces are monitored
+  METHOD ifaces_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_iface WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_iface.
+    TRY.
+        ls_row-iface_id = gc_test-iface_on.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-iface_id = gc_test-iface_off.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_ifaces) = mo_cut->get_ifaces( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_ifaces ) exp = 1 msg = 'Only the active interface' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_ifaces[ 1 ]-iface_id exp = gc_test-iface_on
+                                            msg = 'Active interface returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every SLA row is read (an SLA has no active flag)
+  METHOD slas_all_rows.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_sla WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_sla.
+    TRY.
+        ls_row-iface_id = gc_test-iface_on.
+        ls_row-stage    = gc_test-stage_snt.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-stage    = gc_test-stage_ack.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_slas( ) ) exp = 2 msg = 'Both SLA stages' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every calendar row is read; boundary: none configured - empty
+  METHOD calendars_all_rows.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_cal WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_cal.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_calendars( ) msg = 'No calendar configured' ).
+        ls_row-iface_id = gc_test-iface_on.
+        ls_row-day_type = gc_test-day_work.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_cals) = mo_cut->get_calendars( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_cals ) exp = 1 msg = 'One calendar row' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_cals[ 1 ]-day_type exp = gc_test-day_work
+                                            msg = 'Day type returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active sources are read
+  METHOD sources_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_src WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_src.
+    TRY.
+        ls_row-src_id = gc_test-src_on.
+        ls_row-active = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-src_id = gc_test-src_off.
+        ls_row-active = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_sources) = mo_cut->get_sources( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_sources ) exp = 1 msg = 'Only the active source' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_sources[ 1 ]-src_id exp = gc_test-src_on
+                                            msg = 'Active source returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every status map row of every source is read
+  METHOD source_maps_all_rows.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_srcmap WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_srcmap.
+    TRY.
+        ls_row-src_id       = gc_test-src_on.
+        ls_row-status_value = gc_test-status_ok.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-status_value = gc_test-status_ko.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_source_maps( ) ) exp = 2
+                                            msg = 'Both status values' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active lot configurations are read
+  METHOD lot_configs_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_lotcfg WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_lotcfg.
+    TRY.
+        ls_row-iface_id = gc_test-iface_on.
+        ls_row-lot_type = gc_test-lot_type.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-lot_type = gc_test-lot_off.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_cfgs) = mo_cut->get_lot_configs( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_cfgs ) exp = 1 msg = 'Only the active lot type' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_cfgs[ 1 ]-lot_type exp = gc_test-lot_type
+                                            msg = 'Active lot type returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active checks are run
+  METHOD checks_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_chk WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_chk.
+    TRY.
+        ls_row-check_id = gc_test-check_on.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-check_id = gc_test-check_off.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_checks) = mo_cut->get_checks( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'Only the active check' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-check_id exp = gc_test-check_on
+                                            msg = 'Active check returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.

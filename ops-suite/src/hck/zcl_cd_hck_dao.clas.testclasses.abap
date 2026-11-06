@@ -12,6 +12,7 @@
 *& 2026-11-06 | raw_aggregate_is_rejected, raw_value_query_is_rejected (audit A56).
 *& 2026-11-06 | Metric kind and weight round trip (audit A88).
 *& 2026-11-06 | Performance fix 7: ROW_NUMBER( ) per run - runs ordered by their latest point, cap and warm-up count.
+*& 2026-11-06 | ltc_dao_reads: definitions, thresholds, aggregates, whitelist, drift, baselines, cycles, logs (gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -590,6 +591,379 @@ CLASS ltc_dao IMPLEMENTATION.
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '302'
                                             msg = 'Message 302 (not whitelisted) expected' ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! OSQL tests of the customizing, baseline, job-cycle and statistics reads of the HCK DAO
+"! (every table they read or write is doubled)
+CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        check_a    TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_FIRST',
+        check_b    TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_SECOND',
+        check_off  TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_OFF',
+        metric     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVERDUE',
+        agg        TYPE zif_cd_hck_types=>ty_agg_id VALUE 'RDI_10D',
+        group_1    TYPE zif_cd_hck_types=>ty_group_value VALUE 'US01',
+        group_2    TYPE zif_cd_hck_types=>ty_group_value VALUE 'US02',
+        table_on   TYPE zif_cd_hck_types=>ty_tabname VALUE 'DFKKOP',
+        table_off  TYPE zif_cd_hck_types=>ty_tabname VALUE 'DFKKKO',
+        table_low  TYPE zif_cd_hck_types=>ty_tabname VALUE 'dfkkop',
+        drift_tab  TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_MAP',
+        hash_1     TYPE zif_cd_hck_types=>ty_hash VALUE 'AAAA',
+        hash_2     TYPE zif_cd_hck_types=>ty_hash VALUE 'BBBB',
+        cycle_on   TYPE zif_cd_hck_types=>ty_cycle_id VALUE 'PAYRUN',
+        cycle_off  TYPE zif_cd_hck_types=>ty_cycle_id VALUE 'OLDRUN',
+        step_1     TYPE zif_cd_hck_types=>ty_step_no VALUE '010',
+        step_2     TYPE zif_cd_hck_types=>ty_step_no VALUE '020',
+        log_object TYPE zif_cd_hck_types=>ty_bal_object VALUE 'ZCD_OPS',
+        log_sub    TYPE zif_cd_hck_types=>ty_bal_subobject VALUE 'EBS',
+        log_1      TYPE c LENGTH 20 VALUE '00000000000000000001',
+        log_2      TYPE c LENGTH 20 VALUE '00000000000000000002',
+        day        TYPE d VALUE '20261105',
+        due_old    TYPE d VALUE '20261101',
+        due_new    TYPE d VALUE '20261104',
+        run_id     TYPE sysuuid_x16 VALUE '000000000000000000000000000000A1',
+        alert_1    TYPE sysuuid_x16 VALUE '000000000000000000000000000000B1',
+        alert_2    TYPE sysuuid_x16 VALUE '000000000000000000000000000000B2',
+        alert_3    TYPE sysuuid_x16 VALUE '000000000000000000000000000000B3',
+        channel    TYPE zif_cd_hck_types=>ty_channel VALUE 'EMAIL',
+        win_from   TYPE timestampl VALUE '20261105000000.0000000',
+        inside     TYPE timestampl VALUE '20261105120000.0000000',
+        win_to     TYPE timestampl VALUE '20261105235959.0000000',
+        outside    TYPE timestampl VALUE '20261104120000.0000000',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_hck_dao.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS check_defs_active_by_seq FOR TESTING.
+    METHODS thresholds_of_one_check FOR TESTING.
+    METHODS agg_defs_and_groups_of_check FOR TESTING.
+    METHODS whitelist_needs_active_row FOR TESTING.
+    METHODS drift_tables_only_active FOR TESTING.
+    METHODS baselines_saved_and_replaced FOR TESTING.
+    METHODS cycle_steps_of_active_cycle FOR TESTING.
+    METHODS applog_stats_per_object FOR TESTING.
+    METHODS open_exceptions_oldest_first FOR TESTING.
+    METHODS alert_stats_in_window FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_dao_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' ) ( 'ZCD_HCK_AGGGRP' )
+                                   ( 'ZCD_HCK_TABWL' ) ( 'ZCD_HCK_DRIFT' ) ( 'ZCD_HCK_BASELINE' )
+                                   ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_JOB_STEP' ) ( 'BALHDR' )
+                                   ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    mo_cut = NEW zcl_cd_hck_dao( ).
+  ENDMETHOD.
+
+
+  " Rule: active checks of the selection, ordered by SEQ
+  METHOD check_defs_active_by_seq.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_hck_def.
+    DATA lt_categories TYPE zif_cd_hck_types=>tt_category_range.
+    TRY.
+        ls_row-check_id = gc_test-check_a.
+        ls_row-category = zif_cd_hck_types=>gc_category-financial.
+        ls_row-seq      = 20.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-check_id = gc_test-check_b.
+        ls_row-category = zif_cd_hck_types=>gc_category-technical.
+        ls_row-seq      = 10.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-check_id = gc_test-check_off.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_defs) = mo_cut->get_check_defs( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_defs ) exp = 2 msg = 'Inactive check excluded' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_defs[ 1 ]-check_id exp = gc_test-check_b
+                                            msg = 'Lowest SEQ first' ).
+        INSERT VALUE #( sign = 'I' option = 'EQ' low = zif_cd_hck_types=>gc_category-financial )
+          INTO TABLE lt_categories.
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_check_defs( it_categories = lt_categories ) )
+                                            exp = 1
+                                            msg = 'Category selection applied' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: thresholds of the asked check only (every company-code row)
+  METHOD thresholds_of_one_check.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_thresh WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_hck_thresh.
+    TRY.
+        ls_row-check_id = gc_test-check_a.
+        ls_row-metric   = gc_test-metric.
+        ls_row-bukrs    = zif_cd_hck_types=>gc_default_key.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-bukrs    = gc_test-group_1.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-check_id = gc_test-check_b.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_thresholds) = mo_cut->get_thresholds( gc_test-check_a ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_thresholds ) exp = 2 msg = 'Both rows of the check' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_thresholds[ 1 ]-bukrs exp = zif_cd_hck_types=>gc_default_key
+                                            msg = 'Ordered by company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: aggregate rows and expected groups of the asked check only
+  METHOD agg_defs_and_groups_of_check.
+    DATA lt_agg TYPE STANDARD TABLE OF zcd_hck_agg WITH EMPTY KEY.
+    DATA ls_agg TYPE zcd_hck_agg.
+    DATA lt_grp TYPE STANDARD TABLE OF zcd_hck_agggrp WITH EMPTY KEY.
+    DATA ls_grp TYPE zcd_hck_agggrp.
+    TRY.
+        ls_agg-check_id = gc_test-check_a.
+        ls_agg-agg_id   = gc_test-agg.
+        ls_agg-tabname  = gc_test-table_on.
+        INSERT ls_agg INTO TABLE lt_agg.
+        ls_agg-check_id = gc_test-check_b.
+        INSERT ls_agg INTO TABLE lt_agg.
+        go_env->insert_test_data( lt_agg ).
+        ls_grp-check_id    = gc_test-check_a.
+        ls_grp-agg_id      = gc_test-agg.
+        ls_grp-group_value = gc_test-group_2.
+        INSERT ls_grp INTO TABLE lt_grp.
+        ls_grp-group_value = gc_test-group_1.
+        INSERT ls_grp INTO TABLE lt_grp.
+        go_env->insert_test_data( lt_grp ).
+        DATA(lt_defs) = mo_cut->get_agg_defs( gc_test-check_a ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_defs ) exp = 1 msg = 'One aggregate of the check' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_defs[ 1 ]-tabname exp = gc_test-table_on msg = 'Table read' ).
+        DATA(lt_groups) = mo_cut->get_agg_groups( gc_test-check_a ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_groups ) exp = 2 msg = 'Both expected groups' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-group_value exp = gc_test-group_1
+                                            msg = 'Ordered by group value' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A56): a table is readable only with an active whitelist row (name upper-cased)
+  METHOD whitelist_needs_active_row.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_tabwl WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_hck_tabwl.
+    TRY.
+        ls_row-tabname = gc_test-table_on.
+        ls_row-active  = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-tabname = gc_test-table_off.
+        ls_row-active  = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->is_table_whitelisted( gc_test-table_low )
+                                          msg = 'Active row allows (lower-case name)' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->is_table_whitelisted( gc_test-table_off )
+                                           msg = 'Inactive row refuses' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->is_table_whitelisted( gc_test-drift_tab )
+                                           msg = 'Missing row refuses' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active drift-controlled tables
+  METHOD drift_tables_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_drift WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_hck_drift.
+    TRY.
+        ls_row-tabname = gc_test-drift_tab.
+        ls_row-active  = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-tabname = gc_test-table_off.
+        ls_row-active  = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_tables) = mo_cut->get_drift_tables( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_tables ) exp = 1 msg = 'Only the active table' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_tables[ 1 ]-tabname exp = gc_test-drift_tab
+                                            msg = 'Active table returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a saved baseline is read back; saving again replaces it (no second row)
+  METHOD baselines_saved_and_replaced.
+    DATA lt_baselines TYPE zif_cd_hck_types=>tt_baseline.
+    DATA ls_baseline TYPE zif_cd_hck_types=>ty_baseline.
+    TRY.
+        ls_baseline-tabname   = gc_test-drift_tab.
+        ls_baseline-hash      = gc_test-hash_1.
+        ls_baseline-row_count = 1.
+        INSERT ls_baseline INTO TABLE lt_baselines.
+        mo_cut->save_baselines( lt_baselines ).
+        CLEAR lt_baselines.
+        ls_baseline-hash      = gc_test-hash_2.
+        ls_baseline-row_count = 2.
+        INSERT ls_baseline INTO TABLE lt_baselines.
+        mo_cut->save_baselines( lt_baselines ).
+        DATA(lt_read) = mo_cut->get_baselines( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_read ) exp = 1 msg = 'One baseline per table' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_read[ 1 ]-hash exp = gc_test-hash_2 msg = 'Latest hash kept' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_read[ 1 ]-row_count exp = 2 msg = 'Latest row count kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: steps of active cycles only, joined with the cycle, ordered by step
+  METHOD cycle_steps_of_active_cycle.
+    DATA lt_cyc TYPE STANDARD TABLE OF zcd_job_cycle WITH EMPTY KEY.
+    DATA ls_cyc TYPE zcd_job_cycle.
+    DATA lt_step TYPE STANDARD TABLE OF zcd_job_step WITH EMPTY KEY.
+    DATA ls_step TYPE zcd_job_step.
+    TRY.
+        ls_cyc-cycle_id = gc_test-cycle_on.
+        ls_cyc-active   = abap_true.
+        INSERT ls_cyc INTO TABLE lt_cyc.
+        ls_cyc-cycle_id = gc_test-cycle_off.
+        ls_cyc-active   = abap_false.
+        INSERT ls_cyc INTO TABLE lt_cyc.
+        go_env->insert_test_data( lt_cyc ).
+        ls_step-cycle_id = gc_test-cycle_on.
+        ls_step-step_no  = gc_test-step_2.
+        INSERT ls_step INTO TABLE lt_step.
+        ls_step-step_no  = gc_test-step_1.
+        INSERT ls_step INTO TABLE lt_step.
+        ls_step-cycle_id = gc_test-cycle_off.
+        INSERT ls_step INTO TABLE lt_step.
+        go_env->insert_test_data( lt_step ).
+        DATA(lt_steps) = mo_cut->get_cycle_steps( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_steps ) exp = 2 msg = 'Steps of the active cycle' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_steps[ 1 ]-step_no exp = gc_test-step_1
+                                            msg = 'Ordered by step' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: BALHDR counters summed per object / subobject of the day; no object list - no read
+  METHOD applog_stats_per_object.
+    DATA lt_rows TYPE STANDARD TABLE OF balhdr WITH EMPTY KEY.
+    DATA ls_row TYPE balhdr.
+    DATA lt_objects TYPE zif_cd_hck_types=>tt_object_range.
+    TRY.
+        ls_row-lognumber  = gc_test-log_1.
+        ls_row-object     = gc_test-log_object.
+        ls_row-subobject  = gc_test-log_sub.
+        ls_row-aldate     = gc_test-day.
+        ls_row-msg_cnt_al = 10.
+        ls_row-msg_cnt_e  = 2.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-lognumber  = gc_test-log_2.
+        ls_row-msg_cnt_al = 5.
+        ls_row-msg_cnt_e  = 1.
+        ls_row-msg_cnt_a  = 1.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_test-log_object ) INTO TABLE lt_objects.
+        DATA(lt_stat) = mo_cut->get_applog_stats( it_objects = lt_objects iv_date = gc_test-day ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_stat ) exp = 1 msg = 'One object / subobject' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_stat[ 1 ]-log_count exp = 2 msg = 'Two logs' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_stat[ 1 ]-msg_total exp = 15 msg = 'Messages summed' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_stat[ 1 ]-msg_error exp = 3 msg = 'Errors summed' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_applog_stats( it_objects = VALUE #( )
+                                                                             iv_date    = gc_test-day )
+                                             msg = 'No object list: nothing read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: open and assigned exceptions, oldest due first, capped; resolved ones excluded
+  METHOD open_exceptions_oldest_first.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ops_finding.
+    TRY.
+        ls_row-run_id      = gc_test-run_id.
+        ls_row-finding_no  = 1.
+        ls_row-disposition = zif_cd_hck_types=>gc_disposition-open.
+        ls_row-due_date    = gc_test-due_new.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 2.
+        ls_row-disposition = zif_cd_hck_types=>gc_disposition-assigned.
+        ls_row-due_date    = gc_test-due_old.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 3.
+        ls_row-disposition = zif_cd_ops_types=>gc_disposition-resolved.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_open_exceptions( 10 ) ) exp = 2
+                                            msg = 'Resolved exception excluded' ).
+        DATA(lt_top) = mo_cut->get_open_exceptions( 1 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_top ) exp = 1 msg = 'Capped at the maximum' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_top[ 1 ]-due_date exp = gc_test-due_old
+                                            msg = 'Oldest due date first' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: deliveries counted per channel and status inside the window only
+  METHOD alert_stats_in_window.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_allog WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ops_allog.
+    TRY.
+        ls_row-alert_id = gc_test-alert_1.
+        ls_row-channel  = gc_test-channel.
+        ls_row-status   = zif_cd_hck_types=>gc_alert_status-failed.
+        ls_row-sent_at  = gc_test-inside.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-alert_id = gc_test-alert_2.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-alert_id = gc_test-alert_3.
+        ls_row-sent_at  = gc_test-outside.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_stat) = mo_cut->get_alert_stats( iv_from = gc_test-win_from iv_to = gc_test-win_to ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_stat ) exp = 1 msg = 'One channel / status' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_stat[ 1 ]-item_count exp = 2
+                                            msg = 'Only deliveries inside the window' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

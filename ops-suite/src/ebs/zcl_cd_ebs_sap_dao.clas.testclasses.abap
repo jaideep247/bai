@@ -10,6 +10,7 @@
 *& 2026-11-06 | Performance fix 3: posting-flag tests moved to ZCL_CD_EBS_FEB_DAO (read joined the item read).
 *& 2026-11-06 | Performance fix 6: G/L balances of several statements in one aggregate (ACDOCA double).
 *& 2026-11-06 | Return / NOC reason correction: RLGRD with the returns lot item; NOC items by INFOF (DFKKNRP double).
+*& 2026-11-06 | ltc_sap_dao_reads: cheques, FI lines, lookup rows, retrieval field check (coverage gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -232,6 +233,272 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_noc_items( VALUE #( ) )
                                              msg = 'Empty INFOF list must return nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Parameters of the reads (store double through ZCL_CD_OPS_INJECTOR - no cached store)
+CLASS ltd_store DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
+    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+ENDCLASS.
+
+CLASS ltd_store IMPLEMENTATION.
+  METHOD zif_cd_ops_store~get_param.
+    READ TABLE mt_params INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
+    rv_value = COND #( WHEN sy-subrc = 0 THEN ls_param-value ELSE iv_default ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_OPS_PARAM doubled;
+"! ZCD_OPS_PARAM also serves as the configured lookup table). get_retrievals is tested up to
+"! its DDIC field check, which raises before the SELECT on ZCD_ACH_RTRV_LOG
+"! (osql-not-reached: ZCD_ACH_RTRV_LOG).
+CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        cheque      TYPE zif_cd_ebs_sap_dao=>ty_ztnum VALUE '0000100001',
+        other_chq   TYPE zif_cd_ebs_sap_dao=>ty_ztnum VALUE '0000100002',
+        doc1r       TYPE zif_cd_ebs_sap_dao=>ty_docno VALUE '000000012345',
+        hbkid       TYPE c LENGTH 5 VALUE 'BOA01',
+        bukrs       TYPE c LENGTH 4 VALUE 'US01',
+        belnr       TYPE c LENGTH 10 VALUE '0100000001',
+        gjahr       TYPE n LENGTH 4 VALUE '2026',
+        hkont       TYPE c LENGTH 10 VALUE '0011000100',
+        param       TYPE c LENGTH 30 VALUE 'EBS_LOOKUP_UNIT_TEST',
+        param_text  TYPE c LENGTH 60 VALUE 'OPEN',
+        lookup_tab  TYPE c LENGTH 30 VALUE 'ZCD_OPS_PARAM',
+        lookup_key  TYPE c LENGTH 30 VALUE 'PARAM_NAME',
+        lookup_stat TYPE c LENGTH 30 VALUE 'DESCRIPTION',
+        bad_field   TYPE c LENGTH 30 VALUE 'NO_SUCH_FIELD',
+        msgno_field TYPE symsgno VALUE '051',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_ebs_sap_dao.
+    DATA mo_store TYPE REF TO ltd_store.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+    METHODS teardown.
+
+    METHODS cheque_found_by_number FOR TESTING.
+    METHODS unknown_bukrs_field_ignored FOR TESTING.
+    METHODS retrieval_bad_field_raises FOR TESTING.
+    METHODS cheques_empty_keys_nothing FOR TESTING.
+    METHODS fi_lines_by_document_key FOR TESTING.
+    METHODS lookup_rows_key_and_status FOR TESTING.
+    METHODS lookup_unknown_field_raises FOR TESTING.
+    METHODS lookup_empty_keys_nothing FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_sap_dao_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_OPS_PARAM' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    mo_store = NEW #( ).
+    zcl_cd_ops_injector=>inject_store( mo_store ).
+    mo_cut = NEW zcl_cd_ebs_sap_dao( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  " Rule (A07): a configured company-code field that DFKKCR does not have is ignored, not selected
+  METHOD unknown_bukrs_field_ignored.
+    DATA lt_cr TYPE STANDARD TABLE OF dfkkcr WITH EMPTY KEY.
+    DATA ls_cr TYPE dfkkcr.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
+    TRY.
+        INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-dfkkcr_bukrs_field
+                        value = gc_test-bad_field ) INTO TABLE mo_store->mt_params.
+        ls_cr-ztnum = gc_test-cheque.
+        INSERT ls_cr INTO TABLE lt_cr.
+        go_env->insert_test_data( lt_cr ).
+        INSERT gc_test-cheque INTO TABLE lt_keys.
+        DATA(lt_checks) = mo_cut->get_checks( lt_keys ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'Cheque still read' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_checks[ 1 ]-bukrs msg = 'Unknown field not selected' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a retrieval status field the table does not have fails closed (051) before any SQL
+  METHOD retrieval_bad_field_raises.
+    DATA lt_docno TYPE zif_cd_ebs_sap_dao=>tt_docno.
+    INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-rtrv_status_field
+                    value = gc_test-bad_field ) INTO TABLE mo_store->mt_params.
+    INSERT gc_test-doc1r INTO TABLE lt_docno.
+    TRY.
+        mo_cut->get_retrievals( lt_docno ).
+        cl_abap_unit_assert=>fail( msg = 'Unknown status field must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = gc_test-msgno_field
+                                            msg = 'Unknown field is message 051' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: cheques are read by ZTNUM (= FEBEP-CHECT) with house bank and DOC1R
+  METHOD cheque_found_by_number.
+    DATA lt_cr TYPE STANDARD TABLE OF dfkkcr WITH EMPTY KEY.
+    DATA ls_cr TYPE dfkkcr.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
+    TRY.
+        ls_cr-ztnum = gc_test-cheque.
+        ls_cr-hbkid = gc_test-hbkid.
+        ls_cr-doc1r = gc_test-doc1r.
+        INSERT ls_cr INTO TABLE lt_cr.
+        ls_cr-ztnum = gc_test-other_chq.
+        INSERT ls_cr INTO TABLE lt_cr.
+        go_env->insert_test_data( lt_cr ).
+        INSERT gc_test-cheque INTO TABLE lt_keys.
+        DATA(lt_checks) = mo_cut->get_checks( lt_keys ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'Only the asked cheque' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-doc1r exp = gc_test-doc1r
+                                            msg = 'Payment document DOC1R returned' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-hbkid exp = gc_test-hbkid
+                                            msg = 'House bank returned' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_checks[ 1 ]-bukrs
+                                             msg = 'No company-code field configured: blank' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Boundary: no cheque number - nothing read (FOR ALL ENTRIES guard)
+  METHOD cheques_empty_keys_nothing.
+    DATA lt_cr TYPE STANDARD TABLE OF dfkkcr WITH EMPTY KEY.
+    DATA ls_cr TYPE dfkkcr.
+    TRY.
+        ls_cr-ztnum = gc_test-cheque.
+        INSERT ls_cr INTO TABLE lt_cr.
+        go_env->insert_test_data( lt_cr ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_checks( VALUE #( ) )
+                                             msg = 'Empty key list reads nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: FI lines by document key only (BUKRS / BELNR / GJAHR), with G/L account and clearing
+  METHOD fi_lines_by_document_key.
+    DATA lt_bseg TYPE STANDARD TABLE OF bseg WITH EMPTY KEY.
+    DATA ls_bseg TYPE bseg.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_fi_key.
+    DATA ls_key TYPE zif_cd_ebs_sap_dao=>ty_fi_key.
+    TRY.
+        ls_bseg-bukrs = gc_test-bukrs.
+        ls_bseg-belnr = gc_test-belnr.
+        ls_bseg-gjahr = gc_test-gjahr.
+        ls_bseg-buzei = 1.
+        ls_bseg-hkont = gc_test-hkont.
+        ls_bseg-augbl = gc_test-doc1r.
+        INSERT ls_bseg INTO TABLE lt_bseg.
+        ls_bseg-buzei = 2.
+        INSERT ls_bseg INTO TABLE lt_bseg.
+        ls_bseg-gjahr = gc_test-gjahr - 1.
+        INSERT ls_bseg INTO TABLE lt_bseg.
+        go_env->insert_test_data( lt_bseg ).
+        ls_key-bukrs = gc_test-bukrs.
+        ls_key-belnr = gc_test-belnr.
+        ls_key-gjahr = gc_test-gjahr.
+        INSERT ls_key INTO TABLE lt_keys.
+        DATA(lt_lines) = mo_cut->get_fi_lines( lt_keys ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 2
+                                            msg = 'Both lines of the document, not the other year' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-hkont exp = gc_test-hkont msg = 'G/L account' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_fi_lines( VALUE #( ) )
+                                             msg = 'Empty key list reads nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (R21): configured table, key and status field are DDIC-checked, rows read by key
+  METHOD lookup_rows_key_and_status.
+    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
+    DATA ls_param TYPE zcd_ops_param.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
+    TRY.
+        ls_param-param_name = gc_test-param.
+        ls_param-description = gc_test-param_text.
+        INSERT ls_param INTO TABLE lt_param.
+        go_env->insert_test_data( lt_param ).
+        ls_lookup-table_name   = gc_test-lookup_tab.
+        ls_lookup-key_field    = gc_test-lookup_key.
+        ls_lookup-status_field = gc_test-lookup_stat.
+        INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
+        DATA(lt_rows) = mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row for the key' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = gc_test-param_text
+                                            msg = 'Status field returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an unknown key field fails closed (051) before any SQL
+  METHOD lookup_unknown_field_raises.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
+    ls_lookup-table_name = gc_test-lookup_tab.
+    ls_lookup-key_field  = gc_test-bad_field.
+    INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
+    TRY.
+        mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
+        cl_abap_unit_assert=>fail( msg = 'Unknown key field must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = gc_test-msgno_field
+                                            msg = 'Unknown field is message 051' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Boundary: no key - nothing read, no exception even for a broken configuration
+  METHOD lookup_empty_keys_nothing.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    TRY.
+        ls_lookup-table_name = gc_test-lookup_tab.
+        ls_lookup-key_field  = gc_test-bad_field.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_lookup_rows( is_lookup = ls_lookup
+                                                                            it_keys   = VALUE #( ) )
+                                             msg = 'Empty key list reads nothing' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
