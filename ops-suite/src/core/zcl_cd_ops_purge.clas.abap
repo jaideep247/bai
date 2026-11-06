@@ -10,6 +10,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -88,23 +89,23 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
     DATA(lv_package) = nmax( val1 = int_param( iv_name = 'PURGE_PACKAGE_SIZE' iv_default = gc_default_package )
                              val2 = 1 ).
 
-    LOOP AT targets( ) INTO DATA(ls_target).
+    LOOP AT targets( ) ASSIGNING FIELD-SYMBOL(<ls_target>).
       DATA(ls_result) = VALUE ty_result(
-        target = ls_target-target
-        days   = nmax( val1 = int_param( iv_name    = CONV #( |RETENTION_DAYS_{ ls_target-target }| )
-                                         iv_default = ls_target-default_days )
+        target = <ls_target>-target
+        days   = nmax( val1 = int_param( iv_name    = CONV #( |RETENTION_DAYS_{ <ls_target>-target }| )
+                                         iv_default = <ls_target>-default_days )
                        val2 = gc_min_days ) ).
       ls_result-cutoff = cutoff_date( iv_today = lv_today iv_days = ls_result-days ).
       CONVERT DATE ls_result-cutoff TIME zif_cd_ops_types=>gc_time-day_start
         INTO TIME STAMP lv_cutoff_ts TIME ZONE zif_cd_ops_types=>gc_time_zone_utc.
 
       IF iv_test_mode = abap_true.
-        ls_result-rows = lo_dao->count_purgeable( iv_target = ls_target-target
+        ls_result-rows = lo_dao->count_purgeable( iv_target = <ls_target>-target
                                                   iv_cutoff = lv_cutoff_ts
                                                   iv_today  = lv_today ).
       ELSE.
         DO.
-          DATA(lv_deleted) = lo_dao->delete_package( EXPORTING iv_target   = ls_target-target
+          DATA(lv_deleted) = lo_dao->delete_package( EXPORTING iv_target   = <ls_target>-target
                                                                iv_cutoff   = lv_cutoff_ts
                                                                iv_today    = lv_today
                                                                iv_max      = lv_package

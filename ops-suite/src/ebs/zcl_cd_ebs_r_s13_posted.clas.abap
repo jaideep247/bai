@@ -8,6 +8,7 @@
 *& unposted - one POSTING_INCOMPLETE finding per statement with the count. Pure.
 *& Modification log:
 *& 2026-11-06 | Initial version (operating model: post-posting detective control).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S13 - entries expected to post are posted</p>
 CLASS zcl_cd_ebs_r_s13_posted DEFINITION
@@ -26,18 +27,18 @@ ENDCLASS.
 CLASS zcl_cd_ebs_r_s13_posted IMPLEMENTATION.
 
   METHOD zif_cd_ebs_rule~execute.
-    LOOP AT it_statements INTO DATA(ls_statement) WHERE source = zif_cd_ebs_types=>gc_source-feb.
+    LOOP AT it_statements ASSIGNING FIELD-SYMBOL(<ls_statement>) WHERE source = zif_cd_ebs_types=>gc_source-feb.
       DATA(lv_open) = 0.
       DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( 0 ).
-      LOOP AT it_lines INTO DATA(ls_line) USING KEY stmt
-           WHERE stmt_key = ls_statement-stmt_key AND posting_open = abap_true.
+      LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>) USING KEY stmt
+           WHERE stmt_key = <ls_statement>-stmt_key AND posting_open = abap_true.
         lv_open += 1.
-        lv_amount += ls_line-amount.
+        lv_amount += <ls_line>-amount.
       ENDLOOP.
       IF lv_open > 0.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule       = is_rule
-                 is_statement  = ls_statement
+                 is_statement  = <ls_statement>
                  iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_incomplete
                  iv_amount     = lv_amount
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_incomplete

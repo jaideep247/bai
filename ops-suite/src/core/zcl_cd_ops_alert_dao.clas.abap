@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | claim / complete (durable claim before send), get_repeat_keys (audit A17); escalation override read (A46).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert repository</p>
 CLASS zcl_cd_ops_alert_dao DEFINITION
@@ -62,20 +63,20 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
     IF it_log IS INITIAL.
       RETURN.
     ENDIF.
-    LOOP AT it_log INTO DATA(ls_log).
+    LOOP AT it_log ASSIGNING FIELD-SYMBOL(<ls_log>).
       CLEAR ls_db.
-      ls_db-alert_id    = ls_log-alert_id.
-      ls_db-rule_id     = ls_log-rule_id.
-      ls_db-channel     = ls_log-channel.
-      ls_db-run_id      = ls_log-run_id.
-      ls_db-pe_area      = ls_log-pe_area.
-      ls_db-sent_at     = ls_log-sent_at.
-      ls_db-status      = ls_log-status.
-      ls_db-destination = ls_log-destination.
-      ls_db-subject     = ls_log-subject.
-      ls_db-error       = ls_log-error.
-      ls_db-intent_key  = ls_log-intent_key.
-      ls_db-attempt     = ls_log-attempt.
+      ls_db-alert_id    = <ls_log>-alert_id.
+      ls_db-rule_id     = <ls_log>-rule_id.
+      ls_db-channel     = <ls_log>-channel.
+      ls_db-run_id      = <ls_log>-run_id.
+      ls_db-pe_area      = <ls_log>-pe_area.
+      ls_db-sent_at     = <ls_log>-sent_at.
+      ls_db-status      = <ls_log>-status.
+      ls_db-destination = <ls_log>-destination.
+      ls_db-subject     = <ls_log>-subject.
+      ls_db-error       = <ls_log>-error.
+      ls_db-intent_key  = <ls_log>-intent_key.
+      ls_db-attempt     = <ls_log>-attempt.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
@@ -139,8 +140,8 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
         AND occurrences > 1
       ORDER BY object_type, object_key, check_code
       INTO TABLE @DATA(lt_rows).
-    LOOP AT lt_rows INTO DATA(ls_row).
-      INSERT CORRESPONDING #( ls_row ) INTO TABLE rt_keys.
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT CORRESPONDING #( <ls_row> ) INTO TABLE rt_keys.
     ENDLOOP.
   ENDMETHOD.
 

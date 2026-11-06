@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Gaps per company code and AWTYP (PARAM4), unreversed GL document; metric = total gaps (audit A43).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment engine to GL transfer completeness</p>
 "! PARAM1 = lag in days (keys younger than this are still open, default 1),
@@ -57,14 +58,14 @@ CLASS zcl_cd_hck_c_gl_transfer IMPLEMENTATION.
     INSERT VALUE #( metric = gc_metric
                     dim1   = zif_cd_hck_types=>gc_default_key
                     value  = lv_total ) INTO TABLE rs_result-metrics.
-    LOOP AT lt_gaps INTO DATA(ls_gap).
-      INSERT VALUE #( object_key = |{ ls_gap-fikey }/{ ls_gap-bukrs }|
+    LOOP AT lt_gaps ASSIGNING FIELD-SYMBOL(<ls_gap>).
+      INSERT VALUE #( object_key = |{ <ls_gap>-fikey }/{ <ls_gap>-bukrs }|
                       check_code = zif_cd_hck_types=>gc_code-gl_gap
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
-                      reference  = ls_gap-fikey
+                      reference  = <ls_gap>-fikey
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-reconciliation_key_has_tota
-                                                          iv_v1    = ls_gap-fikey
+                                                          iv_v1    = <ls_gap>-fikey
                                                           iv_v2    = |{ lv_from DATE = ISO }|
                                                           iv_v3    = |{ lv_to DATE = ISO }| ) ) INTO TABLE rs_result-findings.
     ENDLOOP.

@@ -12,6 +12,10 @@
 *& 2026-11-06 | Audit A28: get_febep_reasons (configured FEBEP field, DEFAULT IGNORE).
 *& 2026-11-06 | Audit A65: TY_DOCNO width is the document key width (VERIFY-DDIC OPBEL_KK / AUGBL_KK / DOC1R CHAR 12).
 *& 2026-11-06 | Operating model: get_febep_posting (FEBEP posting-area flags, DEFAULT IGNORE).
+*& 2026-11-06 | Performance fix 3: get_febep_reasons / get_febep_posting moved into ZIF_CD_EBS_FEB_DAO get_items.
+*& 2026-11-06 | Performance fix 4: non-unique sorted secondary keys on the result tables (rules loop USING KEY).
+*& 2026-11-06 | Performance fix 6: get_gl_balances - one ACDOCA aggregate for all closing statements (was one per statement).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -36,7 +40,9 @@ INTERFACE zif_cd_ebs_sap_dao
       "! Returns lot status (DFKKRK-STARS via DFKKRP-OPBEL, as in legacy v4)
       lot_stars TYPE ty_status,
     END OF ty_return_item.
-  TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_SELW1 - rules read the items of one payment document by key
+  TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY
+                       WITH NON-UNIQUE SORTED KEY by_selw1 COMPONENTS selw1.
 
   "! Payment header (DPAYH) by payment document DOC1R
   TYPES:
@@ -46,7 +52,9 @@ INTERFACE zif_cd_ebs_sap_dao
       laufi  TYPE c LENGTH 6,
       status TYPE ty_status,
     END OF ty_payment.
-  TYPES tt_payment TYPE STANDARD TABLE OF ty_payment WITH EMPTY KEY.
+  "! Fix 4: primary order stays newest run first; secondary key BY_DOC1R for the rule lookup
+  TYPES tt_payment TYPE STANDARD TABLE OF ty_payment WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_doc1r COMPONENTS doc1r.
 
   "! ACH retrieval log (ZCD_ACH_RTRV_LOG) by clearing document
   TYPES:
@@ -54,28 +62,11 @@ INTERFACE zif_cd_ebs_sap_dao
       augbl  TYPE ty_docno,
       status TYPE ty_status,
     END OF ty_retrieval.
-  TYPES tt_retrieval TYPE STANDARD TABLE OF ty_retrieval WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_AUGBL - attempts of one clearing document in read order
+  TYPES tt_retrieval TYPE STANDARD TABLE OF ty_retrieval WITH EMPTY KEY
+                     WITH NON-UNIQUE SORTED KEY by_augbl COMPONENTS augbl.
 
   "! Check register (DFKKCR) by check number
-  "! A28: NACHA reason of a FEBEP item, read from the configured field
-  TYPES:
-    BEGIN OF ty_febep_reason,
-      kukey  TYPE n LENGTH 8,
-      esnum  TYPE n LENGTH 5,
-      reason TYPE c LENGTH 4,
-    END OF ty_febep_reason.
-  TYPES tt_febep_reason TYPE STANDARD TABLE OF ty_febep_reason WITH EMPTY KEY.
-  TYPES tt_febep_kukey TYPE SORTED TABLE OF ty_febep_reason-kukey WITH UNIQUE KEY table_line.
-
-  "! Operating model 2026-11-06: posting state of a FEBEP item - POSTED = X when every
-  "! configured posting-area flag (EBS_FEB_POSTED_FIELDS, VERIFY-SE11 VB1OK / VB2OK) holds X
-  TYPES:
-    BEGIN OF ty_febep_posting,
-      kukey  TYPE n LENGTH 8,
-      esnum  TYPE n LENGTH 5,
-      posted TYPE abap_bool,
-    END OF ty_febep_posting.
-  TYPES tt_febep_posting TYPE SORTED TABLE OF ty_febep_posting WITH UNIQUE KEY kukey esnum.
 
   TYPES:
     BEGIN OF ty_check,
@@ -110,7 +101,9 @@ INTERFACE zif_cd_ebs_sap_dao
       hkont TYPE c LENGTH 10,
       augbl TYPE c LENGTH 10,
     END OF ty_fi_line.
-  TYPES tt_fi_line TYPE STANDARD TABLE OF ty_fi_line WITH EMPTY KEY.
+  "! Fix 4: secondary key BY_DOCUMENT - lines of one FI document
+  TYPES tt_fi_line TYPE STANDARD TABLE OF ty_fi_line WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_document COMPONENTS bukrs belnr gjahr.
 
   METHODS get_return_items
     IMPORTING
@@ -132,7 +125,9 @@ INTERFACE zif_cd_ebs_sap_dao
       lookup_key TYPE ty_lookup_key,
       status     TYPE c LENGTH 40,
     END OF ty_lookup_row.
-  TYPES tt_lookup_row TYPE STANDARD TABLE OF ty_lookup_row WITH EMPTY KEY.
+  "! Sweep: secondary key BY_KEY - R21 reads the rows of one key per bank line
+  TYPES tt_lookup_row TYPE STANDARD TABLE OF ty_lookup_row WITH EMPTY KEY
+                      WITH NON-UNIQUE SORTED KEY by_key COMPONENTS lookup_key.
 
   "! Rows of the configured table for the keys (key field, status field). Table and field
   "! names are validated against the DDIC; an unknown name raises (rule fails closed).
@@ -165,36 +160,30 @@ INTERFACE zif_cd_ebs_sap_dao
     RETURNING
       VALUE(rt_lines) TYPE tt_fi_line.
 
-  "! Bank G/L balance in transaction currency up to and including iv_date
-  METHODS get_gl_balance
-    IMPORTING
-      iv_bukrs          TYPE zif_cd_ebs_sap_dao=>ty_fi_key-bukrs
-      iv_gl_account     TYPE zif_cd_ebs_sap_dao=>ty_fi_line-hkont
-      iv_currency       TYPE zif_cd_ops_types=>ty_currency
-      iv_date           TYPE d
-    RETURNING
-      VALUE(rv_balance) TYPE zif_cd_ops_types=>ty_amount.
+  "! Fix 6: one bank G/L balance request per closing statement (R18)
+  TYPES:
+    BEGIN OF ty_gl_request,
+      request_no TYPE i,
+      bukrs      TYPE ty_fi_key-bukrs,
+      gl_account TYPE ty_fi_line-hkont,
+      currency   TYPE zif_cd_ops_types=>ty_currency,
+      stmt_date  TYPE d,
+    END OF ty_gl_request.
+  TYPES tt_gl_request TYPE SORTED TABLE OF ty_gl_request WITH UNIQUE KEY request_no.
+  TYPES:
+    BEGIN OF ty_gl_balance,
+      request_no TYPE i,
+      balance    TYPE zif_cd_ops_types=>ty_amount,
+    END OF ty_gl_balance.
+  TYPES tt_gl_balance TYPE HASHED TABLE OF ty_gl_balance WITH UNIQUE KEY request_no.
 
-  "! A28: return reasons stored by the landscape in a FEBEP field (name from
-  "! EBS_FEB_REASON_FIELD, validated against the DDIC - VERIFY-DDIC)
-  METHODS get_febep_reasons DEFAULT IGNORE
+  "! Bank G/L balances in transaction currency up to and including each request's date,
+  "! one aggregate statement for all requests. A request without postings has no row
+  "! (balance 0, as SUM over no rows gave before)
+  METHODS get_gl_balances
     IMPORTING
-      it_kukey          TYPE tt_febep_kukey
-      iv_field          TYPE string
+      it_requests        TYPE tt_gl_request
     RETURNING
-      VALUE(rt_reasons) TYPE tt_febep_reason.
-
-  "! Operating model 2026-11-06: posting state of the items of the statements. it_fields
-  "! names the FEBEP posting-area completion flags (EBS_FEB_POSTED_FIELDS); each name is
-  "! validated against the DDIC - a name that is not a FEBEP field raises (configuration
-  "! error), it never turns every entry into 'not posted'
-  METHODS get_febep_posting DEFAULT IGNORE
-    IMPORTING
-      it_kukey          TYPE tt_febep_kukey
-      it_fields         TYPE string_table
-    RETURNING
-      VALUE(rt_posting) TYPE tt_febep_posting
-    RAISING
-      zcx_cd_ops_error.
+      VALUE(rt_balances) TYPE tt_gl_balance.
 
 ENDINTERFACE.

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Export through ZCL_CD_HCK_EXPORT: complete file or none (audit A61).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -219,21 +220,21 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD build_alv_rows.
     DATA ls_row TYPE ty_alv_result.
     CLEAR mt_alv.
-    LOOP AT ms_report-results INTO DATA(ls_result).
+    LOOP AT ms_report-results ASSIGNING FIELD-SYMBOL(<ls_result>).
       CLEAR ls_row.
-      ls_row-light        = light( ls_result-rag ).
-      ls_row-check_id     = ls_result-check_id.
-      ls_row-category     = ls_result-category.
-      ls_row-cat_text     = zcl_cd_hck_report_html=>category_text( ls_result-category ).
-      ls_row-priority     = ls_result-priority.
-      ls_row-rag          = ls_result-rag.
-      ls_row-description  = ls_result-description.
-      ls_row-summary      = ls_result-summary.
-      ls_row-findings     = lines( ls_result-findings ).
-      ls_row-metrics      = lines( ls_result-metrics ).
-      ls_row-runtime_ms   = ls_result-runtime_ms.
-      ls_row-timed_out    = ls_result-timed_out.
-      ls_row-plugin_error = ls_result-plugin_error.
+      ls_row-light        = light( <ls_result>-rag ).
+      ls_row-check_id     = <ls_result>-check_id.
+      ls_row-category     = <ls_result>-category.
+      ls_row-cat_text     = zcl_cd_hck_report_html=>category_text( <ls_result>-category ).
+      ls_row-priority     = <ls_result>-priority.
+      ls_row-rag          = <ls_result>-rag.
+      ls_row-description  = <ls_result>-description.
+      ls_row-summary      = <ls_result>-summary.
+      ls_row-findings     = lines( <ls_result>-findings ).
+      ls_row-metrics      = lines( <ls_result>-metrics ).
+      ls_row-runtime_ms   = <ls_result>-runtime_ms.
+      ls_row-timed_out    = <ls_result>-timed_out.
+      ls_row-plugin_error = <ls_result>-plugin_error.
       INSERT ls_row INTO TABLE mt_alv.
     ENDLOOP.
   ENDMETHOD.
@@ -298,32 +299,32 @@ CLASS lcl_app IMPLEMENTATION.
                           column = 2
                           text   = COND string( WHEN ms_report-run-test_mode = abap_true THEN TEXT-t06
                                                 ELSE TEXT-t07 ) ).
-    LOOP AT ms_report-categories INTO DATA(ls_category).
+    LOOP AT ms_report-categories ASSIGNING FIELD-SYMBOL(<ls_category>).
       lv_row = lv_row + 1.
       ro_grid->create_label( row    = lv_row
                              column = 1
-                             text   = |{ ls_category-category } { zcl_cd_hck_report_html=>category_text( ls_category-category ) }| ).
+                             text   = |{ <ls_category>-category } { zcl_cd_hck_report_html=>category_text( <ls_category>-category ) }| ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = zcl_cd_hck_report_html=>rag_text( ls_category-rag ) && ` ` &&
+                            text   = zcl_cd_hck_report_html=>rag_text( <ls_category>-rag ) && ` ` &&
                                      zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_category
-                                                            iv_v1    = ls_category-red_count
-                                                            iv_v2    = ls_category-amber_count
-                                                            iv_v3    = ls_category-check_count ) ).
+                                                            iv_v1    = <ls_category>-red_count
+                                                            iv_v2    = <ls_category>-amber_count
+                                                            iv_v3    = <ls_category>-check_count ) ).
     ENDLOOP.
-    LOOP AT ms_report-pe_areas INTO DATA(ls_pe_area).
+    LOOP AT ms_report-pe_areas ASSIGNING FIELD-SYMBOL(<ls_pe_area>).
       lv_row = lv_row + 1.
       ro_grid->create_label( row = lv_row column = 1 text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_area
-                                                                         iv_v1    = ls_pe_area-pe_area ) ).
+                                                                         iv_v1    = <ls_pe_area>-pe_area ) ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = COND string( WHEN ls_pe_area-last_run_at IS INITIAL THEN TEXT-t08
+                            text   = COND string( WHEN <ls_pe_area>-last_run_at IS INITIAL THEN TEXT-t08
                                                   ELSE zcl_cd_ops_util=>text(
                                                          iv_msgno = zif_cd_hck_types=>gc_msg-report_last_run
-                                                         iv_v1    = |{ ls_pe_area-last_run_at TIMESTAMP = ISO }|
-                                                         iv_v2    = ls_pe_area-age_hours
-                                                         iv_v3    = ls_pe_area-error_count ) &&
-                                                       COND string( WHEN ls_pe_area-stale = abap_true THEN TEXT-t09 ) ) ).
+                                                         iv_v1    = |{ <ls_pe_area>-last_run_at TIMESTAMP = ISO }|
+                                                         iv_v2    = <ls_pe_area>-age_hours
+                                                         iv_v3    = <ls_pe_area>-error_count ) &&
+                                                       COND string( WHEN <ls_pe_area>-stale = abap_true THEN TEXT-t09 ) ) ).
     ENDLOOP.
   ENDMETHOD.
 

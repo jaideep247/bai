@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Labels as class text symbols, sentences as ZCD_OPS messages, markup as constants.
 *& 2026-11-06 | Baseline warm-up: own grey chip, per-category and scorecard count (audit A102).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - morning report renderer (HTML, CSV)</p>
 "! No database, no SAP GUI: input is the report structure built by the
@@ -263,11 +264,11 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
             && csv_field( ls_result-summary ) INTO TABLE rt_lines.
         CONTINUE.
       ENDIF.
-      LOOP AT ls_result-findings INTO DATA(ls_finding).
-        INSERT lv_prefix && csv_field( ls_finding-severity ) && gc_csv_separator
-            && csv_field( ls_finding-check_code ) && gc_csv_separator
-            && csv_field( ls_finding-object_key ) && gc_csv_separator
-            && csv_field( ls_finding-message ) INTO TABLE rt_lines.
+      LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+        INSERT lv_prefix && csv_field( <ls_finding>-severity ) && gc_csv_separator
+            && csv_field( <ls_finding>-check_code ) && gc_csv_separator
+            && csv_field( <ls_finding>-object_key ) && gc_csv_separator
+            && csv_field( <ls_finding>-message ) INTO TABLE rt_lines.
       ENDLOOP.
     ENDLOOP.
   ENDMETHOD.
@@ -285,8 +286,8 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
 
   METHOD header_row.
     rv_html = gc_html-tr_open.
-    LOOP AT it_titles INTO DATA(lv_title).
-      rv_html = rv_html && gc_th && esc( lv_title ) && gc_html-th_close.
+    LOOP AT it_titles ASSIGNING FIELD-SYMBOL(<lv_title>).
+      rv_html = rv_html && gc_th && esc( <lv_title> ) && gc_html-th_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-tr_close.
   ENDMETHOD.
@@ -305,14 +306,14 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
            && gc_h2 && esc( TEXT-005 ) && gc_html-h2_close && gc_table
            && header_row( VALUE #( ( CONV #( TEXT-c01 ) ) ( CONV #( TEXT-c02 ) ) ( CONV #( TEXT-c03 ) )
                                    ( CONV #( TEXT-c04 ) ) ( CONV #( TEXT-c05 ) ) ( CONV #( TEXT-c21 ) ) ) ).
-    LOOP AT is_report-categories INTO DATA(ls_category).
+    LOOP AT is_report-categories ASSIGNING FIELD-SYMBOL(<ls_category>).
       rv_html = rv_html && gc_html-tr_open
-             && cell( esc( |{ ls_category-category } - { category_text( ls_category-category ) }| ) )
-             && cell( rag_chip( ls_category-rag ) )
-             && cell( esc( ls_category-check_count ) )
-             && cell( esc( ls_category-red_count ) )
-             && cell( esc( ls_category-amber_count ) )
-             && cell( esc( ls_category-warmup_count ) ) && gc_html-tr_close.
+             && cell( esc( |{ <ls_category>-category } - { category_text( <ls_category>-category ) }| ) )
+             && cell( rag_chip( <ls_category>-rag ) )
+             && cell( esc( <ls_category>-check_count ) )
+             && cell( esc( <ls_category>-red_count ) )
+             && cell( esc( <ls_category>-amber_count ) )
+             && cell( esc( <ls_category>-warmup_count ) ) && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
   ENDMETHOD.
@@ -325,20 +326,20 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
     rv_html = gc_h2 && esc( TEXT-006 ) && gc_html-h2_close && gc_table
            && header_row( VALUE #( ( CONV #( TEXT-c06 ) ) ( CONV #( TEXT-c07 ) ) ( CONV #( TEXT-c02 ) )
                                    ( CONV #( TEXT-c08 ) ) ( CONV #( TEXT-c09 ) ) ( CONV #( TEXT-c10 ) ) ) ).
-    LOOP AT is_report-pe_areas INTO DATA(ls_pe_area).
-      DATA(lv_age) = COND string( WHEN ls_pe_area-stale = abap_true
+    LOOP AT is_report-pe_areas ASSIGNING FIELD-SYMBOL(<ls_pe_area>).
+      DATA(lv_age) = COND string( WHEN <ls_pe_area>-stale = abap_true
                                   THEN esc( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-stale_age
-                                                                   iv_v1    = ls_pe_area-age_hours
-                                                                   iv_v2    = ls_pe_area-max_age_hours ) )
-                                  ELSE esc( ls_pe_area-age_hours ) ).
+                                                                   iv_v1    = <ls_pe_area>-age_hours
+                                                                   iv_v2    = <ls_pe_area>-max_age_hours ) )
+                                  ELSE esc( <ls_pe_area>-age_hours ) ).
       rv_html = rv_html && gc_html-tr_open
-             && cell( esc( ls_pe_area-pe_area ) )
-             && cell( COND #( WHEN ls_pe_area-last_run_at IS INITIAL THEN esc( TEXT-011 )
-                              ELSE esc( |{ ls_pe_area-last_run_at TIMESTAMP = ISO }| ) ) )
-             && cell( rag_chip( COND #( WHEN ls_pe_area-stale = abap_true THEN zif_cd_ops_types=>gc_rag-red
-                                        ELSE ls_pe_area-rag ) ) )
-             && cell( esc( ls_pe_area-error_count ) )
-             && cell( esc( ls_pe_area-warning_count ) )
+             && cell( esc( <ls_pe_area>-pe_area ) )
+             && cell( COND #( WHEN <ls_pe_area>-last_run_at IS INITIAL THEN esc( TEXT-011 )
+                              ELSE esc( |{ <ls_pe_area>-last_run_at TIMESTAMP = ISO }| ) ) )
+             && cell( rag_chip( COND #( WHEN <ls_pe_area>-stale = abap_true THEN zif_cd_ops_types=>gc_rag-red
+                                        ELSE <ls_pe_area>-rag ) ) )
+             && cell( esc( <ls_pe_area>-error_count ) )
+             && cell( esc( <ls_pe_area>-warning_count ) )
              && cell( lv_age ) && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
@@ -349,15 +350,15 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
     rv_html = gc_h2 && esc( TEXT-007 ) && gc_html-h2_close && gc_table
            && header_row( VALUE #( ( CONV #( TEXT-c11 ) ) ( CONV #( TEXT-c12 ) ) ( CONV #( TEXT-c13 ) )
                                    ( CONV #( TEXT-c02 ) ) ( CONV #( TEXT-c14 ) ) ) ).
-    LOOP AT is_report-results INTO DATA(ls_result).
+    LOOP AT is_report-results ASSIGNING FIELD-SYMBOL(<ls_result>).
       rv_html = rv_html && gc_html-tr_open
-             && cell( gc_html-bold_open && esc( ls_result-check_id ) && gc_html-bold_close_br
-                      && esc( ls_result-description ) )
-             && cell( esc( ls_result-category ) )
-             && cell( esc( ls_result-priority ) )
-             && cell( rag_chip( iv_rag    = ls_result-rag
-                                iv_warmup = ls_result-warmup ) )
-             && cell( esc( ls_result-summary ) ) && gc_html-tr_close.
+             && cell( gc_html-bold_open && esc( <ls_result>-check_id ) && gc_html-bold_close_br
+                      && esc( <ls_result>-description ) )
+             && cell( esc( <ls_result>-category ) )
+             && cell( esc( <ls_result>-priority ) )
+             && cell( rag_chip( iv_rag    = <ls_result>-rag
+                                iv_warmup = <ls_result>-warmup ) )
+             && cell( esc( <ls_result>-summary ) ) && gc_html-tr_close.
     ENDLOOP.
     IF is_report-results IS INITIAL.
       rv_html = rv_html && gc_html-tr_open && cell( esc( TEXT-010 ) ) && gc_html-tr_close.
@@ -376,19 +377,19 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
            && header_row( VALUE #( ( CONV #( TEXT-c06 ) ) ( CONV #( TEXT-c15 ) ) ( CONV #( TEXT-c16 ) )
                                    ( CONV #( TEXT-c17 ) ) ( CONV #( TEXT-c18 ) ) ( CONV #( TEXT-c19 ) )
                                    ( CONV #( TEXT-c20 ) ) ) ).
-    LOOP AT is_report-exceptions INTO DATA(ls_exception).
-      DATA(lv_due) = esc( |{ ls_exception-due_date DATE = ISO }| ).
-      IF ls_exception-overdue_days > 0.
-        lv_due = |{ gc_html-overdue_open }{ lv_due } (+{ esc( ls_exception-overdue_days ) }){ gc_html-span_close }|.
+    LOOP AT is_report-exceptions ASSIGNING FIELD-SYMBOL(<ls_exception>).
+      DATA(lv_due) = esc( |{ <ls_exception>-due_date DATE = ISO }| ).
+      IF <ls_exception>-overdue_days > 0.
+        lv_due = |{ gc_html-overdue_open }{ lv_due } (+{ esc( <ls_exception>-overdue_days ) }){ gc_html-span_close }|.
       ENDIF.
       rv_html = rv_html && gc_html-tr_open
-             && cell( esc( ls_exception-pe_area ) )
-             && cell( esc( ls_exception-check_code ) )
-             && cell( esc( ls_exception-object_key ) )
-             && cell( esc( ls_exception-message ) )
-             && cell( esc( ls_exception-owner ) )
+             && cell( esc( <ls_exception>-pe_area ) )
+             && cell( esc( <ls_exception>-check_code ) )
+             && cell( esc( <ls_exception>-object_key ) )
+             && cell( esc( <ls_exception>-message ) )
+             && cell( esc( <ls_exception>-owner ) )
              && cell( lv_due )
-             && cell( esc( ls_exception-age_days ) ) && gc_html-tr_close.
+             && cell( esc( <ls_exception>-age_days ) ) && gc_html-tr_close.
     ENDLOOP.
     rv_html = rv_html && gc_html-table_close.
   ENDMETHOD.

@@ -15,6 +15,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Reuse of the FMON reader and the EBS reads; FMON files by business date.
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -81,19 +82,19 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
                                             iv_field = is_source-info_field
                                   CHANGING  cs_query = ls_query ).
 
-    LOOP AT run_query( ls_query ) INTO DATA(ls_raw).
+    LOOP AT run_query( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_raw>).
       " The reader takes one key field; the second key is compared here (rows of one key)
       IF iv_match_key2 = abap_true AND is_source-key2_field IS NOT INITIAL
-         AND same_value( iv_left = ls_raw-source iv_right = is_key-key2 ) = abap_false.
+         AND same_value( iv_left = <ls_raw>-source iv_right = is_key-key2 ) = abap_false.
         CONTINUE.
       ENDIF.
-      INSERT VALUE #( key1    = ls_raw-item_key
-                      key2    = ls_raw-source
-                      ref     = ls_raw-file_key
-                      status  = ls_raw-status
-                      ev_date = ls_raw-ev_date
-                      ev_time = ls_raw-ev_time
-                      info    = ls_raw-lot_key ) INTO TABLE rt_rows.
+      INSERT VALUE #( key1    = <ls_raw>-item_key
+                      key2    = <ls_raw>-source
+                      ref     = <ls_raw>-file_key
+                      status  = <ls_raw>-status
+                      ev_date = <ls_raw>-ev_date
+                      ev_time = <ls_raw>-ev_time
+                      info    = <ls_raw>-lot_key ) INTO TABLE rt_rows.
     ENDLOOP.
   ENDMETHOD.
 
@@ -122,9 +123,9 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
     zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-source
                                             iv_field = iv_source_field
                                   CHANGING  cs_query = ls_query ).
-    LOOP AT run_query( ls_query ) INTO DATA(ls_raw).
-      IF same_value( iv_left = ls_raw-source iv_right = iv_source ) = abap_true.
-        INSERT CONV zif_cd_ops_trace_types=>ty_partner( ls_raw-file_key ) INTO TABLE rt_partners.
+    LOOP AT run_query( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_raw>).
+      IF same_value( iv_left = <ls_raw>-source iv_right = iv_source ) = abap_true.
+        INSERT CONV zif_cd_ops_trace_types=>ty_partner( <ls_raw>-file_key ) INTO TABLE rt_partners.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

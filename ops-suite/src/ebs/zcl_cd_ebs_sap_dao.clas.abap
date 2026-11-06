@@ -13,6 +13,8 @@
 *& 2026-11-06 | Audit A07: optional company-code field of DFKKCR (configured, DDIC-validated).
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
 *& 2026-11-06 | Operating model: posting state from the configured FEBEP posting-area flags.
+*& 2026-11-06 | Performance fix 3: FEBEP reason / posting-flag reads moved into ZCL_CD_EBS_FEB_DAO get_items (one pass).
+*& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -36,15 +38,6 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
     CONSTANTS gc_check_fields TYPE string VALUE `ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus`.
     CONSTANTS gc_sql_separator TYPE string VALUE `, `.
     CONSTANTS gc_sql_as_bukrs TYPE string VALUE ` AS bukrs`.
-    "! FEBEP and the static part of the return-reason read (A28)
-    CONSTANTS gc_febep_table TYPE string VALUE `FEBEP`.
-    CONSTANTS gc_reason_fields TYPE string VALUE `kukey, esnum, `.
-    CONSTANTS gc_sql_as_reason TYPE string VALUE ` AS reason`.
-    "! Posting-area flag read (operating model 2026-11-06): keys, alias prefix FLAG<n>, at most
-    "! four flags (the components FLAG1..FLAG4 of the read structure)
-    CONSTANTS gc_febep_keys TYPE string VALUE `kukey, esnum`.
-    CONSTANTS gc_sql_as_flag TYPE string VALUE ` AS flag`.
-    CONSTANTS gc_max_posting_flags TYPE i VALUE 4.
 
     METHODS field_exists
       IMPORTING
@@ -164,77 +157,6 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ebs_sap_dao~get_febep_reasons.
-    CHECK it_kukey IS NOT INITIAL.
-    DATA(lv_field) = to_upper( condense( iv_field ) ).
-    " Only a field that exists in FEBEP is ever named in the statement
-    IF lv_field IS INITIAL OR field_exists( iv_table = gc_febep_table iv_field = lv_field ) = abap_false.
-      RETURN.
-    ENDIF.
-    DATA(lv_fields) = gc_reason_fields && lv_field && gc_sql_as_reason.
-    SELECT (lv_fields)
-      FROM febep
-      FOR ALL ENTRIES IN @it_kukey
-      WHERE kukey = @it_kukey-table_line
-      INTO CORRESPONDING FIELDS OF TABLE @rt_reasons.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_ebs_sap_dao~get_febep_posting.
-    " One row per item with up to four posting-area flags (FLAG1..FLAG4), read in one statement
-    TYPES:
-      BEGIN OF ty_flags,
-        kukey TYPE n LENGTH 8,
-        esnum TYPE n LENGTH 5,
-        flag1 TYPE c LENGTH 1,
-        flag2 TYPE c LENGTH 1,
-        flag3 TYPE c LENGTH 1,
-        flag4 TYPE c LENGTH 1,
-      END OF ty_flags.
-    DATA lt_rows TYPE STANDARD TABLE OF ty_flags WITH EMPTY KEY.
-
-    CHECK it_kukey IS NOT INITIAL AND it_fields IS NOT INITIAL.
-    IF lines( it_fields ) > gc_max_posting_flags.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e051(zcd_ops) WITH lines( it_fields ) zif_cd_ebs_types=>gc_param-feb_posted_fields.
-    ENDIF.
-    " VERIFY-SE11: FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed) are the delivered
-    " default of EBS_FEB_POSTED_FIELDS. Every name is checked before it reaches the statement.
-    DATA(lv_select) = gc_febep_keys.
-    DATA(lv_flags) = 0.
-    LOOP AT it_fields INTO DATA(lv_name).
-      lv_flags += 1.
-      DATA(lv_field) = to_upper( condense( lv_name ) ).
-      IF field_exists( iv_table = gc_febep_table iv_field = lv_field ) = abap_false.
-        RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e051(zcd_ops) WITH lv_field zif_cd_ebs_types=>gc_param-feb_posted_fields.
-      ENDIF.
-      lv_select = |{ lv_select }{ gc_sql_separator }{ lv_field }{ gc_sql_as_flag }{ lv_flags }|.
-    ENDLOOP.
-
-    SELECT (lv_select)
-      FROM febep
-      FOR ALL ENTRIES IN @it_kukey
-      WHERE kukey = @it_kukey-table_line
-      INTO CORRESPONDING FIELDS OF TABLE @lt_rows.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      " Posted only when every configured posting area is complete
-      DATA(lv_posted) = abap_true.
-      DO lv_flags TIMES.
-        " components 1 and 2 are KUKEY and ESNUM
-        ASSIGN COMPONENT sy-index + 2 OF STRUCTURE ls_row TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc <> 0.
-          lv_posted = abap_false.
-        ELSEIF <lv_flag> <> abap_true.
-          lv_posted = abap_false.
-        ENDIF.
-      ENDDO.
-      INSERT VALUE #( kukey = ls_row-kukey esnum = ls_row-esnum posted = lv_posted ) INTO TABLE rt_posting.
-    ENDLOOP.
-  ENDMETHOD.
-
-
   METHOD zif_cd_ebs_sap_dao~get_fi_lines.
     CHECK it_keys IS NOT INITIAL.
     " Key access only (BUKRS/BELNR/GJAHR) - never BSEG by AUGBL or XREF2 (full scan)
@@ -248,18 +170,25 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ebs_sap_dao~get_gl_balance.
+  METHOD zif_cd_ebs_sap_dao~get_gl_balances.
+    CHECK it_requests IS NOT INITIAL.
     DATA(lv_ledger) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = 'EBS_GL_LEDGER'
                                                                   iv_default = CONV #( gc_default_ledger ) ).
-    " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance
-    SELECT SUM( tsl )
-      FROM acdoca
-      WHERE rldnr  = @lv_ledger
-        AND rbukrs = @iv_bukrs
-        AND racct  = @iv_gl_account
-        AND rtcur  = @iv_currency
-        AND budat <= @iv_date
-      INTO @rv_balance.
+    " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance.
+    " Fix 6: the requests are an internal table joined on the database (HANA), one SUM per
+    " request (same filters as the former per-statement SUM: ledger, company code, account,
+    " currency, posting date up to the statement date)
+    SELECT r~request_no, SUM( a~tsl ) AS balance
+      FROM acdoca AS a
+      INNER JOIN @it_requests AS r
+        ON  a~rbukrs = r~bukrs
+        AND a~racct  = r~gl_account
+        AND a~rtcur  = r~currency
+        AND a~budat <= r~stmt_date
+      WHERE a~rldnr = @lv_ledger
+      GROUP BY r~request_no
+      ORDER BY r~request_no
+      INTO CORRESPONDING FIELDS OF TABLE @rt_balances.
   ENDMETHOD.
 
 

@@ -8,6 +8,7 @@
 *& backward steps such as mailed 10 -> returned 9, otherwise never lower).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment request and cheque rules</p>
 CLASS zcl_cd_hck_payreq_rules DEFINITION
@@ -63,19 +64,19 @@ ENDCLASS.
 CLASS zcl_cd_hck_payreq_rules IMPLEMENTATION.
 
   METHOD failed_without_spe.
-    LOOP AT it_failed INTO DATA(lv_key).
-      IF line_exists( it_success[ table_line = lv_key ] ) OR line_exists( it_spe[ table_line = lv_key ] ).
+    LOOP AT it_failed ASSIGNING FIELD-SYMBOL(<lv_key>).
+      IF line_exists( it_success[ table_line = <lv_key> ] ) OR line_exists( it_spe[ table_line = <lv_key> ] ).
         CONTINUE.
       ENDIF.
-      INSERT lv_key INTO TABLE rt_keys.
+      INSERT <lv_key> INTO TABLE rt_keys.
     ENDLOOP.
   ENDMETHOD.
 
 
   METHOD paid_but_cancelled.
-    LOOP AT it_cancelled INTO DATA(lv_key).
-      IF line_exists( it_paid[ table_line = lv_key ] ).
-        INSERT lv_key INTO TABLE rt_keys.
+    LOOP AT it_cancelled ASSIGNING FIELD-SYMBOL(<lv_key>).
+      IF line_exists( it_paid[ table_line = <lv_key> ] ).
+        INSERT <lv_key> INTO TABLE rt_keys.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -104,20 +105,20 @@ CLASS zcl_cd_hck_payreq_rules IMPLEMENTATION.
     DATA(lv_key) = VALUE string( ).
     DATA(lv_previous) = VALUE string( ).
     DATA(lv_reported) = abap_false.
-    LOOP AT lt_events INTO DATA(ls_event).
-      IF ls_event-key <> lv_key.
-        lv_key      = ls_event-key.
-        lv_previous = ls_event-status.
+    LOOP AT lt_events ASSIGNING FIELD-SYMBOL(<ls_event>).
+      IF <ls_event>-key <> lv_key.
+        lv_key      = <ls_event>-key.
+        lv_previous = <ls_event>-status.
         lv_reported = abap_false.
         CONTINUE.
       ENDIF.
       IF lv_reported = abap_false
-         AND is_regression( iv_from = lv_previous iv_to = ls_event-status
+         AND is_regression( iv_from = lv_previous iv_to = <ls_event>-status
                             it_terminal = it_terminal it_allowed = it_allowed ) = abap_true.
-        INSERT VALUE #( key = ls_event-key from_status = lv_previous to_status = ls_event-status ) INTO TABLE rt_found.
+        INSERT VALUE #( key = <ls_event>-key from_status = lv_previous to_status = <ls_event>-status ) INTO TABLE rt_found.
         lv_reported = abap_true.
       ENDIF.
-      lv_previous = ls_event-status.
+      lv_previous = <ls_event>-status.
     ENDLOOP.
   ENDMETHOD.
 

@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (USAA known tables, phase 3).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cheque status regression (ZECT_STATUS)</p>
 "! PARAM1 TABLE=ZCD_CHECK_HIST;KEY=..;SEQ=..;STATUS=..;DATE=..
@@ -50,8 +51,8 @@ CLASS zcl_cd_hck_c_chq_status IMPLEMENTATION.
       iv_date_field = zcl_cd_hck_value_query=>value( it_spec = lt_names iv_name = 'DATE' )
       iv_date_from  = lv_from
       iv_max_rows   = lv_rows ).
-    LOOP AT lt_rows INTO DATA(ls_row).
-      INSERT VALUE #( key = ls_row-v1 seq = ls_row-v2 status = ls_row-v3 ) INTO TABLE lt_events.
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT VALUE #( key = <ls_row>-v1 seq = <ls_row>-v2 status = <ls_row>-v3 ) INTO TABLE lt_events.
     ENDLOOP.
 
     DATA(lt_found) = zcl_cd_hck_payreq_rules=>cheque_regressions(
@@ -62,16 +63,16 @@ CLASS zcl_cd_hck_c_chq_status IMPLEMENTATION.
                                        zcl_cd_hck_value_query=>value( it_spec = lt_opt iv_name = 'ALLOWED' iv_default = `10>9` ) ) ).
     INSERT VALUE #( metric = gc_metric dim1 = zif_cd_hck_types=>gc_default_key value = lines( lt_found ) )
       INTO TABLE rs_result-metrics.
-    LOOP AT lt_found INTO DATA(ls_found) FROM 1 TO lv_max.
-      INSERT VALUE #( object_key = ls_found-key
+    LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_found>) FROM 1 TO lv_max.
+      INSERT VALUE #( object_key = <ls_found>-key
                       check_code = gc_code
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-exception
-                      reference  = ls_found-key
+                      reference  = <ls_found>-key
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-cheque_status_is_not_allowe
-                                                          iv_v1    = ls_found-key
-                                                          iv_v2    = ls_found-from_status
-                                                          iv_v3    = ls_found-to_status ) )
+                                                          iv_v1    = <ls_found>-key
+                                                          iv_v2    = <ls_found>-from_status
+                                                          iv_v3    = <ls_found>-to_status ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
   ENDMETHOD.

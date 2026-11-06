@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A04/A05/A49/A50/A51: version check, per-instance events, window bounds, approved tables.
+*& 2026-11-06 | Performance fix 8: grouped count of a configured table (COUNT(*) per value combination).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -105,6 +106,8 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS unapproved_table_is_refused FOR TESTING.
     METHODS read_without_auth_is_refused FOR TESTING.
     METHODS approved_table_is_read FOR TESTING.
+    METHODS grouped_count_per_status FOR TESTING.
+    METHODS grouped_count_needs_approval FOR TESTING.
 
 ENDCLASS.
 
@@ -478,6 +481,61 @@ CLASS ltc_dao IMPLEMENTATION.
     mo_ddic->mv_may_read = abap_false.
     cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '245'
                                         msg = 'Missing S_TABU_NAM display authority must raise 245' ).
+  ENDMETHOD.
+
+
+  " Fix 8: the grouped read counts the rows per value combination of the query fields (here
+  " interface and stage of ZCD_FMON_FILE) - the same rows the plain read would return.
+  " VERIFY-ADT: dynamic GROUP BY with a dynamic table inside cl_osql_test_environment
+  METHOD grouped_count_per_status.
+    DATA ls_query TYPE zif_cd_fmon_types=>ty_query.
+    TRY.
+        approve_file_table( ).
+        DATA(ls_file1) = new_file( iv_id = 1 iv_date = gc_date ).
+        DATA(ls_file2) = new_file( iv_id = 2 iv_date = gc_date ).
+        DATA(ls_file3) = new_file( iv_id = 3 iv_date = gc_date ).
+        ls_file3-stage = zif_cd_fmon_types=>gc_stage-sent.
+        mo_cut->save_files( VALUE #( ( ls_file1 ) ( ls_file2 ) ( ls_file3 ) ) ).
+        ls_query-table_name = 'ZCD_FMON_FILE'.
+        zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-file_link
+                                                iv_field = 'IFACE_ID'
+                                      CHANGING  cs_query = ls_query ).
+        zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-item_status
+                                                iv_field = 'STAGE'
+                                      CHANGING  cs_query = ls_query ).
+        ls_query-in_field  = 'IFACE_ID'.
+        ls_query-in_values = VALUE #( ( CONV #( gc_iface ) ) ).
+        DATA(lt_counts) = mo_cut->count_legacy( ls_query ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_counts ) exp = 2
+                                            msg = 'Two stages, two groups' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( lt_counts[ row-item_status = CONV string( zif_cd_fmon_types=>gc_stage-generated ) ]-row_count
+                         OPTIONAL )
+          exp = 2
+          msg = 'Two files in GENERATED' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( lt_counts[ row-item_status = CONV string( zif_cd_fmon_types=>gc_stage-sent ) ]-row_count
+                         OPTIONAL )
+          exp = 1
+          msg = 'One file in SENT' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 8: the grouped read passes the same approval gate as the plain read (A51)
+  METHOD grouped_count_needs_approval.
+    DATA lv_msgno TYPE symsgno.
+    TRY.
+        mo_cut->count_legacy( legacy_query( ) ).
+      CATCH zcx_cd_ops_error INTO DATA(lx).
+        lv_msgno = lx->if_t100_message~t100key-msgno.
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '244'
+                                        msg = 'An unapproved table must raise 244 for the grouped read too' ).
   ENDMETHOD.
 
 

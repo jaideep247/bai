@@ -11,6 +11,7 @@
 *& 2026-11-06 | gl_gap_per_company_and_type (audit A43).
 *& 2026-11-06 | raw_aggregate_is_rejected, raw_value_query_is_rejected (audit A56).
 *& 2026-11-06 | Metric kind and weight round trip (audit A88).
+*& 2026-11-06 | Performance fix 7: ROW_NUMBER( ) per run - runs ordered by their latest point, cap and warm-up count.
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -42,6 +43,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS overdue_open_and_assigned FOR TESTING.
     METHODS only_active_suppressions FOR TESTING.
     METHODS history_one_point_per_run FOR TESTING.
+    METHODS history_runs_by_latest_point FOR TESTING.
     METHODS history_skips_unfinished_runs FOR TESTING.
     METHODS history_as_of_excludes_later FOR TESTING.
     METHODS job_run_carries_variant FOR TESTING.
@@ -345,6 +347,44 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                               iv_max_rows = 2 )
                                             exp = lt_exp
                                             msg = 'Two runs, one point each: run 2, then the latest point of run 1' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 7 parity: each run counts once with its latest point; runs are ordered by that point
+  " (not by their first one); the cap counts runs, and a short history (warm-up, A102) returns
+  " every run it has. VERIFY-ADT: window function in a CTE inside cl_osql_test_environment
+  METHOD history_runs_by_latest_point.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102080000.0000000' ).
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 11 iv_at = '20261102120000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261102090000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 21 iv_at = '20261102130000.0000000' ).
+        add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_value = 30 iv_at = '20261102110000.0000000' ).
+        add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_value = 31 iv_at = '20261102100000.0000000' ).
+        insert_history( ).
+        lv_value = 21.
+        INSERT lv_value INTO TABLE lt_exp.
+        lv_value = 11.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_max_rows = 2 )
+                                            exp = lt_exp
+                                            msg = 'Cap 2: run 2 (13:00), then run 1 (12:00), latest points only' ).
+        lv_value = 30.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_max_rows = 5 )
+                                            exp = lt_exp
+                                            msg = 'Warm-up: three runs for a look-back of five, one value each' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

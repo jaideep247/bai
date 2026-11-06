@@ -11,6 +11,8 @@
 *& 2026-11-06 | pending_waiver_is_carried (exceptions app).
 *& 2026-11-06 | stale_running_run_is_found (audit A06).
 *& 2026-11-06 | Parameter snapshot per run (audit A64).
+*& 2026-11-06 | Performance fix 5: carry-forward by (type, key) pairs and binary search - other type untouched,
+*&            | newest earlier row inherited.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -95,6 +97,15 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS stale_running_run_is_found   FOR TESTING.
     METHODS next_run_sees_changed_param  FOR TESTING.
     METHODS param_stable_within_run      FOR TESTING.
+    METHODS carry_other_type_untouched   FOR TESTING.
+    METHODS carry_newest_prior_inherited FOR TESTING.
+    "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
+    METHODS prior_row
+      IMPORTING
+        iv_finding_no  TYPE i
+        iv_object_type TYPE zcd_ops_finding-object_type
+        iv_owner       TYPE syuname
+        iv_created_at  TYPE timestampl.
     "! Replace the maintained parameters (test data)
     METHODS set_param
       IMPORTING
@@ -258,6 +269,73 @@ CLASS ltc_store IMPLEMENTATION.
     ENDIF.
     INSERT ls_row INTO TABLE lt_rows.
     go_env->insert_test_data( lt_rows ).
+  ENDMETHOD.
+
+
+  METHOD prior_row.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ops_finding.
+    ls_row-run_id        = gc_cf-prior_run.
+    ls_row-finding_no    = iv_finding_no.
+    ls_row-pe_area       = zif_cd_ops_types=>gc_pe_area-ebs.
+    ls_row-object_type   = iv_object_type.
+    ls_row-object_key    = gc_cf-key.
+    ls_row-rule_id       = 'R14'.
+    ls_row-check_code    = gc_cf-check_code.
+    ls_row-severity      = zif_cd_ops_types=>gc_severity-error.
+    ls_row-disposition   = zif_cd_ops_types=>gc_disposition-assigned.
+    ls_row-owner         = iv_owner.
+    ls_row-due_date      = gc_cf-due.
+    ls_row-first_seen_at = iv_created_at.
+    ls_row-created_at    = iv_created_at.
+    ls_row-occurrences   = 1.
+    INSERT ls_row INTO TABLE lt_rows.
+    go_env->insert_test_data( lt_rows ).
+  ENDMETHOD.
+
+
+  " Fix 5 parity: an earlier exception of another object type with the same key is neither
+  " inherited nor superseded (the read is by type and key)
+  METHOD carry_other_type_untouched.
+    TRY.
+        prior_row( iv_finding_no = 1 iv_object_type = 'STMT' iv_owner = gc_cf-owner iv_created_at = gc_cf-first_seen ).
+        DATA(ls_run) = save_again( ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-occurrences exp = 1
+                                            msg = 'A LINE exception must not inherit from a STMT row' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_new-owner msg = 'No owner from another object type' ).
+        DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-assigned
+                                            msg = 'The STMT row must not be superseded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 5 parity: with two earlier rows of the same exception the newest is inherited and both
+  " are superseded (binary search keeps the CREATED_AT descending order of the block)
+  METHOD carry_newest_prior_inherited.
+    CONSTANTS lc_old_owner TYPE syuname VALUE 'OLD_OWNER'.
+    CONSTANTS lc_older TYPE timestampl VALUE '20261020060000.0000000'.
+    TRY.
+        prior_row( iv_finding_no = 1 iv_object_type = 'LINE' iv_owner = lc_old_owner iv_created_at = lc_older ).
+        prior_row( iv_finding_no = 2 iv_object_type = 'LINE' iv_owner = gc_cf-owner iv_created_at = gc_cf-first_seen ).
+        DATA(ls_run) = save_again( ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-owner exp = gc_cf-owner
+                                            msg = 'The newest earlier row must be inherited' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 )-disposition
+          exp = zif_cd_ops_types=>gc_disposition-superseded
+          msg = 'The older row must be superseded too' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 2 )-disposition
+          exp = zif_cd_ops_types=>gc_disposition-superseded
+          msg = 'The newest earlier row must be superseded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

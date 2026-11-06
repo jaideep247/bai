@@ -8,6 +8,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Audit A38: row cap detection (truncated status).
+*& 2026-11-06 | Performance fix 8: counts from the grouped read (exact beyond the item cap), truncation only
+*&            | from the lot read, open keys read only for links with open items.
 *&---------------------------------------------------------------------*
 CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -35,6 +37,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_header TYPE zif_cd_fmon_types=>tt_raw_row.
     DATA mt_items TYPE zif_cd_fmon_types=>tt_raw_row.
     DATA mt_queries TYPE STANDARD TABLE OF zif_cd_fmon_types=>ty_query WITH EMPTY KEY.
+    DATA mv_counts TYPE i.
 ENDCLASS.
 
 
@@ -42,6 +45,38 @@ CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~read_legacy.
     INSERT is_query INTO TABLE mt_queries.
     rt_rows = COND #( WHEN is_query-table_name = 'ZLOT_HDR' THEN mt_header ELSE mt_items ).
+    IF is_query-max_rows > 0 AND lines( rt_rows ) > is_query-max_rows.
+      DELETE rt_rows FROM is_query-max_rows + 1.
+    ENDIF.
+  ENDMETHOD.
+  " Fix 8: GROUP BY the query's fields (by role), COUNT(*) - as the database does it
+  METHOD zif_cd_fmon_dao~count_legacy.
+    DATA ls_group TYPE zif_cd_fmon_types=>ty_raw_count.
+    FIELD-SYMBOLS <lv_from> TYPE string.
+    FIELD-SYMBOLS <lv_to> TYPE string.
+    INSERT is_query INTO TABLE mt_queries.
+    mv_counts += 1.
+    LOOP AT mt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
+      CLEAR ls_group.
+      LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).
+        UNASSIGN: <lv_from>, <lv_to>.
+        ASSIGN COMPONENT <ls_field>-role OF STRUCTURE <ls_item> TO <lv_from>.
+        IF <lv_from> IS NOT ASSIGNED.
+          CONTINUE.
+        ENDIF.
+        ASSIGN COMPONENT <ls_field>-role OF STRUCTURE ls_group-row TO <lv_to>.
+        IF <lv_to> IS ASSIGNED.
+          <lv_to> = <lv_from>.
+        ENDIF.
+      ENDLOOP.
+      READ TABLE rt_counts ASSIGNING FIELD-SYMBOL(<ls_count>) WITH KEY row = ls_group-row.
+      IF sy-subrc = 0.
+        <ls_count>-row_count += 1.
+      ELSE.
+        ls_group-row_count = 1.
+        INSERT ls_group INTO TABLE rt_counts.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 ENDCLASS.
 
@@ -81,6 +116,8 @@ CLASS ltc_lot_reader DEFINITION FINAL
     METHODS incomplete_config_is_refused FOR TESTING.
     METHODS row_cap_marks_truncated FOR TESTING.
     METHODS below_cap_is_complete FOR TESTING.
+    METHODS item_counts_exact_beyond_cap FOR TESTING.
+    METHODS no_open_items_no_key_read FOR TESTING.
 
 ENDCLASS.
 
@@ -196,18 +233,60 @@ CLASS ltc_lot_reader IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Audit A38: when the item scan reaches the row cap, open items may lie beyond it -
-  " the status says truncated, so no outcome is derived from the partial count
+  " Audit A38: when the lot (header) scan reaches the row cap, lots of the file may lie beyond
+  " it - the status says truncated, so no outcome is derived from the partial count.
+  " Fix 8: the item counts are exact (grouped read), only the lot read can be cut off
   METHOD row_cap_marks_truncated.
+    DATA ls_row TYPE zif_cd_fmon_types=>ty_raw_row.
     TRY.
         configure_scenario( VALUE #( open_items = 0 ) ).
+        ls_row-lot_key   = |{ gc_lot }9|.
+        ls_row-file_link = gc_file.
+        INSERT ls_row INTO TABLE mo_dao->mt_header.
+        DATA(lt_status) = zcl_cd_fmon_factory=>get_lot_reader( )->read( is_cfg      = ms_cfg
+                                                                        it_files    = mt_files
+                                                                        iv_max_rows = 1 ).
+        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
+                                          msg = '2 lots with a cap of 1 must be marked truncated' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( mo_dao->mt_queries[ 1 ]-max_rows OPTIONAL ) exp = 2
+                                            msg = 'One row beyond the cap must be requested to detect truncation' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 8 (A38 where counts are exact): 3 items with an item cap of 2 are all counted from the
+  " grouped read - the batch is complete, not truncated
+  METHOD item_counts_exact_beyond_cap.
+    TRY.
+        configure_scenario( VALUE #( open_items = 1 ) ).
         DATA(lt_status) = zcl_cd_fmon_factory=>get_lot_reader( )->read( is_cfg      = ms_cfg
                                                                         it_files    = mt_files
                                                                         iv_max_rows = 2 ).
-        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
-                                          msg = '3 items with a cap of 2 must be marked truncated' ).
-        cl_abap_unit_assert=>assert_equals( act = VALUE #( mo_dao->mt_queries[ 2 ]-max_rows OPTIONAL ) exp = 3
-                                            msg = 'One row beyond the cap must be requested to detect truncation' ).
+        cl_abap_unit_assert=>assert_false( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
+                                           msg = 'Exact counts: an item cap reached by the key sample is no truncation' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_status[ 1 ]-total_items OPTIONAL ) exp = 3
+                                            msg = 'All 3 items must be counted' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_status[ 1 ]-open_items OPTIONAL ) exp = 1
+                                            msg = 'The open item beyond the cap must be counted' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 8: a lot with every item done is counted without reading a single item row
+  METHOD no_open_items_no_key_read.
+    TRY.
+        configure_scenario( VALUE #( open_items = 0 ) ).
+        DATA(lt_status) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_status[ 1 ]-done_items OPTIONAL ) exp = 3
+                                            msg = 'All 3 items must be done' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_queries ) exp = 2
+                                            msg = 'Lot read and grouped count only - no item key read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_counts exp = 1
+                                            msg = 'One grouped count for the batch' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.

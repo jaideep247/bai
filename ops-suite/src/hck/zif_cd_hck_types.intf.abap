@@ -16,6 +16,7 @@
 *& 2026-11-06 | Metric kind and weight: aggregation by metric semantics (audit A88).
 *& 2026-11-06 | BASELINE_WARMUP code, warm-up flag and counts (audit A102).
 *& 2026-11-06 | Expected group set of an aggregate, ZCD_HCK_AGGGRP (audit A103).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -498,7 +499,9 @@ INTERFACE zif_cd_hck_types
       taken_by     TYPE syuname,
       hash_version TYPE ty_hash_version,
     END OF ty_baseline.
-  TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY.
+  "! Sweep: secondary key BY_TABLE - the drift check reads the baseline of each table
+  TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY
+                    WITH NON-UNIQUE SORTED KEY by_table COMPONENTS tabname.
 
   "! ZCD_OPS_ALERT_LOG deliveries aggregated per channel and status
   TYPES:

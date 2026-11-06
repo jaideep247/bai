@@ -8,6 +8,7 @@
 *& in dialog. No WRITE lists.
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_purge.
 
@@ -38,8 +39,8 @@ CLASS lcl_app IMPLEMENTATION.
     ENDTRY.
 
     DATA(lv_mode) = COND string( WHEN p_test = abap_true THEN `test mode, nothing deleted` ELSE `deleted` ).
-    LOOP AT mt_results INTO DATA(ls_result).
-      MESSAGE s060(zcd_ops) WITH ls_result-target ls_result-rows ls_result-cutoff lv_mode.
+    LOOP AT mt_results ASSIGNING FIELD-SYMBOL(<ls_result>).
+      MESSAGE s060(zcd_ops) WITH <ls_result>-target <ls_result>-rows <ls_result>-cutoff lv_mode.
     ENDLOOP.
 
     IF sy-batch = abap_false.

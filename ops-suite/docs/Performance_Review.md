@@ -1,0 +1,109 @@
+# Performance review — eight fixes, sorted / hashed tables, field symbols (2026-11-06)
+
+> **First principle:** the fastest read is the one that is not repeated — ask the database once for exactly the rows (or the totals) the decision needs, then look them up by key, never by scanning.
+> **Analogy:** a librarian who fetches every book a class needs in one trip and shelves them by call number — instead of walking to the stacks once per pupil and then reading every spine to find the right one.
+
+Pure performance work: **behaviour unchanged**, every existing ABAP Unit test still holds (the FMON lot-reader truncation test and two FEB source tests were re-shaped where the access path itself changed — §2 fix 3 and fix 8). Where a change carries a parity risk (keys, counts, SQL aggregation) a test was added: 20 new test methods, 2 moved from the SAP DAO to the FEB DAO (754 declared methods including the merged posting-state and dashboard work).
+
+Verified offline only: abaplint (v758) 0 issues, ATC-equivalent rule set 3 documented exemptions, `tools/portable_checks.py` 15/15. **Not verified:** activation, ABAP Unit execution, HANA plans and run times — measure in DV1/QA1 (§7, §8).
+
+## 1. Where the time went
+
+| # | Hot spot (before) | Multiplier |
+|---|---|---|
+| 1 | Cheque rules R07C / R08 / R12: every bank line looped over every DFKKCR row, canonicalising both sides (and reading a parameter) per row; R12 did it twice per line; K01 runs R07C + R08 and BAI 581D runs R08 + R12 on the same keys | lines × register rows × rules |
+| 2 | R22 (line rule, group `*`) read the 5-day FEBKO/FEBEP history per statement, once per rule group | statements × rule groups |
+| 3 | FEB source read FEBEP three times per package (items, reason field, posting flags) and searched the header and reason tables linearly per item | 3 reads, items × headers |
+| 4 | R07 / R07L / R07R / R19: `LOOP … WHERE` on STANDARD result tables per bank line | lines × result rows |
+| 5 | Carry-forward / reconcile: WHERE PE_AREA + OBJECT_KEY could use only PE_AREA of index OBJ (PE_AREA, OBJECT_TYPE, OBJECT_KEY); nested `LOOP lt_prev WHERE` | open exceptions of the area × new findings |
+| 6 | R18: one ACDOCA `SUM` per closing statement | statements |
+| 7 | HCK metric history: up to 5 000 points per series read, latest point per run kept in ABAP | metrics × 5 000 |
+| 8 | FMON lot reader: up to `FMON_MAX_ROWS` (50 000) item rows read to count total / done / open | lots × items |
+
+## 2. The eight fixes
+
+| # | Before (access pattern) | After (access pattern) | Objects | Tests added |
+|---|---|---|---|---|
+| 1 | Per line: `LOOP AT lt_checks` + `ztnum_canonical( )` (with `param( )`) per row; `house_bank_ambiguous( )` and `checks_for_line( )` each scanned again; each rule read DFKKCR itself | `check_register( )`: DFKKCR through a **package memo shared by R07C/R08/R12** (`CLASS-DATA`; a key is read once per package; a new statement-key set clears it; `ZCL_CD_EBS_INJECTOR` clears it in tests), each row canonicalised once into a **SORTED** index (non-unique key `canonical`, read order kept); `register_match( )` = one keyed `LOOP … WHERE canonical =` per line for ambiguity and house-bank scoping; parameters read once per call | `ZCL_CD_EBS_RULE_BASE`, R07C, R08, R12, `ZCL_CD_EBS_INJECTOR` | `r08_zero_flag_off_rows_apart`, `r08_zero_flag_on_rows_merged` (EBS_ZTNUM_IGNORE_ZEROS parity), `register_read_once_package`, `register_new_package_rereads`, `register_memo_keys_not_leak` |
+| 2 | `get_recent_items( )` per statement and rule group | **Instance memo** in R22 (package statement keys + look-back days): one read per house bank account over the union of its statements' windows; each statement's own window applied in ABAP on the new `TY_ITEM-AZDAT` (FEBKO-AZDAT), repository order (KUKEY, ESNUM) kept so the lowest KUKEY still wins; lines by secondary key `STMT`. SQL push-down not done (deferred) | R22, `ZIF/ZCL_CD_EBS_FEB_DAO` | `r22_history_once_per_package`, `r22_windows_per_statement`; OSQL assert on AZDAT |
+| 3 | FEBEP read for items (FEB DAO), again for the reason field and again for the posting flags (SAP DAO); `mt_headers[ kukey ]` and `lt_reasons[ kukey esnum ]` on STANDARD tables | **One FEBEP read**: `get_items( is_extras )` appends the configured reason field (`… AS reason`, only when it is a FEBEP field — DDIC check unchanged) and the posting-area flags (`… AS flag1..4`, at most four, unknown name raises 051 — unchanged) to the item field list; header currency by **HASHED** key KUKEY; `get_febep_reasons` / `get_febep_posting` removed from the SAP DAO (FEB source was their only caller), their OSQL tests moved | `ZCL_CD_EBS_SRC_FEB`, `ZIF/ZCL_CD_EBS_FEB_DAO`, `ZIF/ZCL_CD_EBS_SAP_DAO` | `items_with_reason_and_flags`, `unknown_reason_field_ignored`; posting-flag tests moved to the FEB DAO; FEB source tests count the reads |
+| 4 | `LOOP AT lt_payments / lt_retrievals / lt_items / lt_fi_lines WHERE …` on STANDARD EMPTY KEY tables | STANDARD primary key kept (read order — DPAYH newest run first), **non-unique sorted secondary keys** `BY_DOC1R`, `BY_AUGBL`, `BY_SELW1`, `BY_DOCUMENT`; loops `USING KEY`, `line_exists( …[ KEY by_selw1 … ] )` | R07, R07L, R07R, R19, `ZIF_CD_EBS_SAP_DAO` | `r07_rows_by_doc_key_parity` |
+| 5 | WHERE PE_AREA + OBJECT_KEY on index OBJ (PE_AREA, OBJECT_TYPE, OBJECT_KEY); nested `LOOP lt_prev WHERE type/key/check` per new finding | Index **OBJ = (MANDT, PE_AREA, OBJECT_KEY)** (reconcile and the exception repository cannot know the type — the EBS engine passes keys only); carry-forward reads **(OBJECT_TYPE, OBJECT_KEY) pairs**; earlier rows found by `READ … BINARY SEARCH` on the newest-first sort and a bounded `LOOP … FROM` (a sorted key cannot keep CREATED_AT descending inside the block) | `ZCL_CD_OPS_STORE`, `ZCL_CD_OPS_EXC_DAO`, `ddic/core/zcd_ops_finding.tabl.ddl` (+ regenerated XML) | `carry_other_type_untouched`, `carry_newest_prior_inherited` |
+| 6 | `SELECT SUM( tsl ) … INTO @rv_balance` per statement | **One statement**: `ACDOCA JOIN @it_requests` (company code, G/L account, currency, statement date, request no) `GROUP BY request_no` — same filters and SUM; a request without postings has no row = 0 as before; `get_gl_balance` replaced by `get_gl_balances` | R18, `ZIF/ZCL_CD_EBS_SAP_DAO` | `r18_one_read_per_package`; OSQL `gl_balances_per_request`, `gl_balances_empty_requests` |
+| 7 | Up to 5 000 points per series, de-duplicated per run in ABAP | `WITH +points AS ( … ROW_NUMBER( ) OVER( PARTITION BY run_id ORDER BY measured_at DESCENDING ) AS rn ) SELECT … WHERE rn = 1 ORDER BY measured_at DESCENDING, run_id DESCENDING INTO TABLE … UP TO iv_max_rows ROWS` — series grain incl. DIM2 (A101), as-of bound, completed-run filter and the warm-up count (A102) unchanged | `ZCL_CD_HCK_DAO` | `history_runs_by_latest_point` |
+| 8 | `read_legacy` of up to 50 000 item rows, counted in ABAP | **`count_legacy`**: the same validated path (name re-check, ZCD_FMON_TABWL approval, S_TABU_NAM, bound IN list) with `GROUP BY (fields)` and `COUNT(*) AS ROW_COUNT` into an RTTI table typed from the DDIC — one row per link / lot and status, **no row cap**; `is_done( )` stays in ABAP (UPPER, condense, blank token — SQL cannot match `condense` exactly) and is applied once per distinct status; open keys (≤ 5 per file) read only for links / lots that have open items | `ZCL_CD_FMON_LOT_READER`, `ZIF/ZCL_CD_FMON_DAO`, `ZIF_CD_FMON_TYPES` | `item_counts_exact_beyond_cap`, `no_open_items_no_key_read`; OSQL `grouped_count_per_status`, `grouped_count_needs_approval` |
+
+### Behaviour notes (parity)
+
+- **Fix 1 memo lifetime.** The memo is shared by the rule classes (they are separate plug-in instances) and bound to the package by its statement keys. Within one package R07C, R08 and R12 now see one DFKKCR snapshot (before: three reads milliseconds apart). A second validation of the *identical* statement set in the same internal session would reuse the rows; the engine should call `ZCL_CD_EBS_RULE_BASE=>CLEAR_MEMO( )` at the start of `validate_package` — **needs the EBS engine (not changed here)**; today the batch report validates each statement once per run and the pre-posting hook is dormant (Block_Scope_and_Webhook.md).
+- **Fix 1 key parity.** Rows from the memo are filtered to the call's own query keys, so a line never sees a row that its group's read would not have returned (test `register_memo_keys_not_leak`).
+- **Fix 3.** With one read an item can no longer be missing from a second (posting) read, so "posting state unknown for an item that was read" no longer arises; every item read gets P or O when posting fields are configured, as a consistent database would have given before.
+- **Fix 7.** The old 5 000-point cap could cut off runs when a series had many points per run; the database now ranks every run — the result is the same whenever the old read was not truncated.
+- **Fix 8.** `LOT_SCAN_TRUNCATED` (A38) now comes only from a capped **lot (header) read**; item counts are exact. A capped open-key sample never marks the batch truncated (its counts are exact) but may show fewer keys.
+
+## 3. Why no AMDP
+
+Every hot spot is a set operation ABAP SQL on HANA expresses directly: keyed reads (FOR ALL ENTRIES / IN lists on indexed keys), `JOIN @itab … GROUP BY` (fix 6), window functions in a CTE (fix 7) and dynamic `GROUP BY` with `COUNT(*)` (fix 8). All of it is pushed to HANA by the ABAP SQL interface already. An AMDP would add a second language and transport object, a `USING` list of SAP tables (FEBEP, DFKKCR, ACDOCA) to maintain, client handling, and — for fix 8 — dynamic table names that SQLScript cannot take without dynamic SQL inside the procedure (worse for the security review than the DDIC-validated ABAP path). The remaining cost was repetition and linear search in ABAP, which an AMDP does not remove. Conclusion: no AMDP; revisit only if a DV1/QA1 measurement shows a single statement (not its repetition) dominating.
+
+## 4. Sorted / hashed tables
+
+| Area | Object | Change |
+|---|---|---|
+| EBS | rule base | register index SORTED by canonical number; statements HASHED by key; memo keys HASHED |
+| EBS | FEB source | header currency HASHED by KUKEY |
+| EBS | `ZIF_CD_EBS_SAP_DAO` | secondary keys BY_DOC1R, BY_AUGBL, BY_SELW1, BY_DOCUMENT, BY_KEY (R21 lookup rows); G/L requests SORTED, balances HASHED |
+| EBS | R22 | history HASHED by account |
+| FMON | `ZIF_CD_FMON_TYPES` | files: secondary keys BY_ID (lot / NOC checks), BY_IFACE (late check); events: BY_FILE (SLA verdict, engine de-duplication) |
+| FMON | engine | findings summarised per file reference in one HASHED pass (board and run totals no longer scan all findings per file) |
+| FMON | lot reader | links de-duplicated by hash; done / open statuses HASHED |
+| HCK | DAO | TBTCP first steps in a SORTED table (no SORT + BINARY SEARCH) |
+| HCK | `ZIF_CD_HCK_TYPES` | baselines: secondary key BY_TABLE (config drift) |
+| HCK | tech jobs, aggregate query | job identities / measured groups de-duplicated by hash |
+| Core | store | carry-forward keys SORTED unique (type, key); binary search on the newest-first sort (§2 fix 5) |
+| Core | trace | document headers: secondary key BY_OPBEL |
+
+Kept STANDARD on purpose: result tables whose **order** is part of the behaviour (DPAYH newest run first, FEBEP KUKEY/ESNUM, findings in raise order) — secondary keys added instead; types of the **public interfaces** used by RAP / generated code (`TT_FINDING`, `TT_STATEMENT`, `TT_LINE` already has key STMT); **tiny configuration tables** read once per statement (house bank accounts, SLA rows, check definitions, thresholds); tables where uniqueness is not guaranteed (no unique keys there — no ITAB_DUPLICATE_KEY risk; `INSERT` not `INSERT LINES OF` into unique tables, e.g. R12's distinct-row set).
+
+## 5. Field symbols
+
+177 `LOOP AT … INTO DATA(wa)` became `ASSIGNING FIELD-SYMBOL(<wa>)`: EBS 41, FMON 36, HCK 51, Core 49 (plus the loops rewritten by the fixes themselves). A loop was converted only when the work area is provably read-only (scripted scan of every loop, then abaplint): not assigned, cleared or passed for change (CHANGING / `c*_` parameters / RECEIVING / `INTO` / `OF STRUCTURE` / `REF #`), not used after the loop, the looped table not changed in the loop (nor its rows through another field symbol), not a `GROUP BY` loop, field-symbol name free, and — for attribute tables changed elsewhere in the class — no own method call in the loop body.
+
+Kept as `INTO` (71 evaluated loops): the work area is changed as a local copy or passed for change (50 — e.g. RAP message rows, R05 / BTC map rows, FMON group records, CSV / HTML builders), attribute table changed elsewhere while the loop calls methods (9 — FMON engine `mt_files` / `mt_lotcfgs`, trace engine attempts), work area used after the loop (5), loop changes the looped table (3), name taken (2), `GROUP BY` loops (2). `MODIFY TABLE mt_files FROM ls_file` in the FMON engine stays: the row comes from a hashed table and is changed through a CHANGING method (no write through a field symbol into a key table). `READ TABLE … INTO` (21) and `DATA(wa) = itab[ … ]` (20) were not converted: their not-found handling (initial values, `CX_SY_ITAB_LINE_NOT_FOUND`) would change. Generated RAP behaviour pools (`tools/rap_generate.py`), the EBS engine and test includes were not touched.
+
+## 6. Deferred
+
+| Item | Why deferred |
+|---|---|
+| R22 SQL push-down (duplicate match in SQL) | Fix 2 removes the repetition; push-down changes the evidence path (KUKEY of the first duplicate) and needs a FEBEP index check |
+| HCK G/L-gap count merge (A43 list + total in one statement) | Two light reads; merge with window COUNT when measured |
+| Trace batched reads (`get_items_by_clearing` per document, per-FIN request reads) | Interactive, one payment per call; batch when support reports latency |
+| S01 / S03 prior-header memo (`get_prior_header` per statement) | One keyed read per statement; memo per account and package like fix 2 |
+| FMON event writes (`insert_event` per event, bounded retry) | Documented ATC exemption; array insert needs a new collision strategy |
+| EBS engine: `clear_memo( )` at the start of `validate_package` | EBS engine is owned by a concurrent change (§2 notes) |
+| FMON open-key sample: status filter on the sample read | Needs a second IN condition in the validated query type |
+
+## 7. VERIFY-ADT (first activation / ABAP Unit in DV1)
+
+- Fix 6: internal table as JOIN source (`INNER JOIN @it_requests`) — on HANA since 7.52; also inside `cl_osql_test_environment` with the ACDOCA double.
+- Fix 7: window function in a CTE (`ROW_NUMBER( ) OVER( PARTITION BY … )`) inside `cl_osql_test_environment`.
+- Fix 8: dynamic `GROUP BY (fields)` / `ORDER BY (fields)` with `COUNT(*) AS ROW_COUNT` into an RTTI-created table, on the doubles of the configured tables.
+- Fix 3: dynamic FEBEP field list with `AS reason` / `AS flag<n>` into `INTO CORRESPONDING FIELDS` (FEBEP double); VERIFY-SE11 VB1OK / VB2OK.
+
+## 8. VERIFY-SE11 — indexes the access paths rely on
+
+| Table | Fields | Used by |
+|---|---|---|
+| FEBEP | CHECT | EBS references (R22 history, trace) |
+| DPAYH | DOC1R | R07 |
+| DFKKRP | SELW1 | R07R, R07L |
+| DFKKCR | ZTNUM; DOC1R | R07C / R08 / R12; trace |
+| DFKKOP | AUGBL; ZZ_FIN_TRANS_NUM | trace, HCK payment request rules |
+| BKPF | AWTYP + AWKEY | HCK G/L transfer gaps |
+| DFKKKO | BUDAT | HCK G/L transfer gaps |
+| DFKKSUMC | FIKEY | HCK G/L transfer gaps |
+| BUT000 | BPEXT | payment request → partner |
+| FEBKO | (BUKRS, HBKID, HKTID, AZDAT) | R22 history (fix 2), S01 / S03 prior header |
+| ZCD_ACH_RTRV_LOG | AUGBL | R07L |
+| ZCD_OPS_FINDING | OBJ = (MANDT, PE_AREA, OBJECT_KEY) — **changed by fix 5** | carry-forward, reconcile, exception repository |
+
+BSEG is a physical table on S/4HANA (read by key BUKRS / BELNR / GJAHR only); BSIS / BSAS are compatibility views — never read them for performance-critical paths.

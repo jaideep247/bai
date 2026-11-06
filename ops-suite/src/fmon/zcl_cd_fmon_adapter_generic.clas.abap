@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A39/A52: payment key, malformed rows flagged (not counted), half-open range.
 *& 2026-11-06 | Rows without a usable file reference are quarantined (audit A100).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - generic legacy source adapter</p>
 "! No field name of any legacy table is coded here: the structures of the
@@ -80,9 +81,9 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
                                  it_fields = lt_fields ).
 
     DATA(lt_rows) = zcl_cd_fmon_factory=>get_dao( )->read_legacy( ls_query ).
-    LOOP AT lt_rows INTO DATA(ls_raw).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_raw>).
       DATA(ls_record) = to_record( is_request = is_request
-                                   is_raw     = ls_raw ).
+                                   is_raw     = <ls_raw> ).
       IF ls_record-file_ref IS NOT INITIAL.
         INSERT ls_record INTO TABLE rt_records.
       ENDIF.

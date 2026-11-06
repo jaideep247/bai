@@ -18,6 +18,8 @@
 *&              A40 events stored as applied, A41 unknown age, A49 file instance by
 *&              business date, A52 malformed rows quarantined.
 *& 2026-11-06 | Digest file references verified against the full file name in the registry (audit A100).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -141,6 +143,21 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_lots TYPE zif_cd_fmon_types=>tt_lot_status.
     DATA mt_expects TYPE zif_cd_fmon_types=>tt_expect.
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+
+    "! Sweep: findings of one file reference - number, worst severity rank and the message of
+    "! the first finding of that rank (one pass instead of a scan per file)
+    TYPES:
+      BEGIN OF ty_ref_summary,
+        reference   TYPE zif_cd_ops_types=>ty_finding-reference,
+        count       TYPE i,
+        worst       TYPE i,
+        top_message TYPE zif_cd_ops_types=>ty_finding-message,
+      END OF ty_ref_summary.
+    TYPES tt_ref_summary TYPE HASHED TABLE OF ty_ref_summary WITH UNIQUE KEY reference.
+
+    METHODS findings_by_reference
+      RETURNING
+        VALUE(rt_summary) TYPE tt_ref_summary.
 
     METHODS init
       IMPORTING
@@ -582,14 +599,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    LOOP AT lt_malformed INTO DATA(ls_malformed).
+    LOOP AT lt_malformed ASSIGNING FIELD-SYMBOL(<ls_malformed>).
       engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-malformed_row
-                      iv_key      = |{ ls_malformed-src_id }:{ ls_malformed-role }|
+                      iv_key      = |{ <ls_malformed>-src_id }:{ <ls_malformed>-role }|
                       iv_severity = zif_cd_ops_types=>gc_severity-warning
                       iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-malformed_rows
-                                                           iv_v1    = ls_malformed-src_id
-                                                           iv_v2    = ls_malformed-rows
-                                                           iv_v3    = ls_malformed-role ) ).
+                                                           iv_v1    = <ls_malformed>-src_id
+                                                           iv_v2    = <ls_malformed>-rows
+                                                           iv_v3    = <ls_malformed>-role ) ).
     ENDLOOP.
 
     rt_groups = VALUE #( FOR ls_hash IN lt_hash ( ls_hash ) ).
@@ -598,12 +615,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD prefetch.
     DATA lt_keys TYPE zif_cd_fmon_types=>tt_file_key.
-    LOOP AT it_groups INTO DATA(ls_group).
-      IF line_exists( mt_files[ KEY ref COMPONENTS iface_id = ls_group-iface_id file_ref = ls_group-file_ref ] )
-         OR line_exists( lt_keys[ iface_id = ls_group-iface_id file_ref = ls_group-file_ref ] ).
+    LOOP AT it_groups ASSIGNING FIELD-SYMBOL(<ls_group>).
+      IF line_exists( mt_files[ KEY ref COMPONENTS iface_id = <ls_group>-iface_id file_ref = <ls_group>-file_ref ] )
+         OR line_exists( lt_keys[ iface_id = <ls_group>-iface_id file_ref = <ls_group>-file_ref ] ).
         CONTINUE.
       ENDIF.
-      INSERT VALUE #( iface_id = ls_group-iface_id file_ref = ls_group-file_ref ) INTO TABLE lt_keys.
+      INSERT VALUE #( iface_id = <ls_group>-iface_id file_ref = <ls_group>-file_ref ) INTO TABLE lt_keys.
     ENDLOOP.
     IF lt_keys IS INITIAL.
       RETURN.
@@ -614,8 +631,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                val2 = int_param( iv_name = zif_cd_fmon_types=>gc_param-open_days iv_default = 30 ) ).
     DATA(lt_found) = mo_dao->find_files_by_ref( it_keys  = lt_keys
                                                 iv_since = lv_since ).
-    LOOP AT lt_found INTO DATA(ls_file).
-      INSERT ls_file INTO TABLE mt_files.
+    LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_file>).
+      INSERT <ls_file> INTO TABLE mt_files.
     ENDLOOP.
   ENDMETHOD.
 
@@ -660,25 +677,25 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA(lv_origin) = xsdbool( zcl_cd_fmon_status=>rank( is_group-stage ) = 1 ).
     DATA(lv_date) = COND d( WHEN is_group-business_date IS NOT INITIAL THEN is_group-business_date
                             WHEN lv_origin = abap_true THEN mv_date ).
-    LOOP AT mt_files INTO DATA(ls_file) USING KEY ref
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>) USING KEY ref
          WHERE iface_id = is_group-iface_id AND file_ref = is_group-file_ref.
       " Audit A100: a digest reference matches only the file with the same full name
       IF zcl_cd_fmon_util=>is_digest_ref( is_group-file_ref ) = abap_true
-         AND is_group-file_name IS NOT INITIAL AND ls_file-file_name IS NOT INITIAL
+         AND is_group-file_name IS NOT INITIAL AND <ls_file>-file_name IS NOT INITIAL
          AND zcl_cd_fmon_util=>canonical_name( is_group-file_name )
-             <> zcl_cd_fmon_util=>canonical_name( ls_file-file_name ).
+             <> zcl_cd_fmon_util=>canonical_name( <ls_file>-file_name ).
         ev_ambiguous = abap_true.
         RETURN.
       ENDIF.
       lv_count += 1.
-      IF lv_date IS NOT INITIAL AND ls_file-business_date = lv_date.
-        ev_file_id = ls_file-file_id.
+      IF lv_date IS NOT INITIAL AND <ls_file>-business_date = lv_date.
+        ev_file_id = <ls_file>-file_id.
         RETURN.
       ENDIF.
-      IF lv_origin = abap_false AND ( lv_date IS INITIAL OR ls_file-business_date < lv_date )
-         AND ( lv_best IS INITIAL OR ls_file-business_date > lv_best_date ).
-        lv_best      = ls_file-file_id.
-        lv_best_date = ls_file-business_date.
+      IF lv_origin = abap_false AND ( lv_date IS INITIAL OR <ls_file>-business_date < lv_date )
+         AND ( lv_best IS INITIAL OR <ls_file>-business_date > lv_best_date ).
+        lv_best      = <ls_file>-file_id.
+        lv_best_date = <ls_file>-business_date.
       ENDIF.
     ENDLOOP.
     IF lv_origin = abap_false AND lv_best IS NOT INITIAL.
@@ -804,9 +821,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                           iv_date_to    = mv_date
                                           iv_open_since = lv_open_since
                                           iv_iface_id   = mv_iface ).
-    LOOP AT lt_db INTO DATA(ls_db).
-      IF NOT line_exists( mt_files[ file_id = ls_db-file_id ] ).
-        INSERT ls_db INTO TABLE mt_files.
+    LOOP AT lt_db ASSIGNING FIELD-SYMBOL(<ls_db>).
+      IF NOT line_exists( mt_files[ file_id = <ls_db>-file_id ] ).
+        INSERT <ls_db> INTO TABLE mt_files.
       ENDIF.
     ENDLOOP.
 
@@ -814,7 +831,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       mt_events = mo_dao->get_events( VALUE #( FOR ls_file IN mt_files ( ls_file-file_id ) ) ).
     ENDIF.
     LOOP AT mt_new_events INTO DATA(ls_event).
-      IF NOT line_exists( mt_events[ file_id = ls_event-file_id
+      IF NOT line_exists( mt_events[ KEY by_file
+                                     file_id = ls_event-file_id
                                      src_id  = ls_event-src_id
                                      src_key = ls_event-src_key
                                      stage   = ls_event-stage ] ).
@@ -1004,8 +1022,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD calendar_id_for.
-    LOOP AT mt_cals INTO DATA(ls_cal) WHERE iface_id = iv_iface_id AND fcal_id IS NOT INITIAL.
-      rv_cal = ls_cal-fcal_id.
+    LOOP AT mt_cals ASSIGNING FIELD-SYMBOL(<ls_cal>) WHERE iface_id = iv_iface_id AND fcal_id IS NOT INITIAL.
+      rv_cal = <ls_cal>-fcal_id.
       RETURN.
     ENDLOOP.
     rv_cal = mo_store->get_param( iv_name    = zif_cd_fmon_types=>gc_param-factory_cal
@@ -1026,12 +1044,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-expects       = mt_expects.
     rs_ctx-lots          = mt_lots.
 
-    LOOP AT mt_files INTO DATA(ls_named).
-      IF ls_named-file_name IS NOT INITIAL.
-        INSERT ls_named-file_name INTO TABLE lt_names.
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_named>).
+      IF <ls_named>-file_name IS NOT INITIAL.
+        INSERT <ls_named>-file_name INTO TABLE lt_names.
       ENDIF.
-      IF ls_named-checksum IS NOT INITIAL.
-        INSERT ls_named-checksum INTO TABLE lt_checksums.
+      IF <ls_named>-checksum IS NOT INITIAL.
+        INSERT <ls_named>-checksum INTO TABLE lt_checksums.
       ENDIF.
     ENDLOOP.
     SORT lt_names BY table_line.
@@ -1070,9 +1088,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD persist_registry.
     DATA lt_save TYPE zif_cd_fmon_types=>tt_file.
 
-    LOOP AT mt_changed INTO DATA(lv_file_id).
+    LOOP AT mt_changed ASSIGNING FIELD-SYMBOL(<lv_file_id>).
       " READ TABLE sets sy-subrc; a table expression with OPTIONAL does not
-      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
+      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = <lv_file_id>.
       IF sy-subrc = 0.
         ls_file-changed_at = mv_now.
         ls_file-changed_by = sy-uname.
@@ -1082,8 +1100,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     TRY.
         DATA(lt_conflicts) = mo_dao->save_files( lt_save ).
-        LOOP AT mt_new_events INTO DATA(ls_event).
-          mo_dao->insert_event( ls_event ).
+        LOOP AT mt_new_events ASSIGNING FIELD-SYMBOL(<ls_event>).
+          mo_dao->insert_event( <ls_event> ).
         ENDLOOP.
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
         " Never commit a half-written registry (files without their events or vice versa)
@@ -1105,8 +1123,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     " Audit A04: rows changed meanwhile by another process keep their newer state; the
     " next run re-derives from it. Visible, not an error.
-    LOOP AT lt_conflicts INTO DATA(lv_conflict).
-      READ TABLE mt_files INTO DATA(ls_conflict) WITH TABLE KEY file_id = lv_conflict.
+    LOOP AT lt_conflicts ASSIGNING FIELD-SYMBOL(<lv_conflict>).
+      READ TABLE mt_files INTO DATA(ls_conflict) WITH TABLE KEY file_id = <lv_conflict>.
       IF sy-subrc = 0.
         engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-persist_conflict
                         iv_key      = COND string( WHEN ls_conflict-file_name IS NOT INITIAL THEN ls_conflict-file_name
@@ -1123,21 +1141,21 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD build_board.
     DATA ls_row TYPE zif_cd_fmon_types=>ty_board.
 
-    LOOP AT mt_files INTO DATA(ls_file).
-      ls_row = CORRESPONDING #( ls_file ).
-      READ TABLE mt_ifaces INTO DATA(ls_iface) WITH TABLE KEY iface_id = ls_file-iface_id.
+    DATA(lt_by_ref) = findings_by_reference( ).
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      ls_row = CORRESPONDING #( <ls_file> ).
+      READ TABLE mt_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WITH TABLE KEY iface_id = <ls_file>-iface_id.
       IF sy-subrc = 0.
-        ls_row-owner = ls_iface-owner.
+        ls_row-owner = <ls_iface>-owner.
       ENDIF.
-      DATA(lv_ref) = zcl_cd_fmon_util=>file_hex( ls_file-file_id ).
       DATA(lv_worst) = 0.
-      LOOP AT mt_findings INTO DATA(ls_finding) WHERE reference = lv_ref.
-        ls_row-finding_count += 1.
-        IF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) > lv_worst.
-          lv_worst = zcl_cd_ops_util=>severity_rank( ls_finding-severity ).
-          ls_row-top_message = ls_finding-message.
-        ENDIF.
-      ENDLOOP.
+      READ TABLE lt_by_ref ASSIGNING FIELD-SYMBOL(<ls_ref>)
+           WITH TABLE KEY reference = zcl_cd_fmon_util=>file_hex( <ls_file>-file_id ).
+      IF sy-subrc = 0.
+        ls_row-finding_count = <ls_ref>-count.
+        ls_row-top_message   = <ls_ref>-top_message.
+        lv_worst             = <ls_ref>-worst.
+      ENDIF.
       ls_row-sla_status = COND #( WHEN lv_worst >= 3 THEN zif_cd_ops_types=>gc_rag-red
                                   WHEN lv_worst = 2 THEN zif_cd_ops_types=>gc_rag-amber
                                   ELSE zif_cd_ops_types=>gc_rag-green ).
@@ -1146,14 +1164,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDLOOP.
 
     " Expected-but-missing files and other interface-level findings get their own row
-    LOOP AT mt_findings INTO ls_finding WHERE reference IS INITIAL AND group1 IS NOT INITIAL.
+    LOOP AT mt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE reference IS INITIAL AND group1 IS NOT INITIAL.
       CLEAR ls_row.
-      ls_row-iface_id      = ls_finding-group1.
+      ls_row-iface_id      = <ls_finding>-group1.
       ls_row-business_date = mv_date.
-      ls_row-file_name     = ls_finding-object_key.
+      ls_row-file_name     = <ls_finding>-object_key.
       ls_row-finding_count = 1.
-      ls_row-top_message   = ls_finding-message.
-      ls_row-sla_status    = zcl_cd_ops_util=>rag_from_findings( VALUE #( ( ls_finding ) ) ).
+      ls_row-top_message   = <ls_finding>-message.
+      ls_row-sla_status    = zcl_cd_ops_util=>rag_from_findings( VALUE #( ( <ls_finding> ) ) ).
       INSERT ls_row INTO TABLE rt_board.
     ENDLOOP.
 
@@ -1170,12 +1188,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD finish.
     DATA(lv_worst_run) = 0.
     cs_run-total_items = lines( mt_files ).
-    LOOP AT mt_files INTO DATA(ls_file).
-      DATA(lv_ref) = zcl_cd_fmon_util=>file_hex( ls_file-file_id ).
-      DATA(lv_worst) = 0.
-      LOOP AT mt_findings INTO DATA(ls_finding) WHERE reference = lv_ref.
-        lv_worst = nmax( val1 = lv_worst val2 = zcl_cd_ops_util=>severity_rank( ls_finding-severity ) ).
-      ENDLOOP.
+    DATA(lt_by_ref) = findings_by_reference( ).
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      DATA(lv_worst) = VALUE #( lt_by_ref[ reference = zcl_cd_fmon_util=>file_hex( <ls_file>-file_id ) ]-worst
+                                OPTIONAL ).
       CASE lv_worst.
         WHEN 4.
           cs_run-blocked_items += 1.
@@ -1237,6 +1253,23 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                                  iv_iface_id = is_iface-iface_id
                                                                  iv_lot_type = CONV #( is_iface-file_type ) )
                                  IS NOT INITIAL ).
+  ENDMETHOD.
+
+
+  METHOD findings_by_reference.
+    " In finding order: the first finding of the worst rank gives the message, as before
+    LOOP AT mt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE reference IS NOT INITIAL.
+      READ TABLE rt_summary ASSIGNING FIELD-SYMBOL(<ls_summary>) WITH TABLE KEY reference = <ls_finding>-reference.
+      IF sy-subrc <> 0.
+        INSERT VALUE #( reference = <ls_finding>-reference ) INTO TABLE rt_summary ASSIGNING <ls_summary>.
+      ENDIF.
+      <ls_summary>-count += 1.
+      DATA(lv_rank) = zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+      IF lv_rank > <ls_summary>-worst.
+        <ls_summary>-worst       = lv_rank.
+        <ls_summary>-top_message = <ls_finding>-message.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Program/variant match, retries supersede aborts, late start (audit A42).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle step state rules (pure)</p>
 "! Step date = cycle date + DAY_OFFSET. Candidates: jobs matching the JOBNAME
@@ -78,33 +79,33 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
     rs_status-jobname    = is_step-jobname.
     rs_status-cycle_date = iv_cycle_date.
 
-    LOOP AT it_runs INTO DATA(ls_run) WHERE jobname CP is_step-jobname.
-      IF ls_run-status <> zif_cd_hck_types=>gc_job_status-running
-         AND ls_run-status <> zif_cd_hck_types=>gc_job_status-finished
-         AND ls_run-status <> zif_cd_hck_types=>gc_job_status-aborted.
+    LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>) WHERE jobname CP is_step-jobname.
+      IF <ls_run>-status <> zif_cd_hck_types=>gc_job_status-running
+         AND <ls_run>-status <> zif_cd_hck_types=>gc_job_status-finished
+         AND <ls_run>-status <> zif_cd_hck_types=>gc_job_status-aborted.
         CONTINUE.
       ENDIF.
-      IF ls_run-strtdate <> lv_step_date OR ls_run-strttime < is_step-window_from.
+      IF <ls_run>-strtdate <> lv_step_date OR <ls_run>-strttime < is_step-window_from.
         CONTINUE.
       ENDIF.
       " the job name alone is not the step: program and variant must match when maintained
-      IF ( is_step-program IS NOT INITIAL AND ls_run-progname <> is_step-program )
-         OR ( is_step-variant IS NOT INITIAL AND ls_run-variant <> is_step-variant ).
+      IF ( is_step-program IS NOT INITIAL AND <ls_run>-progname <> is_step-program )
+         OR ( is_step-variant IS NOT INITIAL AND <ls_run>-variant <> is_step-variant ).
         CONTINUE.
       ENDIF.
       lv_attempts = lv_attempts + 1.
-      CASE ls_run-status.
+      CASE <ls_run>-status.
         WHEN zif_cd_hck_types=>gc_job_status-finished.
-          IF ls_finished IS INITIAL OR ls_run-strttime < ls_finished-strttime.
-            ls_finished = ls_run.
+          IF ls_finished IS INITIAL OR <ls_run>-strttime < ls_finished-strttime.
+            ls_finished = <ls_run>.
           ENDIF.
         WHEN zif_cd_hck_types=>gc_job_status-running.
-          IF ls_running IS INITIAL OR ls_run-strttime > ls_running-strttime.
-            ls_running = ls_run.
+          IF ls_running IS INITIAL OR <ls_run>-strttime > ls_running-strttime.
+            ls_running = <ls_run>.
           ENDIF.
         WHEN OTHERS.
-          IF ls_aborted IS INITIAL OR ls_run-strttime > ls_aborted-strttime.
-            ls_aborted = ls_run.
+          IF ls_aborted IS INITIAL OR <ls_run>-strttime > ls_aborted-strttime.
+            ls_aborted = <ls_run>.
           ENDIF.
       ENDCASE.
     ENDLOOP.

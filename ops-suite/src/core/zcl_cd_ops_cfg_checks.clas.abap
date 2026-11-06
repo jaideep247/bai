@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -194,10 +195,10 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
 
   METHOD missing_names.
-    LOOP AT it_needed INTO DATA(lv_name).
-      IF NOT line_exists( it_available[ table_line = lv_name ] )
-         AND NOT line_exists( rt_missing[ table_line = lv_name ] ).
-        INSERT lv_name INTO TABLE rt_missing.
+    LOOP AT it_needed ASSIGNING FIELD-SYMBOL(<lv_name>).
+      IF NOT line_exists( it_available[ table_line = <lv_name> ] )
+         AND NOT line_exists( rt_missing[ table_line = <lv_name> ] ).
+        INSERT <lv_name> INTO TABLE rt_missing.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.

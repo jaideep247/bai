@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Baseline of another hash version reported as outdated, not as drift (audit A57).
 *& 2026-11-06 | Stops between tables when the time budget is used up (audit A18).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - configuration drift vs golden baseline</p>
 "! A changed table = CONFIG_DRIFT (E), a table without baseline =
@@ -55,7 +56,7 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
                           message    = lx_hash->get_text( ) ) INTO TABLE rs_result-findings.
           CONTINUE.
       ENDTRY.
-      READ TABLE lt_baselines INTO DATA(ls_baseline) WITH KEY tabname = ls_table-tabname.
+      READ TABLE lt_baselines INTO DATA(ls_baseline) WITH KEY by_table COMPONENTS tabname = ls_table-tabname.
       IF sy-subrc <> 0.
         INSERT VALUE #( object_key = ls_table-tabname
                         check_code = zif_cd_hck_types=>gc_code-no_baseline

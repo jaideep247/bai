@@ -11,6 +11,7 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression of known findings</p>
 CLASS zcl_cd_hck_suppression DEFINITION
@@ -74,15 +75,15 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
     CHECK it_suppressions IS NOT INITIAL.
     LOOP AT rt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
          WHERE severity <> zif_cd_ops_types=>gc_severity-info.
-      LOOP AT it_suppressions INTO DATA(ls_suppression).
-        IF matches( is_finding = <ls_finding> is_suppression = ls_suppression iv_today = iv_today ) = abap_false.
+      LOOP AT it_suppressions ASSIGNING FIELD-SYMBOL(<ls_suppression>).
+        IF matches( is_finding = <ls_finding> is_suppression = <ls_suppression> iv_today = iv_today ) = abap_false.
           CONTINUE.
         ENDIF.
         <ls_finding>-severity = zif_cd_ops_types=>gc_severity-info.
         <ls_finding>-action   = zif_cd_ops_types=>gc_action-notify.
         <ls_finding>-message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-suppressed_until_by
-                                                       iv_v1    = |{ ls_suppression-valid_to DATE = ISO }|
-                                                       iv_v2    = ls_suppression-created_by
+                                                       iv_v1    = |{ <ls_suppression>-valid_to DATE = ISO }|
+                                                       iv_v2    = <ls_suppression>-created_by
                                                        iv_tail  = CONV #( <ls_finding>-message ) ).
         EXIT.
       ENDLOOP.

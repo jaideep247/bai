@@ -13,6 +13,8 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A65: reference checked against the width of the lookup key kind (no truncation).
 *& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R21 - configurable table lookup</p>
 CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
@@ -67,37 +69,37 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
                                                                 ELSE zif_cd_ebs_types=>gc_check_code-lookup_status ).
     DATA(lt_allowed) = value_list( ls_lookup-allowed_values ).
 
-    LOOP AT it_lines INTO DATA(ls_key_line).
-      DATA(lv_line_key) = lookup_key( is_lookup = ls_lookup is_line = ls_key_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_key_line>).
+      DATA(lv_line_key) = lookup_key( is_lookup = ls_lookup is_line = <ls_key_line> ).
       IF lv_line_key IS NOT INITIAL.
         INSERT lv_line_key INTO TABLE lt_keys.
       ENDIF.
     ENDLOOP.
     DATA(lt_rows) = sap_dao( )->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
 
-    LOOP AT it_lines INTO DATA(ls_line).
-      DATA(ls_rejection) = lookup_rejection( is_rule = is_rule is_lookup = ls_lookup is_line = ls_line ).
+    LOOP AT it_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      DATA(ls_rejection) = lookup_rejection( is_rule = is_rule is_lookup = ls_lookup is_line = <ls_line> ).
       IF ls_rejection IS NOT INITIAL.
         INSERT ls_rejection INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
-      DATA(lv_key) = lookup_key( is_lookup = ls_lookup is_line = ls_line ).
+      DATA(lv_key) = lookup_key( is_lookup = ls_lookup is_line = <ls_line> ).
       IF lv_key IS INITIAL.
         CONTINUE.
       ENDIF.
       CLEAR: lv_statuses, lv_found, lv_ok.
-      LOOP AT lt_rows INTO DATA(ls_row) WHERE lookup_key = lv_key.
+      LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>) USING KEY by_key WHERE lookup_key = lv_key.
         lv_found = abap_true.
         IF ls_lookup-status_field IS INITIAL OR lt_allowed IS INITIAL
-           OR in_list( iv_value = ls_row-status it_list = lt_allowed ) = abap_true.
+           OR in_list( iv_value = <ls_row>-status it_list = lt_allowed ) = abap_true.
           lv_ok = abap_true.
           EXIT.
         ENDIF.
-        lv_statuses = condense( |{ lv_statuses } { ls_row-status }| ).
+        lv_statuses = condense( |{ lv_statuses } { <ls_row>-status }| ).
       ENDLOOP.
       IF lv_found = abap_false.
         INSERT not_found_finding(
-                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 is_rule = is_rule is_line = <ls_line> it_statements = it_statements
                  iv_check_code = lv_not_found
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-lookup_not_found
                                                      iv_v1    = ls_lookup-lookup_id
@@ -105,7 +107,7 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
                                                      iv_v3    = ls_lookup-table_name ) ) INTO TABLE rt_findings.
       ELSEIF lv_ok = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = lv_status_code
+                 is_rule = is_rule is_line = <ls_line> iv_check_code = lv_status_code
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-lookup_status
                                                      iv_v1    = ls_lookup-lookup_id
                                                      iv_v2    = lv_key

@@ -14,6 +14,8 @@
 *& 2026-11-06 | gc_engine_key-registry.
 *& 2026-11-06 | Plug-in interface names for the core factory check (audit A62).
 *& 2026-11-06 | File reference digest for names longer than the key (audit A100).
+*& 2026-11-06 | Performance fix 8: TY_RAW_COUNT (grouped legacy read: values by role + number of rows).
+*& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -429,7 +431,11 @@ INTERFACE zif_cd_fmon_types
       db_exists         TYPE abap_bool,
       db_version        TYPE timestampl,
     END OF ty_file.
-  TYPES tt_file TYPE STANDARD TABLE OF ty_file WITH EMPTY KEY.
+  "! Sweep: secondary keys for the checks - a file by ID (lot checks), the files of an
+  "! interface and business date (late check); primary order unchanged
+  TYPES tt_file TYPE STANDARD TABLE OF ty_file WITH EMPTY KEY
+                WITH NON-UNIQUE SORTED KEY by_id COMPONENTS file_id
+                WITH NON-UNIQUE SORTED KEY by_iface COMPONENTS iface_id business_date.
 
   TYPES:
     BEGIN OF ty_file_key,
@@ -455,7 +461,10 @@ INTERFACE zif_cd_fmon_types
       created_by   TYPE syuname,
       created_at   TYPE timestampl,
     END OF ty_event.
-  TYPES tt_event TYPE STANDARD TABLE OF ty_event WITH EMPTY KEY.
+  "! Sweep: secondary key BY_FILE - the events of a file (SLA verdict) and the business
+  "! event identity (engine de-duplication)
+  TYPES tt_event TYPE STANDARD TABLE OF ty_event WITH EMPTY KEY
+                 WITH NON-UNIQUE SORTED KEY by_file COMPONENTS file_id src_id src_key stage.
 
   " ---------------------------------------------------------------- legacy access
   TYPES:
@@ -504,6 +513,14 @@ INTERFACE zif_cd_fmon_types
       file_link   TYPE string,
     END OF ty_raw_row.
   TYPES tt_raw_row TYPE STANDARD TABLE OF ty_raw_row WITH EMPTY KEY.
+
+  "! Fix 8: one group of a grouped legacy read - the field values by role and the rows counted
+  TYPES:
+    BEGIN OF ty_raw_count,
+      row       TYPE ty_raw_row,
+      row_count TYPE int8,
+    END OF ty_raw_count.
+  TYPES tt_raw_count TYPE STANDARD TABLE OF ty_raw_count WITH EMPTY KEY.
 
   TYPES:
     BEGIN OF ty_ddic_field,
