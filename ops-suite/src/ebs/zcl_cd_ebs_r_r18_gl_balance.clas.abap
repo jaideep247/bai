@@ -6,6 +6,7 @@
 *& closing balance within the tolerance.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Missing G/L account reported as GL_ACCOUNT_NOT_MAPPED instead of skipped (audit 2026-11-06).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check R18 - bank G/L balance = closing</p>
 CLASS zcl_cd_ebs_r_r18_gl_balance DEFINITION
@@ -29,6 +30,12 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
       DATA(lv_gl_account) = VALUE #( lt_accounts[ account_no = ls_statement-account_no active = abap_true ]-gl_account
                                      OPTIONAL ).
       IF lv_gl_account IS INITIAL.
+        " No silent pass: a statement that cannot be reconciled is reported
+        " (an account missing from ZCD_EBS_ACCT altogether is S04's finding)
+        INSERT zcl_cd_ebs_finding=>for_rule_statement(
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'GL_ACCOUNT_NOT_MAPPED'
+                 iv_message = |Account { ls_statement-account_no }: no G/L account in ZCD_EBS_ACCT, closing not reconciled| )
+          INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
       DATA(lv_balance) = sap_dao( )->get_gl_balance( iv_bukrs      = ls_statement-bukrs

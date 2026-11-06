@@ -47,3 +47,20 @@ Second review, this time of `ops-suite` itself (engines and FMON DAO). Each find
 - A run lock per module + variant, and carrying forward open exceptions across re-runs (owner and due date kept, auto-resolved when the item passes).
 
 **Verification:** abaplint 0 issues / 309 files; ATC-equivalent set: 2 documented exemptions; portable checks 13/13; 321 unit test methods. None executed in SAP yet.
+
+---
+
+# Part C — EBS business-rule audit (2026-11-06)
+
+| Prio | Finding | Verdict | Fix | Test (written before the fix) |
+|---|---|---|---|---|
+| High | R07 reads the first DPAYH row | **Confirmed** | Any productive run with an allowed status passes; the message lists every status found | `r07_any_run_with_status_ok` |
+| High | R07L reads the first retrieval-log row | **Confirmed** (a failed attempt can follow a successful one, as in `ZCD_PAYM_REQ_LOG`) | Any attempt with an allowed status passes | `r07l_any_af_attempt_passes` |
+| High | R07R reads the first returns-lot item | **Confirmed** | Any lot with an allowed status passes | `r07r_any_done_lot_passes` |
+| — | (same pattern, found while fixing) R07C reads the first register row | **Confirmed** | Fails when **any** row is cancelled (fail closed) | `r07c_any_cancelled_row_fails` |
+| High | R12 counts a check once although several register rows exist | **By design, now documented**: count = bank entries with at least one register row; total = all register rows (R08 sums them per check, parity D7). Legacy compared input lines with register rows over the whole run (D7) | Definition in the class and in parity D12 | `r12_code_total_mismatch` (existing) |
+| Medium | House-bank filter accepts a missing HBKID on either side | **Confirmed for the statement side** (account missing from ZCD_EBS_ACCT: S04 reported it, but R07C / R08 / R12 still matched across banks). Register side: HBKID is part of the DFKKCR key (VERIFY-DDIC) | Statement without house bank matches only when all candidate rows are in one account; otherwise HOUSE_BANK_AMBIGUOUS | `r08_unknown_bank_ambiguous`, `r08_unknown_bank_single_ok` |
+| Medium | R18 skips a statement without G/L account silently | **Confirmed** | GL_ACCOUNT_NOT_MAPPED finding | `r18_unmapped_gl_reported` |
+| — | R09 misses duplicates split across packages | **Not confirmed**: a package holds whole statements (`ZCL_CD_EBS_SRC_FEB`, N statements per package) and the duplicate key contains the statement; a statement delivered twice is S07 | No change | `r09_second_identical_entry`, `s07_already_imported_fails` (existing) |
+
+**Verification:** abaplint 0 issues; ATC-equivalent set: 2 documented exemptions; portable checks 13/13; 363 test methods on this branch before the phase 2 merge. Not executed in SAP.

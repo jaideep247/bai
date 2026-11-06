@@ -526,6 +526,12 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r12_code_total_mismatch      FOR TESTING.
     METHODS r19_uncleared_doc_fails      FOR TESTING.
     METHODS r19_missing_doc_fails        FOR TESTING.
+    METHODS r07_any_run_with_status_ok   FOR TESTING.
+    METHODS r07l_any_af_attempt_passes   FOR TESTING.
+    METHODS r07r_any_done_lot_passes     FOR TESTING.
+    METHODS r07c_any_cancelled_row_fails FOR TESTING.
+    METHODS r08_unknown_bank_ambiguous   FOR TESTING.
+    METHODS r08_unknown_bank_single_ok   FOR TESTING.
 ENDCLASS.
 
 
@@ -659,6 +665,137 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " Several DPAYH runs for one document (review 2026-11-06): any productive run with an
+  " allowed status satisfies R07 - the first row returned is not authoritative
+  METHOD r07_any_run_with_status_ok.
+    DATA ls_payment TYPE zif_cd_ebs_sap_dao=>ty_payment.
+    TRY.
+        ls_payment-doc1r  = gc_test-docno.
+        ls_payment-laufi  = 'RUN2'.
+        ls_payment-status = 'PAID'.
+        INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+        ls_payment-laufi  = 'RUN1'.
+        ls_payment-status = 'RETURNED'.
+        INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( iv_rule_id = 'R07' iv_param1 = 'RETURNED' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A RETURNED run among several must satisfy R07' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Retrieval log with several attempts: an AF attempt satisfies R07L even when a
+  " failed attempt was written after it (same pattern as ZCD_PAYM_REQ_LOG SUCCESS)
+  METHOD r07l_any_af_attempt_passes.
+    DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
+    TRY.
+        ls_retrieval-augbl  = gc_test-docno.
+        ls_retrieval-status = 'ER'.
+        INSERT ls_retrieval INTO TABLE mo_sap_dao->mt_retrievals.
+        ls_retrieval-status = 'AF'.
+        INSERT ls_retrieval INTO TABLE mo_sap_dao->mt_retrievals.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL' is_rule = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'An AF attempt among several must satisfy R07L' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Payment in two returns lots: a lot with the required status satisfies R07R
+  METHOD r07r_any_done_lot_passes.
+    DATA ls_item TYPE zif_cd_ebs_sap_dao=>ty_return_item.
+    TRY.
+        ls_item-selw1     = gc_test-docno.
+        ls_item-opbel     = '000000000001'.
+        ls_item-lot_stars = '1'.
+        INSERT ls_item INTO TABLE mo_sap_dao->mt_items.
+        ls_item-opbel     = '000000000002'.
+        ls_item-lot_stars = '5'.
+        INSERT ls_item INTO TABLE mo_sap_dao->mt_items.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( iv_rule_id = 'R07R' iv_param1 = '5' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A lot with status 5 among several must satisfy R07R' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fail closed: a cancelled register row fails R07C even when it is not the first row
+  METHOD r07c_any_cancelled_row_fails.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum    = gc_test-ref.
+        ls_check-crstatus = '01'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-crstatus = '99'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07C_CHECK' is_rule = rule( 'R07C' ) ).
+        assert_one_code( iv_check_code = 'CHECK_STATUS' iv_msg = 'A cancelled row must fail R07C' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Statement account without house bank (not in ZCD_EBS_ACCT) and the check number in
+  " two house bank accounts: no account isolation is possible - reported, never matched
+  METHOD r08_unknown_bank_ambiguous.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-hbkid  = 'BOFA1'.
+        ls_check-hktid  = 'COLL1'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        CLEAR: mt_stmts[ 1 ]-hbkid, mt_stmts[ 1 ]-hktid.
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        assert_one_code( iv_check_code = 'HOUSE_BANK_AMBIGUOUS'
+                         iv_msg        = 'Unknown house bank with two candidate accounts must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Statement without house bank but the check number in one account only: unambiguous
+  METHOD r08_unknown_bank_single_ok.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        CLEAR: mt_stmts[ 1 ]-hbkid, mt_stmts[ 1 ]-hktid.
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'One candidate account is unambiguous and must match' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " R12 (legacy 581D TOTAL_SUM_MISMATCH): code total per statement must equal the register total
   METHOD r12_code_total_mismatch.
     DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
@@ -725,6 +862,7 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s10_unposted_entry_reported  FOR TESTING.
     METHODS s12_count_mismatch_reported  FOR TESTING.
     METHODS r18_gl_ne_closing_fails      FOR TESTING.
+    METHODS r18_unmapped_gl_reported     FOR TESTING.
 ENDCLASS.
 
 
@@ -855,6 +993,22 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
     add_statement( iv_opening = '1000.00' iv_closing = '1150.00' ).
     run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
     assert_one_code( iv_check_code = 'GL_NE_CLOSING' iv_msg = 'G/L 1100 vs closing 1150 must fail R18' ).
+  ENDMETHOD.
+
+
+  " No silent pass (review 2026-11-06): a statement whose account has no G/L account
+  " cannot be reconciled - reported instead of skipped
+  METHOD r18_unmapped_gl_reported.
+    TRY.
+        CLEAR mo_cfg_dao->mt_accounts[ 1 ]-gl_account.
+        mo_sap_dao->mv_gl_balance = '1150.00'.
+        add_statement( iv_opening = '1000.00' iv_closing = '1150.00' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
+        assert_one_code( iv_check_code = 'GL_ACCOUNT_NOT_MAPPED'
+                         iv_msg        = 'A statement without G/L account must be reported by R18' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
+*& 2026-11-06 | HOUSE_BANK_AMBIGUOUS reported when the account cannot be determined (audit 2026-11-06).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R08 - check amount vs register</p>
 CLASS zcl_cd_ebs_r_r08_check_amount DEFINITION
@@ -36,6 +37,13 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
     LOOP AT it_lines INTO DATA(ls_line).
       DATA(lv_ztnum) = ztnum_key( line_reference( ls_line ) ).
       IF lv_ztnum IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      IF house_bank_ambiguous( it_checks = lt_checks is_line = ls_line it_statements = it_statements ) = abap_true.
+        INSERT zcl_cd_ebs_finding=>for_rule_line(
+                 is_rule = is_rule is_line = ls_line iv_check_code = 'HOUSE_BANK_AMBIGUOUS'
+                 iv_message = |Check { lv_ztnum }: statement has no house bank, check exists in several accounts| )
+          INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.
       DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).

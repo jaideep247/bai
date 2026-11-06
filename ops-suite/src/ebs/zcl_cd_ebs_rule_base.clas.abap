@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
+*& 2026-11-06 | House bank: statement without house bank matches only when one account is possible (audit 2026-11-06).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -88,8 +89,20 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rv_tolerance) TYPE zif_cd_ops_types=>ty_amount.
 
+    "! Statement has no house bank account and the check number exists in more than one
+    "! account: the register rows cannot be attributed - rules report HOUSE_BANK_AMBIGUOUS
+    METHODS house_bank_ambiguous
+      IMPORTING
+        it_checks           TYPE zif_cd_ebs_sap_dao=>tt_check
+        is_line             TYPE zif_cd_ebs_types=>ty_line
+        it_statements       TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rv_ambiguous) TYPE abap_bool.
+
     "! Check register rows of one check number, scoped to the house bank account of the
-    "! line's statement when both sides carry it (ZTNUM is unique only per account)
+    "! line's statement (ZTNUM is unique only per account). Statement without house bank:
+    "! rows only when they all belong to one account. A register row without house bank
+    "! is accepted: HBKID is part of the DFKKCR key (VERIFY-DDIC), so it is never blank
     METHODS checks_for_line
       IMPORTING
         it_checks        TYPE zif_cd_ebs_sap_dao=>tt_check
@@ -178,6 +191,9 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
     IF lv_ztnum IS INITIAL.
       RETURN.
     ENDIF.
+    IF house_bank_ambiguous( it_checks = it_checks is_line = is_line it_statements = it_statements ) = abap_true.
+      RETURN.
+    ENDIF.
     DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
     LOOP AT it_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
       IF ls_statement-hbkid IS NOT INITIAL AND ls_check-hbkid IS NOT INITIAL
@@ -185,6 +201,25 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       INSERT ls_check INTO TABLE rt_checks.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD house_bank_ambiguous.
+    DATA lv_first TYPE string.
+    DATA(lv_ztnum) = ztnum_key( line_reference( is_line ) ).
+    DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
+    IF lv_ztnum IS INITIAL OR ls_statement-hbkid IS NOT INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT it_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
+      DATA(lv_account) = |{ ls_check-hbkid }/{ ls_check-hktid }|.
+      IF lv_first IS INITIAL.
+        lv_first = lv_account.
+      ELSEIF lv_account <> lv_first.
+        rv_ambiguous = abap_true.
+        RETURN.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

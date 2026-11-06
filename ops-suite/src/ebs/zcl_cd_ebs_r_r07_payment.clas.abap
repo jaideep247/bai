@@ -6,6 +6,7 @@
 *& e.g. RETURNED for BAI 168). Legacy parity: v4 195D and 168D.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Any productive run with an allowed status passes; message lists every status (audit 2026-11-06).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION
@@ -26,20 +27,33 @@ CLASS zcl_cd_ebs_r_r07_payment IMPLEMENTATION.
   METHOD zif_cd_ebs_rule~execute.
     DATA(lt_payments) = sap_dao( )->get_payments( docno_keys( it_lines ) ).
     DATA(lt_allowed) = value_list( is_rule-param1 ).
+    DATA lv_statuses TYPE string.
+    DATA lv_found TYPE abap_bool.
+    DATA lv_ok TYPE abap_bool.
     LOOP AT it_lines INTO DATA(ls_line).
       DATA(lv_key) = docno_key( line_reference( ls_line ) ).
       IF lv_key IS INITIAL.
         CONTINUE.
       ENDIF.
-      DATA(ls_payment) = VALUE #( lt_payments[ doc1r = lv_key ] OPTIONAL ).
-      IF ls_payment IS INITIAL.
+      " Several productive runs can carry the document: any run with an allowed status
+      " satisfies the rule; the first row returned is not authoritative
+      CLEAR: lv_statuses, lv_found, lv_ok.
+      LOOP AT lt_payments INTO DATA(ls_payment) WHERE doc1r = lv_key.
+        lv_found = abap_true.
+        IF lt_allowed IS INITIAL OR in_list( iv_value = ls_payment-status it_list = lt_allowed ) = abap_true.
+          lv_ok = abap_true.
+          EXIT.
+        ENDIF.
+        lv_statuses = condense( |{ lv_statuses } { ls_payment-status }| ).
+      ENDLOOP.
+      IF lv_found = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'PAYMENT_NOT_FOUND'
                  iv_message = |No payment run entry (DPAYH) for document { lv_key }| ) INTO TABLE rt_findings.
-      ELSEIF lt_allowed IS NOT INITIAL AND in_list( iv_value = ls_payment-status it_list = lt_allowed ) = abap_false.
+      ELSEIF lv_ok = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = ls_line iv_check_code = 'PAYMENT_STATUS'
-                 iv_message = |Payment { lv_key } status { ls_payment-status }, expected { is_rule-param1 }| )
+                 iv_message = |Payment { lv_key } status { lv_statuses }, expected { is_rule-param1 }| )
           INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
