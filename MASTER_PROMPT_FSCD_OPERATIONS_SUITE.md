@@ -51,6 +51,22 @@ Exclude business-data updates, posting hooks or enforcement, new payment APIs or
 - Keep queries bounded and use approved tables, fields, and access paths. Enforce organizational access for scheduled and interactive users. Mask sensitive values in reports and alerts. Version operational configuration, preserve an audit trail, and retain evidence under the approved retention policy.
 - Keep findings actionable. Include severity, business impact, affected scope, supporting references, owner, and the next step in the existing runbook. Support shift handover with unresolved critical findings and their latest verified status.
 
+## Insurance production support roadmap
+
+Add these capabilities through the existing reports and operational stores. Use existing evidence from policy, claims and reinsurance interfaces where it is available and approved. Treat missing cross-system evidence as unknown.
+
+| Priority | Support capability | QA acceptance |
+|---|---|---|
+| P1 | **Failed batch interval and lock diagnostics (HCK).** Correlate job, variant, business date, interval, attempt, and available job log, dump, or enqueue evidence. Distinguish suspected contention from a confirmed failure cause. Point support to the existing recovery runbook. | A transient failure followed by a successful retry shows the effective outcome. A failed interval with incomplete evidence remains visible with the evidence gap. |
+| P1 | **Runtime anomaly alerts (HCK).** Compare active jobs with completed runs for comparable variants and business cycles. Use a configured deadline when history is sparse and include throughput only when measured. | A stalled job breaches its configured threshold. Sparse history and month-end patterns do not generate a misleading baseline verdict. |
+| P1 | **In-flight premium before dunning cutoff (EBS/HCK).** Flag accounts with a pending notice and an apparent payment in an existing statement or lot. Show the observation time, cutoff, matching evidence, and confidence for Collections review. | Pending, posted, reversed, and ambiguous payments are distinguished. The alert leaves dunning and policy status untouched. |
+| P1 | **Reconciliation-key and GL transfer readiness (HCK).** Identify open keys, incomplete activity, missing or partial transfers, and unexplained differences at the applicable company, currency, and cutoff. | A partial transfer cannot pass the control. Support can trace the difference to the available activity, key, and GL evidence. |
+| P2 | **Remittance and broker variance triage (EBS).** Present authorized candidate matches for clarification and explain the matching fields. Report broker settlement differences against approved references. Add coinsurance settlement discrepancy reporting only where an existing process and usable evidence are confirmed. | Similar names, identical amounts, and competing references remain review candidates. Findings explain variances without clearing, writing off, or creating payment requests. |
+| P2 | **Claims disbursement exceptions (FMON/HCK).** Report outstanding check aging using approved thresholds. Surface existing wire-screening or payment-control exceptions to the designated owner through approved channels. | Paid, voided, reissued, outstanding, and unknown checks are distinguished. Alerts reflect recorded screening outcomes and preserve restricted access. |
+| P2 | **Read-only payment trace and handover (Core).** Link approved policy, check, or trace references to existing SAP documents, clarification, file and acknowledgement evidence. | An analyst can follow one collection and one claims payment end to end, with ambiguous matches and evidence gaps shown explicitly. |
+
+Automated matching or clearing, dunning deferral, batch replay, lock release, FIKEY closure or GL transfer, check stops, statutory reporting, and payment screening or blocking require separate process ownership and approval. Measure current triage time, manual touches, missed alerts, and false positives during the pilot. Set improvement targets from that baseline.
+
 ## Delivery and acceptance
 
 Deliver in this order: establish the evidence inventory, pilot FMON, harden HCK, verify EBS in shadow mode, then extend tracing and shift handover. Start with one collections interface and one disbursement interface in QA. Compare against existing support reports, PRISM evidence, SAP jobs, and reconciliation records before operational reliance. Validate activation, authorizations, job variants, and peak-volume performance in the target SAP client.
