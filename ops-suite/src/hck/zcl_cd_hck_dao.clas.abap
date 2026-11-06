@@ -18,6 +18,8 @@
 *& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
 *& 2026-11-06 | Baseline history filtered by DIM2 as well (audit A101).
 *& 2026-11-06 | Expected groups read from ZCD_HCK_AGGGRP; row cap on the interface (audit A103).
+*& 2026-11-06 | Performance fix 7: metric history - latest point per run by ROW_NUMBER( ) in a CTE, newest runs
+*&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -40,7 +42,6 @@ CLASS zcl_cd_hck_dao DEFINITION
     CONSTANTS gc_first_step TYPE i VALUE 1.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
     "! Metric points scanned to find the last N distinct runs (A58)
-    CONSTANTS gc_max_history_points TYPE i VALUE 5000.
     CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
 
     "! Program and variant of the first job step (TBTCP) into the job runs (A42)
@@ -206,37 +207,36 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_metric_history.
-    DATA lt_seen TYPE SORTED TABLE OF sysuuid_x16 WITH UNIQUE KEY table_line.
     DATA lv_as_of TYPE timestampl.
     CHECK iv_max_rows > 0.
     lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
     " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT. One series = the
     " persisted grain incl. DIM2 (A101); several points of one run (job instances, backfilled
-    " days) count as one run: its latest point (A58)
-    SELECT m~run_id, m~value
-      FROM zcd_hck_metric AS m
-        INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
-      WHERE m~check_id    = @iv_check_id
-        AND m~metric      = @iv_metric
-        AND m~dim1        = @iv_dim1
-        AND m~dim2        = @iv_dim2
-        AND m~measured_at <= @lv_as_of
-        AND r~test_mode   = @abap_false
-        AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
-                          @zif_cd_ops_types=>gc_run_status-warning,
-                          @zif_cd_ops_types=>gc_run_status-error )
-      ORDER BY m~measured_at DESCENDING, m~run_id DESCENDING
+    " days) count as one run: its latest point (A58).
+    " Fix 7: the database keeps the latest point per run (ROW_NUMBER = 1) and returns only the
+    " iv_max_rows newest runs - same values and order as the former ABAP de-duplication
+    WITH +points AS (
+      SELECT m~run_id, m~value, m~measured_at,
+             row_number( ) OVER( PARTITION BY m~run_id ORDER BY m~measured_at DESCENDING ) AS rn
+        FROM zcd_hck_metric AS m
+          INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
+        WHERE m~check_id    = @iv_check_id
+          AND m~metric      = @iv_metric
+          AND m~dim1        = @iv_dim1
+          AND m~dim2        = @iv_dim2
+          AND m~measured_at <= @lv_as_of
+          AND r~test_mode   = @abap_false
+          AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
+                            @zif_cd_ops_types=>gc_run_status-warning,
+                            @zif_cd_ops_types=>gc_run_status-error ) )
+    SELECT run_id, value, measured_at
+      FROM +points
+      WHERE rn = 1
+      ORDER BY measured_at DESCENDING, run_id DESCENDING
       INTO TABLE @DATA(lt_points)
-      UP TO @gc_max_history_points ROWS.
-    LOOP AT lt_points INTO DATA(ls_point).
-      INSERT ls_point-run_id INTO TABLE lt_seen.
-      IF sy-subrc <> 0.
-        CONTINUE.
-      ENDIF.
-      INSERT ls_point-value INTO TABLE rt_values.
-      IF lines( rt_values ) >= iv_max_rows.
-        EXIT.
-      ENDIF.
+      UP TO @iv_max_rows ROWS.
+    LOOP AT lt_points ASSIGNING FIELD-SYMBOL(<ls_point>).
+      INSERT <ls_point>-value INTO TABLE rt_values.
     ENDLOOP.
   ENDMETHOD.
 
