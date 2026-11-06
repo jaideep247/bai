@@ -35,6 +35,8 @@ CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
     METHODS items_with_posting_flags     FOR TESTING.
     METHODS posting_unknown_field_raises FOR TESTING.
     METHODS posting_empty_keys_nothing   FOR TESTING.
+    METHODS headers_in_date_range        FOR TESTING.
+    METHODS headers_by_company_and_key   FOR TESTING.
 ENDCLASS.
 
 
@@ -202,6 +204,41 @@ CLASS ltc_feb_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_items( it_kukey  = VALUE #( )
                                                                        is_extras = ls_extras )
                                              msg = 'Empty key list must return nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Headers of the selected date range only, in statement order
+  METHOD headers_in_date_range.
+    TRY.
+        DATA(lt_headers) = mo_cut->get_headers( VALUE #( date_from = '20261104' date_to = '20261105' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_headers ) exp = 2
+                                            msg = 'Statements of 4 and 5 Nov only' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_headers[ 1 ]-aznum OPTIONAL ) exp = '00041'
+                                            msg = 'Ordered by statement date and number' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_headers[ 2 ]-aznum OPTIONAL ) exp = '00042'
+                                            msg = 'The later statement comes second' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Company code and statement key ranges restrict the read; another company code is never read
+  METHOD headers_by_company_and_key.
+    DATA lt_febko TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    TRY.
+        lt_febko = VALUE #( ( kukey = '00000009' bukrs = 'CA01' hbkid = 'JPMC1' hktid = 'DISB1'
+                              aznum = '00001' azdat = '20261105' ) ).
+        go_env->insert_test_data( lt_febko ).
+        DATA(lt_headers) = mo_cut->get_headers( VALUE #( bukrs     = VALUE #( ( sign = 'I' option = 'EQ' low = 'US01' ) )
+                                                         kukey     = VALUE #( ( sign = 'I' option = 'EQ' low = '00000003' ) )
+                                                         date_from = '20261101'
+                                                         date_to   = '20261130' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_headers ) exp = 1 msg = 'Only the selected statement' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_headers[ 1 ]-kukey OPTIONAL ) exp = '00000003'
+                                            msg = 'Statement key range applied' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

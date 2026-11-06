@@ -42,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 1093 ABAP Unit methods; 151 classes: 104 with an own test include, 46 covered by another include, 1 exempt
+## 4. Coverage today — 1095 ABAP Unit methods; 151 classes: 104 with an own test include, 46 covered by another include, 1 exempt
 
 Every class of `src/` has one row in `Coverage_Run_Register.csv` (columns: test path, covering include, methods, required / measured coverage, status). `tools/portable_checks.py` regenerates the register from the test includes and from `tools/test_path_register.csv` (covering include or exemption, each with its reason), and refuses a class without either (check `test_path_every_class`). Coverage itself is measured only in DV1 (ABAP Unit with coverage, 90 % statement coverage per class) and recorded in the register.
 
