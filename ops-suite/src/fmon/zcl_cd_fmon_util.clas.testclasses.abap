@@ -45,8 +45,8 @@ CLASS ltc_normalize_ref IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_util=>normalize_ref( gc_short )
                                             exp = 'ACH_PNC_20261102_01'
                                             msg = 'A short reference must stay readable' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -57,8 +57,8 @@ CLASS ltc_normalize_ref IMPLEMENTATION.
         cl_abap_unit_assert=>assert_differs( act = zcl_cd_fmon_util=>normalize_ref( long_name( gc_tail_a ) )
                                              exp = zcl_cd_fmon_util=>normalize_ref( long_name( gc_tail_b ) )
                                              msg = 'Names differing after character 70 must not share a reference' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -69,8 +69,8 @@ CLASS ltc_normalize_ref IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_util=>normalize_ref( long_name( gc_tail_a ) )
                                             exp = zcl_cd_fmon_util=>normalize_ref( to_lower( long_name( gc_tail_a ) ) )
                                             msg = 'The same long name must give the same reference' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -82,8 +82,8 @@ CLASS ltc_normalize_ref IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = strlen( lv_ref )
                                             exp = zif_cd_fmon_types=>gc_ref_digest-width
                                             msg = 'A digest reference must use the full key width' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -96,8 +96,8 @@ CLASS ltc_normalize_ref IMPLEMENTATION.
           msg = 'A long-name reference must be marked as a digest' ).
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_util=>is_digest_ref( zcl_cd_fmon_util=>normalize_ref( gc_short ) )
                                            msg = 'A short reference is not a digest' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

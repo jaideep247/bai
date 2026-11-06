@@ -178,8 +178,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_source    = 'PCLM' ).
         cl_abap_unit_assert=>assert_equals( act = ls_iface-iface_id exp = gc_iface_pclm
                                             msg = 'PCLM row must win over the default row' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -193,8 +193,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_lob       = 'NEWLOB' ).
         cl_abap_unit_assert=>assert_equals( act = ls_iface-iface_id exp = gc_iface_default
                                             msg = 'Unknown source and LOB must use the default row' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -206,8 +206,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_file_name = 'WIRE_JPMC_1' ).
         cl_abap_unit_assert=>assert_initial( act = ls_iface
                                              msg = 'No interface may be resolved' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -220,8 +220,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_file_name = 'ANY_NAME' ).
         cl_abap_unit_assert=>assert_equals( act = ls_iface-iface_id exp = gc_iface_pclm
                                             msg = 'Configured interface must be used' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -235,8 +235,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                         iv_returns_days = `1` ).
         cl_abap_unit_assert=>assert_equals( act = lv_day_type exp = zif_cd_fmon_types=>gc_day_type-holiday
                                             msg = 'Non-working day must be HOLIDAY' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -250,8 +250,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                         iv_returns_days = `1` ).
         cl_abap_unit_assert=>assert_equals( act = lv_day_type exp = zif_cd_fmon_types=>gc_day_type-month_end
                                             msg = 'Last working day must be MONTH_END' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -265,8 +265,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                         iv_returns_days = `1,3` ).
         cl_abap_unit_assert=>assert_equals( act = lv_day_type exp = zif_cd_fmon_types=>gc_day_type-returns_day
                                             msg = 'Monday 2026-11-02 must be RETURNS_DAY' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -285,8 +285,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                             iv_day_type = zif_cd_fmon_types=>gc_day_type-holiday ).
         cl_abap_unit_assert=>assert_initial( act = ls_row
                                              msg = 'Holiday must not fall back to NORMAL' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -305,8 +305,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                             iv_day_type = zif_cd_fmon_types=>gc_day_type-month_end ).
         cl_abap_unit_assert=>assert_equals( act = ls_row exp = ls_cal
                                             msg = 'Month end must use the NORMAL row' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -320,8 +320,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                             iv_grace_min = 60 ).
         cl_abap_unit_assert=>assert_equals( act = lv_code exp = zif_cd_fmon_types=>gc_check_code-file_missing
                                             msg = 'Two hours after window end must be FILE_MISSING' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -335,8 +335,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                             iv_grace_min = 60 ).
         cl_abap_unit_assert=>assert_equals( act = lv_code exp = zif_cd_fmon_types=>gc_check_code-file_late
                                             msg = 'Inside the grace period must be FILE_LATE' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -352,8 +352,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                             iv_grace_min = 60 ).
         cl_abap_unit_assert=>assert_equals( act = lv_code exp = zif_cd_fmon_types=>gc_check_code-unexpected_file
                                             msg = 'File on a zero-expectation day must be flagged' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -366,8 +366,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>arrived_late( is_file   = ls_file
                                                                                  is_expect = expect_one( ) )
                                           msg = 'First event after window end must be late' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -388,8 +388,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict exp = ls_exp
                                             msg = 'No PRISM handoff after 210 min must be missing' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -407,8 +407,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-late
                                             msg = 'Handoff after 60 min (SLA 30) must be late' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -426,8 +426,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-ok
                                             msg = 'Handoff after 10 min must be ok' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -449,8 +449,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-basis_at exp = gc_t0430
                                             msg = 'Basis must be the first event' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -468,8 +468,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                              iv_state = zif_cd_fmon_types=>gc_sla_state-late )
           exp = zif_cd_fmon_types=>gc_check_code-bank_ack_late
           msg = 'Late bank ack code' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -483,8 +483,8 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_file-ack_known    = abap_true.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                           msg = '9 of 10 acknowledged must be a mismatch' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -499,8 +499,8 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_file-ack_known    = abap_true.
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                            msg = '9 ACK + 1 NACK of 10 is no count mismatch' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -514,8 +514,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>ack_amount_mismatch( is_file      = ls_file
                                                                                          iv_tolerance = '0.01' )
                                            msg = 'A 0.01 difference is within tolerance' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -532,8 +532,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>is_duplicate_of( is_file  = ls_second
                                                                                     is_other = ls_first )
                                           msg = 'Same checksum, later arrival must be a duplicate' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -549,8 +549,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>is_duplicate_of( is_file  = ls_first
                                                                                      is_other = ls_second )
                                            msg = 'The earlier file must not be flagged' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -567,8 +567,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                                                 is_iface = ls_iface )
                                             exp = zif_cd_fmon_types=>gc_check_code-zero_byte
                                             msg = 'Zero bytes must be ZERO_BYTE' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -586,8 +586,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                                                 is_iface = ls_iface )
                                             exp = zif_cd_fmon_types=>gc_check_code-size_bounds
                                             msg = '5000 bytes above max 4000 must be out of bounds' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -601,8 +601,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_rules=>size_code( is_file  = ls_file
                                                                                  is_iface = ls_iface )
                                              msg = 'Unknown size must not be checked' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -614,8 +614,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_rules=>lot_outcome( ls_lot )
                                             exp = zif_cd_fmon_types=>gc_stage-partially
                                             msg = 'One open item must give PARTIALLY_PROCESSED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -627,8 +627,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_rules=>lot_outcome( ls_lot )
                                             exp = zif_cd_fmon_types=>gc_stage-fully
                                             msg = 'No open item must give FULLY_PROCESSED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -639,8 +639,8 @@ CLASS ltc_rules IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_rules=>lot_outcome( ls_lot )
                                              msg = 'No lot, no outcome' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -651,8 +651,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_rules=>noc_aging_code( noc_lot( iv_age = 7 iv_open = 1 ) )
                                             exp = zif_cd_fmon_types=>gc_check_code-noc_aging
                                             msg = 'Day 7 with an open NOC must be NOC_AGING' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -663,8 +663,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_rules=>noc_aging_code( noc_lot( iv_age = 6 iv_open = 1 ) )
                                             exp = zif_cd_fmon_types=>gc_check_code-noc_due_today
                                             msg = 'Day 6 with an open NOC must be NOC_DUE_TODAY' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -674,8 +674,8 @@ CLASS ltc_rules IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_rules=>noc_aging_code( noc_lot( iv_age = 9 iv_open = 0 ) )
                                              msg = 'No open NOC item, no aging finding' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -686,8 +686,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>is_done( iv_status      = ``
                                                                             iv_done_values = `X,<BLANK>` )
                                           msg = 'Initial status must match <BLANK>' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -700,8 +700,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                                                 iv_lot_controlled = abap_true )
                                             exp = zif_cd_fmon_types=>gc_stage-loaded
                                             msg = 'FULLY from a source must be capped at FILE_LOADED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -721,8 +721,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                         iv_lot_type = zif_cd_fmon_types=>gc_lot_type-noc ).
         cl_abap_unit_assert=>assert_equals( act = ls_found exp = ls_cfg
                                             msg = 'Default lot row must be used' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -735,8 +735,8 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_file-ack_known    = abap_true.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                           msg = 'A reported ACK count of 0 for 10 records is a mismatch' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -749,8 +749,8 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_file-stage        = zif_cd_fmon_types=>gc_stage-ack.
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                            msg = 'An unreported ACK count must not be compared as 0' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -772,8 +772,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-missing
                                             msg = 'A partial outcome must not meet the processing SLA' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -792,8 +792,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-inferred
                                             msg = 'Forwarded without a PRISM handoff event must be inferred' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -815,8 +815,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_now    = gc_t0800 ).
         cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-ok
                                             msg = 'A NACK within 120 min meets the ACK SLA' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -829,8 +829,8 @@ CLASS ltc_rules IMPLEMENTATION.
                                              iv_state = zif_cd_fmon_types=>gc_sla_state-inferred )
           exp = 'PRISM_HANDOFF_INFERRED'
           msg = 'Inferred handoff must be PRISM_HANDOFF_INFERRED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -842,8 +842,8 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_lot-truncated = abap_true.
         cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_rules=>lot_outcome( ls_lot )
                                              msg = 'A truncated scan must not derive FULLY_PROCESSED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -854,8 +854,8 @@ CLASS ltc_rules IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial(
           act = zcl_cd_fmon_rules=>noc_aging_code( noc_lot( iv_age = zif_cd_fmon_types=>gc_age_unknown iv_open = 1 ) )
           msg = 'Unknown age must not be NOC_AGING or NOC_DUE_TODAY' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -876,8 +876,8 @@ CLASS ltc_rules IMPLEMENTATION.
           act = zcl_cd_fmon_rules=>receipt_correction( space )
           exp = zif_cd_fmon_types=>gc_fcal_correct-previous
           msg = 'Blank basis must default to A' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 

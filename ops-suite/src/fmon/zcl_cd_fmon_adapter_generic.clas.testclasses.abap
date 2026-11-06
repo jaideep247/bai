@@ -107,8 +107,8 @@ CLASS ltc_mapping IMPLEMENTATION.
                                             msg = 'The malformed field must be named' ).
         cl_abap_unit_assert=>assert_false( act = ls_record-count_known
                                            msg = 'A malformed count must not be a known count' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -123,8 +123,8 @@ CLASS ltc_mapping IMPLEMENTATION.
                                           msg = 'An invalid date must mark the row malformed' ).
         cl_abap_unit_assert=>assert_equals( act = ls_record-malformed_role exp = zif_cd_fmon_types=>gc_role-ev_date
                                             msg = 'The date field must be named' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -137,8 +137,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         ms_raw-item_key = `PAY0001`.
         cl_abap_unit_assert=>assert_equals( act = act( )-item_key exp = 'PAY0001'
                                             msg = 'The payment key must be on the record' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -155,8 +155,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         DATA(ls_query) = zcl_cd_fmon_adapter_generic=>build_query( ms_request ).
         cl_abap_unit_assert=>assert_equals( act = ls_query-ts_to exp = '20261103000000'
                                             msg = 'The range must end at the next midnight' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -179,8 +179,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         ls_exp-amount        = '1000.00'.
         cl_abap_unit_assert=>assert_equals( act = act( ) exp = ls_exp
                                             msg = 'Mapped row must give an ACK_RECEIVED record' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -191,8 +191,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         configure_scenario( VALUE #( status = `Z` ) ).
         cl_abap_unit_assert=>assert_initial( act = act( )-stage
                                              msg = 'Unmapped status must not get a stage' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -203,8 +203,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         configure_scenario( VALUE #( status = `Z` with_wildcard = abap_true ) ).
         cl_abap_unit_assert=>assert_equals( act = act( )-stage exp = zif_cd_fmon_types=>gc_stage-nack
                                             msg = 'Wildcard row must map Z to NACK_REJECTED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -215,8 +215,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         configure_scenario( VALUE #( no_status_field = abap_true ) ).
         cl_abap_unit_assert=>assert_equals( act = act( )-stage exp = zif_cd_fmon_types=>gc_stage-generated
                                             msg = 'Default stage must be used' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -227,8 +227,8 @@ CLASS ltc_mapping IMPLEMENTATION.
         configure_scenario( VALUE #( status = `A` file_key = ` run20261102-01 ` ) ).
         cl_abap_unit_assert=>assert_equals( act = act( )-file_ref exp = 'RUN20261102-01'
                                             msg = 'File key must be the normalised reference' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -316,8 +316,8 @@ CLASS ltc_read IMPLEMENTATION.
     TRY.
         DATA(lo_cut) = zcl_cd_fmon_factory=>get_adapter( ).
         lo_cut->read( ms_request ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        lv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '201'
                                         msg = 'Unknown status field must raise 201' ).

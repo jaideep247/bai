@@ -81,8 +81,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Next stage must advance' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-sent
                                             msg = 'Stage must be SENT_TO_PRISM' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -96,8 +96,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Skipping forward must advance' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-ack
                                             msg = 'ACK_RECEIVED is the outcome' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -111,8 +111,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Earlier stage must be ignored' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-forwarded
                                             msg = 'Stage must stay FORWARDED_TO_BANK' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -124,8 +124,8 @@ CLASS ltc_status IMPLEMENTATION.
         DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-sent ).
         cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-ignored
                                             msg = 'Same stage must be ignored' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -139,8 +139,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Terminal ACK must not be overwritten' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-ack
                                             msg = 'Outcome must stay ACK_RECEIVED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -156,8 +156,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'FULLY must not be downgraded' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-unprocessed_count exp = 0
                                             msg = 'Unprocessed count must stay 0' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -177,8 +177,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'PARTIALLY -> FULLY must advance' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file exp = ls_exp
                                             msg = 'File must be FULLY_PROCESSED with 0 open' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -194,8 +194,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'FAILED -> PARTIALLY must advance' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-unprocessed_count exp = 2
                                             msg = 'Unprocessed count must be taken over' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -210,8 +210,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Count change must be reported as update' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-unprocessed_count exp = 1
                                             msg = 'Unprocessed count must be 1' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -225,8 +225,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'Inbound stage on outbound file must be rejected' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-generated
                                             msg = 'Stage must be unchanged' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -238,8 +238,8 @@ CLASS ltc_status IMPLEMENTATION.
         DATA(lv_result) = act( 'SOMETHING_ELSE' ).
         cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-rejected
                                             msg = 'Unknown stage must be rejected' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -256,8 +256,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'A later FAILED row must be ignored' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-fully
                                             msg = 'The request must stay FULLY_PROCESSED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -273,8 +273,8 @@ CLASS ltc_status IMPLEMENTATION.
                                             msg = 'SUCCESS after FAILED must advance' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-fully
                                             msg = 'The request must become FULLY_PROCESSED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -289,8 +289,8 @@ CLASS ltc_status IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true( act = lv_allowed msg = 'SENT -> ACK_RECEIVED must be allowed by hand' ).
         cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-sent
                                             msg = 'The check must not change the file' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -306,8 +306,8 @@ CLASS ltc_status IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = zcl_cd_fmon_status=>manual_allowed( iv_stage = zif_cd_fmon_types=>gc_stage-nack is_file = ms_file )
           msg = 'A final ACK must not be overwritten by hand' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 

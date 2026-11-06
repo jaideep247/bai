@@ -677,8 +677,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'Outcome must be PARTIALLY_PROCESSED' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-unprocessed_count exp = 1
                                             msg = 'Unprocessed count must be 1' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -691,8 +691,8 @@ CLASS ltc_engine IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings exp = expected_lot_finding( )
                                             msg = 'Exactly the LOT_UNPROCESSED finding is expected' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -706,8 +706,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'dispatch( ) must be called once' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mt_dispatched exp = expected_lot_finding( )
                                             msg = 'The PARTIALLY_PROCESSED finding must be dispatched' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -720,8 +720,8 @@ CLASS ltc_engine IMPLEMENTATION.
         DATA(ls_row) = board_row( is_result = act( ) iv_name = gc_ret_file ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-outcome exp = zif_cd_fmon_types=>gc_stage-partially
                                             msg = 'Lot evidence must win over the source status' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -737,8 +737,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'Outbound file must end ACK_RECEIVED' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings
                                              msg = 'A file on time and fully acknowledged has no finding' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -754,8 +754,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                        NEXT n = n + 1 ).
         cl_abap_unit_assert=>assert_equals( act = lv_generated exp = 1
                                             msg = 'Two generation rows must give one event' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -769,8 +769,8 @@ CLASS ltc_engine IMPLEMENTATION.
           act = codes( ls_result-findings )
           exp = VALUE string_table( ( `LOT_UNPROCESSED` ) ( `PLUGIN_ERROR` ) )
           msg = 'PLUGIN_ERROR plus the lot finding must be reported' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -786,8 +786,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = board_row( is_result = ls_result iv_name = gc_ret_file )-outcome
                                             exp = zif_cd_fmon_types=>gc_stage-fully
                                             msg = 'The healthy source must still be processed' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -807,8 +807,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'No alert dispatch in test mode' ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 0
                                             msg = 'Test mode must not take the run lock' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -821,8 +821,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = codes( ls_result-findings )
                                             exp = VALUE string_table( ( `UNMAPPED_STATUS` ) )
                                             msg = 'Unmapped status must be reported' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -838,8 +838,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                            msg = 'NOC_AGING finding expected' ).
         cl_abap_unit_assert=>assert_equals( act = ls_aging-severity exp = zif_cd_ops_types=>gc_severity-error
                                             msg = 'NOC aging is a compliance error (E)' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -855,8 +855,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'The run must be finished before alerts are dispatched' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_commits_seen exp = 2
                                             msg = 'Run start and results must be committed before alerts' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -873,8 +873,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ) )
           msg = 'The failure must be recorded as PERSIST_ERROR' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -894,8 +894,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                           msg = 'The result must carry RUN_LOCKED' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatch_calls exp = 1
                                             msg = 'The refusal must be alerted once' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -909,8 +909,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'The lock must be taken once' ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1
                                             msg = 'The lock must be released once' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -926,8 +926,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key( gc_ret_file ) ] ) )
           msg = 'The evaluated file must be in the reconciliation scope' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -939,8 +939,8 @@ CLASS ltc_engine IMPLEMENTATION.
         act( ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconcile_calls exp = 0
                                             msg = 'No reconciliation after a check failure' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -983,8 +983,8 @@ CLASS ltc_engine IMPLEMENTATION.
           msg = 'A save conflict must be reported as PERSIST_CONFLICT' ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 0
                                             msg = 'A conflict is not a failure - nothing to roll back' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1005,8 +1005,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'The run must close with status error' ).
         cl_abap_unit_assert=>assert_equals( act = mo_store->mv_finish_calls exp = 1
                                             msg = 'The run must be finished' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1024,8 +1024,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ref_reused ] ) )
           msg = 'A daily file name is not a reused reference' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1046,8 +1046,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'Yesterday''s instance must receive the late ACK' ).
         cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
                                              msg = 'Today''s instance must not be acknowledged by it' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1067,8 +1067,8 @@ CLASS ltc_engine IMPLEMENTATION.
           msg = 'An undated ACK for two instances must be FILE_REF_AMBIGUOUS' ).
         cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_prev_day )-outcome
                                              msg = 'No instance may be acknowledged by an ambiguous ACK' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1090,8 +1090,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ref_ambiguous ] ) )
           msg = 'A digest reference whose full name differs must be FILE_REF_AMBIGUOUS' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1118,8 +1118,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ack_count ] ) )
           msg = '2 distinct ACKs for 2 records is no count mismatch' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1136,8 +1136,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-ack_count
                                             exp = 5
                                             msg = 'An ACK count of 5 must not drop to a partial 3' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1154,8 +1154,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-lot_truncated ] ) )
           msg = 'The truncation must be reported as LOT_SCAN_TRUNCATED' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1172,8 +1172,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-plugin_error ] ) )
           msg = 'The calendar failure must be reported' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1192,8 +1192,8 @@ CLASS ltc_engine IMPLEMENTATION.
           msg = 'The malformed row must be reported' ).
         cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
                                              msg = 'A malformed ACK row must not acknowledge the file' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1207,8 +1207,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( mo_dao->mt_events[ src_id = gc_src_in stage = zif_cd_fmon_types=>gc_stage-fully ] ) )
           msg = 'A source FULLY of a lot-controlled file must not be stored as FULLY' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 

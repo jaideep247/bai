@@ -176,8 +176,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Re-run must not duplicate the event' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -191,8 +191,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                            msg = 'Second insert must report not inserted' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -218,8 +218,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Events must be numbered 1 and 2' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -239,8 +239,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Saved file must be found by reference' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -263,8 +263,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Window file and old open file expected' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -282,8 +282,8 @@ CLASS ltc_dao IMPLEMENTATION.
           msg = 'Earlier file with the same checksum expected' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -311,8 +311,8 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD msgno_of_read.
     TRY.
         mo_cut->read_legacy( legacy_query( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        rv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        rv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
   ENDMETHOD.
 
@@ -340,8 +340,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                              msg = 'An open file of a later date must not be evaluated' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -371,8 +371,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'The newer stage must not be overwritten' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -398,8 +398,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'The new stage must be stored' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -420,8 +420,8 @@ CLASS ltc_dao IMPLEMENTATION.
           msg = 'One event per file instance expected' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -440,8 +440,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                            msg = 'A replay for the same file must stay idempotent' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -462,8 +462,8 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Only the instance inside the window expected' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -520,8 +520,8 @@ CLASS ltc_dao IMPLEMENTATION.
           msg = 'One file in SENT' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -531,8 +531,8 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lv_msgno TYPE symsgno.
     TRY.
         mo_cut->count_legacy( legacy_query( ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        lv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '244'
                                         msg = 'An unapproved table must raise 244 for the grouped read too' ).

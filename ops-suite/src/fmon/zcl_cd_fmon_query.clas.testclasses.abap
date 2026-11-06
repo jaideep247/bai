@@ -90,8 +90,8 @@ CLASS ltc_query IMPLEMENTATION.
     TRY.
         zcl_cd_fmon_query=>validate( is_query  = ms_query
                                      it_fields = mt_fields ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        rv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        rv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
   ENDMETHOD.
 
@@ -140,8 +140,8 @@ CLASS ltc_query IMPLEMENTATION.
     TRY.
         zcl_cd_fmon_query=>check_approved( is_query = ms_query
                                            it_allow = it_allow ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        rv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        rv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
   ENDMETHOD.
 

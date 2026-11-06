@@ -196,8 +196,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
         INSERT ls_exp INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = act( ) exp = lt_exp
                                             msg = '3 items, 2 done must give 1 open item' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -211,8 +211,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_items-in_values
                                             exp = VALUE zif_cd_fmon_types=>tt_key_value( ( CONV #( gc_lot ) ) )
                                             msg = 'Item read must be restricted to the lot key' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -223,8 +223,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
     configure_scenario( VALUE #( no_status_field = abap_true ) ).
     TRY.
         act( ).
-      CATCH zcx_cd_ops_error INTO DATA(lx).
-        lv_msgno = lx->if_t100_message~t100key-msgno.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        lv_msgno = lx_error->if_t100_message~t100key-msgno.
     ENDTRY.
     cl_abap_unit_assert=>assert_equals( act = lv_msgno exp = '208'
                                         msg = 'Missing item status field must raise 208' ).
@@ -250,8 +250,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
                                           msg = '2 lots with a cap of 1 must be marked truncated' ).
         cl_abap_unit_assert=>assert_equals( act = VALUE #( mo_dao->mt_queries[ 1 ]-max_rows OPTIONAL ) exp = 2
                                             msg = 'One row beyond the cap must be requested to detect truncation' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -270,8 +270,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
                                             msg = 'All 3 items must be counted' ).
         cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_status[ 1 ]-open_items OPTIONAL ) exp = 1
                                             msg = 'The open item beyond the cap must be counted' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -287,8 +287,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
                                             msg = 'Lot read and grouped count only - no item key read' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_counts exp = 1
                                             msg = 'One grouped count for the batch' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -302,8 +302,8 @@ CLASS ltc_lot_reader IMPLEMENTATION.
                                                                         iv_max_rows = 10 ).
         cl_abap_unit_assert=>assert_false( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
                                            msg = '3 items with a cap of 10 must not be truncated' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
