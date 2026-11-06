@@ -1463,6 +1463,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>369</MSGNR>
+     <TEXT>Check &amp;1 stopped after &amp;2 of &amp;3 item(s): time budget of &amp;4 s used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>

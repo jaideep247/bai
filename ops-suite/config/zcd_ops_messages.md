@@ -248,6 +248,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 366 | &1 reconciliation key(s) / company code(s) without GL document, &2 listed |
 | 367 | Baseline of &1 uses hash version &2 (current &3): take a new baseline |
 | 368 | Export file &1 could not be written completely - no partial file kept |
+| 369 | Check &1 stopped after &2 of &3 item(s): time budget of &4 s used |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

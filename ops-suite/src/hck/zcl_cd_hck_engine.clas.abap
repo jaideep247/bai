@@ -14,6 +14,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Hung runs per area, own run excluded (A06); no business check = red config
 *&              result, grey never SUCCESS (A60); history as-of (A58), flat tolerance (A59).
+*& 2026-11-06 | Each check receives a deadline (start + TIMEOUT_SEC) in its context (audit A18).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -411,11 +412,19 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD execute_check.
     DATA(lv_started) = mo_clock->now( ).
     DATA(lt_thresholds) = mo_dao->get_thresholds( is_def-check_id ).
+    DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
+                                   ELSE param_int( iv_name = gc_param-timeout_sec iv_default = 300 ) ).
+    " A18: the check gets its budget as a deadline; item-wise checks stop when it passes.
+    " A synchronous call cannot be interrupted - the overrun below stays the backstop.
+    DATA(ls_context) = is_context.
+    ls_context-budget_sec = lv_timeout_sec.
+    ls_context-deadline   = cl_abap_tstmp=>add( tstmp = lv_started
+                                                secs  = lv_timeout_sec ).
 
     TRY.
         rs_result = call_plugin( is_def        = is_def
                                  it_thresholds = lt_thresholds
-                                 is_context    = is_context ).
+                                 is_context    = ls_context ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
         CLEAR rs_result.
         rs_result-plugin_error = abap_true.
@@ -441,8 +450,6 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = lv_started
                                                          iv_to   = mo_clock->now( ) ).
 
-    DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
-                                   ELSE param_int( iv_name = gc_param-timeout_sec iv_default = 300 ) ).
     IF rs_result-runtime_ms > lv_timeout_sec * 1000.
       rs_result-timed_out = abap_true.
       INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-timeout

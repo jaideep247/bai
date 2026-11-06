@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Baseline of another hash version reported as outdated, not as drift (audit A57).
+*& 2026-11-06 | Stops between tables when the time budget is used up (audit A18).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - configuration drift vs golden baseline</p>
 "! A changed table = CONFIG_DRIFT (E), a table without baseline =
@@ -34,7 +35,16 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
     DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
     DATA(lt_baselines) = lo_dao->get_baselines( ).
 
-    LOOP AT lo_dao->get_drift_tables( ) INTO DATA(ls_table).
+    DATA(lt_tables) = lo_dao->get_drift_tables( ).
+    LOOP AT lt_tables INTO DATA(ls_table).
+      " A18: hashing is per table - stop between tables once the time budget is used up
+      IF zcl_cd_hck_budget=>exhausted( is_context ) = abap_true.
+        INSERT zcl_cd_hck_budget=>stop_finding( iv_check_id = is_def-check_id
+                                                iv_done     = sy-tabix - 1
+                                                iv_total    = lines( lt_tables )
+                                                is_context  = is_context ) INTO TABLE rs_result-findings.
+        EXIT.
+      ENDIF.
       TRY.
           DATA(ls_current) = lo_dao->compute_table_hash( ls_table-tabname ).
         CATCH zcx_cd_ops_error INTO DATA(lx_hash).

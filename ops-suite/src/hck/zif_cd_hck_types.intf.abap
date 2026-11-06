@@ -12,6 +12,7 @@
 *& 2026-11-06 | Job step program/variant, retries and late start; job read cap (audit A42, A44).
 *& 2026-11-06 | Aggregate query carries its definition for re-validation at the DAO (audit A56).
 *& 2026-11-06 | Baseline hash version; CONFIG_BASELINE_OUTDATED (audit A57).
+*& 2026-11-06 | Check time budget in the context; CHECK_BUDGET_EXHAUSTED (audit A18).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -174,6 +175,7 @@ INTERFACE zif_cd_hck_types
       step_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_LATE',
       job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
       baseline_outdated TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
+      budget_exhausted TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
     END OF gc_code.
 
   CONSTANTS:
@@ -489,6 +491,10 @@ INTERFACE zif_cd_hck_types
       now_time    TYPE t,
       run_id      TYPE zif_cd_ops_types=>ty_run_id,
       test_mode   TYPE abap_bool,
+      "! Time budget of the running check (start + TIMEOUT_SEC); checks that work in
+      "! items stop between items once it has passed (audit A18)
+      deadline    TYPE timestampl,
+      budget_sec  TYPE i,
     END OF ty_context.
 
   "! Result of one check (plug-in output enriched by the engine)
@@ -635,6 +641,7 @@ INTERFACE zif_cd_hck_types
       job_read_capped             TYPE zif_cd_ops_types=>ty_msgno VALUE '365',
       gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
       baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
+      budget_exhausted            TYPE zif_cd_ops_types=>ty_msgno VALUE '369',
     END OF gc_msg.
 
 ENDINTERFACE.

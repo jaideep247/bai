@@ -748,6 +748,9 @@ src/hck/zcd_morning_report.prog.xml,abapGit,
 src/hck/zcl_cd_hck_agg_query.clas.abap,ABAP,Pure validation of a ZCD_HCK_AGG row against the whitelist and the DDIC
 src/hck/zcl_cd_hck_agg_query.clas.testclasses.abap,ABAP,"Unit tests of generic aggregate validation (whitelist, DDIC fields,"
 src/hck/zcl_cd_hck_agg_query.clas.xml,abapGit,
+src/hck/zcl_cd_hck_budget.clas.abap,ABAP,Time budget of a running check (audit A18): a synchronous ABAP check cannot be
+src/hck/zcl_cd_hck_budget.clas.testclasses.abap,ABAP,Unit tests of the check time budget with an LTD clock;
+src/hck/zcl_cd_hck_budget.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_alert_health.clas.abap,ABAP,Technical health: alert delivery of the suite - failed and throttled
 src/hck/zcl_cd_hck_c_alert_health.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_applog.clas.abap,ABAP,Mass-run health: application-log (SLG1) error rate per object/subobject
