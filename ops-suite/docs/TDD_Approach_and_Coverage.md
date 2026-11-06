@@ -86,7 +86,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | FMON | ZCL_CD_FMON_LOT_READER | 7 | Application |
 | FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 8 | Domain |
-| FMON | ZCL_CD_FMON_RULES | 44 | Domain |
+| FMON | ZCL_CD_FMON_RULES (incl. LTC_THROTTLE, PRISM queue allowance) | 55 | Domain |
 | FMON | ZCL_CD_FMON_STATUS | 24 | Domain |
 | FMON | ZCL_CD_FMON_UTIL (file-reference digest, A100) | 5 | Domain |
 | HCK | ZCL_CD_HCK_AGG_QUERY | 14 | Domain |

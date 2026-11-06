@@ -187,7 +187,27 @@ sequenceDiagram
 | DELIVERED | `PRISM_DELIVERED` | rank of FORWARDED_TO_BANK (delivered to bank / IRIS / target) | before SAP's FILE_RECEIVED |
 | FAILED | `PRISM_FAILED` | failure **outcome** at the rank of PRISM_DELIVERED; superseded by a later DELIVERED / FORWARDED / ACK | failure outcome; superseded by DELIVERED or SAP's receipt |
 
-Findings: `PRISM_FAILED` (check row `F_PRFAIL`, `ZCL_CD_FMON_CHK_REJECT` with `OUTCOME=PRISM_FAILED`), SLA codes from the stage (`NO_PRISM_RECEIVED`, `PRISM_RECEIVED_LATE`, `NO_PRISM_DELIVERED`, …), `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported, after `GRACE_MIN`), `PRISM_NOT_LOADED` (inbound file PRISM delivered that SAP has not received after `GRACE_MIN`), `UNMAPPED_FILE` (reference matches no interface and no `interfaceId`). Seed rows: `config/fmon_seed.md`.
+Findings: `PRISM_FAILED` (check row `F_PRFAIL`, `ZCL_CD_FMON_CHK_REJECT` with `OUTCOME=PRISM_FAILED`), SLA codes from the stage (`NO_PRISM_RECEIVED`, `PRISM_RECEIVED_LATE`, `NO_PRISM_DELIVERED`, …), `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported, after `GRACE_MIN`), `PRISM_NOT_LOADED` (inbound file PRISM delivered that SAP has not received after `GRACE_MIN`), `UNMAPPED_FILE` (reference matches no interface and no `interfaceId`), `PRISM_QUEUE_LONG` (more ACH / wire files queued in PRISM ahead of the file than `FMON_PRISM_QUEUE_MAX` allows, below). Seed rows: `config/fmon_seed.md`.
+
+### Timing — PRISM throttles ACH and wire files
+
+> **First principle:** a file that waits its turn in PRISM's queue is not late; a queue that does not move is.
+> **Analogy:** a toll booth that lets one lorry through every two minutes — the tenth lorry of a convoy is not slow, it is tenth in line; a line that stops growing shorter is a closed booth.
+
+Fact (confirmed by the user 2026-11-06): **PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank; positive pay and stop pay are not throttled.** For a throttled outbound file `DELIVERED` therefore trails `RECEIVED` by about **2 min × its position in PRISM's queue** — the 5th ACH file of an evening cycle handed over together is delivered about 8 minutes after the first, and its bank ACK moves the same way.
+
+FMON (`FMON_FILE_MONITORING.md` §A3a) does not raise `PRISM_DELIVERED_LATE` / `NO_PRISM_DELIVERED` for that wait:
+
+| Item | Rule |
+|---|---|
+| Throttled file | Outbound interface whose `PAY_METHOD` is in `FMON_PRISM_THROTTLE_METHODS` (default `ACH,WIRE`) and `FMON_PRISM_THROTTLE_MIN` > 0. Not throttled: positive pay, stop pay, IRIS, BlackLine, OFSAA, cost centre, source files, every inbound file |
+| Queue | Throttled files of the same business date; `FMON_PRISM_THROTTLE_SCOPE` `A` = one PRISM queue for all of them (default), `C` = one queue per bank (`ZCD_FMON_IFACE-BANK_KEY`) — **to confirm with the PRISM team** |
+| Position | Files PRISM received earlier (or in the same instant) that it had not yet delivered / failed when it received this file — taken from the `RECEIVED` / `DELIVERED` / `FAILED` events of the register |
+| Allowance | SLA minutes + `FMON_PRISM_THROTTLE_MIN` × files ahead, on `PRISM_DELIVERED` / `FORWARDED_TO_BANK` and on later stages measured from generation (basis G, e.g. `ACK_RECEIVED`) |
+| Cap | A queue of up to `FMON_PRISM_QUEUE_MAX` files (default 30, incl. the file) is covered; a longer one gets no more allowance and is reported as `PRISM_QUEUE_LONG` (W) |
+| No `RECEIVED` evidence | No allowance — the SLA is evaluated as before |
+
+The same rule applies in the instant unit and in the 5-minute run (one rule in `ZCL_CD_FMON_RULES`, used by `ZCL_CD_FMON_CHK_SLA` on both paths).
 
 ## 8. What PRISM must send, per flow
 
@@ -251,6 +271,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | `ZCD_OPS_PARAM` `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
 | `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` | `X` (unit saves findings and alerts) / blank (registry only) |
 | `ZCD_OPS_PARAM` `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
+| `ZCD_OPS_PARAM` `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `A` / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
 | Volumes | ≈ 2–3 events per file (RECEIVED, DELIVERED, sometimes FAILED); a few thousand rows a day, one bgPF unit and one run record (variant `PRISM`) each; the table grows ≈ 1 M rows per year |

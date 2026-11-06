@@ -94,6 +94,30 @@ Report `ZCD_FMON_MONITOR` (selection: business date, interface, test mode, "show
 
 Expected files that did not arrive appear as their own row (`<interface>/<date>`, FILE_MISSING or FILE_LATE). Schedule the report (or the engine) after each file window in Control-M with test mode off; online users run it in test mode (nothing saved, no alert).
 
+## A3a. SLA verdict and the PRISM throttle
+
+> **First principle:** an SLA measures the time a party is responsible for; time a file spends waiting its turn in PRISM's queue is planned, not late.
+> **Analogy:** a bakery ticket machine — customer 5 is served about four turns after customer 1; measuring each customer from the moment they took a ticket without counting the people ahead would call every busy morning "late".
+
+**SLA basis (unchanged).** Each `ZCD_FMON_SLA` row gives the minutes allowed to reach a stage. Basis **P** measures from the latest event of the highest lower stage (e.g. `PRISM_DELIVERED` from `PRISM_RECEIVED`), basis **G** from the file's first event (generation). Only the stage's own event meets the SLA (A40).
+
+**PRISM throttle (fact, confirmed by the user 2026-11-06):** PRISM throttles **ACH and wire** files at **2 minutes per file** before sending them to the bank; positive pay and stop pay are not throttled. A fixed delivery SLA would report false "late" findings whenever several files go together (the evening ACH cycle), and the bank ACK SLA measured from generation is shifted the same way.
+
+| Item | Rule (`ZCL_CD_FMON_RULES`) |
+|---|---|
+| Throttled file (`IS_THROTTLED`) | Outbound interface, `ZCD_FMON_IFACE-PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS` (default `ACH,WIRE`), `FMON_PRISM_THROTTLE_MIN` > 0. The rule uses the payment method, not the file type or bank key: positive pay (`CHECK`), stop pay, IRIS, BlackLine, OFSAA, cost centre and source files are **not** throttled, inbound files never |
+| Queue (`BUILD_QUEUE`) | Throttled files of the **same business date** with PRISM receipt evidence (`PRISM_RECEIVED` event). Scope `FMON_PRISM_THROTTLE_SCOPE`: `A` = one PRISM queue for all throttled files (default — the user did not say per bank; **to confirm with the PRISM team**), `C` = one queue per counterparty = `ZCD_FMON_IFACE-BANK_KEY` (blank / `*` share one queue) |
+| Left the queue | First event at delivery rank or later: `PRISM_DELIVERED`, `FORWARDED_TO_BANK`, `PRISM_FAILED`, `ACK_RECEIVED` / `NACK_REJECTED` |
+| Position (`QUEUE_POSITION`) | Files of the same queue that PRISM received **earlier or in the same instant** (PRISM's order inside one instant is unknown — a tie counts as ahead, so the rule never produces a false late) and that had not left the queue when this file was received |
+| Allowance | SLA minutes + `FMON_PRISM_THROTTLE_MIN` × files ahead. Applied to the delivery stage (`PRISM_DELIVERED` = `FORWARDED_TO_BANK`) and to every later stage whose basis lies before the delivery: basis **G** (e.g. `ACK_RECEIVED` 240 G → 240 + 8 for the 5th file) or basis **P** measured from a stage below delivery (no delivery recorded yet). A basis-P stage measured from the **recorded** delivery (`ACK_RECEIVED` P after `PRISM_DELIVERED`) gets nothing — the wait is already behind its basis (test `ack_after_delivery_not_shifted`) |
+| Cap | The allowance covers a queue of up to `FMON_PRISM_QUEUE_MAX` files including the file itself (default 30, i.e. at most 29 files ahead). A longer queue gets no further allowance and is reported once per file as **`PRISM_QUEUE_LONG` (W)** by the check evaluating the delivery stage — a jammed PRISM queue is never hidden |
+| No PRISM evidence | A file without `PRISM_RECEIVED` has no queue position: today's behaviour. `FMON_PRISM_THROTTLE_MIN = 0` switches the allowance (and PRISM_QUEUE_LONG) off |
+| Finding text | A late / missing verdict with an allowance uses message 270 (`… (SLA &4 min incl. PRISM queue allowance)`), &4 = SLA + allowance |
+
+Example (seed SLA `PRISM_DELIVERED` 5 P): five ACH files received by PRISM at 17:00 together. File 1 must be delivered by 17:05, file 5 (4 ahead) by 17:13 — delivered at 17:09 it is on time, at 17:14 it is `PRISM_DELIVERED_LATE`. A positive pay file sent in the same cycle neither waits nor is counted. 31 ACH files: the 31st is allowed 5 + 29 × 2 = 63 minutes and `PRISM_QUEUE_LONG` is raised.
+
+**Where it runs.** The engine (`ZCL_CD_FMON_ENGINE->BUILD_CONTEXT`) reads the four parameters and builds the queue for the business dates of the throttled files in the run; a date the run did not load completely (instant unit, run for one interface, open file of an older date) is read from the register (`GET_EVAL_FILES` / `GET_EVENTS` — no new SQL). `ZCL_CD_FMON_CHK_SLA` asks `QUEUE_POSITION` per file and passes the allowance to `SLA_VERDICT`. The instant PRISM unit (`run_event`) and the 5-minute run go through the same context and check — one rule, no copy.
+
 ## A4. NOC and returns completeness
 
 > **First principle:** a returns or NOC file is processed only when zero transactions are unaccounted for.
@@ -125,6 +149,7 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 | FILE_FAILED | R | Inbound file failed to load/process | Re-load after fixing; outcome may improve on re-run |
 | PRISM_FAILED | R | PRISM could not process or deliver the file (PRISM's error code in `ZCD_FMON_PRISM`) | Check the PRISM console with `prismReference`; PRISM retries — a later DELIVERED supersedes the failure (Runbook §4c) |
 | NO_PRISM_RECEIVED / PRISM_RECEIVED_LATE | R / A | SAP handed the file over, PRISM did not confirm receipt within the SLA | Check the PRISM inbound queue / transfer; is the PRISM status API reachable (Runbook §4c)? |
+| PRISM_QUEUE_LONG | A | More ACH / wire files were queued in PRISM ahead of the file than `FMON_PRISM_QUEUE_MAX` covers (PRISM releases one every 2 minutes) | Check PRISM, not SAP: is PRISM's bank queue moving, is a bank connection down? (Runbook §4c) |
 | PRISM_UNKNOWN_FILE / PRISM_NOT_LOADED | A | PRISM reported a file SAP has no generation of / delivered a file SAP has not received (after GRACE_MIN) | Compare the reference with SAP's file name / key; inbound: check the load job and directory |
 | PLUGIN_ERROR / PERSIST_ERROR / ALERT_FAILED | R | The monitor itself could not check something | IT: fix the configuration named in the message; the rest of the run is valid |
 | FILE_LATE, *_LATE (e.g. PRISM_HANDOFF_LATE) | A | Arrived or moved later than the window/SLA | Note for SLA reporting; watch the next cycle |
@@ -170,7 +195,7 @@ Application data (delivery class A):
 | ZCD_FMON_EVENT | FILE_ID, EVENT_NO | Audit trail of every reported stage (also capped or ignored ones). Unique index SRC: FILE_ID, SRC_ID, SRC_KEY, STAGE → idempotent re-runs per file instance |
 | ZCD_FMON_PRISM | EVENT_ID | PRISM status API events (one row per call, PRISM's ID as key): reference, interface, direction, milestone, occurredAt (UTC), counterparty, PRISM reference, count, total, error code / masked text, business date, receipt, PROCESSED_AT. Indexes UNP (PROCESSED_AT, RECEIVED_AT), REF, BDT. Read by `ZCL_CD_FMON_ADAPTER_PRISM` (`PRISM_Status_API.md`) |
 
-Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT. Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
+Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT, FMON_PRISM_THROTTLE_MIN, FMON_PRISM_THROTTLE_SCOPE, FMON_PRISM_THROTTLE_METHODS, FMON_PRISM_QUEUE_MAX (§A3a). Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
 
 ## B2. Class model
 
@@ -279,6 +304,8 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | 265 | &1: PRISM could not process or deliver the file (direction &2) |
 | 266 | &1: reported by PRISM, but SAP has no generation record of it |
 | 267 | &1: delivered by PRISM &2 min ago, not yet received in SAP |
+| 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
+| 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
 
 Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class), 032 (class does not implement interface). 207, 210, 212–219, 221–299 are free. These rows still have to be added to `config/zcd_ops_messages.md` (shared file, not edited by FMON).
 
@@ -301,7 +328,8 @@ Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class
 | ZCL_CD_FMON_PRISM_EVENT / ltc_event | pure | 20 methods: every milestone and direction, missing / invalid / future / non-UTC values, truncation, masking, counterparty format, malformed JSON, array, nested member, business date, idempotent payload, answer JSON |
 | ZCL_CD_FMON_PRISM_API / ltc_api | LTD PRISM DAO, queue, auth, store, clock | 202 (unit queued before commit), 200, 409, 500 (rollback), 400, 405, 403, 415, UTF-8 accepted, 413, queue failure still 202 |
 | ZCL_CD_FMON_PRISM_DAO / ltc_prism_dao | cl_osql_test_environment (ZCD_FMON_PRISM) | insert_new_event, same_payload_is_duplicate, other_payload_is_conflict, unprocessed_read_skips_done, mark_keeps_first_time |
-| ZCL_CD_FMON_PRISM_PROC / ltc_proc | real engine + LTD FMON DAO, PRISM DAO, store, alert, clock | unit_applies_prism_stage, late_event_opens_sla_finding, failed_event_opens_finding, unknown_file_is_deferred, conflict_left_to_batch_run, processed_event_not_reapplied, registry_only_without_instant |
+| ZCL_CD_FMON_PRISM_PROC / ltc_proc | real engine + LTD FMON DAO, PRISM DAO, store, alert, clock | unit_applies_prism_stage, late_event_opens_sla_finding, failed_event_opens_finding, unknown_file_is_deferred, conflict_left_to_batch_run, processed_event_not_reapplied, registry_only_without_instant; PRISM throttle: unit_allows_prism_queue, pospay_not_in_ach_queue, unit_throttle_off_is_late, unit_reports_long_queue |
+| ZCL_CD_FMON_RULES / ltc_throttle (PRISM throttle, 2026-11-06) | pure, no doubles | single_file_gets_base_sla, fifth_file_on_time_at_9_min, fifth_file_late_after_13_min, scope_c_queues_per_bank, pospay_not_throttled, queue_over_max_is_long, ack_from_generation_shifted, ack_after_delivery_not_shifted, zero_throttle_keeps_today, no_receipt_keeps_today, delivered_file_is_not_ahead |
 | ZCL_CD_FMON_ADAPTER_PRISM / ltc_adapter_prism | LTD PRISM DAO | rows_become_prism_stages, interface_id_wins, batch_reads_unprocessed, unknown_field_is_refused |
 | ZCL_CD_FMON_CHK_PRISM_FILE / ltc_prism_file, ZCL_CD_FMON_CHK_REJECT / ltc_reject | pure | grace period, outbound unknown / known, inbound not loaded / received; OUTCOME=PRISM_FAILED, default unchanged |
 | ZCL_CD_FMON_DAO / ltc_dao | cl_osql_test_environment (ZCD_FMON_FILE, ZCD_FMON_EVENT, ZCD_FMON_TABWL), LTD DDIC | same_event_is_stored_once, repeat_insert_reports_false, events_numbered_per_file, saved_file_found_by_ref, open_old_file_is_evaluated, history_found_by_checksum, later_open_file_not_evaluated, newer_registry_not_overwritten, unchanged_registry_is_saved, event_belongs_to_its_instance, older_instances_not_prefetched, unapproved_table_is_refused, read_without_auth_is_refused, approved_table_is_read |
@@ -369,3 +397,4 @@ Recommended QA1 functional test cases (Test & Validation document):
 11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, LOT_NOT_FOUND; since 2026-11-06 FILE_REF_AMBIGUOUS, MALFORMED_SOURCE_ROW, LOT_SCAN_TRUNCATED, PERSIST_CONFLICT. FILE_REF_REUSED is retired: a reused reference on another business date is a new file instance.
 12. **Run lock (2026-11-06):** one monitor run at a time for the whole payment engine area (core message 040, RUN_LOCKED alert); the unique registry index still protects against double registration. Checksum-mismatch and archive-failure checks from the requirements baseline are possible as further `ZIF_CD_FMON_CHECK` rows once a source delivers those fields.
 13. **Audit hardening (2026-11-06, `docs/Audit_Response_FMON.md`):** version-checked registry save (A04), SQL errors handled at the LUW owner (A05), file instance = reference + business date (A49), SLA met only by admissible evidence — the stage itself or a NACK for an ACK SLA, a later stage alone is `*_INFERRED` (A40), ACK counts deduplicated per payment and cumulative, unknown ≠ zero (A39), truncated lot scans derive nothing (A38), age basis and calendar failure explicit (A41), open-file window bounded by the run date (A50), approved tables + S_TABU_NAM at the read boundary (A51), malformed rows quarantined and half-open timestamp range (A52).
+14. **PRISM throttle (2026-11-06, user fact):** the delivery SLA of ACH / wire files includes 2 min × files ahead in PRISM's queue (§A3a). Decided from `PAY_METHOD` (configurable list), not from `FILE_TYPE` or `BANK_KEY`, because positive pay and stop pay go to the same banks but are not throttled. Default queue scope `A` (one queue) is the conservative reading of "2 min per file" — it can only make the allowance larger than per-bank queues would; to confirm with the PRISM team. A capped allowance plus `PRISM_QUEUE_LONG` keeps a stuck queue visible.

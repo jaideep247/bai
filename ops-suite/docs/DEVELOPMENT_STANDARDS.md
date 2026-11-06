@@ -36,6 +36,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
   - DPAYH-ZZ_PAYMENT_STATUS is the live payment status; DFKKOP-ZZ_BILLPLANID sits on DFKKOP (no DFKKNRK join).
   - FEBEP-BUDAT is always filled; FEBEP-XBLNR is never blank for BAI 452 and holds bank text + 10-character payment engine bank account + counter (user, 2026-11-06 — the EBS scope, `EBS_VALIDATION.md` §A0a). BAI 143 / 452 are known unmapped codes (R14 blocks them until Treasury confirms a mapping).
   - TFK033D wildcard `*` does not work (enumerate); TVARVC refuses two type-P rows with the same name.
+  - PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank; positive pay and stop pay are not throttled (user, 2026-11-06 — FMON delivery SLA allowance, `FMON_FILE_MONITORING.md` §A3a).
   - FPY1 locks EFKKCLEGPI per partner interval (GPART_V..GPART_B, one RUNKEY + BUKRS, _SCOPE 3) — design concurrency around partner ranges.
 - FPY1 locks per partner interval; F.13 is not run for disbursement clearing accounts.
 - ACK tables confirm payment-run files per pay cycle; Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK. Disbursements ACK per payment, collections per file.

@@ -91,6 +91,8 @@ The FMON checks write file findings with `REFERENCE` = file ID in hex (`ZCL_CD_F
 | LATE | No breach, an open `*_LATE` exception (FILE_LATE, PRISM_HANDOFF_LATE, BANK_ACK_LATE …) | yellow |
 | OK | Open exceptions exist, none about the SLA (e.g. ACK_COUNT_MISMATCH, DUPLICATE_FILE) — see worst severity | green |
 
+**"Late" for PRISM delivery already includes the PRISM throttle allowance.** PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank (user 2026-11-06; positive pay and stop pay are not throttled). The monitor allows a throttled file its base SLA plus 2 minutes for every ACH / wire file queued ahead of it in PRISM (`FMON_FILE_MONITORING.md` §A3a), so `PRISM_DELIVERED_LATE` / `NO_PRISM_DELIVERED` — and a bank ACK SLA measured from generation — on such a file means it waited longer than its queue position explains; the 5th file of an evening ACH cycle delivered 9 minutes after PRISM received it is not late. A queue longer than `FMON_PRISM_QUEUE_MAX` raises `PRISM_QUEUE_LONG` (W): it is neither `NO_*` nor `*_LATE`, so the file shows SLA status OK with worst severity W, and the check text names the queue length — work it as "check PRISM" (Runbook §4c). The dashboard computes no expected times of its own (no SLA minutes in any CDS view), so nothing in the CDS changes.
+
 Resolved, waived, superseded and information findings never count. **Missing files** (FILE_MISSING, key `<interface>/<date>`) have no file row; they appear only in the open-exceptions entity (tile "Missing files").
 
 ## 6. Tiles, KPI and overview-page cards
