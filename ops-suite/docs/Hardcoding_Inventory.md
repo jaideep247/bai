@@ -4,22 +4,43 @@
 
 ## Before / after
 
-| | Before (f10b8f0) | After |
+| | Before (f10b8f0) | Now |
 |---|---|---|
-| Literals in production ABAP | 1 909 | 1440 |
+| Literals in production ABAP | 1909 | 2140 |
 | User-facing text (1) | 516 | 0 |
 | Technical value (2) | 274 | 0 |
-| Legitimate (3) | 1 119 | 1440 |
+| Legitimate (3) | 1119 | 2140 |
 
-Same scanner and allow-list for both columns. Texts moved to message class ZCD_OPS (built only through `ZCL_CD_OPS_UTIL=>TEXT( )`) or to text symbols of the reports and of `ZCL_CD_HCK_REPORT_HTML` / `ZCL_CD_OPS_ALERT_POLICY`; values moved to named constants in the area types interfaces (`gc_check_code`, `gc_msg`, `gc_param`, `gc_param_default`, `gc_rule_keyword`, `gc_engine_key`, …), class constants, the generated `lif_c` interfaces of the configuration apps, or SAP constants (`cl_abap_typedescr=>typekind_*`). The check `no_inline_texts` in `tools/portable_checks.py` keeps it at zero.
+Same scanner and allow-list for both columns. Texts live in message class ZCD_OPS (built only through `ZCL_CD_OPS_UTIL=>TEXT( )`) or in text symbols; values in named constants of the area types interfaces, class constants, the generated `lif_c` interfaces of the configuration apps, or SAP constants. The portable check `no_inline_texts` keeps categories 1 and 2 at zero; the total grows with new code, not with hardcoding.
 
 ## Now
 
-Literals in production ABAP: **1440** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **1440**.
+Literals in production ABAP: **2140** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **2140**.
 
 Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfaces), separators and format characters, names SAP syntax requires as literals (CALL FUNCTION, AUTHORITY-CHECK OBJECT / ID, MESSAGE TYPE), and allow-listed lines (`tools/literal_allowlist.txt`, each with its reason).
 
-| File | Text (1) | Value (2) | Legitimate (3) |
-|---|---|---|---|
+### Legitimate literals by reason
 
-Files not listed have no category 1 or 2 literal.
+| Reason | Literals |
+|---|---|
+| Named constants in the area types interfaces | 1007 |
+| CONSTANTS / TYPES / DATA / PARAMETERS declarations | 839 |
+| Separators | 157 |
+| Names SAP syntax requires (CALL FUNCTION, AUTHORITY-CHECK, MESSAGE TYPE) | 77 |
+| Allow-listed lines (wire formats, SQL fragments - `tools/literal_allowlist.txt`) | 26 |
+| Repository object names | 14 |
+| Format characters (no letters) | 12 |
+| Range sign / option values | 8 |
+
+### Legitimate literals by payment engine area
+
+| Area (`src/`) | Literals |
+|---|---|
+| CORE | 588 |
+| EBS | 631 |
+| FMON | 451 |
+| HCK | 470 |
+
+### Files with category 1 or 2 literals
+
+None - every file is clean.
