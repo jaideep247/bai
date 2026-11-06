@@ -25,12 +25,22 @@
 | ALL_ABORT | * | B | | | | X | HTTP | ZCD_OPS_WEBHOOK | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | RTB support DL | | 10 | 60 | — | — |
 
+ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on
+EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends
+the series).
+
+ZCD_OPS_ALERT_LOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
+before go-live; it is what stops two dispatchers sending the same alert (A17). Status values: S sent, F failed,
+T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial.
+
 ZCD_OPS_PARAM for reports sent with `send( )`: `ALERT_MORNING` (morning report distribution list), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
 
 Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUTER` unit tests):
 - Severity **B** (blocked, never posted) ignores quiet hours.
 - Throttled (T) and quiet-hour (Q) decisions are logged in ZCD_OPS_ALERT_LOG — nothing is silently dropped.
 - A failing channel is logged as F and never aborts the run; the morning report's "alert delivery health" check counts F rows.
+- `send( )` without recipients or on an inactive channel logs F **and raises** (A45).
+- MAX_ITEMS keeps the most severe findings (B > E > W > I); the message names how many were held back (A63).
 - Test-mode runs never alert.
 
 ## Core parameters — `ZCD_OPS_PARAM` (retention purge, `ZCD_OPS_PURGE`)
