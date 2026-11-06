@@ -79,6 +79,11 @@ annotate entity ZC_CD_EbsStmt with
   @UI.identification: [ { position: 40 } ]
   @UI.selectionField: [ { position: 30 } ]
   HouseBankAccount;
+  @EndUserText.label: 'Payment engine account (from XBLNR)'
+  @UI.lineItem: [ { position: 42, importance: #HIGH } ]
+  @UI.identification: [ { position: 42 } ]
+  @UI.selectionField: [ { position: 32 } ]
+  PeAccount;
   @EndUserText.label: 'G/L account'
   @UI.lineItem: [ { position: 45, importance: #HIGH } ]
   @UI.identification: [ { position: 45 } ]

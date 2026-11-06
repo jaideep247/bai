@@ -16,6 +16,9 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (EBS validation dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
+*& 2026-11-06 | Payment engine account scope (user decision): lines carry FEBEP-XBLNR, the account is
+*&            | derived from it (ZCD_EBS_ACCT-ACCOUNT_NO); all-PE statement shown with PE account and
+*&            | G/L, mixed / blank XBLNR / inactive account / no line hidden, totals by BAI code + XBLNR.
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -26,6 +29,9 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
     CONSTANTS gc_company TYPE c LENGTH 4 VALUE 'US01'.
     CONSTANTS gc_currency TYPE c LENGTH 5 VALUE 'USD'.
     CONSTANTS gc_gl_account TYPE c LENGTH 10 VALUE '0011000100'.
+    "! FEBEP-XBLNR = bank text + payment engine account (10) + counter (user decision 2026-11-06)
+    CONSTANTS gc_xblnr TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412334'.
+    CONSTANTS gc_pe_account TYPE zif_cd_ebs_types=>ty_pe_account VALUE '8XX1174412'.
     TYPES tt_acct TYPE STANDARD TABLE OF zcd_ebs_acct WITH EMPTY KEY.
 
     CLASS-METHODS today
@@ -57,6 +63,7 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
         iv_bai_code    TYPE clike OPTIONAL
         iv_dc_ind      TYPE clike OPTIONAL
         iv_amount      TYPE febep-kwbtr OPTIONAL
+        iv_xblnr       TYPE zif_cd_ebs_types=>ty_xblnr DEFAULT gc_xblnr
       RETURNING
         VALUE(rs_line) TYPE febep.
 
@@ -83,10 +90,12 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
       RETURNING
         VALUE(rs_run) TYPE zcd_ops_run.
 
-    "! Payment engine account (ZCD_EBS_ACCT) of the default statement: only these are on the dashboard
+    "! Payment engine account (ZCD_EBS_ACCT) of the default XBLNR: only statements whose every line
+    "! carries an active one are on the dashboard
     CLASS-METHODS account
       IMPORTING
         iv_hktid       TYPE clike DEFAULT gc_account_id
+        iv_account_no  TYPE clike DEFAULT gc_pe_account
         iv_active      TYPE abap_boolean DEFAULT abap_true
       RETURNING
         VALUE(rs_acct) TYPE zcd_ebs_acct.
@@ -128,6 +137,7 @@ CLASS ltd_rows IMPLEMENTATION.
     rs_acct-bukrs      = gc_company.
     rs_acct-hbkid      = gc_house_bank.
     rs_acct-hktid      = iv_hktid.
+    rs_acct-account_no = iv_account_no.
     rs_acct-gl_account = gc_gl_account.
     rs_acct-currency   = gc_currency.
     rs_acct-active     = iv_active.
@@ -153,6 +163,7 @@ CLASS ltd_rows IMPLEMENTATION.
     rs_line-vorgc = iv_bai_code.
     rs_line-epvoz = iv_dc_ind.
     rs_line-kwbtr = iv_amount.
+    rs_line-xblnr = iv_xblnr.
   ENDMETHOD.
 
 
@@ -246,7 +257,10 @@ CLASS ltc_statement DEFINITION FINAL
     METHODS line_status_from_line_finding FOR TESTING.
     METHODS rows_carry_validation_as_of FOR TESTING.
     METHODS amounts_total_per_bai_code FOR TESTING.
-    METHODS only_payment_engine_accounts FOR TESTING.
+    METHODS all_pe_statement_shown FOR TESTING.
+    METHODS mixed_statement_hidden FOR TESTING.
+    METHODS inactive_account_hidden FOR TESTING.
+    METHODS totals_per_code_and_xblnr FOR TESTING.
 
     METHODS add_finding
       IMPORTING
@@ -311,6 +325,12 @@ CLASS ltc_statement IMPLEMENTATION.
     INSERT ltd_rows=>line( iv_kukey = gc_kukey-blocked iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
     INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 iv_belnr = gc_belnr ) INTO TABLE lt_lines.
     INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_2 ) INTO TABLE lt_lines.
+    " Payment engine scope: a statement is on the dashboard only with at least one line, every
+    " line carrying an active payment engine account (default XBLNR of LTD_ROWS=>LINE)
+    INSERT ltd_rows=>line( iv_kukey = gc_kukey-error iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+    INSERT ltd_rows=>line( iv_kukey = gc_kukey-incomplete iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+    INSERT ltd_rows=>line( iv_kukey = gc_kukey-warning iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+    INSERT ltd_rows=>line( iv_kukey = gc_kukey-resolved iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
 
     " Blocked: an unmapped code on line 1 (B) and a warning; the worst wins
     add_finding( iv_type     = zcl_cd_ebs_finding=>gc_object_type-line
@@ -433,42 +453,152 @@ CLASS ltc_statement IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD only_payment_engine_accounts.
-    CONSTANTS lc_other_account TYPE c LENGTH 5 VALUE 'OTHR1'.
-    CONSTANTS lc_inactive TYPE c LENGTH 5 VALUE 'INAC1'.
-    CONSTANTS lc_kukey_other TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000201'.
-    CONSTANTS lc_kukey_inactive TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000202'.
+  " Every line carries an active payment engine account: statement and lines are shown with the
+  " account derived from XBLNR and the G/L account of the matched ZCD_EBS_ACCT row
+  METHOD all_pe_statement_shown.
+    CONSTANTS lc_xblnr_2 TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412335'.
     DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
     DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
     TRY.
         INSERT ltd_rows=>statement( gc_kukey-clean ) INTO TABLE lt_stmts.
-        DATA(ls_other) = ltd_rows=>statement( lc_kukey_other ).
-        ls_other-hktid = lc_other_account.
-        INSERT ls_other INTO TABLE lt_stmts.
-        DATA(ls_inactive) = ltd_rows=>statement( lc_kukey_inactive ).
-        ls_inactive-hktid = lc_inactive.
-        INSERT ls_inactive INTO TABLE lt_stmts.
         INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
-        INSERT ltd_rows=>line( iv_kukey = lc_kukey_other iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
-        INSERT ltd_rows=>line( iv_kukey = lc_kukey_inactive iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_2 iv_xblnr = lc_xblnr_2 ) INTO TABLE lt_lines.
         go_env->insert_test_data( i_data = lt_stmts ).
-        " Configured: the default account (active) and an inactive one; OTHR1 is not configured at all
-        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) )
-                                                                     ( ltd_rows=>account( iv_hktid  = lc_inactive
-                                                                                          iv_active = abap_false ) ) ) ).
+        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) ) ) ).
         go_env->insert_test_data( i_data = lt_lines ).
 
-        SELECT kukey, glaccount FROM zr_cd_ebsstmt ORDER BY kukey INTO TABLE @DATA(lt_shown).
-        SELECT kukey, glaccount FROM zr_cd_ebsline ORDER BY kukey INTO TABLE @DATA(lt_shown_lines).
+        SELECT kukey, glaccount, peaccount FROM zr_cd_ebsstmt ORDER BY kukey INTO TABLE @DATA(lt_shown).
+        SELECT esnum, glaccount, peaccount, xblnr FROM zr_cd_ebsline ORDER BY esnum INTO TABLE @DATA(lt_shown_lines).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_shown ) exp = 1 msg = 'The all-PE statement is shown' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown[ 1 ]-peaccount OPTIONAL ) exp = ltd_rows=>gc_pe_account
+                                            msg = 'Statement carries the payment engine account from XBLNR' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown[ 1 ]-glaccount OPTIONAL ) exp = ltd_rows=>gc_gl_account
+                                            msg = 'G/L account from the matched account configuration' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_shown_lines ) exp = 2 msg = 'Both lines are shown' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown_lines[ 2 ]-peaccount OPTIONAL )
+                                            exp = ltd_rows=>gc_pe_account
+                                            msg = 'Bank text and counter removed: the account of the line' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown_lines[ 2 ]-xblnr OPTIONAL ) exp = lc_xblnr_2
+                                            msg = 'XBLNR is shown as delivered' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown_lines[ 2 ]-glaccount OPTIONAL )
+                                            exp = ltd_rows=>gc_gl_account msg = 'Every line carries its G/L account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " One line of another account, a line without XBLNR, or no line at all: the statement and all
+  " its lines stay off the dashboard
+  METHOD mixed_statement_hidden.
+    CONSTANTS lc_xblnr_other TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'BOA9999999999001'.
+    CONSTANTS lc_kukey_mixed TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000201'.
+    CONSTANTS lc_kukey_blank TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000202'.
+    CONSTANTS lc_kukey_empty TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000203'.
+    DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    TRY.
+        INSERT ltd_rows=>statement( gc_kukey-clean ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>statement( lc_kukey_mixed ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>statement( lc_kukey_blank ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>statement( lc_kukey_empty ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = lc_kukey_mixed iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = lc_kukey_mixed iv_esnum = gc_line_2 iv_xblnr = lc_xblnr_other ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = lc_kukey_blank iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = lc_kukey_blank iv_esnum = gc_line_2 iv_xblnr = space ) INTO TABLE lt_lines.
+        go_env->insert_test_data( i_data = lt_stmts ).
+        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) ) ) ).
+        go_env->insert_test_data( i_data = lt_lines ).
+
+        SELECT kukey FROM zr_cd_ebsstmt ORDER BY kukey INTO TABLE @DATA(lt_shown).
+        SELECT kukey FROM zr_cd_ebsline ORDER BY kukey INTO TABLE @DATA(lt_shown_lines).
 
         cl_abap_unit_assert=>assert_equals( act = lines( lt_shown ) exp = 1
-                                            msg = 'Only statements of active payment engine accounts' ).
-        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown[ 1 ]-glaccount OPTIONAL ) exp = ltd_rows=>gc_gl_account
-                                            msg = 'G/L account from the account configuration' ).
+                                            msg = 'Only the statement whose every line is a payment engine account' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown[ 1 ]-kukey OPTIONAL ) exp = gc_kukey-clean
+                                            msg = 'The all-PE statement is the one shown' ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_shown_lines ) exp = 1
-                                            msg = 'Lines of other accounts are not shown either' ).
-        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown_lines[ 1 ]-glaccount OPTIONAL )
-                                            exp = ltd_rows=>gc_gl_account msg = 'Every line carries its G/L account' ).
+                                            msg = 'Not even the PE line of a mixed statement is shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The account is configured but inactive: not a payment engine account
+  METHOD inactive_account_hidden.
+    CONSTANTS lc_inactive_hkt TYPE c LENGTH 5 VALUE 'INAC1'.
+    CONSTANTS lc_inactive_acct TYPE zif_cd_ebs_types=>ty_pe_account VALUE '7000000001'.
+    CONSTANTS lc_xblnr_inactive TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'PNC7000000001001'.
+    CONSTANTS lc_kukey_inactive TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000204'.
+    DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    TRY.
+        INSERT ltd_rows=>statement( lc_kukey_inactive ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>line( iv_kukey = lc_kukey_inactive iv_esnum = gc_line_1 iv_xblnr = lc_xblnr_inactive )
+          INTO TABLE lt_lines.
+        go_env->insert_test_data( i_data = lt_stmts ).
+        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( iv_hktid      = lc_inactive_hkt
+                                                                                          iv_account_no = lc_inactive_acct
+                                                                                          iv_active     = abap_false ) ) ) ).
+        go_env->insert_test_data( i_data = lt_lines ).
+
+        SELECT kukey FROM zr_cd_ebsstmt ORDER BY kukey INTO TABLE @DATA(lt_shown).
+        SELECT kukey FROM zr_cd_ebsline ORDER BY kukey INTO TABLE @DATA(lt_shown_lines).
+
+        cl_abap_unit_assert=>assert_initial( act = lt_shown msg = 'A statement of an inactive account is hidden' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_shown_lines msg = 'Its lines are hidden too' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " "Line amounts by BAI code": totals per BAI code + XBLNR (two counters of one account), and
+  " per payment engine account (the counters of one account together)
+  METHOD totals_per_code_and_xblnr.
+    CONSTANTS lc_code TYPE c LENGTH 3 VALUE '475'.
+    CONSTANTS lc_debit TYPE c LENGTH 1 VALUE 'S'.
+    CONSTANTS lc_xblnr_2 TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412335'.
+    DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    TRY.
+        INSERT ltd_rows=>statement( gc_kukey-clean ) INTO TABLE lt_stmts.
+        INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 iv_bai_code = lc_code
+                               iv_dc_ind = lc_debit iv_amount = '100.00' ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_2 iv_bai_code = lc_code
+                               iv_dc_ind = lc_debit iv_amount = '20.00' ) INTO TABLE lt_lines.
+        INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = '00003' iv_bai_code = lc_code
+                               iv_dc_ind = lc_debit iv_amount = '5.50' iv_xblnr = lc_xblnr_2 ) INTO TABLE lt_lines.
+        go_env->insert_test_data( i_data = lt_stmts ).
+        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) ) ) ).
+        go_env->insert_test_data( i_data = lt_lines ).
+
+        " Presentation variant AmountByCode: group by BAI code + XBLNR
+        SELECT baicode, xblnr, SUM( amount ) AS total, SUM( linecount ) AS lines
+          FROM zr_cd_ebsline
+          GROUP BY baicode, xblnr
+          ORDER BY baicode, xblnr
+          INTO TABLE @DATA(lt_by_xblnr).
+        " ... and per payment engine account (the counters of one account together)
+        SELECT peaccount, baicode, SUM( amount ) AS total
+          FROM zr_cd_ebsline
+          GROUP BY peaccount, baicode
+          ORDER BY peaccount, baicode
+          INTO TABLE @DATA(lt_by_account).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_by_xblnr ) exp = 2 msg = 'One total per BAI code and XBLNR' ).
+        DATA(ls_first) = VALUE #( lt_by_xblnr[ xblnr = ltd_rows=>gc_xblnr ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_first-total exp = '120.00' msg = 'Lines of one XBLNR summed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_first-lines exp = 2 msg = 'Two lines behind the XBLNR total' ).
+        DATA(ls_second) = VALUE #( lt_by_xblnr[ xblnr = lc_xblnr_2 ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_second-total exp = '5.50' msg = 'The other counter separate' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_by_account ) exp = 1
+                                            msg = 'Both counters belong to one payment engine account' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_by_account[ 1 ]-total OPTIONAL ) exp = '125.50'
+                                            msg = 'Account total over its counters' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -491,7 +621,7 @@ CLASS ltc_statement IMPLEMENTATION.
         INSERT ltd_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = '00003' iv_bai_code = lc_debit_code
                                iv_dc_ind = lc_debit iv_amount = '30.00' ) INTO TABLE lt_lines.
         go_env->insert_test_data( i_data = lt_stmts ).
-    go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) ) ) ).
+        go_env->insert_test_data( i_data = VALUE ltd_rows=>tt_acct( ( ltd_rows=>account( ) ) ) ).
         go_env->insert_test_data( i_data = lt_lines ).
 
         " The analytical list page sums Amount per BAI code, debit / credit and currency
@@ -525,7 +655,7 @@ CLASS ltc_statement IMPLEMENTATION.
         SELECT kukey, esnum, validationstatus, openfindingcount, isposted FROM zr_cd_ebsline
           ORDER BY kukey, esnum INTO TABLE @DATA(lt_lines).
 
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 3 msg = 'Every FEBEP line once' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 7 msg = 'Every FEBEP line once' ).
         DATA(ls_blocked) = VALUE #( lt_lines[ kukey = gc_kukey-blocked esnum = gc_line_1 ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = condense( ls_blocked-validationstatus ) exp = gc_status-blocked
                                             msg = 'The line key FEB<KUKEY>/<ESNUM> links the finding' ).

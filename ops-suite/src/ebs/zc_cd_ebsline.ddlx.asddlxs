@@ -1,4 +1,8 @@
 // UI annotations: EBS validation dashboard - statement line
+// AmountByCode (user decision 2026-11-06): line amounts by BAI code + XBLNR, with the payment engine
+// account (XBLNR without bank text and counter) as its own column / filter so the counters of one
+// account can be totalled together. XBLNR shown as delivered: the company's own house bank account
+// and a counter, no customer data; read access ZCD_OPS EBS 03 (DCL ZC_CD_EBSDASH).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Statement line', typeNamePlural: 'Statement lines',
                   title: { type: #STANDARD, value: 'BaiCode' },
@@ -12,12 +16,14 @@
                                       { dimension: 'ValidationStatus', role: #SERIES } ],
                measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 } ] },
              { qualifier: 'AmountByCode',
-               title: 'Line amounts by G/L account and BAI code (debit / credit, per currency)',
+               title: 'Line amounts by BAI code and XBLNR (payment engine account, debit / credit)',
                chartType: #BAR_STACKED,
-               dimensions: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
+               dimensions: [ 'GlAccount', 'PeAccount', 'BaiCode', 'Xblnr', 'DebitCreditInd', 'Currency' ],
                measures: [ 'Amount' ],
                dimensionAttributes: [ { dimension: 'GlAccount', role: #CATEGORY },
+                                      { dimension: 'PeAccount', role: #CATEGORY },
                                       { dimension: 'BaiCode', role: #CATEGORY },
+                                      { dimension: 'Xblnr', role: #CATEGORY },
                                       { dimension: 'DebitCreditInd', role: #SERIES },
                                       { dimension: 'Currency', role: #CATEGORY } ],
                measureAttributes: [ { measure: 'Amount', role: #AXIS_1 } ] } ]
@@ -25,10 +31,11 @@
                              visualizations: [ { type: #AS_CHART, qualifier: 'LinesByCode' },
                                                { type: #AS_LINEITEM } ] },
                            { qualifier: 'AmountByCode',
-                             groupBy: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
-                             totalBy: [ 'GlAccount', 'BaiCode' ],
+                             groupBy: [ 'GlAccount', 'PeAccount', 'BaiCode', 'Xblnr', 'DebitCreditInd', 'Currency' ],
+                             totalBy: [ 'GlAccount', 'PeAccount', 'BaiCode', 'Xblnr' ],
                              total: [ 'Amount', 'LineCount' ],
-                             sortOrder: [ { by: 'GlAccount', direction: #ASC }, { by: 'BaiCode', direction: #ASC } ],
+                             sortOrder: [ { by: 'GlAccount', direction: #ASC }, { by: 'PeAccount', direction: #ASC },
+                                          { by: 'BaiCode', direction: #ASC }, { by: 'Xblnr', direction: #ASC } ],
                              visualizations: [ { type: #AS_CHART, qualifier: 'AmountByCode' },
                                                { type: #AS_LINEITEM } ] } ]
 annotate entity ZC_CD_EbsLine with
@@ -64,6 +71,11 @@ annotate entity ZC_CD_EbsLine with
   @UI.identification: [ { position: 50 } ]
   @UI.selectionField: [ { position: 30 } ]
   HouseBankAccount;
+  @EndUserText.label: 'Payment engine account (from XBLNR)'
+  @UI.lineItem: [ { position: 22, importance: #HIGH } ]
+  @UI.identification: [ { position: 52 } ]
+  @UI.selectionField: [ { position: 32 } ]
+  PeAccount;
   @EndUserText.label: 'G/L account'
   @UI.lineItem: [ { position: 25, importance: #HIGH } ]
   @UI.identification: [ { position: 55 } ]
@@ -113,7 +125,9 @@ annotate entity ZC_CD_EbsLine with
   @UI.hidden: true
   BankRefNorm;
   @EndUserText.label: 'Reference (XBLNR)'
+  @UI.lineItem: [ { position: 35, importance: #HIGH } ]
   @UI.identification: [ { position: 160 } ]
+  @UI.selectionField: [ { position: 55 } ]
   Xblnr;
   @EndUserText.label: 'Posting document'
   @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]

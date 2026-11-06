@@ -7,7 +7,10 @@
 //          Validation status (worst first): BLOCKED (open B), ERROR (open E), POSTING_INCOMPLETE
 //          (open S13 - posting-dependent rules not evaluated), WARNING (open W), NO_FINDINGS.
 //          Drill-down: statement -> lines -> findings. Read-only: no behaviour definition.
+//          Only payment engine statements: every line's XBLNR an active payment engine account
+//          (ZI_CD_EbsStmtBase, user decision 2026-11-06).
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-06 | Payment engine account (from XBLNR) on the statement.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation dashboard - statement'
 @Metadata.ignorePropagatedAnnotations: true
@@ -28,6 +31,7 @@ define root view entity ZR_CD_EbsStmt
       Stmt.CompanyCode,
       Stmt.HouseBank,
       Stmt.HouseBankAccount,
+      Stmt.PeAccount,
       Stmt.GlAccount,
       Stmt.StatementNo,
       Stmt.StatementDate,

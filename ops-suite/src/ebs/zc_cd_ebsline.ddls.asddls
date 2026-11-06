@@ -4,6 +4,7 @@
 //          lot items of the line.
 //          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-06 | Payment engine account; totals by BAI code + XBLNR (user decision).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard - line'
 @Metadata.allowExtensions: true
@@ -19,14 +20,16 @@ define root view entity ZC_CD_EbsLine
       CompanyCode,
       HouseBank,
       HouseBankAccount,
+      PeAccount,
       GlAccount,
       StatementNo,
       StatementDate,
       BaiCode,
       PostingRule,
       DebitCreditInd,
-      // Totals per BAI code / debit-credit / currency: summed per group; the currency is part of
-      // every group (amount semantics), so different currencies are never added together
+      // Totals per G/L account, payment engine account, BAI code + XBLNR, debit-credit and currency:
+      // summed per group; the currency is part of every group (amount semantics), so different
+      // currencies are never added together
       @Aggregation.default: #SUM
       Amount,
       Currency,

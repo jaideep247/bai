@@ -5,6 +5,7 @@
 //          metadata extension ZC_CD_EBSSTMT.
 //          Read access: DCL ZC_CD_EBSDASH (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-06 | Payment engine account (from XBLNR).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'EBS validation dashboard'
 @Metadata.allowExtensions: true
@@ -20,6 +21,7 @@ define root view entity ZC_CD_EbsStmt
       CompanyCode,
       HouseBank,
       HouseBankAccount,
+      PeAccount,
       GlAccount,
       StatementNo,
       StatementDate,

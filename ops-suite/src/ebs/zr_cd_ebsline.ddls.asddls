@@ -4,8 +4,11 @@
 //          booking date, bank reference, posting document, the open findings of the line and its
 //          validation status (BLOCKED, ERROR, WARNING, NO_FINDINGS). Also the base of the chart
 //          "lines by BAI code". Drill-down: line -> findings, line -> returns / NOC lot items
-//          (reason from DFKKRP-RLGRD / DFKKNRP-FLGRD, never from FEBEP). Read-only.
+//          (reason from DFKKRP-RLGRD / DFKKNRP-FLGRD, never from FEBEP). Only lines of payment
+//          engine statements (every line's XBLNR an active payment engine account, ZI_CD_EbsStmtBase);
+//          each line carries XBLNR, its payment engine account and the G/L account. Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-06 | Payment engine account (from XBLNR) on every line.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation dashboard - line'
 @Metadata.ignorePropagatedAnnotations: true
@@ -26,6 +29,7 @@ define root view entity ZR_CD_EbsLine
       Line.CompanyCode,
       Line.HouseBank,
       Line.HouseBankAccount,
+      Line.PeAccount,
       Line.GlAccount,
       Line.StatementNo,
       Line.StatementDate,
