@@ -441,6 +441,8 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS undated_ref_ambiguous FOR TESTING.
     METHODS long_name_digest_verified FOR TESTING.
     METHODS payment_acks_deduplicated FOR TESTING.
+    METHODS partial_ack_count_is_reported FOR TESTING.
+    METHODS prism_handoff_without_bank_ack FOR TESTING.
     METHODS ack_count_never_decreases FOR TESTING.
     METHODS truncated_lot_not_completed FOR TESTING.
     METHODS calendar_failure_no_aging FOR TESTING.
@@ -1109,6 +1111,49 @@ CLASS ltc_engine IMPLEMENTATION.
 
   " Audit A39: per-payment ACKs count distinct payments - a payment acknowledged twice
   " (split source, overlapping window) is counted once
+  METHOD partial_ack_count_is_reported.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_dao->mt_ifaces[ iface_id = gc_out ]-ack_level = zif_cd_fmon_types=>gc_ack_level-payment.
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 2 ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_item = 'PAY1' ).
+
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-ack_count
+                                            exp = 1
+                                            msg = 'Only one payment was acknowledged' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ack_count ] ) )
+          msg = 'One of two acknowledgements must produce a count finding' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD prism_handoff_without_bank_ack.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 2 ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-sent
+                    iv_at = '20261102044000' ).
+
+        DATA(ls_result) = act( ).
+        DATA(lv_missing_ack) = zcl_cd_fmon_rules=>sla_code( iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                                                           iv_state = zif_cd_fmon_types=>gc_sla_state-missing ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-stage
+                                            exp = zif_cd_fmon_types=>gc_stage-sent
+                                            msg = 'Handoff must not advance the file to bank acknowledgement' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = lv_missing_ack ] ) )
+          msg = 'A handoff without a bank ACK is overdue at the fixture clock time' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
   METHOD payment_acks_deduplicated.
     TRY.
         configure_scenario( VALUE #( ) ).

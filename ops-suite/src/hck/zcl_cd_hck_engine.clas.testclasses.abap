@@ -724,6 +724,14 @@ CLASS ltc_engine IMPLEMENTATION.
   METHOD hung_run_fails_self.
     TRY.
         configure_scenario( VALUE #( green_checks = 1 include_pe_areas = abap_true fmon_hung = abap_true ) ).
+        ASSIGN mo_store->mt_last_runs[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]
+          TO FIELD-SYMBOL(<ls_prior_run>).
+        IF sy-subrc <> 0.
+          cl_abap_unit_assert=>fail( msg = 'Fixture must include the previous FMON run' ).
+          RETURN.
+        ENDIF.
+        <ls_prior_run>-status = zif_cd_ops_types=>gc_run_status-success.
+        <ls_prior_run>-started_at = '20261105003000.0000000'.
         DATA(ls_report) = act( ).
         DATA(ls_self) = ls_report-results[ check_id = zif_cd_hck_types=>gc_self_check ].
         cl_abap_unit_assert=>assert_equals( act = ls_self-rag exp = gc_red msg = 'A hung run must turn the self check red' ).
