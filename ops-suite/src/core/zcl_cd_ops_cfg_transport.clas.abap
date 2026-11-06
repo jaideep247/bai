@@ -14,8 +14,10 @@
 *& pools do not change. Fallback if the API is not available: function
 *& payment engine areas TR_OBJECTS_CHECK / TR_OBJECTS_INSERT with E071K TABU keys
 *& (VERIFY-SE37).
+*& The API call sits in test seam CTS_API (own test include: error mapping).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-06 | Test seam CTS_API; API error kept in a local, raised after the seam (coverage gap closure).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: transport recording</p>
 CLASS zcl_cd_ops_cfg_transport DEFINITION
@@ -33,24 +35,29 @@ ENDCLASS.
 CLASS zcl_cd_ops_cfg_transport IMPLEMENTATION.
 
   METHOD zif_cd_ops_cfg_transport~record.
+    DATA lx_error TYPE REF TO cx_root.
     " VERIFY-ADT: API names and parameters - see the class header
-    TRY.
-        DATA(lo_cts) = mbc_cp_api=>rap_table_cts(
-          table_entity_relations = VALUE #( FOR ls_relation IN it_relations
-                                            ( entity = ls_relation-entity
-                                              table  = ls_relation-table ) ) ).
-        lo_cts->record_changes( transport_request = iv_request
-                                create            = ir_create
-                                update            = ir_update
-                                delete            = ir_delete ).
-      CATCH cx_root INTO DATA(lx_error).
-        " Deliberately broad: whatever the API raises, the save must not go
-        " through unrecorded - the caller aborts the save
-        RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e408(zcd_ops) WITH iv_request
-          EXPORTING
-            previous = lx_error.
-    ENDTRY.
+    TEST-SEAM cts_api.
+      TRY.
+          mbc_cp_api=>rap_table_cts(
+            table_entity_relations = VALUE #( FOR ls_relation IN it_relations
+                                              ( entity = ls_relation-entity
+                                                table  = ls_relation-table ) )
+            )->record_changes( transport_request = iv_request
+                               create            = ir_create
+                               update            = ir_update
+                               delete            = ir_delete ).
+        CATCH cx_root INTO lx_error.
+          " Deliberately broad: whatever the API raises, the save must not go
+          " through unrecorded - raised below, the caller aborts the save
+      ENDTRY.
+    END-TEST-SEAM.
+    IF lx_error IS BOUND.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e408(zcd_ops) WITH iv_request
+        EXPORTING
+          previous = lx_error.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

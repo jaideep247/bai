@@ -255,14 +255,17 @@ src/core/zcl_cd_ops_alert_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every payment engine area. Reads ZCD_OPS_ALRULE and
 src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests of the alert router with LTD_* doubles for the alert DAO,"
 src/core/zcl_cd_ops_alert_router.clas.xml,abapGit,
-src/core/zcl_cd_ops_auth.clas.abap,ABAP,The only AUTHORITY-CHECK on object ZCD_OPS. Thin wrapper - deliberately
+src/core/zcl_cd_ops_auth.clas.abap,ABAP,The only AUTHORITY-CHECK on object ZCD_OPS. Thin wrapper: each kernel
+src/core/zcl_cd_ops_auth.clas.testclasses.abap,ABAP,Unit tests of the ZCD_OPS authorisation wrapper through its test seams:
 src/core/zcl_cd_ops_auth.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_auth.clas.abap,ABAP,Authorisation check of the configuration apps on object ZCD_OPS (design
+src/core/zcl_cd_ops_cfg_auth.clas.testclasses.abap,ABAP,Unit tests of the configuration-app authorisation adapter: the decision
 src/core/zcl_cd_ops_cfg_auth.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_checks.clas.abap,ABAP,"Field checks of the configuration apps, shared by all four behaviour"
 src/core/zcl_cd_ops_cfg_checks.clas.testclasses.abap,ABAP,Domain tests of the field checks used by the configuration apps: DDIC
 src/core/zcl_cd_ops_cfg_checks.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_client.clas.abap,ABAP,Repository for the system settings the configuration apps depend on:
+src/core/zcl_cd_ops_cfg_client.clas.testclasses.abap,ABAP,OSQL tests of the client / request repository of the configuration apps
 src/core/zcl_cd_ops_cfg_client.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_factory.clas.abap,ABAP,Resolves the gate of the configuration apps and its seams (T000 / E070
 src/core/zcl_cd_ops_cfg_factory.clas.xml,abapGit,
@@ -275,15 +278,19 @@ src/core/zcl_cd_ops_cfg_policy.clas.abap,ABAP,Change policy of the configuration
 src/core/zcl_cd_ops_cfg_policy.clas.testclasses.abap,ABAP,Domain tests of the configuration change policy: new entries only where
 src/core/zcl_cd_ops_cfg_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_transport.clas.abap,ABAP,Records the customizing rows changed in one RAP save on a customizing
+src/core/zcl_cd_ops_cfg_transport.clas.testclasses.abap,ABAP,Unit tests of the transport recording wrapper through test seam CTS_API:
 src/core/zcl_cd_ops_cfg_transport.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
+src/core/zcl_cd_ops_chn_applog.clas.testclasses.abap,ABAP,Unit tests of the application log alert channel through its test seams:
 src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
+src/core/zcl_cd_ops_chn_email.clas.testclasses.abap,ABAP,Unit tests of the e-mail alert channel through test seams BCS_SEND and
 src/core/zcl_cd_ops_chn_email.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_http.clas.abap,ABAP,Alert channel HTTP: POSTs the alert as JSON to an SM59 destination (e.g. a
 src/core/zcl_cd_ops_chn_http.clas.testclasses.abap,ABAP,"Domain tests of the webhook JSON body (TO_JSON): fields present, quotes and"
 src/core/zcl_cd_ops_chn_http.clas.xml,abapGit,
 src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
+src/core/zcl_cd_ops_clock.clas.testclasses.abap,ABAP,"Unit tests of the system clock: today and time are the system fields,"
 src/core/zcl_cd_ops_clock.clas.xml,abapGit,
 src/core/zcl_cd_ops_exc_dao.clas.abap,ABAP,Exception repository: finds the open exceptions of an object and closes
 src/core/zcl_cd_ops_exc_dao.clas.testclasses.abap,ABAP,OSQL tests of the exception repository: only open / assigned exceptions
@@ -297,6 +304,7 @@ src/core/zcl_cd_ops_factory.clas.xml,abapGit,
 src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
 src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_lock.clas.abap,ABAP,Run lock over the standard generic lock object E_TABLE with table
+src/core/zcl_cd_ops_lock.clas.testclasses.abap,ABAP,"Unit tests of the run lock wrapper through its test seams: lock granted,"
 src/core/zcl_cd_ops_lock.clas.xml,abapGit,
 src/core/zcl_cd_ops_ovw_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the production-support overview page
 src/core/zcl_cd_ops_ovw_cds_test.clas.testclasses.abap,ABAP,CDS tests of the production-support overview page on
@@ -1283,7 +1291,3 @@ tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_modernize.py,Other,
 tools/tests/test_name_checks.py,Other,
 tools/tests/test_pcre_only.py,Other,
-tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_modernize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_name_checks.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_pcre_only.cpython-313.pyc,Other,

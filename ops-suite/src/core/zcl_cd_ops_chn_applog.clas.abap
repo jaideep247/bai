@@ -3,10 +3,13 @@
 *& Purpose:
 *& Alert channel APPLOG: writes the alert to the application log (SLG1).
 *& Destination 'OBJECT/SUBOBJECT', default ZCD_OPS/ALERT. Thin wrapper over the
-*& BAL function payment engine areas - covered by the QA1 integration test.
+*& BAL function modules; each call sits in a test seam (BAL_CREATE, BAL_ADD,
+*& BAL_SAVE, BAL_REFRESH), so the own test include proves the error handling;
+*& the BAL database write is covered by the QA1 integration test.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | SLG1 external ID area/run/rule, BAL_LOG_REFRESH after save, partial log reported (audit A45, SLG1).
+*& 2026-11-06 | Test seams around the four BAL calls; return codes kept in locals (coverage gap closure).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel application log</p>
 CLASS zcl_cd_ops_chn_applog DEFINITION
@@ -33,6 +36,8 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
     DATA lt_handle TYPE bal_t_logh.
     DATA lv_object TYPE string.
     DATA lv_sub    TYPE string.
+    DATA lv_subrc  TYPE sysubrc.
+    DATA lv_saved  TYPE abap_bool.
 
     SPLIT is_message-destination AT '/' INTO lv_object lv_sub.
     ls_log-object    = COND #( WHEN lv_object IS NOT INITIAL THEN condense( lv_object ) ELSE gc_default_object ).
@@ -44,15 +49,18 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
     ls_log-altime    = sy-uzeit.
     ls_log-aluser    = sy-uname.
 
-    CALL FUNCTION 'BAL_LOG_CREATE'
-      EXPORTING
-        i_s_log                 = ls_log
-      IMPORTING
-        e_log_handle            = lv_handle
-      EXCEPTIONS
-        log_header_inconsistent = 1
-        OTHERS                  = 2.
-    IF sy-subrc <> 0.
+    TEST-SEAM bal_create.
+      CALL FUNCTION 'BAL_LOG_CREATE'
+        EXPORTING
+          i_s_log                 = ls_log
+        IMPORTING
+          e_log_handle            = lv_handle
+        EXCEPTIONS
+          log_header_inconsistent = 1
+          OTHERS                  = 2.
+      lv_subrc = sy-subrc.
+    END-TEST-SEAM.
+    IF lv_subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e022(zcd_ops) WITH ls_log-object ls_log-subobject.
     ENDIF.
 
@@ -63,40 +71,48 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
                                      ELSE 'I' ).
     SPLIT is_message-text AT cl_abap_char_utilities=>newline INTO TABLE DATA(lt_text).
     LOOP AT lt_text INTO DATA(lv_text).
-      CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT'
-        EXPORTING
-          i_log_handle     = lv_handle
-          i_msgty          = lv_msgty
-          i_text           = CONV char200( lv_text )
-        EXCEPTIONS
-          log_not_found    = 1
-          msg_inconsistent = 2
-          log_is_full      = 3
-          OTHERS           = 4.
-      IF sy-subrc <> 0.
+      TEST-SEAM bal_add.
+        CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT'
+          EXPORTING
+            i_log_handle     = lv_handle
+            i_msgty          = lv_msgty
+            i_text           = CONV char200( lv_text )
+          EXCEPTIONS
+            log_not_found    = 1
+            msg_inconsistent = 2
+            log_is_full      = 3
+            OTHERS           = 4.
+        lv_subrc = sy-subrc.
+      END-TEST-SEAM.
+      IF lv_subrc <> 0.
         EXIT.
       ENDIF.
       lv_added = lv_added + 1.
     ENDLOOP.
 
     INSERT lv_handle INTO TABLE lt_handle.
-    CALL FUNCTION 'BAL_DB_SAVE'
-      EXPORTING
-        i_t_log_handle   = lt_handle
-      EXCEPTIONS
-        log_not_found    = 1
-        save_not_allowed = 2
-        numbering_error  = 3
-        OTHERS           = 4.
-    DATA(lv_saved) = xsdbool( sy-subrc = 0 ).
+    TEST-SEAM bal_save.
+      CALL FUNCTION 'BAL_DB_SAVE'
+        EXPORTING
+          i_t_log_handle   = lt_handle
+        EXCEPTIONS
+          log_not_found    = 1
+          save_not_allowed = 2
+          numbering_error  = 3
+          OTHERS           = 4.
+      lv_saved = xsdbool( sy-subrc = 0 ).
+    END-TEST-SEAM.
     " the saved log is released from memory: long batch runs do not grow SAPLSBAL (SLG1)
-    CALL FUNCTION 'BAL_LOG_REFRESH'
-      EXPORTING
-        i_log_handle  = lv_handle
-      EXCEPTIONS
-        log_not_found = 1
-        OTHERS        = 2.
-    IF sy-subrc <> 0.
+    TEST-SEAM bal_refresh.
+      CALL FUNCTION 'BAL_LOG_REFRESH'
+        EXPORTING
+          i_log_handle  = lv_handle
+        EXCEPTIONS
+          log_not_found = 1
+          OTHERS        = 2.
+      lv_subrc = sy-subrc.
+    END-TEST-SEAM.
+    IF lv_subrc <> 0.
       " nothing to release - the handle is gone already
       CLEAR lv_handle.
     ENDIF.
