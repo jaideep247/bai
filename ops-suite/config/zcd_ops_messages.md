@@ -20,6 +20,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 032 | Class &1 does not implement interface &2 |
 | 040 | Run for &1 &2 is already active (lock held by &3) |
 | 041 | No authorization for &1 activity &2 |
+| 042 | Lock service failed for &1 &2 (run not started) |
 | 050 | Configuration missing: &1 &2 |
 | 051 | Configuration value &1 for &2 is invalid |
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |

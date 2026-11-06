@@ -101,6 +101,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>042</MSGNR>
+     <TEXT>Lock service failed for &amp;1 &amp;2 (run not started)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>050</MSGNR>
      <TEXT>Configuration missing: &amp;1 &amp;2</TEXT>
     </T100>

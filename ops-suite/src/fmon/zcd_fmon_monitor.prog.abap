@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 module FMON at start.
+*& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *&---------------------------------------------------------------------*
 REPORT zcd_fmon_monitor.
 
@@ -43,6 +44,15 @@ CLASS lcl_app IMPLEMENTATION.
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.
+
+    IF zcl_cd_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
+      " Run lock held: background job ends in error so Control-M shows it
+      IF sy-batch = abap_true.
+        MESSAGE ls_result-run-message TYPE 'E'.
+      ENDIF.
+      MESSAGE ls_result-run-message TYPE 'S' DISPLAY LIKE 'E'.
+      RETURN.
+    ENDIF.
 
     mt_board    = ls_result-board.
     mt_findings = ls_result-findings.

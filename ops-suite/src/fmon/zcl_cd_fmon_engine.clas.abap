@@ -9,6 +9,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run header committed at start; results committed before alerts;
 *&              failed registry save rolled back; READ TABLE replaces OPTIONAL + sy-subrc.
+*& 2026-11-06 | Run lock for the whole module (shared registry); body moved to execute( ).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -35,6 +36,25 @@ CLASS zcl_cd_fmon_engine DEFINITION
         zcx_cd_ops_error.
 
   PRIVATE SECTION.
+    "! Lock variant: one monitor run at a time for all interfaces - the registry,
+    "! event numbering and lots are shared (design: module + variant; FMON uses '*')
+    CONSTANTS gc_lock_variant TYPE zif_cd_ops_types=>ty_variant VALUE '*'.
+
+    "! The run itself, under the run lock taken by run( )
+    METHODS execute
+      IMPORTING
+        iv_business_date TYPE d
+        iv_iface_id      TYPE zif_cd_fmon_types=>ty_iface_id
+        iv_test_mode     TYPE abap_bool
+      RETURNING
+        VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS release_lock
+      IMPORTING
+        iv_test_mode TYPE abap_bool.
+
     TYPES tt_file_map TYPE HASHED TABLE OF zif_cd_fmon_types=>ty_file
       WITH UNIQUE KEY file_id
       WITH NON-UNIQUE SORTED KEY ref COMPONENTS iface_id file_ref.
@@ -211,6 +231,41 @@ ENDCLASS.
 CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD run.
+    DATA lv_holder TYPE syuname.
+
+    IF iv_test_mode = abap_false.
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+                                                             iv_variant = gc_lock_variant
+                                                   IMPORTING ev_holder  = lv_holder ) = abap_false.
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+                                                         iv_variant = gc_lock_variant
+                                                         iv_holder  = lv_holder ).
+        rs_result-run      = ls_refusal-run.
+        rs_result-findings = ls_refusal-findings.
+        RETURN.
+      ENDIF.
+    ENDIF.
+
+    TRY.
+        rs_result = execute( iv_business_date = iv_business_date
+                             iv_iface_id      = iv_iface_id
+                             iv_test_mode     = iv_test_mode ).
+      CLEANUP.
+        release_lock( iv_test_mode ).
+    ENDTRY.
+    release_lock( iv_test_mode ).
+  ENDMETHOD.
+
+
+  METHOD release_lock.
+    IF iv_test_mode = abap_false.
+      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+                                                iv_variant = gc_lock_variant ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD execute.
     init( iv_business_date = iv_business_date
           iv_iface_id      = iv_iface_id
           iv_test_mode     = iv_test_mode ).

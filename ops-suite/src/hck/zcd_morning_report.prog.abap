@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 module HCK at start.
+*& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
 *& ZCL_CD_HCK_REPORT_HTML. Schedule daily (Control-M) with a variant that
@@ -157,6 +158,14 @@ CLASS lcl_app IMPLEMENTATION.
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.
+    IF zcl_cd_ops_run_guard=>was_refused( VALUE #( ms_report-results[ 1 ]-findings OPTIONAL ) ) = abap_true.
+      " Run lock held: background job ends in error so Control-M shows it
+      IF sy-batch = abap_true.
+        MESSAGE ms_report-run-message TYPE 'E'.
+      ENDIF.
+      MESSAGE ms_report-run-message TYPE 'S' DISPLAY LIKE 'E'.
+      RETURN.
+    ENDIF.
 
     build_alv_rows( ).
     IF p_exp = abap_true.

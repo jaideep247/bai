@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run header committed at start; results committed before alerts and report mail.
+*& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -63,6 +64,19 @@ CLASS zcl_cd_hck_engine DEFINITION
         zcx_cd_ops_error.
 
   PRIVATE SECTION.
+
+    "! The run itself, under the run lock taken by run( )
+    METHODS execute
+      IMPORTING
+        is_selection     TYPE zif_cd_hck_types=>ty_selection
+      RETURNING
+        VALUE(rs_report) TYPE zif_cd_hck_types=>ty_report
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS release_lock
+      IMPORTING
+        is_selection TYPE zif_cd_hck_types=>ty_selection.
 
     DATA mo_store TYPE REF TO zif_cd_ops_store.
     DATA mo_dao TYPE REF TO zif_cd_hck_dao.
@@ -169,6 +183,44 @@ ENDCLASS.
 CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD run.
+    DATA lv_holder TYPE syuname.
+
+    IF is_selection-test_mode = abap_false.
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-health_check
+                                                             iv_variant = is_selection-variant
+                                                   IMPORTING ev_holder  = lv_holder ) = abap_false.
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-health_check
+                                                         iv_variant = is_selection-variant
+                                                         iv_holder  = lv_holder ).
+        rs_report-run         = ls_refusal-run.
+        rs_report-overall_rag = ls_refusal-run-rag.
+        INSERT VALUE #( check_id = zcl_cd_ops_run_guard=>gc_check_code
+                        category = zif_cd_hck_types=>gc_category-technical
+                        rag      = ls_refusal-run-rag
+                        summary  = ls_refusal-run-message
+                        findings = ls_refusal-findings ) INTO TABLE rs_report-results.
+        RETURN.
+      ENDIF.
+    ENDIF.
+
+    TRY.
+        rs_report = execute( is_selection ).
+      CLEANUP.
+        release_lock( is_selection ).
+    ENDTRY.
+    release_lock( is_selection ).
+  ENDMETHOD.
+
+
+  METHOD release_lock.
+    IF is_selection-test_mode = abap_false.
+      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-health_check
+                                                iv_variant = is_selection-variant ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD execute.
     mo_store = zcl_cd_ops_factory=>get_store( ).
     mo_clock = zcl_cd_ops_factory=>get_clock( ).
     mo_dao   = zcl_cd_hck_factory=>get_dao( ).

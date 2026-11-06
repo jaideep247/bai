@@ -7,6 +7,7 @@
 *& always blocked). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -58,10 +59,12 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mt_saved    TYPE zif_cd_ops_types=>tt_finding.
     DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     DATA mv_commits  TYPE i.
+    DATA mv_starts   TYPE i.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
+    mv_starts += 1.
     rs_run-module    = iv_module.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
@@ -119,6 +122,28 @@ CLASS ltd_failing_rule IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
+CLASS ltd_lock DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_lock.
+    DATA mv_held     TYPE abap_bool.
+    DATA mv_acquires TYPE i.
+    DATA mv_releases TYPE i.
+ENDCLASS.
+
+CLASS ltd_lock IMPLEMENTATION.
+  METHOD zif_cd_ops_lock~acquire.
+    mv_acquires += 1.
+    rv_acquired = xsdbool( mv_held = abap_false ).
+    IF mv_held = abap_true.
+      ev_holder = 'OTHER_JOB'.
+    ENDIF.
+  ENDMETHOD.
+  METHOD zif_cd_ops_lock~release.
+    mv_releases += 1.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_clock.
@@ -170,6 +195,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     DATA mo_cfg    TYPE REF TO ltd_cfg.
     DATA mo_store  TYPE REF TO ltd_store.
     DATA mo_alert  TYPE REF TO ltd_alert.
+    DATA mo_lock   TYPE REF TO ltd_lock.
     DATA ms_result TYPE zcl_cd_ebs_engine=>ty_result.
 
     METHODS setup.
@@ -209,6 +235,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS off_mode_validates_nothing   FOR TESTING.
     METHODS failed_rule_blocks_posting   FOR TESTING.
     METHODS broken_config_blocks_posting FOR TESTING.
+    METHODS held_lock_skips_run          FOR TESTING.
+    METHODS lock_released_after_run      FOR TESTING.
 ENDCLASS.
 
 
@@ -219,6 +247,8 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_cfg    = NEW #( ).
     mo_store  = NEW #( ).
     mo_alert  = NEW #( ).
+    mo_lock   = NEW #( ).
+    zcl_cd_ops_injector=>inject_lock( mo_lock ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
     zcl_cd_ops_injector=>inject_alert( mo_alert ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
@@ -231,7 +261,7 @@ CLASS ltc_engine IMPLEMENTATION.
   METHOD teardown.
     zcl_cd_ops_injector=>reset( ).
     zcl_cd_ebs_injector=>reset( ).
-    CLEAR: mo_source, mo_cfg, mo_store, mo_alert.
+    CLEAR: mo_source, mo_cfg, mo_store, mo_alert, mo_lock.
   ENDMETHOD.
 
 
@@ -427,6 +457,7 @@ CLASS ltc_engine IMPLEMENTATION.
     cl_abap_unit_assert=>assert_initial( act = mo_store->mt_saved msg = 'Test mode must save nothing' ).
     cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 0 msg = 'Test mode must not commit' ).
     cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatched exp = 0 msg = 'Test mode must not alert' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 0 msg = 'Test mode must not take the run lock' ).
   ENDMETHOD.
 
 
@@ -565,6 +596,36 @@ CLASS ltc_engine IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Must not raise: { lx_error->get_text( ) }| ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: while another run of the same variant holds the lock, nothing is
+  " validated or saved; the refusal is alerted once
+  METHOD held_lock_skips_run.
+    DATA(ls_flags) = default_flags( ).
+    configure_scenario( ls_flags ).
+    mo_lock->mv_held = abap_true.
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_equals( act = mo_store->mv_starts exp = 0
+                                        msg = 'No run may be started while the lock is held' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_run_guard=>was_refused( ms_result-findings )
+                                      msg = 'The result must carry RUN_LOCKED' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatched exp = 1
+                                        msg = 'The refusal must be alerted once' ).
+  ENDMETHOD.
+
+
+  " Rule: a productive run takes the lock once and releases it at the end
+  METHOD lock_released_after_run.
+    DATA(ls_flags) = default_flags( ).
+    configure_scenario( ls_flags ).
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 1 msg = 'The lock must be taken once' ).
+    cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1 msg = 'The lock must be released once' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -12,6 +12,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Findings kept in memory capped at EBS_RESULT_MAX; RAG accumulated per package (review 3.5).
 *& 2026-11-06 | Fail closed: PLUGIN_ERROR and VALIDATION_ERROR have action BLOCK; validate_for_posting never raises.
+*& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -91,6 +92,22 @@ CLASS zcl_cd_ebs_engine DEFINITION
         VALUE(rv_mode) TYPE ty_mode.
 
   PRIVATE SECTION.
+    "! The run itself, under the run lock taken by run( )
+    METHODS execute
+      IMPORTING
+        io_source        TYPE REF TO zif_cd_ebs_source
+        iv_variant       TYPE zif_cd_ops_types=>ty_variant
+        iv_test_mode     TYPE abap_bool
+      RETURNING
+        VALUE(rs_result) TYPE ty_result
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS release_lock
+      IMPORTING
+        iv_variant   TYPE zif_cd_ops_types=>ty_variant
+        iv_test_mode TYPE abap_bool.
+
     TYPES:
       BEGIN OF ty_plugin,
         class_name TYPE zif_cd_ops_types=>ty_class_name,
@@ -143,6 +160,41 @@ ENDCLASS.
 CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD run.
+    DATA lv_holder TYPE syuname.
+
+    IF iv_test_mode = abap_false.
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-ebs
+                                                             iv_variant = iv_variant
+                                                   IMPORTING ev_holder  = lv_holder ) = abap_false.
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-ebs
+                                                         iv_variant = iv_variant
+                                                         iv_holder  = lv_holder ).
+        rs_result-run      = ls_refusal-run.
+        rs_result-findings = ls_refusal-findings.
+        RETURN.
+      ENDIF.
+    ENDIF.
+
+    TRY.
+        rs_result = execute( io_source    = io_source
+                             iv_variant   = iv_variant
+                             iv_test_mode = iv_test_mode ).
+      CLEANUP.
+        release_lock( iv_variant = iv_variant iv_test_mode = iv_test_mode ).
+    ENDTRY.
+    release_lock( iv_variant = iv_variant iv_test_mode = iv_test_mode ).
+  ENDMETHOD.
+
+
+  METHOD release_lock.
+    IF iv_test_mode = abap_false.
+      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-ebs
+                                                iv_variant = iv_variant ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD execute.
     " Findings kept in memory are capped (EBS_RESULT_MAX); every finding is still saved
     " per package, and the run RAG is accumulated over all of them (review 3.5)
     DATA lt_all_findings TYPE zif_cd_ops_types=>tt_finding.

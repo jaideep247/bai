@@ -10,6 +10,7 @@
 *&            | Z_BAI_MASS_VALIDATION / ZFIR_BANK_POST_VALIDATION_V2).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 module EBS replaces S_PROGRAM.
+*& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -91,6 +92,14 @@ CLASS lcl_report IMPLEMENTATION.
         DATA(ls_result) = NEW zcl_cd_ebs_engine( )->run( io_source    = build_source( )
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).
+        IF zcl_cd_ops_run_guard=>was_refused( ls_result-findings ) = abap_true.
+          " Run lock held: background job ends in error so Control-M shows it
+          IF sy-batch = abap_true.
+            MESSAGE ls_result-run-message TYPE 'E'.
+          ENDIF.
+          MESSAGE ls_result-run-message TYPE 'S' DISPLAY LIKE 'E'.
+          RETURN.
+        ENDIF.
         IF sy-batch = abap_true.
           MESSAGE s000(zcd_ops) WITH is_result_text( ls_result-run ) space space space.
         ELSE.

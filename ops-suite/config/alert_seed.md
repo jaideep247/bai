@@ -23,6 +23,7 @@
 | NOC_AGING | FMON | E | | NOC_AGING* | | | EMAIL | compliance DL | X | 100 | 1440 | — | — |
 | HCK_RED | HCK | E | | | R | X | EMAIL | RTB support DL | X | 50 | 60 | 22:00–06:00 | 2 / RTB lead DL |
 | ALL_ABORT | * | B | | | | X | HTTP | ZCD_OPS_WEBHOOK | X | 20 | 15 | — | — |
+| RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | RTB support DL | | 10 | 60 | — | — |
 
 ZCD_OPS_PARAM for reports sent with `send( )`: `ALERT_MORNING` (morning report distribution list), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
 

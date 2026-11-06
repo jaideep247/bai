@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -152,11 +153,13 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_finish_calls TYPE i.
     DATA mv_commit_calls TYPE i.
     DATA mv_rollback_calls TYPE i.
+    DATA mv_start_calls TYPE i.
 ENDCLASS.
 
 
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
+    mv_start_calls += 1.
     rs_run-module    = iv_module.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
@@ -204,6 +207,29 @@ CLASS ltd_alert IMPLEMENTATION.
       mv_commits_seen  = mo_store->mv_commit_calls.
       mv_finishes_seen = mo_store->mv_finish_calls.
     ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_lock DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_lock.
+    DATA mv_held     TYPE abap_bool.
+    DATA mv_acquires TYPE i.
+    DATA mv_releases TYPE i.
+ENDCLASS.
+
+
+CLASS ltd_lock IMPLEMENTATION.
+  METHOD zif_cd_ops_lock~acquire.
+    mv_acquires += 1.
+    rv_acquired = xsdbool( mv_held = abap_false ).
+    IF mv_held = abap_true.
+      ev_holder = 'OTHER_JOB'.
+    ENDIF.
+  ENDMETHOD.
+  METHOD zif_cd_ops_lock~release.
+    mv_releases += 1.
   ENDMETHOD.
 ENDCLASS.
 
@@ -277,6 +303,7 @@ CLASS ltc_engine DEFINITION FINAL
     DATA mo_calendar TYPE REF TO ltd_calendar.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
+    DATA mo_lock TYPE REF TO ltd_lock.
     DATA mv_test_mode TYPE abap_bool.
 
     METHODS setup.
@@ -343,6 +370,8 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS noc_age_is_in_banking_days FOR TESTING.
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS persist_error_rolls_back FOR TESTING.
+    METHODS held_lock_skips_run FOR TESTING.
+    METHODS lock_released_after_run FOR TESTING.
 
 ENDCLASS.
 
@@ -356,6 +385,8 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_calendar = NEW #( ).
     mo_store    = NEW #( ).
     mo_alert    = NEW #( ).
+    mo_lock     = NEW #( ).
+    zcl_cd_ops_injector=>inject_lock( mo_lock ).
     zcl_cd_fmon_injector=>inject_dao( mo_dao ).
     zcl_cd_fmon_injector=>inject_adapter( mo_adapter ).
     zcl_cd_fmon_injector=>inject_lot_reader( mo_lots ).
@@ -695,6 +726,8 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'No commit in test mode' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatch_calls exp = 0
                                             msg = 'No alert dispatch in test mode' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 0
+                                            msg = 'Test mode must not take the run lock' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -761,6 +794,42 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ) )
           msg = 'The failure must be recorded as PERSIST_ERROR' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: while another monitor run holds the lock (the registry is shared by all
+  " interfaces), nothing is read, saved or committed; the refusal is alerted once
+  METHOD held_lock_skips_run.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        mo_lock->mv_held = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_start_calls exp = 0
+                                            msg = 'No run may be started while the lock is held' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_save_calls exp = 0
+                                            msg = 'No registry save while the lock is held' ).
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_run_guard=>was_refused( ls_result-findings )
+                                          msg = 'The result must carry RUN_LOCKED' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_dispatch_calls exp = 1
+                                            msg = 'The refusal must be alerted once' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a productive run takes the lock once and releases it at the end
+  METHOD lock_released_after_run.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 1
+                                            msg = 'The lock must be taken once' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1
+                                            msg = 'The lock must be released once' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
