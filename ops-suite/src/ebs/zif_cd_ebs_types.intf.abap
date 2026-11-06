@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A27 blocks-posting flag and A03 required rules (RULE_GROUP_EMPTY, RULE_UNUSABLE, NONE row).
 *& 2026-11-06 | Audit A25 / A33: canonical account key, missing-currency check codes.
 *& 2026-11-06 | Audit A14: R22 duplicate history (check code, message, look-back parameter).
+*& 2026-11-06 | Audit A26 / A32 / A34 / A35: disposition, statement key, sign and gross-total check codes.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -186,8 +187,12 @@ INTERFACE zif_cd_ebs_types
       pay_method    TYPE ty_paymeth,
       map_posting   TYPE c LENGTH 4,
       blocked       TYPE abap_bool,
+      "! A26: the map row expects the entry not to be posted (disposition NOT_POSTED)
+      not_posted    TYPE abap_bool,
     END OF ty_line.
-  TYPES tt_line TYPE STANDARD TABLE OF ty_line WITH EMPTY KEY.
+  "! A35: secondary key STMT - statement rules read their statement's lines by key
+  TYPES tt_line TYPE STANDARD TABLE OF ty_line WITH EMPTY KEY
+                WITH NON-UNIQUE SORTED KEY stmt COMPONENTS stmt_key.
 
   "! Result of parsing one bank file
   TYPES:
@@ -235,7 +240,15 @@ INTERFACE zif_cd_ebs_types
       action      TYPE zif_cd_ops_types=>ty_action,
       active      TYPE abap_bool,
       description TYPE c LENGTH 60,
+      "! A26: expected disposition - blank = posted as usual, NOT_POSTED = never posted
+      disposition TYPE c LENGTH 10,
     END OF ty_btc_map.
+
+  "! Expected disposition of a bank transaction code (ZCD_BTC_MAP-DISPOSITION)
+  CONSTANTS:
+    BEGIN OF gc_disposition,
+      not_posted TYPE c LENGTH 10 VALUE 'NOT_POSTED',
+    END OF gc_disposition.
   TYPES tt_btc_map TYPE STANDARD TABLE OF ty_btc_map WITH EMPTY KEY.
 
   "! ZCD_BTC_RULE joined with ZCD_EBS_RULE_DEF
@@ -410,6 +423,7 @@ INTERFACE zif_cd_ebs_types
       amount_below_min               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_BELOW_MIN',
       balance_arithmetic             TYPE zif_cd_ops_types=>ty_check_code VALUE 'BALANCE_ARITHMETIC',
       btc_coverage                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BTC_COVERAGE',
+      cdi_unknown                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'CDI_UNKNOWN',
       check_amount_mismatch          TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_AMOUNT_MISMATCH',
       check_not_found                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_NOT_FOUND',
       check_status                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_STATUS',
@@ -427,6 +441,7 @@ INTERFACE zif_cd_ebs_types
       fi_doc_not_found               TYPE zif_cd_ops_types=>ty_check_code VALUE 'FI_DOC_NOT_FOUND',
       gl_account_not_mapped          TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_ACCOUNT_NOT_MAPPED',
       gl_ne_closing                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_NE_CLOSING',
+      gross_totals                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'GROSS_TOTALS',
       house_bank_ambiguous           TYPE zif_cd_ops_types=>ty_check_code VALUE 'HOUSE_BANK_AMBIGUOUS',
       map_action_block               TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_ACTION_BLOCK',
       not_posted                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOT_POSTED',
@@ -435,6 +450,7 @@ INTERFACE zif_cd_ebs_types
       payment_status                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_STATUS',
       posting_rule_mismatch          TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISMATCH',
       posting_rule_missing           TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISSING',
+      posting_rule_unresolved        TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_UNRESOLVED',
       reason_invalid                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_INVALID',
       reason_missing                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_MISSING',
       reason_unmapped                TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_UNMAPPED',
@@ -574,6 +590,10 @@ INTERFACE zif_cd_ebs_types
       currency_missing            TYPE zif_cd_ops_types=>ty_msgno VALUE '515',
       account_currency_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '516',
       duplicate_history           TYPE zif_cd_ops_types=>ty_msgno VALUE '517',
+      cdi_unknown                 TYPE zif_cd_ops_types=>ty_msgno VALUE '518',
+      gross_credits               TYPE zif_cd_ops_types=>ty_msgno VALUE '519',
+      gross_debits                TYPE zif_cd_ops_types=>ty_msgno VALUE '520',
+      posting_rule_unresolved     TYPE zif_cd_ops_types=>ty_msgno VALUE '521',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A34: unknown debit/credit indicator stays unknown.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -121,8 +122,9 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
     rs_line-line_no      = is_item-esnum.
     rs_line-kukey        = is_item-kukey.
     rs_line-esnum        = is_item-esnum.
+    " A34: only the configured indicators give a direction; anything else stays unknown (S02)
     rs_line-cdi          = COND #( WHEN is_item-epvoz = mv_credit_ind THEN zif_cd_ebs_types=>gc_cdi-credit
-                                   ELSE zif_cd_ebs_types=>gc_cdi-debit ).
+                                   WHEN is_item-epvoz = mv_debit_ind  THEN zif_cd_ebs_types=>gc_cdi-debit ).
     rs_line-amount       = abs( is_item-kwbtr ).
     rs_line-currency     = COND #( WHEN is_item-kwaer IS NOT INITIAL THEN is_item-kwaer ELSE iv_currency ).
     rs_line-booking_date = is_item-budat.

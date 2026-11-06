@@ -41,7 +41,8 @@ SPEC = {
         title='EBS rules and mapping', tables=[
             ('zcd_btc_map', 'BtcMap', 'zcd_d_btcmap', 'Bank transaction code', 'Bank transaction codes',
              ['bank_key'], [('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'flow_type', 'D,C,*'),
-                            ('enum', 'exp_cdi', ',C,D,*'), ('enum', 'action', ',' + ACTIONS), ('rulegroups',)]),
+                            ('enum', 'exp_cdi', ',C,D,*'), ('enum', 'action', ',' + ACTIONS),
+                            ('enum', 'disposition', ',NOT_POSTED'), ('rulegroups',)]),
             ('zcd_btc_rule', 'BtcRule', 'zcd_d_btcrule', 'Rule assignment', 'Rule assignments', [],
              [('enum', 'severity', ',' + SEV), ('enum', 'action', ',' + ACTIONS),
               ('enum', 'blocks_posting', ',Y,N')]),

@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A35: lines read by statement key.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S12 - entry count = declared count</p>
 CLASS zcl_cd_ebs_r_s12_count DEFINITION
@@ -28,7 +29,7 @@ CLASS zcl_cd_ebs_r_s12_count IMPLEMENTATION.
     LOOP AT it_statements INTO DATA(ls_statement)
          WHERE source = zif_cd_ebs_types=>gc_source-feb AND declared_count >= 0.
       DATA(lv_read) = REDUCE i( INIT lv_count = 0
-                                FOR ls_line IN it_lines WHERE ( stmt_key = ls_statement-stmt_key )
+                                FOR ls_line IN it_lines USING KEY stmt WHERE ( stmt_key = ls_statement-stmt_key )
                                 NEXT lv_count = lv_count + 1 ).
       IF lv_read <> ls_statement-declared_count.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(

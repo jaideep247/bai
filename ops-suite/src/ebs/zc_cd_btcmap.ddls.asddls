@@ -20,6 +20,7 @@ define view entity ZC_CD_BtcMap
       ActionCode,
       Active,
       Description,
+      Disposition,
       ChangedBy,
       ChangedAt,
       LastChangedBy,

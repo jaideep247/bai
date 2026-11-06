@@ -32,6 +32,8 @@ define view entity ZR_CD_BtcMap
       active as Active,
       @EndUserText.label: 'Description'
       description as Description,
+      @EndUserText.label: 'Disposition'
+      disposition as Disposition,
       @EndUserText.label: 'Changed by (SM30)'
       changed_by as ChangedBy,
       @EndUserText.label: 'Changed at (SM30)'

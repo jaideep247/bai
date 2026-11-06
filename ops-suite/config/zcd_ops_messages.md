@@ -273,3 +273,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 515 | Entry &1: currency missing on the entry or its statement |
 | 516 | Account &1: currency missing in the statement or in ZCD_EBS_ACCT |
 | 517 | Entry &1 already in statement &2 of the account (reference &3) |
+| 518 | Statement &1: &2 entries without debit/credit indicator |
+| 519 | Declared credits &1, entries &2 |
+| 520 | Declared debits &1, entries &2 |
+| 521 | Entry &1 imported without posting rule; map prescribes &2 |

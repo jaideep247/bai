@@ -6,6 +6,7 @@
 *& live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A34: an unknown debit/credit indicator stays unknown.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -104,6 +105,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
     METHODS camt_code_split_into_parts   FOR TESTING.
     METHODS lines_keyed_to_statement     FOR TESTING.
     METHODS packages_follow_size         FOR TESTING.
+    METHODS unknown_epvoz_has_no_sign    FOR TESTING.
 ENDCLASS.
 
 
@@ -270,6 +272,21 @@ CLASS ltc_src_feb IMPLEMENTATION.
                                             msg = 'Second package must hold the last statement' ).
         cl_abap_unit_assert=>assert_initial( act = lo_source->next_package( )
                                              msg = 'Third call must end the run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A34: an indicator that is neither the configured credit nor debit value stays unknown
+  " (S02 reports it) - it is never silently turned into a debit
+  METHOD unknown_epvoz_has_no_sign.
+    TRY.
+        add_header( gc_test-kukey1 ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' iv_epvoz = 'X' ).
+        DATA(ls_package) = new_source( )->next_package( ).
+        cl_abap_unit_assert=>assert_initial( act = ls_package-lines[ 1 ]-cdi
+                                             msg = 'An unknown EPVOZ must not become debit or credit' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

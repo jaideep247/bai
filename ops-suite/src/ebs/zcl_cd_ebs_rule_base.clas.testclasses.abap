@@ -14,6 +14,7 @@
 *& 2026-11-06 | Audit A25 / A33: canonical account identity, missing currencies.
 *& 2026-11-06 | Audit A07 / A08: company code in the register match, leading zeros, R12 populations.
 *& 2026-11-06 | Audit A14: cross-statement duplicate look-back (R22).
+*& 2026-11-06 | Audit A26 / A32 / A34: sweeps not posted, imported entry without posting rule, sign and gross totals.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -381,6 +382,7 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS teardown.
     METHODS r01_debit_on_credit_code     FOR TESTING.
+    METHODS r15_imported_without_rule    FOR TESTING.
     METHODS r03_missing_currency         FOR TESTING.
     METHODS r01_reversal_may_flip_sign   FOR TESTING.
     METHODS r02_amount_above_max_fails   FOR TESTING.
@@ -417,6 +419,27 @@ CLASS ltc_line_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R03_CURRENCY' is_rule = rule( 'R03' ) ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-currency_missing
                          iv_msg        = 'A line without currency must be reported by R03' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A32: an imported entry without posting rule (FEBEP-VGINT) is reported - FF_5 could not
+  " interpret it; a parsed file (not yet imported) has no posting rule yet and is not reported
+  METHOD r15_imported_without_rule.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-map_posting = '0001'.
+        run( iv_class = 'ZCL_CD_EBS_R_R15_POSTING_RULE' is_rule = rule( 'R15' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_unresolved
+                         iv_msg        = 'An imported entry without posting rule must be reported' ).
+        CLEAR mt_findings.
+        mt_stmts[ 1 ]-source = zif_cd_ebs_types=>gc_source-file.
+        run( iv_class = 'ZCL_CD_EBS_R_R15_POSTING_RULE' is_rule = rule( 'R15' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A parsed file has no posting rule yet - not reported' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -1197,6 +1220,9 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s01_other_account_not_prior  FOR TESTING.
     METHODS s07_two_accounts_same_number FOR TESTING.
     METHODS r22_entry_in_earlier_stmt    FOR TESTING.
+    METHODS s10_unposted_sweep_ok        FOR TESTING.
+    METHODS s02_unknown_cdi_reported     FOR TESTING.
+    METHODS s02_gross_totals_compared    FOR TESTING.
     METHODS r22_own_statement_ignored    FOR TESTING.
     METHODS r22_other_amount_not_dup     FOR TESTING.
     METHODS r22_window_from_rule         FOR TESTING.
@@ -1414,6 +1440,56 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         run_r22( ).
         cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_from exp = CONV d( gc_test-today - 5 )
                                             msg = 'The history must be read from the statement date minus WINDOW_DAYS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A26: a sweep the business does not post (map disposition NOT_POSTED) is complete unposted
+  METHOD s10_unposted_sweep_ok.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-not_posted = abap_true.
+        run( iv_class = 'ZCL_CD_EBS_R_S10_COMPLETE' is_rule = rule( 'S10' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'An unposted sweep (NOT_POSTED) must not be incomplete' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A34: an entry without debit/credit indicator cannot be balanced - reported, never treated as credit
+  METHOD s02_unknown_cdi_reported.
+    TRY.
+        add_statement( iv_opening = '1000.00' iv_closing = '1250.00' ).
+        add_line( iv_cdi = space iv_amount = '250.00' ).
+        run( iv_class = 'ZCL_CD_EBS_R_S02_BALANCE' is_rule = rule( 'S02' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-cdi_unknown
+                         iv_msg        = 'An entry without debit/credit indicator must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A34: declared gross credits and debits are compared separately - equal overstatements on
+  " both sides cancel out in the net, not in the gross comparison
+  METHOD s02_gross_totals_compared.
+    TRY.
+        add_statement( iv_opening = '1000.00' iv_closing = '1250.00' ).
+        mt_stmts[ 1 ]-has_totals    = abap_true.
+        mt_stmts[ 1 ]-total_credits = '300.00'.
+        mt_stmts[ 1 ]-total_debits  = '50.00'.
+        add_line( iv_cdi = zif_cd_ebs_types=>gc_cdi-credit iv_amount = '250.00' ).
+        run( iv_class = 'ZCL_CD_EBS_R_S02_BALANCE' is_rule = rule( 'S02' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 2
+                                            msg = 'Credits 250 vs 300 and debits 0 vs 50 must both be reported' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mt_findings[ check_code = zif_cd_ebs_types=>gc_check_code-gross_totals ] ) )
+          msg = 'The gross deviation must be reported as GROSS_TOTALS' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

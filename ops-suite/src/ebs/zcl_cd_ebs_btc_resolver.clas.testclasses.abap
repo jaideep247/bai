@@ -82,6 +82,7 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS bai143_collections_only      FOR TESTING.
     METHODS bai452_validated_as_468      FOR TESTING.
     METHODS imported_stmt_gets_account   FOR TESTING.
+    METHODS not_posted_disposition_taken FOR TESTING.
 ENDCLASS.
 
 
@@ -507,6 +508,22 @@ CLASS ltc_resolver IMPLEMENTATION.
         run_resolver( ).
         cl_abap_unit_assert=>assert_equals( act = mt_stmts[ 1 ]-account_no exp = gc_test-account
                                             msg = 'The imported statement must get the configured account number' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A26: the map row's disposition NOT_POSTED reaches the line (sweeps 275 / 575)
+  METHOD not_posted_disposition_taken.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        mt_map[ 1 ]-disposition = zif_cd_ebs_types=>gc_disposition-not_posted.
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_true( act = first_line( )-not_posted
+                                          msg = 'A NOT_POSTED map row must mark the line as not posted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

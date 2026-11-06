@@ -19,6 +19,7 @@ define table zcd_d_btcmap {
   actioncode : abap.char(10);
   active : abap_boolean;
   description : abap.char(60);
+  disposition : abap.char(10);
   changedby : syuname;
   changedat : timestampl;
   lastchangedby : abp_lastchange_user;

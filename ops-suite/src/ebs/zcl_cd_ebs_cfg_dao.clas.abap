@@ -27,7 +27,7 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_cfg_dao~get_btc_map.
     SELECT scheme, btc_code, bank_key, flow_type, category, rule_group, exp_cdi, pay_method,
-           posting_rule, ret_reason, action, active, description
+           posting_rule, ret_reason, action, active, description, disposition
       FROM zcd_btc_map
       ORDER BY scheme, btc_code, bank_key, flow_type
       INTO CORRESPONDING FIELDS OF TABLE @rt_map.

@@ -1610,6 +1610,30 @@
      <MSGNR>517</MSGNR>
      <TEXT>Entry &amp;1 already in statement &amp;2 of the account (reference &amp;3)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>518</MSGNR>
+     <TEXT>Statement &amp;1: &amp;2 entries without debit/credit indicator</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>519</MSGNR>
+     <TEXT>Declared credits &amp;1, entries &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>520</MSGNR>
+     <TEXT>Declared debits &amp;1, entries &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>521</MSGNR>
+     <TEXT>Entry &amp;1 imported without posting rule; map prescribes &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

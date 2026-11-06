@@ -18,6 +18,7 @@ INTERFACE lif_c.
       classname                      TYPE string VALUE `CLASSNAME`,
       defaultaction                  TYPE string VALUE `DEFAULTACTION`,
       defaultseverity                TYPE string VALUE `DEFAULTSEVERITY`,
+      disposition                    TYPE string VALUE `DISPOSITION`,
       expcdi                         TYPE string VALUE `EXPCDI`,
       flowdefault                    TYPE string VALUE `FLOWDEFAULT`,
       flowtype                       TYPE string VALUE `FLOWTYPE`,
@@ -53,6 +54,7 @@ INTERFACE lif_c.
     END OF gc_tab,
     BEGIN OF gc_val,
       btcmap_actioncode              TYPE string VALUE `,AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
+      btcmap_disposition             TYPE string VALUE `,NOT_POSTED`,
       btcmap_expcdi                  TYPE string VALUE `,C,D,*`,
       btcmap_flowtype                TYPE string VALUE `D,C,*`,
       btcmap_scheme                  TYPE string VALUE `BAI2,ISO,PRTRY`,
@@ -204,6 +206,12 @@ CLASS lhc_btcmap IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ActionCode
                         v2 = lif_c=>gc_el-actioncode v3 = lif_c=>gc_val-btcmap_actioncode
                         element = lif_c=>gc_el-actioncode ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Disposition )
+                                        iv_list  = lif_c=>gc_val-btcmap_disposition ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Disposition
+                        v2 = lif_c=>gc_el-disposition v3 = lif_c=>gc_val-btcmap_disposition
+                        element = lif_c=>gc_el-disposition ) INTO TABLE lt_msg.
       ENDIF.
       " An active row that is not BLOCK needs a rule group (blank = category) with an active rule
       DATA(lv_group) = COND zif_cd_ops_cfg_types=>ty_name( WHEN ls_row-RuleGroup IS INITIAL
