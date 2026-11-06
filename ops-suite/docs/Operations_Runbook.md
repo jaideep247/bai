@@ -22,7 +22,14 @@
 
 ## 3. Owned exceptions
 
-Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open) and a due date (`SLA_DAYS_<module>_<severity>`). Assign an owner (disposition A), resolve with a reason (R) or waive with approval (W). Overdue exceptions are a category C check on the morning report.
+Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open) and a due date (`SLA_DAYS_<module>_<severity>`). Work them in the **Owned exceptions** app (`RAP_Ops_Apps.md`): *Assign* an owner (A), *Resolve* with a reason (R), or *Request waiver* (reason + end date) and have a **second person** *Approve waiver* (W). Every action is in the history of the exception. Overdue exceptions are a category C check on the morning report.
+
+| Situation | App | What you do | Second person? |
+|---|---|---|---|
+| A bank line is blocked (e.g. R14 unmapped code) and must be posted today | **Blocked line releases** | Create a release for the line and check code with reason and evidence; the approver approves; then post (FEBAN/FPB7). Fix the mapping afterwards so it does not recur | Yes (ZCD_OPS 85) |
+| A known health-check finding for a planned outage or a known issue | **Health check suppressions** | Create with check, pattern / company code, period, reason; *End now* when fixed | Only for more than 7 days |
+| PRISM / ACK / bank confirmed a file stage that SAP never recorded | **Monitored files — manual status** | *Set status manually* with stage, reason and evidence; only forward moves are possible | No |
+| A PRISM payment request was handled outside SAP | **PRISM requests handled manually** | Record request, handling reference and reason; the exception closes. SAP re-sends nothing | No |
 
 **Re-runs do not reset the queue.** When the next run raises the same exception (same module, object and check), the new row keeps the owner, due date and first-seen time and counts the occurrence; the earlier row becomes S (superseded) — so each exception is listed once. A valid waiver stays W. When a run evaluates the object again and the finding is gone, the exception is resolved automatically ("Passed on re-run …"). A run in which a rule, check or source failed (PLUGIN_ERROR) resolves nothing.
 

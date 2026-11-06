@@ -96,6 +96,15 @@ All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every 
 - Operations app `ZUI_CD_FMON_PRQ_O4` (decision 2026-11-06: **record only, no reprocessing**): new table `ZCD_FMON_PRQ_WA` keyed by the PRISM request reference (CHAR 70, as delivered by PRISM) + sequence. Action **Handled manually** (reference — e.g. payment document or ticket — mandatory, reason mandatory) → status H; the open FMON exception for that request is resolved with the reference (§6.1 history row). Nothing is re-sent or re-posted by SAP.
 - Still needed for the monitoring side: the SE11 structure of `ZCD_PAYM_REQ_LOG` (request reference, status and timestamp fields) to configure the FMON API interface; until then the reference is entered by hand from PRISM.
 
+### 6.6 Status — built (phase 3, 2026-11-06)
+All five apps built as designed (`RAP_Ops_Apps.md`). Deviations:
+- **No draft** for any operations BO — every action is one complete change; draft would add a second, unaudited state.
+- **Release key** is the finding's object key (`<statement>/<line>`) plus check code, copied from the exception — not separate statement-key / line-number columns (no format drift between finding and release).
+- **Suppression company code** is matched inside the finding's object key (HCK object keys carry the company code as dimension); a separate column on the finding does not exist.
+- **Manual status** only for files already in the registry; an expected file that never arrived is worked as an exception.
+- **History of releases / PRISM handling** is written by `ZCL_CD_OPS_EXC_DAO` in the other BO's saver (EML of a second BO is not allowed in the save sequence).
+- **Read authorisation** per area: CDS views `#NOT_REQUIRED`, actions instance- / globally authorised; a DCL is a DV1 decision (`RAP_Ops_Apps.md` §4 step 5).
+
 ## 7. Delivery and verification
 
 - RAP sources in abapGit format under `src/<module>/` (DDLS, DDLX, BDEF, SRVD, draft TABL, behaviour pools); service bindings created and published in ADT after import (`Implementation_Order.md`).

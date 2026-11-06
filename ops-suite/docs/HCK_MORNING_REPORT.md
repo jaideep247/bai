@@ -261,6 +261,18 @@ Every HCK finding: module `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `
 
 Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BASELINE_OUTLIER` (W), `TIMEOUT_OVERRUN` (W), `PLUGIN_ERROR` (E), `ALERT_FAILED` (W).
 
+### 7a. Known-table checks (USAA reference)
+| Check | Class | What it finds |
+|---|---|---|
+| `C_PRQ_NO_SPE` | `ZCL_CD_HCK_C_PRQ_SPE` | Payment requests that failed (and have no SUCCESS row) without a `ZCD_SPE_EXCP_LOG` row — the source is never told |
+| `C_CHQ_STATUS` | `ZCL_CD_HCK_C_CHQ_STATUS` | Cheques whose status went backwards in `ZCD_CHECK_HIST` (ZECT_STATUS: 3 / 4 / 9 terminal, 10 → 9 allowed) |
+| `C_PRQ_CANCEL` | `ZCL_CD_HCK_C_PRQ_CANCEL` | PCLM requests CANCELLED although their open item (FIN number = `DFKKOP-ZZ_FIN_TRANS_NUM`) is cleared |
+
+Table and field names come from PARAM1–3 (`NAME=VALUE;…`, `config/hck_seed.md`), are checked against the DDIC and the whitelist, and every query is limited by its date field (`ZCL_CD_HCK_VALUE_QUERY`).
+
+### 7b. Suppressions (operations app)
+Known findings can be suppressed per check, object pattern and company code for a period (`ZUI_CD_HCK_SUP_O4`; more than `HCK_SUPPRESS_MAX_DAYS` = 7 days needs a second user). A suppressed finding stays on the report as information "Suppressed until … by …", is not alerted and does not make the check red or amber.
+
 ## 8. Thresholds and baselines
 
 > **First principle:** a limit is either absolute (policy) or relative to the metric's own history (normality) — the table says which.

@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-398 methods in 39 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+455 methods in 47 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 398 / 398 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 455 / 455 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -108,6 +108,10 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | CORE-05 | Fix the map row from CORE-04 and re-run | +1 ZCD_BTC_MAP row | Exception resolved "Passed on re-run"; open list on the morning report no longer shows it | pending |
 | CORE-06 | Waived exception raised again | Disposition W, WAIVER_UNTIL in the future | New row stays W | pending |
 | CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions | pending |
+| OPS-01 … OPS-10 | Operations apps: assign / resolve, waiver four-eyes, blocked-line release and posting gate, suppression (short / long), manual file status forward / backward, PRISM request handled manually | `RAP_Ops_Apps.md` §5 | As listed in `RAP_Ops_Apps.md` §5 | pending |
+| HCK-QA-15 | `C_PRQ_NO_SPE` with one failed request without SPE row and one with SUCCESS after the failure | `config/hck_seed.md` rows, SE11 names filled | One finding (the first request); the second is not failed | pending |
+| HCK-QA-16 | `C_CHQ_STATUS` with a cheque history 10 → 2 and one 10 → 9 | — | One finding (10 → 2); 10 → 9 allowed | pending |
+| HCK-QA-17 | `C_PRQ_CANCEL` with a PCLM request CANCELLED whose open item is cleared | — | One finding PRQ_PAID_CANCELLED | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

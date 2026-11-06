@@ -24,6 +24,8 @@
 | **Test first, core controls 2026-11-06** — test written before the code it drives; lint red until the code existed; not executed | `ZCL_CD_OPS_RUN_GUARD`, `ZCL_CD_OPS_PURGE`, `ZCL_CD_OPS_PURGE_DAO`, store carry-forward / `reconcile` (7 OSQL tests), engine lock and reconciliation tests (EBS 4, FMON 4, HCK 3), `injected_auth_is_returned` | `RAP_Apps_Design.md` §1–§4; commit history of 2026-11-06 |
 | **Test first, configuration apps** — red observed in abaplint (47 "not found") before the classes existed | `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE` | Phase 2 hand-over |
 | **Test first, EBS rule audit** (part C) | 7 rule tests (`r07_any_run_with_status_ok` … `r18_unmapped_gl_reported`) written before the fixes | `Review_Response_2026-11-06.md` part C |
+| **Test first, operations apps** (phase 3) — tests written before each class / engine change; not executed | `ZCL_CD_OPS_EXC_POLICY`, `ZCL_CD_OPS_EXC_DAO`, `ZCL_CD_EBS_RELEASE_POLICY`, `ZCL_CD_EBS_RELEASE_DAO`, `ZCL_CD_HCK_SUPPRESSION`, `ZCL_CD_HCK_PAYREQ_RULES`, `ZCL_CD_HCK_VALUE_QUERY`, `ZCL_CD_FMON_OPS_POLICY`, `ZCL_CD_FMON_STATUS=>MANUAL_ALLOWED`; engine tests for release and suppression; store `pending_waiver_is_carried` | `RAP_Ops_Apps.md` §3 |
+| **Test after (characterisation)**, phase 3 | `success_wins_over_later_fail`, `success_after_fail_wins` (existing state-machine behaviour, pinned for the PRISM SUCCESS rule) | `RAP_Ops_Apps.md` §3 |
 | **No unit test by design** | See §5 | Covered by the listed alternative |
 
 **What "red" and "green" mean here.** In this build red was a test that did not compile against missing code and green was a clean abaplint run. That proves each test targets the new code; it does **not** prove the tests pass. True red/green — an assertion failing, then passing — happens at the first ABAP Unit run in DV1. Until then no test result exists.
@@ -37,14 +39,14 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 398 ABAP Unit methods in 39 test includes
+## 4. Coverage today — 455 ABAP Unit methods in 47 test includes
 
 | Module | Object (test include) | Methods | Level |
 |---|---|---|---|
 | Core | ZCL_CD_OPS_UTIL | 12 | Domain |
 | Core | ZCL_CD_OPS_ALERT_POLICY | 14 | Domain |
 | Core | ZCL_CD_OPS_ALERT_ROUTER | 8 | Application |
-| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 12 | OSQL |
+| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 13 | OSQL |
 | Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seams) | 7 | Domain |
 | Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
 | Core | ZCL_CD_OPS_PURGE (retention rules, packages, test mode) | 5 | Domain / Application |
@@ -53,6 +55,14 @@
 | Core | ZCL_CD_OPS_CFG_POLICY (configuration apps: client policy) | 11 | Domain |
 | Core | ZCL_CD_OPS_CFG_CHECKS (configuration apps: field validations) | 17 | Domain |
 | Core | ZCL_CD_OPS_CFG_GATE (configuration apps: features, transport, authorisation) | 7 | Application |
+| Core | ZCL_CD_OPS_EXC_POLICY (exceptions app: lifecycle, four-eyes) | 9 | Domain |
+| Core | ZCL_CD_OPS_EXC_DAO (find open, resolve with history) | 2 | OSQL |
+| EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 6 | Domain |
+| EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
+| FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
+| HCK | ZCL_CD_HCK_SUPPRESSION (suppression matcher, four-eyes) | 8 | Domain |
+| HCK | ZCL_CD_HCK_PAYREQ_RULES (known-table rules: SPE, CANCELLED, ZECT_STATUS) | 8 | Domain |
+| HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 13 | Domain |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
@@ -60,9 +70,9 @@
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 17 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 14 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FEB | 6 | Application |
-| EBS | ZCL_CD_EBS_ENGINE | 18 | Application |
+| EBS | ZCL_CD_EBS_ENGINE | 21 | Application |
 | EBS | ZCL_CD_EBS_CFG_DAO / _FEB_DAO / _SAP_DAO | 3 + 3 + 3 | OSQL |
-| FMON | ZCL_CD_FMON_STATUS | 11 | Domain |
+| FMON | ZCL_CD_FMON_STATUS | 15 | Domain |
 | FMON | ZCL_CD_FMON_RULES | 35 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 5 | Domain |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 6 | Domain / Application |
@@ -70,8 +80,8 @@
 | FMON | ZCL_CD_FMON_ENGINE | 17 | Application |
 | FMON | ZCL_CD_FMON_DAO | 6 | OSQL |
 | HCK | ZCL_CD_HCK_STATS / _THRESHOLD / _SCORE / _CYCLE_EVAL / _AGG_QUERY / _REPORT_HTML / _PARAM | 12 + 11 + 6 + 11 + 12 + 7 + 3 | Domain |
-| HCK | ZCL_CD_HCK_ENGINE | 13 | Application |
-| HCK | ZCL_CD_HCK_DAO | 4 | OSQL |
+| HCK | ZCL_CD_HCK_ENGINE | 14 | Application |
+| HCK | ZCL_CD_HCK_DAO | 5 | OSQL |
 
 Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master prompt). **Measured coverage: none yet** — record it in `Coverage_Run_Register.csv` after the first DV1 run.
 
@@ -96,6 +106,9 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 | ZCL_CD_OPS_ALERT_DAO | Three SELECTs and one INSERT | Router tests with DAO double; QA1 |
 | ZCL_CD_OPS_INJECTOR, ZCL_CD_EBS/_FMON/_HCK_FACTORY / _INJECTOR | Construction only | Every application test resolves its CUT through them; plug-in creation of the core factory is unit tested |
 | ZCL_CD_OPS_CLOCK | Two system-field reads | Injected clock doubles in every time-dependent test |
+| Behaviour pools `ZBP_R_CD_OPSEXCEPTION`, `_EBSRELEASE`, `_HCKSUPPRESS`, `_FMONFILE`, `_FMONPRQWA`; their CDS, BDEF, SRVD | Thin handlers: every decision in a tested policy class | Policy tests; QA1 OPS-01 … OPS-10 (`RAP_Ops_Apps.md` §5) |
+| Check classes `ZCL_CD_HCK_C_PRQ_SPE`, `_C_CHQ_STATUS`, `_C_PRQ_CANCEL` | Parameter reading + DAO calls; rules in `ZCL_CD_HCK_PAYREQ_RULES`, queries in `ZCL_CD_HCK_VALUE_QUERY` (both tested) | QA1 HCK-QA-15 … 17 |
+| `ZCL_CD_HCK_DAO=>SELECT_VALUES` | Dynamic read of a validated query on landscape tables with unconfirmed fields | Builder tests; QA1 |
 | Behaviour pools `ZBP_R_CD_*CFGALL`, CDS, BDEF, SRVD of the configuration apps | Generated (`tools/rap_generate.py`), thin | Gate / checks tests; DV1 cases `RAP_Config_Apps.md` §6 |
 | ZCL_CD_OPS_CFG_CLIENT, ZCL_CD_OPS_CFG_TRANSPORT, ZCL_CD_OPS_CFG_AUTH | T000 / E070 reads, SAP CTS API wrapper, adapter to ZCL_CD_OPS_AUTH | Gate tests with doubles; DV1 |
 | ZCL_CD_OPS_AUTH | One `AUTHORITY-CHECK` on ZCD_OPS; a test would assert the kernel | Injected auth double (`injected_auth_is_returned`); QA1 role tests (allowed / refused per activity and module) |

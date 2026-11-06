@@ -18,7 +18,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | 0.5 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
 | 0.6 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
 | 0.7 | Domain `CCCORACTIV` fixed values confirmed (configuration-app client policy) | SE11 | Values match `ZCL_CD_OPS_CFG_CLIENT` |
-| 0.7 | Authorisation object `ZCD_OPS` (field `ZCD_MODULE`, data element / domain `ZCD_OPS_MODULE`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
+| 0.8 | Authorisation object `ZCD_OPS` (field `ZCD_MODULE`, data element / domain `ZCD_OPS_MODULE`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
 
 ## Step 1 — DDIC (SE11 / ADT)
 
@@ -35,6 +35,10 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 ## Step 1a — RAP configuration apps
 
 Follow `RAP_Config_Apps.md` §6: confirm the VERIFY-ADT items (business-configuration CTS API, UNION ALL in view entities, `delete` as validation trigger), activate in the order given there, create and publish the service bindings `ZUI_CD_EBS_CFG_O4`, `ZUI_CD_FMON_CFG_O4`, `ZUI_CD_HCK_CFG_O4`, `ZUI_CD_OPS_CFG_O4`, add the FLP tiles, and check `rec/client` (step 0.6).
+
+## Step 1b — RAP operations apps
+
+Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on the history association, `READ ENTITIES` in `save_modified`, `RAISE SHORTDUMP`), activate tables → abstract entities `ZA_CD_*` → `ZR_` / `ZC_` views → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions, then create and publish `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_EBS_REL_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`. Approver roles (ZCD_OPS 85) go only to users who do not request (segregation of duties).
 
 ## Step 2 — Classes, in dependency order (activate each group together)
 

@@ -24,6 +24,8 @@ The morning report itself is sent as a report (route `MORNING`), not as an alert
 
 Suite-level alert: **RUN_LOCKED** (check code, every module) — a scheduled run was refused because another run of the same module and variant still holds the run lock. Seed rule `RUN_LOCKED` routes it to RTB support (`config/alert_seed.md`).
 
+**Suppressed and released findings are information.** A health-check finding under an active suppression and an EBS block with an approved release become severity I — rules with a minimum severity of W or higher do not alert them (`RAP_Ops_Apps.md`).
+
 ## Part B — Technical
 
 ```mermaid

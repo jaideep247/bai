@@ -26,7 +26,7 @@ Facts below were confirmed in production work in 2026 (payment engine reference)
 
 Field names **not** in the reference (still `VERIFY-SE11`): the FIN-number and timestamp fields of `ZCD_PAYM_REQ_LOG`, every field of `ZCD_SPE_EXCP_LOG` and `ZCD_CHECK_HIST` other than the status domain, the ACK tables (`ZCD_ACH_ACK`, `ZCD_WIRE_ACK`), `ZCDT_REGUT`, `ZCD_STRP_POUT_LOG`, `ZCD_ACH_RTRV_LOG` status field (three candidate names, parity C4).
 
-## 2. How the suite uses them (phase 3 of the RAP build)
+## 2. How the suite uses them (phase 3 of the RAP build) — **built 2026-11-06**
 
 | Use | Module | Known facts applied | Still to confirm |
 |---|---|---|---|
