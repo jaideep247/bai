@@ -13,18 +13,28 @@
            - uncommitted changes -> pull postponed (VS Code shows the pending pull)
            - rebase conflict     -> rebase aborted, repository left exactly as before,
                                     logged as ATTENTION
-      4. If you have local commits not on GitHub -> git push (unless -NoPush).
+      4. If you have local commits not on GitHub -> git push, ONLY with -Push (opt-in).
+         Without -Push the commits are reported as AHEAD and stay local.
+    After an aborted rebase the result is verified (no rebase in progress, HEAD and
+    branch back on the commit they had before the pull); if not, the run logs ERROR
+    and leaves the repository for manual repair.
     Every run is written to %LOCALAPPDATA%\git-sync\git-sync.log.
 
 .EXAMPLE
     .\git-sync.ps1 -RepoPath 'C:\Users\JaideepSharma\Downloads\USAA\bai'
 
 .EXAMPLE
-    .\git-sync.ps1 -RepoPath 'C:\repo1','C:\repo2' -NoPush
+    .\git-sync.ps1 -RepoPath 'C:\repo1','C:\repo2' -Push
+
+.NOTES
+    2026-11-06 | Push is opt-in (-Push); -NoPush kept as a no-op for old task definitions.
+               | Rebase abort result verified before the repository is reported unchanged.
 #>
 [CmdletBinding()]
 param(
     [string[]] $RepoPath = @('C:\Users\JaideepSharma\Downloads\USAA\bai'),
+    [switch]   $Push,
+    # Deprecated: pushing is off unless -Push is given; accepted so old tasks keep working
     [switch]   $NoPush,
     [string]   $LogFile = (Join-Path $env:LOCALAPPDATA 'git-sync\git-sync.log')
 )
@@ -49,6 +59,44 @@ function Invoke-Git {
     param([string] $Repo, [string[]] $Arguments)
     $output = & git -C $Repo @Arguments 2>&1 | ForEach-Object { "$_" }
     [pscustomobject]@{ Code = $LASTEXITCODE; Output = (($output -join ' ').Trim()) }
+}
+
+function Get-Head {
+    param([string] $Repo)
+    (Invoke-Git $Repo @('rev-parse', 'HEAD')).Output
+}
+
+function Test-RebaseInProgress {
+    param([string] $Repo)
+    $gitDir = (Invoke-Git $Repo @('rev-parse', '--git-dir')).Output
+    if (-not [System.IO.Path]::IsPathRooted($gitDir)) { $gitDir = Join-Path $Repo $gitDir }
+    (Test-Path (Join-Path $gitDir 'rebase-merge')) -or (Test-Path (Join-Path $gitDir 'rebase-apply'))
+}
+
+function Undo-FailedPull {
+    <# Aborts a rebase left by a failed pull and proves the repository is back where it was.
+       Returns $true only when no rebase is in progress, HEAD is the pre-pull commit and
+       the branch is checked out again. #>
+    param([string] $Repo, [string] $Branch, [string] $HeadBefore)
+    $abortOutput = ''
+    if (Test-RebaseInProgress $Repo) {
+        $abort = Invoke-Git $Repo @('rebase', '--abort')
+        $abortOutput = $abort.Output
+        if ($abort.Code -ne 0) {
+            Write-Log "ERROR     $Repo [$Branch] - rebase --abort failed (exit $($abort.Code)): $abortOutput"
+            return $false
+        }
+    }
+    $stillRebasing = Test-RebaseInProgress $Repo
+    $headAfter     = Get-Head $Repo
+    $branchAfter   = (Invoke-Git $Repo @('rev-parse', '--abbrev-ref', 'HEAD')).Output
+    if ($stillRebasing -or $headAfter -ne $HeadBefore -or $branchAfter -ne $Branch) {
+        Write-Log ("ERROR     $Repo [$Branch] - repository NOT restored after the failed pull " +
+                   "(rebase in progress: $stillRebasing, HEAD $headAfter, expected $HeadBefore, " +
+                   "branch $branchAfter); repair manually. $abortOutput")
+        return $false
+    }
+    return $true
 }
 
 function Sync-Repository {
@@ -93,18 +141,23 @@ function Sync-Repository {
         if ($dirty) {
             Write-Log "WAIT      $Repo [$branch] - $behind new commit(s) on GitHub; you have uncommitted changes, pull postponed"
         } else {
+            $headBefore = Get-Head $Repo
             $pull = Invoke-Git $Repo @('pull', '--rebase', '--quiet')
             if ($pull.Code -ne 0) {
-                Invoke-Git $Repo @('rebase', '--abort') | Out-Null
-                Write-Log "ATTENTION $Repo [$branch] - pull conflicted and was undone; resolve with Sync in VS Code. $($pull.Output)"
                 $script:attention = $true
+                if (Undo-FailedPull -Repo $Repo -Branch $branch -HeadBefore $headBefore) {
+                    Write-Log "ATTENTION $Repo [$branch] - pull failed and was undone (verified: HEAD $headBefore); resolve with Sync in VS Code. $($pull.Output)"
+                }
                 return
             }
             Write-Log "PULLED    $Repo [$branch] - $behind commit(s)"
         }
     }
 
-    if ($ahead -gt 0 -and -not $NoPush -and ($behind -eq 0 -or -not $dirty)) {
+    if ($ahead -gt 0 -and -not $Push) {
+        Write-Log "AHEAD     $Repo [$branch] - $ahead local commit(s) not pushed (push is opt-in: -Push)"
+    }
+    if ($ahead -gt 0 -and $Push -and ($behind -eq 0 -or -not $dirty)) {
         $push = Invoke-Git $Repo @('push', '--quiet')
         if ($push.Code -ne 0) {
             Write-Log "ATTENTION $Repo [$branch] - push failed: $($push.Output)"
