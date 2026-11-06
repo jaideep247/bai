@@ -124,6 +124,10 @@ check('method_names', name_checks.method_name_failures(ROOT),
       'Methods are snake_case, never start with a data prefix (lv_, it_, mo_, gc_, ...) and have '
       '30 characters at most (test methods included).')
 
+check('pcre_only', name_checks.posix_regex_failures(ROOT),
+      'Regular expressions use PCRE only (pcre = / PCRE); POSIX (regex =, FIND / REPLACE ... REGEX, '
+      'CL_ABAP_REGEX POSIX) is obsolete since ABAP 7.55.')
+
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']
 if lint_bin:

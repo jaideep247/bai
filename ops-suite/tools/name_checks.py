@@ -151,3 +151,22 @@ def method_name_failures(root):
             if len(name) > LIMIT:
                 failures.append(f'{rel}:{no} method {name} ({len(name)} > {LIMIT})')
     return failures
+
+
+# POSIX regular expressions are obsolete since ABAP 7.55: only PCRE is allowed.
+_POSIX_PATTERNS = [
+    re.compile(r'\bregex\s*=', re.I),                      # matches( ... regex = ... ), find( ... regex = ... )
+    re.compile(r'\b(FIND|REPLACE)\b[^.]*\bREGEX\b', re.I), # FIND / REPLACE ... REGEX
+    re.compile(r'\bcl_abap_regex\s*=>\s*create_posix\b', re.I),
+    re.compile(r'\bNEW\s+cl_abap_regex\s*\(', re.I),      # constructor = POSIX unless pcre
+]
+
+
+def posix_regex_failures(root):
+    """Files that use POSIX regular expressions in code (comments ignored)."""
+    failures = []
+    for path in _walk(os.path.join(root, 'src'), '.abap'):
+        for no, line in _code_lines(_read(path)):
+            if any(p.search(line) for p in _POSIX_PATTERNS):
+                failures.append(f'{os.path.relpath(path, root)}:{no}: {line.strip()[:80]}')
+    return failures
