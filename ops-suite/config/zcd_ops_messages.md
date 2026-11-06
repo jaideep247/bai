@@ -277,3 +277,5 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 519 | Declared credits &1, entries &2 |
 | 520 | Declared debits &1, entries &2 |
 | 521 | Entry &1 imported without posting rule; map prescribes &2 |
+| 522 | Reason &1: mapping in ZCD_EBS_RSN_MAP incomplete (&2) |
+| 523 | Reason &1 is not a &2 code |

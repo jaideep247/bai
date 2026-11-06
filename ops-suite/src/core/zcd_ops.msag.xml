@@ -1634,6 +1634,18 @@
      <MSGNR>521</MSGNR>
      <TEXT>Entry &amp;1 imported without posting rule; map prescribes &amp;2</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>522</MSGNR>
+     <TEXT>Reason &amp;1: mapping in ZCD_EBS_RSN_MAP incomplete (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>523</MSGNR>
+     <TEXT>Reason &amp;1 is not a &amp;2 code</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

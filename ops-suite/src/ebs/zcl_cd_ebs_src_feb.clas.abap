@@ -9,6 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A34: unknown debit/credit indicator stays unknown.
+*& 2026-11-06 | Audit A28: return reason from the configured FEBEP field (EBS_FEB_REASON_FIELD).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -95,6 +96,20 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
       DATA(lv_currency) = VALUE #( mt_headers[ kukey = ls_item-kukey ]-waers OPTIONAL ).
       INSERT map_line( is_item = ls_item iv_currency = CONV #( lv_currency ) ) INTO TABLE rs_package-lines.
     ENDLOOP.
+
+    " A28: the NACHA return reason, where the landscape stores it in a FEBEP field
+    DATA(lv_reason_field) = zcl_cd_ops_factory=>get_store( )->get_param(
+                              iv_name = zif_cd_ebs_types=>gc_param-feb_reason_field ).
+    IF lv_reason_field IS NOT INITIAL.
+      DATA lt_reason_kukey TYPE zif_cd_ebs_sap_dao=>tt_febep_kukey.
+      lt_reason_kukey = lt_kukey.
+      DATA(lt_reasons) = zcl_cd_ebs_factory=>get_sap_dao( )->get_febep_reasons( it_kukey = lt_reason_kukey
+                                                                                iv_field = lv_reason_field ).
+      LOOP AT rs_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+        <ls_line>-return_reason = VALUE #( lt_reasons[ kukey = <ls_line>-kukey esnum = <ls_line>-esnum ]-reason
+                                           OPTIONAL ).
+      ENDLOOP.
+    ENDIF.
   ENDMETHOD.
 
 

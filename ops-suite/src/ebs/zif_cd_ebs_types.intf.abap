@@ -14,6 +14,7 @@
 *& 2026-11-06 | Audit A25 / A33: canonical account key, missing-currency check codes.
 *& 2026-11-06 | Audit A14: R22 duplicate history (check code, message, look-back parameter).
 *& 2026-11-06 | Audit A26 / A32 / A34 / A35: disposition, statement key, sign and gross-total check codes.
+*& 2026-11-06 | Audit A28: reason mapping completeness and kind, FEBEP reason field.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -373,6 +374,8 @@ INTERFACE zif_cd_ebs_types
       keylen_ztnum       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_ZTNUM',
       "! A14: look-back days of R22 when the rule row has no WINDOW_DAYS
       dup_lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DUP_LOOKBACK_DAYS',
+      "! A28: FEBEP field holding the NACHA return / NOC reason (blank = not stored; VERIFY-DDIC)
+      feb_reason_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_REASON_FIELD',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
@@ -387,7 +390,13 @@ INTERFACE zif_cd_ebs_types
       optional TYPE string VALUE `OPTIONAL`,
       "! R07L PARAM3: a retrieval passing on PARAM1 also needs a returns-lot entry (A11)
       lot      TYPE string VALUE `LOT`,
+      "! R05 PARAM2: the entry is a return (NACHA R codes) or a notification of change (C codes)
+      return   TYPE string VALUE `RETURN`,
+      noc      TYPE string VALUE `NOC`,
     END OF gc_rule_keyword.
+
+  "! First character of a seeded placeholder in configuration (e.g. <payment engine reason>)
+  CONSTANTS gc_placeholder_prefix TYPE c LENGTH 1 VALUE '<'.
 
   "! Characters of a numeric code (BAI2 type codes are three digits)
   CONSTANTS gc_digits TYPE c LENGTH 10 VALUE '0123456789'.
@@ -453,6 +462,8 @@ INTERFACE zif_cd_ebs_types
       posting_rule_unresolved        TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_UNRESOLVED',
       reason_invalid                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_INVALID',
       reason_missing                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_MISSING',
+      reason_kind                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_KIND',
+      reason_map_incomplete          TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_MAP_INCOMPLETE',
       reason_unmapped                TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_UNMAPPED',
       ref_format                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_FORMAT',
       ref_missing                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_MISSING',
@@ -594,6 +605,8 @@ INTERFACE zif_cd_ebs_types
       gross_credits               TYPE zif_cd_ops_types=>ty_msgno VALUE '519',
       gross_debits                TYPE zif_cd_ops_types=>ty_msgno VALUE '520',
       posting_rule_unresolved     TYPE zif_cd_ops_types=>ty_msgno VALUE '521',
+      reason_map_incomplete       TYPE zif_cd_ops_types=>ty_msgno VALUE '522',
+      reason_kind                 TYPE zif_cd_ops_types=>ty_msgno VALUE '523',
     END OF gc_msg.
 
 ENDINTERFACE.

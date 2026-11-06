@@ -15,6 +15,7 @@
 *& 2026-11-06 | Audit A07 / A08: company code in the register match, leading zeros, R12 populations.
 *& 2026-11-06 | Audit A14: cross-statement duplicate look-back (R22).
 *& 2026-11-06 | Audit A26 / A32 / A34: sweeps not posted, imported entry without posting rule, sign and gross totals.
+*& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -391,6 +392,9 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS r04_alnum_format_enforced    FOR TESTING.
     METHODS r05_unknown_reason_fails     FOR TESTING.
     METHODS r05_mapped_reason_passes     FOR TESTING.
+    METHODS r05_placeholder_rejected     FOR TESTING.
+    METHODS r05_noc_on_return_entry      FOR TESTING.
+    METHODS r05_required_without_map     FOR TESTING.
     METHODS r09_second_identical_entry   FOR TESTING.
     METHODS r10_value_date_out_of_window FOR TESTING.
     METHODS r15_posting_rule_mismatch    FOR TESTING.
@@ -527,6 +531,60 @@ CLASS ltc_line_rules IMPLEMENTATION.
     mt_lines[ 1 ]-return_reason = 'R01'.
     run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
     cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Mapped reason must pass R05' ).
+  ENDMETHOD.
+
+
+  " A28: a mapping row without an effective payment engine reason (placeholder) is incomplete
+  METHOD r05_placeholder_rejected.
+    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
+    TRY.
+        ls_reason-reason      = 'R01'.
+        ls_reason-fica_reason = '<PE'.
+        INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'R01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_map_incomplete
+                         iv_msg        = 'A placeholder mapping must not count as mapped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A28: a NOC code on an entry routed as a return (PARAM2 RETURN) is the wrong kind
+  METHOD r05_noc_on_return_entry.
+    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
+    TRY.
+        ls_reason-reason      = 'C01'.
+        ls_reason-fica_reason = '051'.
+        ls_reason-is_noc      = abap_true.
+        INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'C01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param2 = 'RETURN' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_kind
+                         iv_msg        = 'A NOC code on a return entry must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A28: a required reason cannot be validated without any mapping - incomplete configuration
+  METHOD r05_required_without_map.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'R01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param1 = 'REQUIRED' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_map_incomplete
+                         iv_msg        = 'A required reason without mapping must be reported, not format-checked' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

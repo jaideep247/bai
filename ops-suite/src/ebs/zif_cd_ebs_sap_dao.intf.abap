@@ -9,6 +9,7 @@
 *& 2026-11-06 | TY_CHECK carries HBKID/HKTID (review 3.2).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A07: company code of the register row (optional, configured field).
+*& 2026-11-06 | Audit A28: get_febep_reasons (configured FEBEP field, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -52,6 +53,16 @@ INTERFACE zif_cd_ebs_sap_dao
   TYPES tt_retrieval TYPE STANDARD TABLE OF ty_retrieval WITH EMPTY KEY.
 
   "! Check register (DFKKCR) by check number
+  "! A28: NACHA reason of a FEBEP item, read from the configured field
+  TYPES:
+    BEGIN OF ty_febep_reason,
+      kukey  TYPE n LENGTH 8,
+      esnum  TYPE n LENGTH 5,
+      reason TYPE c LENGTH 4,
+    END OF ty_febep_reason.
+  TYPES tt_febep_reason TYPE STANDARD TABLE OF ty_febep_reason WITH EMPTY KEY.
+  TYPES tt_febep_kukey TYPE SORTED TABLE OF ty_febep_reason-kukey WITH UNIQUE KEY table_line.
+
   TYPES:
     BEGIN OF ty_check,
       ztnum    TYPE ty_ztnum,
@@ -149,5 +160,14 @@ INTERFACE zif_cd_ebs_sap_dao
       iv_date           TYPE d
     RETURNING
       VALUE(rv_balance) TYPE zif_cd_ops_types=>ty_amount.
+
+  "! A28: return reasons stored by the landscape in a FEBEP field (name from
+  "! EBS_FEB_REASON_FIELD, validated against the DDIC - VERIFY-DDIC)
+  METHODS get_febep_reasons DEFAULT IGNORE
+    IMPORTING
+      it_kukey          TYPE tt_febep_kukey
+      iv_field          TYPE string
+    RETURNING
+      VALUE(rt_reasons) TYPE tt_febep_reason.
 
 ENDINTERFACE.

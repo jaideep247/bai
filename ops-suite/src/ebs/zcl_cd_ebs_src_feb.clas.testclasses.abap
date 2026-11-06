@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A34: an unknown debit/credit indicator stays unknown.
+*& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -37,6 +38,22 @@ ENDCLASS.
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
+    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+ENDCLASS.
+
+"! SAP-DAO double: only the FEBEP return-reason read is used by the FEB source
+CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ebs_sap_dao PARTIALLY IMPLEMENTED.
+    DATA mt_reasons TYPE zif_cd_ebs_sap_dao=>tt_febep_reason.
+    DATA mv_field   TYPE string.
+ENDCLASS.
+
+CLASS ltd_sap_dao IMPLEMENTATION.
+  METHOD zif_cd_ebs_sap_dao~get_febep_reasons.
+    mv_field   = iv_field.
+    rt_reasons = mt_reasons.
+  ENDMETHOD.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -53,7 +70,7 @@ CLASS ltd_store IMPLEMENTATION.
     RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
-    rv_value = iv_default.
+    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.
@@ -80,6 +97,8 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
       END OF gc_test.
 
     DATA mo_dao TYPE REF TO ltd_feb.
+    DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_sap TYPE REF TO ltd_sap_dao.
 
     METHODS setup.
     METHODS teardown.
@@ -106,6 +125,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
     METHODS lines_keyed_to_statement     FOR TESTING.
     METHODS packages_follow_size         FOR TESTING.
     METHODS unknown_epvoz_has_no_sign    FOR TESTING.
+    METHODS reason_from_configured_field FOR TESTING.
 ENDCLASS.
 
 
@@ -113,8 +133,11 @@ CLASS ltc_src_feb IMPLEMENTATION.
 
   METHOD setup.
     mo_dao = NEW #( ).
+    mo_store = NEW #( ).
+    mo_sap = NEW #( ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_store( NEW ltd_store( ) ).
+    zcl_cd_ebs_injector=>inject_sap_dao( mo_sap ).
+    zcl_cd_ops_injector=>inject_store( mo_store ).
   ENDMETHOD.
 
 
@@ -287,6 +310,26 @@ CLASS ltc_src_feb IMPLEMENTATION.
         DATA(ls_package) = new_source( )->next_package( ).
         cl_abap_unit_assert=>assert_initial( act = ls_package-lines[ 1 ]-cdi
                                              msg = 'An unknown EPVOZ must not become debit or credit' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A28: where the landscape stores the NACHA reason in a FEBEP field (EBS_FEB_REASON_FIELD,
+  " VERIFY-DDIC), the FEB source fills the line's return reason from it
+  METHOD reason_from_configured_field.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-feb_reason_field value = 'ZZRETURN_REASON' )
+          INTO TABLE mo_store->mt_params.
+        INSERT VALUE #( kukey = gc_test-kukey1 esnum = '00001' reason = 'R01' ) INTO TABLE mo_sap->mt_reasons.
+        add_header( gc_test-kukey1 ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
+        DATA(ls_package) = new_source( )->next_package( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ 1 ]-return_reason exp = 'R01'
+                                            msg = 'The reason must come from the configured FEBEP field' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap->mv_field exp = 'ZZRETURN_REASON'
+                                            msg = 'The configured field must be read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
