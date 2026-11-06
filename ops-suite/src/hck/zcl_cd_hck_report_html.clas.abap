@@ -8,6 +8,7 @@
 *& 2026-11-06 | Labels as class text symbols, sentences as ZCD_OPS messages, markup as constants.
 *& 2026-11-06 | Baseline warm-up: own grey chip, per-category and scorecard count (audit A102).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: string templates.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - morning report renderer (HTML, CSV)</p>
 "! No database, no SAP GUI: input is the report structure built by the

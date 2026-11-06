@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A92-A94: CAMT document gate, booked entries only, details reconciled to their entry; invalid amount / count block.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, CASE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).

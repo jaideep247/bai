@@ -10,6 +10,7 @@
 *& (core-to-payment engine area use accepted for this one housekeeping class).
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION

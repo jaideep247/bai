@@ -15,6 +15,7 @@
 *& 2026-11-06 | Plug-in interface names for the factory interface check (audit A62).
 *& 2026-11-06 | Run status NO_DATA (N) for runs without input (audit A68).
 *& 2026-11-06 | Alert message carries intent key and raise time (webhook de-duplication).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).

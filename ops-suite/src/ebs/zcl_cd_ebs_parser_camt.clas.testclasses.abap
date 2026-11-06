@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A92-A94: entry status in fixtures; batch reconciliation, status layouts, document gate, invalid amount / count.
+*& 2026-11-06 | Modern-syntax sweep: string templates.
 *&---------------------------------------------------------------------*
 CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

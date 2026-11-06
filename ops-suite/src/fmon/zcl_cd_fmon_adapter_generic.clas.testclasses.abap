@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A39/A52: malformed rows, payment key, half-open day range.
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltc_mapping DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.

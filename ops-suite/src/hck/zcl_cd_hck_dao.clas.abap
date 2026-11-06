@@ -22,6 +22,7 @@
 *&            | first, UP TO iv_max_rows (was up to 5000 points per series filtered in ABAP).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: string templates, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is

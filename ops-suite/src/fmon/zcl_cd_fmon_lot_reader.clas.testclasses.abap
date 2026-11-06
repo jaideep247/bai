@@ -10,6 +10,7 @@
 *& 2026-11-06 | Audit A38: row cap detection (truncated status).
 *& 2026-11-06 | Performance fix 8: counts from the grouped read (exact beyond the item cap), truncation only
 *&            | from the lot read, open keys read only for links with open items.
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

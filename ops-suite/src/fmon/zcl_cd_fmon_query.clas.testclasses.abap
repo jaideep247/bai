@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A51: approved table / field checks.
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltc_query DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.

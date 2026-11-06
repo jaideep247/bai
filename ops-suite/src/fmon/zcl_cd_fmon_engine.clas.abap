@@ -20,6 +20,7 @@
 *& 2026-11-06 | Digest file references verified against the full file name in the registry (audit A100).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry

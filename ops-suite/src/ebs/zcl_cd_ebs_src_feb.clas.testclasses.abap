@@ -12,6 +12,7 @@
 *& 2026-11-06 | Operating model: posting state from the FEBEP posting-area flags; NONE switches it off.
 *& 2026-11-06 | Performance fix 3: reason and posting flags come with the items (one FEBEP read); reads counted.
 *& 2026-11-06 | Return reason correction: FEBEP carries no return reason - the line reason stays blank.
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

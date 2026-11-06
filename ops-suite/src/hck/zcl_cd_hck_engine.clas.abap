@@ -21,6 +21,7 @@
 *& 2026-11-06 | Baseline history requested per series incl. DIM2 (audit A101).
 *& 2026-11-06 | Baseline warm-up: info finding, check grey not GREEN, not scored (audit A102).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against

@@ -5,6 +5,7 @@
 *& plug-ins configured in ZCD_OPS_ALCHN; they deliver and nothing else.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert delivery channel</p>
 INTERFACE zif_cd_ops_alert_channel

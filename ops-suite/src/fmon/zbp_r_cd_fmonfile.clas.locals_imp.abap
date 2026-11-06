@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A05: technical database error of the event insert ends the save.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *&---------------------------------------------------------------------*
 CLASS lcl_buffer DEFINITION FINAL.
   PUBLIC SECTION.

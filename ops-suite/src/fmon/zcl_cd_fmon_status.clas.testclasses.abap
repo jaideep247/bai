@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | PRISM SUCCESS rule and manual status tests (design 6.4, 6.5).
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltc_status DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.

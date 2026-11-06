@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (TDD gap closure).
 *& 2026-11-06 | Authorisation seam: injected double is returned.
 *& 2026-11-06 | Interface check before instantiation (audit A62).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

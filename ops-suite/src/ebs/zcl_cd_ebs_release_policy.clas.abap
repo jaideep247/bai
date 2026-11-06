@@ -13,6 +13,7 @@
 *& 2026-11-06 | Audit A65: KEY_LENGTH_CONFIG is a configuration gap, never released.
 *& 2026-11-06 | Audit A98: MAP_CONFLICT is a configuration gap, never released.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: string templates.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - blocked-line release rules</p>
 CLASS zcl_cd_ebs_release_policy DEFINITION

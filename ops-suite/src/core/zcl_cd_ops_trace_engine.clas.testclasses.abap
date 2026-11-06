@@ -13,6 +13,7 @@
 *& 2026-11-06 | Return / NOC reasons: return reason RLGRD shown (current and historical clearing),
 *&            | different reasons AMBIGUOUS; NOC evidence by clearing document / payment reference,
 *&            | not found = NOT_APPLICABLE, never changes the verdict. Full chain lists the NOC row.
+*& 2026-11-06 | Modern-syntax sweep: string templates.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

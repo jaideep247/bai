@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - duplicate file</p>
 "! Rules: ZCL_CD_FMON_RULES=>IS_DUPLICATE_OF. Params: ORIGIN_ROWS=Y|N

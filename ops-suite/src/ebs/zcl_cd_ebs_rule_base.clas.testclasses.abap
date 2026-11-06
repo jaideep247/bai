@@ -25,6 +25,7 @@
 *& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
 *& 2026-11-06 | Return / NOC reason correction: R05 bank-file tests on the file source; LTC_R05_LOT_REASON
 *&            | (FEB source: returns lot DFKKRP-RLGRD, NOC lot DFKKNRP-FLGRD by INFOF).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN, inline CAST.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

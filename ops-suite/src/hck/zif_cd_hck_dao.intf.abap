@@ -12,6 +12,7 @@
 *& 2026-11-06 | G/L transfer gaps per company code and reference type; total count (audit A43).
 *& 2026-11-06 | get_metric_history at the persisted grain incl. DIM2 (audit A101).
 *& 2026-11-06 | get_agg_groups (expected groups); row cap public (audit A103).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime

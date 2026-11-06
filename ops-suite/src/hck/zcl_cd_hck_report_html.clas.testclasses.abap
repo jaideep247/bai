@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Baseline warm-up chip (audit A102).
+*& 2026-11-06 | Modern-syntax sweep: string templates.
 *&---------------------------------------------------------------------*
 CLASS ltc_report_html DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

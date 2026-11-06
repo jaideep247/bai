@@ -7,6 +7,7 @@
 *& SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A100).
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltc_normalize_ref DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

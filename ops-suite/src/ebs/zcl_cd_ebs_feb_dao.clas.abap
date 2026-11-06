@@ -12,6 +12,7 @@
 *& 2026-11-06 | Performance fix 3: get_items reads return reason and posting-area flags in the same FEBEP pass
 *&            | (names DDIC-validated as before in the SAP DAO).
 *& 2026-11-06 | Return reason correction: no FEBEP reason field (FEBEP carries no return reason).
+*& 2026-11-06 | Modern-syntax sweep: unchained TYPES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION

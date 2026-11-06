@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | claim, complete, get_repeat_keys (audit A17, DEFAULT IGNORE).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert configuration and log</p>
 INTERFACE zif_cd_ops_alert_dao

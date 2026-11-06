@@ -7,6 +7,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

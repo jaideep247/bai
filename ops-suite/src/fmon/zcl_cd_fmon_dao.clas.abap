@@ -14,6 +14,7 @@
 *& 2026-11-06 | Performance fix 8: count_legacy - GROUP BY the query fields with COUNT(*) on the same
 *&            | validated path as read_legacy (shared select_legacy).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,

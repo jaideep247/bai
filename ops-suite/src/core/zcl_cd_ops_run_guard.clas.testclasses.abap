@@ -7,6 +7,7 @@
 *& SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A86: an empty total/count of a present 49/98/99 trailer is TRAILER_FIELD_MISSING, never the computed value.
 *& 2026-11-06 | Audit A95/A96: missing 49/98/99 blocks (B); funds-type layout validated before references are read.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.

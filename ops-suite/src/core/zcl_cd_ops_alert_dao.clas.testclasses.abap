@@ -6,6 +6,7 @@
 *& rejects parallel inserts exists only in the target system).
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A17).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

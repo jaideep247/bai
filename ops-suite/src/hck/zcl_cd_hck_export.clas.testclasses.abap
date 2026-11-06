@@ -5,6 +5,7 @@
 *& does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A61: no truncated report export).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_file DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

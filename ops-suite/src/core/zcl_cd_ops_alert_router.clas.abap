@@ -14,6 +14,7 @@
 *& 2026-11-06 | Channel interface checked before the channel class is created (audit A62).
 *& 2026-11-06 | Message handed to the channel carries intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION

@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A04/A05/A49/A50/A51: version check, per-instance events, window bounds, approved tables.
 *& 2026-11-06 | Performance fix 8: grouped count of a configured table (COUNT(*) per value combination).
+*& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

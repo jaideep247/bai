@@ -17,6 +17,7 @@
 *& 2026-11-06 | BASELINE_WARMUP code, warm-up flag and counts (audit A102).
 *& 2026-11-06 | Expected group set of an aggregate, ZCD_HCK_AGGGRP (audit A103).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer

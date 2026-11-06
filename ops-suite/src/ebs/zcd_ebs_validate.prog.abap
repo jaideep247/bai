@@ -15,6 +15,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A68: FEB date range validated (selection screen and source).
 *& 2026-11-06 | Audit A69: server file read rejects encoding and read errors, distinguishes end of file, always closes.
+*& 2026-11-06 | Modern-syntax sweep: CASE.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 

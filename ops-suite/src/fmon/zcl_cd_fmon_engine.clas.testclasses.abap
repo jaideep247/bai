@@ -12,6 +12,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Audit A04/A05/A38-A41/A49/A52: conflicts, SQL error, file instances by date,
 *&              payment ACK dedupe, truncated lots, calendar failure, malformed rows.
+*& 2026-11-06 | Modern-syntax sweep: RAISE EXCEPTION NEW, caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

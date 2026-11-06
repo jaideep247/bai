@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Claim, repeat, consecutive escalation, escalation override, send failures (audit A17, A45, A46).
 *& 2026-11-06 | Delivered message carries the intent key and raise time (webhook de-duplication).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
