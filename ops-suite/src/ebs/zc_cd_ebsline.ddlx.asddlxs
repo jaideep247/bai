@@ -12,11 +12,12 @@
                                       { dimension: 'ValidationStatus', role: #SERIES } ],
                measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 } ] },
              { qualifier: 'AmountByCode',
-               title: 'Line amounts by BAI code (debit / credit, per currency)',
+               title: 'Line amounts by G/L account and BAI code (debit / credit, per currency)',
                chartType: #BAR_STACKED,
-               dimensions: [ 'BaiCode', 'DebitCreditInd', 'Currency' ],
+               dimensions: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
                measures: [ 'Amount' ],
-               dimensionAttributes: [ { dimension: 'BaiCode', role: #CATEGORY },
+               dimensionAttributes: [ { dimension: 'GlAccount', role: #CATEGORY },
+                                      { dimension: 'BaiCode', role: #CATEGORY },
                                       { dimension: 'DebitCreditInd', role: #SERIES },
                                       { dimension: 'Currency', role: #CATEGORY } ],
                measureAttributes: [ { measure: 'Amount', role: #AXIS_1 } ] } ]
@@ -24,10 +25,10 @@
                              visualizations: [ { type: #AS_CHART, qualifier: 'LinesByCode' },
                                                { type: #AS_LINEITEM } ] },
                            { qualifier: 'AmountByCode',
-                             groupBy: [ 'BaiCode', 'DebitCreditInd', 'Currency' ],
-                             totalBy: [ 'BaiCode' ],
+                             groupBy: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
+                             totalBy: [ 'GlAccount', 'BaiCode' ],
                              total: [ 'Amount', 'LineCount' ],
-                             sortOrder: [ { by: 'BaiCode', direction: #ASC } ],
+                             sortOrder: [ { by: 'GlAccount', direction: #ASC }, { by: 'BaiCode', direction: #ASC } ],
                              visualizations: [ { type: #AS_CHART, qualifier: 'AmountByCode' },
                                                { type: #AS_LINEITEM } ] } ]
 annotate entity ZC_CD_EbsLine with
@@ -63,6 +64,11 @@ annotate entity ZC_CD_EbsLine with
   @UI.identification: [ { position: 50 } ]
   @UI.selectionField: [ { position: 30 } ]
   HouseBankAccount;
+  @EndUserText.label: 'G/L account'
+  @UI.lineItem: [ { position: 25, importance: #HIGH } ]
+  @UI.identification: [ { position: 55 } ]
+  @UI.selectionField: [ { position: 35 } ]
+  GlAccount;
   @EndUserText.label: 'Statement number'
   @UI.identification: [ { position: 60 } ]
   StatementNo;

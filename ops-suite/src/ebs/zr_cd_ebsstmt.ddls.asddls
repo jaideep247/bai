@@ -28,6 +28,7 @@ define root view entity ZR_CD_EbsStmt
       Stmt.CompanyCode,
       Stmt.HouseBank,
       Stmt.HouseBankAccount,
+      Stmt.GlAccount,
       Stmt.StatementNo,
       Stmt.StatementDate,
       Stmt.Currency,

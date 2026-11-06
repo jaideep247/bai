@@ -26,6 +26,7 @@ define root view entity ZR_CD_EbsLine
       Line.CompanyCode,
       Line.HouseBank,
       Line.HouseBankAccount,
+      Line.GlAccount,
       Line.StatementNo,
       Line.StatementDate,
       Line.BaiCode,

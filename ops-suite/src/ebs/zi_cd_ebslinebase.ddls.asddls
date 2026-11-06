@@ -27,6 +27,7 @@ define view entity ZI_CD_EbsLineBase
       Stmt.CompanyCode                                      as CompanyCode,
       Stmt.HouseBank                                        as HouseBank,
       Stmt.HouseBankAccount                                 as HouseBankAccount,
+      Stmt.GlAccount                                        as GlAccount,
       Stmt.StatementNo                                      as StatementNo,
       Stmt.StatementDate                                    as StatementDate,
       Line.vorgc                                            as BaiCode,

@@ -24,6 +24,8 @@ CLASS lcl_rows DEFINITION FINAL FOR TESTING.
     CONSTANTS gc_account_id TYPE c LENGTH 5 VALUE 'DISB1'.
     CONSTANTS gc_company TYPE c LENGTH 4 VALUE 'US01'.
     CONSTANTS gc_currency TYPE c LENGTH 5 VALUE 'USD'.
+    CONSTANTS gc_gl_account TYPE c LENGTH 10 VALUE '0011000100'.
+    TYPES tt_acct TYPE STANDARD TABLE OF zcd_ebs_acct WITH EMPTY KEY.
 
     CLASS-METHODS today
       RETURNING
@@ -80,6 +82,14 @@ CLASS lcl_rows DEFINITION FINAL FOR TESTING.
       RETURNING
         VALUE(rs_run) TYPE zcd_ops_run.
 
+    "! Payment engine account (ZCD_EBS_ACCT) of the default statement: only these are on the dashboard
+    CLASS-METHODS account
+      IMPORTING
+        iv_hktid       TYPE clike DEFAULT gc_account_id
+        iv_active      TYPE abap_boolean DEFAULT abap_true
+      RETURNING
+        VALUE(rs_acct) TYPE zcd_ebs_acct.
+
     "! Statement key FEB<KUKEY> and line key FEB<KUKEY>/<ESNUM without zeros>
     CLASS-METHODS stmt_key
       IMPORTING
@@ -110,6 +120,16 @@ CLASS lcl_rows IMPLEMENTATION.
 
   METHOD seconds_ago.
     rv_ts = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( now( ) ) secs = iv_seconds ).
+  ENDMETHOD.
+
+
+  METHOD account.
+    rs_acct-bukrs      = gc_company.
+    rs_acct-hbkid      = gc_house_bank.
+    rs_acct-hktid      = iv_hktid.
+    rs_acct-gl_account = gc_gl_account.
+    rs_acct-currency   = gc_currency.
+    rs_acct-active     = iv_active.
   ENDMETHOD.
 
 
@@ -225,6 +245,7 @@ CLASS ltc_statement DEFINITION FINAL
     METHODS line_status_from_line_finding FOR TESTING.
     METHODS rows_carry_validation_as_of FOR TESTING.
     METHODS amounts_total_per_bai_code FOR TESTING.
+    METHODS only_payment_engine_accounts FOR TESTING.
 
     METHODS add_finding
       IMPORTING
@@ -335,6 +356,7 @@ CLASS ltc_statement IMPLEMENTATION.
                           iv_ended_at = lcl_rows=>now( ) ) INTO TABLE lt_runs.
 
     go_env->insert_test_data( i_data = lt_stmts ).
+    go_env->insert_test_data( i_data = VALUE lcl_rows=>tt_acct( ( lcl_rows=>account( ) ) ) ).
     go_env->insert_test_data( i_data = lt_lines ).
     go_env->insert_test_data( i_data = mt_findings ).
     go_env->insert_test_data( i_data = lt_runs ).
@@ -410,6 +432,48 @@ CLASS ltc_statement IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD only_payment_engine_accounts.
+    CONSTANTS lc_other_account TYPE c LENGTH 5 VALUE 'OTHR1'.
+    CONSTANTS lc_inactive TYPE c LENGTH 5 VALUE 'INAC1'.
+    CONSTANTS lc_kukey_other TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000201'.
+    CONSTANTS lc_kukey_inactive TYPE zif_cd_ebs_types=>ty_kukey VALUE '00000202'.
+    DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    TRY.
+        INSERT lcl_rows=>statement( gc_kukey-clean ) INTO TABLE lt_stmts.
+        DATA(ls_other) = lcl_rows=>statement( lc_kukey_other ).
+        ls_other-hktid = lc_other_account.
+        INSERT ls_other INTO TABLE lt_stmts.
+        DATA(ls_inactive) = lcl_rows=>statement( lc_kukey_inactive ).
+        ls_inactive-hktid = lc_inactive.
+        INSERT ls_inactive INTO TABLE lt_stmts.
+        INSERT lcl_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT lcl_rows=>line( iv_kukey = lc_kukey_other iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        INSERT lcl_rows=>line( iv_kukey = lc_kukey_inactive iv_esnum = gc_line_1 ) INTO TABLE lt_lines.
+        go_env->insert_test_data( i_data = lt_stmts ).
+        " Configured: the default account (active) and an inactive one; OTHR1 is not configured at all
+        go_env->insert_test_data( i_data = VALUE lcl_rows=>tt_acct( ( lcl_rows=>account( ) )
+                                                                     ( lcl_rows=>account( iv_hktid  = lc_inactive
+                                                                                          iv_active = abap_false ) ) ) ).
+        go_env->insert_test_data( i_data = lt_lines ).
+
+        SELECT kukey, glaccount FROM zr_cd_ebsstmt ORDER BY kukey INTO TABLE @DATA(lt_shown).
+        SELECT kukey, glaccount FROM zr_cd_ebsline ORDER BY kukey INTO TABLE @DATA(lt_shown_lines).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_shown ) exp = 1
+                                            msg = 'Only statements of active payment engine accounts' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown[ 1 ]-glaccount OPTIONAL ) exp = lcl_rows=>gc_gl_account
+                                            msg = 'G/L account from the account configuration' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_shown_lines ) exp = 1
+                                            msg = 'Lines of other accounts are not shown either' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_shown_lines[ 1 ]-glaccount OPTIONAL )
+                                            exp = lcl_rows=>gc_gl_account msg = 'Every line carries its G/L account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD amounts_total_per_bai_code.
     CONSTANTS lc_credit_code TYPE c LENGTH 3 VALUE '165'.
     CONSTANTS lc_debit_code TYPE c LENGTH 3 VALUE '475'.
@@ -426,18 +490,21 @@ CLASS ltc_statement IMPLEMENTATION.
         INSERT lcl_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = '00003' iv_bai_code = lc_debit_code
                                iv_dc_ind = lc_debit iv_amount = '30.00' ) INTO TABLE lt_lines.
         go_env->insert_test_data( i_data = lt_stmts ).
+    go_env->insert_test_data( i_data = VALUE lcl_rows=>tt_acct( ( lcl_rows=>account( ) ) ) ).
         go_env->insert_test_data( i_data = lt_lines ).
 
         " The analytical list page sums Amount per BAI code, debit / credit and currency
-        SELECT baicode, debitcreditind, currency, SUM( amount ) AS total, SUM( linecount ) AS lines
+        SELECT glaccount, baicode, debitcreditind, currency, SUM( amount ) AS total, SUM( linecount ) AS lines
           FROM zr_cd_ebsline
-          GROUP BY baicode, debitcreditind, currency
-          ORDER BY baicode
+          GROUP BY glaccount, baicode, debitcreditind, currency
+          ORDER BY glaccount, baicode
           INTO TABLE @DATA(lt_totals).
 
         cl_abap_unit_assert=>assert_equals( act = lines( lt_totals ) exp = 2 msg = 'One total per BAI code and direction' ).
         DATA(ls_credit) = VALUE #( lt_totals[ baicode = lc_credit_code ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_credit-total exp = '150.25' msg = 'Credit lines of code 165 summed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_credit-glaccount exp = lcl_rows=>gc_gl_account
+                                            msg = 'Totals per G/L account of the payment engine account' ).
         cl_abap_unit_assert=>assert_equals( act = ls_credit-lines exp = 2 msg = 'Two lines behind the total' ).
         cl_abap_unit_assert=>assert_equals( act = ls_credit-currency exp = lcl_rows=>gc_currency
                                             msg = 'Line without currency takes the statement currency' ).
@@ -941,6 +1008,7 @@ CLASS ltc_returns IMPLEMENTATION.
     ls_noc-flgrd = gc_noc_reason.
     INSERT ls_noc INTO TABLE lt_nocs.
     go_env->insert_test_data( i_data = lt_stmts ).
+    go_env->insert_test_data( i_data = VALUE lcl_rows=>tt_acct( ( lcl_rows=>account( ) ) ) ).
     go_env->insert_test_data( i_data = lt_lines ).
     go_env->insert_test_data( i_data = lt_returns ).
     go_env->insert_test_data( i_data = lt_nocs ).
