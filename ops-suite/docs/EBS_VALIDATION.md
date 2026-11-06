@@ -54,9 +54,15 @@ Production codes used today (legacy validators, disbursement accounts) keep thei
 | **REF_TOO_LONG / REF_FORMAT** | The bank reference cannot be a document number (longer than the key, or not alphanumeric) | Look the entry up manually; it is never matched on a truncated key | Disbursement ops |
 | **DUPLICATE_HISTORY** (R22) | The entry is already in an earlier statement of the account (look-back window) | Check FEBEP for the earlier statement before posting | Treasury |
 | **AWAITING_LOT_TRANSFER** (W) | Payment / returns lot not found yet, statement inside the in-flight window (`EBS_INFLIGHT_HOURS`) | None while inside the window; the line is held as EXCEPTION, never auto-posted | Disbursement ops |
+| **MISSING_TRAILER / FUNDS_LAYOUT** (B, BAI2) | A 49 / 98 / 99 record is missing, or a detail's funds-type block cannot be read | Request a resend; nothing of the file is posted | Treasury |
+| **CAMT_DOCUMENT / INVALID_AMOUNT / INVALID_COUNT** (B, CAMT) | Namespace / version not approved, second message body, wrong statement element, or a value that is not a number | Request a corrected file; a new CAMT version is a parser change (§B6a) | Payment engine support |
+| **ENTRY_NOT_BOOKED** (W, CAMT) | Entry with status PDNG / INFO (or none) — quarantined, not posted | Wait for the booked entry in a later statement | Treasury |
+| **CAMT_BATCH_MISMATCH** (B) / **CAMT_DETAIL_AMOUNT_MISSING** (E) | Transaction details do not add up to their entry, or a detail has no amount | Post the entry manually from the bank advice; the detail lines are not emitted | Payment engine support |
+| **MAP_CONFLICT** (B) | ZCD_BTC_MAP has a blank-flow row and a `*` row for the same code that contradict each other | Delete one row (the app stores `*`); never released | Payment engine support |
+| **KILL_SWITCH_FALLBACK** (W) | TVARVC `ZCD_EBS_VALIDATION_MODE` missing, invalid or unreadable — MONITOR used | Maintain the switch (E / M / O) | Payment engine support |
 
 ### A4. Modes (kill switch)
-TVARVC `ZCD_EBS_VALIDATION_MODE` (type P, NUMB 0000): **E** enforce (pre-posting hook blocks B findings), **M** monitor (record only — also the value used when the row cannot be read), **O** off. The scheduled report never blocks; only the pre-posting hook uses the mode.
+TVARVC `ZCD_EBS_VALIDATION_MODE` (type P, NUMB 0000): **E** enforce (pre-posting hook blocks B findings), **M** monitor (record only — also the value used when the row is missing, holds another value or cannot be read; `read_mode` then returns a KILL_SWITCH_FALLBACK diagnostic, A91), **O** off. The scheduled report never blocks; only the pre-posting hook uses the mode.
 
 ---
 
