@@ -75,8 +75,9 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-09 | Imported statement (FEB source), 168 on disbursement account, payment not RETURNED in DPAYH | Seed group BAI168D | R07 PAYMENT_STATUS | pending |
 | EBS-10 | 581 checks paid with one register amount off by 1.00 | Seed group BAI581D | R08 CHECK_AMOUNT_MISMATCH on that check, R12 CODE_TOTAL_MISMATCH on the statement | pending |
 | EBS-11 | Same statement file delivered twice | — | S07 STMT_ALREADY_IMPORTED (B) | pending |
-| EBS-12 | Kill switch E / M / O on a file with one unmapped code (pre-posting entry) | TVARVC row | E: block; M: findings, no block; O: no validation; row deleted: behaves as M | pending |
-| EBS-13 | Circuit breaker: file with > 50 % unmapped lines in 3 packages | `EBS_CB_MIN_LINES` 1, package size 1 | Run status A, CIRCUIT_BREAKER finding, alert per ON_ABORT rule | pending |
+| EBS-12 | Kill switch E / M / O on a file with one unmapped code (pre-posting entry) | TVARVC row | **Out of scope for this release:** the pre-posting path (`VALIDATE_FOR_POSTING` / BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, blocked-line release) stays switched off; case moves with A02 to the future enforcement phase | not in this release |
+| EBS-13 | Circuit breaker (A104): **FEB source** (`P_FEB`) over ≥ 3 imported statements, each a controlled package, every package > 50 % of its lines unmapped (the statements were imported, posted and cleared before the run — post-posting detective control) | `P_PACK` = 1 (one statement per package); `EBS_CB_MIN_LINES` = 1, `EBS_CB_FAIL_PCT` = 50, `EBS_CB_PACKAGES` = 3; ≥ 3 test statements selected by `S_KUKEY` / date range | Package 3 trips the breaker: run status A (aborted), one CIRCUIT_BREAKER finding (rule CB, E), no further package read, alert per the ON_ABORT rule; with only 2 bad packages followed by a good one: no breaker (counter resets) | pending |
+| EBS-13a | Oversized or invalid single file through the **file source** (`P_FILE`) — one file is always one package, so the breaker cannot trip | (a) file not UTF-8; (b) BAI2 file cut off before the 98/99 trailers; (c) production-size file (largest observed day, `<line count, VERIFY with operations>`) | (a) read rejected, message 012, no run results (A69); (b) structural findings S00 / S06 TRAILER missing (B), lines not reported as validated (A86/A95); (c) one package, run completes or fails visibly; record runtime and memory — no size limit exists in code (`VERIFY` in QA1 whether one is needed) | pending |
 | EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN/FINDING/ALERT_LOG unchanged | pending |
 
 ### 6.2 File monitoring
@@ -120,6 +121,7 @@ Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–
 | BAI code / flow | Legacy failures | New findings | Differences explained by | Status |
 |---|---|---|---|---|
 | 166 D / 166 C / 143 C / 168 D / 195 D / 255 D / 466 D / 468 D / 452 D / 581 D (275 / 575: sweeps, no validation — D14); R21 lookup with one ZCD_EBS_LOOKUP row (missing key, wrong status, unknown lookup → PLUGIN_ERROR) | pending | pending | pending | pending |
+| **PAR-195** (A105): 195 D, three lines of one payment run — existing payment, same LAUFD / LAUFI with a missing DOC1R, unknown run | COMPLETE 4 (run-level LAUFD / LAUFI): fails only the unknown run | R07 `PAYMENT_NOT_FOUND` on the missing payment **and** the unknown run (payment-level DOC1R, as v4) | Deliberate: run-level vs payment-level match (`Legacy_Parity_Comparison.md` §3 and §4 PAR-195) | pending |
 
 ## 8. Integration (QA1)
 PRISM file hand-off and ack tables populated by the real interfaces; registry events derived from them in the right order (FMON-01, FMON-05). BCS, SLG1 and SM59 channels (ALR-05 … 07).

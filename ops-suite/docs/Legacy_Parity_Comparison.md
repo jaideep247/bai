@@ -5,6 +5,11 @@
 
 **Baseline compared:** `BAI_Validators_ABAP75_Refactor_Pack_v4_FIX195_DOC1R` (29 Dec 2025, latest validator logic) and `bai-validation-framework-COMPLETE (4)` (latest mass-validator framework). Earlier packs (COMPLETE 1–3, refactor v1–v3, `ZFIR_BANK_POST_VALIDATION_V2`) were read for intent only. Conflicts with the first framework `jaideep247/src` are in §3a.
 
+**Pinned legacy references (A105).** Every legacy statement below refers to the sources archived in this repository at commit `0a4a6b0ea1b2469cd8714fc5579bf98303d6442c` (unchanged since):
+- v4 validators: `legacy/bai_validators_v4/` — e.g. `legacy/bai_validators_v4/zcl_bai_195_disb.clas.abap`
+- COMPLETE 4 framework: `legacy/bai_validation_framework_complete4/src/` — e.g. `legacy/bai_validation_framework_complete4/src/validators/zcl_bai_195_disb.clas.abap`
+- Line numbers quoted are those of the files at that commit.
+
 **Status:** Draft — parity is proven by the unit tests named below (not yet executed in SAP) and must be confirmed by a shadow run in QA1 (§4).
 
 ## 1. Validator-by-validator parity
@@ -53,7 +58,7 @@
 |---|---|---|---|
 | `COMMIT WORK` inside `SELECT … PACKAGE SIZE … ENDSELECT` | ZCL_BAI_MASS_VALIDATOR | Cursor closed → runtime error on the 2nd package | Statement-keyed packages, commit between packages (`ZCL_CD_EBS_SRC_FEB`) |
 | Validator instances cached across chunks, statistics accumulate (`ADD 1`) but `total_count` overwritten | Factory + validators | Wrong pass/fail counts | Counts derived from findings per package (`count_lines`) |
-| 195: counter never incremented → every line `COUNT_ZERO` | COMPLETE 4 | All 195 lines fail | v4 DOC1R logic (R07) |
+| 195: **run-level** match instead of a payment-level match (corrected 2026-11-06, A105 — an earlier version of this row said the counter was never incremented; it is: `ADD 1 TO lv_count` for every DPAYH row whose LAUFD / LAUFI equal `CHECT+0(8)` / `CHECT+8(5)`, `zcl_bai_195_disb.clas.abap` lines 37–39 and 56–60) | COMPLETE 4 | A line passes when **any** payment of the payment run (LAUFD + LAUFI) exists, so a wire whose own payment is missing passes as long as another payment of the same run exists; `COUNT_ZERO` only when the whole run is unknown | v4 payment-level lookup: DPAYH by DOC1R derived from CHECT (`legacy/bai_validators_v4/zcl_bai_195_disb.clas.abap` lines 41–65, 91–92) → R07; QA case PAR-195 (§4) |
 | `DATA(lv_checks) = ''` (type C length 1) | COMPLETE 4 | Failure codes truncated to one letter | Typed finding structure |
 | `READ TABLE … WHERE`, `DATA(x) TYPE … VALUE` | 275, 468, 581 (COMPLETE 4) | Do not compile | — |
 | `RETURNING … TYPE TABLE OF`, undeclared exception raised | Factory, query service | Do not compile | — |
@@ -117,5 +122,7 @@ Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git hi
 1. Run legacy `Z_BAI_MASS_VALIDATION` (v4 validators, with defect D1 corrected locally so they actually check) and `ZCD_EBS_VALIDATE` in **test mode** on the same FEBKO/FEBEP date range.
 2. Compare per BAI code and line: legacy failed checks vs new findings. Every difference must map to a row D1–D11; anything else is a defect.
 3. Record results in the Test and Validation document §7 and attach the comparison extract (no production data in chat or e-mail).
+
+**PAR-195 — 195 run-level vs payment-level (A105).** In QA1 pick one payment run (LAUFD + LAUFI) with at least two wire payments and build three BAI 195 lines: (a) CHECT of an existing payment of the run; (b) CHECT carrying the same LAUFD / LAUFI but a payment key (DOC1R) that does not exist in DPAYH; (c) LAUFD / LAUFI of no run. Expected: COMPLETE 4 passes (a) and (b), fails (c) with `COUNT_ZERO`; v4 and `ZCD_EBS_VALIDATE` pass (a) and report (b) and (c) (R07 `PAYMENT_NOT_FOUND`). Line (b) is the deliberate difference; record it as such. `VERIFY-SE11`: CHECT layout (LAUFD 8 + LAUFI 5) and DPAYH-DOC1R length (C6).
 
 The shadow run is the only proof of parity; unit tests prove the code does what was decided, not that it was decided the same way as before.
