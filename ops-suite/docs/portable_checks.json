@@ -97,7 +97,7 @@
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 784 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 830 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]
