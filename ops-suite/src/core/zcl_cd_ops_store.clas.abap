@@ -13,6 +13,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | get_stale_runs: running runs older than a limit, own run excluded (audit A06).
 *& 2026-11-06 | Parameter cache is run-scoped: start_run takes a fresh snapshot (audit A64).
+*& 2026-11-06 | Performance fix 5: carry-forward reads by (OBJECT_TYPE, OBJECT_KEY) pairs; earlier rows found
+*&            | by binary search on the sorted read (newest first kept), not a nested WHERE scan.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -203,24 +205,34 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
 
   METHOD carry_forward.
-    DATA lt_keys TYPE zif_cd_ops_types=>tt_object_key.
+    TYPES:
+      BEGIN OF ty_object,
+        object_type TYPE zcd_ops_finding-object_type,
+        object_key  TYPE zcd_ops_finding-object_key,
+      END OF ty_object.
+    DATA lt_keys TYPE SORTED TABLE OF ty_object WITH UNIQUE KEY object_type object_key.
+    DATA ls_object TYPE ty_object.
     DATA lt_prev TYPE tt_db_finding.
     DATA lt_superseded TYPE tt_db_update.
     DATA ls_superseded TYPE ty_db_update.
 
-    LOOP AT ct_new INTO DATA(ls_candidate) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
-      INSERT ls_candidate-object_key INTO TABLE lt_keys.
+    " Fix 5: the object type of every candidate is known - only (type, key) pairs are read
+    LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_candidate>) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
+      ls_object-object_type = <ls_candidate>-object_type.
+      ls_object-object_key  = <ls_candidate>-object_key.
+      INSERT ls_object INTO TABLE lt_keys.
     ENDLOOP.
     CHECK lt_keys IS NOT INITIAL.
 
-    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5; OBJECT_TYPE is a filter)
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
            waiver_req_by, waiver_req_at, waiver_reason
       FROM zcd_ops_finding
       FOR ALL ENTRIES IN @lt_keys
       WHERE pe_area      = @is_run-pe_area
-        AND object_key  = @lt_keys-table_line
+        AND object_key  = @lt_keys-object_key
+        AND object_type = @lt_keys-object_type
         AND run_id     <> @is_run-run_id
         AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
                              @zif_cd_ops_types=>gc_disposition-assigned,
@@ -232,11 +244,26 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
     LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_new>) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
       DATA(lv_inherited) = abap_false.
-      LOOP AT lt_prev ASSIGNING FIELD-SYMBOL(<ls_prev>)
-           WHERE object_type   = <ls_new>-object_type
-             AND object_key    = <ls_new>-object_key
-             AND check_code    = <ls_new>-check_code
-             AND superseded_by IS INITIAL.
+      " Fix 5: first row of the (type, key, check) block by binary search on the sort order
+      " above - a sorted key could not keep CREATED_AT descending inside the block
+      READ TABLE lt_prev TRANSPORTING NO FIELDS
+           WITH KEY object_type = <ls_new>-object_type
+                    object_key  = <ls_new>-object_key
+                    check_code  = <ls_new>-check_code
+           BINARY SEARCH.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+      DATA(lv_first) = sy-tabix.
+      LOOP AT lt_prev ASSIGNING FIELD-SYMBOL(<ls_prev>) FROM lv_first.
+        IF <ls_prev>-object_type <> <ls_new>-object_type
+           OR <ls_prev>-object_key <> <ls_new>-object_key
+           OR <ls_prev>-check_code <> <ls_new>-check_code.
+          EXIT.
+        ENDIF.
+        IF <ls_prev>-superseded_by IS NOT INITIAL.
+          CONTINUE.
+        ENDIF.
         IF lv_inherited = abap_false.
           inherit( EXPORTING is_prev  = <ls_prev>
                              iv_today = iv_today
@@ -301,6 +328,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     ENDIF.
 
     IF it_object_keys IS NOT INITIAL.
+      " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_KEY (fix 5: the caller knows no object type)
       SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
              due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
         FROM zcd_ops_finding

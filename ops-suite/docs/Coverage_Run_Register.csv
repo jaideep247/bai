@@ -50,7 +50,7 @@ ZCL_CD_OPS_FACTORY,11,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,7,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,4,90,,Not run in target SAP
-ZCL_CD_OPS_STORE,16,90,,Not run in target SAP
+ZCL_CD_OPS_STORE,18,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_DAO,8,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_ENGINE,21,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,14,90,,Not run in target SAP
