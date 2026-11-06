@@ -1,0 +1,85 @@
+projection;
+strict ( 2 );
+use draft;
+
+define behavior for ZC_CD_HckCfgAll alias HckCfgAll
+{
+  use update;
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Resume;
+  use action Prepare;
+
+  use association _HckCheckDef { create; with draft; }
+  use association _HckThreshold { create; with draft; }
+  use association _HckAggregate { create; with draft; }
+  use association _HckDriftTable { create; with draft; }
+  use association _HckWhitelist { create; with draft; }
+  use association _JobCycle { create; with draft; }
+  use association _JobStep { create; with draft; }
+}
+
+define behavior for ZC_CD_HckCheckDef alias HckCheckDef
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckThreshold alias HckThreshold
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckAggregate alias HckAggregate
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckDriftTable alias HckDriftTable
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckWhitelist alias HckWhitelist
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_JobCycle alias JobCycle
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_JobStep alias JobStep
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}

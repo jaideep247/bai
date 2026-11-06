@@ -1,0 +1,290 @@
+managed implementation in class zbp_r_cd_fmoncfgall unique;
+strict ( 2 );
+with draft;
+
+// File monitoring setup: singleton root (virtual, nothing persisted) - lock, total ETag,
+// draft and the customizing request; every customizing table is a child.
+define behavior for ZR_CD_FmonCfgAll alias FmonCfgAll
+with unmanaged save
+draft table zcd_d_fmoncfg
+lock master
+total etag LastChangedAtMax
+authorization master ( global )
+##DRAFT_OP_NOT_REQUIRED
+{
+  update;
+  field ( readonly ) SingletonID, LastChangedAtMax;
+
+  association _FmonIface { create ( features : global ); with draft; }
+  association _FmonSla { create ( features : global ); with draft; }
+  association _FmonSource { create ( features : global ); with draft; }
+  association _FmonSourceMap { create ( features : global ); with draft; }
+  association _FmonCheck { create ( features : global ); with draft; }
+  association _FmonLotCfg { create ( features : global ); with draft; }
+  association _FmonCalendar { create ( features : global ); with draft; }
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation FmonIface ~ validateFields;
+    validation FmonIface ~ validateTransport;
+    validation FmonSla ~ validateFields;
+    validation FmonSla ~ validateTransport;
+    validation FmonSource ~ validateFields;
+    validation FmonSource ~ validateTransport;
+    validation FmonSourceMap ~ validateTransport;
+    validation FmonCheck ~ validateFields;
+    validation FmonCheck ~ validateTransport;
+    validation FmonLotCfg ~ validateFields;
+    validation FmonLotCfg ~ validateTransport;
+    validation FmonCalendar ~ validateFields;
+    validation FmonCalendar ~ validateTransport;
+  }
+}
+
+define behavior for ZR_CD_FmonIface alias FmonIface
+persistent table zcd_fmon_iface
+with additional save
+draft table zcd_d_fmiface
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) IfaceId;
+  field ( mandatory : create ) IfaceId;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_iface
+  {
+    IfaceId = iface_id;
+    Direction = direction;
+    FileType = file_type;
+    SourceSys = source_sys;
+    TargetSys = target_sys;
+    PayMethod = pay_method;
+    Lob = lob;
+    BankKey = bank_key;
+    NamePattern = name_pattern;
+    MinBytes = min_bytes;
+    MaxBytes = max_bytes;
+    AckExpected = ack_expected;
+    AckLevel = ack_level;
+    Owner = owner;
+    Active = active;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonSla alias FmonSla
+persistent table zcd_fmon_sla
+with additional save
+draft table zcd_d_fmsla
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) IfaceId, Stage;
+  field ( mandatory : create ) IfaceId, Stage;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_sla
+  {
+    IfaceId = iface_id;
+    Stage = stage;
+    MaxMinutes = max_minutes;
+    Basis = basis;
+    Severity = severity;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonSource alias FmonSource
+persistent table zcd_fmon_src
+with additional save
+draft table zcd_d_fmsrc
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) SrcId;
+  field ( mandatory : create ) SrcId;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_src
+  {
+    SrcId = src_id;
+    IfaceId = iface_id;
+    TableName = table_name;
+    FileKeyField = file_key_field;
+    FileNameField = file_name_field;
+    DateField = date_field;
+    TimeField = time_field;
+    TsField = ts_field;
+    StatusField = status_field;
+    CountField = count_field;
+    AmountField = amount_field;
+    SizeField = size_field;
+    ChecksumField = checksum_field;
+    SourceField = source_field;
+    LobField = lob_field;
+    DefaultStage = default_stage;
+    AdapterClass = adapter_class;
+    Active = active;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonSourceMap alias FmonSourceMap
+persistent table zcd_fmon_srcmap
+with additional save
+draft table zcd_d_fmsrcmap
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) SrcId, StatusValue;
+  field ( mandatory : create ) SrcId;
+  association _FmonCfgAll { with draft; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_srcmap
+  {
+    SrcId = src_id;
+    StatusValue = status_value;
+    Stage = stage;
+    Info = info;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonCheck alias FmonCheck
+persistent table zcd_fmon_chk
+with additional save
+draft table zcd_d_fmchk
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) CheckId;
+  field ( mandatory : create ) CheckId;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_chk
+  {
+    CheckId = check_id;
+    ClassName = class_name;
+    Severity = severity;
+    Active = active;
+    Params = params;
+    Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonLotCfg alias FmonLotCfg
+persistent table zcd_fmon_lotcfg
+with additional save
+draft table zcd_d_fmlotcfg
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) IfaceId, LotType;
+  field ( mandatory : create ) IfaceId, LotType;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_lotcfg
+  {
+    IfaceId = iface_id;
+    LotType = lot_type;
+    HdrTable = hdr_table;
+    HdrLotField = hdr_lot_field;
+    HdrLinkField = hdr_link_field;
+    ItemTable = item_table;
+    ItemLotField = item_lot_field;
+    ItemKeyField = item_key_field;
+    ItemStatusField = item_status_field;
+    ItemLinkField = item_link_field;
+    LinkBy = link_by;
+    DoneValues = done_values;
+    NocSlaDays = noc_sla_days;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonCalendar alias FmonCalendar
+persistent table zcd_fmon_cal
+with additional save
+draft table zcd_d_fmcal
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) IfaceId, DayType;
+  field ( mandatory : create ) IfaceId, DayType;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_cal
+  {
+    IfaceId = iface_id;
+    DayType = day_type;
+    ExpectedCount = expected_count;
+    WindowFrom = window_from;
+    WindowTo = window_to;
+    FcalId = fcal_id;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

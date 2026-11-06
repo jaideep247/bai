@@ -1,0 +1,32 @@
+// UI annotations: File monitoring setup
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'File monitoring setup',
+                     typeNamePlural: 'File monitoring setup',
+                     title: { type: #STANDARD, value: 'SingletonID' } } }
+annotate entity ZC_CD_FmonCfgAll with
+{
+  @UI.facet: [
+    { id: 'Transport', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Transport (DV1)', position: 10 },
+    { id: 'FmonIface', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Interfaces', position: 20, targetElement: '_FmonIface' },
+    { id: 'FmonSla', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Stage SLAs', position: 30, targetElement: '_FmonSla' },
+    { id: 'FmonSource', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Source adapters', position: 40, targetElement: '_FmonSource' },
+    { id: 'FmonSourceMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Status mappings', position: 50, targetElement: '_FmonSourceMap' },
+    { id: 'FmonCheck', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Checks', position: 60, targetElement: '_FmonCheck' },
+    { id: 'FmonLotCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Returns / NOC lots', position: 70, targetElement: '_FmonLotCfg' },
+    { id: 'FmonCalendar', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Expected files per day type', position: 80, targetElement: '_FmonCalendar' }
+  ]
+
+  @UI.lineItem: [{ position: 10 }]
+  SingletonID;
+
+  @UI.identification: [{ position: 10, label: 'Customizing request (DV1 only)' }]
+  TransportRequestID;
+}

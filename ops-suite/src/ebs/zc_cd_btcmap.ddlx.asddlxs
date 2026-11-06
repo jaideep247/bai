@@ -1,0 +1,72 @@
+// UI annotations: EBS rules and mapping - Bank transaction codes
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Bank transaction code',
+                     typeNamePlural: 'Bank transaction codes',
+                     title: { type: #STANDARD, value: 'Scheme' } } }
+annotate entity ZC_CD_BtcMap with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Scheme;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  BtcCode;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  BankKey;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  FlowType;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Category;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  RuleGroup;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  ExpCdi;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  PayMethod;
+
+  @UI.identification: [{ position: 90 }]
+  PostingRule;
+
+  @UI.identification: [{ position: 100 }]
+  RetReason;
+
+  @UI.identification: [{ position: 110 }]
+  ActionCode;
+
+  @UI.identification: [{ position: 120 }]
+  Active;
+
+  @UI.identification: [{ position: 130 }]
+  Description;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

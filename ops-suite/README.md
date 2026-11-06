@@ -30,6 +30,9 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1) |
 | `Implementation_Order.md` | Basis / developers — abapGit import, activation and transport order |
 | `Review_Response_2026-11-06.md` | Reviewers — answers to the principal consultant review |
+| `RAP_Apps_Design.md` | Everyone — decisions D-1…D-6 for the RAP configuration and operations apps |
+| `RAP_Config_Apps.md` | Configuration owners, RTB — the four configuration apps, client policy, validations, DV1 steps |
+| `USAA_Known_Tables.md` | Developers, RTB — confirmed landscape tables, fields and joins used by the suite |
 | `ATC_Validation.md` | Reviewers, QA — ATC-equivalent offline checks, exemptions, what DV1 ATC must confirm |
 | `RAP_Apps_Design.md` | Business owner, architects — configuration and operations apps, authorisation, run lock, carry-forward, purge |
 | `Operations_Runbook.md` | IT support |

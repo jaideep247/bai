@@ -17,6 +17,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | 0.4 | BAdI FIEB_CHANGE_BS_DATA method signature | SE18 | Copied into the BAdI design (not delivered here) |
 | 0.5 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
 | 0.6 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
+| 0.7 | Domain `CCCORACTIV` fixed values confirmed (configuration-app client policy) | SE11 | Values match `ZCL_CD_OPS_CFG_CLIENT` |
 | 0.7 | Authorisation object `ZCD_OPS` (field `ZCD_MODULE`, data element / domain `ZCD_OPS_MODULE`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
 
 ## Step 1 — DDIC (SE11 / ADT)
@@ -30,6 +31,10 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are not in the abapGit XML — create them from the comments in `ddic/*/*.tabl.ddl`.
 7. Application log object/subobject `ZCD_OPS` / `ALERT` (SLG0) for the APPLOG channel.
 8. Authorization object `ZCD_OPS` — step 0.7 (reports, purge and the CDS access role `ZI_CD_OpsAnalytics`).
+
+## Step 1a — RAP configuration apps
+
+Follow `RAP_Config_Apps.md` §6: confirm the VERIFY-ADT items (business-configuration CTS API, UNION ALL in view entities, `delete` as validation trigger), activate in the order given there, create and publish the service bindings `ZUI_CD_EBS_CFG_O4`, `ZUI_CD_FMON_CFG_O4`, `ZUI_CD_HCK_CFG_O4`, `ZUI_CD_OPS_CFG_O4`, add the FLP tiles, and check `rec/client` (step 0.6).
 
 ## Step 2 — Classes, in dependency order (activate each group together)
 

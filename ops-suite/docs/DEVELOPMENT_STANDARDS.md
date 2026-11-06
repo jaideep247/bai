@@ -71,6 +71,7 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - Every module writes results only through `zcl_cd_ops_factory=>get_store( )` → one auditable store (ZCD_OPS_RUN / ZCD_OPS_FINDING). Findings of severity B/E/W become owned exceptions with an SLA due date.
 - Parameters: `store->get_param( iv_name = 'XYZ' iv_default = `...` )` — never hard-code thresholds, e-mail addresses, company codes, status literals.
 - Registry lookups fall back to a blank/`*` default row (a new source/bank/LOB costs configuration only).
+- Configuration is maintained only through the four RAP configuration apps (`RAP_Config_Apps.md`); SM30 maintenance views are not delivered. New customizing table → add it to the spec in `tools/rap_generate.py`, add the three admin fields, regenerate.
 - A failing plug-in never aborts a run: catch `zcx_cd_ops_error` and `cx_root` per plug-in and record a finding (`check_code = 'PLUGIN_ERROR'`, severity E).
 - **Fail closed where a check gates money:** an EBS rule that fails carries action BLOCK, so posting is blocked in enforce mode; `validate_for_posting` never raises (VALIDATION_ERROR, action BLOCK).
 - **Durable before notified:** commit the run header at start; commit results and run end before any alert or mail (a channel may `COMMIT WORK` itself); never commit a half-written save — `store->rollback( )`.

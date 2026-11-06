@@ -1,0 +1,72 @@
+// UI annotations: Health check setup - Job cycle steps
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Job step',
+                     typeNamePlural: 'Job cycle steps',
+                     title: { type: #STANDARD, value: 'CycleId' } } }
+annotate entity ZC_CD_JobStep with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  CycleId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  StepNo;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Description;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Jobname;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Program;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Variant;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  PredStep;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  DayOffset;
+
+  @UI.identification: [{ position: 90 }]
+  WindowFrom;
+
+  @UI.identification: [{ position: 100 }]
+  WindowTo;
+
+  @UI.identification: [{ position: 110 }]
+  MaxRuntimeMin;
+
+  @UI.identification: [{ position: 120 }]
+  Skippable;
+
+  @UI.identification: [{ position: 130 }]
+  Critical;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

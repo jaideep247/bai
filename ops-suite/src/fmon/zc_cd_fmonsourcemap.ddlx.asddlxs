@@ -1,0 +1,35 @@
+// UI annotations: File monitoring setup - Status mappings
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Status mapping',
+                     typeNamePlural: 'Status mappings',
+                     title: { type: #STANDARD, value: 'SrcId' } } }
+annotate entity ZC_CD_FmonSourceMap with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  SrcId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  StatusValue;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Stage;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Info;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

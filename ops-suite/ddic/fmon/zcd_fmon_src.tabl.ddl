@@ -30,4 +30,8 @@ define table zcd_fmon_src {
   adapter_class   : abap.char(30);
   active          : abap_boolean;
   description     : abap.char(60);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }

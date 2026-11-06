@@ -1,0 +1,30 @@
+// UI annotations: EBS rules and mapping
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'EBS rules and mapping',
+                     typeNamePlural: 'EBS rules and mapping',
+                     title: { type: #STANDARD, value: 'SingletonID' } } }
+annotate entity ZC_CD_EbsCfgAll with
+{
+  @UI.facet: [
+    { id: 'Transport', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Transport (DV1)', position: 10 },
+    { id: 'BtcMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Bank transaction codes', position: 20, targetElement: '_BtcMap' },
+    { id: 'BtcRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Rule assignments', position: 30, targetElement: '_BtcRule' },
+    { id: 'RuleDef', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Rule registry', position: 40, targetElement: '_RuleDef' },
+    { id: 'HouseBankAcct', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'House bank accounts', position: 50, targetElement: '_HouseBankAcct' },
+    { id: 'FlowPattern', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Flow patterns (XBLNR)', position: 60, targetElement: '_FlowPattern' },
+    { id: 'ReasonMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Return / NOC reasons', position: 70, targetElement: '_ReasonMap' }
+  ]
+
+  @UI.lineItem: [{ position: 10 }]
+  SingletonID;
+
+  @UI.identification: [{ position: 10, label: 'Customizing request (DV1 only)' }]
+  TransportRequestID;
+}

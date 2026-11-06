@@ -1,0 +1,24 @@
+// UI annotations: Alerting and parameters
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Alerting and parameters',
+                     typeNamePlural: 'Alerting and parameters',
+                     title: { type: #STANDARD, value: 'SingletonID' } } }
+annotate entity ZC_CD_OpsCfgAll with
+{
+  @UI.facet: [
+    { id: 'Transport', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Transport (DV1)', position: 10 },
+    { id: 'AlertRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Alert rules', position: 20, targetElement: '_AlertRule' },
+    { id: 'AlertChannel', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Alert channels', position: 30, targetElement: '_AlertChannel' },
+    { id: 'OpsParam', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Runtime parameters', position: 40, targetElement: '_OpsParam' }
+  ]
+
+  @UI.lineItem: [{ position: 10 }]
+  SingletonID;
+
+  @UI.identification: [{ position: 10, label: 'Customizing request (DV1 only)' }]
+  TransportRequestID;
+}

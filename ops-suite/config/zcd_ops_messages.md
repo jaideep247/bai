@@ -1,6 +1,6 @@
 # Message class ZCD_OPS
 
-Number ranges: 001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK.
+Number ranges: 001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK · 400–449 configuration apps (RAP).
 Create in SE91 exactly as listed (short texts ≤ 73 characters).
 
 | No. | Text |
@@ -57,3 +57,19 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 316 | Export file &1 could not be opened for writing |
 | 317 | Aggregate function &1 of check &2 is not supported (COUNT, SUM) |
 | 318 | SUM field &1 of table &2 is not numeric |
+| 401 | New entries are created in DV1 and transported (client &1) |
+| 402 | Enter a customizing request: changes in this client are recorded |
+| 403 | Transport request &1 does not exist |
+| 404 | &1 is not a customizing request or customizing task |
+| 405 | Transport request &1 is released or no longer modifiable |
+| 406 | Entries are deleted in DV1 and transported (client &1) |
+| 407 | No authorization for &1 of &2 configuration (object ZCD_OPS) |
+| 408 | Changes could not be recorded on transport request &1 |
+| 410 | Class &1 does not exist or does not implement &2 |
+| 411 | Table &1 does not exist in the ABAP dictionary |
+| 412 | Field &1 does not exist in table &2 |
+| 413 | Value &1 is not allowed for &2 (allowed: &3) |
+| 414 | Enter both &1 and &2, or neither |
+| 415 | Amber &1 and red &2 are in the wrong order for &3 |
+| 416 | Rule group &1 has no active rule in ZCD_BTC_RULE |
+| 417 | &1 must be greater than zero |

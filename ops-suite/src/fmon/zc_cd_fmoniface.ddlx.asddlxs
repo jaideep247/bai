@@ -1,0 +1,75 @@
+// UI annotations: File monitoring setup - Interfaces
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Interface',
+                     typeNamePlural: 'Interfaces',
+                     title: { type: #STANDARD, value: 'IfaceId' } } }
+annotate entity ZC_CD_FmonIface with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  IfaceId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Direction;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  FileType;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  SourceSys;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  TargetSys;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  PayMethod;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  Lob;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  BankKey;
+
+  @UI.identification: [{ position: 90 }]
+  NamePattern;
+
+  @UI.identification: [{ position: 100 }]
+  MinBytes;
+
+  @UI.identification: [{ position: 110 }]
+  MaxBytes;
+
+  @UI.identification: [{ position: 120 }]
+  AckExpected;
+
+  @UI.identification: [{ position: 130 }]
+  AckLevel;
+
+  @UI.identification: [{ position: 140 }]
+  Owner;
+
+  @UI.identification: [{ position: 150 }]
+  Active;
+
+  @UI.identification: [{ position: 160 }]
+  Description;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

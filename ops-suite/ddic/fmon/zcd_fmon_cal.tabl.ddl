@@ -14,4 +14,8 @@ define table zcd_fmon_cal {
   window_to      : abap.tims;
   // Factory calendar (TFACD); blank = parameter FMON_FACTORY_CAL
   fcal_id        : abap.char(2);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }

@@ -20,5 +20,9 @@ define table zcd_ebs_acct {
   // Bank G/L account for R18
   gl_account   : abap.char(10);
   active       : abap_boolean;
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Secondary index ZCD_EBS_ACCT~ACC : MANDT, ACCOUNT_NO (file statements)

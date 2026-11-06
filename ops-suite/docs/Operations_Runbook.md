@@ -31,7 +31,8 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 | Situation | Action | Effect |
 |---|---|---|
 | EBS validation blocks postings wrongly | TVARVC `ZCD_EBS_VALIDATION_MODE` = `M` (or `O`) | Monitor only / off — no transport needed |
-| Alert storm | Deactivate the rule in ZCD_OPS_ALERT_RULE or raise THROTTLE_MIN | Immediate, logged |
+| Alert storm | Deactivate the rule in the Alerting & parameters app or raise THROTTLE_MIN | Immediate, logged |
+| Change a threshold / SLA / rule parameter in production | Configuration app of the area → Edit → change the existing row → Save | No transport; logged in SCU3. New rows only in DV1 and by transport |
 | A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. **EBS in enforce mode:** a failing rule blocks posting of its packages (fail closed). Deactivating the rule removes that check — get the rule owner's approval, or switch to `M` for the affected period |
 | Remove the suite | Unschedule the three jobs, set the switch to `O` | Back to previous behaviour in < 15 min |
 | Job refused with RUN_LOCKED (message 040) | Check SM37 for the run named in the message; wait for it, or — only if that job is gone — delete the lock in SM12 (table ZCD_OPS_LOCK, argument client + module + variant) | One run per module + variant (FMON: one per system); the refusal is alerted (rule RUN_LOCKED) |

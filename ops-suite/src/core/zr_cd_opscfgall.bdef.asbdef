@@ -1,0 +1,140 @@
+managed implementation in class zbp_r_cd_opscfgall unique;
+strict ( 2 );
+with draft;
+
+// Alerting and parameters: singleton root (virtual, nothing persisted) - lock, total ETag,
+// draft and the customizing request; every customizing table is a child.
+define behavior for ZR_CD_OpsCfgAll alias OpsCfgAll
+with unmanaged save
+draft table zcd_d_opscfg
+lock master
+total etag LastChangedAtMax
+authorization master ( global )
+##DRAFT_OP_NOT_REQUIRED
+{
+  update;
+  field ( readonly ) SingletonID, LastChangedAtMax;
+
+  association _AlertRule { create ( features : global ); with draft; }
+  association _AlertChannel { create ( features : global ); with draft; }
+  association _OpsParam { create ( features : global ); with draft; }
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation AlertRule ~ validateFields;
+    validation AlertRule ~ validateTransport;
+    validation AlertChannel ~ validateFields;
+    validation AlertChannel ~ validateTransport;
+    validation OpsParam ~ validateTransport;
+  }
+}
+
+define behavior for ZR_CD_AlertRule alias AlertRule
+persistent table zcd_ops_alert_rule
+with additional save
+draft table zcd_d_alrule
+lock dependent by _OpsCfgAll
+authorization dependent by _OpsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) RuleId;
+  field ( mandatory : create ) RuleId;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_alert_rule
+  {
+    RuleId = rule_id;
+    Module = module;
+    MinSeverity = min_severity;
+    RulePattern = rule_pattern;
+    CheckPattern = check_pattern;
+    Group1Pattern = group1_pattern;
+    Group2Pattern = group2_pattern;
+    MinRag = min_rag;
+    OnAbort = on_abort;
+    Channel = channel;
+    Destination = destination;
+    Digest = digest;
+    MaxItems = max_items;
+    ThrottleMin = throttle_min;
+    QuietFrom = quiet_from;
+    QuietTo = quiet_to;
+    EscalateAfter = escalate_after;
+    EscalationDest = escalation_dest;
+    Active = active;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_AlertChannel alias AlertChannel
+persistent table zcd_ops_alert_chn
+with additional save
+draft table zcd_d_alchn
+lock dependent by _OpsCfgAll
+authorization dependent by _OpsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Channel;
+  field ( mandatory : create ) Channel;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_alert_chn
+  {
+    Channel = channel;
+    ClassName = class_name;
+    Destination = destination;
+    Active = active;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_OpsParam alias OpsParam
+persistent table zcd_ops_param
+with additional save
+draft table zcd_d_param
+lock dependent by _OpsCfgAll
+authorization dependent by _OpsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) ParamName;
+  field ( mandatory : create ) ParamName;
+  association _OpsCfgAll { with draft; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_param
+  {
+    ParamName = param_name;
+    ParamValue = param_value;
+    Description = description;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

@@ -10,5 +10,9 @@ define table zcd_hck_drift {
   active        : abap_boolean;
   changed_by    : syuname;
   changed_at    : timestampl;
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Only customizing tables (small). The hash reads the whole table ordered by primary key.

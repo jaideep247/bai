@@ -1,0 +1,32 @@
+// UI annotations: Health check setup
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Health check setup',
+                     typeNamePlural: 'Health check setup',
+                     title: { type: #STANDARD, value: 'SingletonID' } } }
+annotate entity ZC_CD_HckCfgAll with
+{
+  @UI.facet: [
+    { id: 'Transport', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+      label: 'Transport (DV1)', position: 10 },
+    { id: 'HckCheckDef', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Checks', position: 20, targetElement: '_HckCheckDef' },
+    { id: 'HckThreshold', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Thresholds', position: 30, targetElement: '_HckThreshold' },
+    { id: 'HckAggregate', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Generic aggregates', position: 40, targetElement: '_HckAggregate' },
+    { id: 'HckDriftTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Tables under drift control', position: 50, targetElement: '_HckDriftTable' },
+    { id: 'HckWhitelist', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Aggregate table whitelist', position: 60, targetElement: '_HckWhitelist' },
+    { id: 'JobCycle', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Job cycles', position: 70, targetElement: '_JobCycle' },
+    { id: 'JobStep', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Job cycle steps', position: 80, targetElement: '_JobStep' }
+  ]
+
+  @UI.lineItem: [{ position: 10 }]
+  SingletonID;
+
+  @UI.identification: [{ position: 10, label: 'Customizing request (DV1 only)' }]
+  TransportRequestID;
+}

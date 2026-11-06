@@ -1,0 +1,37 @@
+// UI annotations: Health check setup - Tables under drift control
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Drift table',
+                     typeNamePlural: 'Tables under drift control',
+                     title: { type: #STANDARD, value: 'Tabname' } } }
+annotate entity ZC_CD_HckDriftTable with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Tabname;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Description;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Active;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}
