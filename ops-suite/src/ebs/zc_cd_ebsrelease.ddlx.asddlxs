@@ -1,4 +1,7 @@
 // UI annotations: Blocked line releases (EBS)
+// Navigation hint (2026-11-06): the blocked statement line opens in FEBAN through the launchpad
+// target mapping ZCDBankStatement-reprocess (SAP GUI transaction FEBAN).
+// VERIFY-ADT: @Consumption.semanticObject in the metadata extension and the target mapping.
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Release', typeNamePlural: 'Releases',
                   title: { type: #STANDARD, value: 'ObjectKey' },
@@ -8,11 +11,16 @@ annotate entity ZC_CD_EbsRelease with
   @UI.facet: [ { id: 'Release', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Release', position: 10 } ]
   @UI.lineItem: [ { position: 10, importance: #HIGH },
                   { type: #FOR_ACTION, dataAction: 'approveRelease', label: 'Approve' },
-                  { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' } ]
+                  { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' },
+                  { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'reprocess',
+                    label: 'Bank statement (FEBAN)' } ]
   @UI.identification: [ { position: 10 },
                         { type: #FOR_ACTION, dataAction: 'approveRelease', label: 'Approve' },
-                        { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' } ]
+                        { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' },
+                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'reprocess',
+                          label: 'Bank statement (FEBAN)' } ]
   @UI.selectionField: [ { position: 10 } ]
+  @Consumption.semanticObject: 'ZCDBankStatement'
   ObjectKey;
   @UI.lineItem: [ { position: 20, importance: #HIGH } ]
   @UI.identification: [ { position: 20 } ]
