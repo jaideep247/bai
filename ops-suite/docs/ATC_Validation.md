@@ -47,7 +47,7 @@
 | `ZCL_CD_OPS_ALERT_DAO=>INSERT_LOG` | sy-subrc after INSERT … ACCEPTING DUPLICATE KEYS | Duplicate audit keys are skipped on purpose; `"#EC CI_SUBRC` set |
 | `ZBP_R_CD_*` behaviour pools | `check_abstract`, `unused_methods` | ABAP requires `ABSTRACT FINAL … FOR BEHAVIOR OF`; handler methods are called by the RAP framework. Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these |
 | `ZCL_CD_FMON_DAO=>INSERT_EVENT` and `SAVE_FILES` | Database operation in loop | INSERT_EVENT: bounded retry (3 attempts) only after a primary-key collision with a parallel writer. SAVE_FILES (audit A04): row lock + version compare per registry row, bounded by the files of one run. `"#EC CI_SEL_NESTED` set |
-| `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_FMON_DAO`, `ZCL_CD_HCK_DAO` | Dynamic SQL (security / Code Vulnerability Analyzer) | Table and field names come only from customizing and are validated against the DDIC (and the whitelist ZCD_HCK_TABWL); values are bound host variables or escaped with `cl_abap_dyn_prg=>quote`; no user input reaches the statement. Excluded file-by-file in `abaplint.atc.json`, so new dynamic SQL anywhere else still fails |
+| `ZCL_CD_EBS_FEB_DAO` (item read, performance fix 3), `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_FMON_DAO`, `ZCL_CD_HCK_DAO` | Dynamic SQL (security / Code Vulnerability Analyzer) | Table and field names come only from customizing or class constants and are validated against the DDIC (and the whitelist ZCD_HCK_TABWL); values are bound host variables or escaped with `cl_abap_dyn_prg=>quote`; no user input reaches the statement. Excluded file-by-file in `abaplint.atc.json`, so new dynamic SQL anywhere else still fails |
 
 ## 5. What only the SAP system can confirm (run in DV1)
 

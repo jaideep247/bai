@@ -10,12 +10,16 @@
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
 *& 2026-11-06 | Audit A68: inverted date range raises.
 *& 2026-11-06 | Operating model: posting state from the FEBEP posting-area flags; NONE switches it off.
+*& 2026-11-06 | Performance fix 3: reason and posting flags come with the items (one FEBEP read); reads counted.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ebs_feb_dao.
     DATA mt_headers TYPE zif_cd_ebs_feb_dao=>tt_header.
     DATA mt_items   TYPE zif_cd_ebs_feb_dao=>tt_item.
+    "! Fix 3: extras asked for with the items and number of item reads
+    DATA ms_extras  TYPE zif_cd_ebs_feb_dao=>ty_item_extras.
+    DATA mv_item_reads TYPE i.
 ENDCLASS.
 
 CLASS ltd_feb IMPLEMENTATION.
@@ -23,6 +27,8 @@ CLASS ltd_feb IMPLEMENTATION.
     rt_headers = mt_headers.
   ENDMETHOD.
   METHOD zif_cd_ebs_feb_dao~get_items.
+    ms_extras = is_extras.
+    mv_item_reads += 1.
     LOOP AT mt_items INTO DATA(ls_item).
       IF line_exists( it_kukey[ table_line = ls_item-kukey ] ).
         INSERT ls_item INTO TABLE rt_items.
@@ -41,30 +47,6 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
     DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-"! SAP-DAO double: only the FEBEP return-reason read is used by the FEB source
-CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ebs_sap_dao PARTIALLY IMPLEMENTED.
-    DATA mt_reasons TYPE zif_cd_ebs_sap_dao=>tt_febep_reason.
-    DATA mv_field   TYPE string.
-    "! Operating model: posting state returned per item, fields asked for, number of reads
-    DATA mt_posting TYPE zif_cd_ebs_sap_dao=>tt_febep_posting.
-    DATA mt_fields  TYPE string_table.
-    DATA mv_posting_reads TYPE i.
-ENDCLASS.
-
-CLASS ltd_sap_dao IMPLEMENTATION.
-  METHOD zif_cd_ebs_sap_dao~get_febep_reasons.
-    mv_field   = iv_field.
-    rt_reasons = mt_reasons.
-  ENDMETHOD.
-  METHOD zif_cd_ebs_sap_dao~get_febep_posting.
-    mv_posting_reads += 1.
-    mt_fields  = it_fields.
-    rt_posting = mt_posting.
-  ENDMETHOD.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -109,7 +91,6 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
 
     DATA mo_dao TYPE REF TO ltd_feb.
     DATA mo_store TYPE REF TO ltd_store.
-    DATA mo_sap TYPE REF TO ltd_sap_dao.
 
     METHODS setup.
     METHODS teardown.
@@ -148,9 +129,7 @@ CLASS ltc_src_feb IMPLEMENTATION.
   METHOD setup.
     mo_dao = NEW #( ).
     mo_store = NEW #( ).
-    mo_sap = NEW #( ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_dao ).
-    zcl_cd_ebs_injector=>inject_sap_dao( mo_sap ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
   ENDMETHOD.
 
@@ -336,14 +315,16 @@ CLASS ltc_src_feb IMPLEMENTATION.
     TRY.
         INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-feb_reason_field value = 'ZZRETURN_REASON' )
           INTO TABLE mo_store->mt_params.
-        INSERT VALUE #( kukey = gc_test-kukey1 esnum = '00001' reason = 'R01' ) INTO TABLE mo_sap->mt_reasons.
         add_header( gc_test-kukey1 ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
+        mo_dao->mt_items[ 1 ]-reason = 'R01'.
         DATA(ls_package) = new_source( )->next_package( ).
         cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ 1 ]-return_reason exp = 'R01'
                                             msg = 'The reason must come from the configured FEBEP field' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_sap->mv_field exp = 'ZZRETURN_REASON'
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->ms_extras-reason_field exp = 'ZZRETURN_REASON'
                                             msg = 'The configured field must be read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_item_reads exp = 1
+                                            msg = 'Items, reason and posting flags must come in one FEBEP read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -363,22 +344,14 @@ CLASS ltc_src_feb IMPLEMENTATION.
   ENDMETHOD.
 
   " Operating model 2026-11-06: an imported entry is posted when every FEBEP posting-area flag
-  " (EBS_FEB_POSTED_FIELDS, default VB1OK / VB2OK - VERIFY-SE11) is complete, else open; an
-  " item the read does not return keeps an unknown posting state
+  " (EBS_FEB_POSTED_FIELDS, default VB1OK / VB2OK - VERIFY-SE11) is complete, else open.
+  " Fix 3: the flags come with the item (same FEBEP read), so every item read has a state
   METHOD posting_state_from_febep.
-    DATA ls_posting TYPE zif_cd_ebs_sap_dao=>ty_febep_posting.
     TRY.
-        ls_posting-kukey  = gc_test-kukey1.
-        ls_posting-esnum  = '00001'.
-        ls_posting-posted = abap_true.
-        INSERT ls_posting INTO TABLE mo_sap->mt_posting.
-        ls_posting-esnum  = '00002'.
-        ls_posting-posted = abap_false.
-        INSERT ls_posting INTO TABLE mo_sap->mt_posting.
         add_header( gc_test-kukey1 ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00002' ).
-        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00003' ).
+        mo_dao->mt_items[ 1 ]-posted = abap_true.
         DATA(ls_package) = new_source( )->next_package( ).
         cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00001' ]-posting_state
                                             exp = zif_cd_ebs_types=>gc_posting_state-posted
@@ -386,13 +359,12 @@ CLASS ltc_src_feb IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00002' ]-posting_state
                                             exp = zif_cd_ebs_types=>gc_posting_state-open
                                             msg = 'An incomplete posting area must give posting state O' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00003' ]-posting_state
-                                            exp = zif_cd_ebs_types=>gc_posting_state-unknown
-                                            msg = 'An item without posting data must stay unknown' ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_sap->mt_fields ) exp = 2
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->ms_extras-posted_fields ) exp = 2
                                             msg = 'The delivered default names two posting-area flags' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_sap->mt_fields[ 1 ] exp = `VB1OK`
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->ms_extras-posted_fields[ 1 ] exp = `VB1OK`
                                             msg = 'Posting area 1 flag VB1OK is read first' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_item_reads exp = 1
+                                            msg = 'The posting flags must come with the item read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -408,8 +380,8 @@ CLASS ltc_src_feb IMPLEMENTATION.
         add_header( gc_test-kukey1 ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
         DATA(ls_package) = new_source( )->next_package( ).
-        cl_abap_unit_assert=>assert_equals( act = mo_sap->mv_posting_reads exp = 0
-                                            msg = 'NONE must not read the posting state' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->ms_extras-posted_fields
+                                             msg = 'NONE must not read the posting state' ).
         cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ 1 ]-posting_state
                                             exp = zif_cd_ebs_types=>gc_posting_state-unknown
                                             msg = 'Without the read the posting state stays unknown' ).

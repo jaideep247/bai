@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Operating model: posting-area flag names are DDIC-validated (unknown name raises).
+*& 2026-11-06 | Performance fix 3: posting-flag tests moved to ZCL_CD_EBS_FEB_DAO (read joined the item read).
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -29,8 +30,6 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
     METHODS return_item_found_by_selw1   FOR TESTING.
     METHODS empty_keys_read_nothing      FOR TESTING.
     METHODS payment_found_by_doc1r       FOR TESTING.
-    METHODS posting_unknown_field_raises FOR TESTING.
-    METHODS posting_empty_keys_nothing   FOR TESTING.
 ENDCLASS.
 
 
@@ -104,36 +103,6 @@ CLASS ltc_sap_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_payments ) exp = 1 msg = 'One payment expected' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-laufi exp = 'PCLM01'
                                             msg = 'Payment run id must be returned' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-  " Operating model 2026-11-06: a posting-area flag name that is not a FEBEP field is a
-  " configuration error (message 051) - never a silent 'every entry not posted'
-  METHOD posting_unknown_field_raises.
-    DATA lt_kukey TYPE zif_cd_ebs_sap_dao=>tt_febep_kukey.
-    DATA lt_fields TYPE string_table.
-    INSERT CONV #( '00001001' ) INTO TABLE lt_kukey.
-    INSERT `ZZ_NOT_A_FEBEP_FIELD` INTO TABLE lt_fields.
-    TRY.
-        mo_cut->get_febep_posting( it_kukey = lt_kukey it_fields = lt_fields ).
-        cl_abap_unit_assert=>fail( msg = 'An unknown FEBEP field must raise' ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
-        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '051'
-                                            msg = 'Message 051 (invalid configuration value) expected' ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " FOR ALL ENTRIES guard: no statement key, no read
-  METHOD posting_empty_keys_nothing.
-    DATA lt_fields TYPE string_table.
-    INSERT `VB1OK` INTO TABLE lt_fields.
-    TRY.
-        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_febep_posting( it_kukey  = VALUE #( )
-                                                                               it_fields = lt_fields )
-                                             msg = 'Empty key list must return nothing' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
