@@ -8,6 +8,7 @@
 *& 5-minute run; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (instant PRISM processing, user decision 2026-11-06).
+*& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

@@ -15,6 +15,7 @@
 *& doubled (test data is built relative to today).
 *& Modification log:
 *& 2026-11-06 | Initial version (transactions dashboard).
+*& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.

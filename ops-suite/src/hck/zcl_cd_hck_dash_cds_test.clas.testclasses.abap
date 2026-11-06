@@ -13,6 +13,7 @@
 *& cross-joined row) on 7.58; $session.system_date is not doubled.
 *& Modification log:
 *& 2026-11-06 | Initial version (health check dashboard).
+*& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
