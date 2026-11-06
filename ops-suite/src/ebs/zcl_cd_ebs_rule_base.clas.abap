@@ -10,6 +10,7 @@
 *& 2026-11-06 | House bank: statement without house bank matches only when one account is possible (audit 2026-11-06).
 *& 2026-11-06 | Audit A25: account_key / account_of - one canonical account identity for all rules.
 *& 2026-11-06 | Audit A07: company code in the register match; canonical check numbers (leading zeros).
+*& 2026-11-06 | Audit A65: document keys checked against the DDIC key width and format before conversion (no truncation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -23,6 +24,12 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
 
     "! Default length of document-number keys (OPBEL/AUGBL/DOC1R): ZCD_OPS_PARAM EBS_KEYLEN_DOCNO
     CONSTANTS gc_default_docno_length TYPE i VALUE 12.
+
+    "! Default length of check-number keys: 0 = as delivered (ZCD_OPS_PARAM EBS_KEYLEN_ZTNUM)
+    CONSTANTS gc_default_ztnum_length TYPE i VALUE 0.
+
+    "! A65: characters a document-number key may contain (checked before conversion)
+    CONSTANTS gc_key_alphabet TYPE string VALUE `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
 
   PROTECTED SECTION.
     TYPES tt_stmt_hash TYPE HASHED TABLE OF zif_cd_ebs_types=>ty_statement WITH UNIQUE KEY stmt_key.
@@ -61,6 +68,55 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         it_lines       TYPE zif_cd_ebs_types=>tt_line
       RETURNING
         VALUE(rt_keys) TYPE zif_cd_ebs_sap_dao=>tt_docno.
+
+    "! A65: width in characters of a key type - the DDIC-modelled key type is the only source
+    METHODS key_width
+      IMPORTING
+        iv_key          TYPE simple
+      RETURNING
+        VALUE(rv_width) TYPE i.
+
+    "! A65: why a reference cannot become a key of iv_width characters (check code), blank
+    "! when it can: configured length above the width (KEY_LENGTH_CONFIG), normalised
+    "! reference longer than the width (REF_TOO_LONG - never truncated into another key) or,
+    "! with iv_alphanumeric, characters outside 0-9 / A-Z (REF_FORMAT)
+    METHODS key_problem
+      IMPORTING
+        iv_reference         TYPE clike
+        iv_length            TYPE i
+        iv_width             TYPE i
+        iv_alphanumeric      TYPE abap_bool DEFAULT abap_false
+      RETURNING
+        VALUE(rv_check_code) TYPE zif_cd_ops_types=>ty_check_code.
+
+    "! A65: finding of the rule for a line whose reference cannot become the key; initial if it can
+    METHODS key_rejection
+      IMPORTING
+        is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
+        is_line           TYPE zif_cd_ebs_types=>ty_line
+        iv_length         TYPE i
+        iv_width          TYPE i
+        iv_alphanumeric   TYPE abap_bool DEFAULT abap_false
+      RETURNING
+        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+
+    "! A65: key_rejection for the payment engine document number (OPBEL / AUGBL / DOC1R)
+    METHODS docno_rejection
+      IMPORTING
+        is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
+        is_line           TYPE zif_cd_ebs_types=>ty_line
+      RETURNING
+        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+
+    "! EBS_KEYLEN_DOCNO, default gc_default_docno_length
+    METHODS docno_length
+      RETURNING
+        VALUE(rv_length) TYPE i.
+
+    "! EBS_KEYLEN_ZTNUM, default 0 (as delivered)
+    METHODS ztnum_length
+      RETURNING
+        VALUE(rv_length) TYPE i.
 
     "! Check-register query keys of the lines: every form a check number can take in DFKKCR -
     "! as delivered, without leading zeros and padded to EBS_KEYLEN_ZTNUM
@@ -173,17 +229,96 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD docno_key.
-    DATA(lv_length) = CONV i( zcl_cd_ops_util=>to_decimal(
-      iv_value   = param( iv_name = 'EBS_KEYLEN_DOCNO' iv_default = |{ gc_default_docno_length }| )
-      iv_default = gc_default_docno_length ) ).
+    " A65: an overlength or malformed reference yields no key - it is never truncated
+    DATA(lv_length) = docno_length( ).
+    IF key_problem( iv_reference    = iv_reference
+                    iv_length       = lv_length
+                    iv_width        = key_width( rv_key )
+                    iv_alphanumeric = abap_true ) IS NOT INITIAL.
+      RETURN.
+    ENDIF.
     rv_key = zcl_cd_ops_util=>normalize_key( iv_reference = iv_reference iv_length = lv_length ).
   ENDMETHOD.
 
 
   METHOD ztnum_key.
-    DATA(lv_length) = CONV i( zcl_cd_ops_util=>to_decimal(
-      iv_value = param( iv_name = 'EBS_KEYLEN_ZTNUM' iv_default = `0` ) ) ).
-    rv_key = zcl_cd_ops_util=>normalize_key( iv_reference = iv_reference iv_length = lv_length ).
+    rv_key = zcl_cd_ops_util=>normalize_key( iv_reference = iv_reference iv_length = ztnum_length( ) ).
+  ENDMETHOD.
+
+
+  METHOD docno_length.
+    rv_length = CONV i( zcl_cd_ops_util=>to_decimal(
+      iv_value   = param( iv_name = zif_cd_ebs_types=>gc_param-keylen_docno iv_default = |{ gc_default_docno_length }| )
+      iv_default = gc_default_docno_length ) ).
+  ENDMETHOD.
+
+
+  METHOD ztnum_length.
+    rv_length = CONV i( zcl_cd_ops_util=>to_decimal(
+      iv_value = param( iv_name = zif_cd_ebs_types=>gc_param-keylen_ztnum iv_default = |{ gc_default_ztnum_length }| ) ) ).
+  ENDMETHOD.
+
+
+  METHOD key_width.
+    rv_width = CAST cl_abap_elemdescr( cl_abap_typedescr=>describe_by_data( iv_key ) )->output_length.
+  ENDMETHOD.
+
+
+  METHOD key_problem.
+    IF iv_length > iv_width.
+      rv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config.
+      RETURN.
+    ENDIF.
+    DATA(lv_key) = zcl_cd_ops_util=>normalize_key( iv_reference = iv_reference iv_length = iv_length ).
+    IF strlen( lv_key ) > iv_width.
+      rv_check_code = zif_cd_ebs_types=>gc_check_code-ref_too_long.
+    ELSEIF iv_alphanumeric = abap_true AND lv_key IS NOT INITIAL AND lv_key CN gc_key_alphabet.
+      rv_check_code = zif_cd_ebs_types=>gc_check_code-ref_format.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD key_rejection.
+    DATA(lv_reference) = line_reference( is_line ).
+    IF lv_reference IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lv_problem) = key_problem( iv_reference    = lv_reference
+                                    iv_length       = iv_length
+                                    iv_width        = iv_width
+                                    iv_alphanumeric = iv_alphanumeric ).
+    IF lv_problem IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lv_key) = zcl_cd_ops_util=>normalize_key( iv_reference = lv_reference iv_length = iv_length ).
+    DATA(lv_key_length) = strlen( lv_key ).
+    DATA(lv_message) = SWITCH string(
+      lv_problem
+      WHEN zif_cd_ebs_types=>gc_check_code-key_length_config
+      THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-key_length_config
+                                  iv_v1    = iv_length
+                                  iv_v2    = iv_width )
+      WHEN zif_cd_ebs_types=>gc_check_code-ref_too_long
+      THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ref_too_long
+                                  iv_v1    = lv_key
+                                  iv_v2    = lv_key_length
+                                  iv_v3    = iv_width )
+      ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ref_format
+                                  iv_v1    = lv_key ) ).
+    rs_finding = zcl_cd_ebs_finding=>for_rule_line( is_rule       = is_rule
+                                                     is_line       = is_line
+                                                     iv_check_code = lv_problem
+                                                     iv_message    = lv_message ).
+  ENDMETHOD.
+
+
+  METHOD docno_rejection.
+    DATA lv_docno TYPE zif_cd_ebs_sap_dao=>ty_docno.
+    rs_finding = key_rejection( is_rule         = is_rule
+                                is_line         = is_line
+                                iv_length       = docno_length( )
+                                iv_width        = key_width( lv_docno )
+                                iv_alphanumeric = abap_true ).
   ENDMETHOD.
 
 

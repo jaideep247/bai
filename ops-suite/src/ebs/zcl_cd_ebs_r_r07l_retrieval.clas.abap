@@ -12,6 +12,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A11: PARAM2 statuses pass alone (AP), PARAM3 LOT requires a returns-lot entry.
+*& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07L - ACH retrieval log status</p>
 CLASS zcl_cd_ebs_r_r07l_retrieval DEFINITION
@@ -43,6 +44,11 @@ CLASS zcl_cd_ebs_r_r07l_retrieval IMPLEMENTATION.
       lt_items = sap_dao( )->get_return_items( docno_keys( it_lines ) ).
     ENDIF.
     LOOP AT it_lines INTO DATA(ls_line).
+      DATA(ls_rejection) = docno_rejection( is_rule = is_rule is_line = ls_line ).
+      IF ls_rejection IS NOT INITIAL.
+        INSERT ls_rejection INTO TABLE rt_findings.
+        CONTINUE.
+      ENDIF.
       DATA(lv_key) = docno_key( line_reference( ls_line ) ).
       IF lv_key IS INITIAL.
         CONTINUE.

@@ -16,6 +16,7 @@
 *& 2026-11-06 | Audit A14: cross-statement duplicate look-back (R22).
 *& 2026-11-06 | Audit A26 / A32 / A34: sweeps not posted, imported entry without posting rule, sign and gross totals.
 *& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
+*& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -668,6 +669,10 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r21_any_allowed_status_ok    FOR TESTING.
     METHODS r21_status_not_allowed       FOR TESTING.
     METHODS r21_unknown_lookup_raises    FOR TESTING.
+    METHODS r07_refs_share_12_chars      FOR TESTING.
+    METHODS r07_key_length_over_width    FOR TESTING.
+    METHODS r07_ref_format_rejected      FOR TESTING.
+    METHODS r21_key_length_over_width    FOR TESTING.
     METHODS add_lookup
       IMPORTING
         iv_allowed TYPE clike DEFAULT 'OK'.
@@ -1018,6 +1023,76 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
 
   " Generic lookup R21 (new BAI codes need configuration only): PARAM1 names a ZCD_EBS_LOOKUP
   " row - table, key field, key kind, status field, allowed values
+  " A65: two 13-character references sharing their first 12 characters are rejected
+  " (REF_TOO_LONG), never truncated onto document 123456789012; a 12-character one matches
+  METHOD r07_refs_share_12_chars.
+    TRY.
+        INSERT VALUE #( doc1r = '123456789012' status = 'PAID' ) INTO TABLE mo_sap_dao->mt_payments.
+        add_statement( ).
+        add_line( iv_reference = '1234567890123' ).
+        add_line( iv_reference = '1234567890124' ).
+        add_line( iv_reference = '123456789012' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE string_table( FOR f IN mt_findings ( CONV string( f-check_code ) ) )
+          exp = VALUE string_table( ( CONV string( zif_cd_ebs_types=>gc_check_code-ref_too_long ) )
+                                    ( CONV string( zif_cd_ebs_types=>gc_check_code-ref_too_long ) ) )
+          msg = 'Both overlength references must be rejected, not matched on their first 12 characters' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mt_docno_seen
+                                            exp = VALUE zif_cd_ebs_sap_dao=>tt_docno( ( '123456789012' ) )
+                                            msg = 'Only the reference that fits may be queried' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: EBS_KEYLEN_DOCNO above the 12-character key width is a configuration finding
+  METHOD r07_key_length_over_width.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-keylen_docno value = '15' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config
+                         iv_msg        = 'A key length above the DDIC width must be rejected explicitly' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: a reference with characters outside 0-9 / A-Z cannot be a document number (REF_FORMAT)
+  METHOD r07_ref_format_rejected.
+    TRY.
+        add_statement( ).
+        add_line( iv_reference = 'AB-12' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-ref_format
+                         iv_msg        = 'A malformed reference must be rejected before conversion' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: a REFERENCE lookup whose key length exceeds the lookup key width is rejected
+  METHOD r21_key_length_over_width.
+    TRY.
+        add_lookup( ).
+        mo_cfg_dao->mt_lookups[ lookup_id = 'TESTLKP' ]-key_kind   = zif_cd_ebs_types=>gc_lookup_key-reference.
+        mo_cfg_dao->mt_lookups[ lookup_id = 'TESTLKP' ]-key_length = 80.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config
+                         iv_msg        = 'A lookup key length above the key width must be rejected' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD add_lookup.
     DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
     ls_lookup-lookup_id      = 'TESTLKP'.

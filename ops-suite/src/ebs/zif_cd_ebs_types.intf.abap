@@ -16,6 +16,7 @@
 *& 2026-11-06 | Audit A26 / A32 / A34 / A35: disposition, statement key, sign and gross-total check codes.
 *& 2026-11-06 | Audit A28: reason mapping completeness and kind, FEBEP reason field.
 *& 2026-11-06 | Audit A86: message TRAILER_FIELD_MISSING.
+*& 2026-11-06 | Audit A65: key width check codes, messages and EBS_KEYLEN_DOCNO constant.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -373,6 +374,8 @@ INTERFACE zif_cd_ebs_types
       "! Leading zeros of check numbers are not significant (X, default) or are (blank)
       ztnum_ignore_zeros TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_ZTNUM_IGNORE_ZEROS',
       keylen_ztnum       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_ZTNUM',
+      "! A65: length of document-number keys; must not exceed the DDIC key width (12)
+      keylen_docno       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_DOCNO',
       "! A14: look-back days of R22 when the rule row has no WINDOW_DAYS
       dup_lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DUP_LOOKBACK_DAYS',
       "! A28: FEBEP field holding the NACHA return / NOC reason (blank = not stored; VERIFY-DDIC)
@@ -468,6 +471,10 @@ INTERFACE zif_cd_ebs_types
       reason_unmapped                TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_UNMAPPED',
       ref_format                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_FORMAT',
       ref_missing                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_MISSING',
+      "! A65: reference longer than the key it must become (never truncated)
+      ref_too_long                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_TOO_LONG',
+      "! A65: configured key length above the DDIC key width (configuration)
+      key_length_config              TYPE zif_cd_ops_types=>ty_check_code VALUE 'KEY_LENGTH_CONFIG',
       retrieval_not_found            TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETRIEVAL_NOT_FOUND',
       rule_group_empty               TYPE zif_cd_ops_types=>ty_check_code VALUE 'RULE_GROUP_EMPTY',
       rule_unusable                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'RULE_UNUSABLE',
@@ -609,6 +616,8 @@ INTERFACE zif_cd_ebs_types
       reason_map_incomplete       TYPE zif_cd_ops_types=>ty_msgno VALUE '522',
       reason_kind                 TYPE zif_cd_ops_types=>ty_msgno VALUE '523',
       trailer_field_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '524',
+      ref_too_long                TYPE zif_cd_ops_types=>ty_msgno VALUE '525',
+      key_length_config           TYPE zif_cd_ops_types=>ty_msgno VALUE '526',
     END OF gc_msg.
 
 ENDINTERFACE.

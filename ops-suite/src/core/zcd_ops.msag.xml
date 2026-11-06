@@ -1652,6 +1652,18 @@
      <MSGNR>524</MSGNR>
      <TEXT>&amp;1: not declared on the trailer (computed value not accepted)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>525</MSGNR>
+     <TEXT>Reference &amp;1 has &amp;2 characters; the key holds &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>526</MSGNR>
+     <TEXT>Key length &amp;1 exceeds the key width &amp;2 (configuration)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

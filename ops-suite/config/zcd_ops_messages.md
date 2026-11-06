@@ -280,3 +280,5 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 522 | Reason &1: mapping in ZCD_EBS_RSN_MAP incomplete (&2) |
 | 523 | Reason &1 is not a &2 code |
 | 524 | &1: not declared on the trailer (computed value not accepted) |
+| 525 | Reference &1 has &2 characters; the key holds &3 |
+| 526 | Key length &1 exceeds the key width &2 (configuration) |

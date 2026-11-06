@@ -9,6 +9,7 @@
 *& 2026-11-06 | Any productive run with an allowed status passes; message lists every status (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION
@@ -33,6 +34,11 @@ CLASS zcl_cd_ebs_r_r07_payment IMPLEMENTATION.
     DATA lv_found TYPE abap_bool.
     DATA lv_ok TYPE abap_bool.
     LOOP AT it_lines INTO DATA(ls_line).
+      DATA(ls_rejection) = docno_rejection( is_rule = is_rule is_line = ls_line ).
+      IF ls_rejection IS NOT INITIAL.
+        INSERT ls_rejection INTO TABLE rt_findings.
+        CONTINUE.
+      ENDIF.
       DATA(lv_key) = docno_key( line_reference( ls_line ) ).
       IF lv_key IS INITIAL.
         CONTINUE.
