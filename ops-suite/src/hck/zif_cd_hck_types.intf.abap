@@ -561,6 +561,11 @@ INTERFACE zif_cd_hck_types
       health_score_100_red_amber  TYPE zif_cd_ops_types=>ty_msgno VALUE '336',
       suppressed_until_by         TYPE zif_cd_ops_types=>ty_msgno VALUE '337',
       config_drift                TYPE zif_cd_ops_types=>ty_msgno VALUE '338',
+      html_report_meta            TYPE zif_cd_ops_types=>ty_msgno VALUE '339',
+      html_score_counts           TYPE zif_cd_ops_types=>ty_msgno VALUE '340',
+      mail_subject_1              TYPE zif_cd_ops_types=>ty_msgno VALUE '341',
+      mail_subject_2              TYPE zif_cd_ops_types=>ty_msgno VALUE '342',
+      stale_age                   TYPE zif_cd_ops_types=>ty_msgno VALUE '343',
     END OF gc_msg.
 
 ENDINTERFACE.

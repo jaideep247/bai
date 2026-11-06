@@ -57,6 +57,22 @@ for folder, (_, text) in PACKAGES.items():
     path = os.path.join(SRC, folder, 'package.devc.xml')
     changed += write(path, wrap('LCL_OBJECT_DEVC', '   <DEVC>\n' + tag('CTEXT', text) + '   </DEVC>\n'))
 
+def tpool(texts):
+    """TPOOL of a program or class from docs/text_elements/<object>.texts.md (empty if none)."""
+    if not os.path.exists(texts):
+        return ''
+    out = '   <TPOOL>\n'
+    kinds = {'Title': 'R', 'Text symbol': 'I', 'Selection text': 'S'}
+    for kind, key, text in re.findall(r'^\| (Title|Text symbol|Selection text) \| (\S+) \| (.*?) \|$',
+                                      open(texts, encoding='utf-8').read(), re.M):
+        entry = (' ' * 8 + text) if kinds[kind] == 'S' else text
+        out += '    <item>\n' + tag('ID', kinds[kind], 5)
+        if kinds[kind] != 'R':
+            out += tag('KEY', key, 5)
+        out += tag('ENTRY', entry, 5) + tag('LENGTH', len(entry), 5) + '    </item>\n'
+    return out + '   </TPOOL>\n'
+
+
 # classes, interfaces, programs
 for d, _, files in os.walk(SRC):
     for f in sorted(files):
@@ -77,6 +93,9 @@ for d, _, files in os.walk(SRC):
             if os.path.exists(p.replace('.clas.abap', '.clas.testclasses.abap')):
                 body += tag('WITH_UNIT_TESTS', 'X')
             body += '   </VSEOCLASS>\n'
+            # Class text pool (text symbols TEXT-nnn), same TPOOL format as programs and
+            # placed right after VSEOCLASS as in abapGit's zcl_abapgit_object_clas->serialize_xml
+            body += tpool(os.path.join(ROOT, 'docs', 'text_elements', f.replace('.clas.abap', '.clas.texts.md')))
             changed += write(p.replace('.clas.abap', '.clas.xml'), wrap('LCL_OBJECT_CLAS', body))
         elif f.endswith('.intf.abap'):
             text = open(p, encoding='utf-8').read()
@@ -87,18 +106,7 @@ for d, _, files in os.walk(SRC):
         elif f.endswith('.prog.abap'):
             body = '   <PROGDIR>\n' + tag('NAME', name) + tag('SUBC', '1') + tag('RLOAD', 'E') + \
                    tag('FIXPT', 'X') + tag('UCCHECK', 'X') + '   </PROGDIR>\n'
-            texts = os.path.join(ROOT, 'docs', 'text_elements', f.replace('.prog.abap', '.prog.texts.md'))
-            if os.path.exists(texts):
-                body += '   <TPOOL>\n'
-                kinds = {'Title': 'R', 'Text symbol': 'I', 'Selection text': 'S'}
-                for kind, key, text in re.findall(r'^\| (Title|Text symbol|Selection text) \| (\S+) \| (.*?) \|$',
-                                                  open(texts, encoding='utf-8').read(), re.M):
-                    entry = (' ' * 8 + text) if kinds[kind] == 'S' else text
-                    body += '    <item>\n' + tag('ID', kinds[kind], 5)
-                    if kinds[kind] != 'R':
-                        body += tag('KEY', key, 5)
-                    body += tag('ENTRY', entry, 5) + tag('LENGTH', len(entry), 5) + '    </item>\n'
-                body += '   </TPOOL>\n'
+            body += tpool(os.path.join(ROOT, 'docs', 'text_elements', f.replace('.prog.abap', '.prog.texts.md')))
             changed += write(p.replace('.prog.abap', '.prog.xml'), wrap('LCL_OBJECT_PROG', body))
 
 # RAP sources (DDLS, DDLX, BDEF, SRVD). Formats taken from abapGit's serializers
