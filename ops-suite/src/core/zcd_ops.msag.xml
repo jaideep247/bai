@@ -185,6 +185,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>160</MSGNR>
+     <TEXT>Release is not waiting for approval (status &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>161</MSGNR>
+     <TEXT>Line (object key) and check code are required for a release</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>200</MSGNR>
      <TEXT>Table &amp;1 not found in the DDIC or not a flat DDIC structure</TEXT>
     </T100>

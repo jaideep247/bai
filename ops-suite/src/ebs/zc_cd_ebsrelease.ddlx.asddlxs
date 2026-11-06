@@ -1,0 +1,50 @@
+// UI annotations: Blocked line releases (EBS)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Release', typeNamePlural: 'Releases',
+                  title: { type: #STANDARD, value: 'ObjectKey' },
+                  description: { type: #STANDARD, value: 'CheckCode' } }
+annotate entity ZC_CD_EbsRelease with
+{
+  @UI.facet: [ { id: 'Release', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Release', position: 10 } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_ACTION, dataAction: 'approveRelease', label: 'Approve' },
+                  { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' } ]
+  @UI.identification: [ { position: 10 },
+                        { type: #FOR_ACTION, dataAction: 'approveRelease', label: 'Approve' },
+                        { type: #FOR_ACTION, dataAction: 'rejectRelease', label: 'Reject' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  ObjectKey;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  CheckCode;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Status;
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 40 } ]
+  CompanyCode;
+  @UI.lineItem: [ { position: 50 } ]
+  @UI.identification: [ { position: 50 } ]
+  Reason;
+  @UI.identification: [ { position: 60 } ]
+  Evidence;
+  @UI.lineItem: [ { position: 70 } ]
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  RequestedBy;
+  @UI.identification: [ { position: 80 } ]
+  RequestedAt;
+  @UI.lineItem: [ { position: 90 } ]
+  @UI.identification: [ { position: 90 } ]
+  ApprovedBy;
+  @UI.identification: [ { position: 100 } ]
+  ApprovedAt;
+  @UI.hidden: true
+  ReleaseUuid;
+  @UI.hidden: true
+  LocalLastChangedAt;
+  @UI.hidden: true
+  LastChangedAt;
+}

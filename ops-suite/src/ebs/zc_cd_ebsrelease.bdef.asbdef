@@ -1,0 +1,10 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_CD_EbsRelease alias Release
+use etag
+{
+  use create;
+  use action approveRelease;
+  use action rejectRelease;
+}

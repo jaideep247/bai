@@ -9,6 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: package scope reconciled; skipped after a rule failure.
+*& 2026-11-06 | Release tests approved_release_unblocks, other_block_still_blocks, rule_failure_not_releasable.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -118,6 +119,29 @@ CLASS ltd_alert IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
+CLASS ltd_release_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ebs_release_dao.
+    "! Check code released (approved) for every line the engine asks for; blank = none
+    DATA mv_check_code TYPE zif_cd_ops_types=>ty_check_code.
+    DATA mv_calls TYPE i.
+ENDCLASS.
+
+CLASS ltd_release_dao IMPLEMENTATION.
+  METHOD zif_cd_ebs_release_dao~get_approved.
+    mv_calls += 1.
+    CHECK mv_check_code IS NOT INITIAL.
+    LOOP AT it_object_keys INTO DATA(lv_key).
+      INSERT VALUE #( release_uuid = '000000000000000000000000000000A1'
+                      object_key   = lv_key
+                      check_code   = mv_check_code
+                      status       = zif_cd_ebs_release_types=>gc_status-approved
+                      requested_by = 'REQUESTER'
+                      approved_by  = 'APPROVER' ) INTO TABLE rt_releases.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
 CLASS ltd_failing_rule DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ebs_rule.
@@ -203,6 +227,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     DATA mo_store  TYPE REF TO ltd_store.
     DATA mo_alert  TYPE REF TO ltd_alert.
     DATA mo_lock   TYPE REF TO ltd_lock.
+    DATA mo_release TYPE REF TO ltd_release_dao.
     DATA ms_result TYPE zcl_cd_ebs_engine=>ty_result.
 
     METHODS setup.
@@ -242,6 +267,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS off_mode_validates_nothing   FOR TESTING.
     METHODS failed_rule_blocks_posting   FOR TESTING.
     METHODS broken_config_blocks_posting FOR TESTING.
+    METHODS approved_release_unblocks    FOR TESTING.
+    METHODS other_block_still_blocks     FOR TESTING.
+    METHODS rule_failure_not_releasable  FOR TESTING.
     METHODS held_lock_skips_run          FOR TESTING.
     METHODS lock_released_after_run      FOR TESTING.
     METHODS validated_lines_reconciled   FOR TESTING.
@@ -263,6 +291,8 @@ CLASS ltc_engine IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-fail_class io_instance = NEW ltd_failing_rule( ) ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
+    mo_release = NEW #( ).
+    zcl_cd_ebs_injector=>inject_release_dao( mo_release ).
     CLEAR ms_result.
   ENDMETHOD.
 
@@ -670,6 +700,64 @@ CLASS ltc_engine IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconciles exp = 0
                                         msg = 'No reconciliation after a rule failure' ).
+  ENDMETHOD.
+
+
+  " Release (design 6.2): an approved release of the line's block opens the gate; the
+  " finding stays recorded as information
+  METHOD approved_release_unblocks.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-line_code = gc_test-code_unmap.
+    configure_scenario( ls_flags ).
+    mo_release->mv_check_code = 'UNMAPPED_BTC'.
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = mo_source->mt_packages[ 1 ] ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-block msg = 'A released line must not block posting' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_decision-findings[ check_code = 'UNMAPPED_BTC' ]-severity OPTIONAL )
+          exp = zif_cd_ops_types=>gc_severity-info
+          msg = 'The released block must stay recorded as information' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Release is per check code: a release for another check does not open the gate
+  METHOD other_block_still_blocks.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-line_code = gc_test-code_unmap.
+    configure_scenario( ls_flags ).
+    mo_release->mv_check_code = 'CHECK_STATUS'.
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = mo_source->mt_packages[ 1 ] ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A release of another check code must not unblock' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fail closed stays closed: a rule that could not run is never released
+  METHOD rule_failure_not_releasable.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-assign_fail_rule = abap_true.
+    configure_scenario( ls_flags ).
+    mo_release->mv_check_code = 'PLUGIN_ERROR'.
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = mo_source->mt_packages[ 1 ] ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A PLUGIN_ERROR must still block although a release exists' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

@@ -14,6 +14,7 @@
 *& 2026-11-06 | Fail closed: PLUGIN_ERROR and VALIDATION_ERROR have action BLOCK; validate_for_posting never raises.
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: each package's lines and statements reconciled.
+*& 2026-11-06 | Posting gate honours approved blocked-line releases (design 6.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -99,6 +100,13 @@ CLASS zcl_cd_ebs_engine DEFINITION
         VALUE(rv_mode) TYPE ty_mode.
 
   PRIVATE SECTION.
+    "! Approved blocked-line releases applied to the findings of a posting check
+    METHODS apply_releases
+      IMPORTING
+        it_findings        TYPE zif_cd_ops_types=>tt_finding
+      RETURNING
+        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
+
     "! The run itself, under the run lock taken by run( )
     METHODS execute
       IMPORTING
@@ -373,7 +381,24 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         message     = |Validation could not run: { lx_error->get_text( ) }| )
           INTO TABLE rs_decision-findings.
     ENDTRY.
+    rs_decision-findings = apply_releases( rs_decision-findings ).
     rs_decision-block = must_block( iv_mode = iv_mode it_findings = rs_decision-findings ).
+  ENDMETHOD.
+
+
+  METHOD apply_releases.
+    " Design 6.2: approved releases (second user) turn exactly their line's block into
+    " information. A failing lookup changes nothing - the gate stays closed.
+    rt_findings = it_findings.
+    DATA(lt_keys) = zcl_cd_ebs_release_policy=>releasable_keys( it_findings ).
+    CHECK lt_keys IS NOT INITIAL.
+    TRY.
+        rt_findings = zcl_cd_ebs_release_policy=>apply(
+                        it_findings = it_findings
+                        it_releases = zcl_cd_ebs_factory=>get_release_dao( )->get_approved( lt_keys ) ).
+      CATCH cx_root ##CATCH_ALL ##NO_HANDLER.
+        " deliberately broad and silent: without the release data the blocks stand
+    ENDTRY.
   ENDMETHOD.
 
 

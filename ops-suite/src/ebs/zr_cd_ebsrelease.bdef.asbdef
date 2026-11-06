@@ -1,0 +1,43 @@
+managed implementation in class zbp_r_cd_ebsrelease unique;
+strict ( 2 );
+
+// EBS blocked-line release (design 6.2): create = request (ZCD_OPS 43), approval by a
+// second user (ZCD_OPS 85). On approval the open exception of the line is resolved.
+define behavior for ZR_CD_EbsRelease alias Release
+persistent table zcd_ebs_release
+with additional save
+lock master
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  create;
+  internal update;
+  field ( numbering : managed, readonly ) ReleaseUuid;
+  field ( readonly ) Status, RequestedBy, RequestedAt, ApprovedBy, ApprovedAt, LocalLastChangedAt, LastChangedAt;
+  field ( mandatory : create, readonly : update ) ObjectKey, CheckCode;
+  field ( mandatory : create, readonly : update ) Reason;
+  field ( readonly : update ) CompanyCode, Evidence;
+
+  determination setRequested on modify { create; }
+  validation validateRequest on save { create; }
+
+  action ( features : instance ) approveRelease result [1] $self;
+  action ( features : instance ) rejectRelease result [1] $self;
+
+  mapping for zcd_ebs_release
+  {
+    ReleaseUuid        = release_uuid;
+    ObjectKey          = object_key;
+    CheckCode          = check_code;
+    CompanyCode        = bukrs;
+    Reason             = reason;
+    Evidence           = evidence;
+    Status             = status;
+    RequestedBy        = requested_by;
+    RequestedAt        = requested_at;
+    ApprovedBy         = approved_by;
+    ApprovedAt         = approved_at;
+    LocalLastChangedAt = local_last_changed_at;
+    LastChangedAt      = last_changed_at;
+  }
+}

@@ -5,6 +5,7 @@
 *& ZCL_CD_EBS_INJECTOR. Getters never read the database.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Release repository seam (design 6.2).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -26,6 +27,11 @@ CLASS zcl_cd_ebs_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ebs_sap_dao.
 
+    "! Approved blocked-line releases for the posting gate (design 6.2)
+    CLASS-METHODS get_release_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_ebs_release_dao.
+
     "! Parser for a file format. Class from ZCD_OPS_PARAM EBS_PARSER_<format>,
     "! default ZCL_CD_EBS_PARSER_BAI2 / ZCL_CD_EBS_PARSER_CAMT.
     CLASS-METHODS get_parser
@@ -41,6 +47,7 @@ CLASS zcl_cd_ebs_factory DEFINITION
     CLASS-DATA go_feb_dao_double TYPE REF TO zif_cd_ebs_feb_dao.
     CLASS-DATA go_sap_dao_double TYPE REF TO zif_cd_ebs_sap_dao.
     CLASS-DATA go_parser_double  TYPE REF TO zif_cd_ebs_parser.
+    CLASS-DATA go_release_dao_double TYPE REF TO zif_cd_ebs_release_dao.
 
 ENDCLASS.
 
@@ -63,6 +70,12 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
   METHOD get_sap_dao.
     ro_dao = COND #( WHEN go_sap_dao_double IS BOUND THEN go_sap_dao_double
                      ELSE NEW zcl_cd_ebs_sap_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_release_dao.
+    ro_dao = COND #( WHEN go_release_dao_double IS BOUND THEN go_release_dao_double
+                     ELSE NEW zcl_cd_ebs_release_dao( ) ).
   ENDMETHOD.
 
 

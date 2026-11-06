@@ -1,0 +1,5 @@
+@EndUserText.label: 'Blocked line releases'
+@ObjectModel.leadingEntity.name: 'ZC_CD_EBSRELEASE'
+define service ZUI_CD_EBS_REL {
+  expose ZC_CD_EbsRelease as Release;
+}

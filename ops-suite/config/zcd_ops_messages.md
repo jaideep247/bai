@@ -34,6 +34,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |
 | 151 | XML content could not be parsed: &1 |
 | 152 | Unsupported XML message &1/&2; expected camt.053 or camt.054 |
+| 160 | Release is not waiting for approval (status &1) |
+| 161 | Line (object key) and check code are required for a release |
 | 200 | Table &1 not found in the DDIC or not a flat DDIC structure |
 | 201 | Field &1 does not exist in table &2 |
 | 202 | &1 is not a valid DDIC name |
