@@ -22,6 +22,8 @@ define view entity ZR_CD_RuleDef
       active as Active,
       @EndUserText.label: 'Blocks posting'
       blocks_posting as BlocksPosting,
+      @EndUserText.label: 'Needs posting'
+      needs_posting as NeedsPosting,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

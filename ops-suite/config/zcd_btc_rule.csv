@@ -8,6 +8,7 @@ RULE_GROUP,RULE_ID,SEQ,SEVERITY,ACTION,PARAM1,PARAM2,PARAM3,TOLERANCE,WINDOW_DAY
 *,S09,70,,,,,,,,X,
 *,S10,80,,,,,,,,X,
 *,S12,90,,,,,,,,X,
+*,S13,95,,,,,,,,X,
 *,R18,100,,,,,,0.00,,X,
 *,R01,110,,,,,,,,X,
 *,R03,120,,,,,,,,X,

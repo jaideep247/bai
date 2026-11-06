@@ -19,6 +19,8 @@
 *& 2026-11-06 | Audit A98: contradictory blank / * map rows block through the posting decision.
 *& 2026-11-06 | Audit A95: missing 99 blocks through the posting decision (parsed BAI2 file).
 *& 2026-11-06 | Audit A97: end-to-end parser-to-engine tests (configuration-only code, informational code); dispatch test commented.
+*& 2026-11-06 | Operating model: LTC_POSTING_STATE - posted / unposted / NOT_POSTED entries, file source,
+*&            | POSTING_INCOMPLETE once per statement, never green, no reconciliation of skipped entries.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -1457,6 +1459,417 @@ CLASS ltc_engine IMPLEMENTATION.
                                            msg = 'An informational code must never become a postable line' ).
         cl_abap_unit_assert=>assert_equals( act = lines( ls_decision-dispositions ) exp = 1
                                             msg = 'Only the monetary entry gets a posting disposition' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Operating model 2026-11-06: rule double that records the lines and statements it is given
+CLASS ltd_probe_rule DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ebs_rule.
+    DATA mt_lines      TYPE zif_cd_ebs_types=>tt_line.
+    DATA mt_statements TYPE zif_cd_ebs_types=>tt_statement.
+ENDCLASS.
+
+CLASS ltd_probe_rule IMPLEMENTATION.
+  METHOD zif_cd_ebs_rule~execute.
+    INSERT LINES OF it_lines INTO TABLE mt_lines.
+    INSERT LINES OF it_statements INTO TABLE mt_statements.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! Operating model 2026-11-06 (post-posting detective control): an imported entry that is
+"! expected to post but is not posted is not evaluated by the posting-dependent rules
+"! (NEEDS_POSTING), is counted as unevaluated, gets one POSTING_INCOMPLETE per statement
+"! (rule S13) and keeps the run from being green. Does not prove live SAP runtime behavior.
+CLASS ltc_posting_state DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        group       TYPE zif_cd_ebs_types=>ty_rule_group VALUE 'NEWBANK',
+        code        TYPE zif_cd_ebs_types=>ty_btc_code VALUE '987',
+        dep_class   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_POSTED_PROBE',
+        indep_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_INDEP_PROBE',
+        stmt_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_STMT_PROBE',
+        s13_class   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_EBS_R_S13_POSTED',
+        s13_id      TYPE zif_cd_ops_types=>ty_rule_id VALUE 'S13',
+        stmt_key    TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'FEB00001001',
+      END OF gc_test.
+
+    TYPES:
+      BEGIN OF ty_flags,
+        "! FEB (imported statement) or FILE (bank file before import)
+        source        TYPE zif_cd_ebs_types=>ty_source,
+        "! Posting state of every line: P posted, O open, blank unknown
+        posting_state TYPE c LENGTH 1,
+        lines         TYPE i,
+        "! Map row disposition NOT_POSTED (e.g. 275 / 575 sweeps)
+        not_posted    TYPE abap_bool,
+        "! Severity of the S13 assignment (blank = W, the seed default)
+        s13_severity  TYPE zif_cd_ops_types=>ty_severity,
+      END OF ty_flags.
+
+    DATA mo_source    TYPE REF TO ltd_source.
+    DATA mo_cfg       TYPE REF TO ltd_cfg.
+    DATA mo_store     TYPE REF TO ltd_store.
+    DATA mo_dep_rule  TYPE REF TO ltd_probe_rule.
+    DATA mo_ind_rule  TYPE REF TO ltd_probe_rule.
+    DATA mo_stmt_rule TYPE REF TO ltd_probe_rule.
+    DATA ms_result    TYPE zcl_cd_ebs_engine=>ty_result.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS default_flags
+      RETURNING
+        VALUE(rs_flags) TYPE ty_flags.
+    METHODS configure_scenario
+      IMPORTING
+        is_flags TYPE ty_flags.
+    METHODS add_rule
+      IMPORTING
+        iv_group         TYPE zif_cd_ebs_types=>ty_rule_group
+        iv_id            TYPE zif_cd_ops_types=>ty_rule_id
+        iv_class         TYPE zif_cd_ops_types=>ty_class_name
+        iv_level         TYPE char1
+        iv_needs_posting TYPE abap_bool
+        iv_severity      TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error.
+    METHODS run_engine.
+    METHODS count_code
+      IMPORTING
+        iv_check_code   TYPE zif_cd_ops_types=>ty_check_code
+      RETURNING
+        VALUE(rv_count) TYPE i.
+
+    METHODS posted_entry_runs_all_rules  FOR TESTING.
+    METHODS open_entry_skips_dep_rules   FOR TESTING.
+    METHODS open_entry_is_unevaluated    FOR TESTING.
+    METHODS open_entries_one_finding     FOR TESTING.
+    METHODS open_entry_run_never_green   FOR TESTING.
+    METHODS open_entry_indep_rules_run   FOR TESTING.
+    METHODS not_posted_map_no_finding    FOR TESTING.
+    METHODS file_source_rules_unchanged  FOR TESTING.
+    METHODS open_entry_not_reconciled    FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_posting_state IMPLEMENTATION.
+
+  METHOD setup.
+    mo_source    = NEW #( ).
+    mo_cfg       = NEW #( ).
+    mo_store     = NEW #( ).
+    mo_dep_rule  = NEW #( ).
+    mo_ind_rule  = NEW #( ).
+    mo_stmt_rule = NEW #( ).
+    zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
+    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-dep_class io_instance = mo_dep_rule ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-indep_class io_instance = mo_ind_rule ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-stmt_class io_instance = mo_stmt_rule ).
+    zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
+    zcl_cd_ebs_injector=>inject_release_dao( NEW ltd_release_dao( ) ).
+    CLEAR ms_result.
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+    zcl_cd_ebs_injector=>reset( ).
+    CLEAR: mo_source, mo_cfg, mo_store, mo_dep_rule, mo_ind_rule, mo_stmt_rule.
+  ENDMETHOD.
+
+
+  METHOD default_flags.
+    rs_flags-source        = zif_cd_ebs_types=>gc_source-feb.
+    rs_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-posted.
+    rs_flags-lines         = 1.
+  ENDMETHOD.
+
+
+  METHOD add_rule.
+    DATA ls_rule TYPE zif_cd_ebs_types=>ty_rule_cfg.
+    ls_rule-rule_group    = iv_group.
+    ls_rule-rule_id       = iv_id.
+    ls_rule-class_name    = iv_class.
+    ls_rule-level         = iv_level.
+    ls_rule-severity      = iv_severity.
+    ls_rule-action        = zif_cd_ops_types=>gc_action-notify.
+    ls_rule-active        = abap_true.
+    ls_rule-needs_posting = iv_needs_posting.
+    INSERT ls_rule INTO TABLE mo_cfg->mt_rules.
+  ENDMETHOD.
+
+
+  " Map row for the code, the S13 rule, a posting-dependent statement rule (as R18 / S10), a
+  " posting-dependent line rule (as R19 / R07R) and an independent line rule (as R01) - and
+  " one statement whose lines all carry the posting state of the scenario
+  METHOD configure_scenario.
+    DATA ls_map     TYPE zif_cd_ebs_types=>ty_btc_map.
+    DATA ls_package TYPE zif_cd_ebs_types=>ty_package.
+    DATA ls_stmt    TYPE zif_cd_ebs_types=>ty_statement.
+    DATA ls_line    TYPE zif_cd_ebs_types=>ty_line.
+
+    ls_map-scheme      = zif_cd_ebs_types=>gc_scheme-bai2.
+    ls_map-btc_code    = gc_test-code.
+    ls_map-flow_type   = zif_cd_ebs_types=>gc_flow-any.
+    ls_map-category    = 'D01'.
+    ls_map-rule_group  = gc_test-group.
+    ls_map-exp_cdi     = zif_cd_ebs_types=>gc_cdi-credit.
+    ls_map-active      = abap_true.
+    ls_map-disposition = COND #( WHEN is_flags-not_posted = abap_true THEN zif_cd_ebs_types=>gc_disposition-not_posted ).
+    INSERT ls_map INTO TABLE mo_cfg->mt_map.
+
+    add_rule( iv_group         = zif_cd_ebs_types=>gc_rule_group_all
+              iv_id            = gc_test-s13_id
+              iv_class         = gc_test-s13_class
+              iv_level         = zif_cd_ebs_types=>gc_level-statement
+              iv_needs_posting = abap_false
+              iv_severity      = COND #( WHEN is_flags-s13_severity IS INITIAL
+                                         THEN zif_cd_ops_types=>gc_severity-warning
+                                         ELSE is_flags-s13_severity ) ).
+    add_rule( iv_group = zif_cd_ebs_types=>gc_rule_group_all iv_id = 'R18' iv_class = gc_test-stmt_class
+              iv_level = zif_cd_ebs_types=>gc_level-statement iv_needs_posting = abap_true ).
+    add_rule( iv_group = gc_test-group iv_id = 'R19' iv_class = gc_test-dep_class
+              iv_level = zif_cd_ebs_types=>gc_level-line iv_needs_posting = abap_true ).
+    add_rule( iv_group = gc_test-group iv_id = 'R01' iv_class = gc_test-indep_class
+              iv_level = zif_cd_ebs_types=>gc_level-line iv_needs_posting = abap_false ).
+
+    ls_stmt-stmt_key  = COND #( WHEN is_flags-source = zif_cd_ebs_types=>gc_source-feb THEN gc_test-stmt_key
+                                ELSE 'S0001' ).
+    ls_stmt-source    = is_flags-source.
+    ls_stmt-currency  = 'USD'.
+    ls_stmt-stmt_date = '20261105'.
+    INSERT ls_stmt INTO TABLE ls_package-statements.
+    DO is_flags-lines TIMES.
+      CLEAR ls_line.
+      ls_line-stmt_key      = ls_stmt-stmt_key.
+      ls_line-line_no       = sy-index.
+      ls_line-scheme        = zif_cd_ebs_types=>gc_scheme-bai2.
+      ls_line-btc_code      = gc_test-code.
+      ls_line-cdi           = zif_cd_ebs_types=>gc_cdi-credit.
+      ls_line-amount        = '10.00'.
+      ls_line-currency      = 'USD'.
+      ls_line-reference     = |REF{ sy-index }|.
+      ls_line-posting_state = is_flags-posting_state.
+      INSERT ls_line INTO TABLE ls_package-lines.
+    ENDDO.
+    INSERT ls_package INTO TABLE mo_source->mt_packages.
+  ENDMETHOD.
+
+
+  METHOD run_engine.
+    TRY.
+        ms_result = NEW zcl_cd_ebs_engine( )->run( io_source = mo_source iv_variant = 'UNIT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Engine run raised: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD count_code.
+    rv_count = REDUCE i( INIT lv_n = 0 FOR ls_f IN ms_result-findings WHERE ( check_code = iv_check_code )
+                         NEXT lv_n = lv_n + 1 ).
+  ENDMETHOD.
+
+
+  " A posted entry: every rule runs, nothing is unevaluated, no POSTING_INCOMPLETE, green
+  METHOD posted_entry_runs_all_rules.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dep_rule->mt_lines ) exp = 1
+                                            msg = 'A posting-dependent line rule must validate a posted entry' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_stmt_rule->mt_statements ) exp = 1
+                                            msg = 'A posting-dependent statement rule must validate a posted statement' ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( zif_cd_ebs_types=>gc_check_code-posting_incomplete ) exp = 0
+                                            msg = 'A posted entry must not raise POSTING_INCOMPLETE' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-posting_open exp = 0
+                                            msg = 'A posted entry is fully evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 1
+                                            msg = 'A posted entry without findings passes' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+                                            msg = 'A fully posted, clean statement closes green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " An entry expected to post but not posted: posting-dependent rules (line and statement)
+  " never see it - no false 'FI document not found' before FEBP has finished
+  METHOD open_entry_skips_dep_rules.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dep_rule->mt_lines
+                                             msg = 'A posting-dependent line rule must not see an unposted entry' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_stmt_rule->mt_statements
+                                             msg = 'A posting-dependent statement rule must skip the incomplete statement' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The skipped entry is counted and reported as unevaluated - never passed, never failed
+  METHOD open_entry_is_unevaluated.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        ls_flags-lines         = 2.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-posting_open exp = 2
+                                            msg = 'Both unposted entries must be counted as posting-open' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-unevaluated exp = 2
+                                            msg = 'Posting-open entries are unevaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 0
+                                            msg = 'An unevaluated entry must never count as passed' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-failed_items exp = 0
+                                            msg = 'An entry whose posting checks did not run must not count as failed' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 2
+                                            msg = 'Unevaluated entries still count in the total' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " One statement-level POSTING_INCOMPLETE (rule S13) for the statement, however many of its
+  " entries are open, with the configured severity
+  METHOD open_entries_one_finding.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        ls_flags-lines         = 3.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( zif_cd_ebs_types=>gc_check_code-posting_incomplete ) exp = 1
+                                            msg = 'One POSTING_INCOMPLETE per statement expected' ).
+        DATA(ls_finding) = ms_result-findings[ check_code = zif_cd_ebs_types=>gc_check_code-posting_incomplete ].
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-object_type exp = zcl_cd_ebs_finding=>gc_object_type-statement
+                                            msg = 'POSTING_INCOMPLETE is a statement finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = CONV zif_cd_ops_types=>ty_object_key( gc_test-stmt_key )
+                                            msg = 'POSTING_INCOMPLETE must name the statement' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Severity comes from the S13 rule configuration' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-rule_id exp = gc_test-s13_id
+                                            msg = 'POSTING_INCOMPLETE is raised by rule S13' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A run with entries not evaluated for posting is never green - even if S13 were configured
+  " with severity I (information)
+  METHOD open_entry_run_never_green.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        ls_flags-s13_severity  = zif_cd_ops_types=>gc_severity-info.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_differs( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+                                             msg = 'A run with POSTING_INCOMPLETE must never be green' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-amber
+                                            msg = 'Incomplete posting without other findings is amber' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rules that do not depend on the posting (structure, balance, sign, value date, mapping)
+  " still validate the unposted entry
+  METHOD open_entry_indep_rules_run.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_ind_rule->mt_lines ) exp = 1
+                                            msg = 'An independent rule must still validate the unposted entry' ).
+        cl_abap_unit_assert=>assert_true( act = mo_ind_rule->mt_lines[ 1 ]-posting_open
+                                          msg = 'The engine marks the entry as expected to post but not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A26: an entry mapped NOT_POSTED (sweeps 275 / 575) is not expected to post - unposted is
+  " complete: no POSTING_INCOMPLETE, nothing unevaluated
+  METHOD not_posted_map_no_finding.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        ls_flags-not_posted    = abap_true.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( zif_cd_ebs_types=>gc_check_code-posting_incomplete ) exp = 0
+                                            msg = 'A NOT_POSTED entry left unposted must not raise POSTING_INCOMPLETE' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-posting_open exp = 0
+                                            msg = 'A NOT_POSTED entry is not posting-open' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dep_rule->mt_lines ) exp = 1
+                                            msg = 'Rules of a NOT_POSTED entry run as before' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Bank file before import: the posting state is unknown by definition - the posting-dependent
+  " rules behave as before (they run), no POSTING_INCOMPLETE, nothing unevaluated
+  METHOD file_source_rules_unchanged.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-source        = zif_cd_ebs_types=>gc_source-file.
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-unknown.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dep_rule->mt_lines ) exp = 1
+                                            msg = 'A file entry must reach the posting-dependent rule as before' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_stmt_rule->mt_statements ) exp = 1
+                                            msg = 'A file statement must reach the posting-dependent statement rule' ).
+        cl_abap_unit_assert=>assert_equals( act = count_code( zif_cd_ebs_types=>gc_check_code-posting_incomplete ) exp = 0
+                                            msg = 'A bank file must never raise POSTING_INCOMPLETE' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-unevaluated exp = 0
+                                            msg = 'Nothing of a bank file is unevaluated for posting' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Exceptions of earlier runs for an unposted entry and its statement stay open: a skipped
+  " check is never a 'passed on re-run'
+  METHOD open_entry_not_reconciled.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-posting_state = zif_cd_ebs_types=>gc_posting_state-open.
+        configure_scenario( ls_flags ).
+        DATA(ls_line) = mo_source->mt_packages[ 1 ]-lines[ 1 ].
+        run_engine( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = zcl_cd_ebs_finding=>line_key( ls_line ) ] ) )
+          msg = 'An unposted entry must not be reconciled' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key(
+                                                                                gc_test-stmt_key ) ] ) )
+          msg = 'A statement with an unposted entry must not be reconciled' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

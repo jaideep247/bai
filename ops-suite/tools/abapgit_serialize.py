@@ -64,8 +64,9 @@ changed += write(os.path.join(os.path.dirname(ROOT), '.abapgit.xml'), HEAD +
     '   <MASTER_LANGUAGE>E</MASTER_LANGUAGE>\n   <STARTING_FOLDER>/ops-suite/src/</STARTING_FOLDER>\n'
     '   <FOLDER_LOGIC>PREFIX</FOLDER_LOGIC>\n   <IGNORE>\n    <item>/.gitignore</item>\n'
     '    <item>/LICENSE</item>\n    <item>/README.md</item>\n'
-    # read-only rollout scope: the blocked-line release app is not pulled (pre-posting enforcement)
-    '    <item>/ops-suite/src/ebs/*ebsrelease.*</item>\n    <item>/ops-suite/src/ebs/zui_cd_ebs_rel.*</item>\n   </IGNORE>\n  </DATA>\n </asx:values>\n</asx:abap>\n')
+    # read-only rollout scope (Implementation_Order.md): the blocked-line release app stays out of the pull
+    '    <item>/ops-suite/src/ebs/*ebsrelease.*</item>\n    <item>/ops-suite/src/ebs/zui_cd_ebs_rel.*</item>\n'
+    '   </IGNORE>\n  </DATA>\n </asx:values>\n</asx:abap>\n')
 
 # packages
 for folder, (_, text) in PACKAGES.items():

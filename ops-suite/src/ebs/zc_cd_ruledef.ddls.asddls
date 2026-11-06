@@ -15,6 +15,7 @@ define view entity ZC_CD_RuleDef
       Description,
       Active,
       BlocksPosting,
+      NeedsPosting,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A34: an unknown debit/credit indicator stays unknown.
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
 *& 2026-11-06 | Audit A68: inverted date range raises.
+*& 2026-11-06 | Operating model: posting state from the FEBEP posting-area flags; NONE switches it off.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -48,12 +49,21 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_sap_dao PARTIALLY IMPLEMENTED.
     DATA mt_reasons TYPE zif_cd_ebs_sap_dao=>tt_febep_reason.
     DATA mv_field   TYPE string.
+    "! Operating model: posting state returned per item, fields asked for, number of reads
+    DATA mt_posting TYPE zif_cd_ebs_sap_dao=>tt_febep_posting.
+    DATA mt_fields  TYPE string_table.
+    DATA mv_posting_reads TYPE i.
 ENDCLASS.
 
 CLASS ltd_sap_dao IMPLEMENTATION.
   METHOD zif_cd_ebs_sap_dao~get_febep_reasons.
     mv_field   = iv_field.
     rt_reasons = mt_reasons.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_sap_dao~get_febep_posting.
+    mv_posting_reads += 1.
+    mt_fields  = it_fields.
+    rt_posting = mt_posting.
   ENDMETHOD.
 ENDCLASS.
 
@@ -128,6 +138,8 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
     METHODS unknown_epvoz_has_no_sign    FOR TESTING.
     METHODS reason_from_configured_field FOR TESTING.
     METHODS inverted_date_range_raises   FOR TESTING.
+    METHODS posting_state_from_febep     FOR TESTING.
+    METHODS posting_state_off_with_none  FOR TESTING.
 ENDCLASS.
 
 
@@ -347,6 +359,62 @@ CLASS ltc_src_feb IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = zif_cd_ebs_types=>gc_msg-date_range
                                             msg = 'Message 527 expected for an inverted date range' ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Operating model 2026-11-06: an imported entry is posted when every FEBEP posting-area flag
+  " (EBS_FEB_POSTED_FIELDS, default VB1OK / VB2OK - VERIFY-SE11) is complete, else open; an
+  " item the read does not return keeps an unknown posting state
+  METHOD posting_state_from_febep.
+    DATA ls_posting TYPE zif_cd_ebs_sap_dao=>ty_febep_posting.
+    TRY.
+        ls_posting-kukey  = gc_test-kukey1.
+        ls_posting-esnum  = '00001'.
+        ls_posting-posted = abap_true.
+        INSERT ls_posting INTO TABLE mo_sap->mt_posting.
+        ls_posting-esnum  = '00002'.
+        ls_posting-posted = abap_false.
+        INSERT ls_posting INTO TABLE mo_sap->mt_posting.
+        add_header( gc_test-kukey1 ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00002' ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00003' ).
+        DATA(ls_package) = new_source( )->next_package( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00001' ]-posting_state
+                                            exp = zif_cd_ebs_types=>gc_posting_state-posted
+                                            msg = 'Complete posting areas must give posting state P' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00002' ]-posting_state
+                                            exp = zif_cd_ebs_types=>gc_posting_state-open
+                                            msg = 'An incomplete posting area must give posting state O' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ esnum = '00003' ]-posting_state
+                                            exp = zif_cd_ebs_types=>gc_posting_state-unknown
+                                            msg = 'An item without posting data must stay unknown' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_sap->mt_fields ) exp = 2
+                                            msg = 'The delivered default names two posting-area flags' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap->mt_fields[ 1 ] exp = `VB1OK`
+                                            msg = 'Posting area 1 flag VB1OK is read first' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " EBS_FEB_POSTED_FIELDS = NONE: the posting state is not read - every entry stays unknown and
+  " the posting-dependent rules behave as before
+  METHOD posting_state_off_with_none.
+    TRY.
+        INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-feb_posted_fields
+                        value = zif_cd_ebs_types=>gc_param_default-feb_posted_off ) INTO TABLE mo_store->mt_params.
+        add_header( gc_test-kukey1 ).
+        add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
+        DATA(ls_package) = new_source( )->next_package( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap->mv_posting_reads exp = 0
+                                            msg = 'NONE must not read the posting state' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_package-lines[ 1 ]-posting_state
+                                            exp = zif_cd_ebs_types=>gc_posting_state-unknown
+                                            msg = 'Without the read the posting state stays unknown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

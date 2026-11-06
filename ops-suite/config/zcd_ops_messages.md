@@ -320,6 +320,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 538 | Entry &1 (&2 &3) has status '&4' - not booked, not posted |
 | 539 | Entry &1: transaction details &2 do not reconcile to the entry &3 (&4) |
 | 540 | Entry &1: a transaction detail has no amount - the batch stays one entry line |
+| 541 | &1 entries not posted yet (total &2) - posting checks not evaluated |
+| 542 | &1 entries not evaluated (posting not complete) |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

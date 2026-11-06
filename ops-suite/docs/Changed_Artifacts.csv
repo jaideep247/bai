@@ -465,6 +465,8 @@ src/ebs/zcl_cd_ebs_r_s10_complete.clas.abap,ABAP,S10 (imported statements only):
 src/ebs/zcl_cd_ebs_r_s10_complete.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s12_count.clas.abap,ABAP,S12 (imported statements): the number of entries read must equal the
 src/ebs/zcl_cd_ebs_r_s12_count.clas.xml,abapGit,
+src/ebs/zcl_cd_ebs_r_s13_posted.clas.abap,ABAP,S13 (imported statements only): every entry expected to post is posted.
+src/ebs/zcl_cd_ebs_r_s13_posted.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_release_dao.clas.abap,ABAP,"Reads approved blocked-line releases (ZCD_EBS_RELEASE, status A) for the"
 src/ebs/zcl_cd_ebs_release_dao.clas.testclasses.abap,ABAP,OSQL tests of the release repository: only approved releases of the
 src/ebs/zcl_cd_ebs_release_dao.clas.xml,abapGit,
