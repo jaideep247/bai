@@ -13,7 +13,7 @@ One **analytical list page** (Fiori elements, OData V4) over every monitored fil
 
 | Area of the page | Content |
 |---|---|
-| Header / KPI | **Monitor as of** (end of the last completed FMON run), age in minutes, stale flag (red when older than 45 minutes or no completed run) |
+| Header / KPI | **Monitor as of** (end of the last completed FMON run), age in minutes, stale flag (red when older than 15 minutes or no completed run) |
 | Filter bar | Source system, LOB, payment method, interface, direction, bank, business date, flow bucket, SLA status |
 | Chart (default) | Files by **flow bucket**, stacked by payment method. Alternative views: files per business date (all / successful / rejected), records by source and LOB |
 | Table | One row per file: business date, interface, direction, source, LOB, method, bank, file name, flow bucket (coloured), successful, SLA status (coloured), worst open severity, records, control total, ACK / NACK count, unprocessed items, open exceptions, last event, as of |
@@ -26,9 +26,9 @@ Everything is **read-only**: no behaviour definition, no action, no write. Excep
 > **First principle:** "nothing failed" and "nothing was checked" look identical unless the check's time is on the page.
 > **Analogy:** a thermometer reading is useless without the time it was read.
 
-- The dashboard reads what `ZCD_FMON_MONITOR` stored; it does not read source tables live. It is refreshed by every monitor run (Control-M job `ZCD_FMON_MONITOR_ALL`, every 15–30 minutes).
+- The dashboard reads what `ZCD_FMON_MONITOR` stored; it does not read source tables live. It is refreshed by every monitor run (native SAP periodic job `ZCD_FMON_MONITOR_ALL` in SM36, every 5 minutes). PRISM milestones arrive faster: each PRISM status API call is processed within seconds by a background unit (bgPF), so PRISM stages and the SLA status they affect are near-instant (`PRISM_Status_API.md`).
 - **As of** = `ENDED_AT` of the last **completed full** FMON run in `ZCD_OPS_RUN`: area `FMON`, variant `ALL` (whole monitor, `ZCL_CD_FMON_ENGINE`), not test mode, status S, W or E (`ZIF_CD_OPS_TYPES=>GC_RUN_STATUS`; E = finished with error findings, still a complete look). A running (R) or aborted (A) run, a test run and a single-interface run never advance the as-of time.
-- **Stale** when the as-of time is older than **45 minutes** (1.5 × the slowest cadence of 30 minutes) or there is no completed run at all. CDS cannot read `ZCD_OPS_PARAM`; the 45 is a literal in `ZR_CD_FmonAsOf` and the age in minutes is exposed, so a tile may apply a stricter threshold.
+- **Stale** when the as-of time is older than **15 minutes** (3 × the 5-minute cadence) or there is no completed run at all. CDS cannot read `ZCD_OPS_PARAM`; the 15 minutes (900 s) are a literal in `ZR_CD_FmonAsOf` and the age in minutes is exposed, so a tile may apply a stricter threshold.
 - Every dashboard row carries `AsOfAt`, `AsOfRunId`, `MonitorAgeMinutes`, `MonitorIsStale`; the entity `MonitorAsOf` holds the one as-of row (also when no file exists).
 - Times are UTC time stamps; the browser shows them in the user's time zone.
 
@@ -179,7 +179,7 @@ The DCL is not covered by the unit tests (they select the `ZR_` views); QA case 
 | ID | Case | Expected |
 |---|---|---|
 | FMD-01 | Run `ZCD_FMON_MONITOR` (test mode off), open the dashboard | As of = end of that run; age < 30 min; not stale |
-| FMD-02 | Stop the Control-M job for > 45 min (or look at QA1 without runs) | Header and every row: stale, red; tile *Stale monitor* = 1 — the page never looks like a quiet day |
+| FMD-02 | Stop the SM36 job for > 15 min (or look at QA1 without runs) | Header and every row: stale, red; tile *Stale monitor* = 1 — the page never looks like a quiet day |
 | FMD-03 | Run the monitor for one interface only, and in test mode | As of does not move |
 | FMD-04 | Outbound ACH file: generated → sent → ACK | Bucket RECEIVED → SENT → ACKNOWLEDGED across runs; successful only after the ACK; SE16 ZCD_FMON_FILE matches |
 | FMD-05 | BlackLine file (no ACK) sent to PRISM | Bucket SENT, successful |

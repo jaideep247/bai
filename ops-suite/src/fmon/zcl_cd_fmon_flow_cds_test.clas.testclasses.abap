@@ -689,7 +689,7 @@ CLASS ltc_as_of DEFINITION FINAL
     CONSTANTS gc_t5 TYPE timestampl VALUE '20261105100000'.
     CONSTANTS gc_t_old TYPE timestampl VALUE '20200101000000'.
     CONSTANTS gc_iface_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
-    CONSTANTS gc_stale_minutes TYPE i VALUE 45.
+    CONSTANTS gc_stale_minutes TYPE i VALUE 15.
     CONSTANTS:
       BEGIN OF gc_run,
         r1 TYPE zif_cd_ops_types=>ty_run_id VALUE 'B0000000000000000000000000000001',

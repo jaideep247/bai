@@ -70,7 +70,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 Launchpad space **Production Support** → *File monitoring dashboard* (read-only; details `Dashboard_File_Monitoring.md`). Work it in this order, every time:
 
-1. **Stale monitor first.** Header / tile *Stale monitor*: as of = end of the last completed FMON run. **Stale (red, older than 45 min or no run)** → nothing else on the page is current. Check SM37 / Control-M job `ZCD_FMON_MONITOR_ALL` (aborted? RUN_LOCKED? not scheduled?) and the morning report category *health of the health check*; escalate to the batch owner. Do not report "no rejected files" from a stale page.
+1. **Stale monitor first.** Header / tile *Stale monitor*: as of = end of the last completed FMON run. **Stale (red, older than 15 min or no run)** → nothing else on the page is current. Check SM37 / Control-M job `ZCD_FMON_MONITOR_ALL` (aborted? RUN_LOCKED? not scheduled?) and the morning report category *health of the health check*; escalate to the batch owner. Do not report "no rejected files" from a stale page.
 2. **Breached SLA.** Filter SLA status = BREACHED (tile *Breached SLA*). Each file missed an SLA stage (NO_PRISM_HANDOFF, NO_BANK_ACK, …): open the file → *Open exceptions* → follow `FMON_FILE_MONITORING.md` §A5 for the check code. Then tile *Missing files* (FILE_MISSING has no file row).
 3. **Rejected / errored.** Flow bucket REJECTED (tile *Rejected today*): NACK from the bank, inbound processing FAILED, or PRISM_FAILED once the PRISM status API is live. Open the file → *Events* shows who said so and when.
 4. **Unprocessed / partial.** Tile *Unprocessed* or bucket PARTIAL: returns / NOC items not yet accounted for (LOT_UNPROCESSED); work the lot (FP09 / NOC application) and wait for the next run.
@@ -108,7 +108,7 @@ All three reports are re-runnable: EBS and HCK create a new run; FMON registry e
 
 ## 5a. Housekeeping
 
-`ZCD_OPS_PURGE` (monthly, Control-M, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060). No other housekeeping job is needed for the suite's tables; expired application logs of object `ZCD_OPS` are deleted with the standard SLG2 job.
+`ZCD_OPS_PURGE` (monthly, native SAP job, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060). No other housekeeping job is needed for the suite's tables; expired application logs of object `ZCD_OPS` are deleted with the standard SLG2 job.
 
 ## 6. Who to call
 

@@ -86,7 +86,7 @@ Many "failures" are timing: if a behaviour is working as designed, record it as 
 >
 > **Analogy:** the morning stand-up of a ward — one list, one owner per bed, decisions recorded.
 
-1. The scheduled run (Control-M → SAP job running `ZCD_MORNING_REPORT` with the productive variant) finishes before the first business payment cycle; the e-mail reaches the RTB distribution list.
+1. The scheduled run (native SAP job in SM36 running `ZCD_MORNING_REPORT` with the productive variant) finishes before the first business payment cycle; the e-mail reaches the RTB distribution list.
 2. The RTB analyst on duty reads the scorecard, works RED first, then AMBER, using §3.
 3. Every RED/AMBER finding is already an owned exception (payment engine area HCK) with a due date; assign the owner the same morning.
 4. Persistent false positives are a **threshold change** (customizing, §13) — never "ignore the colour".

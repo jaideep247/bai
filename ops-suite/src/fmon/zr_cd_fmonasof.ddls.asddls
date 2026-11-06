@@ -4,9 +4,11 @@
 //          that end time in minutes and a stale flag. One row, also when no run qualifies
 //          (then stale, age null). Every dashboard row carries these fields (ZR_CD_FmonFlow),
 //          so a monitor that stopped is visible and never mistaken for quiet traffic. Read-only.
-//          Stale default: 45 minutes = 1.5 x the slowest FMON cadence of 30 minutes (literal,
+//          Stale default: 15 minutes = 3 x the FMON cadence of 5 minutes (native SAP job;
+//          literal,
 //          CDS cannot read ZCD_OPS_PARAM; tiles may apply their own threshold on the age).
 // Modification log: 2026-11-06 | Initial version (FMON file monitoring dashboard).
+//                   2026-11-06 | Stale after 15 min: FMON runs every 5 min as a native SAP job.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'FMON monitor as of (last completed run)'
 @Metadata.ignorePropagatedAnnotations: true
@@ -33,13 +35,13 @@ define root view entity ZR_CD_FmonAsOf
         when Last.LastEndedAt is null
           then cast( 'X' as abap_boolean )
         when tstmp_seconds_between( cast( Last.LastEndedAt as timestamp ),
-                                    tstmp_current_utctimestamp( ), 'NULL' ) > 2700
+                                    tstmp_current_utctimestamp( ), 'NULL' ) > 900
           then cast( 'X' as abap_boolean )
         else cast( ' ' as abap_boolean ) end                as IsStale,
       // Criticality for the header KPI / tile: 1 red (stale), 3 green
       cast( case
               when Last.LastEndedAt is null then 1
               when tstmp_seconds_between( cast( Last.LastEndedAt as timestamp ),
-                                          tstmp_current_utctimestamp( ), 'NULL' ) > 2700 then 1
+                                          tstmp_current_utctimestamp( ), 'NULL' ) > 900 then 1
               else 3 end as abap.int1 )                     as StaleCriticality
 }

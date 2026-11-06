@@ -109,14 +109,16 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).
 6. TVARVC `ZCD_EBS_VALIDATION_MODE` = `O` (off). The batch run `ZCD_EBS_VALIDATE` never reads it; it governs only the dormant pre-posting path, which has no caller in this release.
 
-## Step 4 — Jobs (Control-M)
+## Step 4 — Jobs (native SAP jobs; EBS chained in Control-M)
+
+**Scheduling decision (2026-11-06).** The suite's own monitors are SAP-internal and owned by the SAP support team, so they run as **native SAP periodic jobs (SM36)**: file monitoring every 5 minutes, the morning report daily, purge monthly. Only `ZCD_EBS_VALIDATE` stays in **Control-M**, because it must start after the statement import, posting and payment clearing jobs that Control-M schedules. PRISM status API calls are processed on arrival by a background unit (bgPF), so PRISM milestones do not wait for the 5-minute run. Trade-off: a native job cannot report that SAP background processing itself has stopped; the morning report's health-of-health check (last run per payment engine area) and Basis monitoring cover that.
 
 | Job | Program / variant | When |
 |---|---|---|
 | ZCD_EBS_VALIDATE_ALL | `ZCD_EBS_VALIDATE`, FEB source, yesterday–today, test mode off | After each BAI load (JPMC/BOA 8:20 am cycle) **once the statement import, the posting job (FEBP) and the payment clearing job have completed** — a post-posting detective control (operating model 2026-11-06); a Control-M dependency on those three jobs, not a clock time (predecessors below) |
-| ZCD_FMON_MONITOR_ALL | `ZCD_FMON_MONITOR`, business date today | Every 30 min, 4 am – 8 pm (an overlapping start is refused with RUN_LOCKED) |
-| ZCD_MORNING_REPORT | `ZCD_MORNING_REPORT`, all categories, e-mail on | 6:45 am, after the overnight cycle and before business hours |
-| ZCD_OPS_PURGE_MONTHLY | `ZCD_OPS_PURGE`, test mode off | Monthly, outside the payment windows (first Sunday, 3 am) |
+| ZCD_FMON_MONITOR_ALL | `ZCD_FMON_MONITOR`, business date today | **SM36 periodic job, every 5 min**, around the clock or 4 am – 8 pm per the payment windows (an overlapping start is refused with RUN_LOCKED; must finish well within 5 min — measure at gate 3) |
+| ZCD_MORNING_REPORT | `ZCD_MORNING_REPORT`, all categories, e-mail on | **SM36 daily job**, 6:45 am, after the overnight cycle and before business hours |
+| ZCD_OPS_PURGE_MONTHLY | `ZCD_OPS_PURGE`, test mode off | **SM36 monthly job**, outside the payment windows (first Sunday, 3 am) |
 
 **Control-M predecessors of ZCD_EBS_VALIDATE_ALL (operating model 2026-11-06).** Define in-conditions, per bank cycle, on the successful end (OK) of:
 
@@ -128,10 +130,10 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 The predecessors are parsed from free-text comments in the schedule export — absence of a dependency there does not prove independence; confirm the chain with the job owners. If the validation starts before a predecessor finished, the run reports **POSTING_INCOMPLETE** and does not evaluate the posting-dependent rules for the unposted lines (never a false pass or a false failure); a Control-M rerun after the predecessors is idempotent (`Operations_Runbook.md` §5c). Do not add the reverse dependency: nothing waits for the validation.
 
-**Batch server group and runtime limits (Basis, before gate 3).** Run the three suite jobs and the purge on a dedicated batch server group — RZ12 (logon / RFC server groups) for the group, SM61 job server group `ZCD_OPS` naming the application servers and their background work processes — and set it as the *target server group* of each Control-M job (SM36 *Exec. target*). Keep the group off the servers that carry the FS-CD mass runs (FPY1, FPVA, FPVB, FP09, FPB7, FEBP) so the suite never competes for their background work processes; schedule job class C. Limit runtime in Control-M (max runtime alert per job, e.g. 30 min for the FMON cycle, 60 min for EBS and the morning report) — the run lock (RUN_LOCKED) stops overlapping starts, the stale-run check of the morning report shows a hung run.
+**Batch server group and runtime limits (Basis, before gate 3).** Run the three suite jobs and the purge on a dedicated batch server group — RZ12 (logon / RFC server groups) for the group, SM61 job server group `ZCD_OPS` naming the application servers and their background work processes — and set it as the *target server group* of each job (SM36 *Exec. target*; for the Control-M EBS job in its SAP job definition). Keep the group off the servers that carry the FS-CD mass runs (FPY1, FPVA, FPVB, FP09, FPB7, FEBP) so the suite never competes for their background work processes; schedule job class C. Limit runtime (Control-M max-runtime alert for EBS, 60 min; for the native jobs the morning report's stale-run and job-runtime checks, e.g. 4 min for the FMON cycle, 60 min for the morning report) — the run lock (RUN_LOCKED) stops overlapping starts, the stale-run check of the morning report shows a hung run.
 
 **No locks on standard tables.** The suite only reads FS-CD / FI tables (DFKKOP, DPAYH, DFKKCR, DFKKRP, FEBKO / FEBEP, BSEG, ACDOCA …) with Open SQL `SELECT`; it takes no ENQUEUE on them and never writes them. On SAP HANA a read sees committed data without read locks (MVCC), so a running FEBP / FPY1 is neither blocked nor slowed by a suite run. The only lock the suite takes is its own run lock (`E_TABLE` on `ZCD_OPS_LOCK`, client + payment engine area + variant).
 
 ## Step 5 — Rollback
 
-Deactivate the jobs (Control-M) and set `ZCD_EBS_VALIDATION_MODE` = `O`. No standard object is modified and the BAdI is not part of this delivery, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.
+Deactivate the jobs (SM36 periodic jobs and the Control-M EBS job) and set `ZCD_EBS_VALIDATION_MODE` = `O`. No standard object is modified and the BAdI is not part of this delivery, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.
