@@ -151,7 +151,7 @@ Since 2026-11-06 (user decision) `ZCD_EBS_VALIDATE` validates, and the EBS dashb
 
 ## 5a. Housekeeping
 
-`ZCD_OPS_PURGE` (monthly, native SAP job, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060). No other housekeeping job is needed for the suite's tables; expired application logs of object `ZCD_OPS` are deleted with the standard SLG2 job.
+`ZCD_OPS_PURGE` (monthly, native SAP job, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics, PRISM status events. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060). No other housekeeping job is needed for the suite's tables; expired application logs of object `ZCD_OPS` are deleted with the standard SLG2 job.
 
 ## 6. Who to call
 

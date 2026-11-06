@@ -254,7 +254,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
 | Volumes | ≈ 2–3 events per file (RECEIVED, DELIVERED, sometimes FAILED); a few thousand rows a day, one bgPF unit and one run record (variant `PRISM`) each; the table grows ≈ 1 M rows per year |
-| Retention | **400 days** — `ZCL_CD_OPS_PURGE` has code-defined targets (days per target in `RETENTION_DAYS_<target>`), so the target `ZCD_FMON_PRISM` (by `BUSINESS_DATE`, index BDT) is a follow-up change to the purge class; until then the table is not purged |
+| Retention | **400 days** — purge target `FMON_PRISM` of `ZCD_OPS_PURGE` deletes `ZCD_FMON_PRISM` rows by receipt time (`RECEIVED_AT`), parameter `RETENTION_DAYS_FMON_PRISM` (never below 30 days); the file history itself stays in the FMON events |
 
 ## 12. Objects
 

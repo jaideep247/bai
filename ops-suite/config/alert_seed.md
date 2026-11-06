@@ -61,6 +61,7 @@ Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUT
 | RETENTION_DAYS_ALERT_LOG | `180` | Alert log rows (by send time) |
 | RETENTION_DAYS_FMON_EVENT | `400` | FMON file events (by creation time) |
 | RETENTION_DAYS_HCK_METRIC | `400` | HCK metric history (by measurement time; baselines need the history) |
+| RETENTION_DAYS_FMON_PRISM | `400` | PRISM status API events (`ZCD_FMON_PRISM`, by receipt time); the file history stays in the FMON events |
 | PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package |
 
 Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`).
