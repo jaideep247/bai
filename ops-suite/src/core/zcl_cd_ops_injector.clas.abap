@@ -1,0 +1,88 @@
+*&---------------------------------------------------------------------*
+*& Artifact: zcl_cd_ops_injector.clas.abap
+*& Purpose:
+*& Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
+*& Writes the private double slots of ZCL_CD_OPS_FACTORY.
+*& Always call reset( ) in teardown.
+*& Modification log:
+*& 2026-11-05 | Initial version (ops suite consolidation).
+*&---------------------------------------------------------------------*
+"! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
+"! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
+"! Writes the private double slots of ZCL_CD_OPS_FACTORY.
+"! Always call reset( ) in teardown.
+CLASS zcl_cd_ops_injector DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PRIVATE.
+
+  PUBLIC SECTION.
+
+    CLASS-METHODS inject_store
+      IMPORTING
+        io_store TYPE REF TO zif_cd_ops_store.
+
+    CLASS-METHODS inject_alert
+      IMPORTING
+        io_alert TYPE REF TO zif_cd_ops_alert.
+
+    CLASS-METHODS inject_clock
+      IMPORTING
+        io_clock TYPE REF TO zif_cd_ops_clock.
+
+    CLASS-METHODS inject_alert_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_ops_alert_dao.
+
+    CLASS-METHODS inject_plugin
+      IMPORTING
+        iv_class_name TYPE zif_cd_ops_types=>ty_class_name
+        io_instance   TYPE REF TO object.
+
+    CLASS-METHODS reset.
+
+ENDCLASS.
+
+
+
+CLASS zcl_cd_ops_injector IMPLEMENTATION.
+
+  METHOD inject_store.
+    zcl_cd_ops_factory=>go_store_double = io_store.
+  ENDMETHOD.
+
+
+  METHOD inject_alert.
+    zcl_cd_ops_factory=>go_alert_double = io_alert.
+  ENDMETHOD.
+
+
+  METHOD inject_clock.
+    zcl_cd_ops_factory=>go_clock_double = io_clock.
+  ENDMETHOD.
+
+
+  METHOD inject_alert_dao.
+    zcl_cd_ops_factory=>go_alert_dao_double = io_dao.
+  ENDMETHOD.
+
+
+  METHOD inject_plugin.
+    DATA(lv_name) = to_upper( condense( CONV string( iv_class_name ) ) ).
+    DELETE zcl_cd_ops_factory=>gt_plugin_double
+      WHERE class_name = CONV zif_cd_ops_types=>ty_class_name( lv_name ).
+    INSERT VALUE #( class_name = lv_name
+                    instance   = io_instance ) INTO TABLE zcl_cd_ops_factory=>gt_plugin_double.
+  ENDMETHOD.
+
+
+  METHOD reset.
+    CLEAR: zcl_cd_ops_factory=>go_store_double,
+           zcl_cd_ops_factory=>go_alert_double,
+           zcl_cd_ops_factory=>go_clock_double,
+           zcl_cd_ops_factory=>go_alert_dao_double,
+           zcl_cd_ops_factory=>gt_plugin_double,
+           zcl_cd_ops_factory=>go_store.
+  ENDMETHOD.
+
+ENDCLASS.

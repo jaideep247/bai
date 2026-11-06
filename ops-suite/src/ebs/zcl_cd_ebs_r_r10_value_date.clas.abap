@@ -1,0 +1,40 @@
+*&---------------------------------------------------------------------*
+*& Artifact: zcl_cd_ebs_r_r10_value_date.clas.abap
+*& Purpose:
+*& R10: value date and booking date may differ by at most WINDOW_DAYS
+*& (default 5). Also serves R13 (reversal window) when assigned to reversal
+*& categories with their own window. Pure.
+*& Modification log:
+*& 2026-11-05 | Initial version (ops suite consolidation).
+*&---------------------------------------------------------------------*
+"! <p class="shorttext synchronized">EBS rule R10 - value date window</p>
+CLASS zcl_cd_ebs_r_r10_value_date DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_cd_ebs_rule_base
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS zif_cd_ebs_rule~execute REDEFINITION.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_default_window TYPE i VALUE 5.
+ENDCLASS.
+
+
+
+CLASS zcl_cd_ebs_r_r10_value_date IMPLEMENTATION.
+
+  METHOD zif_cd_ebs_rule~execute.
+    DATA(lv_window) = COND i( WHEN is_rule-window_days > 0 THEN is_rule-window_days ELSE gc_default_window ).
+    LOOP AT it_lines INTO DATA(ls_line) WHERE value_date IS NOT INITIAL AND booking_date IS NOT INITIAL.
+      IF abs( ls_line-value_date - ls_line-booking_date ) > lv_window.
+        INSERT zcl_cd_ebs_finding=>for_rule_line(
+                 is_rule = is_rule is_line = ls_line iv_check_code = 'VALUE_DATE_WINDOW'
+                 iv_message = |Value date { ls_line-value_date DATE = ISO } more than { lv_window } days |
+                           && |from booking date { ls_line-booking_date DATE = ISO }| ) INTO TABLE rt_findings.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.

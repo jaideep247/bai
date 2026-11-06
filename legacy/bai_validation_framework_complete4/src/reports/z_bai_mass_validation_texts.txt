@@ -1,0 +1,33 @@
+*&---------------------------------------------------------------------*
+*& Text Symbols for Z_BAI_MASS_VALIDATION
+*&---------------------------------------------------------------------*
+*& Use transaction SE38 -> Goto -> Text Elements -> Text Symbols
+*& Or upload this file
+*&---------------------------------------------------------------------*
+
+TEXT-001: Date Range Selection
+TEXT-002: Execution Options
+TEXT-003: BAI Code Filter (Optional)
+TEXT-004: Display Options
+
+*&---------------------------------------------------------------------*
+*& Selection Screen Text (Text IDs for Parameters)
+*&---------------------------------------------------------------------*
+
+P_DATEFR: From Date
+P_DATETO: To Date
+P_CHUNK:  Chunk Size
+P_TEST:   Test Mode (No Commit)
+S_BAI:    BAI Codes
+P_DETAIL: Show Details
+P_ALV:    Display in ALV
+
+*&---------------------------------------------------------------------*
+*& Messages
+*&---------------------------------------------------------------------*
+
+M001: BAI Validation Framework - Mass Execution Started
+M002: Validation completed successfully
+M003: Validation completed with errors
+M004: No records found for date range
+M005: Batch ID generated

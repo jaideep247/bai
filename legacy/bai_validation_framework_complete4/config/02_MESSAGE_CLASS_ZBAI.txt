@@ -1,0 +1,96 @@
+*&---------------------------------------------------------------------*
+*& Message Class ZBAI - Complete Definition
+*& Create in SE91
+*& All 27 messages defined
+*&---------------------------------------------------------------------*
+
+Message Class: ZBAI
+Application: ZBC (Customer Development)
+
+*&---------------------------------------------------------------------*
+*& INFORMATION MESSAGES (001-009)
+*&---------------------------------------------------------------------*
+001 I &1 &2 &3 &4
+002 I Processed chunk &1 of &2
+003 I Batch &1 completed. Passed: &2, Failed: &3
+010 I Validator &1, Chunk &2: &3
+
+*&---------------------------------------------------------------------*
+*& VALIDATION ERRORS (010-019)
+*&---------------------------------------------------------------------*
+010 E Invalid configuration: &1
+011 E No validators configured for execution
+012 E Batch ID generation failed
+013 E Batch validation already running: &1
+014 E Not authorized to perform this action: &1
+015 E Failure threshold exceeded: &1
+999 E &1
+
+*&---------------------------------------------------------------------*
+*& DATABASE ERRORS (020-029)
+*&---------------------------------------------------------------------*
+020 E Database insert failed for table &1
+021 E Database update failed for table &1
+022 E Summary insert failed for table &1
+023 E Batch audit log insert failed for table &1
+024 E Commit failed for table &1
+025 E Rollback failed for table &1
+026 E Database delete failed for table &1
+027 E Database select failed for table &1
+
+*&---------------------------------------------------------------------*
+*& CONFIG ERRORS (030-039)
+*&---------------------------------------------------------------------*
+030 E Missing configuration for BAI code &1
+031 E Invalid BAI code: &1
+032 E Invalid flow type: &1
+
+*&---------------------------------------------------------------------*
+*& MISSING DATA ERRORS (040-049)
+*&---------------------------------------------------------------------*
+040 E Missing DFKKRP record for key &1
+041 E Missing DFKKRK record for key &1
+042 E Missing DPAYH record for key &1
+043 E Missing BSEG record for key &1
+
+*&---------------------------------------------------------------------*
+*& FIELD MISMATCH ERRORS (050-059)
+*&---------------------------------------------------------------------*
+050 E STARS mismatch: expected &1, found &2
+051 E Status mismatch: expected &1, found &2
+052 E Field &1 is empty
+
+*&---------------------------------------------------------------------*
+*& STATE ERRORS (060-069)
+*&---------------------------------------------------------------------*
+060 E Invalid state &1, expected &2
+061 E Not all records in state B: &1 records found
+
+*&---------------------------------------------------------------------*
+*& AMOUNT ERRORS (070-079)
+*&---------------------------------------------------------------------*
+070 E Sum mismatch: expected &1, found &2
+071 E Currency mismatch: expected &1, found &2
+
+*&---------------------------------------------------------------------*
+*& EXECUTION ERRORS (100-109)
+*&---------------------------------------------------------------------*
+101 E Error getting validator &1: &2
+102 E Validation error for &1: &2
+103 E DB error saving results for &1: &2
+
+*&---------------------------------------------------------------------*
+*& MONITORING WARNINGS (150-159)
+*&---------------------------------------------------------------------*
+150 W High failure rate for &1: &2 in chunk &3
+151 E Critical: &1 consecutive high failure chunks above &2
+199 W Chunk &1 failure rate: &2
+
+*&---------------------------------------------------------------------*
+*& CREATION INSTRUCTIONS
+*&---------------------------------------------------------------------*
+* 1. Transaction SE91
+* 2. Create message class ZBAI
+* 3. Application: ZBC
+* 4. Enter all messages above with correct number, type, and text
+* 5. Save and activate

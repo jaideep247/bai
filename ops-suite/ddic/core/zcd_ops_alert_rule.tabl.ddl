@@ -1,0 +1,35 @@
+@EndUserText.label : 'Ops suite: alert rules (SM30)'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zcd_ops_alert_rule {
+  key client      : abap.clnt not null;
+  key rule_id     : abap.char(10) not null;
+  // HCK / FMON / EBS or * for every module
+  module          : abap.char(4);
+  // B, E, W or I - lowest severity that triggers
+  min_severity    : abap.char(1);
+  // CP patterns on the finding; blank = any
+  rule_pattern    : abap.char(35);
+  check_pattern   : abap.char(35);
+  group1_pattern  : abap.char(35);
+  group2_pattern  : abap.char(35);
+  // Run-level trigger: R or A (run RAG equal or worse); blank = none
+  min_rag         : abap.char(1);
+  on_abort        : abap_boolean;
+  // EMAIL / APPLOG / HTTP (ZCD_OPS_ALERT_CHN)
+  channel         : abap.char(10);
+  // e-mail list | OBJECT/SUBOBJECT | SM59 destination
+  destination     : abap.char(255);
+  digest          : abap_boolean;
+  max_items       : abap.int4;
+  throttle_min    : abap.int4;
+  quiet_from      : abap.tims;
+  quiet_to        : abap.tims;
+  escalate_after  : abap.int4;
+  escalation_dest : abap.char(255);
+  active          : abap_boolean;
+  changed_by      : syuname;
+  changed_at      : timestampl;
+}

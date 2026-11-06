@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fictitious camt.053 end-of-day statement (sample / documentation only).
+     2 credits 20000.00 + 2 debits 19812.50; OPBD 25000000.00 -> CLBD 25000187.50 -->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>EXMP-STMT-20261104-0001</MsgId>
+      <CreDtTm>2026-11-04T06:15:00</CreDtTm>
+      <MsgRcpt>
+        <Nm>EXAMPLE LIFE INSURANCE CO</Nm>
+        <Id><OrgId><AnyBIC>EXLIUS33XXX</AnyBIC></OrgId></Id>
+      </MsgRcpt>
+    </GrpHdr>
+    <Stmt>
+      <Id>000111222333-20261103</Id>
+      <ElctrncSeqNb>307</ElctrncSeqNb>
+      <LglSeqNb>307</LglSeqNb>
+      <CreDtTm>2026-11-04T06:15:00</CreDtTm>
+      <FrToDt>
+        <FrDtTm>2026-11-03T00:00:00</FrDtTm>
+        <ToDtTm>2026-11-03T23:59:59</ToDtTm>
+      </FrToDt>
+      <Acct>
+        <Id><Othr><Id>000111222333</Id></Othr></Id>
+        <Ccy>USD</Ccy>
+        <Svcr><FinInstnId><BICFI>EXMPUS33XXX</BICFI></FinInstnId></Svcr>
+      </Acct>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="USD">25000000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-11-03</Dt></Dt>
+      </Bal>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="USD">25000187.50</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-11-03</Dt></Dt>
+      </Bal>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>CLAV</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="USD">24990187.50</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-11-03</Dt></Dt>
+      </Bal>
+      <TxsSummry>
+        <TtlNtries>
+          <NbOfNtries>4</NbOfNtries>
+          <Sum>39812.50</Sum>
+          <TtlNetNtry><Amt>187.50</Amt><CdtDbtInd>CRDT</CdtDbtInd></TtlNetNtry>
+        </TtlNtries>
+        <TtlCdtNtries><NbOfNtries>2</NbOfNtries><Sum>20000.00</Sum></TtlCdtNtries>
+        <TtlDbtNtries><NbOfNtries>2</NbOfNtries><Sum>19812.50</Sum></TtlDbtNtries>
+      </TxsSummry>
+      <!-- 1: ACH premium credit, matched by EndToEndId -->
+      <Ntry>
+        <Amt Ccy="USD">12500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt>
+        <ValDt><Dt>2026-11-03</Dt></ValDt>
+        <AcctSvcrRef>ACH0001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>ACDT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>POL100234</EndToEndId></Refs>
+          <Amt Ccy="USD">12500.00</Amt>
+          <AddtlTxInf>PREMIUM ACH CREDIT EXAMPLE CUSTOMER</AddtlTxInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <!-- 2: incoming wire, no EndToEndId (NOTPROVIDED) -> InstrId is the reference -->
+      <Ntry>
+        <Amt Ccy="USD">7500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt>
+        <ValDt><Dt>2026-11-04</Dt></ValDt>
+        <AcctSvcrRef>FW260001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>DMCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><InstrId>WIRE-77-100587</InstrId><EndToEndId>NOTPROVIDED</EndToEndId></Refs>
+        </TxDtls></NtryDtls>
+        <AddtlNtryInf>INCOMING WIRE, POLICY 100587</AddtlNtryInf>
+      </Ntry>
+      <!-- 3: cheque paid, matched by ChqNb -->
+      <Ntry>
+        <Amt Ccy="USD">4812.50</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt>
+        <ValDt><Dt>2026-11-03</Dt></ValDt>
+        <AcctSvcrRef>CHK0001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICHQ</Cd><SubFmlyCd>CCHQ</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><ChqNb>0000104501</ChqNb></Refs>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <!-- 4: ACH claim payment batch, one line per TxDtls (9000.00 + 6000.00) -->
+      <Ntry>
+        <Amt Ccy="USD">15000.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt>
+        <ValDt><Dt>2026-11-03</Dt></ValDt>
+        <AcctSvcrRef>ACH0101</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>ACDT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls>
+          <Btch><NbOfTxs>2</NbOfTxs></Btch>
+          <TxDtls>
+            <Refs><EndToEndId>DISB260001-01</EndToEndId></Refs>
+            <Amt Ccy="USD">9000.00</Amt>
+          </TxDtls>
+          <TxDtls>
+            <Refs><EndToEndId>DISB260001-02</EndToEndId></Refs>
+            <Amt Ccy="USD">6000.00</Amt>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>ACH DEBIT CLAIM PAYMENTS BATCH 11</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

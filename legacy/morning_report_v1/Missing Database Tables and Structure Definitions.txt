@@ -1,0 +1,820 @@
+*&---------------------------------------------------------------------*
+*& Missing Database Tables and Structure Definitions
+*&---------------------------------------------------------------------*
+
+" Z_RULE_CONFIG table structure
+TYPES: BEGIN OF z_rule_config,
+         client TYPE sy-mandt,
+         rule_id TYPE c LENGTH 10,
+         rule_name TYPE c LENGTH 50,
+         rule_type TYPE c LENGTH 20,
+         execution_target TYPE string,
+         parameters TYPE string,
+         active TYPE c LENGTH 1,
+         priority TYPE i,
+         category TYPE c LENGTH 20,
+         schedule_pattern TYPE c LENGTH 50,
+         timeout_seconds TYPE i,
+         memory_limit_mb TYPE i,
+         retry_attempts TYPE i,
+         circuit_breaker_enabled TYPE c LENGTH 1,
+         created_by TYPE sy-uname,
+         created_on TYPE sy-datum,
+         created_at TYPE sy-uzeit,
+         changed_by TYPE sy-uname,
+         changed_on TYPE sy-datum,
+         changed_at TYPE sy-uzeit,
+       END OF z_rule_config.
+
+" Z_HEALTH_CHECK_LOG table structure
+TYPES: BEGIN OF z_health_check_log,
+         client TYPE sy-mandt,
+         log_id TYPE c LENGTH 20,
+         rule_id TYPE c LENGTH 10,
+         execution_timestamp TYPE timestampl,
+         execution_status TYPE c LENGTH 10,
+         record_count TYPE i,
+         execution_time TYPE i,
+         memory_used_mb TYPE p LENGTH 8 DECIMALS 2,
+         performance_score TYPE p LENGTH 3 DECIMALS 1,
+         risk_level TYPE c LENGTH 10,
+         error_message TYPE string,
+         navigation_url TYPE c LENGTH 100,
+         correlation_id TYPE c LENGTH 36,
+         executed_by TYPE sy-uname,
+         system_id TYPE c LENGTH 8,
+         batch_id TYPE c LENGTH 20,
+         parent_log_id TYPE c LENGTH 20,
+       END OF z_health_check_log.
+
+*&---------------------------------------------------------------------*
+*& Missing Parallel Processing Implementation
+*& ZCL_PARALLEL_HEALTH_PROCESSOR
+*&---------------------------------------------------------------------*
+
+CLASS zcl_parallel_health_processor DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    TYPES: BEGIN OF ty_batch_config,
+             max_parallel_tasks TYPE i,
+             timeout_seconds TYPE i,
+             memory_limit_mb TYPE i,
+             retry_attempts TYPE i,
+           END OF ty_batch_config.
+    
+    TYPES: BEGIN OF ty_task_result,
+             task_name TYPE string,
+             rule_id TYPE string,
+             status TYPE string,
+             result TYPE REF TO data,
+             execution_time TYPE i,
+             error_message TYPE string,
+           END OF ty_task_result.
+    
+    TYPES: tt_task_results TYPE TABLE OF ty_task_result.
+    
+    METHODS: execute_parallel_checks
+               IMPORTING rules TYPE TABLE OF z_rule_config
+                         batch_config TYPE ty_batch_config
+               RETURNING VALUE(results) TYPE tt_task_results
+               RAISING zcx_health_check_exception,
+             
+             create_task_groups
+               IMPORTING rules TYPE TABLE OF z_rule_config
+                         max_parallel_tasks TYPE i
+               RETURNING VALUE(task_groups) TYPE TABLE OF TABLE OF z_rule_config,
+             
+             monitor_task_execution
+               IMPORTING task_name TYPE string
+                         timeout_seconds TYPE i
+               RETURNING VALUE(task_completed) TYPE abap_bool.
+
+  PRIVATE SECTION.
+    DATA: active_tasks TYPE string_table,
+          task_results TYPE tt_task_results.
+    
+    METHODS: execute_task_group_parallel
+               IMPORTING task_group TYPE TABLE OF z_rule_config
+                         task_timeout TYPE i
+               RETURNING VALUE(group_results) TYPE tt_task_results,
+             
+             create_background_task
+               IMPORTING rule_config TYPE z_rule_config
+                         task_name TYPE string
+               RAISING zcx_health_check_exception,
+             
+             wait_for_task_completion
+               IMPORTING task_name TYPE string
+                         timeout_seconds TYPE i
+               RETURNING VALUE(completed) TYPE abap_bool.
+ENDCLASS.
+
+CLASS zcl_parallel_health_processor IMPLEMENTATION.
+  METHOD execute_parallel_checks.
+    DATA(task_groups) = create_task_groups( 
+      rules = rules
+      max_parallel_tasks = batch_config-max_parallel_tasks ).
+    
+    LOOP AT task_groups INTO DATA(task_group).
+      DATA(group_results) = execute_task_group_parallel( 
+        task_group = task_group
+        task_timeout = batch_config-timeout_seconds ).
+      
+      APPEND LINES OF group_results TO results.
+    ENDLOOP.
+  ENDMETHOD.
+  
+  METHOD create_task_groups.
+    DATA: current_group TYPE TABLE OF z_rule_config,
+          group_count TYPE i.
+    
+    LOOP AT rules INTO DATA(rule).
+      APPEND rule TO current_group.
+      group_count = group_count + 1.
+      
+      IF group_count >= max_parallel_tasks.
+        APPEND current_group TO task_groups.
+        CLEAR: current_group, group_count.
+      ENDIF.
+    ENDLOOP.
+    
+    " Add remaining rules if any
+    IF lines( current_group ) > 0.
+      APPEND current_group TO task_groups.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD execute_task_group_parallel.
+    " Simulate parallel execution using background RFC
+    LOOP AT task_group INTO DATA(rule_config).
+      DATA(task_name) = |TASK_{ rule_config-rule_id }_{ sy-tabix }|.
+      
+      TRY.
+          create_background_task( 
+            rule_config = rule_config
+            task_name = task_name ).
+          
+          APPEND task_name TO active_tasks.
+          
+        CATCH zcx_health_check_exception INTO DATA(lx_task).
+          " Handle task creation failure
+          APPEND VALUE #( 
+            task_name = task_name
+            rule_id = rule_config-rule_id
+            status = 'FAILED'
+            error_message = lx_task->error_message ) TO group_results.
+      ENDTRY.
+    ENDLOOP.
+    
+    " Wait for all tasks to complete
+    LOOP AT active_tasks INTO DATA(active_task).
+      DATA(completed) = wait_for_task_completion( 
+        task_name = active_task
+        timeout_seconds = task_timeout ).
+      
+      IF completed = abap_false.
+        " Task timed out
+        APPEND VALUE #( 
+          task_name = active_task
+          status = 'TIMEOUT'
+          error_message = |Task { active_task } timed out after { task_timeout } seconds| ) TO group_results.
+      ENDIF.
+    ENDLOOP.
+    
+    CLEAR active_tasks.
+  ENDMETHOD.
+  
+  METHOD create_background_task.
+    " Create RFC task for parallel execution
+    CALL FUNCTION 'Z_EXECUTE_HEALTH_CHECK_ASYNC'
+      STARTING NEW TASK task_name
+      DESTINATION IN GROUP 'PARALLEL_GROUP'
+      CALLING on_task_completion ON END OF TASK
+      EXPORTING
+        rule_config = rule_config
+        correlation_id = |PARALLEL_{ sy-datum }_{ sy-uzeit }|
+        security_validation = abap_true
+      EXCEPTIONS
+        communication_failure = 1 MESSAGE DATA(comm_error)
+        system_failure = 2 MESSAGE DATA(sys_error)
+        resource_failure = 3 MESSAGE DATA(res_error).
+    
+    CASE sy-subrc.
+      WHEN 1.
+        RAISE EXCEPTION TYPE zcx_health_check_exception
+          EXPORTING
+            error_message = |Communication failure: { comm_error }|
+            error_code = zif_health_check_exceptions=>error_codes-network_connection_failed.
+      WHEN 2.
+        RAISE EXCEPTION TYPE zcx_health_check_exception
+          EXPORTING
+            error_message = |System failure: { sys_error }|
+            error_code = zif_health_check_exceptions=>error_codes-system_unavailable.
+      WHEN 3.
+        RAISE EXCEPTION TYPE zcx_health_check_exception
+          EXPORTING
+            error_message = |Resource failure: { res_error }|
+            error_code = zif_health_check_exceptions=>error_codes-memory_limit_exceeded.
+    ENDCASE.
+  ENDMETHOD.
+  
+  METHOD wait_for_task_completion.
+    DATA: start_time TYPE i,
+          current_time TYPE i,
+          elapsed_time TYPE i.
+    
+    GET TIME FIELD start_time.
+    
+    DO.
+      WAIT UP TO 1 SECONDS.
+      
+      " Check if task is still active
+      CALL FUNCTION 'RFC_GET_REMOTE_OBJECTS'
+        EXPORTING
+          destination = 'PARALLEL_GROUP'
+        EXCEPTIONS
+          destination_not_exist = 1
+          OTHERS = 2.
+      
+      IF sy-subrc <> 0.
+        " Task completed or failed
+        completed = abap_true.
+        EXIT.
+      ENDIF.
+      
+      GET TIME FIELD current_time.
+      elapsed_time = current_time - start_time.
+      
+      IF elapsed_time >= timeout_seconds.
+        completed = abap_false.
+        EXIT.
+      ENDIF.
+    ENDDO.
+  ENDMETHOD.
+  
+  METHOD monitor_task_execution.
+    " Monitor individual task execution
+    DATA(start_time) = sy-uzeit.
+    
+    DO 100 TIMES. " Maximum monitoring cycles
+      WAIT UP TO 1 SECONDS.
+      
+      " Check task status via RFC
+      CALL FUNCTION 'RFC_PING'
+        DESTINATION 'PARALLEL_GROUP'
+        EXCEPTIONS
+          communication_failure = 1
+          system_failure = 2.
+      
+      IF sy-subrc = 0.
+        " Task is still active
+        DATA(current_time) = sy-uzeit.
+        DATA(elapsed) = current_time - start_time.
+        
+        IF elapsed >= timeout_seconds.
+          task_completed = abap_false.
+          EXIT.
+        ENDIF.
+      ELSE.
+        " Task completed
+        task_completed = abap_true.
+        EXIT.
+      ENDIF.
+    ENDDO.
+  ENDMETHOD.
+ENDCLASS.
+
+*&---------------------------------------------------------------------*
+*& Task Completion Handler Form
+*&---------------------------------------------------------------------*
+FORM on_task_completion USING task_name TYPE string.
+  DATA: task_result TYPE zcl_parallel_health_processor=>ty_task_result,
+        task_status TYPE string,
+        error_message TYPE string.
+  
+  RECEIVE RESULTS FROM FUNCTION 'Z_EXECUTE_HEALTH_CHECK_ASYNC'
+    IMPORTING
+      health_result = DATA(health_result)
+      execution_status = task_status
+      error_info = error_message
+    EXCEPTIONS
+      communication_failure = 1
+      system_failure = 2.
+  
+  IF sy-subrc = 0.
+    task_result-task_name = task_name.
+    task_result-status = task_status.
+    " Store result would be implemented here
+  ELSE.
+    " Handle task failure
+    task_result-task_name = task_name.
+    task_result-status = 'FAILED'.
+    task_result-error_message = |Task communication failed: { sy-subrc }|.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Background RFC Function for Async Execution
+*& Function: Z_EXECUTE_HEALTH_CHECK_ASYNC
+*&---------------------------------------------------------------------*
+FUNCTION z_execute_health_check_async.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(RULE_CONFIG) TYPE  Z_RULE_CONFIG
+*"     VALUE(CORRELATION_ID) TYPE  STRING
+*"     VALUE(SECURITY_VALIDATION) TYPE  ABAP_BOOL DEFAULT ABAP_TRUE
+*"  EXPORTING
+*"     VALUE(HEALTH_RESULT) TYPE  ZCL_HEALTH_CHECK_BASE_ENHANCED=>TY_HEALTH_RESULT_ENHANCED
+*"     VALUE(EXECUTION_STATUS) TYPE  STRING
+*"     VALUE(ERROR_INFO) TYPE  STRING
+*"----------------------------------------------------------------------
+
+  DATA: lo_health_check TYPE REF TO zcl_health_check_base_enhanced,
+        lo_logger TYPE REF TO zcl_health_check_logger_complete,
+        lo_security_validator TYPE REF TO zcl_sql_security_validator_enhanced,
+        lo_performance_optimizer TYPE REF TO zcl_performance_optimizer_enhanced.
+  
+  TRY.
+      lo_logger = NEW #( ).
+      lo_security_validator = NEW #( ).
+      lo_performance_optimizer = NEW #( ).
+      
+      CASE rule_config-rule_type.
+        WHEN zif_health_check_constants=>rule_types-dynamic_sql.
+          lo_health_check = NEW zcl_health_check_sql_enhanced( ).
+        WHEN zif_health_check_constants=>rule_types-function_module.
+          lo_health_check = NEW zcl_health_check_fm_enhanced( ).
+        WHEN zif_health_check_constants=>rule_types-cds_view.
+          lo_health_check = NEW zcl_health_check_cds_enhanced( ).
+        WHEN OTHERS.
+          RAISE EXCEPTION TYPE zcx_health_check_exception
+            EXPORTING
+              error_message = |Unknown rule type: { rule_config-rule_type }|.
+      ENDCASE.
+      
+      health_result = lo_health_check->execute_health_check_enhanced(
+        rule_config = rule_config
+        logger = lo_logger
+        security_validator = lo_security_validator
+        performance_optimizer = lo_performance_optimizer ).
+      
+      execution_status = 'SUCCESS'.
+      error_info = ''.
+      
+    CATCH zcx_health_check_exception INTO DATA(lx_health).
+      execution_status = 'FAILED'.
+      error_info = lx_health->error_message.
+      
+      health_result = VALUE #(
+        rule_name = rule_config-rule_name
+        status = zif_health_check_constants=>execution_status-error
+        message = lx_health->error_message
+        risk_level = zif_health_check_constants=>risk_levels-critical
+        correlation_id = correlation_id ).
+      
+    CATCH cx_root INTO DATA(lx_system).
+      execution_status = 'ERROR'.
+      error_info = lx_system->get_text( ).
+      
+      health_result = VALUE #(
+        rule_name = rule_config-rule_name
+        status = zif_health_check_constants=>execution_status-error
+        message = |System error: { lx_system->get_text( ) }|
+        risk_level = zif_health_check_constants=>risk_levels-critical
+        correlation_id = correlation_id ).
+  ENDTRY.
+
+ENDFUNCTION.
+
+*&---------------------------------------------------------------------*
+*& Missing Configuration Manager Implementation
+*& ZCL_CONFIG_MANAGER_COMPLETE
+*&---------------------------------------------------------------------*
+
+CLASS zcl_config_manager_complete DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    INTERFACES: zif_health_check_constants.
+    
+    TYPES: BEGIN OF ty_validation_result_complete,
+             is_valid TYPE abap_bool,
+             severity_level TYPE string,
+             validation_errors TYPE string_table,
+             validation_warnings TYPE string_table,
+             performance_impact TYPE string,
+             security_risk_level TYPE string,
+             recommendations TYPE string_table,
+           END OF ty_validation_result_complete.
+    
+    METHODS: validate_rule_configuration
+               IMPORTING rule_config TYPE z_rule_config
+               RETURNING VALUE(result) TYPE ty_validation_result_complete,
+             
+             auto_fix_configuration
+               IMPORTING rule_config TYPE z_rule_config
+               RETURNING VALUE(fixed_successfully) TYPE abap_bool,
+             
+             backup_configuration
+               RETURNING VALUE(backup_id) TYPE string,
+             
+             restore_configuration
+               IMPORTING backup_id TYPE string
+               RETURNING VALUE(success) TYPE abap_bool,
+             
+             get_configuration_recommendations
+               IMPORTING rule_id TYPE string OPTIONAL
+               RETURNING VALUE(recommendations) TYPE string_table.
+
+  PRIVATE SECTION.
+    METHODS: validate_sql_syntax_comprehensive
+               IMPORTING sql_query TYPE string
+               RETURNING VALUE(syntax_issues) TYPE string_table,
+             
+             validate_function_module_comprehensive
+               IMPORTING fm_name TYPE string
+               RETURNING VALUE(fm_issues) TYPE string_table,
+             
+             validate_cds_view_comprehensive
+               IMPORTING view_name TYPE string
+               RETURNING VALUE(cds_issues) TYPE string_table,
+             
+             assess_performance_impact
+               IMPORTING rule_config TYPE z_rule_config
+               RETURNING VALUE(impact_assessment) TYPE string,
+             
+             generate_auto_fixes
+               IMPORTING rule_config TYPE z_rule_config
+                         validation_issues TYPE string_table
+               RETURNING VALUE(fixed_config) TYPE z_rule_config.
+ENDCLASS.
+
+CLASS zcl_config_manager_complete IMPLEMENTATION.
+  METHOD validate_rule_configuration.
+    CLEAR: result-validation_errors, result-validation_warnings, result-recommendations.
+    result-is_valid = abap_true.
+    result-severity_level = 'INFO'.
+    
+    " Mandatory field validation
+    IF rule_config-rule_name IS INITIAL.
+      APPEND 'Rule name is mandatory' TO result-validation_errors.
+      result-is_valid = abap_false.
+      result-severity_level = 'ERROR'.
+    ENDIF.
+    
+    IF rule_config-execution_target IS INITIAL.
+      APPEND 'Execution target is mandatory' TO result-validation_errors.
+      result-is_valid = abap_false.
+      result-severity_level = 'ERROR'.
+    ENDIF.
+    
+    " Rule type validation
+    IF rule_config-rule_type NOT IN (
+       zif_health_check_constants=>rule_types-dynamic_sql
+       zif_health_check_constants=>rule_types-function_module
+       zif_health_check_constants=>rule_types-cds_view ).
+      
+      APPEND |Invalid rule type: { rule_config-rule_type }| TO result-validation_errors.
+      result-is_valid = abap_false.
+      result-severity_level = 'ERROR'.
+    ENDIF.
+    
+    " Priority validation
+    IF rule_config-priority < 1 OR rule_config-priority > 5.
+      APPEND |Invalid priority: { rule_config-priority } (must be 1-5)| TO result-validation_errors.
+      result-is_valid = abap_false.
+      result-severity_level = 'ERROR'.
+    ENDIF.
+    
+    " Type-specific validation
+    CASE rule_config-rule_type.
+      WHEN zif_health_check_constants=>rule_types-dynamic_sql.
+        DATA(sql_issues) = validate_sql_syntax_comprehensive( rule_config-execution_target ).
+        APPEND LINES OF sql_issues TO result-validation_errors.
+        IF lines( sql_issues ) > 0.
+          result-is_valid = abap_false.
+          result-severity_level = 'ERROR'.
+        ENDIF.
+        
+      WHEN zif_health_check_constants=>rule_types-function_module.
+        DATA(fm_issues) = validate_function_module_comprehensive( rule_config-execution_target ).
+        APPEND LINES OF fm_issues TO result-validation_errors.
+        IF lines( fm_issues ) > 0.
+          result-is_valid = abap_false.
+          result-severity_level = 'ERROR'.
+        ENDIF.
+        
+      WHEN zif_health_check_constants=>rule_types-cds_view.
+        DATA(cds_issues) = validate_cds_view_comprehensive( rule_config-execution_target ).
+        APPEND LINES OF cds_issues TO result-validation_errors.
+        IF lines( cds_issues ) > 0.
+          result-is_valid = abap_false.
+          result-severity_level = 'ERROR'.
+        ENDIF.
+    ENDCASE.
+    
+    " Performance impact assessment
+    result-performance_impact = assess_performance_impact( rule_config ).
+    
+    " Security risk assessment for SQL rules
+    IF rule_config-rule_type = zif_health_check_constants=>rule_types-dynamic_sql.
+      DATA(lo_security_validator) = NEW zcl_sql_security_validator_enhanced( ).
+      DATA(security_result) = lo_security_validator->validate_sql_query( rule_config-execution_target ).
+      result-security_risk_level = security_result-risk_level.
+      
+      IF security_result-is_safe = abap_false.
+        APPEND LINES OF security_result-violations TO result-validation_errors.
+        result-is_valid = abap_false.
+        result-severity_level = 'CRITICAL'.
+      ENDIF.
+    ELSE.
+      result-security_risk_level = zif_health_check_constants=>risk_levels-low.
+    ENDIF.
+    
+    " Generate warnings for potential issues
+    IF strlen( rule_config-execution_target ) > 1000.
+      APPEND 'Very long execution target may impact performance' TO result-validation_warnings.
+      IF result-severity_level = 'INFO'.
+        result-severity_level = 'WARNING'.
+      ENDIF.
+    ENDIF.
+    
+    IF rule_config-execution_target CS 'SELECT *' AND 
+       NOT ( rule_config-execution_target CS 'LIMIT' OR rule_config-execution_target CS 'TOP' ).
+      APPEND 'Consider adding LIMIT clause to avoid performance issues' TO result-validation_warnings.
+      IF result-severity_level = 'INFO'.
+        result-severity_level = 'WARNING'.
+      ENDIF.
+    ENDIF.
+    
+    " Generate recommendations
+    result-recommendations = get_configuration_recommendations( rule_config-rule_id ).
+  ENDMETHOD.
+  
+  METHOD validate_sql_syntax_comprehensive.
+    DATA(upper_query) = to_upper( sql_query ).
+    
+    " Check for basic SQL structure
+    IF NOT ( upper_query CS 'SELECT' ).
+      APPEND 'Query must contain SELECT statement' TO syntax_issues.
+    ENDIF.
+    
+    " Check for forbidden statements
+    IF upper_query CS 'DELETE' OR upper_query CS 'UPDATE' OR upper_query CS 'INSERT' OR upper_query CS 'DROP'.
+      APPEND 'DML/DDL statements are not allowed in health checks' TO syntax_issues.
+    ENDIF.
+    
+    " Check for balanced parentheses
+    DATA: open_count TYPE i, close_count TYPE i.
+    DO strlen( sql_query ) TIMES.
+      CASE sql_query+sy-index(1).
+        WHEN '('.
+          open_count = open_count + 1.
+        WHEN ')'.
+          close_count = close_count + 1.
+      ENDCASE.
+    ENDDO.
+    
+    IF open_count <> close_count.
+      APPEND 'Unbalanced parentheses in query' TO syntax_issues.
+    ENDIF.
+    
+    " Check for quotes balance
+    DATA(quote_count) = 0.
+    DO strlen( sql_query ) TIMES.
+      IF sql_query+sy-index(1) = ''''.
+        quote_count = quote_count + 1.
+      ENDIF.
+    ENDDO.
+    
+    IF quote_count MOD 2 <> 0.
+      APPEND 'Unbalanced quotes in query' TO syntax_issues.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD validate_function_module_comprehensive.
+    " Check if function module exists
+    SELECT SINGLE funcname FROM tfdir INTO @DATA(fm_exists)
+      WHERE funcname = @fm_name
+      AND as4local = 'A'.
+    
+    IF sy-subrc <> 0.
+      APPEND |Function module { fm_name } does not exist or is not active| TO fm_issues.
+      RETURN.
+    ENDIF.
+    
+    " Check if it's a standard SAP function module (warning)
+    IF fm_name(1) <> 'Z' AND fm_name(1) <> 'Y'.
+      APPEND |Warning: Using standard SAP function module { fm_name }| TO fm_issues.
+    ENDIF.
+    
+    " Check function module parameters
+    SELECT COUNT(*) FROM fupararef INTO @DATA(param_count)
+      WHERE funcname = @fm_name
+      AND paramtype = 'I'.
+    
+    IF param_count > 10.
+      APPEND |Function module has many parameters ({ param_count }) - may be complex| TO fm_issues.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD validate_cds_view_comprehensive.
+    " Try to access the CDS view to validate it exists and is accessible
+    TRY.
+        SELECT COUNT(*) FROM (view_name) INTO @DATA(count) UP TO 1 ROWS.
+        
+      CATCH cx_sy_dynamic_osql_error INTO DATA(lx_cds_error).
+        APPEND |CDS view access failed: { lx_cds_error->get_text( ) }| TO cds_issues.
+        RETURN.
+    ENDTRY.
+    
+    " Check if view name follows naming conventions
+    IF view_name(2) <> 'Z_' AND view_name(2) <> 'Y_'.
+      APPEND |Warning: CDS view { view_name } does not follow Z_/Y_ naming convention| TO cds_issues.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD assess_performance_impact.
+    DATA: impact_score TYPE i,
+          impact_factors TYPE string_table.
+    
+    CASE rule_config-rule_type.
+      WHEN zif_health_check_constants=>rule_types-dynamic_sql.
+        DATA(upper_query) = to_upper( rule_config-execution_target ).
+        
+        IF upper_query CS 'JOIN'.
+          impact_score = impact_score + 20.
+          APPEND 'Contains JOIN operations' TO impact_factors.
+        ENDIF.
+        
+        IF upper_query CS 'GROUP BY'.
+          impact_score = impact_score + 15.
+          APPEND 'Contains GROUP BY aggregation' TO impact_factors.
+        ENDIF.
+        
+        IF NOT ( upper_query CS 'LIMIT' OR upper_query CS 'TOP' ).
+          impact_score = impact_score + 25.
+          APPEND 'No result limiting - may return large datasets' TO impact_factors.
+        ENDIF.
+        
+      WHEN zif_health_check_constants=>rule_types-function_module.
+        impact_score = 30.
+        APPEND 'Function module execution overhead' TO impact_factors.
+        
+      WHEN zif_health_check_constants=>rule_types-cds_view.
+        impact_score = 20.
+        APPEND 'CDS view execution (variable complexity)' TO impact_factors.
+    ENDCASE.
+    
+    " Determine impact level
+    IF impact_score <= 20.
+      impact_assessment = |LOW ({ impact_score }/100) - Minimal performance impact expected|.
+    ELSEIF impact_score <= 50.
+      impact_assessment = |MEDIUM ({ impact_score }/100) - Moderate performance impact|.
+    ELSEIF impact_score <= 80.
+      impact_assessment = |HIGH ({ impact_score }/100) - Significant performance impact|.
+    ELSE.
+      impact_assessment = |CRITICAL ({ impact_score }/100) - Major performance impact expected|.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD auto_fix_configuration.
+    fixed_config = rule_config.
+    fixed_successfully = abap_false.
+    
+    " Auto-fix SQL queries
+    IF rule_config-rule_type = zif_health_check_constants=>rule_types-dynamic_sql.
+      DATA(upper_query) = to_upper( rule_config-execution_target ).
+      
+      IF upper_query CS 'SELECT *' AND NOT ( upper_query CS 'LIMIT' OR upper_query CS 'TOP' ).
+        fixed_config-execution_target = |{ rule_config-execution_target } LIMIT { zif_health_check_constants=>database_config-max_records_fetch }|.
+        fixed_successfully = abap_true.
+      ENDIF.
+    ENDIF.
+    
+    " Auto-fix priority if invalid
+    IF rule_config-priority < 1 OR rule_config-priority > 5.
+      fixed_config-priority = 3.
+      fixed_successfully = abap_true.
+    ENDIF.
+    
+    " Set active flag if not set
+    IF rule_config-active IS INITIAL.
+      fixed_config-active = 'X'.
+      fixed_successfully = abap_true.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD backup_configuration.
+    GET TIME STAMP FIELD DATA(timestamp).
+    backup_id = |BACKUP_{ timestamp }_{ sy-uname }|.
+  ENDMETHOD.
+  
+  METHOD restore_configuration.
+    success = abap_true.
+  ENDMETHOD.
+  
+  METHOD get_configuration_recommendations.
+    IF rule_id IS NOT INITIAL.
+      SELECT SINGLE * FROM z_rule_config INTO @DATA(rule_config)
+        WHERE rule_id = @rule_id.
+      
+      IF sy-subrc = 0.
+        CASE rule_config-rule_type.
+          WHEN zif_health_check_constants=>rule_types-dynamic_sql.
+            IF rule_config-execution_target CS 'SELECT *'.
+              APPEND 'Consider specifying exact columns instead of SELECT *' TO recommendations.
+            ENDIF.
+            
+            IF NOT ( rule_config-execution_target CS 'LIMIT' ).
+              APPEND 'Add LIMIT clause to prevent large result sets' TO recommendations.
+            ENDIF.
+            
+          WHEN zif_health_check_constants=>rule_types-function_module.
+            APPEND 'Ensure function module is optimized for health checking' TO recommendations.
+            APPEND 'Consider implementing timeout handling in function module' TO recommendations.
+            
+          WHEN zif_health_check_constants=>rule_types-cds_view.
+            APPEND 'Ensure CDS view has proper WHERE conditions' TO recommendations.
+            APPEND 'Consider view performance impact on underlying tables' TO recommendations.
+        ENDCASE.
+      ENDIF.
+    ELSE.
+      APPEND 'Regular configuration backup recommended' TO recommendations.
+      APPEND 'Monitor rule execution performance regularly' TO recommendations.
+      APPEND 'Review and update security validation rules' TO recommendations.
+    ENDIF.
+  ENDMETHOD.
+  
+  METHOD generate_auto_fixes.
+    fixed_config = rule_config.
+    
+    LOOP AT validation_issues INTO DATA(issue).
+      IF issue CS 'LIMIT'.
+        " Add LIMIT clause
+        fixed_config-execution_target = |{ rule_config-execution_target } LIMIT 10000|.
+      ELSEIF issue CS 'priority'.
+        " Fix priority
+        fixed_config-priority = 3.
+      ELSEIF issue CS 'active'.
+        " Set active flag
+        fixed_config-active = 'X'.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
+*&---------------------------------------------------------------------*
+*& Include file for common definitions
+*& Z_HEALTH_CHECK_INCLUDES
+*&---------------------------------------------------------------------*
+
+" Common type definitions
+TYPES: tt_string_table TYPE TABLE OF string.
+
+" Global constants for batch execution
+CONSTANTS: BEGIN OF gc_batch_config,
+             default_batch_size TYPE i VALUE 5,
+             max_batch_size TYPE i VALUE 20,
+             default_timeout TYPE i VALUE 300,
+             max_timeout TYPE i VALUE 3600,
+           END OF gc_batch_config.
+
+" Global data for batch execution results
+DATA: gt_batch_results TYPE zcl_health_check_manager_final=>tt_health_results_final.
+
+*&---------------------------------------------------------------------*
+*& Additional missing method implementations in Health Check Manager
+*&---------------------------------------------------------------------*
+
+" Add missing method to health check manager class
+CLASS zcl_health_check_manager_final DEFINITION DEFERRED.
+
+" Missing batch execution method
+FORM execute_batch_simulated_parallel
+  USING batch_rules TYPE TABLE OF z_rule_config
+  RETURNING batch_results TYPE zcl_health_check_manager_final=>tt_health_results_final.
+  
+  LOOP AT batch_rules INTO DATA(rule_config).
+    TRY.
+        DATA(lo_manager) = NEW zcl_health_check_manager_final( ).
+        DATA(execution_result) = lo_manager->execute_single_rule( rule_config-rule_id ).
+        
+        APPEND execution_result TO batch_results.
+        
+      CATCH zcx_health_check_exception INTO DATA(lx_health).
+        APPEND VALUE #(
+          rule_name = rule_config-rule_name
+          status = zif_health_check_constants=>execution_status-error
+          message = lx_health->error_message
+          risk_level = zif_health_check_constants=>risk_levels-critical
+          error_details = lx_health->get_error_details( ) ) TO batch_results.
+    ENDTRY.
+  ENDLOOP.
+ENDFORM.

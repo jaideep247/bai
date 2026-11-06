@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Text Symbols for Z_BAI_VALIDATION_DASHBOARD
+*&---------------------------------------------------------------------*
+
+TEXT-001: View Selection
+TEXT-002: Filter Criteria
+TEXT-003: Display Options
+
+*&---------------------------------------------------------------------*
+*& Selection Screen Text (Parameters)
+*&---------------------------------------------------------------------*
+
+P_SUMM:   Summary View
+P_DET:    Detail View  
+P_BATCH:  Batch Overview
+
+P_DATEFR: From Date
+P_DATETO: To Date
+
+S_BATCH:  Batch IDs
+S_BAI:    BAI Codes
+S_STATUS: Status (P/R/Y)
+
+P_FAILED: Show Failed Only
+P_LAYOUT: Layout Variant

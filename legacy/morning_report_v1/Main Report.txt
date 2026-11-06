@@ -1,0 +1,715 @@
+*&---------------------------------------------------------------------*
+*& Report Z_HEALTH_CHECK_REPORT_FINAL
+*&---------------------------------------------------------------------*
+*& Enhanced ABAP Dynamic Health Check System - Main Report
+*& Complete enterprise-grade health monitoring solution
+*&---------------------------------------------------------------------*
+
+REPORT z_health_check_report_final.
+
+" Include necessary interfaces and types
+INCLUDE: z_health_check_includes.
+
+" Global data declarations
+DATA: gt_results TYPE zcl_health_check_manager_final=>tt_health_results_final,
+      go_manager TYPE REF TO zcl_health_check_manager_final,
+      gv_correlation_id TYPE string.
+
+" Selection screen definition
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  " Execution Parameters
+  PARAMETERS: p_system TYPE sy-sysid DEFAULT sy-sysid OBLIGATORY,
+              p_days TYPE i DEFAULT 30,
+              p_paral TYPE abap_bool AS CHECKBOX DEFAULT abap_false,
+              p_maxtsk TYPE i DEFAULT 5,
+              p_cache TYPE abap_bool AS CHECKBOX DEFAULT abap_true,
+              p_secure TYPE abap_bool AS CHECKBOX DEFAULT abap_true.
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-002.
+  " Selection Criteria
+  SELECT-OPTIONS: s_rule FOR z_rule_config-rule_id,
+                  s_categ FOR z_rule_config-category,
+                  s_prior FOR z_rule_config-priority.
+SELECTION-SCREEN END OF BLOCK b2.
+
+SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE TEXT-003.
+  " Output Options
+  PARAMETERS: p_detail TYPE abap_bool AS CHECKBOX DEFAULT abap_true,
+              p_dashboard TYPE abap_bool AS CHECKBOX DEFAULT abap_false,
+              p_export TYPE abap_bool AS CHECKBOX DEFAULT abap_false,
+              p_format TYPE string DEFAULT 'EXCEL' LOWER CASE,
+              p_email TYPE abap_bool AS CHECKBOX DEFAULT abap_false.
+SELECTION-SCREEN END OF BLOCK b3.
+
+SELECTION-SCREEN BEGIN OF BLOCK b4 WITH FRAME TITLE TEXT-004.
+  " Advanced Options
+  PARAMETERS: p_test TYPE abap_bool AS CHECKBOX DEFAULT abap_false,
+              p_sched TYPE abap_bool AS CHECKBOX DEFAULT abap_false,
+              p_log TYPE abap_bool AS CHECKBOX DEFAULT abap_true.
+SELECTION-SCREEN END OF BLOCK b4.
+
+" Selection screen validation
+AT SELECTION-SCREEN.
+  PERFORM validate_selection_screen.
+
+" Main processing
+START-OF-SELECTION.
+  PERFORM main_processing.
+
+END-OF-SELECTION.
+  PERFORM display_results.
+
+*&---------------------------------------------------------------------*
+*& Form validate_selection_screen
+*&---------------------------------------------------------------------*
+FORM validate_selection_screen.
+  " Validate max parallel tasks
+  IF p_maxtsk < 1 OR p_maxtsk > 20.
+    MESSAGE 'Max parallel tasks must be between 1 and 20' TYPE 'E'.
+  ENDIF.
+  
+  " Validate system ID
+  IF strlen( p_system ) <> 3.
+    MESSAGE 'System ID must be exactly 3 characters' TYPE 'E'.
+  ENDIF.
+  
+  " Validate days back
+  IF p_days < 1 OR p_days > 365.
+    MESSAGE 'Days back must be between 1 and 365' TYPE 'E'.
+  ENDIF.
+  
+  " Validate export format
+  IF p_export = abap_true.
+    CASE to_upper( p_format ).
+      WHEN 'EXCEL' OR 'CSV' OR 'PDF' OR 'JSON'.
+        " Valid formats
+      WHEN OTHERS.
+        MESSAGE 'Invalid export format. Use: EXCEL, CSV, PDF, or JSON' TYPE 'E'.
+    ENDCASE.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form main_processing
+*&---------------------------------------------------------------------*
+FORM main_processing.
+  " Initialize framework
+  TRY.
+      go_manager = NEW zcl_health_check_manager_final( ).
+      
+      " Generate correlation ID for this execution
+      CALL FUNCTION 'GUID_CREATE'
+        IMPORTING
+          ev_guid_22 = gv_correlation_id.
+      
+      WRITE: / 'Enhanced Health Check System Started',
+             / 'Correlation ID:', gv_correlation_id,
+             / 'Execution Time:', sy-datum, sy-uzeit,
+             /.
+      
+      " Validate system configuration if in test mode
+      IF p_test = abap_true.
+        PERFORM validate_system_configuration.
+      ENDIF.
+      
+      " Convert selection options to internal tables
+      DATA: lt_rule_filter TYPE string_table,
+            lt_category_filter TYPE string_table,
+            lt_priority_filter TYPE string_table.
+      
+      PERFORM convert_selection_options
+        CHANGING lt_rule_filter
+                 lt_category_filter
+                 lt_priority_filter.
+      
+      " Execute health checks
+      gt_results = go_manager->execute_all_checks_final(
+        source_system = p_system
+        date_range = |DAYS_BACK_{ p_days }|
+        parallel_execution = p_paral
+        max_parallel_tasks = p_maxtsk
+        enable_caching = p_cache
+        security_validation = p_secure
+        rule_filter = lt_rule_filter
+        category_filter = lt_category_filter
+        priority_filter = lt_priority_filter ).
+      
+      " Log execution summary
+      IF p_log = abap_true.
+        PERFORM log_execution_summary.
+      ENDIF.
+      
+      " Schedule automated execution if requested
+      IF p_sched = abap_true.
+        PERFORM schedule_automation.
+      ENDIF.
+      
+      " Export results if requested
+      IF p_export = abap_true.
+        PERFORM export_results.
+      ENDIF.
+      
+      " Send email notifications if requested
+      IF p_email = abap_true.
+        PERFORM send_email_notifications.
+      ENDIF.
+      
+    CATCH zcx_health_check_exception INTO DATA(lx_health).
+      WRITE: / 'Health Check Execution Failed:',
+             / lx_health->get_error_details( ),
+             /.
+      MESSAGE lx_health->error_message TYPE 'E'.
+      
+    CATCH cx_root INTO DATA(lx_system).
+      WRITE: / 'System Error:',
+             / lx_system->get_text( ),
+             /.
+      MESSAGE lx_system->get_text( ) TYPE 'E'.
+  ENDTRY.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form validate_system_configuration
+*&---------------------------------------------------------------------*
+FORM validate_system_configuration.
+  WRITE: / 'Validating System Configuration...',
+         /.
+  
+  DATA(validation_results) = go_manager->validate_system_configuration( ).
+  
+  LOOP AT validation_results INTO DATA(validation_message).
+    WRITE: / validation_message.
+  ENDLOOP.
+  
+  WRITE: /.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form convert_selection_options
+*&---------------------------------------------------------------------*
+FORM convert_selection_options
+  CHANGING ct_rule_filter TYPE string_table
+           ct_category_filter TYPE string_table
+           ct_priority_filter TYPE string_table.
+  
+  " Convert rule ID selection
+  LOOP AT s_rule.
+    IF s_rule-low IS NOT INITIAL.
+      APPEND s_rule-low TO ct_rule_filter.
+    ENDIF.
+    IF s_rule-high IS NOT INITIAL AND s_rule-high <> s_rule-low.
+      APPEND s_rule-high TO ct_rule_filter.
+    ENDIF.
+  ENDLOOP.
+  
+  " Convert category selection
+  LOOP AT s_categ.
+    IF s_categ-low IS NOT INITIAL.
+      APPEND s_categ-low TO ct_category_filter.
+    ENDIF.
+    IF s_categ-high IS NOT INITIAL AND s_categ-high <> s_categ-low.
+      APPEND s_categ-high TO ct_category_filter.
+    ENDIF.
+  ENDLOOP.
+  
+  " Convert priority selection
+  LOOP AT s_prior.
+    IF s_prior-low IS NOT INITIAL.
+      APPEND |{ s_prior-low }| TO ct_priority_filter.
+    ENDIF.
+    IF s_prior-high IS NOT INITIAL AND s_prior-high <> s_prior-low.
+      APPEND |{ s_prior-high }| TO ct_priority_filter.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form log_execution_summary
+*&---------------------------------------------------------------------*
+FORM log_execution_summary.
+  DATA(summary) = go_manager->get_execution_summary_final( gt_results ).
+  
+  WRITE: / 'Execution Summary:',
+         / '==================',
+         / 'Total Rules:', summary-total_rules,
+         / 'Passed:', summary-passed_rules,
+         / 'Failed:', summary-failed_rules,
+         / 'Warnings:', summary-warning_rules,
+         / 'Errors:', summary-error_rules,
+         / 'Skipped:', summary-skipped_rules,
+         / 'Overall Health Score:', summary-overall_health_score,
+         / 'Critical Issues:', summary-critical_issues_count,
+         / 'High Risk Issues:', summary-high_risk_count,
+         / 'Total Execution Time:', summary-total_execution_time, 'ms',
+         / 'Average Execution Time:', summary-average_execution_time, 'ms',
+         / 'Total Memory Used:', summary-total_memory_used, 'MB',
+         /.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form schedule_automation
+*&---------------------------------------------------------------------*
+FORM schedule_automation.
+  TRY.
+      DATA(job_id) = go_manager->schedule_automated_execution( 
+        schedule_config = |DAILY_EXECUTION_{ sy-datum }| ).
+      
+      WRITE: / 'Automated Execution Scheduled:',
+             / 'Job ID:', job_id,
+             /.
+      
+    CATCH zcx_health_check_exception INTO DATA(lx_schedule).
+      WRITE: / 'Scheduling Failed:',
+             / lx_schedule->get_error_details( ),
+             /.
+  ENDTRY.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form export_results
+*&---------------------------------------------------------------------*
+FORM export_results.
+  DATA: file_path TYPE string,
+        file_content TYPE string_table.
+  
+  CASE to_upper( p_format ).
+    WHEN 'EXCEL'.
+      PERFORM export_to_excel CHANGING file_path.
+      
+    WHEN 'CSV'.
+      PERFORM export_to_csv CHANGING file_path.
+      
+    WHEN 'PDF'.
+      PERFORM export_to_pdf CHANGING file_path.
+      
+    WHEN 'JSON'.
+      PERFORM export_to_json CHANGING file_path.
+  ENDCASE.
+  
+  WRITE: / 'Results exported to:', file_path,
+         /.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form export_to_excel
+*&---------------------------------------------------------------------*
+FORM export_to_excel CHANGING cv_file_path TYPE string.
+  " Export to Excel with multiple worksheets
+  DATA: lo_excel TYPE REF TO zcl_excel,
+        lo_worksheet TYPE REF TO zcl_excel_worksheet.
+  
+  TRY.
+      " Create Excel workbook
+      CREATE OBJECT lo_excel.
+      
+      " Summary worksheet
+      lo_worksheet = lo_excel->get_active_worksheet( ).
+      lo_worksheet->set_title( 'Summary' ).
+      
+      " Add summary data
+      DATA(summary) = go_manager->get_execution_summary_final( gt_results ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 1 ip_value = 'Health Check Summary' ).
+      lo_worksheet->set_cell( ip_row = 2 ip_column = 1 ip_value = 'Overall Health Score' ).
+      lo_worksheet->set_cell( ip_row = 2 ip_column = 2 ip_value = summary-overall_health_score ).
+      lo_worksheet->set_cell( ip_row = 3 ip_column = 1 ip_value = 'Total Rules' ).
+      lo_worksheet->set_cell( ip_row = 3 ip_column = 2 ip_value = summary-total_rules ).
+      lo_worksheet->set_cell( ip_row = 4 ip_column = 1 ip_value = 'Passed Rules' ).
+      lo_worksheet->set_cell( ip_row = 4 ip_column = 2 ip_value = summary-passed_rules ).
+      lo_worksheet->set_cell( ip_row = 5 ip_column = 1 ip_value = 'Failed Rules' ).
+      lo_worksheet->set_cell( ip_row = 5 ip_column = 2 ip_value = summary-failed_rules ).
+      
+      " Detailed results worksheet
+      lo_worksheet = lo_excel->add_new_worksheet( 'Detailed Results' ).
+      
+      " Add headers
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 1 ip_value = 'Rule Name' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 2 ip_value = 'Status' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 3 ip_value = 'Risk Level' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 4 ip_value = 'Performance Score' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 5 ip_value = 'Execution Time (ms)' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 6 ip_value = 'Memory Used (MB)' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 7 ip_value = 'Record Count' ).
+      lo_worksheet->set_cell( ip_row = 1 ip_column = 8 ip_value = 'Message' ).
+      
+      " Add data rows
+      DATA(row_number) = 2.
+      LOOP AT gt_results INTO DATA(result).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 1 ip_value = result-rule_name ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 2 ip_value = result-status ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 3 ip_value = result-risk_level ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 4 ip_value = result-performance_score ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 5 ip_value = result-execution_time ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 6 ip_value = result-memory_used_mb ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 7 ip_value = result-record_count ).
+        lo_worksheet->set_cell( ip_row = row_number ip_column = 8 ip_value = result-message ).
+        row_number = row_number + 1.
+      ENDLOOP.
+      
+      " Save file
+      cv_file_path = |/tmp/health_check_{ sy-datum }_{ sy-uzeit }.xlsx|.
+      " Note: In real implementation, would use appropriate file system calls
+      
+    CATCH cx_root INTO DATA(lx_excel).
+      WRITE: / 'Excel export failed:', lx_excel->get_text( ).
+  ENDTRY.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form export_to_csv
+*&---------------------------------------------------------------------*
+FORM export_to_csv CHANGING cv_file_path TYPE string.
+  DATA: csv_content TYPE string_table.
+  
+  " CSV Header
+  APPEND 'Rule Name;Status;Risk Level;Performance Score;Execution Time;Memory Used;Record Count;Message' TO csv_content.
+  
+  " Data rows
+  LOOP AT gt_results INTO DATA(result).
+    DATA(csv_line) = |{ result-rule_name };{ result-status };{ result-risk_level };{ result-performance_score };{ result-execution_time };{ result-memory_used_mb };{ result-record_count };{ result-message }|.
+    APPEND csv_line TO csv_content.
+  ENDLOOP.
+  
+  " Save to file
+  cv_file_path = |/tmp/health_check_{ sy-datum }_{ sy-uzeit }.csv|.
+  
+  " Note: In real implementation, would use OPEN DATASET/TRANSFER/CLOSE DATASET
+  WRITE: / 'CSV content prepared for export'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form export_to_pdf
+*&---------------------------------------------------------------------*
+FORM export_to_pdf CHANGING cv_file_path TYPE string.
+  " Generate PDF report
+  DATA(report_content) = go_manager->generate_health_report( 
+    results = gt_results
+    report_format = 'DETAILED'
+    include_recommendations = abap_true ).
+  
+  cv_file_path = |/tmp/health_check_report_{ sy-datum }_{ sy-uzeit }.pdf|.
+  
+  " Note: In real implementation, would convert string table to PDF
+  WRITE: / 'PDF report generated'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form export_to_json
+*&---------------------------------------------------------------------*
+FORM export_to_json CHANGING cv_file_path TYPE string.
+  DATA: json_content TYPE string.
+  
+  " Simple JSON structure (in real implementation would use JSON serializer)
+  json_content = '{"healthCheckResults":['.
+  
+  LOOP AT gt_results INTO DATA(result).
+    IF sy-tabix > 1.
+      json_content = |{ json_content },|.
+    ENDIF.
+    
+    json_content = |{ json_content }{"ruleName":"{ result-rule_name }","status":"{ result-status }","riskLevel":"{ result-risk_level }","performanceScore":{ result-performance_score },"executionTime":{ result-execution_time },"memoryUsed":{ result-memory_used_mb },"recordCount":{ result-record_count },"message":"{ result-message }"}|.
+  ENDLOOP.
+  
+  json_content = |{ json_content }]}|.
+  
+  cv_file_path = |/tmp/health_check_{ sy-datum }_{ sy-uzeit }.json|.
+  WRITE: / 'JSON export prepared'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form send_email_notifications
+*&---------------------------------------------------------------------*
+FORM send_email_notifications.
+  DATA(summary) = go_manager->get_execution_summary_final( gt_results ).
+  
+  " Only send notifications for critical issues
+  IF summary-critical_issues_count > 0 OR summary-overall_health_score < 5.
+    
+    " Prepare email content
+    DATA: email_subject TYPE string,
+          email_body TYPE string_table.
+    
+    email_subject = |Health Check Alert - System { p_system } - { sy-datum }|.
+    
+    APPEND |Health Check Alert for System { p_system }| TO email_body.
+    APPEND |Execution Date: { sy-datum } { sy-uzeit }| TO email_body.
+    APPEND '' TO email_body.
+    APPEND |Overall Health Score: { summary-overall_health_score }/10| TO email_body.
+    APPEND |Critical Issues: { summary-critical_issues_count }| TO email_body.
+    APPEND |High Risk Issues: { summary-high_risk_count }| TO email_body.
+    APPEND |Failed Rules: { summary-failed_rules }| TO email_body.
+    APPEND '' TO email_body.
+    APPEND 'Please review the health check results and take appropriate action.' TO email_body.
+    APPEND 'Correlation ID: ' TO email_body.
+    APPEND gv_correlation_id TO email_body.
+    
+    " Send email (placeholder implementation)
+    WRITE: / 'Email notification prepared:',
+           / 'Subject:', email_subject,
+           / 'Recipients would be notified of critical issues',
+           /.
+  ELSE.
+    WRITE: / 'No critical issues - email notification not required',
+           /.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form display_results
+*&---------------------------------------------------------------------*
+FORM display_results.
+  IF p_dashboard = abap_true.
+    PERFORM display_dashboard.
+  ELSE.
+    PERFORM display_alv_results.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form display_dashboard
+*&---------------------------------------------------------------------*
+FORM display_dashboard.
+  " Dashboard-style display
+  DATA(summary) = go_manager->get_execution_summary_final( gt_results ).
+  
+  WRITE: / '========================================',
+         / '       SYSTEM HEALTH DASHBOARD',
+         / '========================================',
+         /.
+  
+  " Health score visualization
+  DATA(health_indicator) = COND string( 
+    WHEN summary-overall_health_score >= 8 THEN 'EXCELLENT'
+    WHEN summary-overall_health_score >= 6 THEN 'GOOD'
+    WHEN summary-overall_health_score >= 4 THEN 'FAIR'
+    ELSE 'POOR' ).
+  
+  WRITE: / 'Overall Health Score:', summary-overall_health_score, '/10 (', health_indicator, ')',
+         /.
+  
+  " Status summary with visual indicators
+  WRITE: / 'Status Summary:',
+         / '  ✓ Passed:', summary-passed_rules,
+         / '  ⚠ Warnings:', summary-warning_rules,
+         / '  ✗ Failed:', summary-failed_rules,
+         / '  ❌ Errors:', summary-error_rules,
+         / '  ⏸ Skipped:', summary-skipped_rules,
+         /.
+  
+  " Risk assessment
+  WRITE: / 'Risk Assessment:',
+         / '  🔴 Critical:', summary-critical_issues_count,
+         / '  🟠 High:', summary-high_risk_count,
+         / '  🟡 Medium:', summary-medium_risk_count,
+         / '  🟢 Low:', summary-low_risk_count,
+         /.
+  
+  " Performance metrics
+  WRITE: / 'Performance Metrics:',
+         / '  Total Execution Time:', summary-total_execution_time, 'ms',
+         / '  Average Execution Time:', summary-average_execution_time, 'ms',
+         / '  Total Memory Usage:', summary-total_memory_used, 'MB',
+         /.
+  
+  " Top issues
+  WRITE: / 'Top Issues Requiring Attention:',
+         /.
+  
+  DATA(issue_count) = 0.
+  LOOP AT gt_results INTO DATA(result) WHERE status = zif_health_check_constants=>execution_status-failed
+                                         OR risk_level = zif_health_check_constants=>risk_levels-critical
+                                         OR risk_level = zif_health_check_constants=>risk_levels-high.
+    
+    issue_count = issue_count + 1.
+    IF issue_count > 5. " Show top 5 issues
+      EXIT.
+    ENDIF.
+    
+    WRITE: / issue_count, '. ', result-rule_name, '(', result-status, '/', result-risk_level, ')'.
+  ENDLOOP.
+  
+  IF issue_count = 0.
+    WRITE: / 'No critical issues detected - System is healthy!'.
+  ENDIF.
+  
+  WRITE: /.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form display_alv_results
+*&---------------------------------------------------------------------*
+FORM display_alv_results.
+  " Enhanced ALV display with navigation capabilities
+  DATA: lo_alv TYPE REF TO cl_gui_alv_grid,
+        lo_container TYPE REF TO cl_gui_docking_container,
+        lt_fieldcat TYPE lvc_t_fcat,
+        ls_layout TYPE lvc_s_layo,
+        ls_variant TYPE disvariant.
+  
+  " Build field catalog
+  PERFORM build_fieldcat CHANGING lt_fieldcat.
+  
+  " Set layout options
+  ls_layout-zebra = abap_true.
+  ls_layout-grid_title = |Health Check Results - { sy-datum } { sy-uzeit }|.
+  ls_layout-smalltitle = abap_true.
+  ls_layout-cwidth_opt = abap_true.
+  
+  " Set variant
+  ls_variant-report = sy-repid.
+  ls_variant-variant = '/DEFAULT'.
+  
+  TRY.
+      " Create docking container
+      CREATE OBJECT lo_container
+        EXPORTING
+          repid = sy-repid
+          dynnr = sy-dynnr
+          side = cl_gui_docking_container=>dock_at_bottom
+          extension = 2000.
+      
+      " Create ALV grid
+      CREATE OBJECT lo_alv
+        EXPORTING
+          i_parent = lo_container.
+      
+      " Display ALV with results
+      lo_alv->set_table_for_first_display(
+        EXPORTING
+          is_layout = ls_layout
+          is_variant = ls_variant
+          i_save = 'A'
+        CHANGING
+          it_outtab = gt_results
+          it_fieldcatalog = lt_fieldcat ).
+      
+      " Set up event handling for navigation
+      PERFORM setup_alv_events USING lo_alv.
+      
+    CATCH cx_root INTO DATA(lx_alv).
+      " Fallback to simple list display
+      WRITE: / 'ALV display failed, showing simple list:',
+             / lx_alv->get_text( ),
+             /.
+      PERFORM display_simple_list.
+  ENDTRY.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form build_fieldcat
+*&---------------------------------------------------------------------*
+FORM build_fieldcat CHANGING ct_fieldcat TYPE lvc_t_fcat.
+  DATA: ls_fieldcat TYPE lvc_s_fcat.
+  
+  " Rule Name
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'RULE_NAME'.
+  ls_fieldcat-coltext = 'Rule Name'.
+  ls_fieldcat-outputlen = 30.
+  ls_fieldcat-key = abap_true.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Status
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'STATUS'.
+  ls_fieldcat-coltext = 'Status'.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-emphasize = 'C700'. " Color coding
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Risk Level
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'RISK_LEVEL'.
+  ls_fieldcat-coltext = 'Risk Level'.
+  ls_fieldcat-outputlen = 10.
+  ls_fieldcat-emphasize = 'C600'.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Performance Score
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'PERFORMANCE_SCORE'.
+  ls_fieldcat-coltext = 'Score'.
+  ls_fieldcat-outputlen = 8.
+  ls_fieldcat-decimals_o = 1.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Execution Time
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'EXECUTION_TIME'.
+  ls_fieldcat-coltext = 'Time (ms)'.
+  ls_fieldcat-outputlen = 10.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Memory Used
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'MEMORY_USED_MB'.
+  ls_fieldcat-coltext = 'Memory (MB)'.
+  ls_fieldcat-outputlen = 12.
+  ls_fieldcat-decimals_o = 2.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Record Count
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'RECORD_COUNT'.
+  ls_fieldcat-coltext = 'Records'.
+  ls_fieldcat-outputlen = 10.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Message
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'MESSAGE'.
+  ls_fieldcat-coltext = 'Message'.
+  ls_fieldcat-outputlen = 50.
+  APPEND ls_fieldcat TO ct_fieldcat.
+  
+  " Navigation URL (hidden but available for hotspot)
+  CLEAR ls_fieldcat.
+  ls_fieldcat-fieldname = 'NAVIGATION_URL'.
+  ls_fieldcat-coltext = 'Navigate'.
+  ls_fieldcat-outputlen = 15.
+  ls_fieldcat-hotspot = abap_true.
+  APPEND ls_fieldcat TO ct_fieldcat.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form setup_alv_events
+*&---------------------------------------------------------------------*
+FORM setup_alv_events USING io_alv TYPE REF TO cl_gui_alv_grid.
+  " Set up event handling for double-click navigation
+  DATA: lt_events TYPE cntl_simple_events,
+        ls_event TYPE cntl_simple_event.
+  
+  ls_event-eventid = cl_gui_alv_grid=>mc_evt_hotspot_click.
+  ls_event-appl_event = abap_true.
+  APPEND ls_event TO lt_events.
+  
+  io_alv->set_registered_events( lt_events ).
+  
+  " Note: In real implementation, would set up event handler class
+  WRITE: / 'ALV events configured for navigation'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form display_simple_list
+*&---------------------------------------------------------------------*
+FORM display_simple_list.
+  " Simple list output as fallback
+  WRITE: / 'Rule Name', 25 'Status', 35 'Risk', 45 'Score', 55 'Time(ms)', 70 'Memory(MB)', 85 'Records', 95 'Message',
+         /.
+  
+  LOOP AT gt_results INTO DATA(result).
+    WRITE: / result-rule_name(24), result-status(9), result-risk_level(9), 
+           result-performance_score, result-execution_time(10), 
+           result-memory_used_mb(10), result-record_count(8), 
+           result-message(30).
+  ENDLOOP.
+ENDFORM.
+
+*----------------------------------------------------------------------*
+* Text Symbols
+*----------------------------------------------------------------------*
+* Selection screen texts
+TEXT-001: 'Execution Parameters'.
+TEXT-002: 'Selection Criteria'.
+TEXT-003: 'Output Options'.
+TEXT-004: 'Advanced Options'.

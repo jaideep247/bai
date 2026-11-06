@@ -1,0 +1,200 @@
+@EndUserText.label : 'BAI Validation Lock Table'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_lock {
+  key client      : mandt not null;
+  key lock_key    : char50 not null;
+  description     : char100;
+  created_by      : syuname;
+  created_at      : timestampl;
+@EndUserText.label : 'BAI System Configuration'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_config {
+  key client      : mandt not null;
+  key param_name  : char30 not null;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  param_value     : abap.string(255);
+  
+  description     : char100;
+  data_type       : char10;
+  
+  @Semantics.user.lastChangedBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at      : timestampl;
+@EndUserText.label : 'BAI Validation Checkpoint for Restart'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_checkpoint {
+  key client        : mandt not null;
+  key batch_id      : sysuuid_x16 not null;
+  key chunk_number  : int4 not null;
+  
+  @Semantics.calendar.date
+  execution_date    : datum not null;
+  
+  status            : char1 default 'P';
+  
+  records_processed : int4 default 0;
+  records_passed    : int4 default 0;
+  records_failed    : int4 default 0;
+  
+  duration_ms       : int8 default 0;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  error_message     : abap.string(500);
+  
+  @Semantics.user.createdBy
+  created_by        : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at        : timestampl;
+  
+  @Semantics.user.lastChangedBy
+  changed_by        : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at        : timestampl;
+@EndUserText.label : 'BAI Configuration Change Log'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_config_changelog {
+  key client      : mandt not null;
+  key change_id   : sysuuid_x16 not null;
+  
+  table_name      : tabname;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 200
+  key_fields      : abap.string(200);
+  
+  field_name      : fieldname;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  old_value       : abap.string(500);
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  new_value       : abap.string(500);
+  
+  change_type     : char1;
+  
+  @Semantics.user.createdBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  changed_at      : timestampl;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  change_reason   : abap.string(255);
+  
+  transaction     : tcode;
+  program         : progname;
+@EndUserText.label : 'BAI Validator Configuration'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_validator_config {
+  key client      : mandt not null;
+  key bai_code    : char10 not null;
+  key flow_type   : char1 not null;
+  
+  class_name      : seoclsname not null;
+  active          : abap_bool default abap_true;
+  description     : char60;
+  priority        : int1 default 50;
+  
+  @Semantics.user.createdBy
+  created_by      : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at      : timestampl;
+  
+  @Semantics.user.lastChangedBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at      : timestampl;
+@EndUserText.label : 'BAI Validation Results - Failed Records Only'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_validation_results {
+  key client           : mandt not null;
+  key kukey            : char12 not null;
+  key esnum            : char9 not null;
+  key bai_code         : char10 not null;
+  key batch_id         : sysuuid_x16 not null;
+  
+  vorgc                : char4;
+  belnr                : char10;
+  gjahr                : char4;
+  chect                : char20;
+  flow_type            : char1;
+  
+  status               : char1 default 'R';
+  status_icon          : char4 default '@5C@';
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 100
+  failed_checks        : abap.string(100);
+  
+  primary_failure      : char10;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 5000
+  details_json         : abap.string(5000);
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  message              : abap.string(255);
+  
+  @Semantics.calendar.date
+  validation_date      : datum not null;
+  
+  @Semantics.calendar.time
+  validation_time      : tims not null;
+  
+  @Semantics.user.createdBy
+  validated_by         : syuname;
+  
+  @Semantics.user.createdBy
+  created_by           : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at           : timestampl;
+@EndUserText.label : 'BAI Validation Summary'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_validation_summary {
+  key client            : mandt not null;
+  key batch_id          : sysuuid_x16 not null;
+  key bai_code          : char10 not null;
+  key flow_type         : char1 not null;
+  
+  @Semantics.calendar.date
+  validation_date       : datum not null;
+  
+  @Semantics.calendar.time
+  validation_time       : tims not null;
+  
+  total_records         : int4 default 0;
+  passed_count          : int4 default 0;
+  failed_count          : int4 default 0;
+  warning_count         : int4 default 0;
+  
+  @Semantics.quantity.unitOfMeasure : 'pass_rate_unit'
+  pass_rate             : dec(5,2) default 0;
+  

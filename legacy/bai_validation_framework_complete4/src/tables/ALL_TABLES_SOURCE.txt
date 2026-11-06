@@ -1,0 +1,393 @@
+*&---------------------------------------------------------------------*
+*& Complete Database Tables - All 11 Tables
+*& Ready to create in SE11
+*& All corrections applied
+*&---------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*& TABLE 1: ZBAI_LOCK
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validation Lock Table'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_lock {
+  key client      : mandt not null;
+  key lock_key    : char50 not null;
+  description     : char100;
+  created_by      : syuname;
+  created_at      : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 2: ZBAI_CONFIG
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI System Configuration'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_config {
+  key client      : mandt not null;
+  key param_name  : char30 not null;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  param_value     : abap.string(255);
+  
+  description     : char100;
+  data_type       : char10;
+  
+  @Semantics.user.lastChangedBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at      : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 3: ZBAI_CHECKPOINT
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validation Checkpoint for Restart'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_checkpoint {
+  key client        : mandt not null;
+  key batch_id      : sysuuid_x16 not null;
+  key chunk_number  : int4 not null;
+  
+  @Semantics.calendar.date
+  execution_date    : datum not null;
+  
+  status            : char1 default 'P';
+  
+  records_processed : int4 default 0;
+  records_passed    : int4 default 0;
+  records_failed    : int4 default 0;
+  
+  duration_ms       : int8 default 0;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  error_message     : abap.string(500);
+  
+  @Semantics.user.createdBy
+  created_by        : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at        : timestampl;
+  
+  @Semantics.user.lastChangedBy
+  changed_by        : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at        : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 4: ZBAI_CONFIG_CHANGELOG
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Configuration Change Log'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_config_changelog {
+  key client      : mandt not null;
+  key change_id   : sysuuid_x16 not null;
+  
+  table_name      : tabname;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 200
+  key_fields      : abap.string(200);
+  
+  field_name      : fieldname;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  old_value       : abap.string(500);
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 500
+  new_value       : abap.string(500);
+  
+  change_type     : char1;
+  
+  @Semantics.user.createdBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  changed_at      : timestampl;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  change_reason   : abap.string(255);
+  
+  transaction     : tcode;
+  program         : progname;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 5: ZBAI_VALIDATOR_CONFIG
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validator Configuration'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #C
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zbai_validator_config {
+  key client      : mandt not null;
+  key bai_code    : char10 not null;
+  key flow_type   : char1 not null;
+  
+  class_name      : seoclsname not null;
+  active          : abap_bool default abap_true;
+  description     : char60;
+  priority        : int1 default 50;
+  
+  @Semantics.user.createdBy
+  created_by      : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at      : timestampl;
+  
+  @Semantics.user.lastChangedBy
+  changed_by      : syuname;
+  
+  @Semantics.systemDateTime.lastChangedAt
+  changed_at      : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 6: ZBAI_VALIDATION_RESULTS
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validation Results - Failed Records Only'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_validation_results {
+  key client           : mandt not null;
+  key kukey            : char12 not null;
+  key esnum            : char9 not null;
+  key bai_code         : char10 not null;
+  key batch_id         : sysuuid_x16 not null;
+  
+  vorgc                : char4;
+  belnr                : char10;
+  gjahr                : char4;
+  chect                : char20;
+  flow_type            : char1;
+  
+  status               : char1 default 'R';
+  status_icon          : char4 default '@5C@';
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 100
+  failed_checks        : abap.string(100);
+  
+  primary_failure      : char10;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 5000
+  details_json         : abap.string(5000);
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 255
+  message              : abap.string(255);
+  
+  @Semantics.calendar.date
+  validation_date      : datum not null;
+  
+  @Semantics.calendar.time
+  validation_time      : tims not null;
+  
+  @Semantics.user.createdBy
+  validated_by         : syuname;
+  
+  @Semantics.user.createdBy
+  created_by           : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at           : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 7: ZBAI_VALIDATION_SUMMARY
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validation Summary'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_validation_summary {
+  key client            : mandt not null;
+  key batch_id          : sysuuid_x16 not null;
+  key bai_code          : char10 not null;
+  key flow_type         : char1 not null;
+  
+  @Semantics.calendar.date
+  validation_date       : datum not null;
+  
+  @Semantics.calendar.time
+  validation_time       : tims not null;
+  
+  total_records         : int4 default 0;
+  passed_count          : int4 default 0;
+  failed_count          : int4 default 0;
+  warning_count         : int4 default 0;
+  
+  @Semantics.quantity.unitOfMeasure : 'pass_rate_unit'
+  pass_rate             : dec(5,2) default 0;
+  
+  pass_rate_unit        : char1 default '%';
+  
+  duration_ms           : int8 default 0;
+  avg_ms_per_record     : dec(10,2) default 0;
+  
+  @Semantics.user.createdBy
+  created_by            : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at            : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& TABLE 8: ZBAI_BATCH_AUDIT_LOG
+*&---------------------------------------------------------------------*
+@EndUserText.label : 'BAI Validation Batch Audit Log'
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #DISPLAY_ONLY
+define table zbai_batch_audit_log {
+  key client           : mandt not null;
+  key batch_id         : sysuuid_x16 not null;
+  
+  @Semantics.calendar.date
+  execution_date       : datum not null;
+  
+  @Semantics.calendar.time
+  execution_time       : tims not null;
+  
+  total_records        : int4 default 0;
+  total_passed         : int4 default 0;
+  total_failed         : int4 default 0;
+  
+  @AbapCatalog.dataType : #STRING
+  @AbapCatalog.fieldLength : 200
+  bai_codes_validated  : abap.string(200);
+  
+  @Semantics.calendar.date
+  febep_date_from      : datum;
+  
+  @Semantics.calendar.date
+  febep_date_to        : datum;
+  
+  duration_seconds     : dec(10,2) default 0;
+  
+  status               : char1 default 'S';
+  
+  @Semantics.user.createdBy
+  created_by           : syuname;
+  
+  @Semantics.systemDateTime.createdAt
+  created_at           : timestampl;
+}
+
+*&---------------------------------------------------------------------*
+*& INDEXES FOR ZBAI_VALIDATION_RESULTS
+*&---------------------------------------------------------------------*
+
+* Index 1: Batch + BAI lookup
+CREATE INDEX zbai_validation_results~001 ON zbai_validation_results (
+  client,
+  batch_id,
+  bai_code,
+  flow_type
+);
+
+* Index 2: Date-based queries
+CREATE INDEX zbai_validation_results~002 ON zbai_validation_results (
+  client,
+  validation_date,
+  bai_code,
+  status
+);
+
+* Index 3: Trending/Analytics
+CREATE INDEX zbai_validation_results~003 ON zbai_validation_results (
+  client,
+  bai_code,
+  status,
+  validation_date DESC
+);
+
+* Index 4: Document lookup
+CREATE INDEX zbai_validation_results~004 ON zbai_validation_results (
+  client,
+  belnr,
+  gjahr,
+  bai_code
+);
+
+* Index 5: Failure analysis
+CREATE INDEX zbai_validation_results~005 ON zbai_validation_results (
+  client,
+  primary_failure,
+  validation_date DESC
+);
+
+* Index 6: KUKEY history
+CREATE INDEX zbai_validation_results~006 ON zbai_validation_results (
+  client,
+  kukey,
+  esnum,
+  validation_date DESC
+);
+
+*&---------------------------------------------------------------------*
+*& SAMPLE CONFIGURATION DATA
+*&---------------------------------------------------------------------*
+
+* ZBAI_VALIDATOR_CONFIG - Sample Data
+INSERT zbai_validator_config VALUES (
+  '100', '166', 'D', 'ZCL_BAI_166_DISB', 'X', 'BAI 166 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '166', 'C', 'ZCL_BAI_166_COLL_CLEAR', 'X', 'BAI 166 Collection/Clearance', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '168', 'D', 'ZCL_BAI_168_DISB', 'X', 'BAI 168 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '195', 'D', 'ZCL_BAI_195_DISB', 'X', 'BAI 195 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '255', 'D', 'ZCL_BAI_255_DISB', 'X', 'BAI 255 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '275', 'D', 'ZCL_BAI_275_DISB', 'X', 'BAI 275 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '466', 'D', 'ZCL_BAI_466_DISB', 'X', 'BAI 466 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '468', 'D', 'ZCL_BAI_468_DISB', 'X', 'BAI 468 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '575', 'D', 'ZCL_BAI_575_DISB', 'X', 'BAI 575 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+INSERT zbai_validator_config VALUES (
+  '100', '581', 'D', 'ZCL_BAI_581_DISB', 'X', 'BAI 581 Disbursement', 50, 'ADMIN', '20241228120000', '', ''
+).
+
+* ZBAI_CONFIG - System Parameters
+INSERT zbai_config VALUES (
+  '100', 'ALERT_EMAIL', 'bai-alerts@company.com', 'Email for critical alerts', 'EMAIL', 'ADMIN', '20241228120000'
+).
+INSERT zbai_config VALUES (
+  '100', 'FAILURE_THRESHOLD', '50.0', 'Failure rate threshold (%)', 'DECIMAL', 'ADMIN', '20241228120000'
+).
+INSERT zbai_config VALUES (
+  '100', 'MAX_CONSECUTIVE_FAILURES', '3', 'Max consecutive high-failure chunks', 'INT', 'ADMIN', '20241228120000'
+).
+INSERT zbai_config VALUES (
+  '100', 'DEFAULT_CHUNK_SIZE', '10000', 'Default chunk size for processing', 'INT', 'ADMIN', '20241228120000'
+).

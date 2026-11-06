@@ -1,0 +1,73 @@
+{
+  "global": {
+    "files": "/src/**/*.*",
+    "skipGeneratedGatewayClasses": true,
+    "skipGeneratedPersistentClasses": true,
+    "skipGeneratedFunctionGroups": true
+  },
+  "dependencies": [
+    {
+      "url": "https://github.com/abaplint/deps",
+      "folder": "/deps",
+      "files": "/src/**/*.*"
+    }
+  ],
+  "syntax": {
+    "version": "v758",
+    "errorNamespace": "^(ZCL_CD_|ZIF_CD_|ZCX_CD_|LCL_|LTC_|LTD_|LIF_)",
+    "globalConstants": [],
+    "globalMacros": []
+  },
+  "rules": {
+    "parser_error": true,
+    "check_syntax": true,
+    "unknown_types": false,
+    "check_no_handler_pragma": true,
+    "unused_variables": true,
+    "definitions_top": false,
+    "sql_escape_host_variables": true,
+    "max_one_statement": true,
+    "line_length": {
+      "length": 140
+    },
+    "method_length": {
+      "statements": 120,
+      "errorWhenEmpty": false
+    },
+    "obsolete_statement": {
+      "compute": true,
+      "add": true,
+      "subtract": true,
+      "multiply": true,
+      "divide": true,
+      "move": true,
+      "refresh": true,
+      "setExtended": true,
+      "occurs": true,
+      "withHeaderLine": true,
+      "fieldSymbolStructure": true,
+      "typePools": true,
+      "load": true,
+      "parameter": true,
+      "ranges": true,
+      "communication": true,
+      "pack": true,
+      "selectWithoutInto": true,
+      "freeMemory": true,
+      "exitFromSQL": true,
+      "sortByFS": true,
+      "callTransformation": false,
+      "regex": true,
+      "occurences": true,
+      "clientSpecified": true,
+      "formDefinition": false,
+      "formImplementation": false
+    },
+    "prefer_inline": false,
+    "keyword_case": false,
+    "exporting": true,
+    "preferred_compare_operator": true,
+    "use_new": true,
+    "check_comments": false
+  }
+}

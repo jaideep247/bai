@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fictitious camt.054 return notification (sample / documentation only).
+     Entry 1: two returned ACH disbursements credited back (150.00 R01 + 200.00 R03).
+     Entry 2: one returned ACH premium collection debited back (125.00 R01). -->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>EXMP-NTF-20261104-0007</MsgId>
+      <CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm>
+      <MsgRcpt><Nm>EXAMPLE LIFE INSURANCE CO</Nm></MsgRcpt>
+    </GrpHdr>
+    <Ntfctn>
+      <Id>NTF-0007-01</Id>
+      <ElctrncSeqNb>7</ElctrncSeqNb>
+      <CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm>
+      <Acct>
+        <Id><Othr><Id>000444555666</Id></Othr></Id>
+        <Ccy>USD</Ccy>
+        <Svcr><FinInstnId><BIC>EXMPUS33XXX</BIC></FinInstnId></Svcr>
+      </Acct>
+      <TxsSummry>
+        <TtlNtries><NbOfNtries>2</NbOfNtries><Sum>475.00</Sum></TtlNtries>
+        <TtlCdtNtries><NbOfNtries>1</NbOfNtries><Sum>350.00</Sum></TtlCdtNtries>
+        <TtlDbtNtries><NbOfNtries>1</NbOfNtries><Sum>125.00</Sum></TtlDbtNtries>
+      </TxsSummry>
+      <Ntry>
+        <Amt Ccy="USD">350.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-11-04</Dt></BookgDt>
+        <ValDt><Dt>2026-11-04</Dt></ValDt>
+        <AcctSvcrRef>RTN-BATCH-77</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>RRTN</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>DISB250981-04</EndToEndId></Refs>
+            <AmtDtls><TxAmt><Amt Ccy="USD">150.00</Amt></TxAmt></AmtDtls>
+            <RtrInf><Rsn><Cd>R01</Cd></Rsn><AddtlInf>INSUFFICIENT FUNDS</AddtlInf></RtrInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs><InstrId>INS-250981-07</InstrId><EndToEndId>DISB250981-07</EndToEndId></Refs>
+            <AmtDtls><TxAmt><Amt Ccy="USD">200.00</Amt></TxAmt></AmtDtls>
+            <RtrInf><Rsn><Cd>R03</Cd></Rsn><AddtlInf>NO ACCOUNT/UNABLE TO LOCATE</AddtlInf></RtrInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="USD">125.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-11-04</Dt></BookgDt>
+        <ValDt><Dt>2026-11-04</Dt></ValDt>
+        <AcctSvcrRef>RTN-BATCH-78</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>IDDT</Cd><SubFmlyCd>UPDD</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>COLL261020-115</EndToEndId></Refs>
+            <AmtDtls><TxAmt><Amt Ccy="USD">125.00</Amt></TxAmt></AmtDtls>
+            <RtrInf><Rsn><Cd>R01</Cd></Rsn></RtrInf>
+            <AddtlTxInf>RETURNED PREMIUM COLLECTION POLICY 100777</AddtlTxInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>

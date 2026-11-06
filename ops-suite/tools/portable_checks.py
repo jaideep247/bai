@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Portable consistency checks for the ops suite (no SAP system needed).
+
+Evidence of house-rule compliance only - NOT SAP activation, ATC or ABAP Unit
+results. Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv and
+docs/Changed_Artifacts.csv.  Usage:  python3 tools/portable_checks.py [abaplint-binary]
+"""
+import csv, json, os, re, subprocess, sys, datetime
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, 'src')
+COMMIT_ALLOWED = {'zcl_cd_ops_store.clas.abap', 'zcl_cd_ops_chn_email.clas.abap'}
+
+def abap_files():
+    for d, _, files in os.walk(SRC):
+        for f in sorted(files):
+            if f.endswith('.abap'):
+                yield os.path.join(d, f)
+
+def obj_name(f):
+    return os.path.basename(f).split('.')[0]
+
+def strip_comments(text):
+    out = []
+    for line in text.splitlines():
+        if line.lstrip().startswith('*') or line.lstrip().startswith('"'):
+            continue
+        out.append(re.sub(r'"[^\n]*$', '', line) if '"' in line and "'" not in line and '`' not in line else line)
+    return '\n'.join(out)
+
+checks, register = [], {}
+def check(name, failures, detail):
+    checks.append({'name': name, 'passed': not failures, 'detail': detail,
+                   'failures': failures[:50]})
+
+files = list(abap_files())
+hdr, names, short, select_star, fae, bukrs, final, risk, tnames, commits, writes = ([] for _ in range(11))
+for f in files:
+    rel = os.path.relpath(f, ROOT)
+    text = open(f, encoding='utf-8').read()
+    code = strip_comments(text)
+    base = os.path.basename(f)
+    if not re.search(r'^\*& Artifact: ' + re.escape(base) + r'\s*$', text, re.M):
+        hdr.append(rel)
+    if len(obj_name(f)) > 30:
+        names.append(rel)
+    for m in re.finditer(r'shorttext synchronized">([^<]*)<', text):
+        if len(m.group(1)) > 60:
+            short.append(f'{rel}: {m.group(1)}')
+    if re.search(r'\bSELECT\s+(SINGLE\s+)?\*', code, re.I):
+        select_star.append(rel)
+    for m in re.finditer(r'METHOD\s+([\w~]+)\.(.*?)ENDMETHOD\.', code, re.S | re.I):
+        body = m.group(2)
+        if re.search(r'FOR\s+ALL\s+ENTRIES', body, re.I) and not re.search(r'IS\s+(NOT\s+)?INITIAL|CHECK\s+\w', body, re.I):
+            fae.append(f'{rel}: {m.group(1)}')
+    if re.search(r"'1000'", code) and 'testclasses' not in base:
+        bukrs.append(rel)
+    if base.endswith('.clas.abap'):
+        m = re.search(r'CLASS\s+\w+\s+DEFINITION(.*?)\.', code, re.S | re.I)
+        if m and 'PUBLIC' in m.group(1).upper() and 'ABSTRACT' not in m.group(1).upper() \
+                and 'FINAL' not in m.group(1).upper() and not obj_name(f).startswith('zcx_'):
+            final.append(rel)
+    for m in re.finditer(r'CLASS\s+(\w+)\s+DEFINITION([^.]*?)FOR\s+TESTING([^.]*)\.', code, re.S | re.I):
+        tail = (m.group(2) + m.group(3)).upper()
+        if 'ABSTRACT' in tail and 'RISK' not in tail:
+            continue
+        if ('RISK LEVEL' in tail or 'DURATION' in tail) and ('HARMLESS' not in tail or 'SHORT' not in tail):
+            risk.append(f'{rel}: {m.group(1)}')
+    tests = re.findall(r'METHODS\s+(\w+)\s+FOR\s+TESTING', code, re.I)
+    for t in tests:
+        if len(t) > 30:
+            tnames.append(f'{rel}: {t}')
+    if tests:
+        owner = obj_name(f).upper()
+        register[owner] = register.get(owner, 0) + len(tests)
+    if re.search(r'\bCOMMIT\s+WORK\b', code, re.I) and base not in COMMIT_ALLOWED:
+        commits.append(rel)
+    if base.endswith('.prog.abap') and re.search(r'^\s*WRITE\b', code, re.I | re.M):
+        writes.append(rel)
+
+check('artifact_header_present', hdr, 'Every ABAP source starts with the Artifact/Purpose/Modification log header.')
+check('object_names_max_30', names, 'Every object name is 30 characters or fewer.')
+check('short_text_max_60', short, 'Every SE24 short text (ABAP Doc shorttext) is 60 characters or fewer.')
+check('no_select_star', select_star, 'No SELECT * (explicit field lists only).')
+check('fae_guarded', fae, 'Every method with FOR ALL ENTRIES checks the driver table for INITIAL first.')
+check('no_hardcoded_company_code', bukrs, "No hard-coded company code '1000' in production code.")
+check('concrete_classes_final', final, 'Every concrete public class is FINAL.')
+check('tests_harmless_short', risk, 'Every test class is RISK LEVEL HARMLESS DURATION SHORT.')
+check('test_method_names_max_30', tnames, 'Every test method name is 30 characters or fewer.')
+check('commit_only_in_sanctioned_objects', commits, 'COMMIT WORK only in the store (LUW owner) and the e-mail channel (BCS).')
+check('no_write_lists', writes, 'Programs use ALV / HTML output, never WRITE lists.')
+
+lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
+lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']
+if lint_bin:
+    out = subprocess.run([lint_bin], cwd=ROOT, capture_output=True, text=True).stdout
+    m = re.search(r'abaplint: (\d+) issue', out)
+    issues = int(m.group(1)) if m else -1
+    lint_failures = [] if issues == 0 else [l for l in out.splitlines() if '[E]' in l][:50] or [out[-500:]]
+    lint_detail = f'abaplint (v758 syntax, SAP stubs from abaplint/deps): {issues} issue(s) over {len(files)} files.'
+check('abaplint_clean', lint_failures, lint_detail)
+
+docs = os.path.join(ROOT, 'docs')
+result = {
+    '_artifact': {'name': 'portable_checks.json',
+                  'purpose': 'Portable consistency evidence; not SAP activation, ATC, runtime or coverage',
+                  'generated': datetime.date.today().isoformat()},
+    'passed': sum(c['passed'] for c in checks), 'total': len(checks),
+    'abap_files': len(files), 'declared_unit_methods': sum(register.values()),
+    'measured_coverage': None, 'checks': checks}
+json.dump(result, open(os.path.join(docs, 'portable_checks.json'), 'w'), indent=2)
+
+with open(os.path.join(docs, 'Coverage_Run_Register.csv'), 'w', newline='') as fh:
+    w = csv.writer(fh)
+    w.writerow(['Object', 'ABAP Unit methods supplied', 'Required statement coverage percent',
+                'Measured statement coverage percent', 'Status'])
+    for owner in sorted(register):
+        w.writerow([owner, register[owner], 90, '', 'Not run in target SAP'])
+
+with open(os.path.join(docs, 'Changed_Artifacts.csv'), 'w', newline='') as fh:
+    w = csv.writer(fh)
+    w.writerow(['Artifact', 'Type', 'Purpose'])
+    for d, _, fs in sorted(os.walk(ROOT)):
+        if '/.git' in d or '/node_modules' in d:
+            continue
+        for f in sorted(fs):
+            p = os.path.relpath(os.path.join(d, f), ROOT)
+            kind = ('ABAP' if f.endswith('.abap') else 'DDIC' if f.endswith('.ddl') else
+                    'CDS' if f.endswith('.asddls') else 'Config' if p.startswith('config') else
+                    'Doc' if f.endswith(('.md', '.csv', '.json')) else 'Other')
+            purpose = ''
+            if f.endswith('.abap'):
+                m = re.search(r'\*& Purpose:\n\*& (.*)', open(os.path.join(d, f), encoding='utf-8').read())
+                purpose = m.group(1).strip() if m else ''
+            w.writerow([p, kind, purpose])
+
+print(f"{result['passed']}/{result['total']} checks passed; {len(files)} ABAP files; "
+      f"{result['declared_unit_methods']} unit test methods")
+for c in checks:
+    if not c['passed']:
+        print('FAIL', c['name'], c['failures'][:5])

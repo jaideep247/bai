@@ -1,0 +1,219 @@
+*&---------------------------------------------------------------------*
+*& Artifact: zif_cd_ops_types.intf.abap
+*& Purpose:
+*& Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
+*& Every finding of every module is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+*& B = block (never post), E = error, W = warning, I = information
+*& Modification log:
+*& 2026-11-05 | Initial version (ops suite consolidation).
+*&---------------------------------------------------------------------*
+"! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
+"! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
+"! Every finding of every module is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+INTERFACE zif_cd_ops_types
+  PUBLIC.
+
+  TYPES ty_module      TYPE c LENGTH 4.
+  TYPES ty_severity    TYPE c LENGTH 1.
+  TYPES ty_rag         TYPE c LENGTH 1.
+  TYPES ty_run_status  TYPE c LENGTH 1.
+  TYPES ty_rule_id     TYPE c LENGTH 10.
+  TYPES ty_check_code  TYPE c LENGTH 30.
+  TYPES ty_object_type TYPE c LENGTH 10.
+  TYPES ty_object_key  TYPE c LENGTH 70.
+  TYPES ty_group       TYPE c LENGTH 35.
+  TYPES ty_reference   TYPE c LENGTH 35.
+  TYPES ty_message     TYPE c LENGTH 255.
+  TYPES ty_action      TYPE c LENGTH 10.
+  TYPES ty_param_name  TYPE c LENGTH 30.
+  TYPES ty_param_value TYPE c LENGTH 255.
+  TYPES ty_variant     TYPE c LENGTH 30.
+  TYPES ty_amount      TYPE p LENGTH 12 DECIMALS 2.
+  TYPES ty_currency    TYPE c LENGTH 5.
+  TYPES ty_class_name  TYPE c LENGTH 30.
+  TYPES ty_run_id      TYPE x LENGTH 16.
+
+  CONSTANTS:
+    BEGIN OF gc_module,
+      health_check TYPE ty_module VALUE 'HCK',
+      file_monitor TYPE ty_module VALUE 'FMON',
+      ebs          TYPE ty_module VALUE 'EBS',
+    END OF gc_module.
+
+  "! B = block (never post), E = error, W = warning, I = information
+  CONSTANTS:
+    BEGIN OF gc_severity,
+      block   TYPE ty_severity VALUE 'B',
+      error   TYPE ty_severity VALUE 'E',
+      warning TYPE ty_severity VALUE 'W',
+      info    TYPE ty_severity VALUE 'I',
+    END OF gc_severity.
+
+  CONSTANTS:
+    BEGIN OF gc_rag,
+      red   TYPE ty_rag VALUE 'R',
+      amber TYPE ty_rag VALUE 'A',
+      green TYPE ty_rag VALUE 'G',
+      grey  TYPE ty_rag VALUE ' ',
+    END OF gc_rag.
+
+  CONSTANTS:
+    BEGIN OF gc_run_status,
+      running TYPE ty_run_status VALUE 'R',
+      success TYPE ty_run_status VALUE 'S',
+      warning TYPE ty_run_status VALUE 'W',
+      error   TYPE ty_run_status VALUE 'E',
+      aborted TYPE ty_run_status VALUE 'A',
+    END OF gc_run_status.
+
+  "! Action taken for a finding (master prompt: ZCD_BTC_RULE-ACTION)
+  CONSTANTS:
+    BEGIN OF gc_action,
+      auto_post  TYPE ty_action VALUE 'AUTO_POST',
+      exception  TYPE ty_action VALUE 'EXCEPTION',
+      block      TYPE ty_action VALUE 'BLOCK',
+      notify     TYPE ty_action VALUE 'NOTIFY',
+      on_account TYPE ty_action VALUE 'ON_ACCOUNT',
+    END OF gc_action.
+
+  TYPES:
+    BEGIN OF ty_finding,
+      object_type TYPE ty_object_type,
+      object_key  TYPE ty_object_key,
+      group1      TYPE ty_group,
+      group2      TYPE ty_group,
+      rule_id     TYPE ty_rule_id,
+      check_code  TYPE ty_check_code,
+      severity    TYPE ty_severity,
+      action      TYPE ty_action,
+      amount      TYPE ty_amount,
+      currency    TYPE ty_currency,
+      reference   TYPE ty_reference,
+      message     TYPE ty_message,
+      details     TYPE string,
+    END OF ty_finding.
+  TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_run,
+      run_id        TYPE ty_run_id,
+      module        TYPE ty_module,
+      variant       TYPE ty_variant,
+      test_mode     TYPE abap_bool,
+      started_at    TYPE timestampl,
+      ended_at      TYPE timestampl,
+      status        TYPE ty_run_status,
+      rag           TYPE ty_rag,
+      total_items   TYPE i,
+      passed_items  TYPE i,
+      failed_items  TYPE i,
+      blocked_items TYPE i,
+      warning_items TYPE i,
+      finding_count TYPE i,
+      runtime_ms    TYPE i,
+      message       TYPE ty_message,
+      created_by    TYPE syuname,
+    END OF ty_run.
+  TYPES tt_run TYPE STANDARD TABLE OF ty_run WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_kv,
+      name  TYPE ty_param_name,
+      value TYPE ty_param_value,
+    END OF ty_kv.
+  TYPES tt_kv TYPE SORTED TABLE OF ty_kv WITH UNIQUE KEY name.
+
+  "! ---- Alert router (ZCD_OPS_ALERT_RULE / _CHN / _LOG) ----
+  TYPES ty_channel     TYPE c LENGTH 10.
+  TYPES ty_pattern     TYPE c LENGTH 35.
+  TYPES ty_alert_dest  TYPE c LENGTH 255.
+
+  CONSTANTS:
+    BEGIN OF gc_channel,
+      email  TYPE ty_channel VALUE 'EMAIL',
+      applog TYPE ty_channel VALUE 'APPLOG',
+      http   TYPE ty_channel VALUE 'HTTP',
+    END OF gc_channel.
+
+  "! Delivery status in ZCD_OPS_ALERT_LOG
+  CONSTANTS:
+    BEGIN OF gc_alert_status,
+      sent      TYPE c LENGTH 1 VALUE 'S',
+      failed    TYPE c LENGTH 1 VALUE 'F',
+      throttled TYPE c LENGTH 1 VALUE 'T',
+      quiet     TYPE c LENGTH 1 VALUE 'Q',
+    END OF gc_alert_status.
+
+  "! One alert rule: which findings of which module go to which channel
+  TYPES:
+    BEGIN OF ty_alert_rule,
+      rule_id         TYPE ty_rule_id,
+      module          TYPE ty_module,
+      "! Lowest severity that triggers (B, E, W, I)
+      min_severity    TYPE ty_severity,
+      "! CP patterns on the finding; blank = any
+      rule_pattern    TYPE ty_pattern,
+      check_pattern   TYPE ty_pattern,
+      group1_pattern  TYPE ty_pattern,
+      group2_pattern  TYPE ty_pattern,
+      "! Also alert when the run ends with this RAG or worse (blank = no run-level alert)
+      min_rag         TYPE ty_rag,
+      on_abort        TYPE abap_bool,
+      channel         TYPE ty_channel,
+      "! E-mail list, SM59 destination or log object - meaning depends on the channel
+      destination     TYPE ty_alert_dest,
+      "! X = one digest per rule and run; blank = one message per finding
+      digest          TYPE abap_bool,
+      max_items       TYPE i,
+      throttle_min    TYPE i,
+      quiet_from      TYPE t,
+      quiet_to        TYPE t,
+      "! After n consecutive alerting runs add the escalation destination
+      escalate_after  TYPE i,
+      escalation_dest TYPE ty_alert_dest,
+      active          TYPE abap_bool,
+    END OF ty_alert_rule.
+  TYPES tt_alert_rule TYPE STANDARD TABLE OF ty_alert_rule WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_alert_channel,
+      channel     TYPE ty_channel,
+      class_name  TYPE ty_class_name,
+      "! Default destination when the rule has none
+      destination TYPE ty_alert_dest,
+      active      TYPE abap_bool,
+    END OF ty_alert_channel.
+  TYPES tt_alert_channel TYPE STANDARD TABLE OF ty_alert_channel WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_alert_message,
+      alert_id    TYPE ty_run_id,
+      rule_id     TYPE ty_rule_id,
+      channel     TYPE ty_channel,
+      destination TYPE ty_alert_dest,
+      module      TYPE ty_module,
+      run_id      TYPE ty_run_id,
+      severity    TYPE ty_severity,
+      subject     TYPE ty_message,
+      html        TYPE string,
+      text        TYPE string,
+      item_count  TYPE i,
+    END OF ty_alert_message.
+  TYPES tt_alert_message TYPE STANDARD TABLE OF ty_alert_message WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_alert_log,
+      alert_id    TYPE ty_run_id,
+      rule_id     TYPE ty_rule_id,
+      channel     TYPE ty_channel,
+      run_id      TYPE ty_run_id,
+      module      TYPE ty_module,
+      sent_at     TYPE timestampl,
+      status      TYPE c LENGTH 1,
+      destination TYPE ty_alert_dest,
+      subject     TYPE ty_message,
+      error       TYPE ty_message,
+    END OF ty_alert_log.
+  TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
+
+ENDINTERFACE.
