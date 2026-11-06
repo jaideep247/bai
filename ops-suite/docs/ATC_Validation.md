@@ -49,9 +49,24 @@
 
 ## 5. What only the SAP system can confirm (run in DV1)
 
-1. ATC with the company's check variant (and SAP's standard variants for S/4HANA readiness and HANA performance, as configured in DV1) on packages `ZCD_OPS*`.
+1. ATC with the company's check variant on packages `ZCD_OPS*`, and SAP's standard S/4HANA readiness and HANA performance variants if DV1 has them.
 2. Code Vulnerability Analyzer, if licensed — the dynamic-SQL exemptions above.
-3. Checks needing system data: package interface / use access, released-API usage, field existence of every `VERIFY-DDIC` field in standard and legacy tables (abaplint treats standard tables as unknown), function-module interfaces, authorization objects.
+3. Checks needing system data: package interface / use access, field existence of every `VERIFY-DDIC` field in standard and legacy tables (abaplint treats standard tables as unknown), function-module interfaces, authorization objects.
 4. ABAP Unit with coverage (`Coverage_Run_Register.csv`).
 
-**Status:** offline evidence complete; ATC result in DV1 pending. Record the ATC run in `Test_and_Validation_Document.md` §14.
+## 6. DV1 checklist in ADT (Eclipse) — first import
+
+| # | Step | How | Pass when | Suite-specific note |
+|---|---|---|---|---|
+| 1 | Import | abapGit pull into package `ZCD_OPS` with a workbench transport | All objects active, abapGit shows no local differences | Tables, message class and text pools come from the repository XML — do not create them by hand |
+| 2 | DDIC facts | SE11 for every `VERIFY-DDIC` marker (list in the module READMEs) | Field exists with the expected type | A missing field is a code change, not an ATC exemption |
+| 3 | ATC | Package `ZCD_OPS` (include subpackages) or the transport: *Run As > ABAP Test Cockpit With…* and choose the variant used on transport release; single object: Ctrl+Shift+F2 | 0 priority 1 and 2 findings without an approved exemption | Use the company's **classic** variant. `ABAP_CLOUD_DEVELOPMENT_DEFAULT` is for ABAP Cloud: this suite reads FEBEP, DFKK*, BSEG, TBTCO and uses `cl_bcs` on purpose (classic track), so that variant reports every unreleased API — run it only for information |
+| 4 | Baseline / delta | ATC baseline | — | Every object in the suite is new, so every finding is ours; a baseline does not hide anything here |
+| 5 | Exemptions | ATC Problems view: *Request Exemption* per finding, approver as per ATC setup | The three exemptions in §4 approved; no others | Never silence a finding with a quick fix that only adds a pseudo comment |
+| 6 | Quick fixes (Ctrl+1) | Only for findings §3 does not explain | Each fix reviewed, unit tests still green, change committed back to git | A fix applied only in DV1 makes abapGit show the object as changed and is lost at the next pull — commit it through abapGit |
+| 7 | Formatter (Shift+F1) | Optional | — | The code already uses upper-case keywords. Formatting with other team settings rewrites every object and creates a large diff with no functional change: if used, apply to all objects once and commit through abapGit |
+| 8 | ABAP Unit | Package `ZCD_OPS`: Ctrl+Shift+F10; with coverage: Ctrl+Shift+F11 | 316 test methods, all green; statement coverage ≥ 85 % (target 90 %) | DAO tests use `cl_osql_test_environment` (no data changes); all test classes are RISK LEVEL HARMLESS, so the client setting for risk level does not skip any |
+| 9 | Release gate | ATC check on transport release (central ATC setting, maintained by the ATC administrator) | Release blocked on priority 1/2 | An "ATC on activation" setting in ADT preferences was not confirmed by us — rely on the central release check |
+| 10 | Evidence | Export the ATC result and the coverage figures | Recorded | `Coverage_Run_Register.csv`; `Test_and_Validation_Document.md` §14 |
+
+**Status:** offline evidence complete; DV1 ATC and ABAP Unit pending. Record both in `Test_and_Validation_Document.md` §14.
