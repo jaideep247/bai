@@ -30,6 +30,7 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1) |
 | `Implementation_Order.md` | Basis / developers — abapGit import, activation and transport order |
 | `Review_Response_2026-11-06.md` | Reviewers — answers to the principal consultant review |
+| `ATC_Validation.md` | Reviewers, QA — ATC-equivalent offline checks, exemptions, what DV1 ATC must confirm |
 | `Operations_Runbook.md` | IT support |
 | `Class_Purpose_and_Modification_Log.md`, `Changed_Artifacts.csv`, `Coverage_Run_Register.csv`, `portable_checks.json` | Release evidence |
 
@@ -43,7 +44,7 @@ cd ops-suite && npx @abaplint/cli@2
 python3 tools/portable_checks.py "$(command -v abaplint)"
 ```
 
-**What this proves and what it does not:** abaplint checks syntax and typing against SAP stubs at 7.58 rules; the portable checks prove house-rule compliance. Neither proves activation, DDIC existence, ATC or ABAP Unit results — those happen in DV1 (`Test_and_Validation_Document.md` §5). Fields marked `VERIFY-DDIC` in the DAO classes must be confirmed in SE11 first.
+**What this proves and what it does not:** abaplint checks syntax and typing against SAP stubs at 7.58 rules; the portable checks prove house-rule compliance. The ATC-equivalent run (`abaplint.atc.json`, see `docs/ATC_Validation.md`) leaves one documented exemption. Neither proves activation, DDIC existence, the real ATC result or ABAP Unit results — those happen in DV1 (`Test_and_Validation_Document.md` §5). Fields marked `VERIFY-DDIC` in the DAO classes must be confirmed in SE11 first.
 
 ## Keeping local and cloud in sync
 

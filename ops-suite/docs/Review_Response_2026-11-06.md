@@ -23,5 +23,6 @@
 ## Verification after the changes
 
 - abaplint (7.58 rules, SAP stubs): 0 issues over 309 files, **now including the abapGit table definitions**, so every SELECT / INSERT on the ZCD_* tables is checked against its field list (proved by a deliberate typo that was caught, then reverted).
+- ATC-equivalent rule set: 184 findings fixed down to 1 documented exemption — `ATC_Validation.md`.
 - Portable checks: see `portable_checks.json`.
 - Not verified: abapGit pull into DV1, activation, ABAP Unit run — first DV1 import is the test.
