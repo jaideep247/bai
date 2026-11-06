@@ -15,6 +15,7 @@
 *& 2026-11-06 | Hung runs per area, own run excluded (A06); no business check = red config
 *&              result, grey never SUCCESS (A60); history as-of (A58), flat tolerance (A59).
 *& 2026-11-06 | Each check receives a deadline (start + TIMEOUT_SEC) in its context (audit A18).
+*& 2026-11-06 | Check interface verified by the factory before instantiation (audit A62).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -471,14 +472,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
 
   METHOD call_plugin.
-    DATA lo_check TYPE REF TO zif_cd_hck_check.
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin( is_def-class_name ).
-    TRY.
-        lo_check ?= lo_object.
-      CATCH cx_sy_move_cast_error.
-        RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e300(zcd_ops) WITH is_def-check_id is_def-class_name.
-    ENDTRY.
+    " A62: the factory checks ZIF_CD_HCK_CHECK by RTTI before the class is created
+    " (message 032 names class and interface)
+    DATA(lo_check) = CAST zif_cd_hck_check( zcl_cd_ops_factory=>get_plugin(
+      iv_class_name = is_def-class_name
+      iv_interface  = zif_cd_hck_types=>gc_check_intf ) ).
     rs_result = lo_check->execute( is_def        = is_def
                                    it_thresholds = it_thresholds
                                    is_context    = is_context ).

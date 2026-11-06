@@ -28,6 +28,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 030 | Class &1 does not exist |
 | 031 | Class &1 cannot be instantiated as a plug-in |
 | 032 | Class &1 does not implement interface &2 |
+| 033 | Plug-in interface &1 does not exist |
 | 040 | Run for &1 &2 is already active (lock held by &3) |
 | 041 | No authorization for &1 activity &2 |
 | 042 | Lock service failed for &1 &2 (run not started) |

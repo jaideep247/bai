@@ -209,6 +209,8 @@ INTERFACE zif_cd_hck_types
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
   "! Result row raised when no business check is selected / active (audit A60)
   CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
+  "! Plug-in interface every configured check class implements (factory check, A62)
+  CONSTANTS gc_check_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
   "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
   CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
 

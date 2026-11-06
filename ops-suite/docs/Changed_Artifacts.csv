@@ -226,6 +226,8 @@ src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so 
 src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_lock.clas.abap,ABAP,Run lock over the standard generic lock object E_TABLE with table
 src/core/zcl_cd_ops_lock.clas.xml,abapGit,
+src/core/zcl_cd_ops_plugin_probe.clas.abap,ABAP,Test support for ZCL_CD_OPS_FACTORY=>GET_PLUGIN (audit A62): a class that
+src/core/zcl_cd_ops_plugin_probe.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge.clas.abap,ABAP,"Retention purge of the suite's own history: runs with their findings, alert"
 src/core/zcl_cd_ops_purge.clas.testclasses.abap,ABAP,Tests of the retention purge rules and orchestration with a DAO double:
 src/core/zcl_cd_ops_purge.clas.xml,abapGit,

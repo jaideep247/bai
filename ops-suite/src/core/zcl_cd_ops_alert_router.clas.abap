@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Durable claim before send, carried-forward exceptions not re-alerted, escalation over run
 *&              history, escalation override, direct send failures surfaced (audit A17, A45, A46).
+*& 2026-11-06 | Channel interface checked before the channel class is created (audit A62).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -160,7 +161,8 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     ls_message-extnumber   = |{ iv_route }|.
     TRY.
         DATA(lo_channel) = CAST zif_cd_ops_alert_channel(
-          zcl_cd_ops_factory=>get_plugin( ls_channel-class_name ) ).
+          zcl_cd_ops_factory=>get_plugin( iv_class_name = ls_channel-class_name
+                                          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
         lo_channel->deliver( ls_message ).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
                  iv_status = zif_cd_ops_types=>gc_alert_status-sent
@@ -274,7 +276,9 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
   METHOD deliver_messages.
     DATA lo_channel TYPE REF TO zif_cd_ops_alert_channel.
     TRY.
-        lo_channel = CAST zif_cd_ops_alert_channel( zcl_cd_ops_factory=>get_plugin( is_channel-class_name ) ).
+        lo_channel = CAST zif_cd_ops_alert_channel( zcl_cd_ops_factory=>get_plugin(
+          iv_class_name = is_channel-class_name
+          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
       CATCH zcx_cd_ops_error cx_sy_move_cast_error INTO DATA(lx_wiring).
         LOOP AT it_messages INTO DATA(ls_failed).
           add_log( iv_rule_id = ls_failed-rule_id iv_channel = ls_failed-channel is_run = is_run

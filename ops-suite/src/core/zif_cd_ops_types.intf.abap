@@ -12,6 +12,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Alert claim / repeat / partial statuses, intent key, SLG1 external ID, escalation override (A17, A45, A46).
+*& 2026-11-06 | Plug-in interface names for the factory interface check (audit A62).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -63,6 +64,12 @@ INTERFACE zif_cd_ops_types
   TYPES ty_amount      TYPE p LENGTH 12 DECIMALS 2.
   TYPES ty_currency    TYPE c LENGTH 5.
   TYPES ty_class_name  TYPE c LENGTH 30.
+
+  "! Plug-in interfaces of the core (passed to ZCL_CD_OPS_FACTORY=>GET_PLUGIN, A62)
+  CONSTANTS:
+    BEGIN OF gc_plugin_intf,
+      alert_channel TYPE ty_class_name VALUE 'ZIF_CD_OPS_ALERT_CHANNEL',
+    END OF gc_plugin_intf.
   TYPES ty_run_id      TYPE x LENGTH 16.
 
   CONSTANTS:
@@ -303,6 +310,7 @@ INTERFACE zif_cd_ops_types
       no_recipient                TYPE zif_cd_ops_types=>ty_msgno VALUE '021',
       applog_partial              TYPE zif_cd_ops_types=>ty_msgno VALUE '025',
       bcs_not_sent                TYPE zif_cd_ops_types=>ty_msgno VALUE '026',
+      interface_not_found         TYPE zif_cd_ops_types=>ty_msgno VALUE '033',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -143,6 +143,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>033</MSGNR>
+     <TEXT>Plug-in interface &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>040</MSGNR>
      <TEXT>Run for &amp;1 &amp;2 is already active (lock held by &amp;3)</TEXT>
     </T100>

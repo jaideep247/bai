@@ -6,8 +6,8 @@
   },
   "passed": 15,
   "total": 15,
-  "abap_files": 232,
-  "declared_unit_methods": 501,
+  "abap_files": 233,
+  "declared_unit_methods": 505,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,25 +79,25 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (1478 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (1481 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "223 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "224 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 232 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 233 files.",
       "failures": []
     },
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 2 finding(s) over 748 file(s), 2 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 2 finding(s) over 750 file(s), 2 documented exemption(s).",
       "failures": []
     }
   ]
