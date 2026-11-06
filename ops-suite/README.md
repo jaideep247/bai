@@ -38,6 +38,7 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `ATC_Validation.md` | Reviewers, QA — ATC-equivalent offline checks, exemptions, what DV1 ATC must confirm |
 | `RAP_Apps_Design.md` | Business owner, architects — configuration and operations apps, authorisation, run lock, carry-forward, purge |
 | `Operations_Runbook.md` | IT support |
+| `Performance_Review.md` | Developers, reviewers, Basis — the eight performance fixes (before / after access paths), sorted / hashed tables, field symbols, why no AMDP, deferred items, VERIFY-SE11 index list |
 | `Payment_Trace.md` | L1/L2 support, reviewers — read-only 360° payment trace: stages, statuses, FIN + source and reversed-item lookups, VERIFY-SE11 list, QA cases |
 | `Class_Purpose_and_Modification_Log.md`, `Changed_Artifacts.csv`, `Coverage_Run_Register.csv`, `portable_checks.json` | Release evidence |
 

@@ -41,7 +41,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 698 ABAP Unit methods in 55 test includes
+## 4. Coverage today — 735 ABAP Unit methods in 55 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -62,43 +62,45 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 8 | OSQL |
 | Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 21 | Application |
 | Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
-| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 16 | OSQL |
+| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 18 | OSQL |
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 20 | Domain |
-| EBS | ZCL_CD_EBS_CFG_DAO | 8 | OSQL |
-| EBS | ZCL_CD_EBS_ENGINE | 51 | Application |
-| EBS | ZCL_CD_EBS_FEB_DAO | 4 | OSQL |
+| EBS | ZCL_CD_EBS_CFG_DAO | 9 | OSQL |
+| EBS | ZCL_CD_EBS_ENGINE | 60 | Application |
+| EBS | ZCL_CD_EBS_FEB_DAO | 8 | OSQL |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 27 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 24 | Domain |
 | EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
 | EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 7 | Domain |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 28 rule classes) | 86 | Domain / Application |
-| EBS | ZCL_CD_EBS_SAP_DAO | 3 | OSQL |
-| EBS | ZCL_CD_EBS_SRC_FEB | 9 | Application |
+| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 28 rule classes) | 95 | Domain / Application |
+| EBS | ZCL_CD_EBS_SAP_DAO | 5 | OSQL |
+| EBS | ZCL_CD_EBS_SRC_FEB | 11 | Application |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 10 | Domain / Application |
-| FMON | ZCL_CD_FMON_DAO | 15 | OSQL |
-| FMON | ZCL_CD_FMON_ENGINE | 28 | Application |
-| FMON | ZCL_CD_FMON_LOT_READER | 5 | Application |
+| FMON | ZCL_CD_FMON_DAO | 17 | OSQL |
+| FMON | ZCL_CD_FMON_ENGINE | 29 | Application |
+| FMON | ZCL_CD_FMON_LOT_READER | 7 | Application |
 | FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 8 | Domain |
 | FMON | ZCL_CD_FMON_RULES | 44 | Domain |
 | FMON | ZCL_CD_FMON_STATUS | 15 | Domain |
-| HCK | ZCL_CD_HCK_AGG_QUERY | 12 | Domain |
+| FMON | ZCL_CD_FMON_UTIL (file-reference digest, A100) | 5 | Domain |
+| HCK | ZCL_CD_HCK_AGG_QUERY | 14 | Domain |
 | HCK | ZCL_CD_HCK_BUDGET | 3 | Domain |
 | HCK | ZCL_CD_HCK_CANONICAL | 3 | Domain |
+| HCK | ZCL_CD_HCK_C_VOLUME (expected groups measured zero, A103) | 2 | Application |
 | HCK | ZCL_CD_HCK_CYCLE_EVAL | 14 | Domain |
-| HCK | ZCL_CD_HCK_DAO | 14 | OSQL |
-| HCK | ZCL_CD_HCK_ENGINE | 19 | Application |
+| HCK | ZCL_CD_HCK_DAO | 16 | OSQL |
+| HCK | ZCL_CD_HCK_ENGINE | 20 | Application |
 | HCK | ZCL_CD_HCK_EXPORT | 3 | Domain |
 | HCK | ZCL_CD_HCK_PARAM | 3 | Domain |
 | HCK | ZCL_CD_HCK_PAYREQ_RULES (known-table rules: SPE, CANCELLED, ZECT_STATUS) | 8 | Domain |
-| HCK | ZCL_CD_HCK_REPORT_HTML | 7 | Domain |
+| HCK | ZCL_CD_HCK_REPORT_HTML | 8 | Domain |
 | HCK | ZCL_CD_HCK_SCORE | 6 | Domain |
 | HCK | ZCL_CD_HCK_STATS | 12 | Domain |
 | HCK | ZCL_CD_HCK_SUPPRESSION (suppression matcher, four-eyes) | 8 | Domain |
-| HCK | ZCL_CD_HCK_THRESHOLD | 14 | Domain |
+| HCK | ZCL_CD_HCK_THRESHOLD | 16 | Domain |
 | HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
 
 ### Master prompt acceptance tests mapped to proof

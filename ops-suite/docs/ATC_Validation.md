@@ -43,7 +43,7 @@
 
 | Object | Check | Justification |
 |---|---|---|
-| `ZCL_CD_HCK_DAO=>EXECUTE_AGGREGATE` (line 176) | SELECT without ORDER BY | Aggregate without GROUP BY returns exactly one row; pseudo comment `"#EC CI_NOORDER` set (honoured by ATC; abaplint's rule ignores pseudo comments) |
+| `ZCL_CD_HCK_DAO=>EXECUTE_AGGREGATE` (line 188 after the performance fixes of 2026-11-06) | SELECT without ORDER BY | Aggregate without GROUP BY returns exactly one row; pseudo comment `"#EC CI_NOORDER` set (honoured by ATC; abaplint's rule ignores pseudo comments) |
 | `ZCL_CD_OPS_ALERT_DAO=>INSERT_LOG` | sy-subrc after INSERT … ACCEPTING DUPLICATE KEYS | Duplicate audit keys are skipped on purpose; `"#EC CI_SUBRC` set |
 | `ZBP_R_CD_*` behaviour pools | `check_abstract`, `unused_methods` | ABAP requires `ABSTRACT FINAL … FOR BEHAVIOR OF`; handler methods are called by the RAP framework. Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these |
 | `ZCL_CD_FMON_DAO=>INSERT_EVENT` and `SAVE_FILES` | Database operation in loop | INSERT_EVENT: bounded retry (3 attempts) only after a primary-key collision with a parallel writer. SAVE_FILES (audit A04): row lock + version compare per registry row, bounded by the files of one run. `"#EC CI_SEL_NESTED` set |
@@ -67,7 +67,7 @@
 | 5 | Exemptions | ATC Problems view: *Request Exemption* per finding, approver as per ATC setup | The three exemptions in §4 approved; no others | Never silence a finding with a quick fix that only adds a pseudo comment |
 | 6 | Quick fixes (Ctrl+1) | Only for findings §3 does not explain | Each fix reviewed, unit tests still green, change committed back to git | A fix applied only in DV1 makes abapGit show the object as changed and is lost at the next pull — commit it through abapGit |
 | 7 | Formatter (Shift+F1) | Optional | — | The code already uses upper-case keywords. Formatting with other team settings rewrites every object and creates a large diff with no functional change: if used, apply to all objects once and commit through abapGit |
-| 8 | ABAP Unit | Package `ZCD_OPS`: Ctrl+Shift+F10; with coverage: Ctrl+Shift+F11 | 698 test methods, all green; statement coverage ≥ 85 % (target 90 %) | DAO tests use `cl_osql_test_environment` (no data changes); all test classes are RISK LEVEL HARMLESS, so the client setting for risk level does not skip any |
+| 8 | ABAP Unit | Package `ZCD_OPS`: Ctrl+Shift+F10; with coverage: Ctrl+Shift+F11 | 735 test methods, all green; statement coverage ≥ 85 % (target 90 %) | DAO tests use `cl_osql_test_environment` (no data changes); all test classes are RISK LEVEL HARMLESS, so the client setting for risk level does not skip any |
 | 9 | Release gate | ATC check on transport release (central ATC setting, maintained by the ATC administrator) | Release blocked on priority 1/2 | An "ATC on activation" setting in ADT preferences was not confirmed by us — rely on the central release check |
 | 10 | Evidence | Export the ATC result and the coverage figures | Recorded | `Coverage_Run_Register.csv`; `Test_and_Validation_Document.md` §14 |
 
