@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-321 methods in 33 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+356 methods in 36 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 321 / 321 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 356 / 356 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -97,6 +97,18 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | ALR-06 | HTTP channel to SM59 test endpoint | Destination by Basis | JSON body received, log S; non-2xx → log F | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
 
+### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)
+
+| ID | Scenario | Configuration | Expected | Result |
+|---|---|---|---|---|
+| CORE-01 | User without ZCD_OPS 16 for EBS starts `ZCD_EBS_VALIDATE` (same for FMON / HCK / CORE purge) | Role without the module | Message 041, nothing runs | pending |
+| CORE-02 | Second `ZCD_EBS_VALIDATE` with the same variant while the first runs | Two jobs | Second: no run row, RUN_LOCKED alert (rule RUN_LOCKED), job ends in error with message 040; first unaffected | pending |
+| CORE-03 | Lock released after a run that dumps (SM50 cancel) | — | Lock gone in SM12 when the job ends; next run starts | pending |
+| CORE-04 | Same EBS file validated twice with the same unmapped code | Exception assigned to a user after run 1 | Run 2 row: disposition A, same owner and due date, OCCURRENCES 2; run 1 row disposition S | pending |
+| CORE-05 | Fix the map row from CORE-04 and re-run | +1 ZCD_BTC_MAP row | Exception resolved "Passed on re-run"; open list on the morning report no longer shows it | pending |
+| CORE-06 | Waived exception raised again | Disposition W, WAIVER_UNTIL in the future | New row stays W | pending |
+| CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions | pending |
+
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 
 Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–D11 of that document.
@@ -112,7 +124,7 @@ PRISM file hand-off and ack tables populated by the real interfaces; registry ev
 Cancel `ZCD_EBS_VALIDATE` (SM50) between packages: findings of committed packages remain, run stays status R, the morning report's health-of-health check flags it. Re-run produces a new run; no duplicate events in ZCD_FMON_EVENT (unique index).
 
 ## 10. Concurrency (QA1)
-Two `ZCD_FMON_MONITOR` jobs started together: no run lock is delivered — the schedule must keep one job at a time (documented limitation). EBS runs are read-only on FEBKO/FEBEP and safe in parallel.
+Two `ZCD_FMON_MONITOR` jobs started together: the second is refused (run lock for the whole FMON module, CORE-02 pattern). Two EBS or HCK runs of the same variant: the second is refused; different variants run in parallel. Two FMON writers of the same file's events (no lock, e.g. a manual event): EVENT_NO collision retried, every event recorded once.
 
 ## 11. Performance (QA1, acceptance 6)
 

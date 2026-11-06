@@ -195,6 +195,7 @@ sequenceDiagram
   participant S as Core store
   participant A as Core alert
   R->>E: run(selection)
+  Note over E: run lock for the variant (not in test mode); held → refused run RUN_LOCKED, nothing else
   E->>S: start_run(HCK, test mode) + commit (not in test mode)
   E->>D: get_check_defs(categories, priorities, ids)
   loop each active check (SEQ)
@@ -205,12 +206,14 @@ sequenceDiagram
     E->>D: save_metrics (not in test mode)
   end
   E->>S: get_last_run(EBS/FMON/HCK) -> HCK_SELF
+  E->>S: reconcile(executed check IDs without plugin error) (not in test mode)
   E->>D: get_open_exceptions(top N)
   E->>S: finish_run + commit (not in test mode: results durable first)
   E->>A: dispatch(run, findings) (not in test mode)
   E->>A: send(MORNING, HTML) if requested (not in test mode)
   E->>S: save ALERT_FAILED findings + finish_run + commit (only on a delivery failure)
   E-->>R: report (score, categories, results, modules, exceptions)
+  Note over E: run lock released (also on exception)
 ```
 
 ## 6. Tables

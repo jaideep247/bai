@@ -22,6 +22,8 @@ The morning report itself is sent as a report (route `MORNING`), not as an alert
 | T | Throttled (same rule alerted within the window) | None — by design |
 | Q | Held: quiet hours | Appears in the next morning report |
 
+Suite-level alert: **RUN_LOCKED** (check code, every module) — a scheduled run was refused because another run of the same module and variant still holds the run lock. Seed rule `RUN_LOCKED` routes it to RTB support (`config/alert_seed.md`).
+
 ## Part B — Technical
 
 ```mermaid

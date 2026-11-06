@@ -69,10 +69,12 @@ flowchart LR
   E1 --> E2[2. Statement rules S01–S12, R18]
   E2 --> E3[3. Line rules per rule group + '*' — blocked lines skipped]
   E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
-  ST -->|commit per package| CB{Circuit breaker}
+  ST -->|reconcile package scope, commit per package| CB{Circuit breaker}
   CB -->|end of run| AL[Alert router ZCD_OPS_ALERT_RULE]
   E3 -.->|validate_for_posting, mode E/M/O| BADI[BAdI FIEB_CHANGE_BS_DATA]
 ```
+
+Before anything runs the engine takes the **run lock** for its variant (`ZCD_OPS_LOCK` via `E_TABLE`, kept across the package commits, released at the end); a second run of the same variant is refused with RUN_LOCKED. After saving each package's findings the engine **reconciles** the package's lines and statements: open exceptions of earlier runs for these objects that were not raised again are resolved; an exception raised again keeps owner, due date and first-seen time (`ZCL_CD_OPS_STORE`). A package with a PLUGIN_ERROR resolves nothing.
 
 Points of no return: the commit after each package (findings durable) and the alert hand-over after the run. A failure between packages leaves the run in status R (running) — the morning report's health-of-health check flags runs that never closed.
 

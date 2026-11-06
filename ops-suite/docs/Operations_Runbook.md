@@ -24,6 +24,8 @@
 
 Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open) and a due date (`SLA_DAYS_<module>_<severity>`). Assign an owner (disposition A), resolve with a reason (R) or waive with approval (W). Overdue exceptions are a category C check on the morning report.
 
+**Re-runs do not reset the queue.** When the next run raises the same exception (same module, object and check), the new row keeps the owner, due date and first-seen time and counts the occurrence; the earlier row becomes S (superseded) — so each exception is listed once. A valid waiver stays W. When a run evaluates the object again and the finding is gone, the exception is resolved automatically ("Passed on re-run …"). A run in which a rule, check or source failed (PLUGIN_ERROR) resolves nothing.
+
 ## 4. Emergency switches
 
 | Situation | Action | Effect |
@@ -32,10 +34,15 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 | Alert storm | Deactivate the rule in ZCD_OPS_ALERT_RULE or raise THROTTLE_MIN | Immediate, logged |
 | A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. **EBS in enforce mode:** a failing rule blocks posting of its packages (fail closed). Deactivating the rule removes that check — get the rule owner's approval, or switch to `M` for the affected period |
 | Remove the suite | Unschedule the three jobs, set the switch to `O` | Back to previous behaviour in < 15 min |
+| Job refused with RUN_LOCKED (message 040) | Check SM37 for the run named in the message; wait for it, or — only if that job is gone — delete the lock in SM12 (table ZCD_OPS_LOCK, argument client + module + variant) | One run per module + variant (FMON: one per system); the refusal is alerted (rule RUN_LOCKED) |
 
 ## 5. Re-running
 
 All three reports are re-runnable: EBS and HCK create a new run; FMON registry events are idempotent (same source row, same stage = one event). Use test mode to check a fix before a productive re-run.
+
+## 5a. Housekeeping
+
+`ZCD_OPS_PURGE` (monthly, Control-M, test mode off) deletes the suite's own history older than the retention parameters (`RETENTION_DAYS_*`, never below 30 days): runs with their findings, alert log, FMON events, HCK metrics. Runs that still hold an open, assigned or validly waived exception are kept. Run it in test mode first after any parameter change; the job log shows one line per target (message 060).
 
 ## 6. Who to call
 
