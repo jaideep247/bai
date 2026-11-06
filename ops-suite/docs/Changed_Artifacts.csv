@@ -175,6 +175,7 @@ src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's 
 src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
+src/core/zcl_cd_ops_alert_dao.clas.testclasses.abap,ABAP,SQL tests of the alert DAO claim / repeat-key logic on cl_osql_test_environment
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_policy.clas.abap,ABAP,"Decides which alert rules fire for a run, whether quiet hours, throttling or"
 src/core/zcl_cd_ops_alert_policy.clas.testclasses.abap,ABAP,"Domain tests of the alert rules: severity floor, patterns, run-level RAG,"

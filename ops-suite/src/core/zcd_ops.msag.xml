@@ -113,6 +113,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>025</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 written only in part (&amp;3 of &amp;4 lines)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>026</MSGNR>
+     <TEXT>E-mail for &amp;1 was not accepted by SAPconnect (BCS send result)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>030</MSGNR>
      <TEXT>Class &amp;1 does not exist</TEXT>
     </T100>

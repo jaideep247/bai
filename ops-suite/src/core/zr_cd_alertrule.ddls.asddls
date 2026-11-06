@@ -42,6 +42,8 @@ define view entity ZR_CD_AlertRule
       escalate_after as EscalateAfter,
       @EndUserText.label: 'Escalation destination'
       escalation_dest as EscalationDest,
+      @EndUserText.label: 'Esc override'
+      esc_override as EscOverride,
       @EndUserText.label: 'Active'
       active as Active,
       @EndUserText.label: 'Changed by (SM30)'

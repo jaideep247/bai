@@ -11,6 +11,7 @@
 *& 2026-11-06 | Message class constant and message number / variable types (texts as messages).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Alert claim / repeat / partial statuses, intent key, SLG1 external ID, escalation override (A17, A45, A46).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -29,6 +30,8 @@ INTERFACE zif_cd_ops_types
   TYPES ty_group       TYPE c LENGTH 35.
   TYPES ty_reference   TYPE c LENGTH 35.
   TYPES ty_message     TYPE c LENGTH 255.
+  TYPES ty_intent_key    TYPE c LENGTH 40.
+  TYPES ty_extnumber     TYPE c LENGTH 100.
   "! Number of a message of class ZCD_OPS (every user-facing text of the suite is one)
   TYPES ty_msgno       TYPE n LENGTH 3.
   "! Message variable (&1 .. &4)
@@ -190,6 +193,12 @@ INTERFACE zif_cd_ops_types
       failed    TYPE c LENGTH 1 VALUE 'F',
       throttled TYPE c LENGTH 1 VALUE 'T',
       quiet     TYPE c LENGTH 1 VALUE 'Q',
+      "! Durable claim written and committed before the external send (audit A17)
+      claimed   TYPE c LENGTH 1 VALUE 'C',
+      "! Only carried-forward exceptions - not alerted again (audit A17)
+      repeat    TYPE c LENGTH 1 VALUE 'R',
+      "! Delivered in part (e.g. application log stopped adding lines, audit A45)
+      partial   TYPE c LENGTH 1 VALUE 'P',
     END OF gc_alert_status.
 
   "! One alert rule: which findings of which payment engine area go to which channel
@@ -219,6 +228,8 @@ INTERFACE zif_cd_ops_types
       "! After n consecutive alerting runs add the escalation destination
       escalate_after  TYPE i,
       escalation_dest TYPE ty_alert_dest,
+      "! X = a due escalation is delivered even inside the throttle window (audit A46)
+      esc_override    TYPE abap_bool,
       active          TYPE abap_bool,
     END OF ty_alert_rule.
   TYPES tt_alert_rule TYPE STANDARD TABLE OF ty_alert_rule WITH EMPTY KEY.
@@ -246,6 +257,8 @@ INTERFACE zif_cd_ops_types
       html        TYPE string,
       text        TYPE string,
       item_count  TYPE i,
+      "! External ID of the application log (SLG1): payment engine area / run / rule
+      extnumber   TYPE ty_extnumber,
     END OF ty_alert_message.
   TYPES tt_alert_message TYPE STANDARD TABLE OF ty_alert_message WITH EMPTY KEY.
 
@@ -261,8 +274,21 @@ INTERFACE zif_cd_ops_types
       destination TYPE ty_alert_dest,
       subject     TYPE ty_message,
       error       TYPE ty_message,
+      "! Alert intent (rule, run, channel, destination, subject) and attempt: one
+      "! dispatcher per intent and attempt (unique index INT, audit A17)
+      intent_key  TYPE ty_intent_key,
+      attempt     TYPE i,
     END OF ty_alert_log.
   TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
+
+  "! A finding raised again only because an open exception was carried forward
+  TYPES:
+    BEGIN OF ty_repeat_key,
+      object_type TYPE ty_object_type,
+      object_key  TYPE ty_object_key,
+      check_code  TYPE ty_check_code,
+    END OF ty_repeat_key.
+  TYPES tt_repeat_key TYPE HASHED TABLE OF ty_repeat_key WITH UNIQUE KEY object_type object_key check_code.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
@@ -274,6 +300,9 @@ INTERFACE zif_cd_ops_types
       alert_more_findings         TYPE zif_cd_ops_types=>ty_msgno VALUE '006',
       channel_inactive            TYPE zif_cd_ops_types=>ty_msgno VALUE '007',
       passed_on_rerun             TYPE zif_cd_ops_types=>ty_msgno VALUE '008',
+      no_recipient                TYPE zif_cd_ops_types=>ty_msgno VALUE '021',
+      applog_partial              TYPE zif_cd_ops_types=>ty_msgno VALUE '025',
+      bcs_not_sent                TYPE zif_cd_ops_types=>ty_msgno VALUE '026',
     END OF gc_msg.
 
 ENDINTERFACE.

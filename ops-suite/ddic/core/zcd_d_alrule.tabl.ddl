@@ -24,6 +24,7 @@ define table zcd_d_alrule {
   quietto : abap.tims;
   escalateafter : abap.int4;
   escalationdest : abap.char(255);
+  escoverride : abap_boolean;
   active : abap_boolean;
   changedby : syuname;
   changedat : timestampl;
