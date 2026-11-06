@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A07: optional company-code field of DFKKCR (configured, DDIC-validated).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -28,6 +29,12 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
     CONSTANTS gc_rtrv_table TYPE string VALUE `ZCD_ACH_RTRV_LOG`.
 
   PRIVATE SECTION.
+    "! Check register and its static field list (A07 appends the configured company-code field)
+    CONSTANTS gc_check_table TYPE string VALUE `DFKKCR`.
+    CONSTANTS gc_check_fields TYPE string VALUE `ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus`.
+    CONSTANTS gc_sql_separator TYPE string VALUE `, `.
+    CONSTANTS gc_sql_as_bukrs TYPE string VALUE ` AS bukrs`.
+
     METHODS field_exists
       IMPORTING
         iv_table      TYPE string
@@ -131,7 +138,14 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " Confirmed: DFKKCR-ZTNUM = FEBEP-CHECT, DFKKCR-DOC1R = DFKKOP-AUGBL.
     " VERIFY-DDIC: DFKKCR-RWBTR (amount) and CRSTATUS as used by legacy v4 581/255;
     " HBKID/HKTID returned so rules scope a check number to its house bank account
-    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus
+    " A07: optional company-code field (EBS_DFKKCR_BUKRS_FIELD), validated against the DDIC
+    DATA(lv_fields) = gc_check_fields.
+    DATA(lv_bukrs_field) = to_upper( condense( zcl_cd_ops_factory=>get_store( )->get_param(
+                             iv_name = zif_cd_ebs_types=>gc_param-dfkkcr_bukrs_field ) ) ).
+    IF lv_bukrs_field IS NOT INITIAL AND field_exists( iv_table = gc_check_table iv_field = lv_bukrs_field ) = abap_true.
+      lv_fields = lv_fields && gc_sql_separator && lv_bukrs_field && gc_sql_as_bukrs.
+    ENDIF.
+    SELECT (lv_fields)
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_ztnum
       WHERE ztnum = @it_ztnum-table_line

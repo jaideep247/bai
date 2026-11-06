@@ -10,6 +10,7 @@
 *& 2026-11-06 | HOUSE_BANK_AMBIGUOUS reported when the account cannot be determined (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check-register query with every form of the check number (leading zeros).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R08 - check amount vs register</p>
 CLASS zcl_cd_ebs_r_r08_check_amount DEFINITION
@@ -29,12 +30,8 @@ CLASS zcl_cd_ebs_r_r08_check_amount IMPLEMENTATION.
 
   METHOD zif_cd_ebs_rule~execute.
     DATA lt_ztnum TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
-    LOOP AT it_lines INTO DATA(ls_key_line).
-      DATA(lv_ref) = ztnum_key( line_reference( ls_key_line ) ).
-      IF lv_ref IS NOT INITIAL.
-        INSERT lv_ref INTO TABLE lt_ztnum.
-      ENDIF.
-    ENDLOOP.
+    " Every form the check number can take in the register (leading zeros)
+    lt_ztnum = ztnum_query_keys( it_lines ).
     DATA(lt_checks) = sap_dao( )->get_checks( lt_ztnum ).
     LOOP AT it_lines INTO DATA(ls_line).
       DATA(lv_ztnum) = ztnum_key( line_reference( ls_line ) ).

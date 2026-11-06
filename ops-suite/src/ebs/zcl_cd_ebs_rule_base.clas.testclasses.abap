@@ -12,6 +12,7 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A11: 166 disbursement retrieval-log chain (R07L PARAM2 AP, PARAM3 LOT).
 *& 2026-11-06 | Audit A25 / A33: canonical account identity, missing currencies.
+*& 2026-11-06 | Audit A07 / A08: company code in the register match, leading zeros, R12 populations.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -73,6 +74,7 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mt_fi_lines   TYPE zif_cd_ebs_sap_dao=>tt_fi_line.
     DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
+    DATA mt_ztnum_seen TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
     DATA mt_lookup_rows TYPE zif_cd_ebs_sap_dao=>tt_lookup_row.
     DATA ms_lookup_used TYPE zif_cd_ebs_types=>ty_lookup_cfg.
 ENDCLASS.
@@ -103,6 +105,7 @@ CLASS ltd_sap_dao IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_ebs_sap_dao~get_checks.
+    mt_ztnum_seen = it_ztnum.
     LOOP AT mt_checks INTO DATA(ls_check).
       IF line_exists( it_ztnum[ table_line = ls_check-ztnum ] ).
         INSERT ls_check INTO TABLE rt_checks.
@@ -568,6 +571,11 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r07c_any_cancelled_row_fails FOR TESTING.
     METHODS r08_unknown_bank_ambiguous   FOR TESTING.
     METHODS r08_unknown_bank_single_ok   FOR TESTING.
+    METHODS r08_other_company_ignored    FOR TESTING.
+    METHODS r08_leading_zeros_match      FOR TESTING.
+    METHODS r08_bank_zeros_register_none FOR TESTING.
+    METHODS r12_equal_total_other_count  FOR TESTING.
+    METHODS r12_register_row_not_reused  FOR TESTING.
     METHODS r21_missing_record_reported  FOR TESTING.
     METHODS r21_any_allowed_status_ok    FOR TESTING.
     METHODS r21_status_not_allowed       FOR TESTING.
@@ -1009,6 +1017,116 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_other->get_text( ) }| ).
     ENDTRY.
     cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'An unknown lookup ID must raise ZCX_CD_OPS_ERROR' ).
+  ENDMETHOD.
+
+
+  " A07: the same house bank ID in another company code is another account - its register
+  " row (company code from DFKKCR) is ignored
+  METHOD r08_other_company_ignored.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-bukrs  = gc_test-bukrs.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-bukrs  = 'CA01'.
+        ls_check-amount = '999.00'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A register row of another company code must be ignored' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Leading zeros: the bank strips them, the register keeps them (EBS_KEYLEN_ZTNUM = 13)
+  METHOD r08_leading_zeros_match.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        INSERT VALUE #( name = 'EBS_KEYLEN_ZTNUM' value = '13' ) INTO TABLE mo_store->mt_params.
+        ls_check-ztnum  = '0000000012345'.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = '12345 and 0000000012345 must be the same check' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Leading zeros the other way round: the bank sends them, the register does not
+  METHOD r08_bank_zeros_register_none.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( iv_reference = '0000000012345' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = '0000000012345 from the bank must match register 12345' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A08: equal totals with unequal counts fail - one bank entry against two register rows
+  METHOD r12_equal_total_other_count.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-doc1r  = '000000000001'.
+        ls_check-amount = '125.00'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-doc1r  = '000000000002'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-code_count_mismatch
+                         iv_msg        = 'One bank entry against two register rows must fail on count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A08: a repeated bank reference must not reuse the same register row
+  METHOD r12_register_row_not_reused.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 2
+                                            msg = 'Two bank entries on one register row: total and count fail' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

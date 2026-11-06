@@ -352,6 +352,11 @@ INTERFACE zif_cd_ebs_types
       feb_debit_ind     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_DEBIT_IND',
       feb_credit_ind    TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_CREDIT_IND',
       rtrv_status_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_RTRV_STATUS_FIELD',
+      "! A07: DFKKCR field holding the company code (blank = not used; VERIFY-DDIC)
+      dfkkcr_bukrs_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DFKKCR_BUKRS_FIELD',
+      "! Leading zeros of check numbers are not significant (X, default) or are (blank)
+      ztnum_ignore_zeros TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_ZTNUM_IGNORE_ZEROS',
+      keylen_ztnum       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_ZTNUM',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,

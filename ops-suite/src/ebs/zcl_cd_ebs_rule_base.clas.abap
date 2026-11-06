@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | House bank: statement without house bank matches only when one account is possible (audit 2026-11-06).
 *& 2026-11-06 | Audit A25: account_key / account_of - one canonical account identity for all rules.
+*& 2026-11-06 | Audit A07: company code in the register match; canonical check numbers (leading zeros).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -60,6 +61,22 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         it_lines       TYPE zif_cd_ebs_types=>tt_line
       RETURNING
         VALUE(rt_keys) TYPE zif_cd_ebs_sap_dao=>tt_docno.
+
+    "! Check-register query keys of the lines: every form a check number can take in DFKKCR -
+    "! as delivered, without leading zeros and padded to EBS_KEYLEN_ZTNUM
+    METHODS ztnum_query_keys
+      IMPORTING
+        it_lines       TYPE zif_cd_ebs_types=>tt_line
+      RETURNING
+        VALUE(rt_keys) TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
+
+    "! Canonical check number: condensed; leading zeros removed from an all-digit number
+    "! unless EBS_ZTNUM_IGNORE_ZEROS is blank (one rule for bank CHECT and DFKKCR-ZTNUM)
+    METHODS ztnum_canonical
+      IMPORTING
+        iv_value        TYPE clike
+      RETURNING
+        VALUE(rv_value) TYPE string.
 
     "! Comma list from a rule parameter, or the default list when the parameter is blank
     METHODS value_list
@@ -170,6 +187,28 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD ztnum_query_keys.
+    LOOP AT it_lines INTO DATA(ls_line).
+      DATA(lv_reference) = condense( CONV string( line_reference( ls_line ) ) ).
+      IF lv_reference IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( lv_reference ) INTO TABLE rt_keys.
+      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( ztnum_key( lv_reference ) ) INTO TABLE rt_keys.
+      INSERT CONV zif_cd_ebs_sap_dao=>ty_ztnum( ztnum_canonical( lv_reference ) ) INTO TABLE rt_keys.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD ztnum_canonical.
+    rv_value = condense( CONV string( iv_value ) ).
+    IF param( iv_name = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros iv_default = CONV #( abap_true ) ) = abap_true
+       AND rv_value CO zif_cd_ebs_types=>gc_digits.
+      SHIFT rv_value LEFT DELETING LEADING '0'.
+    ENDIF.
+  ENDMETHOD.
+
+
   METHOD docno_keys.
     LOOP AT it_lines INTO DATA(ls_line).
       DATA(lv_reference) = line_reference( ls_line ).
@@ -212,9 +251,18 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
-    LOOP AT it_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
+    DATA(lv_canonical) = ztnum_canonical( lv_ztnum ).
+    LOOP AT it_checks INTO DATA(ls_check).
+      IF ztnum_canonical( ls_check-ztnum ) <> lv_canonical.
+        CONTINUE.
+      ENDIF.
       IF ls_statement-hbkid IS NOT INITIAL AND ls_check-hbkid IS NOT INITIAL
          AND ( ls_check-hbkid <> ls_statement-hbkid OR ls_check-hktid <> ls_statement-hktid ).
+        CONTINUE.
+      ENDIF.
+      " A07: a house bank ID is unique only within its company code
+      IF ls_statement-bukrs IS NOT INITIAL AND ls_check-bukrs IS NOT INITIAL
+         AND ls_check-bukrs <> ls_statement-bukrs.
         CONTINUE.
       ENDIF.
       INSERT ls_check INTO TABLE rt_checks.
@@ -229,8 +277,12 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
     IF lv_ztnum IS INITIAL OR ls_statement-hbkid IS NOT INITIAL.
       RETURN.
     ENDIF.
-    LOOP AT it_checks INTO DATA(ls_check) WHERE ztnum = lv_ztnum.
-      DATA(lv_account) = |{ ls_check-hbkid }/{ ls_check-hktid }|.
+    DATA(lv_canonical) = ztnum_canonical( lv_ztnum ).
+    LOOP AT it_checks INTO DATA(ls_check).
+      IF ztnum_canonical( ls_check-ztnum ) <> lv_canonical.
+        CONTINUE.
+      ENDIF.
+      DATA(lv_account) = |{ ls_check-bukrs }/{ ls_check-hbkid }/{ ls_check-hktid }|.
       IF lv_first IS INITIAL.
         lv_first = lv_account.
       ELSEIF lv_account <> lv_first.
