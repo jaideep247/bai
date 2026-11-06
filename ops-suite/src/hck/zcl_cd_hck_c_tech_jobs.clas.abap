@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -40,7 +41,7 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
     DATA(lt_patterns) = CORRESPONDING zif_cd_hck_types=>tt_jobname_range( zcl_cd_hck_param=>pattern_range( is_def-param1 ) ).
     IF lt_patterns IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e050(zcd_ops) WITH is_def-check_id 'PARAM1 (job name patterns)'.
+        MESSAGE e345(zcd_ops) WITH is_def-check_id.
     ENDIF.
     DATA(lv_long_min)  = zcl_cd_hck_param=>int( iv_value = is_def-param2 iv_default = 120 ).
     DATA(lv_grace_min) = zcl_cd_hck_param=>int( iv_value = is_def-param3 iv_default = 30 ).

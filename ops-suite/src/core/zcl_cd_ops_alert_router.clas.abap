@@ -8,6 +8,7 @@
 *& channel is logged and never aborts the calling run. Test-mode runs never alert.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -197,7 +198,8 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     IF ls_channel IS INITIAL OR ls_channel-active = abap_false.
       add_log( iv_rule_id = ls_rule-rule_id iv_channel = ls_rule-channel is_run = is_run
                iv_status = zif_cd_ops_types=>gc_alert_status-failed
-               iv_error = |Channel { ls_rule-channel } not configured or inactive in ZCD_OPS_ALERT_CHN| ).
+               iv_error = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-channel_inactive
+                                               iv_v1    = ls_rule-channel ) ).
       RETURN.
     ENDIF.
 

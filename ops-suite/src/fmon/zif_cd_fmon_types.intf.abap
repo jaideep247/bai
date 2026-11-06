@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | gc_manual_src_id (design 6.4).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -570,6 +571,22 @@ INTERFACE zif_cd_fmon_types
       findings TYPE zif_cd_ops_types=>tt_finding,
     END OF ty_result.
 
+  "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
+  CONSTANTS:
+    BEGIN OF gc_engine_key,
+      source   TYPE c LENGTH 4 VALUE 'SRC:',
+      lot      TYPE c LENGTH 4 VALUE 'LOT:',
+      calendar TYPE c LENGTH 4 VALUE 'CAL:',
+      check    TYPE c LENGTH 4 VALUE 'CHK:',
+    END OF gc_engine_key.
+
+  "! SLA check codes are built from the stage label: NO_<stage> (missing), <stage>_LATE
+  CONSTANTS:
+    BEGIN OF gc_sla_code,
+      missing_prefix TYPE c LENGTH 3 VALUE 'NO_',
+      late_suffix    TYPE c LENGTH 5 VALUE '_LATE',
+    END OF gc_sla_code.
+
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
@@ -599,6 +616,7 @@ INTERFACE zif_cd_fmon_types
       file_s_finding_s            TYPE zif_cd_ops_types=>ty_msgno VALUE '236',
       alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '237',
       lot_unprocessed             TYPE zif_cd_ops_types=>ty_msgno VALUE '238',
+      event_info                  TYPE zif_cd_ops_types=>ty_msgno VALUE '239',
     END OF gc_msg.
 
 ENDINTERFACE.

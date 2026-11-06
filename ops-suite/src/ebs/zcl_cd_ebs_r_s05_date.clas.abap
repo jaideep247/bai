@@ -33,7 +33,7 @@ CLASS zcl_cd_ebs_r_s05_date IMPLEMENTATION.
       IF ls_statement-stmt_date IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_date_missing
-                 iv_message = 'Statement has no date' ) INTO TABLE rt_findings.
+                 iv_message = zcl_cd_ops_util=>text( zif_cd_ebs_types=>gc_msg-stmt_date_missing ) ) INTO TABLE rt_findings.
       ELSEIF ls_statement-stmt_date > lv_today.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_date_future

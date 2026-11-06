@@ -383,7 +383,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
                         message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-validation_could_not_run
-                                                             iv_v1    = lx_error->get_text( ) ) )
+                                                             iv_tail  = lx_error->get_text( ) ) )
           INTO TABLE rs_decision-findings.
     ENDTRY.
     rs_decision-findings = apply_releases( rs_decision-findings ).
@@ -476,7 +476,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_failed
                                                              iv_v1    = is_rule-rule_id
                                                              iv_v2    = is_rule-class_name
-                                                             iv_v3    = lx_error->get_text( ) ) )
+                                                             iv_tail  = lx_error->get_text( ) ) )
           INTO TABLE rt_findings.
     ENDTRY.
   ENDMETHOD.

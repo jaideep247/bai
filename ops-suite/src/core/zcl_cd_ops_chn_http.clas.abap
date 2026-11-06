@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel HTTP webhook</p>
 CLASS zcl_cd_ops_chn_http DEFINITION
@@ -26,6 +27,8 @@ CLASS zcl_cd_ops_chn_http DEFINITION
         VALUE(rv_json) TYPE string.
 
   PRIVATE SECTION.
+    "! Webhook payload format (wire format of the receiver, not text)
+    CONSTANTS gc_content_type TYPE string VALUE `application/json; charset=utf-8`.
     CLASS-METHODS json_string
       IMPORTING
         iv_value       TYPE clike
@@ -60,7 +63,7 @@ CLASS zcl_cd_ops_chn_http IMPLEMENTATION.
     ENDIF.
 
     lo_client->request->set_method( if_http_request=>co_request_method_post ).
-    lo_client->request->set_content_type( 'application/json; charset=utf-8' ).
+    lo_client->request->set_content_type( gc_content_type ).
     lo_client->request->set_cdata( to_json( is_message ) ).
 
     lo_client->send( EXCEPTIONS OTHERS = 1 ).

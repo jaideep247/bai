@@ -53,6 +53,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Channel &amp;1 not configured or inactive in ZCD_OPS_ALERT_CHN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Passed on re-run &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>010</MSGNR>
      <TEXT>Insert into table &amp;1 failed</TEXT>
     </T100>
@@ -216,13 +228,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>103</MSGNR>
-     <TEXT>Validation could not run: &amp;1</TEXT>
+     <TEXT>Validation could not run:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>104</MSGNR>
-     <TEXT>Rule &amp;1 (&amp;2) failed: &amp;3</TEXT>
+     <TEXT>Rule &amp;1 (&amp;2) failed:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -948,7 +960,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>225</MSGNR>
-     <TEXT>Source &amp;1 (&amp;2): &amp;3</TEXT>
+     <TEXT>Source &amp;1 (&amp;2):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -972,7 +984,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>229</MSGNR>
-     <TEXT>Lot reader &amp;1 (&amp;2): &amp;3</TEXT>
+     <TEXT>Lot reader &amp;1 (&amp;2):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -984,7 +996,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>231</MSGNR>
-     <TEXT>Factory calendar &amp;1: &amp;2; calendar days used</TEXT>
+     <TEXT>Factory calendar &amp;1 (calendar days used):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -996,19 +1008,19 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>233</MSGNR>
-     <TEXT>Factory calendar &amp;1: &amp;2; NORMAL day used</TEXT>
+     <TEXT>Factory calendar &amp;1 (NORMAL day used):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>234</MSGNR>
-     <TEXT>Check &amp;1 (&amp;2): &amp;3</TEXT>
+     <TEXT>Check &amp;1 (&amp;2):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>235</MSGNR>
-     <TEXT>Registry not saved: &amp;1</TEXT>
+     <TEXT>Registry not saved:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1020,13 +1032,19 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>237</MSGNR>
-     <TEXT>Alert dispatch failed: &amp;1</TEXT>
+     <TEXT>Alert dispatch failed:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>238</MSGNR>
      <TEXT>&amp;1: &amp;2 of &amp;3 &amp;4 transaction(s) unprocessed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>239</MSGNR>
+     <TEXT>&amp;1 source row(s), status &amp;2</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1224,19 +1242,19 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>332</MSGNR>
-     <TEXT>&amp;1 after &amp;2 min (max &amp;3)</TEXT>
+     <TEXT>after &amp;1 min (max &amp;2)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>333</MSGNR>
-     <TEXT>&amp;1 in &amp;2 min (max &amp;3)</TEXT>
+     <TEXT>in &amp;1 min (max &amp;2)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>334</MSGNR>
-     <TEXT>&amp;1, blocked by predecessor &amp;2</TEXT>
+     <TEXT>blocked by predecessor &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1254,7 +1272,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>337</MSGNR>
-     <TEXT>Suppressed until &amp;1 by &amp;2: &amp;3</TEXT>
+     <TEXT>Suppressed until &amp;1 by &amp;2:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1291,6 +1309,60 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>343</MSGNR>
      <TEXT>&amp;1 &gt; &amp;2 STALE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>344</MSGNR>
+     <TEXT>Check &amp;1: PARAM1 (application log objects) is not maintained</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>345</MSGNR>
+     <TEXT>Check &amp;1: PARAM1 (job name patterns) is not maintained</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>346</MSGNR>
+     <TEXT>At least &amp;1 reconciliation keys without GL document (list capped)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>347</MSGNR>
+     <TEXT>No active job cycle configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>348</MSGNR>
+     <TEXT>OK - &amp;1 metric(s) within limits</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>349</MSGNR>
+     <TEXT>(+&amp;1 more)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>350</MSGNR>
+     <TEXT>Health of the health check (EBS, FMON, HCK ran)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>351</MSGNR>
+     <TEXT>Payment engine area &amp;1 has never run</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>352</MSGNR>
+     <TEXT>Payment engine area &amp;1 last ran &amp;2 h ago (max &amp;3 h)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1423,6 +1495,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>505</MSGNR>
      <TEXT>Record &amp;1 in line &amp;2 found after file trailer 99; expected end of file</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>506</MSGNR>
+     <TEXT>Statement has no date</TEXT>
     </T100>
    </T100>
   </asx:values>

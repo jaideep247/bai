@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | text( ): user-facing texts are ZCD_OPS messages (phase 5, remove hardcoding).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -29,6 +30,8 @@ CLASS zcl_cd_ops_util DEFINITION
         iv_v2          TYPE simple OPTIONAL
         iv_v3          TYPE simple OPTIONAL
         iv_v4          TYPE simple OPTIONAL
+        "! Appended after the message text, not truncated (exception texts, messages)
+        iv_tail        TYPE string OPTIONAL
       RETURNING
         VALUE(rv_text) TYPE string.
 
@@ -137,6 +140,9 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
     ENDIF.
     MESSAGE ID zif_cd_ops_types=>gc_message_class TYPE zif_cd_ops_types=>gc_msgty_info NUMBER iv_msgno
             WITH lv_v1 lv_v2 lv_v3 lv_v4 INTO rv_text.
+    IF iv_tail IS NOT INITIAL.
+      rv_text = |{ rv_text } { iv_tail }|.
+    ENDIF.
   ENDMETHOD.
 
 

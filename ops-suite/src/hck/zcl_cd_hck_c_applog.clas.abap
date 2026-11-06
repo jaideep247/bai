@@ -5,6 +5,7 @@
 *& from the BALHDR message counters, for a configured object list.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - application log error rate (SLG1)</p>
 "! PARAM1 = log objects (patterns allowed), PARAM2 = subobjects (blank = all),
@@ -37,7 +38,7 @@ CLASS zcl_cd_hck_c_applog IMPLEMENTATION.
     DATA(lt_objects) = CORRESPONDING zif_cd_hck_types=>tt_object_range( zcl_cd_hck_param=>pattern_range( is_def-param1 ) ).
     IF lt_objects IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e050(zcd_ops) WITH is_def-check_id 'PARAM1 (log objects)'.
+        MESSAGE e344(zcd_ops) WITH is_def-check_id.
     ENDIF.
     DATA(lt_subobjects) = CORRESPONDING zif_cd_hck_types=>tt_subobj_range( zcl_cd_hck_param=>pattern_range( is_def-param2 ) ).
     DATA(lv_day) = CONV d( is_context-report_date - zcl_cd_hck_param=>int( iv_value = is_def-param3 iv_default = 1 ) ).

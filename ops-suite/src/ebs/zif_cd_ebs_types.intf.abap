@@ -298,6 +298,8 @@ INTERFACE zif_cd_ebs_types
     END OF ty_reason_map.
   TYPES tt_reason_map TYPE SORTED TABLE OF ty_reason_map WITH UNIQUE KEY reason.
 
+  "! Statement keys of imported statements: FEB<KUKEY>
+  CONSTANTS gc_feb_stmt_prefix TYPE c LENGTH 3 VALUE 'FEB'.
   "! Statement keys of a parsed file (not yet imported): S0001, S0002, ...
   CONSTANTS gc_file_stmt_prefix TYPE c LENGTH 1 VALUE 'S'.
 
@@ -458,6 +460,7 @@ INTERFACE zif_cd_ebs_types
       acct_trailer_no_account     TYPE zif_cd_ops_types=>ty_msgno VALUE '503',
       group_trailer_no_group      TYPE zif_cd_ops_types=>ty_msgno VALUE '504',
       record_after_trailer        TYPE zif_cd_ops_types=>ty_msgno VALUE '505',
+      stmt_date_missing           TYPE zif_cd_ops_types=>ty_msgno VALUE '506',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -258,6 +258,8 @@ INTERFACE zif_cd_ops_types
       alert_run_line_1            TYPE zif_cd_ops_types=>ty_msgno VALUE '004',
       alert_run_line_2            TYPE zif_cd_ops_types=>ty_msgno VALUE '005',
       alert_more_findings         TYPE zif_cd_ops_types=>ty_msgno VALUE '006',
+      channel_inactive            TYPE zif_cd_ops_types=>ty_msgno VALUE '007',
+      passed_on_rerun             TYPE zif_cd_ops_types=>ty_msgno VALUE '008',
     END OF gc_msg.
 
 ENDINTERFACE.

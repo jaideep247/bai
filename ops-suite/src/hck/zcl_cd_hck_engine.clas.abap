@@ -11,6 +11,7 @@
 *& 2026-11-06 | Exception carry-forward: executed checks reconciled by check ID.
 *& 2026-11-06 | Active suppressions applied per check result (design 6.3).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -501,13 +502,15 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_worst) = zcl_cd_ops_util=>worst_severity( cs_result-findings ).
     IF lv_worst IS INITIAL OR lv_worst = zif_cd_ops_types=>gc_severity-info.
       IF cs_result-summary IS INITIAL.
-        cs_result-summary = |OK - { lines( cs_result-metrics ) } metric(s) within limits|.
+        cs_result-summary = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-summary_ok iv_v1 = lines( cs_result-metrics ) ).
       ENDIF.
       RETURN.
     ENDIF.
     DATA(ls_worst) = VALUE #( cs_result-findings[ severity = lv_worst ] OPTIONAL ).
     cs_result-summary = COND #( WHEN lines( cs_result-findings ) > 1
-                                THEN |{ ls_worst-message } (+{ lines( cs_result-findings ) - 1 } more)|
+                                THEN ls_worst-message && ` `
+                                     && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-summary_more
+                                                               iv_v1    = lines( cs_result-findings ) - 1 )
                                 ELSE ls_worst-message ).
   ENDMETHOD.
 
@@ -551,7 +554,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     LOOP AT lt_pe_areas INTO DATA(lv_pe_area).
       CLEAR ls_status.
       ls_status-pe_area        = to_upper( lv_pe_area ).
-      ls_status-max_age_hours = param_int( iv_name    = CONV #( |HCK_MAX_AGE_H_{ ls_status-pe_area }| )
+      ls_status-max_age_hours = param_int( iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_age && ls_status-pe_area )
                                            iv_default = lv_default_age ).
       DATA(ls_last) = mo_store->get_last_run( ls_status-pe_area ).
       IF ls_last-run_id IS INITIAL.
@@ -582,7 +585,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD self_check.
     rs_result-check_id    = zif_cd_hck_types=>gc_self_check.
-    rs_result-description = 'Health of the health check (EBS, FMON, HCK ran)'.
+    rs_result-description = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-self_check_text ).
     rs_result-category    = zif_cd_hck_types=>gc_category-technical.
     rs_result-priority    = zif_cd_hck_types=>gc_priority-high.
     LOOP AT it_pe_areas INTO DATA(ls_pe_area) WHERE stale = abap_true.
@@ -591,9 +594,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-notify
                       message    = COND #( WHEN ls_pe_area-last_run_at IS INITIAL
-                                           THEN |Payment engine area { ls_pe_area-pe_area } has never run|
-                                           ELSE |Payment engine area { ls_pe_area-pe_area } last ran { ls_pe_area-age_hours } h ago |
-                                             && |(max { ls_pe_area-max_age_hours } h)| ) )
+                                           THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-area_never_ran
+                                                                       iv_v1    = ls_pe_area-pe_area )
+                                           ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-area_last_ran
+                                                                       iv_v1    = ls_pe_area-pe_area
+                                                                       iv_v2    = ls_pe_area-age_hours
+                                                                       iv_v3    = ls_pe_area-max_age_hours ) ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
     finalize_result( CHANGING cs_result = rs_result ).

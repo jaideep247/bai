@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -542,6 +543,12 @@ INTERFACE zif_cd_hck_types
       exceptions     TYPE tt_open_exception,
     END OF ty_report.
 
+  "! Parameter-name prefixes completed by a payment engine area (e.g. HCK_MAX_AGE_H_EBS)
+  CONSTANTS:
+    BEGIN OF gc_param_prefix,
+      max_age TYPE c LENGTH 14 VALUE 'HCK_MAX_AGE_H_',
+    END OF gc_param_prefix.
+
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
@@ -566,6 +573,15 @@ INTERFACE zif_cd_hck_types
       mail_subject_1              TYPE zif_cd_ops_types=>ty_msgno VALUE '341',
       mail_subject_2              TYPE zif_cd_ops_types=>ty_msgno VALUE '342',
       stale_age                   TYPE zif_cd_ops_types=>ty_msgno VALUE '343',
+      param1_log_objects          TYPE zif_cd_ops_types=>ty_msgno VALUE '344',
+      param1_job_patterns         TYPE zif_cd_ops_types=>ty_msgno VALUE '345',
+      gl_gaps_capped              TYPE zif_cd_ops_types=>ty_msgno VALUE '346',
+      no_job_cycle                TYPE zif_cd_ops_types=>ty_msgno VALUE '347',
+      summary_ok                  TYPE zif_cd_ops_types=>ty_msgno VALUE '348',
+      summary_more                TYPE zif_cd_ops_types=>ty_msgno VALUE '349',
+      self_check_text             TYPE zif_cd_ops_types=>ty_msgno VALUE '350',
+      area_never_ran              TYPE zif_cd_ops_types=>ty_msgno VALUE '351',
+      area_last_ran               TYPE zif_cd_ops_types=>ty_msgno VALUE '352',
     END OF gc_msg.
 
 ENDINTERFACE.

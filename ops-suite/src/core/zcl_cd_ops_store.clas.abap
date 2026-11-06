@@ -10,6 +10,7 @@
 *& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
 *& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -331,7 +332,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       ls_resolved-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
       ls_resolved-resolved_by         = sy-uname.
       ls_resolved-resolved_at         = lv_now.
-      ls_resolved-resolution          = |Passed on re-run { is_run-run_id }|.
+      ls_resolved-resolution          = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-passed_on_rerun
+                                                             iv_v1    = |{ is_run-run_id }| ).
       ls_resolved-col_ind-disposition = abap_true.
       ls_resolved-col_ind-resolved_by = abap_true.
       ls_resolved-col_ind-resolved_at = abap_true.

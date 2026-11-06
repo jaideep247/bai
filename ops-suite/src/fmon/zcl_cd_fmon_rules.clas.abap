@@ -6,6 +6,7 @@
 *& duplicates, size, lot outcome, NOC aging. Check classes call these.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -374,8 +375,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
                                     WHEN zif_cd_fmon_types=>gc_stage-fully     THEN `PROCESSING`
                                     ELSE condense( iv_stage ) ).
     rv_code = SWITCH #( iv_state
-                        WHEN zif_cd_fmon_types=>gc_sla_state-missing THEN |NO_{ lv_label }|
-                        WHEN zif_cd_fmon_types=>gc_sla_state-late    THEN |{ lv_label }_LATE|
+                        WHEN zif_cd_fmon_types=>gc_sla_state-missing THEN zif_cd_fmon_types=>gc_sla_code-missing_prefix && lv_label
+                        WHEN zif_cd_fmon_types=>gc_sla_state-late    THEN lv_label && zif_cd_fmon_types=>gc_sla_code-late_suffix
                         ELSE `` ).
   ENDMETHOD.
 

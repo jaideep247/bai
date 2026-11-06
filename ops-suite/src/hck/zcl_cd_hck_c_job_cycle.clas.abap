@@ -5,6 +5,7 @@
 *& configured cycle step from TBTCO; findings for missed/failed/stuck/overrun.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle monitor (ZCD_JOB_CYCLE/STEP)</p>
 "! PARAM1 = cycle date offset in days (default 0 = report date),
@@ -44,7 +45,7 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
     DATA(lt_steps) = lo_dao->get_cycle_steps(
       CORRESPONDING zif_cd_hck_types=>tt_cycle_range( zcl_cd_hck_param=>pattern_range( is_def-param2 ) ) ).
     IF lt_steps IS INITIAL.
-      rs_result-summary = 'No active job cycle configured'.
+      rs_result-summary = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-no_job_cycle ).
       RETURN.
     ENDIF.
 

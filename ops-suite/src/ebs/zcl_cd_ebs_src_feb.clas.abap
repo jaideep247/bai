@@ -7,6 +7,7 @@
 *& Debit/credit indicators and the BAI code field are parameters (VERIFY-DDIC).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -95,7 +96,7 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
 
 
   METHOD map_statement.
-    rs_statement-stmt_key       = |FEB{ is_header-kukey }|.
+    rs_statement-stmt_key       = zif_cd_ebs_types=>gc_feb_stmt_prefix && |{ is_header-kukey }|.
     rs_statement-source         = zif_cd_ebs_types=>gc_source-feb.
     rs_statement-kukey          = is_header-kukey.
     rs_statement-bukrs          = is_header-bukrs.
@@ -114,7 +115,7 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
 
 
   METHOD map_line.
-    rs_line-stmt_key     = |FEB{ is_item-kukey }|.
+    rs_line-stmt_key     = zif_cd_ebs_types=>gc_feb_stmt_prefix && |{ is_item-kukey }|.
     rs_line-line_no      = is_item-esnum.
     rs_line-kukey        = is_item-kukey.
     rs_line-esnum        = is_item-esnum.

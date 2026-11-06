@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Test text_fills_message_vars (texts as ZCD_OPS messages).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -27,6 +28,7 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS elapsed_crosses_minute       FOR TESTING.
     METHODS bad_decimal_gives_default    FOR TESTING.
     METHODS text_fills_message_vars      FOR TESTING.
+    METHODS text_tail_is_not_truncated   FOR TESTING.
 ENDCLASS.
 
 
@@ -155,6 +157,20 @@ CLASS ltc_util IMPLEMENTATION.
                                                iv_v3    = `C` ).
         cl_abap_unit_assert=>assert_equals( act = condense( lv_text ) exp = `A 42 C`
                                             msg = 'Variables must replace &1 to &3 in order' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A long value (exception text, finding message) is appended untruncated as the tail -
+  " message variables are only 50 characters long
+  METHOD text_tail_is_not_truncated.
+    TRY.
+        DATA(lv_long) = repeat( val = `x` occ = 80 ).
+        DATA(lv_text) = zcl_cd_ops_util=>text( iv_msgno = '000' iv_v1 = `A` iv_tail = lv_long ).
+        cl_abap_unit_assert=>assert_equals( act = condense( lv_text ) exp = |A { lv_long }|
+                                            msg = 'The tail must follow the message text in full' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

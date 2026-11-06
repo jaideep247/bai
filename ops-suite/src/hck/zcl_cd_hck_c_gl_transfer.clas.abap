@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payment engine to GL transfer completeness</p>
 "! PARAM1 = lag in days (keys younger than this are still open, default 1),
@@ -53,7 +54,7 @@ CLASS zcl_cd_hck_c_gl_transfer IMPLEMENTATION.
                                                           iv_v3    = |{ lv_to DATE = ISO }| ) ) INTO TABLE rs_result-findings.
     ENDLOOP.
     IF lines( lt_gaps ) >= lv_max.
-      rs_result-summary = |At least { lv_max } reconciliation keys without GL document (list capped)|.
+      rs_result-summary = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-gl_gaps_capped iv_v1 = lv_max ).
     ENDIF.
   ENDMETHOD.
 
