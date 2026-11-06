@@ -33,6 +33,7 @@
 *& 2026-11-06 | Performance: rule lookups per line / finding by sorted secondary keys, alert classes
 *&            | of the kept findings hashed, read-only loops with field symbols; the check-register
 *&            | memo is cleared at the start of validate_package (same statements validated twice).
+*& 2026-11-06 | Package buffers released (FREE) once persisted, before the next package is read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -505,6 +506,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         rs_result-run-status = zif_cd_ops_types=>gc_run_status-aborted.
         EXIT.
       ENDIF.
+      " The package is persisted, counted and kept within EBS_RESULT_MAX: release its buffers
+      " before the next package is read (lower peak memory in long batch runs)
+      FREE: ls_package, lt_findings.
     ENDDO.
 
     " A68: a run that selected no statement evaluated nothing - NO_DATA (grey), not green,
