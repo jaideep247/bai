@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Audit A38: row cap detection (truncated status).
 *&---------------------------------------------------------------------*
 CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -78,6 +79,8 @@ CLASS ltc_lot_reader DEFINITION FINAL
     METHODS one_open_item_is_counted FOR TESTING.
     METHODS lot_items_read_by_lot_key FOR TESTING.
     METHODS incomplete_config_is_refused FOR TESTING.
+    METHODS row_cap_marks_truncated FOR TESTING.
+    METHODS below_cap_is_complete FOR TESTING.
 
 ENDCLASS.
 
@@ -190,6 +193,39 @@ CLASS ltc_lot_reader IMPLEMENTATION.
                                         msg = 'Missing item status field must raise 208' ).
     cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_queries
                                          msg = 'No table may be read' ).
+  ENDMETHOD.
+
+
+  " Audit A38: when the item scan reaches the row cap, open items may lie beyond it -
+  " the status says truncated, so no outcome is derived from the partial count
+  METHOD row_cap_marks_truncated.
+    TRY.
+        configure_scenario( VALUE #( open_items = 0 ) ).
+        DATA(lt_status) = zcl_cd_fmon_factory=>get_lot_reader( )->read( is_cfg      = ms_cfg
+                                                                        it_files    = mt_files
+                                                                        iv_max_rows = 2 ).
+        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
+                                          msg = '3 items with a cap of 2 must be marked truncated' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( mo_dao->mt_queries[ 2 ]-max_rows OPTIONAL ) exp = 3
+                                            msg = 'One row beyond the cap must be requested to detect truncation' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A38: a scan below the cap is complete
+  METHOD below_cap_is_complete.
+    TRY.
+        configure_scenario( VALUE #( open_items = 0 ) ).
+        DATA(lt_status) = zcl_cd_fmon_factory=>get_lot_reader( )->read( is_cfg      = ms_cfg
+                                                                        it_files    = mt_files
+                                                                        iv_max_rows = 10 ).
+        cl_abap_unit_assert=>assert_false( act = VALUE #( lt_status[ 1 ]-truncated OPTIONAL )
+                                           msg = '3 items with a cap of 10 must not be truncated' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

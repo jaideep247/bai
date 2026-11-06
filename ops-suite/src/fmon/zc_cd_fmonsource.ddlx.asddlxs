@@ -62,15 +62,18 @@ annotate entity ZC_CD_FmonSource with
   LobField;
 
   @UI.identification: [{ position: 160 }]
-  DefaultStage;
+  ItemKeyField;
 
   @UI.identification: [{ position: 170 }]
-  AdapterClass;
+  DefaultStage;
 
   @UI.identification: [{ position: 180 }]
-  Active;
+  AdapterClass;
 
   @UI.identification: [{ position: 190 }]
+  Active;
+
+  @UI.identification: [{ position: 200 }]
   Description;
 
   @UI.hidden: true

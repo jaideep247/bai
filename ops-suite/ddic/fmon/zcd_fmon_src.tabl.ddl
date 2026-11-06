@@ -25,6 +25,8 @@ define table zcd_fmon_src {
   checksum_field  : abap.char(30);
   source_field    : abap.char(30);
   lob_field       : abap.char(30);
+  // Payment identity of per-payment ACK/NACK rows (dedupe); blank = rows are counted
+  item_key_field  : abap.char(30);
   default_stage   : abap.char(20);
   // Blank = ZCL_CD_FMON_ADAPTER_GENERIC; else a class implementing ZIF_CD_FMON_ADAPTER
   adapter_class   : abap.char(30);

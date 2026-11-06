@@ -7,6 +7,8 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A38-A41: SLA admissible evidence / INFERRED, reported ACK counts only,
+*&              truncated lots derive nothing, unknown age no verdict, receipt correction.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -75,9 +77,11 @@ CLASS zcl_cd_fmon_rules DEFINITION
       RETURNING
         VALUE(rv_late) TYPE abap_bool.
 
-    "! SLA of one stage for one file. The stage counts as reached by any event
-    "! of equal or higher rank (NACK reaches the ack stage, FAILED the processing
-    "! stage). Basis P = latest event of the highest lower rank, G = first event.
+    "! SLA of one stage for one file. Only admissible evidence meets it (audit A40): an
+    "! event of the SLA stage itself, or NACK for the ACK stage (the bank's response).
+    "! PARTIALLY / FAILED never meet a processing SLA. A later stage without the SLA
+    "! stage's own event is INFERRED, not met. Basis P = latest event of the highest
+    "! lower rank, G = first event.
     CLASS-METHODS sla_verdict
       IMPORTING
         is_file           TYPE zif_cd_fmon_types=>ty_file
@@ -95,7 +99,7 @@ CLASS zcl_cd_fmon_rules DEFINITION
       RETURNING
         VALUE(rv_code) TYPE zif_cd_ops_types=>ty_check_code.
 
-    "! Both sides reported (> 0) and ACK + NACK count <> record count
+    "! Record count known, ACK/NACK count reported (ACK_KNOWN) and ACK + NACK <> record count
     CLASS-METHODS ack_count_mismatch
       IMPORTING
         is_file            TYPE zif_cd_fmon_types=>ty_file
@@ -148,6 +152,23 @@ CLASS zcl_cd_fmon_rules DEFINITION
         iv_done_values TYPE clike
       RETURNING
         VALUE(rv_done) TYPE abap_bool.
+
+    "! Correction option for the receipt date of a banking-day age (audit A41):
+    "! A (default) = days strictly after receipt, so a non-working receipt day moves back;
+    "! N = count from the next working day
+    CLASS-METHODS receipt_correction
+      IMPORTING
+        iv_basis          TYPE zif_cd_fmon_types=>ty_age_basis
+      RETURNING
+        VALUE(rv_correct) TYPE zif_cd_fmon_types=>ty_fcal_correct.
+
+    "! The event stage is admissible evidence for the SLA stage (same stage; NACK for ACK)
+    CLASS-METHODS is_admissible
+      IMPORTING
+        iv_sla_stage         TYPE zif_cd_fmon_types=>ty_stage
+        iv_event_stage       TYPE zif_cd_fmon_types=>ty_stage
+      RETURNING
+        VALUE(rv_admissible) TYPE abap_bool.
 
     "! Lot-controlled interfaces: a source FULLY/PARTIALLY is capped at FILE_LOADED
     CLASS-METHODS cap_stage
@@ -317,6 +338,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     DATA lv_prev_rank TYPE i.
     DATA lv_prev_at TYPE timestampl.
     DATA lv_reached TYPE timestampl.
+    DATA lv_beyond TYPE abap_bool.
 
     DATA(lv_target) = zcl_cd_fmon_status=>rank( is_sla-stage ).
     IF lv_target = 0 OR zcl_cd_fmon_status=>direction_of( is_sla-stage ) <> is_file-direction.
@@ -328,24 +350,38 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       DATA(lv_rank) = zcl_cd_fmon_status=>rank( ls_event-stage ).
-      IF lv_rank >= lv_target.
+      IF is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = ls_event-stage ) = abap_true.
         IF lv_reached IS INITIAL OR ls_event-event_at < lv_reached.
           lv_reached = ls_event-event_at.
         ENDIF.
-      ELSEIF lv_rank > lv_prev_rank OR ( lv_rank = lv_prev_rank AND ls_event-event_at > lv_prev_at ).
+      ELSEIF lv_rank > lv_target.
+        lv_beyond = abap_true.
+      ELSEIF lv_rank < lv_target
+         AND ( lv_rank > lv_prev_rank OR ( lv_rank = lv_prev_rank AND ls_event-event_at > lv_prev_at ) ).
         lv_prev_rank = lv_rank.
         lv_prev_at   = ls_event-event_at.
       ENDIF.
     ENDLOOP.
 
-    IF lv_reached IS INITIAL AND zcl_cd_fmon_status=>rank( is_file-stage ) >= lv_target.
+    " The registry state counts only as admissible evidence, never by rank alone
+    IF lv_reached IS INITIAL
+       AND ( is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = is_file-stage ) = abap_true
+             OR is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = is_file-outcome ) = abap_true ).
       lv_reached = is_file-last_event_at.
+    ENDIF.
+    IF lv_reached IS INITIAL AND zcl_cd_fmon_status=>rank( is_file-stage ) > lv_target.
+      lv_beyond = abap_true.
     ENDIF.
 
     rs_verdict-basis_at   = COND #( WHEN is_sla-basis = zif_cd_fmon_types=>gc_sla_basis-generation
                                     THEN is_file-first_event_at
                                     ELSE lv_prev_at ).
     rs_verdict-reached_at = lv_reached.
+    IF lv_reached IS INITIAL AND lv_beyond = abap_true.
+      " A later stage was observed without the SLA stage's own event: not evidenced
+      rs_verdict-state = zif_cd_fmon_types=>gc_sla_state-inferred.
+      RETURN.
+    ENDIF.
     IF rs_verdict-basis_at IS INITIAL.
       RETURN.
     ENDIF.
@@ -366,6 +402,21 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD is_admissible.
+    rv_admissible = xsdbool( iv_event_stage IS NOT INITIAL
+                         AND ( iv_event_stage = iv_sla_stage
+                               OR ( iv_sla_stage = zif_cd_fmon_types=>gc_stage-ack
+                                    AND iv_event_stage = zif_cd_fmon_types=>gc_stage-nack ) ) ).
+  ENDMETHOD.
+
+
+  METHOD receipt_correction.
+    rv_correct = COND #( WHEN iv_basis = zif_cd_fmon_types=>gc_age_basis-next_working
+                         THEN zif_cd_fmon_types=>gc_fcal_correct-next
+                         ELSE zif_cd_fmon_types=>gc_fcal_correct-previous ).
+  ENDMETHOD.
+
+
   METHOD sla_code.
     DATA(lv_label) = SWITCH string( iv_stage
                                     WHEN zif_cd_fmon_types=>gc_stage-sent      THEN `PRISM_HANDOFF`
@@ -377,15 +428,19 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     rv_code = SWITCH #( iv_state
                         WHEN zif_cd_fmon_types=>gc_sla_state-missing THEN zif_cd_fmon_types=>gc_sla_code-missing_prefix && lv_label
                         WHEN zif_cd_fmon_types=>gc_sla_state-late    THEN lv_label && zif_cd_fmon_types=>gc_sla_code-late_suffix
+                        WHEN zif_cd_fmon_types=>gc_sla_state-inferred
+                          THEN lv_label && zif_cd_fmon_types=>gc_sla_code-inferred_suffix
                         ELSE `` ).
   ENDMETHOD.
 
 
   METHOD ack_count_mismatch.
-    DATA(lv_responses) = is_file-ack_count + is_file-nack_count.
-    rv_mismatch = xsdbool( is_file-record_count > 0
-                       AND lv_responses > 0
-                       AND lv_responses <> is_file-record_count ).
+    " Audit A39: only a count the source reported is compared (a reported 0 is a fact,
+    " an unreported count is unknown); ACK + NACK together are the bank's responses
+    IF is_file-record_count <= 0 OR is_file-ack_known = abap_false.
+      RETURN.
+    ENDIF.
+    rv_mismatch = xsdbool( is_file-ack_count + is_file-nack_count <> is_file-record_count ).
   ENDMETHOD.
 
 
@@ -426,7 +481,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
 
 
   METHOD lot_outcome.
-    IF is_lot-found = abap_false OR is_lot-total_items = 0.
+    " Audit A38: a scan stopped at the row cap cannot prove completion
+    IF is_lot-found = abap_false OR is_lot-total_items = 0 OR is_lot-truncated = abap_true.
       RETURN.
     ENDIF.
     rv_stage = COND #( WHEN is_lot-open_items > 0 THEN zif_cd_fmon_types=>gc_stage-partially
@@ -435,7 +491,9 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
 
 
   METHOD noc_aging_code.
-    IF is_lot-lot_type <> zif_cd_fmon_types=>gc_lot_type-noc OR is_lot-open_items = 0 OR is_lot-sla_days <= 0.
+    " Audit A41: an age the calendar could not determine gives no verdict
+    IF is_lot-lot_type <> zif_cd_fmon_types=>gc_lot_type-noc OR is_lot-open_items = 0 OR is_lot-sla_days <= 0
+       OR is_lot-age_days < 0.
       RETURN.
     ENDIF.
     IF is_lot-age_days > is_lot-sla_days.

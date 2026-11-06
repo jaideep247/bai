@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A05: technical database error of the event insert ends the save.
 *&---------------------------------------------------------------------*
 CLASS lcl_buffer DEFINITION FINAL.
   PUBLIC SECTION.
@@ -129,6 +130,9 @@ CLASS lsc_fmonfile IMPLEMENTATION.
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the file must never change without its audit event
           RAISE SHORTDUMP lx_error.
+        CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+          " Audit A05: a technical database error ends the save the same way
+          RAISE SHORTDUMP lx_sql.
       ENDTRY.
     ENDLOOP.
     CLEAR lcl_buffer=>gt_manual.

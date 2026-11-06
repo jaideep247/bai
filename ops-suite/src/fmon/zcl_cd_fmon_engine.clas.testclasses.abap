@@ -10,6 +10,8 @@
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: evaluated files reconciled; skipped after a check failure.
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Audit A04/A05/A38-A41/A49/A52: conflicts, SQL error, file instances by date,
+*&              payment ACK dedupe, truncated lots, calendar failure, malformed rows.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -23,6 +25,12 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mv_save_calls TYPE i.
     DATA mv_fail_save TYPE abap_bool.
+    "! Registry rows the lookup by reference returns (instances of earlier days)
+    DATA mt_existing TYPE zif_cd_fmon_types=>tt_file.
+    "! Every saved row is reported as changed by another process (audit A04)
+    DATA mv_conflict_all TYPE abap_bool.
+    "! The save fails with a technical SQL error (audit A05)
+    DATA mv_sql_error TYPE abap_bool.
 ENDCLASS.
 
 
@@ -49,7 +57,11 @@ CLASS ltd_dao IMPLEMENTATION.
     rt_checks = mt_checks.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~find_files_by_ref.
-    CLEAR rt_files.
+    LOOP AT mt_existing INTO DATA(ls_file).
+      IF line_exists( it_keys[ iface_id = ls_file-iface_id file_ref = ls_file-file_ref ] ).
+        INSERT ls_file INTO TABLE rt_files.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_eval_files.
     CLEAR rt_files.
@@ -65,7 +77,13 @@ CLASS ltd_dao IMPLEMENTATION.
     IF mv_fail_save = abap_true.
       RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
     ENDIF.
+    IF mv_sql_error = abap_true.
+      RAISE EXCEPTION TYPE cx_sy_open_sql_db.
+    ENDIF.
     mt_saved = it_files.
+    IF mv_conflict_all = abap_true.
+      rt_conflicts = VALUE #( FOR ls_saved IN it_files ( ls_saved-file_id ) ).
+    ENDIF.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~insert_event.
     INSERT is_event INTO TABLE mt_events.
@@ -104,6 +122,8 @@ CLASS ltd_lot_reader DEFINITION FINAL FOR TESTING.
         keys      TYPE string,
       END OF ty_lot.
     DATA mt_lots TYPE STANDARD TABLE OF ty_lot WITH EMPTY KEY.
+    "! The item scan reached the row cap (audit A38)
+    DATA mv_truncated TYPE abap_bool.
 ENDCLASS.
 
 
@@ -115,6 +135,7 @@ CLASS ltd_lot_reader IMPLEMENTATION.
       ls_status-file_id  = ls_file-file_id.
       ls_status-lot_type = is_cfg-lot_type.
       ls_status-sla_days = is_cfg-noc_sla_days.
+      ls_status-truncated = mv_truncated.
       READ TABLE mt_lots INTO DATA(ls_lot) WITH KEY file_name = ls_file-file_name.
       IF sy-subrc = 0.
         ls_status-found       = abap_true.
@@ -133,6 +154,8 @@ CLASS ltd_calendar DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_fmon_calendar.
     DATA mv_age TYPE i VALUE 1.
+    "! The factory calendar cannot convert dates (audit A41)
+    DATA mv_fail TYPE abap_bool.
 ENDCLASS.
 
 
@@ -144,6 +167,9 @@ CLASS ltd_calendar IMPLEMENTATION.
     rv_month_end = abap_false.
   ENDMETHOD.
   METHOD zif_cd_fmon_calendar~working_days_between.
+    IF mv_fail = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e206(zcd_ops) WITH 'US' iv_from.
+    ENDIF.
     rv_days = mv_age.
   ENDMETHOD.
 ENDCLASS.
@@ -293,6 +319,8 @@ CLASS ltc_engine DEFINITION FINAL
       END OF ty_flags.
 
     CONSTANTS gc_date TYPE d VALUE '20261102'.
+    CONSTANTS gc_prev_day TYPE d VALUE '20261101'.
+    CONSTANTS gc_prev_day2 TYPE d VALUE '20261031'.
     CONSTANTS gc_out TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_PNC_OUT'.
     CONSTANTS gc_ret TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_RET_IN'.
     CONSTANTS gc_noc TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'NOC_IN'.
@@ -336,12 +364,31 @@ CLASS ltc_engine DEFINITION FINAL
 
     METHODS add_record
       IMPORTING
-        iv_src_id TYPE zif_cd_fmon_types=>ty_src_id
-        iv_name   TYPE zif_cd_fmon_types=>ty_file_name
-        iv_stage  TYPE zif_cd_fmon_types=>ty_stage
-        iv_at     TYPE timestampl
-        iv_count  TYPE i DEFAULT 0
-        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT 0.
+        iv_src_id    TYPE zif_cd_fmon_types=>ty_src_id
+        iv_name      TYPE zif_cd_fmon_types=>ty_file_name
+        iv_stage     TYPE zif_cd_fmon_types=>ty_stage
+        iv_at        TYPE timestampl
+        iv_count     TYPE i DEFAULT 0
+        iv_amount    TYPE zif_cd_ops_types=>ty_amount DEFAULT 0
+        iv_date      TYPE d DEFAULT gc_date
+        iv_item      TYPE zif_cd_fmon_types=>ty_key_value OPTIONAL
+        iv_malformed TYPE abap_bool DEFAULT abap_false.
+
+    "! A registry instance of the outbound file from an earlier run (lookup by reference)
+    METHODS existing_file
+      IMPORTING
+        iv_id    TYPE i
+        iv_date  TYPE d
+        iv_stage TYPE zif_cd_fmon_types=>ty_stage
+        iv_acks  TYPE i DEFAULT 0.
+
+    "! Board row of the outbound file for one business date
+    METHODS out_row
+      IMPORTING
+        is_result     TYPE zif_cd_fmon_types=>ty_result
+        iv_date       TYPE d
+      RETURNING
+        VALUE(rs_row) TYPE zif_cd_fmon_types=>ty_board.
 
     METHODS add_check
       IMPORTING
@@ -382,6 +429,17 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS lock_released_after_run FOR TESTING.
     METHODS evaluated_files_reconciled FOR TESTING.
     METHODS check_failure_no_reconcile FOR TESTING.
+    METHODS save_conflict_is_reported FOR TESTING.
+    METHODS sql_error_ends_run_failed FOR TESTING.
+    METHODS same_name_next_day_new_file FOR TESTING.
+    METHODS late_ack_goes_to_its_day FOR TESTING.
+    METHODS undated_ref_ambiguous FOR TESTING.
+    METHODS payment_acks_deduplicated FOR TESTING.
+    METHODS ack_count_never_decreases FOR TESTING.
+    METHODS truncated_lot_not_completed FOR TESTING.
+    METHODS calendar_failure_no_aging FOR TESTING.
+    METHODS malformed_row_quarantined FOR TESTING.
+    METHODS source_full_event_is_capped FOR TESTING.
 
 ENDCLASS.
 
@@ -438,7 +496,12 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_rec-raw_status    = iv_stage.
     ls_rec-stage         = iv_stage.
     ls_rec-event_at      = iv_at.
-    ls_rec-business_date = gc_date.
+    ls_rec-business_date = iv_date.
+    ls_rec-item_key      = iv_item.
+    ls_rec-malformed     = iv_malformed.
+    IF iv_malformed = abap_true.
+      ls_rec-malformed_role = zif_cd_fmon_types=>gc_role-rec_count.
+    ENDIF.
     IF iv_count > 0.
       ls_rec-rec_count   = iv_count.
       ls_rec-count_known = abap_true.
@@ -880,4 +943,249 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
+
+  METHOD existing_file.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    ls_file-file_id        = CONV zif_cd_fmon_types=>ty_file_id( iv_id ).
+    ls_file-iface_id       = gc_out.
+    ls_file-file_ref       = zcl_cd_fmon_util=>normalize_ref( gc_out_file ).
+    ls_file-direction      = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_file-file_type      = zif_cd_fmon_types=>gc_file_type-payment.
+    ls_file-file_name      = gc_out_file.
+    ls_file-business_date  = iv_date.
+    ls_file-stage          = iv_stage.
+    ls_file-record_count   = 10.
+    ls_file-ack_count      = iv_acks.
+    ls_file-ack_known      = xsdbool( iv_acks > 0 ).
+    ls_file-first_event_at = '20261101043000'.
+    ls_file-last_event_at  = '20261101044000'.
+    ls_file-db_exists      = abap_true.
+    ls_file-db_version     = '20261101050000'.
+    INSERT ls_file INTO TABLE mo_dao->mt_existing.
+  ENDMETHOD.
+
+
+  METHOD out_row.
+    rs_row = VALUE #( is_result-board[ file_name = gc_out_file business_date = iv_date ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  " Audit A04: a registry row changed meanwhile by another process is not overwritten;
+  " the conflict is visible, nothing is rolled back
+  METHOD save_conflict_is_reported.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        mo_dao->mv_conflict_all = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_conflict ] ) )
+          msg = 'A save conflict must be reported as PERSIST_CONFLICT' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 0
+                                            msg = 'A conflict is not a failure - nothing to roll back' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A05: a technical SQL error is handled by the LUW owner: rolled back, recorded,
+  " and the run is closed as failed instead of staying 'running'
+  METHOD sql_error_ends_run_failed.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        mo_dao->mv_sql_error = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 1
+                                            msg = 'The half-written registry must be rolled back' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ) )
+          msg = 'The SQL error must be recorded as PERSIST_ERROR' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-run-status exp = zif_cd_ops_types=>gc_run_status-error
+                                            msg = 'The run must close with status error' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_finish_calls exp = 1
+                                            msg = 'The run must be finished' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A49: the same file name generated again the next day is a new file instance -
+  " never merged into yesterday's file and never rejected as a reused reference
+  METHOD same_name_next_day_new_file.
+    TRY.
+        configure_scenario( VALUE #( outbound = abap_true ) ).
+        existing_file( iv_id = 91 iv_date = gc_prev_day iv_stage = zif_cd_fmon_types=>gc_stage-ack ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
+                                            exp = zif_cd_fmon_types=>gc_stage-ack
+                                            msg = 'Today''s instance must be its own file and end ACK_RECEIVED' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ref_reused ] ) )
+          msg = 'A daily file name is not a reused reference' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A49: a late ACK carrying yesterday's business date updates yesterday's
+  " instance, not today's generation of the same name
+  METHOD late_ack_goes_to_its_day.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        existing_file( iv_id = 92 iv_date = gc_prev_day iv_stage = zif_cd_fmon_types=>gc_stage-sent ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 10 iv_amount = '1000.00' ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_count = 10 iv_date = gc_prev_day ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_prev_day )-outcome
+                                            exp = zif_cd_fmon_types=>gc_stage-ack
+                                            msg = 'Yesterday''s instance must receive the late ACK' ).
+        cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
+                                             msg = 'Today''s instance must not be acknowledged by it' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A49: an observation without a business date that matches instances of several
+  " dates is not applied to any of them - it is reported
+  METHOD undated_ref_ambiguous.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        existing_file( iv_id = 93 iv_date = gc_prev_day2 iv_stage = zif_cd_fmon_types=>gc_stage-sent ).
+        existing_file( iv_id = 94 iv_date = gc_prev_day iv_stage = zif_cd_fmon_types=>gc_stage-sent ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_count = 10 iv_date = '00000000' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ref_ambiguous ] ) )
+          msg = 'An undated ACK for two instances must be FILE_REF_AMBIGUOUS' ).
+        cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_prev_day )-outcome
+                                             msg = 'No instance may be acknowledged by an ambiguous ACK' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A39: per-payment ACKs count distinct payments - a payment acknowledged twice
+  " (split source, overlapping window) is counted once
+  METHOD payment_acks_deduplicated.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        mo_dao->mt_ifaces[ iface_id = gc_out ]-ack_level = zif_cd_fmon_types=>gc_ack_level-payment.
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 2 iv_amount = '200.00' ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_item = 'PAY1' ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050100' iv_item = 'PAY1' ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050200' iv_item = 'PAY2' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-ack_count
+                                            exp = 2
+                                            msg = 'Three ACK rows for two payments must count 2' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ack_count ] ) )
+          msg = '2 distinct ACKs for 2 records is no count mismatch' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A39: a later run that sees only part of the ACK rows (window) never lowers the
+  " count already recorded - outcomes are cumulative
+  METHOD ack_count_never_decreases.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        existing_file( iv_id = 95 iv_date = gc_date iv_stage = zif_cd_fmon_types=>gc_stage-forwarded iv_acks = 5 ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_count = 3 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_date )-ack_count
+                                            exp = 5
+                                            msg = 'An ACK count of 5 must not drop to a partial 3' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A38: when the lot scan is truncated, the file does not become FULLY_PROCESSED
+  METHOD truncated_lot_not_completed.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 0 ) ).
+        mo_lots->mv_truncated = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_differs( act = board_row( is_result = ls_result iv_name = gc_ret_file )-outcome
+                                             exp = zif_cd_fmon_types=>gc_stage-fully
+                                             msg = 'A truncated scan must not complete the file' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-lot_truncated ] ) )
+          msg = 'The truncation must be reported as LOT_SCAN_TRUNCATED' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A41: when the factory calendar fails, NOC aging is not judged on calendar days
+  METHOD calendar_failure_no_aging.
+    TRY.
+        configure_scenario( VALUE #( noc_age = 7 ) ).
+        mo_calendar->mv_fail = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-noc_aging ] ) )
+          msg = 'No NOC_AGING verdict without a banking-day age' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-plugin_error ] ) )
+          msg = 'The calendar failure must be reported' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A52: a malformed source row is quarantined and reported, never applied
+  METHOD malformed_row_quarantined.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 10 ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = '20261102050000' iv_malformed = abap_true ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-malformed_row ] ) )
+          msg = 'The malformed row must be reported' ).
+        cl_abap_unit_assert=>assert_initial( act = out_row( is_result = ls_result iv_date = gc_date )-outcome
+                                             msg = 'A malformed ACK row must not acknowledge the file' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A40: for a lot-controlled interface the source's FULLY is stored as the stage
+  " applied (FILE_LOADED), so a processing SLA can only be met by the lot outcome
+  METHOD source_full_event_is_capped.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 source_says_fully = abap_true ) ).
+        act( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_dao->mt_events[ src_id = gc_src_in stage = zif_cd_fmon_types=>gc_stage-fully ] ) )
+          msg = 'A source FULLY of a lot-controlled file must not be stored as FULLY' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
 ENDCLASS.
+

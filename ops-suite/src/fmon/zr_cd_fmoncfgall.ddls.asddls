@@ -10,6 +10,7 @@ define root view entity ZR_CD_FmonCfgAll
   composition [0..*] of ZR_CD_FmonCheck as _FmonCheck
   composition [0..*] of ZR_CD_FmonLotCfg as _FmonLotCfg
   composition [0..*] of ZR_CD_FmonCalendar as _FmonCalendar
+  composition [0..*] of ZR_CD_FmonTableAllow as _FmonTableAllow
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -21,7 +22,8 @@ define root view entity ZR_CD_FmonCfgAll
       _FmonSourceMap,
       _FmonCheck,
       _FmonLotCfg,
-      _FmonCalendar
+      _FmonCalendar,
+      _FmonTableAllow
 }
 where
   I_Language.Language = $session.system_language

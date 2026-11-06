@@ -22,6 +22,7 @@ define view entity ZC_CD_FmonSource
       ChecksumField,
       SourceField,
       LobField,
+      ItemKeyField,
       DefaultStage,
       AdapterClass,
       Active,

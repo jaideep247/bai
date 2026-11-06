@@ -6,6 +6,7 @@
 *& DDIC-validated; counts done vs open items per registered file.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A38: one row beyond the cap is read; reaching it marks the batch truncated.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - returns/NOC lot completeness reader</p>
 "! Two shapes: header table links lot to file and items are read by lot key
@@ -22,6 +23,8 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
 
   PRIVATE SECTION.
     CONSTANTS gc_max_keys TYPE i VALUE 5.
+    "! A query of this read returned more rows than the cap (audit A38)
+    DATA mv_truncated TYPE abap_bool.
 
     TYPES:
       BEGIN OF ty_count,
@@ -53,9 +56,12 @@ CLASS zcl_cd_fmon_lot_reader DEFINITION
       RETURNING
         VALUE(rv_link) TYPE zif_cd_fmon_types=>ty_key_value.
 
+    "! Reads one row beyond iv_max_rows; more rows than the cap set MV_TRUNCATED and
+    "! the surplus is dropped. iv_max_rows = 0 reads without cap.
     METHODS run_query
       IMPORTING
         is_query       TYPE zif_cd_fmon_types=>ty_query
+        iv_max_rows    TYPE i
       RETURNING
         VALUE(rt_rows) TYPE zif_cd_fmon_types=>tt_raw_row
       RAISING
@@ -88,6 +94,7 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
     DATA lt_links TYPE zif_cd_fmon_types=>tt_key_value.
     DATA ls_status TYPE zif_cd_fmon_types=>ty_lot_status.
 
+    CLEAR mv_truncated.
     check_config( is_cfg ).
 
     LOOP AT it_files INTO DATA(ls_file).
@@ -108,6 +115,8 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
       ls_status-file_id  = ls_file-file_id.
       ls_status-lot_type = is_cfg-lot_type.
       ls_status-sla_days = is_cfg-noc_sla_days.
+      " The cap applies to the whole batch: no file's completion is proven
+      ls_status-truncated = mv_truncated.
       READ TABLE lt_counts INTO DATA(ls_count) WITH TABLE KEY link = link_of( is_cfg  = is_cfg
                                                                                is_file = ls_file ).
       IF sy-subrc = 0.
@@ -149,7 +158,13 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
     DATA(lt_fields) = zcl_cd_fmon_factory=>get_ddic( )->describe_table( is_query-table_name ).
     zcl_cd_fmon_query=>validate( is_query  = is_query
                                  it_fields = lt_fields ).
-    rt_rows = zcl_cd_fmon_factory=>get_dao( )->read_legacy( is_query ).
+    DATA(ls_query) = is_query.
+    ls_query-max_rows = COND #( WHEN iv_max_rows > 0 THEN iv_max_rows + 1 ).
+    rt_rows = zcl_cd_fmon_factory=>get_dao( )->read_legacy( ls_query ).
+    IF iv_max_rows > 0 AND lines( rt_rows ) > iv_max_rows.
+      mv_truncated = abap_true.
+      DELETE rt_rows FROM iv_max_rows + 1.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -178,8 +193,7 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
                                     CHANGING  cs_query = ls_query ).
       ls_query-in_field  = to_upper( condense( is_cfg-item_link_field ) ).
       ls_query-in_values = it_links.
-      ls_query-max_rows  = iv_max_rows.
-      rt_items = run_query( ls_query ).
+      rt_items = run_query( is_query = ls_query iv_max_rows = iv_max_rows ).
       RETURN.
     ENDIF.
 
@@ -193,8 +207,7 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
                                   CHANGING  cs_query = ls_query ).
     ls_query-in_field  = to_upper( condense( is_cfg-hdr_link_field ) ).
     ls_query-in_values = it_links.
-    ls_query-max_rows  = iv_max_rows.
-    LOOP AT run_query( ls_query ) INTO DATA(ls_header).
+    LOOP AT run_query( is_query = ls_query iv_max_rows = iv_max_rows ) INTO DATA(ls_header).
       INSERT VALUE #( lot_key = ls_header-lot_key
                       link    = ls_header-file_link ) INTO TABLE lt_lot_link.
       IF sy-subrc = 0.
@@ -219,8 +232,7 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
                                   CHANGING  cs_query = ls_query ).
     ls_query-in_field  = to_upper( condense( is_cfg-item_lot_field ) ).
     ls_query-in_values = lt_lot_keys.
-    ls_query-max_rows  = iv_max_rows.
-    rt_items = run_query( ls_query ).
+    rt_items = run_query( is_query = ls_query iv_max_rows = iv_max_rows ).
     LOOP AT rt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
       READ TABLE lt_lot_link INTO DATA(ls_lot_link) WITH TABLE KEY lot_key = CONV #( <ls_item>-lot_key ).
       IF sy-subrc = 0.

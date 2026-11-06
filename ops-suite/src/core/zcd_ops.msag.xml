@@ -1049,6 +1049,66 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>240</MSGNR>
+     <TEXT>&amp;1: newer registry state written by another process - not overwritten</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>241</MSGNR>
+     <TEXT>&amp;1: lot item scan stopped at &amp;2 row(s) - completion not proven</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>242</MSGNR>
+     <TEXT>Reference &amp;1 of &amp;2 matches files of several business dates - not applied</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>243</MSGNR>
+     <TEXT>Source &amp;1: &amp;2 row(s) skipped, field &amp;3 malformed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>244</MSGNR>
+     <TEXT>Table &amp;1 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>245</MSGNR>
+     <TEXT>No display authorization for table &amp;1 (S_TABU_NAM)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>246</MSGNR>
+     <TEXT>Database error in file monitoring, registry not saved:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>247</MSGNR>
+     <TEXT>&amp;1 of &amp;2 &amp;3 item(s) open</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>248</MSGNR>
+     <TEXT>Factory calendar &amp;1: banking-day age unknown, no aging verdict:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>249</MSGNR>
+     <TEXT>Field &amp;1 of table &amp;2 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
     </T100>

@@ -13,6 +13,10 @@
 *& 2026-11-06 | Exception carry-forward: evaluated files reconciled before the commit.
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A04 save conflicts reported, A05 SQL errors handled at the LUW owner,
+*&              A38 truncated lot scans, A39 payment-level ACK dedupe and cumulative counts,
+*&              A40 events stored as applied, A41 unknown age, A49 file instance by
+*&              business date, A52 malformed rows quarantined.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -92,9 +96,23 @@ CLASS zcl_cd_fmon_engine DEFINITION
         checksum      TYPE zif_cd_fmon_types=>ty_checksum,
         source_sys    TYPE zif_cd_fmon_types=>ty_system,
         lob           TYPE zif_cd_fmon_types=>ty_lob,
+        "! Distinct payment identities of per-payment rows (audit A39)
+        items         TYPE string_table,
       END OF ty_group.
     TYPES tt_group TYPE STANDARD TABLE OF ty_group WITH EMPTY KEY.
-    TYPES tt_group_hash TYPE HASHED TABLE OF ty_group WITH UNIQUE KEY src_id iface_id file_ref stage.
+    "! Audit A49: the business date is part of the observation identity, so generations of
+    "! the same reference on different days are never collapsed into one group
+    TYPES tt_group_hash TYPE HASHED TABLE OF ty_group
+      WITH UNIQUE KEY src_id iface_id file_ref stage business_date.
+
+    "! Malformed rows per source and field (audit A52): one finding each, never counted
+    TYPES:
+      BEGIN OF ty_malformed,
+        src_id TYPE zif_cd_fmon_types=>ty_src_id,
+        role   TYPE zif_cd_fmon_types=>ty_role,
+        rows   TYPE i,
+      END OF ty_malformed.
+    TYPES tt_malformed TYPE HASHED TABLE OF ty_malformed WITH UNIQUE KEY src_id role.
 
     DATA mo_dao TYPE REF TO zif_cd_fmon_dao.
     DATA mo_store TYPE REF TO zif_cd_ops_store.
@@ -146,6 +164,20 @@ CLASS zcl_cd_fmon_engine DEFINITION
       IMPORTING
         it_groups TYPE tt_group.
 
+    "! File instance of an observation (audit A49): identity = interface + reference +
+    "! business date. An origin (first stage) without its instance creates one; a later
+    "! stage goes to the instance of its date, else to the latest earlier instance; an
+    "! undated observation matching instances of several dates is ambiguous (blank id)
+    METHODS resolve_file
+      IMPORTING
+        is_group      TYPE ty_group
+        is_iface      TYPE zif_cd_fmon_types=>ty_iface
+      EXPORTING
+        ev_file_id    TYPE zif_cd_fmon_types=>ty_file_id
+        ev_ambiguous  TYPE abap_bool
+      RAISING
+        zcx_cd_ops_error.
+
     METHODS get_or_create
       IMPORTING
         is_group          TYPE ty_group
@@ -154,6 +186,16 @@ CLASS zcl_cd_fmon_engine DEFINITION
         VALUE(rv_file_id) TYPE zif_cd_fmon_types=>ty_file_id
       RAISING
         zcx_cd_ops_error.
+
+    "! ACK / NACK counts (audit A39): per-payment rows count distinct payment identities,
+    "! file-level rows the reported count; counts are cumulative (never lowered by a later
+    "! partial window) and ACK_KNOWN separates an unreported count from a reported zero
+    METHODS apply_responses
+      IMPORTING
+        is_group TYPE ty_group
+        is_iface TYPE zif_cd_fmon_types=>ty_iface
+      CHANGING
+        cs_file  TYPE zif_cd_fmon_types=>ty_file.
 
     METHODS apply_group
       IMPORTING
@@ -308,15 +350,27 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       mo_store->commit( ).
     ENDIF.
 
-    load_config( ).
-    sync_sources( ).
-    load_registry( ).
-    derive_lot_outcomes( ).
-    build_expectations( ).
-    run_checks( ).
-    IF mv_test_mode = abap_false.
-      persist_registry( ).
-    ENDIF.
+    " Audit A05: a technical SQL error anywhere in the run is handled here, at the owner of
+    " the LUW - rolled back, recorded, and the run closed as failed (never left running)
+    TRY.
+        load_config( ).
+        sync_sources( ).
+        load_registry( ).
+        derive_lot_outcomes( ).
+        build_expectations( ).
+        run_checks( ).
+        IF mv_test_mode = abap_false.
+          persist_registry( ).
+        ENDIF.
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        IF mv_test_mode = abap_false.
+          mo_store->rollback( ).
+        ENDIF.
+        engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
+                        iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
+                                                            iv_tail  = lx_sql->get_text( ) ) ).
+    ENDTRY.
 
     rs_result-board = build_board( ).
     finish( CHANGING cs_run = ls_run ).
@@ -401,23 +455,21 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     SORT lt_groups BY event_at src_id.
     LOOP AT lt_groups INTO DATA(ls_group).
       DATA(ls_iface) = VALUE #( mt_ifaces[ iface_id = ls_group-iface_id ] OPTIONAL ).
-      DATA(lv_file_id) = get_or_create( is_group = ls_group
-                                        is_iface = ls_iface ).
-      DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
-      IF zcl_cd_fmon_status=>rank( ls_group-stage ) = 1
-         AND ls_group-business_date > ls_file-business_date.
-        " A new generation/receipt under a reference already used on an earlier day:
-        " the file key is not unique - make it visible instead of merging silently
-        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-ref_reused
+      resolve_file( EXPORTING is_group     = ls_group
+                              is_iface     = ls_iface
+                    IMPORTING ev_file_id   = DATA(lv_file_id)
+                              ev_ambiguous = DATA(lv_ambiguous) ).
+      IF lv_ambiguous = abap_true.
+        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-ref_ambiguous
                         iv_key      = |{ ls_group-src_id }:{ ls_group-file_ref }|
                         iv_iface_id = ls_group-iface_id
                         iv_severity = zif_cd_ops_types=>gc_severity-warning
-                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-reference_of_reused_on_conf
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-reference_ambiguous
                                                              iv_v1    = ls_group-file_ref
-                                                             iv_v2    = |{ ls_file-business_date DATE = ISO }|
-                                                             iv_v3    = |{ ls_group-business_date DATE = ISO }| ) ).
+                                                             iv_v2    = ls_group-iface_id ) ).
         CONTINUE.
       ENDIF.
+      DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
       apply_group( EXPORTING is_group = ls_group
                              is_iface = ls_iface
                    CHANGING  cs_file  = ls_file ).
@@ -429,9 +481,22 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD aggregate.
     DATA lt_hash TYPE tt_group_hash.
+    DATA lt_malformed TYPE tt_malformed.
     FIELD-SYMBOLS <ls_group> TYPE ty_group.
+    FIELD-SYMBOLS <ls_bad> TYPE ty_malformed.
 
     LOOP AT it_records INTO DATA(ls_record).
+      IF ls_record-malformed = abap_true.
+        " Audit A52: quarantined - counted for one finding per field, never applied
+        READ TABLE lt_malformed ASSIGNING <ls_bad>
+          WITH TABLE KEY src_id = is_src-src_id role = ls_record-malformed_role.
+        IF sy-subrc <> 0.
+          INSERT VALUE #( src_id = is_src-src_id role = ls_record-malformed_role )
+            INTO TABLE lt_malformed ASSIGNING <ls_bad>.
+        ENDIF.
+        <ls_bad>-rows += 1.
+        CONTINUE.
+      ENDIF.
       DATA(ls_iface) = zcl_cd_fmon_rules=>resolve_iface( it_ifaces    = mt_ifaces
                                                         iv_iface_id  = ls_record-iface_id
                                                         iv_file_name = ls_record-file_name
@@ -463,10 +528,11 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
 
       READ TABLE lt_hash ASSIGNING <ls_group>
-        WITH TABLE KEY src_id   = is_src-src_id
-                       iface_id = ls_iface-iface_id
-                       file_ref = ls_record-file_ref
-                       stage    = ls_record-stage.
+        WITH TABLE KEY src_id        = is_src-src_id
+                       iface_id      = ls_iface-iface_id
+                       file_ref      = ls_record-file_ref
+                       stage         = ls_record-stage
+                       business_date = ls_record-business_date.
       IF sy-subrc <> 0.
         INSERT VALUE #( src_id        = is_src-src_id
                         iface_id      = ls_iface-iface_id
@@ -479,6 +545,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
       <ls_group>-rows += 1.
       <ls_group>-amount += ls_record-amount.
+      IF ls_record-item_key IS NOT INITIAL
+         AND NOT line_exists( <ls_group>-items[ table_line = ls_record-item_key ] ).
+        INSERT CONV string( ls_record-item_key ) INTO TABLE <ls_group>-items.
+      ENDIF.
       IF ls_record-count_known = abap_true.
         <ls_group>-rec_count += ls_record-rec_count.
         <ls_group>-count_known = abap_true.
@@ -511,6 +581,16 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
+    LOOP AT lt_malformed INTO DATA(ls_malformed).
+      engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-malformed_row
+                      iv_key      = |{ ls_malformed-src_id }:{ ls_malformed-role }|
+                      iv_severity = zif_cd_ops_types=>gc_severity-warning
+                      iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-malformed_rows
+                                                           iv_v1    = ls_malformed-src_id
+                                                           iv_v2    = ls_malformed-rows
+                                                           iv_v3    = ls_malformed-role ) ).
+    ENDLOOP.
+
     rt_groups = VALUE #( FOR ls_hash IN lt_hash ( ls_hash ) ).
   ENDMETHOD.
 
@@ -527,7 +607,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     IF lt_keys IS INITIAL.
       RETURN.
     ENDIF.
-    DATA(lt_found) = mo_dao->find_files_by_ref( lt_keys ).
+    " Instances of earlier days are needed only inside the evaluation / open-file window
+    DATA lv_since TYPE d.
+    lv_since = mv_date - nmax( val1 = int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 )
+                               val2 = int_param( iv_name = zif_cd_fmon_types=>gc_param-open_days iv_default = 30 ) ).
+    DATA(lt_found) = mo_dao->find_files_by_ref( it_keys  = lt_keys
+                                                iv_since = lv_since ).
     LOOP AT lt_found INTO DATA(ls_file).
       INSERT ls_file INTO TABLE mt_files.
     ENDLOOP.
@@ -536,13 +621,6 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD get_or_create.
     DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
-
-    READ TABLE mt_files INTO ls_file WITH KEY ref COMPONENTS iface_id = is_group-iface_id
-                                                            file_ref = is_group-file_ref.
-    IF sy-subrc = 0.
-      rv_file_id = ls_file-file_id.
-      RETURN.
-    ENDIF.
 
     TRY.
         ls_file-file_id = cl_system_uuid=>create_uuid_x16_static( ).
@@ -569,6 +647,71 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ls_file-created_at    = mv_now.
     INSERT ls_file INTO TABLE mt_files.
     rv_file_id = ls_file-file_id.
+  ENDMETHOD.
+
+
+  METHOD resolve_file.
+    DATA lv_best TYPE zif_cd_fmon_types=>ty_file_id.
+    DATA lv_best_date TYPE d.
+    DATA lv_count TYPE i.
+
+    CLEAR: ev_file_id, ev_ambiguous.
+    DATA(lv_origin) = xsdbool( zcl_cd_fmon_status=>rank( is_group-stage ) = 1 ).
+    DATA(lv_date) = COND d( WHEN is_group-business_date IS NOT INITIAL THEN is_group-business_date
+                            WHEN lv_origin = abap_true THEN mv_date ).
+    LOOP AT mt_files INTO DATA(ls_file) USING KEY ref
+         WHERE iface_id = is_group-iface_id AND file_ref = is_group-file_ref.
+      lv_count += 1.
+      IF lv_date IS NOT INITIAL AND ls_file-business_date = lv_date.
+        ev_file_id = ls_file-file_id.
+        RETURN.
+      ENDIF.
+      IF lv_origin = abap_false AND ( lv_date IS INITIAL OR ls_file-business_date < lv_date )
+         AND ( lv_best IS INITIAL OR ls_file-business_date > lv_best_date ).
+        lv_best      = ls_file-file_id.
+        lv_best_date = ls_file-business_date.
+      ENDIF.
+    ENDLOOP.
+    IF lv_origin = abap_false AND lv_best IS NOT INITIAL.
+      IF is_group-business_date IS INITIAL AND lv_count > 1.
+        " Undated and several instances: no safe correlation
+        ev_ambiguous = abap_true.
+        RETURN.
+      ENDIF.
+      ev_file_id = lv_best.
+      RETURN.
+    ENDIF.
+    ev_file_id = get_or_create( is_group = is_group
+                                is_iface = is_iface ).
+  ENDMETHOD.
+
+
+  METHOD apply_responses.
+    DATA(lv_payment) = xsdbool( is_iface-ack_level = zif_cd_fmon_types=>gc_ack_level-payment ).
+    " Per-payment rows: distinct payment identities, else rows; file level: reported count
+    DATA(lv_count) = COND i( WHEN lv_payment = abap_true AND is_group-items IS NOT INITIAL THEN lines( is_group-items )
+                             WHEN lv_payment = abap_true THEN is_group-rows
+                             ELSE is_group-rec_count ).
+    DATA(lv_known) = xsdbool( lv_payment = abap_true OR is_group-count_known = abap_true ).
+    CASE is_group-stage.
+      WHEN zif_cd_fmon_types=>gc_stage-ack.
+        IF lv_known = abap_true.
+          cs_file-ack_count = nmax( val1 = cs_file-ack_count val2 = lv_count ).
+          cs_file-ack_known = abap_true.
+        ENDIF.
+        IF is_group-amount > cs_file-ack_amount.
+          cs_file-ack_amount = is_group-amount.
+        ENDIF.
+      WHEN zif_cd_fmon_types=>gc_stage-nack.
+        IF lv_known = abap_true.
+          cs_file-nack_count = nmax( val1 = cs_file-nack_count val2 = lv_count ).
+          cs_file-ack_known  = abap_true.
+        ELSE.
+          " A rejection without a count is at least one rejected record
+          cs_file-nack_count = nmax( val1 = cs_file-nack_count val2 = 1 ).
+        ENDIF.
+      WHEN OTHERS.
+    ENDCASE.
   ENDMETHOD.
 
 
@@ -599,17 +742,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDIF.
 
     " Disbursements are acknowledged per payment (one row each), collections per file
-    CASE is_group-stage.
-      WHEN zif_cd_fmon_types=>gc_stage-ack.
-        cs_file-ack_count  = COND #( WHEN is_iface-ack_level = zif_cd_fmon_types=>gc_ack_level-payment
-                                     THEN is_group-rows ELSE is_group-rec_count ).
-        cs_file-ack_amount = is_group-amount.
-      WHEN zif_cd_fmon_types=>gc_stage-nack.
-        cs_file-nack_count = COND #( WHEN is_iface-ack_level = zif_cd_fmon_types=>gc_ack_level-payment
-                                     THEN is_group-rows
-                                     ELSE nmax( val1 = is_group-rec_count val2 = 1 ) ).
-      WHEN OTHERS.
-    ENDCASE.
+    apply_responses( EXPORTING is_group = is_group
+                               is_iface = is_iface
+                     CHANGING  cs_file  = cs_file ).
 
     IF cs_file-first_event_at IS INITIAL OR is_group-event_at < cs_file-first_event_at.
       cs_file-first_event_at = is_group-event_at.
@@ -624,8 +759,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       cs_file-lob = is_group-lob.
     ENDIF.
 
+    " Audit A40: the event records the stage as applied - for lot-controlled interfaces a
+    " source FULLY / PARTIALLY is FILE_LOADED, the lot decides the outcome (raw status in INFO)
+    DATA(lv_stage) = zcl_cd_fmon_rules=>cap_stage( iv_stage          = is_group-stage
+                                                   iv_lot_controlled = is_lot_controlled( is_iface ) ).
     INSERT VALUE #( file_id      = cs_file-file_id
-                    stage        = is_group-stage
+                    stage        = lv_stage
                     event_at     = is_group-event_at
                     src_id       = is_group-src_id
                     src_key      = is_group-file_ref
@@ -641,8 +780,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     " For lot-controlled interfaces the lot, not the source, decides the outcome
     zcl_cd_fmon_status=>apply(
       EXPORTING
-        iv_stage = zcl_cd_fmon_rules=>cap_stage( iv_stage          = is_group-stage
-                                                 iv_lot_controlled = is_lot_controlled( is_iface ) )
+        iv_stage = lv_stage
       CHANGING
         cs_file  = cs_file ).
   ENDMETHOD.
@@ -714,6 +852,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           CONTINUE.
       ENDTRY.
 
+      IF line_exists( lt_status[ truncated = abap_true ] ).
+        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-lot_truncated
+                        iv_key      = zif_cd_fmon_types=>gc_engine_key-lot && |{ ls_cfg-iface_id }:{ ls_cfg-lot_type }|
+                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_scan_truncated
+                                                             iv_v1    = ls_cfg-lot_type
+                                                             iv_v2    = lv_max_rows ) ).
+      ENDIF.
       LOOP AT lt_status INTO DATA(ls_status).
         READ TABLE mt_files INTO ls_file WITH TABLE KEY file_id = ls_status-file_id.
         IF sy-subrc <> 0.
@@ -753,7 +899,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         src_id       = zif_cd_fmon_types=>gc_lot_src_id
         src_key      = zcl_cd_fmon_util=>file_hex( cs_file-file_id )
         record_count = is_status-total_items
-        info         = |{ is_status-open_items } of { is_status-total_items } { is_status-lot_type } item(s) open|
+        info         = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_items_open
+                                             iv_v1    = is_status-open_items
+                                             iv_v2    = is_status-total_items
+                                             iv_v3    = is_status-lot_type )
         created_by   = sy-uname
         created_at   = mv_now ).
       INSERT ls_event INTO TABLE mt_new_events.
@@ -767,16 +916,21 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD banking_age.
     DATA(lv_cal) = calendar_id_for( is_file-iface_id ).
     TRY.
-        rv_days = mo_calendar->working_days_between( iv_from        = is_file-business_date
-                                                     iv_to          = mv_date
-                                                     iv_calendar_id = lv_cal ).
+        rv_days = mo_calendar->working_days_between(
+                    iv_from        = is_file-business_date
+                    iv_to          = mv_date
+                    iv_calendar_id = lv_cal
+                    iv_basis       = CONV #( mo_store->get_param(
+                                               iv_name    = zif_cd_fmon_types=>gc_param-age_basis
+                                               iv_default = CONV #( zif_cd_fmon_types=>gc_age_basis-after_receipt ) ) ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_cal).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-calendar && lv_cal
-                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_calendar_d
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-factory_calendar_age_unknwn
                                                             iv_v1    = lv_cal
                                                             iv_tail  = lx_cal->get_text( ) ) ).
-        rv_days = nmax( val1 = 0 val2 = mv_date - is_file-business_date ).
+        " Audit A41: no silent fallback to calendar days - the age is unknown, no verdict
+        rv_days = zif_cd_fmon_types=>gc_age_unknown.
     ENDTRY.
   ENDMETHOD.
 
@@ -918,7 +1072,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDLOOP.
 
     TRY.
-        mo_dao->save_files( lt_save ).
+        DATA(lt_conflicts) = mo_dao->save_files( lt_save ).
         LOOP AT mt_new_events INTO DATA(ls_event).
           mo_dao->insert_event( ls_event ).
         ENDLOOP.
@@ -926,10 +1080,34 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         " Never commit a half-written registry (files without their events or vice versa)
         mo_store->rollback( ).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
-                        iv_key     = 'ZCD_FMON_FILE'
+                        iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-registry_not_saved
                                                             iv_tail  = lx_ops->get_text( ) ) ).
+        RETURN.
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        " Audit A05: technical SQL errors are rolled back the same way
+        mo_store->rollback( ).
+        engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
+                        iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
+                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
+                                                            iv_tail  = lx_sql->get_text( ) ) ).
+        RETURN.
     ENDTRY.
+
+    " Audit A04: rows changed meanwhile by another process keep their newer state; the
+    " next run re-derives from it. Visible, not an error.
+    LOOP AT lt_conflicts INTO DATA(lv_conflict).
+      READ TABLE mt_files INTO DATA(ls_conflict) WITH TABLE KEY file_id = lv_conflict.
+      IF sy-subrc = 0.
+        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-persist_conflict
+                        iv_key      = COND string( WHEN ls_conflict-file_name IS NOT INITIAL THEN ls_conflict-file_name
+                                                   ELSE ls_conflict-file_ref )
+                        iv_iface_id = ls_conflict-iface_id
+                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-newer_registry_state
+                                                             iv_v1    = ls_conflict-file_name ) ).
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

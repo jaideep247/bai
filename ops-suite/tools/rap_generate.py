@@ -66,7 +66,8 @@ SPEC = {
             ('zcd_fmon_src', 'FmonSource', 'zcd_d_fmsrc', 'Source adapter', 'Source adapters', [],
              [('table', 'table_name')] + [('field', f, 'table_name') for f in (
                  'file_key_field', 'file_name_field', 'date_field', 'time_field', 'ts_field', 'status_field',
-                 'count_field', 'amount_field', 'size_field', 'checksum_field', 'source_field', 'lob_field')]
+                 'count_field', 'amount_field', 'size_field', 'checksum_field', 'source_field', 'lob_field',
+                 'item_key_field')]
              + [('class', 'adapter_class', 'ZIF_CD_FMON_ADAPTER')]),
             ('zcd_fmon_srcmap', 'FmonSourceMap', 'zcd_d_fmsrcmap', 'Status mapping', 'Status mappings',
              ['status_value'], []),
@@ -80,6 +81,9 @@ SPEC = {
               ('enum', 'link_by', ',N,R')]),
             ('zcd_fmon_cal', 'FmonCalendar', 'zcd_d_fmcal', 'Expected files', 'Expected files per day type', [],
              [('window', 'window_from', 'window_to')]),
+            # Audit A51: tables / fields the dynamic reader may read
+            ('zcd_fmon_tabwl', 'FmonTableAllow', 'zcd_d_fmtabwl', 'Approved table', 'Approved tables', [],
+             [('table', 'table_name')]),
         ]),
     'hck': dict(
         folder='hck', pe_area='HCK', root='HckCfgAll', draft='zcd_d_hckcfg', service='ZUI_CD_HCK_CFG',

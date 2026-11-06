@@ -6,6 +6,7 @@
 *& tables. The only FMON seam that issues SQL.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A04/A49: version-checked save returns conflicts; reference lookup bounded by date.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -44,9 +45,12 @@ INTERFACE zif_cd_fmon_dao
       VALUE(rt_checks) TYPE zif_cd_fmon_types=>tt_chk.
 
   "! Registry entries by interface + file reference
+  "! Instances of the references (all business dates since iv_since - audit A49);
+  "! every row comes back with DB_EXISTS and DB_VERSION (= CHANGED_AT as read)
   METHODS find_files_by_ref
     IMPORTING
       it_keys         TYPE zif_cd_fmon_types=>tt_file_key
+      iv_since        TYPE d OPTIONAL
     RETURNING
       VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
 
@@ -77,21 +81,30 @@ INTERFACE zif_cd_fmon_dao
       VALUE(rt_events) TYPE zif_cd_fmon_types=>tt_event.
 
   "! Insert or update registry entries (no commit)
+  "! New rows are inserted; a row read before (DB_EXISTS) is updated only while its
+  "! CHANGED_AT still equals DB_VERSION - otherwise another process changed it and the
+  "! file is returned as a conflict, never overwritten (audit A04)
   METHODS save_files
     IMPORTING
-      it_files TYPE zif_cd_fmon_types=>tt_file
+      it_files            TYPE zif_cd_fmon_types=>tt_file
+    RETURNING
+      VALUE(rt_conflicts) TYPE zif_cd_fmon_types=>tt_file_id
     RAISING
-      zcx_cd_ops_error.
+      zcx_cd_ops_error
+      "! Technical database error: the caller (LUW owner) rolls back (audit A05)
+      cx_sy_open_sql_db.
 
-  "! Idempotent: an event with the same SRC_ID + SRC_KEY + STAGE is not
-  "! inserted again (returns abap_false). EVENT_NO is assigned here.
+  "! Idempotent per file instance: an event with the same FILE_ID + SRC_ID + SRC_KEY +
+  "! STAGE is not inserted again (returns abap_false). EVENT_NO is assigned here.
   METHODS insert_event
     IMPORTING
       is_event           TYPE zif_cd_fmon_types=>ty_event
     RETURNING
       VALUE(rv_inserted) TYPE abap_bool
     RAISING
-      zcx_cd_ops_error.
+      zcx_cd_ops_error
+      "! Technical database error: the caller (LUW owner) rolls back (audit A05)
+      cx_sy_open_sql_db.
 
   "! Dynamic read of a configured table. The caller has validated every
   "! name against the DDIC (ZCL_CD_FMON_QUERY=>VALIDATE); no free-text WHERE.

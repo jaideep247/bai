@@ -8,6 +8,9 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | insert_event: duplicate key re-checked against the business key; EVENT_NO retried (parallel writers).
+*& 2026-11-06 | Audit A04 version-checked save (conflicts returned), A05/A49 event key per file
+*&              instance, A49 reference lookup by date, A50 open-file upper bound,
+*&              A51 approved tables + S_TABU_NAM at the read boundary, A52 half-open range.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -23,7 +26,18 @@ CLASS zcl_cd_fmon_dao DEFINITION
     INTERFACES zif_cd_fmon_dao.
 
   PRIVATE SECTION.
-    TYPES ty_db_files TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
+
+    "! Rows as read: they exist in the DB, version = CHANGED_AT (audit A04)
+    METHODS mark_loaded
+      CHANGING
+        ct_files TYPE zif_cd_fmon_types=>tt_file.
+
+    "! Table and fields approved in ZCD_FMON_TABWL and display authorisation (audit A51)
+    METHODS check_read_allowed
+      IMPORTING
+        is_query TYPE zif_cd_fmon_types=>ty_query
+      RAISING
+        zcx_cd_ops_error.
 
     "! Attempts at a free EVENT_NO when a parallel writer took the same number
     CONSTANTS gc_insert_attempts TYPE i VALUE 3.
@@ -116,9 +130,11 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
            last_event_at, src_id, src_key, created_at, changed_at, changed_by
       FROM zcd_fmon_file
       FOR ALL ENTRIES IN @it_keys
-      WHERE iface_id = @it_keys-iface_id
-        AND file_ref = @it_keys-file_ref
+      WHERE iface_id       = @it_keys-iface_id
+        AND file_ref       = @it_keys-file_ref
+        AND business_date >= @iv_since
       INTO CORRESPONDING FIELDS OF TABLE @rt_files.
+    mark_loaded( CHANGING ct_files = rt_files ).
   ENDMETHOD.
 
 
@@ -132,6 +148,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         FROM zcd_fmon_file
         WHERE business_date BETWEEN @iv_date_from AND @iv_date_to
            OR ( business_date >= @iv_open_since
+                AND business_date <= @iv_date_to
                 AND ( outcome = @lv_no_outcome OR outcome = @zif_cd_fmon_types=>gc_stage-partially ) )
         ORDER BY business_date, file_id
         INTO CORRESPONDING FIELDS OF TABLE @rt_files.
@@ -144,10 +161,12 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         WHERE iface_id = @iv_iface_id
           AND ( business_date BETWEEN @iv_date_from AND @iv_date_to
                 OR ( business_date >= @iv_open_since
+                     AND business_date <= @iv_date_to
                      AND ( outcome = @lv_no_outcome OR outcome = @zif_cd_fmon_types=>gc_stage-partially ) ) )
         ORDER BY business_date, file_id
         INTO CORRESPONDING FIELDS OF TABLE @rt_files.
     ENDIF.
+    mark_loaded( CHANGING ct_files = rt_files ).
   ENDMETHOD.
 
 
@@ -181,6 +200,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
     SORT rt_files BY file_id.
     DELETE ADJACENT DUPLICATES FROM rt_files COMPARING file_id.
+    mark_loaded( CHANGING ct_files = rt_files ).
   ENDMETHOD.
 
 
@@ -197,14 +217,44 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_fmon_dao~save_files.
-    DATA lt_db TYPE ty_db_files.
+    DATA ls_db TYPE zcd_fmon_file.
+    DATA lv_current TYPE timestampl.
+
     CHECK it_files IS NOT INITIAL.
-    lt_db = CORRESPONDING #( it_files ).
-    MODIFY zcd_fmon_file FROM TABLE @lt_db.
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
-    ENDIF.
+    LOOP AT it_files INTO DATA(ls_file).
+      ls_db = CORRESPONDING #( ls_file ).
+      IF ls_file-db_exists = abap_false.
+        INSERT zcd_fmon_file FROM @ls_db.                "#EC CI_IMUD_NESTED
+        IF sy-subrc <> 0.
+          RAISE EXCEPTION TYPE zcx_cd_ops_error
+            MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
+        ENDIF.
+        CONTINUE.
+      ENDIF.
+      " Audit A04: lock the row and compare its version with the one this run read;
+      " a newer row written meanwhile (manual status, other process) is never overwritten
+      SELECT SINGLE FOR UPDATE changed_at                "#EC CI_SEL_NESTED
+        FROM zcd_fmon_file
+        WHERE file_id = @ls_file-file_id
+        INTO @lv_current.
+      IF sy-subrc <> 0 OR lv_current <> ls_file-db_version.
+        INSERT ls_file-file_id INTO TABLE rt_conflicts.
+        CONTINUE.
+      ENDIF.
+      UPDATE zcd_fmon_file FROM @ls_db.                  "#EC CI_IMUD_NESTED
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD mark_loaded.
+    LOOP AT ct_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      <ls_file>-db_exists  = abap_true.
+      <ls_file>-db_version = <ls_file>-changed_at.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -247,10 +297,12 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD event_exists.
-    " Unique secondary index SRC: SRC_ID / SRC_KEY / STAGE - at most one row
+    " Unique secondary index SRC: FILE_ID / SRC_ID / SRC_KEY / STAGE - at most one row;
+    " the file instance is part of the key (audit A49: same reference, other business date)
     SELECT file_id
       FROM zcd_fmon_event
-      WHERE src_id  = @is_event-src_id
+      WHERE file_id = @is_event-file_id
+        AND src_id  = @is_event-src_id
         AND src_key = @is_event-src_key
         AND stage   = @is_event-stage
       ORDER BY file_id
@@ -275,6 +327,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         MESSAGE e202(zcd_ops) WITH is_query-table_name.
     ENDIF.
     DATA(lv_table)  = to_upper( condense( CONV string( is_query-table_name ) ) ).
+    check_read_allowed( is_query ).
     DATA(lv_fields) = field_list( is_query ).
 
     " Host variables referenced by name from the dynamic WHERE condition below
@@ -289,7 +342,9 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
        AND zcl_cd_fmon_query=>is_valid_name( is_query-date_field ) = abap_true.
       lv_where = COND #( WHEN is_query-date_kind = zif_cd_fmon_types=>gc_date_kind-date
                          THEN |{ is_query-date_field } BETWEEN @LV_DATE_FROM AND @LV_DATE_TO|
-                         ELSE |{ is_query-date_field } BETWEEN @LV_TS_FROM AND @LV_TS_TO| ).
+                         " Audit A52: half-open timestamp range [from, to)
+                         ELSE |{ is_query-date_field } >= @LV_TS_FROM AND { is_query-date_field }|
+                           && zif_cd_fmon_types=>gc_ts_window_upper ).
     ENDIF.
     IF is_query-in_field IS NOT INITIAL
        AND zcl_cd_fmon_query=>is_valid_name( is_query-in_field ) = abap_true.
@@ -338,6 +393,24 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       ENDLOOP.
       INSERT ls_raw INTO TABLE rt_rows.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD check_read_allowed.
+    DATA lt_allow TYPE zif_cd_fmon_types=>tt_tab_allow.
+    DATA(lv_table) = CONV zif_cd_fmon_types=>ty_tabname( to_upper( condense( CONV string( is_query-table_name ) ) ) ).
+    SELECT table_name, field_name
+      FROM zcd_fmon_tabwl
+      WHERE table_name = @lv_table
+        AND active     = @abap_true
+      ORDER BY table_name, field_name
+      INTO CORRESPONDING FIELDS OF TABLE @lt_allow.
+    zcl_cd_fmon_query=>check_approved( is_query = is_query
+                                       it_allow = lt_allow ).
+    IF zcl_cd_fmon_factory=>get_ddic( )->may_read( lv_table ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e245(zcd_ops) WITH lv_table.
+    ENDIF.
   ENDMETHOD.
 
 

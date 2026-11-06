@@ -9,6 +9,9 @@
 *& 2026-11-06 | gc_manual_src_id (design 6.4).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A04-A52: file instance identity, version check, payment-level ACK
+*&              dedupe, lot truncation, SLA evidence, age basis, approved tables, malformed rows.
+*& 2026-11-06 | gc_engine_key-registry.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -56,6 +59,10 @@ INTERFACE zif_cd_fmon_types
   TYPES ty_key_value    TYPE c LENGTH 255.
   TYPES ty_time_zone    TYPE c LENGTH 6.
   TYPES ty_light        TYPE c LENGTH 1.
+  "! Banking-day age basis (FMON_AGE_BASIS): A = days strictly after receipt, N = from next working day
+  TYPES ty_age_basis    TYPE c LENGTH 1.
+  "! Factory-calendar correction option of DATE_CONVERT_TO_FACTORYDATE ('+' next, '-' previous)
+  TYPES ty_fcal_correct TYPE c LENGTH 1.
 
   CONSTANTS:
     BEGIN OF gc_direction,
@@ -139,6 +146,10 @@ INTERFACE zif_cd_fmon_types
       timestamp TYPE ty_date_kind VALUE 'T',
     END OF gc_date_kind.
 
+  "! Dynamic WHERE of the legacy reader: exclusive upper bound of the timestamp window
+  "! [TS_FROM, TS_TO) - TS_TO is the next midnight (audit A52)
+  CONSTANTS gc_ts_window_upper TYPE string VALUE ` < @LV_TS_TO`.
+
   "! Field roles = component names of TY_RAW_ROW
   CONSTANTS:
     BEGIN OF gc_role,
@@ -182,7 +193,12 @@ INTERFACE zif_cd_fmon_types
       noc_due_today    TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOC_DUE_TODAY',
       unmapped_file    TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_FILE',
       unmapped_status  TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_STATUS',
+      " retired by audit A49 (no longer raised); kept for findings of earlier runs
       ref_reused       TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REF_REUSED',
+      ref_ambiguous    TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REF_AMBIGUOUS',
+      persist_conflict TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_CONFLICT',
+      lot_truncated    TYPE zif_cd_ops_types=>ty_check_code VALUE 'LOT_SCAN_TRUNCATED',
+      malformed_row    TYPE zif_cd_ops_types=>ty_check_code VALUE 'MALFORMED_SOURCE_ROW',
       plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
       persist_error    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_ERROR',
       alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
@@ -207,6 +223,8 @@ INTERFACE zif_cd_fmon_types
       noc_sla_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_NOC_SLA_DAYS',
       "! Row cap per legacy table read [50000]
       max_rows      TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_MAX_ROWS',
+      "! Banking-day age basis: A strictly after receipt, N from next working day [A]
+      age_basis     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_AGE_BASIS',
     END OF gc_param.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
@@ -215,6 +233,26 @@ INTERFACE zif_cd_fmon_types
   CONSTANTS gc_lot_src_id TYPE ty_src_id VALUE 'LOT'.
   "! Source of events set by hand in the manual-status app (design 6.4)
   CONSTANTS gc_manual_src_id TYPE ty_src_id VALUE 'MANUAL'.
+  "! Banking-day age that could not be determined (calendar failure): no aging verdict
+  CONSTANTS gc_age_unknown TYPE i VALUE -1.
+  CONSTANTS:
+    BEGIN OF gc_age_basis,
+      after_receipt TYPE ty_age_basis VALUE 'A',
+      next_working  TYPE ty_age_basis VALUE 'N',
+    END OF gc_age_basis.
+  CONSTANTS:
+    BEGIN OF gc_fcal_correct,
+      next     TYPE ty_fcal_correct VALUE '+',
+      previous TYPE ty_fcal_correct VALUE '-',
+    END OF gc_fcal_correct.
+  "! Display authorisation checked at the dynamic read boundary (ZCL_CD_FMON_DDIC=>MAY_READ)
+  CONSTANTS:
+    BEGIN OF gc_table_auth,
+      object   TYPE xuobject VALUE 'S_TABU_NAM',
+      id_actvt TYPE xufield VALUE 'ACTVT',
+      id_table TYPE xufield VALUE 'TABLE',
+      display  TYPE activ_auth VALUE '03',
+    END OF gc_table_auth.
   "! Token in a done-value list that stands for an initial status
   CONSTANTS gc_blank_token TYPE string VALUE `<BLANK>`.
 
@@ -278,6 +316,8 @@ INTERFACE zif_cd_fmon_types
       checksum_field  TYPE ty_fieldname,
       source_field    TYPE ty_fieldname,
       lob_field       TYPE ty_fieldname,
+      "! Payment identity of per-payment ACK/NACK rows (dedupe, audit A39); blank = row count
+      item_key_field  TYPE ty_fieldname,
       default_stage   TYPE ty_stage,
       adapter_class   TYPE zif_cd_ops_types=>ty_class_name,
       active          TYPE abap_bool,
@@ -324,6 +364,14 @@ INTERFACE zif_cd_fmon_types
     END OF ty_chk.
   TYPES tt_chk TYPE SORTED TABLE OF ty_chk WITH UNIQUE KEY check_id.
 
+  "! Tables (and fields; '*' = all) the dynamic reader may read (ZCD_FMON_TABWL, audit A51)
+  TYPES:
+    BEGIN OF ty_tab_allow,
+      table_name TYPE ty_tabname,
+      field_name TYPE ty_fieldname,
+    END OF ty_tab_allow.
+  TYPES tt_tab_allow TYPE STANDARD TABLE OF ty_tab_allow WITH EMPTY KEY.
+
   " ---------------------------------------------------------------- registry
   TYPES:
     BEGIN OF ty_file,
@@ -347,6 +395,8 @@ INTERFACE zif_cd_fmon_types
       unprocessed_count TYPE i,
       ack_count         TYPE i,
       ack_amount        TYPE zif_cd_ops_types=>ty_amount,
+      "! ACK/NACK count reported by the source (X) - blank = not reported, not zero (audit A39)
+      ack_known         TYPE abap_bool,
       nack_count        TYPE i,
       origin_rows       TYPE i,
       first_event_at    TYPE timestampl,
@@ -356,6 +406,9 @@ INTERFACE zif_cd_fmon_types
       created_at        TYPE timestampl,
       changed_at        TYPE timestampl,
       changed_by        TYPE syuname,
+      "! Not stored: the row exists in ZCD_FMON_FILE and CHANGED_AT as read (version check, audit A04)
+      db_exists         TYPE abap_bool,
+      db_version        TYPE timestampl,
     END OF ty_file.
   TYPES tt_file TYPE STANDARD TABLE OF ty_file WITH EMPTY KEY.
 
@@ -472,6 +525,11 @@ INTERFACE zif_cd_fmon_types
       checksum      TYPE ty_checksum,
       source_sys    TYPE ty_system,
       lob           TYPE ty_lob,
+      "! Payment identity (ITEM_KEY_FIELD) of per-payment rows
+      item_key      TYPE ty_key_value,
+      "! Row failed conversion of a required or numeric field: quarantined, never counted (audit A52)
+      malformed     TYPE abap_bool,
+      malformed_role TYPE ty_role,
     END OF ty_src_record.
   TYPES tt_src_record TYPE STANDARD TABLE OF ty_src_record WITH EMPTY KEY.
 
@@ -488,6 +546,8 @@ INTERFACE zif_cd_fmon_types
       open_keys   TYPE string,
       age_days    TYPE i,
       sla_days    TYPE i,
+      "! The item scan hit the row cap: completion cannot be proven (audit A38)
+      truncated   TYPE abap_bool,
     END OF ty_lot_status.
   TYPES tt_lot_status TYPE SORTED TABLE OF ty_lot_status WITH UNIQUE KEY file_id.
 
@@ -526,6 +586,8 @@ INTERFACE zif_cd_fmon_types
       ok      TYPE ty_sla_state VALUE ' ',
       missing TYPE ty_sla_state VALUE 'M',
       late    TYPE ty_sla_state VALUE 'L',
+      "! Only a later or different stage was observed: the stage itself is not evidenced
+      inferred TYPE ty_sla_state VALUE 'I',
     END OF gc_sla_state.
 
   TYPES:
@@ -584,6 +646,8 @@ INTERFACE zif_cd_fmon_types
       lot      TYPE c LENGTH 4 VALUE 'LOT:',
       calendar TYPE c LENGTH 4 VALUE 'CAL:',
       check    TYPE c LENGTH 4 VALUE 'CHK:',
+      "! Object key of registry persistence findings
+      registry TYPE c LENGTH 13 VALUE 'ZCD_FMON_FILE',
     END OF gc_engine_key.
 
   "! SLA check codes are built from the stage label: NO_<stage> (missing), <stage>_LATE
@@ -591,6 +655,7 @@ INTERFACE zif_cd_fmon_types
     BEGIN OF gc_sla_code,
       missing_prefix TYPE c LENGTH 3 VALUE 'NO_',
       late_suffix    TYPE c LENGTH 5 VALUE '_LATE',
+      inferred_suffix TYPE c LENGTH 9 VALUE '_INFERRED',
     END OF gc_sla_code.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
@@ -623,6 +688,13 @@ INTERFACE zif_cd_fmon_types
       alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '237',
       lot_unprocessed             TYPE zif_cd_ops_types=>ty_msgno VALUE '238',
       event_info                  TYPE zif_cd_ops_types=>ty_msgno VALUE '239',
+      newer_registry_state        TYPE zif_cd_ops_types=>ty_msgno VALUE '240',
+      lot_scan_truncated          TYPE zif_cd_ops_types=>ty_msgno VALUE '241',
+      reference_ambiguous         TYPE zif_cd_ops_types=>ty_msgno VALUE '242',
+      malformed_rows              TYPE zif_cd_ops_types=>ty_msgno VALUE '243',
+      database_error              TYPE zif_cd_ops_types=>ty_msgno VALUE '246',
+      lot_items_open              TYPE zif_cd_ops_types=>ty_msgno VALUE '247',
+      factory_calendar_age_unknwn TYPE zif_cd_ops_types=>ty_msgno VALUE '248',
     END OF gc_msg.
 
 ENDINTERFACE.
