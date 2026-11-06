@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_hck_types.intf.abap
 *& Purpose:
-*& Types and constants of the health check (HCK) module: customizing rows,
+*& Types and constants of the health check (HCK) payment engine area: customizing rows,
 *& metrics, check results, job-cycle states and the morning report model.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -146,7 +146,7 @@ INTERFACE zif_cd_hck_types
       threshold_amber  TYPE zif_cd_ops_types=>ty_check_code VALUE 'THRESHOLD_AMBER',
       baseline_outlier TYPE zif_cd_ops_types=>ty_check_code VALUE 'BASELINE_OUTLIER',
       timeout          TYPE zif_cd_ops_types=>ty_check_code VALUE 'TIMEOUT_OVERRUN',
-      module_stale     TYPE zif_cd_ops_types=>ty_check_code VALUE 'MODULE_STALE',
+      pe_area_stale     TYPE zif_cd_ops_types=>ty_check_code VALUE 'MODULE_STALE',
       alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',
       gl_gap           TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_TRANSFER_GAP',
       job_cancelled    TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_CANCELLED',
@@ -377,10 +377,10 @@ INTERFACE zif_cd_hck_types
     END OF ty_applog_stat.
   TYPES tt_applog_stat TYPE STANDARD TABLE OF ty_applog_stat WITH EMPTY KEY.
 
-  "! Overdue owned exceptions per module (ZCD_OPS_FINDING)
+  "! Overdue owned exceptions per payment engine area (ZCD_OPS_FINDING)
   TYPES:
     BEGIN OF ty_overdue,
-      module     TYPE zif_cd_ops_types=>ty_module,
+      pe_area     TYPE zif_cd_ops_types=>ty_pe_area,
       item_count TYPE int8,
       oldest_due TYPE d,
     END OF ty_overdue.
@@ -389,7 +389,7 @@ INTERFACE zif_cd_hck_types
   "! Open owned exception for the morning report (top N)
   TYPES:
     BEGIN OF ty_open_exception,
-      module       TYPE zif_cd_ops_types=>ty_module,
+      pe_area       TYPE zif_cd_ops_types=>ty_pe_area,
       group1       TYPE zif_cd_ops_types=>ty_group,
       group2       TYPE zif_cd_ops_types=>ty_group,
       object_key   TYPE zif_cd_ops_types=>ty_object_key,
@@ -405,7 +405,7 @@ INTERFACE zif_cd_hck_types
     END OF ty_open_exception.
   TYPES tt_open_exception TYPE STANDARD TABLE OF ty_open_exception WITH EMPTY KEY.
 
-  "! FI-CA reconciliation key without a GL document
+  "! payment engine reconciliation key without a GL document
   TYPES:
     BEGIN OF ty_fikey_gap,
       fikey TYPE ty_fikey,
@@ -497,10 +497,10 @@ INTERFACE zif_cd_hck_types
       categories     TYPE tt_category_status,
     END OF ty_summary.
 
-  "! Last-run status of a suite module (EBS, FMON, HCK) - health of the health check
+  "! Last-run status of a suite payment engine area (EBS, FMON, HCK) - health of the health check
   TYPES:
-    BEGIN OF ty_module_status,
-      module        TYPE zif_cd_ops_types=>ty_module,
+    BEGIN OF ty_pe_area_status,
+      pe_area        TYPE zif_cd_ops_types=>ty_pe_area,
       last_run_at   TYPE timestampl,
       status        TYPE zif_cd_ops_types=>ty_run_status,
       rag           TYPE zif_cd_ops_types=>ty_rag,
@@ -510,8 +510,8 @@ INTERFACE zif_cd_hck_types
       age_hours     TYPE i,
       max_age_hours TYPE i,
       stale         TYPE abap_bool,
-    END OF ty_module_status.
-  TYPES tt_module_status TYPE STANDARD TABLE OF ty_module_status WITH EMPTY KEY.
+    END OF ty_pe_area_status.
+  TYPES tt_pe_area_status TYPE STANDARD TABLE OF ty_pe_area_status WITH EMPTY KEY.
 
   "! Selection of one engine run (morning report selection screen)
   TYPES:
@@ -520,13 +520,13 @@ INTERFACE zif_cd_hck_types
       categories      TYPE tt_category_range,
       priorities      TYPE tt_priority_range,
       check_ids       TYPE tt_check_range,
-      include_modules TYPE abap_bool,
+      include_pe_areas TYPE abap_bool,
       send_mail       TYPE abap_bool,
       test_mode       TYPE abap_bool,
       variant         TYPE zif_cd_ops_types=>ty_variant,
     END OF ty_selection.
 
-  "! Morning report: scorecard + results + modules + open exceptions
+  "! Morning report: scorecard + results + payment engine areas + open exceptions
   TYPES:
     BEGIN OF ty_report,
       run            TYPE zif_cd_ops_types=>ty_run,
@@ -537,7 +537,7 @@ INTERFACE zif_cd_hck_types
       high_count     TYPE i,
       categories     TYPE tt_category_status,
       results        TYPE tt_check_result,
-      modules        TYPE tt_module_status,
+      pe_areas        TYPE tt_pe_area_status,
       exceptions     TYPE tt_open_exception,
     END OF ty_report.
 

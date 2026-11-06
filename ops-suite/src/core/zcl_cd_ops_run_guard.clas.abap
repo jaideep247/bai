@@ -29,7 +29,7 @@ CLASS zcl_cd_ops_run_guard DEFINITION
     "! refusal is still returned to the caller and shown by the report)
     CLASS-METHODS refuse
       IMPORTING
-        iv_module         TYPE zif_cd_ops_types=>ty_module
+        iv_pe_area         TYPE zif_cd_ops_types=>ty_pe_area
         iv_variant        TYPE zif_cd_ops_types=>ty_variant
         iv_holder         TYPE syuname
       RETURNING
@@ -50,7 +50,7 @@ CLASS zcl_cd_ops_run_guard IMPLEMENTATION.
   METHOD refuse.
     DATA lv_text TYPE zif_cd_ops_types=>ty_message.
 
-    MESSAGE e040(zcd_ops) WITH iv_module iv_variant iv_holder INTO lv_text.
+    MESSAGE e040(zcd_ops) WITH iv_pe_area iv_variant iv_holder INTO lv_text.
 
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
     TRY.
@@ -59,7 +59,7 @@ CLASS zcl_cd_ops_run_guard IMPLEMENTATION.
         " The refusal is still reported; only the alert log loses its run reference
         CLEAR rs_refusal-run-run_id.
     ENDTRY.
-    rs_refusal-run-module        = iv_module.
+    rs_refusal-run-pe_area        = iv_pe_area.
     rs_refusal-run-variant       = iv_variant.
     rs_refusal-run-started_at    = lv_now.
     rs_refusal-run-ended_at      = lv_now.
@@ -70,8 +70,8 @@ CLASS zcl_cd_ops_run_guard IMPLEMENTATION.
     rs_refusal-run-created_by    = sy-uname.
 
     INSERT VALUE #( object_type = gc_object_type
-                    object_key  = |{ iv_module }/{ iv_variant }|
-                    group1      = iv_module
+                    object_key  = |{ iv_pe_area }/{ iv_variant }|
+                    group1      = iv_pe_area
                     rule_id     = 'LOCK'
                     check_code  = gc_check_code
                     severity    = zif_cd_ops_types=>gc_severity-error

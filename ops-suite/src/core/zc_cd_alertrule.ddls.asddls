@@ -8,7 +8,7 @@ define view entity ZC_CD_AlertRule
   key RuleId,
       @Consumption.hidden: true
       SingletonID,
-      Module,
+      PaymentEngineArea,
       MinSeverity,
       RulePattern,
       CheckPattern,

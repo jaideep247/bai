@@ -9,7 +9,7 @@ define table zcd_ops_alert_log {
   rule_id       : abap.char(10);
   channel       : abap.char(10);
   run_id        : sysuuid_x16;
-  module        : abap.char(4);
+  pe_area        : abap.char(4);
   sent_at       : timestampl;
   // S sent, F failed, T throttled, Q quiet hours
   status        : abap.char(1);

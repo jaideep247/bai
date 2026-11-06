@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_ops_alert.intf.abap
 *& Purpose:
-*& Alert router port used by every module. dispatch( ) applies the alert
+*& Alert router port used by every payment engine area. dispatch( ) applies the alert
 *& rules in ZCD_OPS_ALERT_RULE; send( ) delivers a prepared report (e.g. the
 *& morning report) by e-mail to the recipients of a route parameter.
 *& Modification log:
@@ -22,7 +22,7 @@ INTERFACE zif_cd_ops_alert
     RAISING
       zcx_cd_ops_error.
 
-  "! Apply the configured alert rules of the run's module to its findings and
+  "! Apply the configured alert rules of the run's payment engine area to its findings and
   "! deliver through the configured channels. Delivery failures are logged in
   "! ZCD_OPS_ALERT_LOG and never raised; raises only when configuration cannot be read.
   METHODS dispatch

@@ -1,4 +1,4 @@
-@EndUserText.label : 'EBS: NACHA return/NOC reason to FI-CA'
+@EndUserText.label : 'EBS: NACHA return/NOC reason to payment engine'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #C
@@ -7,7 +7,7 @@ define table zcd_ebs_rsn_map {
   key mandt   : abap.clnt not null;
   // R01..R85 or C01..C07
   key reason  : abap.char(4) not null;
-  // FI-CA return reason (returns lot)
+  // payment engine return reason (returns lot)
   fica_reason : abap.char(3);
   is_noc      : abap_boolean;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

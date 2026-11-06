@@ -9,7 +9,7 @@ lock master
 authorization master ( instance )
 {
   internal update;
-  field ( readonly ) RunId, FindingNo, Module, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
+  field ( readonly ) RunId, FindingNo, PaymentEngineArea, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
                      WaiverReqAt, WaiverReason, CreatedAt;
@@ -26,7 +26,7 @@ authorization master ( instance )
   {
     RunId        = run_id;
     FindingNo    = finding_no;
-    Module       = module;
+    PaymentEngineArea       = pe_area;
     ObjectType   = object_type;
     ObjectKey    = object_key;
     Group1       = group1;

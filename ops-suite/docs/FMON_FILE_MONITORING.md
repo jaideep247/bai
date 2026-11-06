@@ -145,7 +145,7 @@ Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_D
 
 ## B2. Class model
 
-> **First principle:** domain rules are pure functions; only the DAO touches the database; only the calendar class calls function modules.
+> **First principle:** domain rules are pure functions; only the DAO touches the database; only the calendar class calls function payment engine areas.
 > **Analogy:** a kitchen — the recipe (rules) is on paper, the pantry (DAO) is the only door to the stock, the oven (calendar FMs) is one appliance.
 
 ```mermaid
@@ -192,7 +192,7 @@ classDiagram
     ZCL_CD_FMON_INJECTOR ..> ZCL_CD_FMON_FACTORY : friend
 ```
 
-Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole module (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → group by source/file/stage → apply all groups in event-time order through the state machine → **registry**: window files + open files + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; on failure **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CD_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
+Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole payment engine area (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → group by source/file/stage → apply all groups in event-time order through the state machine → **registry**: window files + open files + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; on failure **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CD_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
 
 Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYPEDESCR=>DESCRIBE_BY_NAME` (classic EXCEPTIONS) and `GET_DDIC_FIELD_LIST`; `ZCL_CD_FMON_QUERY=>VALIDATE` rejects any table/field name that is not a DDIC identifier (pattern check) or not in the table (200–203), requires a date or key restriction (209); the DAO builds `SELECT (fields) FROM (table) WHERE (validated name) BETWEEN @… / IN @…` — there is no free-text WHERE anywhere.
 
@@ -212,7 +212,7 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | **New returns/NOC lot table** | `ZCD_FMON_LOTCFG` row (interface or `*`, lot type, header/item fields, done values, NOC SLA days). |
 | **New check** | Class implementing `ZIF_CD_FMON_CHECK` (pure: context in, findings out) + `ZCD_FMON_CHK` row. Variants of existing checks (other stage, grace, tolerance) are rows with parameters. |
 | **Thresholds** | SLA minutes, windows, tolerance (`TOLERANCE=`), grace (`GRACE_MIN=`), NOC days — rows/parameters. |
-| **Alert routing** | `ZCD_OPS_ALERT_RULE` (core): module FMON, minimum severity, group1 pattern = interface, channel, recipients. |
+| **Alert routing** | `ZCD_OPS_ALERT_RULE` (core): payment engine area FMON, minimum severity, group1 pattern = interface, channel, recipients. |
 
 ## B4. Messages (class ZCD_OPS, FMON range 200–299)
 
@@ -309,4 +309,4 @@ Recommended QA1 functional test cases (Test & Validation document):
 9. **SLA check is one configurable class** (`ZCL_CD_FMON_CHK_SLA`) driven by ZCD_FMON_SLA rows; "no PRISM handoff" and "no bank ack" are check rows with `STAGE=`. Late-but-reached is reported separately (`*_LATE`, W).
 10. **Holiday without a calendar row expects nothing** (no fallback to NORMAL) — avoids false FILE_MISSING on bank holidays; files that day → UNEXPECTED_FILE.
 11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, FILE_REF_REUSED, LOT_NOT_FOUND.
-12. **Run lock (2026-11-06):** one monitor run at a time for the whole module (core message 040, RUN_LOCKED alert); the unique registry index still protects against double registration. Checksum-mismatch and archive-failure checks from the master prompt are possible as further `ZIF_CD_FMON_CHECK` rows once a source delivers those fields.
+12. **Run lock (2026-11-06):** one monitor run at a time for the whole payment engine area (core message 040, RUN_LOCKED alert); the unique registry index still protects against double registration. Checksum-mismatch and archive-failure checks from the master prompt are possible as further `ZIF_CD_FMON_CHECK` rows once a source delivers those fields.

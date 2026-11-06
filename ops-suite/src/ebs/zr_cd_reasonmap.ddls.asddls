@@ -8,7 +8,7 @@ define view entity ZR_CD_ReasonMap
       @EndUserText.label: 'Reason'
   key reason as Reason,
       1 as SingletonID,
-      @EndUserText.label: 'FI-CA reason'
+      @EndUserText.label: 'Payment engine reason'
       fica_reason as FicaReason,
       @EndUserText.label: 'NOC reason'
       is_noc as IsNoc,

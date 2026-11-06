@@ -6,8 +6,8 @@
 *& with a waiver that has not expired (no end date = not expired). Its findings
 *& are deleted with it. Alert log, FMON events and HCK metrics are purged by
 *& their own timestamps. Deletes by key, at most iv_max rows per call; the
-*& caller commits. Reads ZCD_FMON_EVENT / ZCD_HCK_METRIC of the module packages
-*& (core-to-module use accepted for this one housekeeping class).
+*& caller commits. Reads ZCD_FMON_EVENT / ZCD_HCK_METRIC of the payment engine area packages
+*& (core-to-payment engine area use accepted for this one housekeeping class).
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *&---------------------------------------------------------------------*

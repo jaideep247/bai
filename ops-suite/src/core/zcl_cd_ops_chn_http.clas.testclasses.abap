@@ -27,7 +27,7 @@ CLASS ltc_http_json IMPLEMENTATION.
 
   METHOD message.
     rs_message-rule_id    = 'EBS_BLOCK'.
-    rs_message-module     = zif_cd_ops_types=>gc_module-ebs.
+    rs_message-pe_area     = zif_cd_ops_types=>gc_pe_area-ebs.
     rs_message-severity   = zif_cd_ops_types=>gc_severity-block.
     rs_message-subject    = 'Blocked entries'.
     rs_message-item_count = 3.
@@ -35,7 +35,7 @@ CLASS ltc_http_json IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " The receiver needs rule, module, severity and item count to route the page
+  " The receiver needs rule, payment engine area, severity and item count to route the page
   METHOD body_carries_rule_and_items.
     DATA(lv_json) = zcl_cd_ops_chn_http=>to_json( message( ) ).
     cl_abap_unit_assert=>assert_char_cp( act = lv_json exp = '*"ruleId":"EBS_BLOCK"*' msg = 'ruleId must be sent' ).

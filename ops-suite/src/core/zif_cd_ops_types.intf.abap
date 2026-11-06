@@ -2,20 +2,20 @@
 *& Artifact: zif_cd_ops_types.intf.abap
 *& Purpose:
 *& Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
-*& Every finding of every module is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+*& Every finding of every payment engine area is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
 *& B = block (never post), E = error, W = warning, I = information
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Module CORE and exception dispositions.
+*& 2026-11-06 | Payment engine area CORE and exception dispositions.
 *& 2026-11-06 | Object-key and group sets (reconciliation scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
-"! Every finding of every module is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
+"! Every finding of every payment engine area is written to one store (ZCD_OPS_RUN / ZCD_OPS_FINDING).
 INTERFACE zif_cd_ops_types
   PUBLIC.
 
-  TYPES ty_module      TYPE c LENGTH 4.
+  TYPES ty_pe_area      TYPE c LENGTH 4.
   TYPES ty_severity    TYPE c LENGTH 1.
   TYPES ty_rag         TYPE c LENGTH 1.
   TYPES ty_run_status  TYPE c LENGTH 1.
@@ -36,13 +36,13 @@ INTERFACE zif_cd_ops_types
   TYPES ty_run_id      TYPE x LENGTH 16.
 
   CONSTANTS:
-    BEGIN OF gc_module,
-      health_check TYPE ty_module VALUE 'HCK',
-      file_monitor TYPE ty_module VALUE 'FMON',
-      ebs          TYPE ty_module VALUE 'EBS',
-      "! Cross-module objects: alerting, parameters, purge (authorisation object ZCD_OPS)
-      core         TYPE ty_module VALUE 'CORE',
-    END OF gc_module.
+    BEGIN OF gc_pe_area,
+      health_check TYPE ty_pe_area VALUE 'HCK',
+      file_monitor TYPE ty_pe_area VALUE 'FMON',
+      ebs          TYPE ty_pe_area VALUE 'EBS',
+      "! Cross-payment engine area objects: alerting, parameters, purge (authorisation object ZCD_OPS)
+      core         TYPE ty_pe_area VALUE 'CORE',
+    END OF gc_pe_area.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.
@@ -118,7 +118,7 @@ INTERFACE zif_cd_ops_types
   TYPES:
     BEGIN OF ty_run,
       run_id        TYPE ty_run_id,
-      module        TYPE ty_module,
+      pe_area        TYPE ty_pe_area,
       variant       TYPE ty_variant,
       test_mode     TYPE abap_bool,
       started_at    TYPE timestampl,
@@ -165,11 +165,11 @@ INTERFACE zif_cd_ops_types
       quiet     TYPE c LENGTH 1 VALUE 'Q',
     END OF gc_alert_status.
 
-  "! One alert rule: which findings of which module go to which channel
+  "! One alert rule: which findings of which payment engine area go to which channel
   TYPES:
     BEGIN OF ty_alert_rule,
       rule_id         TYPE ty_rule_id,
-      module          TYPE ty_module,
+      pe_area          TYPE ty_pe_area,
       "! Lowest severity that triggers (B, E, W, I)
       min_severity    TYPE ty_severity,
       "! CP patterns on the finding; blank = any
@@ -212,7 +212,7 @@ INTERFACE zif_cd_ops_types
       rule_id     TYPE ty_rule_id,
       channel     TYPE ty_channel,
       destination TYPE ty_alert_dest,
-      module      TYPE ty_module,
+      pe_area      TYPE ty_pe_area,
       run_id      TYPE ty_run_id,
       severity    TYPE ty_severity,
       subject     TYPE ty_message,
@@ -228,7 +228,7 @@ INTERFACE zif_cd_ops_types
       rule_id     TYPE ty_rule_id,
       channel     TYPE ty_channel,
       run_id      TYPE ty_run_id,
-      module      TYPE ty_module,
+      pe_area      TYPE ty_pe_area,
       sent_at     TYPE timestampl,
       status      TYPE c LENGTH 1,
       destination TYPE ty_alert_dest,

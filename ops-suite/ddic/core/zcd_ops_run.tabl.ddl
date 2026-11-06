@@ -6,7 +6,7 @@
 define table zcd_ops_run {
   key mandt     : abap.clnt not null;
   key run_id    : sysuuid_x16 not null;
-  module        : abap.char(4);
+  pe_area        : abap.char(4);
   variant       : abap.char(30);
   test_mode     : abap_boolean;
   started_at    : timestampl;
@@ -23,4 +23,4 @@ define table zcd_ops_run {
   message       : abap.char(255);
   created_by    : syuname;
 }
-// Secondary index ZCD_OPS_RUN~MOD: MANDT, MODULE, STARTED_AT (morning report / last-run lookups)
+// Secondary index ZCD_OPS_RUN~MOD: MANDT, PAYMENT ENGINE AREA, STARTED_AT (morning report / last-run lookups)

@@ -53,7 +53,7 @@
 
 1. ATC with the company's check variant on packages `ZCD_OPS*`, and SAP's standard S/4HANA readiness and HANA performance variants if DV1 has them.
 2. Code Vulnerability Analyzer, if licensed — the dynamic-SQL exemptions above.
-3. Checks needing system data: package interface / use access, field existence of every `VERIFY-DDIC` field in standard and legacy tables (abaplint treats standard tables as unknown), function-module interfaces, authorization objects.
+3. Checks needing system data: package interface / use access, field existence of every `VERIFY-DDIC` field in standard and legacy tables (abaplint treats standard tables as unknown), function-payment engine area interfaces, authorization objects.
 4. ABAP Unit with coverage (`Coverage_Run_Register.csv`).
 
 ## 6. DV1 checklist in ADT (Eclipse) — first import
@@ -61,7 +61,7 @@
 | # | Step | How | Pass when | Suite-specific note |
 |---|---|---|---|---|
 | 1 | Import | abapGit pull into package `ZCD_OPS` with a workbench transport | All objects active, abapGit shows no local differences | Tables, message class and text pools come from the repository XML — do not create them by hand |
-| 2 | DDIC facts | SE11 for every `VERIFY-DDIC` marker (list in the module READMEs) | Field exists with the expected type | A missing field is a code change, not an ATC exemption |
+| 2 | DDIC facts | SE11 for every `VERIFY-DDIC` marker (list in the payment engine area READMEs) | Field exists with the expected type | A missing field is a code change, not an ATC exemption |
 | 3 | ATC | Package `ZCD_OPS` (include subpackages) or the transport: *Run As > ABAP Test Cockpit With…* and choose the variant used on transport release; single object: Ctrl+Shift+F2 | 0 priority 1 and 2 findings without an approved exemption | Use the company's **classic** variant. `ABAP_CLOUD_DEVELOPMENT_DEFAULT` is for ABAP Cloud: this suite reads FEBEP, DFKK*, BSEG, TBTCO and uses `cl_bcs` on purpose (classic track), so that variant reports every unreleased API — run it only for information |
 | 4 | Baseline / delta | ATC baseline | — | Every object in the suite is new, so every finding is ours; a baseline does not hide anything here |
 | 5 | Exemptions | ATC Problems view: *Request Exemption* per finding, approver as per ATC setup | The three exemptions in §4 approved; no others | Never silence a finding with a quick fix that only adds a pseudo comment |

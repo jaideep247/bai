@@ -1,12 +1,12 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_c_gl_transfer.clas.abap
 *& Purpose:
-*& Financial integrity: every FI-CA reconciliation key with totals records
+*& Financial integrity: every payment engine reconciliation key with totals records
 *& must have reached the general ledger (DFKKSUMC/DFKKKO-FIKEY = AWKEY).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Health check - FI-CA to GL transfer completeness</p>
+"! <p class="shorttext synchronized">Health check - payment engine to GL transfer completeness</p>
 "! PARAM1 = lag in days (keys younger than this are still open, default 1),
 "! PARAM2 = window in days (default 7), PARAM3 = max keys listed (default 500).
 "! Metric GL_MISSING_KEYS (DIM1 '*'); one owned exception per missing key.

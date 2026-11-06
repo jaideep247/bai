@@ -29,4 +29,4 @@ define table zcd_hck_def {
   last_changed_at       : abp_lastchange_tstmpl;
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
-// Alert routing is not a column here: ZCD_OPS_ALERT_RULE matches on module HCK and GROUP2 = check id.
+// Alert routing is not a column here: ZCD_OPS_ALERT_RULE matches on payment engine area HCK and GROUP2 = check id.

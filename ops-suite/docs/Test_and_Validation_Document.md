@@ -83,7 +83,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 Fourteen cases FMON-01 … FMON-14 (outbound ACH end to end, re-run idempotency, no PRISM handoff, wire ack beyond 30 min, NACK, ack count mismatch, BAI statement missing/late, holiday calendar, **returns file partially processed then completed — acceptance 8**, wrong field name in customizing, NOC aging day 6 vs day 7, test mode, **new source and LOB by customizing — acceptance 2**, duplicate file). Configuration and expected results: `FMON_FILE_MONITORING.md` §B5.
 
 ### 6.3 Health checks and morning report
-Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by company code — acceptance 1**, customizing-only threshold change, **new job-cycle step — acceptance 5**, each job-cycle state, config drift and baseline, plug-in failure, stale module (health of health), e-mail, background run with export, dashboard). Configuration and expected results: `HCK_MORNING_REPORT.md` §14.
+Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by company code — acceptance 1**, customizing-only threshold change, **new job-cycle step — acceptance 5**, each job-cycle state, config drift and baseline, plug-in failure, stale payment engine area (health of health), e-mail, background run with export, dashboard). Configuration and expected results: `HCK_MORNING_REPORT.md` §14.
 
 ### 6.4 Alerting
 
@@ -101,7 +101,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 
 | ID | Scenario | Configuration | Expected | Result |
 |---|---|---|---|---|
-| CORE-01 | User without ZCD_OPS 16 for EBS starts `ZCD_EBS_VALIDATE` (same for FMON / HCK / CORE purge) | Role without the module | Message 041, nothing runs | pending |
+| CORE-01 | User without ZCD_OPS 16 for EBS starts `ZCD_EBS_VALIDATE` (same for FMON / HCK / CORE purge) | Role without the payment engine area | Message 041, nothing runs | pending |
 | CORE-02 | Second `ZCD_EBS_VALIDATE` with the same variant while the first runs | Two jobs | Second: no run row, RUN_LOCKED alert (rule RUN_LOCKED), job ends in error with message 040; first unaffected | pending |
 | CORE-03 | Lock released after a run that dumps (SM50 cancel) | — | Lock gone in SM12 when the job ends; next run starts | pending |
 | CORE-04 | Same EBS file validated twice with the same unmapped code | Exception assigned to a user after run 1 | Run 2 row: disposition A, same owner and due date, OCCURRENCES 2; run 1 row disposition S | pending |
@@ -128,7 +128,7 @@ PRISM file hand-off and ack tables populated by the real interfaces; registry ev
 Cancel `ZCD_EBS_VALIDATE` (SM50) between packages: findings of committed packages remain, run stays status R, the morning report's health-of-health check flags it. Re-run produces a new run; no duplicate events in ZCD_FMON_EVENT (unique index).
 
 ## 10. Concurrency (QA1)
-Two `ZCD_FMON_MONITOR` jobs started together: the second is refused (run lock for the whole FMON module, CORE-02 pattern). Two EBS or HCK runs of the same variant: the second is refused; different variants run in parallel. Two FMON writers of the same file's events (no lock, e.g. a manual event): EVENT_NO collision retried, every event recorded once.
+Two `ZCD_FMON_MONITOR` jobs started together: the second is refused (run lock for the whole FMON payment engine area, CORE-02 pattern). Two EBS or HCK runs of the same variant: the second is refused; different variants run in parallel. Two FMON writers of the same file's events (no lock, e.g. a manual event): EVENT_NO collision retried, every event recorded once.
 
 ## 11. Performance (QA1, acceptance 6)
 

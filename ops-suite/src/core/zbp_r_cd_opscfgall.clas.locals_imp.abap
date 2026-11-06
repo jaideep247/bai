@@ -9,7 +9,7 @@
 *&---------------------------------------------------------------------*
 CLASS lhc_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
-    CONSTANTS gc_module TYPE zif_cd_ops_cfg_types=>ty_module VALUE 'CORE'.
+    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'CORE'.
 
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR OpsCfgAll RESULT result.
@@ -22,9 +22,9 @@ ENDCLASS.
 CLASS lhc_opscfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS activity 02 for the module: editing the singleton covers every child
+    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child
     DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(
-                                   iv_module = gc_module
+                                   iv_pe_area = gc_pe_area
                                    iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
                             THEN if_abap_behv=>auth-allowed
                             ELSE if_abap_behv=>auth-unauthorized ).
@@ -96,10 +96,10 @@ CLASS lhc_alertrule IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-alertrule.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Module )
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-PaymentEngineArea )
                                         iv_list  = `,*,EBS,FMON,HCK` ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Module v2 = 'Module'
-                        v3 = `,*,EBS,FMON,HCK` element = 'MODULE' ) INTO TABLE lt_msg.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-PaymentEngineArea v2 = 'PaymentEngineArea'
+                        v3 = `,*,EBS,FMON,HCK` element = 'PAYMENTENGINEAREA' ) INTO TABLE lt_msg.
       ENDIF.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-MinSeverity )
                                         iv_list  = `,B,E,W,I` ) = abap_false.

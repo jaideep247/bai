@@ -7,7 +7,7 @@ define table zcd_ops_finding {
   key mandt     : abap.clnt not null;
   key run_id    : sysuuid_x16 not null;
   key finding_no : abap.int4 not null;
-  module        : abap.char(4);
+  pe_area        : abap.char(4);
   object_type   : abap.char(10);
   object_key    : abap.char(70);
   group1        : abap.char(35);
@@ -44,5 +44,5 @@ define table zcd_ops_finding {
   created_at    : timestampl;
 }
 // Secondary indexes:
-//   ZCD_OPS_FINDING~OPN : MANDT, MODULE, DISPOSITION, DUE_DATE   (exception queue / aging)
-//   ZCD_OPS_FINDING~OBJ : MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)
+//   ZCD_OPS_FINDING~OPN : MANDT, PAYMENT ENGINE AREA, DISPOSITION, DUE_DATE   (exception queue / aging)
+//   ZCD_OPS_FINDING~OBJ : MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)

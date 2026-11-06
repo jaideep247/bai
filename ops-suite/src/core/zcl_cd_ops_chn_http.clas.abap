@@ -81,7 +81,7 @@ CLASS zcl_cd_ops_chn_http IMPLEMENTATION.
 
   METHOD to_json.
     rv_json = |\{"ruleId":{ json_string( is_message-rule_id ) },|
-           && |"module":{ json_string( is_message-module ) },|
+           && |"payment engine area":{ json_string( is_message-pe_area ) },|
            && |"severity":{ json_string( is_message-severity ) },|
            && |"subject":{ json_string( is_message-subject ) },|
            && |"items":{ is_message-item_count },|

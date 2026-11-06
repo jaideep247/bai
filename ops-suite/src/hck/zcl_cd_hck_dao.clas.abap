@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_dao.clas.abap
 *& Purpose:
-*& All SQL of the health check module: customizing, metric history, drift
+*& All SQL of the health check payment engine area: customizing, metric history, drift
 *& baselines and the technical reads (TBTCO, BALHDR, SNAP, VBHDR, locks).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -375,20 +375,20 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_overdue_exceptions.
     CONSTANTS lc_no_date TYPE d VALUE '00000000'.
-    " index ZCD_OPS_FINDING~OPN: CLIENT, MODULE, DISPOSITION, DUE_DATE
-    SELECT module, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
+    " index ZCD_OPS_FINDING~OPN: CLIENT, PAYMENT ENGINE AREA, DISPOSITION, DUE_DATE
+    SELECT pe_area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
       FROM zcd_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
         AND due_date    < @iv_today
         AND due_date    > @lc_no_date
-      GROUP BY module
-      ORDER BY module
+      GROUP BY pe_area
+      ORDER BY pe_area
       INTO CORRESPONDING FIELDS OF TABLE @rt_overdue.
   ENDMETHOD.
 
 
   METHOD zif_cd_hck_dao~get_open_exceptions.
-    SELECT module, group1, group2, object_key, check_code, severity, message, disposition,
+    SELECT pe_area, group1, group2, object_key, check_code, severity, message, disposition,
            owner, due_date, created_at
       FROM zcd_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
@@ -401,8 +401,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_fikeys_without_gl.
     " confirmed path DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY; the header BKPF-AWKEY
     " carries the same reference key and is indexed (AWTYP/AWKEY), BSEG-AWKEY is not.
-    "VERIFY-DDIC: DFKKKO-BUDAT (posting date of the FI-CA document header)
-    "VERIFY-DDIC: BKPF-AWKEY holds the reconciliation key (FIKEY) for the FI-CA transfer
+    "VERIFY-DDIC: DFKKKO-BUDAT (posting date of the payment engine document header)
+    "VERIFY-DDIC: BKPF-AWKEY holds the reconciliation key (FIKEY) for the payment engine transfer
     SELECT DISTINCT s~fikey
       FROM dfkksumc AS s
       WHERE EXISTS ( SELECT fikey FROM dfkkko

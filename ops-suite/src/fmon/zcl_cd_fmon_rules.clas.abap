@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_fmon_rules.clas.abap
 *& Purpose:
-*& Pure FMON domain rules (no database, no clock, no function modules):
+*& Pure FMON domain rules (no database, no clock, no function payment engine areas):
 *& interface defaults, day types, expectations, SLA verdicts, ack match,
 *& duplicates, size, lot outcome, NOC aging. Check classes call these.
 *& Modification log:

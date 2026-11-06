@@ -1,6 +1,6 @@
 // Artifact: zi_cd_opsfinding.ddls.asddls
 // Purpose: Basic interface view over ZCD_OPS_FINDING (findings / owned exceptions
-//          of all modules) with aging. Release-dependent annotations: verify on target release.
+//          of all payment engine areas) with aging. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #CHECK
@@ -14,7 +14,7 @@ define view entity ZI_CD_OpsFinding
 {
   key run_id                                              as RunId,
   key finding_no                                          as FindingNo,
-      module                                              as Module,
+      pe_area                                              as PaymentEngineArea,
       object_type                                         as ObjectType,
       object_key                                          as ObjectKey,
       // HCK: category A-E / check id; EBS, FMON: their own grouping

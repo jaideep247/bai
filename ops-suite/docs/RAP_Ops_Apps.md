@@ -70,7 +70,7 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 2. Activate: tables (ZCD_OPS_EXC_HIST, ZCD_EBS_RELEASE, ZCD_HCK_SUPPRESS, ZCD_FMON_PRQ_WA, ZCD_OPS_FINDING with the waiver-request fields) → abstract entities `ZA_CD_*` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
 3. Create and **publish** the OData V4 – UI service bindings `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_EBS_REL_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`; FLP tiles per business role.
 4. Roles: ZCD_OPS 02 per area for operations; 43 (EBS) for release requesters; **85 only for approvers who are not requesters** (segregation of duties); `S_SERVICE` for the five services.
-5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CD_OpsException` (`pfcg_auth( ZCD_OPS, ZCD_MODULE, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
+5. Read access: the CDS views carry `#NOT_REQUIRED`; restrict reading per area with a DCL on `ZR_CD_OpsException` (`pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )`) if the business roles are not already separated by service — decision for security.
 
 ## 5. QA1 cases
 
@@ -78,7 +78,7 @@ Every action writes one row in ZCD_OPS_EXC_HIST (action, from / to disposition, 
 |---|---|---|
 | OPS-01 | Assign, resolve an exception | History rows ASSIGN, RESOLVE; disposition A then R |
 | OPS-02 | Request a waiver, approve with the same user | *Approve* disabled; via API message 063 |
-| OPS-03 | Approve the waiver with a second user, re-run the module | Disposition W; the re-run keeps W until the end date |
+| OPS-03 | Approve the waiver with a second user, re-run the payment engine area | Disposition W; the re-run keeps W until the end date |
 | OPS-04 | Request a release for an R14 block, approve with a second user, run validate_for_posting in enforce mode | Not blocked; finding information; exception resolved with RELEASE |
 | OPS-05 | Same line with a second, different block | Still blocked |
 | OPS-06 | Suppress a red check for 3 days | Active at once; check green with info finding; no alert |

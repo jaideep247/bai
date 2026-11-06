@@ -18,7 +18,7 @@ define view entity ZI_CD_HckMetricCube
   key Metric,
   key Dimension1,
   key Dimension2,
-      Module,
+      PaymentEngineArea,
       MeasuredDate,
       _Check.Category                                     as Category,
       // SUM is right for volumes (counts); for durations / rates use MaxValue or divide by SampleCount

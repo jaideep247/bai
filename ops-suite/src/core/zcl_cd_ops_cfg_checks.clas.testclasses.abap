@@ -115,7 +115,7 @@ CLASS ltc_checks IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a plug-in class is accepted only if it implements the module interface
+  " Rule: a plug-in class is accepted only if it implements the payment engine area interface
   METHOD class_with_interface_accepted.
     TRY.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_ops_cfg_checks=>implements( iv_class     = gc_test-channel

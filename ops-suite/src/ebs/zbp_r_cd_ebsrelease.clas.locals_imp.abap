@@ -169,7 +169,7 @@ CLASS lhc_release IMPLEMENTATION.
   METHOD auth.
     rv_auth = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
                              iv_activity = iv_activity
-                             iv_module   = zif_cd_ops_types=>gc_module-ebs ) = abap_true
+                             iv_pe_area   = zif_cd_ops_types=>gc_pe_area-ebs ) = abap_true
                       THEN if_abap_behv=>auth-allowed
                       ELSE if_abap_behv=>auth-unauthorized ).
   ENDMETHOD.
@@ -196,7 +196,7 @@ CLASS lsc_release IMPLEMENTATION.
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
     LOOP AT lt_releases INTO DATA(ls_release) WHERE Status = zif_cd_ebs_release_types=>gc_status-approved.
       TRY.
-          lo_exc_dao->resolve( it_keys      = lo_exc_dao->find_open( iv_module     = zif_cd_ops_types=>gc_module-ebs
+          lo_exc_dao->resolve( it_keys      = lo_exc_dao->find_open( iv_pe_area     = zif_cd_ops_types=>gc_pe_area-ebs
                                                                      iv_object_key = ls_release-ObjectKey
                                                                      iv_check_code = ls_release-CheckCode )
                                iv_action    = zif_cd_ops_exc_types=>gc_action-release

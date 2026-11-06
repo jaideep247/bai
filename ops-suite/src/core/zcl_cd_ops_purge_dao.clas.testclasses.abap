@@ -83,14 +83,14 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
     DATA ls_finding TYPE zcd_ops_finding.
     ls_run-run_id     = iv_run_id.
-    ls_run-module     = zif_cd_ops_types=>gc_module-ebs.
+    ls_run-pe_area     = zif_cd_ops_types=>gc_pe_area-ebs.
     ls_run-started_at = iv_started.
     ls_run-status     = zif_cd_ops_types=>gc_run_status-success.
     INSERT ls_run INTO TABLE lt_runs.
     go_env->insert_test_data( lt_runs ).
     ls_finding-run_id       = iv_run_id.
     ls_finding-finding_no   = 1.
-    ls_finding-module       = zif_cd_ops_types=>gc_module-ebs.
+    ls_finding-pe_area       = zif_cd_ops_types=>gc_pe_area-ebs.
     ls_finding-check_code   = 'UNMAPPED_BTC'.
     ls_finding-severity     = zif_cd_ops_types=>gc_severity-error.
     ls_finding-disposition  = iv_disposition.

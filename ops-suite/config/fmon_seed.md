@@ -118,4 +118,4 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 
 ## Alerting
 
-FMON calls the core router (`ZIF_CD_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCD_OPS_ALERT_RULE` (owned by core), e.g. module `FMON`, minimum severity `E`, group1 pattern `ACH_*`. FMON keeps no alert configuration of its own.
+FMON calls the core router (`ZIF_CD_OPS_ALERT~DISPATCH`) once per run. Thresholds, recipients, channels, digest, throttling and quiet hours are rows of `ZCD_OPS_ALERT_RULE` (owned by core), e.g. payment engine area `FMON`, minimum severity `E`, group1 pattern `ACH_*`. FMON keeps no alert configuration of its own.

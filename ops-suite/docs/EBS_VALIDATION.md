@@ -101,7 +101,7 @@ Points of no return: the commit after each package (findings durable) and the al
 | ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window |
 | ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | Account number as the bank sends it, bank key, format, default flow, currency, bank G/L |
 | ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG) |
-| ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → FI-CA return reason |
+| ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → payment engine return reason |
 
 Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow → blank bank + `*`; ISO codes then fall back to the family row (`PMNT-ICDT`), then the proprietary code (BAI type codes in CAMT `Prtry` with issuer BAI reuse the BAI2 rows when `EBS_CAMT_BAI_FALLBACK` = X), then scheme PRTRY. Nothing found → X01.
 
@@ -116,7 +116,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | S05 | S | ZCL_CD_EBS_R_S05_DATE | Date missing / future / stale |
 | S06, S11, S12 (file) | parser | ZCL_CD_EBS_PARSER_* | Control totals, empty file, declared counts |
 | S07 | S | ZCL_CD_EBS_R_S07_DUPLICATE | Duplicate in file / already imported |
-| S08 | FMON | file registry | File expected and registered — file monitoring module |
+| S08 | FMON | file registry | File expected and registered — file monitoring payment engine area |
 | S09 | S | ZCL_CD_EBS_R_S09_COVERAGE | Unmapped entries per statement |
 | S10 | S | ZCL_CD_EBS_R_S10_COMPLETE | Entries neither posted nor blocked |
 | S12 (imported) | S | ZCL_CD_EBS_R_S12_COUNT | FEBKO-ANZES vs entries |

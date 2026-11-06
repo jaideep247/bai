@@ -1,12 +1,12 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_ops_lock.intf.abap
 *& Purpose:
-*& One run per module + variant at a time. The lock survives COMMIT WORK
+*& One run per payment engine area + variant at a time. The lock survives COMMIT WORK
 *& (engines commit per package) and is released by the engine at the end.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - run lock per module and variant</p>
+"! <p class="shorttext synchronized">Operations suite - run lock per area and variant</p>
 INTERFACE zif_cd_ops_lock
   PUBLIC.
 
@@ -14,7 +14,7 @@ INTERFACE zif_cd_ops_lock
   "! @raising zcx_cd_ops_error | lock service not available
   METHODS acquire
     IMPORTING
-      iv_module          TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area          TYPE zif_cd_ops_types=>ty_pe_area
       iv_variant         TYPE zif_cd_ops_types=>ty_variant
     EXPORTING
       ev_holder          TYPE syuname
@@ -25,7 +25,7 @@ INTERFACE zif_cd_ops_lock
 
   METHODS release
     IMPORTING
-      iv_module  TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area  TYPE zif_cd_ops_types=>ty_pe_area
       iv_variant TYPE zif_cd_ops_types=>ty_variant.
 
 ENDINTERFACE.

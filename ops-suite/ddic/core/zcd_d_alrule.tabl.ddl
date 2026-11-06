@@ -7,7 +7,7 @@ define table zcd_d_alrule {
   key mandt : abap.clnt not null;
   key ruleid : abap.char(10) not null;
   singletonid : abap.int1;
-  module : abap.char(4);
+  paymentenginearea : abap.char(4);
   minseverity : abap.char(1);
   rulepattern : abap.char(35);
   checkpattern : abap.char(35);

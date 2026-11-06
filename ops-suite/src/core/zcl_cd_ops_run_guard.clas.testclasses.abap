@@ -81,7 +81,7 @@ CLASS ltc_run_guard IMPLEMENTATION.
 
 
   METHOD refuse.
-    rs_refusal = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-ebs
+    rs_refusal = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                iv_variant = 'DAILY'
                                                iv_holder  = gc_holder ).
   ENDMETHOD.

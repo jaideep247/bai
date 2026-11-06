@@ -30,7 +30,7 @@ CLASS lhc_handled IMPLEMENTATION.
     IF requested_authorizations-%create = if_abap_behv=>mk-on.
       result-%create = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
                                       iv_activity = zif_cd_ops_auth=>gc_activity-change
-                                      iv_module   = zif_cd_ops_types=>gc_module-file_monitor ) = abap_true
+                                      iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
                                THEN if_abap_behv=>auth-allowed
                                ELSE if_abap_behv=>auth-unauthorized ).
     ENDIF.
@@ -89,7 +89,7 @@ CLASS lsc_handled IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       TRY.
           lo_exc_dao->resolve( it_keys      = lo_exc_dao->find_open(
-                                                iv_module     = zif_cd_ops_types=>gc_module-file_monitor
+                                                iv_pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                 iv_object_key = to_upper( ls_row-RequestRef ) )
                                iv_action    = zif_cd_ops_exc_types=>gc_action-manual
                                iv_reason    = ls_row-Reason

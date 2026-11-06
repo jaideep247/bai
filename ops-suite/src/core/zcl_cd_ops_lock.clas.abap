@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ops_lock.clas.abap
 *& Purpose:
 *& Run lock over the standard generic lock object E_TABLE with table
-*& ZCD_OPS_LOCK (key MANDT, MODULE, VARIANT) as argument. _SCOPE '1': the lock
+*& ZCD_OPS_LOCK (key MANDT, PAYMENT ENGINE AREA, VARIANT) as argument. _SCOPE '1': the lock
 *& belongs to the program, not to the update task, so it survives the engines'
 *& COMMIT WORK per package. Thin wrapper - deliberately not unit tested; engines
 *& are tested with an injected double.
@@ -26,7 +26,7 @@ CLASS zcl_cd_ops_lock DEFINITION
 
     METHODS varkey
       IMPORTING
-        iv_module        TYPE zif_cd_ops_types=>ty_module
+        iv_pe_area        TYPE zif_cd_ops_types=>ty_pe_area
         iv_variant       TYPE zif_cd_ops_types=>ty_variant
       RETURNING
         VALUE(rv_varkey) TYPE rstable-varkey.
@@ -38,7 +38,7 @@ ENDCLASS.
 CLASS zcl_cd_ops_lock IMPLEMENTATION.
 
   METHOD zif_cd_ops_lock~acquire.
-    DATA(lv_varkey) = varkey( iv_module = iv_module iv_variant = iv_variant ).
+    DATA(lv_varkey) = varkey( iv_pe_area = iv_pe_area iv_variant = iv_variant ).
     CLEAR ev_holder.
 
     " VERIFY-SE37: ENQUEUE_E_TABLE parameters MODE_RSTABLE, TABNAME, VARKEY, _SCOPE
@@ -59,13 +59,13 @@ CLASS zcl_cd_ops_lock IMPLEMENTATION.
         ev_holder = sy-msgv1.
       WHEN OTHERS.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e042(zcd_ops) WITH iv_module iv_variant.
+          MESSAGE e042(zcd_ops) WITH iv_pe_area iv_variant.
     ENDCASE.
   ENDMETHOD.
 
 
   METHOD zif_cd_ops_lock~release.
-    DATA(lv_varkey) = varkey( iv_module = iv_module iv_variant = iv_variant ).
+    DATA(lv_varkey) = varkey( iv_pe_area = iv_pe_area iv_variant = iv_variant ).
 
     " VERIFY-SE37: DEQUEUE_E_TABLE parameters MODE_RSTABLE, TABNAME, VARKEY, _SCOPE
     CALL FUNCTION 'DEQUEUE_E_TABLE'
@@ -78,12 +78,12 @@ CLASS zcl_cd_ops_lock IMPLEMENTATION.
 
 
   METHOD varkey.
-    " Fixed positions of the ZCD_OPS_LOCK key: MANDT (3), MODULE (4), VARIANT (30)
-    DATA lv_module  TYPE zif_cd_ops_types=>ty_module.
+    " Fixed positions of the ZCD_OPS_LOCK key: MANDT (3), PAYMENT ENGINE AREA (4), VARIANT (30)
+    DATA lv_pe_area  TYPE zif_cd_ops_types=>ty_pe_area.
     DATA lv_variant TYPE zif_cd_ops_types=>ty_variant.
-    lv_module  = iv_module.
+    lv_pe_area  = iv_pe_area.
     lv_variant = iv_variant.
-    CONCATENATE sy-mandt lv_module lv_variant INTO rv_varkey RESPECTING BLANKS.
+    CONCATENATE sy-mandt lv_pe_area lv_variant INTO rv_varkey RESPECTING BLANKS.
   ENDMETHOD.
 
 ENDCLASS.

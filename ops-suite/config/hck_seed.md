@@ -13,8 +13,8 @@
 
 | PARAM_NAME | PARAM_VALUE | Meaning |
 |---|---|---|
-| HCK_WATCH_MODULES | `EBS,FMON,HCK` | Modules whose last run is checked (health of the health check) |
-| HCK_MAX_AGE_HOURS | `26` | Default max age of a module's last run (daily run + 2 h slack) |
+| HCK_WATCH_MODULES | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
+| HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
 | HCK_MAX_AGE_H_FMON | `2` | FMON runs every 15–30 min — stale after 2 h (confirm schedule) |
 | HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0 |
 | HCK_LOOKBACK_RUNS | `8` | Default baseline history points |
@@ -28,7 +28,7 @@
 | SLA_DAYS_HCK_W | `3` | Due date of HCK warning findings |
 
 Alert routing of findings (channels, recipients, throttling, quiet hours) is customizing of the core
-table `ZCD_OPS_ALERT_RULE` — suggested HCK rule: module `HCK`, minimum severity `E`, channel `EMAIL`,
+table `ZCD_OPS_ALERT_RULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
 digest per run, rule/group pattern `*` (confirm with the core owner).
 
 ## 2. Check catalog — `ZCD_HCK_DEF`
@@ -36,7 +36,7 @@ digest per run, rule/group pattern `*` (confirm with the core owner).
 | CHECK_ID | DESCRIPTION | CAT | CLASS_NAME | ACTIVE | SEQ | PRIO | PARAM1 | PARAM2 | PARAM3 | TIMEOUT_SEC |
 |---|---|---|---|---|---|---|---|---|---|---|
 | A_RET_AGED | Return debits aging > 10 days by company code | A | ZCL_CD_HCK_C_GENERIC_AGG | X | 10 | H | | | | 120 |
-| A_GL_TRANSFER | FI-CA reconciliation keys reached the GL | A | ZCL_CD_HCK_C_GL_TRANSFER | X | 20 | H | `1` (lag days) | `7` (window days) | `500` (max keys) | 300 |
+| A_GL_TRANSFER | payment engine reconciliation keys reached the GL | A | ZCL_CD_HCK_C_GL_TRANSFER | X | 20 | H | `1` (lag days) | `7` (window days) | `500` (max keys) | 300 |
 | B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_*` | `1` (yesterday) | | 120 |
 | B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK*,ZCD*` (**confirm objects**) | | `1` | 120 |
 | B_VOLUME | Payment engine volumes (yesterday) | B | ZCL_CD_HCK_C_VOLUME | X | 50 | L | `1` (offset) | `1` (days) | | 300 |
@@ -96,7 +96,7 @@ longer dimensions (job names, log objects) use the `*` row.
 |---|---|---|---|---|---|---|---|---|---|---|
 | A_RET_AGED | RET_AGED | DFKKOP | COUNT | | FAEDN | AGE | 10 | BUKRS | AUGST EQ `''` (open) | HVORG IN `<return-debit main transactions, confirm in TFKHVO>` |
 
-VERIFY-DDIC: DFKKOP-FAEDN, AUGST, HVORG, BUKRS (standard FI-CA names, not in the confirmed list).
+VERIFY-DDIC: DFKKOP-FAEDN, AUGST, HVORG, BUKRS (standard payment engine names, not in the confirmed list).
 Alternative after confirmation: returns items via DFKKRP (DFKKRP-SELW1 = DFKKOP-AUGBL is confirmed).
 Variant with amounts: `AGG_FUNC = SUM`, `SUM_FIELD = BETRH` (VERIFY-DDIC).
 Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
@@ -111,8 +111,8 @@ Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
 
 | TABNAME | DESCRIPTION | ACTIVE | APPROVED_BY |
 |---|---|---|---|
-| DFKKOP | FI-CA open items (aging) | X | `<security reviewer>` |
-| DFKKRP | FI-CA returns items | X | `<security reviewer>` |
+| DFKKOP | payment engine open items (aging) | X | `<security reviewer>` |
+| DFKKRP | payment engine returns items | X | `<security reviewer>` |
 | FEBKO | Bank statement headers (volume) | X | `<security reviewer>` |
 | ZCD_PAYM_REQ_LOG | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
 | ZCD_SPE_EXCP_LOG | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |

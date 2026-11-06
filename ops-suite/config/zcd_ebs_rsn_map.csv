@@ -1,20 +1,20 @@
 REASON,FICA_REASON,IS_NOC,TEXT (documentation only)
-R01,<FI-CA reason>,,Insufficient funds
-R02,<FI-CA reason>,,Account closed
-R03,<FI-CA reason>,,No account / unable to locate
-R04,<FI-CA reason>,,Invalid account number
-R05,<FI-CA reason>,,Unauthorized debit to consumer account
-R06,<FI-CA reason>,,Returned per ODFI request
-R07,<FI-CA reason>,,Authorization revoked
-R08,<FI-CA reason>,,Payment stopped
-R09,<FI-CA reason>,,Uncollected funds
-R10,<FI-CA reason>,,Customer advises not authorized
-R11,<FI-CA reason>,,Customer advises entry not in accordance with terms
-R16,<FI-CA reason>,,Account frozen
-R20,<FI-CA reason>,,Non-transaction account
-R23,<FI-CA reason>,,Credit entry refused by receiver
-R24,<FI-CA reason>,,Duplicate entry
-R29,<FI-CA reason>,,Corporate customer advises not authorized
+R01,<payment engine reason>,,Insufficient funds
+R02,<payment engine reason>,,Account closed
+R03,<payment engine reason>,,No account / unable to locate
+R04,<payment engine reason>,,Invalid account number
+R05,<payment engine reason>,,Unauthorized debit to consumer account
+R06,<payment engine reason>,,Returned per ODFI request
+R07,<payment engine reason>,,Authorization revoked
+R08,<payment engine reason>,,Payment stopped
+R09,<payment engine reason>,,Uncollected funds
+R10,<payment engine reason>,,Customer advises not authorized
+R11,<payment engine reason>,,Customer advises entry not in accordance with terms
+R16,<payment engine reason>,,Account frozen
+R20,<payment engine reason>,,Non-transaction account
+R23,<payment engine reason>,,Credit entry refused by receiver
+R24,<payment engine reason>,,Duplicate entry
+R29,<payment engine reason>,,Corporate customer advises not authorized
 C01,,X,Incorrect account number
 C02,,X,Incorrect routing number
 C03,,X,Incorrect routing and account number

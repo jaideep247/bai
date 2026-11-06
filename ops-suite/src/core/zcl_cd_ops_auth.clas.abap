@@ -27,14 +27,14 @@ CLASS zcl_cd_ops_auth IMPLEMENTATION.
     IF iv_bukrs IS INITIAL.
       AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_object
         ID 'ACTVT'      FIELD iv_activity
-        ID 'ZCD_MODULE' FIELD iv_module
+        ID 'ZCD_MODULE' FIELD iv_pe_area
         ID 'BUKRS'      DUMMY.
       rv_allowed = xsdbool( sy-subrc = 0 ).
       RETURN.
     ENDIF.
     AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_object
       ID 'ACTVT'      FIELD iv_activity
-      ID 'ZCD_MODULE' FIELD iv_module
+      ID 'ZCD_MODULE' FIELD iv_pe_area
       ID 'BUKRS'      FIELD iv_bukrs.
     rv_allowed = xsdbool( sy-subrc = 0 ).
   ENDMETHOD.
@@ -42,10 +42,10 @@ CLASS zcl_cd_ops_auth IMPLEMENTATION.
 
   METHOD zif_cd_ops_auth~check.
     IF zif_cd_ops_auth~is_allowed( iv_activity = iv_activity
-                                   iv_module   = iv_module
+                                   iv_pe_area   = iv_pe_area
                                    iv_bukrs    = iv_bukrs ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e041(zcd_ops) WITH |{ zif_cd_ops_auth=>gc_object } { iv_module }| iv_activity.
+        MESSAGE e041(zcd_ops) WITH |{ zif_cd_ops_auth=>gc_object } { iv_pe_area }| iv_activity.
     ENDIF.
   ENDMETHOD.
 

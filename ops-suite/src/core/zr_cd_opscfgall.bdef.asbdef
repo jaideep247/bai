@@ -53,7 +53,7 @@ etag master LocalLastChangedAt
   mapping for zcd_ops_alert_rule
   {
     RuleId = rule_id;
-    Module = module;
+    PaymentEngineArea = pe_area;
     MinSeverity = min_severity;
     RulePattern = rule_pattern;
     CheckPattern = check_pattern;

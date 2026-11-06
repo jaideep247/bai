@@ -240,16 +240,16 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     rs_message-rule_id     = is_selection-rule-rule_id.
     rs_message-channel     = is_selection-rule-channel.
     rs_message-destination = iv_destination.
-    rs_message-module      = is_run-module.
+    rs_message-pe_area      = is_run-pe_area.
     rs_message-run_id      = is_run-run_id.
     rs_message-severity    = lv_worst.
     rs_message-item_count  = iv_total.
     rs_message-subject     = COND #(
       WHEN is_selection-run_level = abap_true
-      THEN |[{ is_run-module }] run { is_run-variant } ended { is_run-status } / RAG { is_run-rag }|
+      THEN |[{ is_run-pe_area }] run { is_run-variant } ended { is_run-status } / RAG { is_run-rag }|
       WHEN iv_total = 1 AND lines( it_findings ) = 1
-      THEN |[{ is_run-module }][{ lv_worst }] { it_findings[ 1 ]-rule_id } { it_findings[ 1 ]-message }|
-      ELSE |[{ is_run-module }][{ lv_worst }] { iv_total } finding(s) - rule { is_selection-rule-rule_id }| ).
+      THEN |[{ is_run-pe_area }][{ lv_worst }] { it_findings[ 1 ]-rule_id } { it_findings[ 1 ]-message }|
+      ELSE |[{ is_run-pe_area }][{ lv_worst }] { iv_total } finding(s) - rule { is_selection-rule-rule_id }| ).
     rs_message-html = |<p><b>{ zcl_cd_ops_util=>html_escape( rs_message-subject ) }</b></p>|
                    && |<p>Run { is_run-variant } status { is_run-status }, RAG { is_run-rag }, |
                    && |items { is_run-total_items }, failed { is_run-failed_items }, |

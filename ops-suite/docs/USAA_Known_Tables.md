@@ -28,7 +28,7 @@ Field names **not** in the reference (still `VERIFY-SE11`): the FIN-number and t
 
 ## 2. How the suite uses them (phase 3 of the RAP build) — **built 2026-11-06**
 
-| Use | Module | Known facts applied | Still to confirm |
+| Use | Payment engine area | Known facts applied | Still to confirm |
 |---|---|---|---|
 | PRISM payment-request monitoring (API interface `PAYREQ_PRISM_IN`) | FMON (generic adapter, configuration) | Status field `ZZ_STATUS`, processed = `SUCCESS`; a later failed row must not downgrade a request that has a SUCCESS row; partition by `SOURCE` | Request reference / FIN-number and timestamp field names |
 | Payment request failed **without an SPE row** | HCK check (new check class) | Every failure needs a `ZCD_SPE_EXCP_LOG` row | SPE key field linking to the request |

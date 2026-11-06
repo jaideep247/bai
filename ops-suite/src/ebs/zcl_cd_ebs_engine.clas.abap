@@ -188,10 +188,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-ebs
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                              iv_variant = iv_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-ebs
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                          iv_variant = iv_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -230,7 +230,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-ebs
+      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                 iv_variant = iv_variant ).
     ENDIF.
   ENDMETHOD.
@@ -245,7 +245,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
     DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
     DATA(lv_started) = zcl_cd_ops_factory=>get_clock( )->now( ).
-    rs_result-run = lo_store->start_run( iv_module    = zif_cd_ops_types=>gc_module-ebs
+    rs_result-run = lo_store->start_run( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-ebs
                                          iv_variant   = iv_variant
                                          iv_test_mode = iv_test_mode ).
     IF iv_test_mode = abap_false.

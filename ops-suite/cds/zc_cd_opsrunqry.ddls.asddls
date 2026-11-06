@@ -1,6 +1,6 @@
 // Artifact: zc_cd_opsrunqry.ddls.asddls
 // Purpose: Analytical query (dashboard tile "suite runs"): runs, red runs and
-//          average runtime per module and day. Release-dependent syntax: verify on target release.
+//          average runtime per payment engine area and day. Release-dependent syntax: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 // Authorization: enforced on ZI_CD_OpsRunCube (DCL ZI_CD_OpsAnalytics).
 @EndUserText.label: 'Ops suite runs - query'
@@ -9,7 +9,7 @@ define transient view entity ZC_CD_OpsRunQry
   as projection on ZI_CD_OpsRunCube
 {
   @AnalyticsDetails.query.axis: #ROWS
-  Module,
+  PaymentEngineArea,
   @AnalyticsDetails.query.axis: #ROWS
   @Consumption.filter: { selectionType: #INTERVAL, multipleSelections: false }
   RunDate,

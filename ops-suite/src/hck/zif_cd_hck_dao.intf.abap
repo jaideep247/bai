@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_hck_dao.intf.abap
 *& Purpose:
-*& Data access of the health check module: customizing, metric history,
+*& Data access of the health check payment engine area: customizing, metric history,
 *& configuration baselines and the technical reads used by the checks.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -9,7 +9,7 @@
 *& 2026-11-06 | select_values for the known-table checks (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
-"! The only place in the HCK module that issues SQL, calls DDIC runtime
+"! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
 "! descriptions or reads system tables. Checks and the engine stay SQL-free.
 INTERFACE zif_cd_hck_dao
   PUBLIC.
@@ -141,14 +141,14 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_stat) TYPE zif_cd_hck_types=>tt_applog_stat.
 
-  "! Owned exceptions past their due date, per module (ZCD_OPS_FINDING)
+  "! Owned exceptions past their due date, per payment engine area (ZCD_OPS_FINDING)
   METHODS get_overdue_exceptions
     IMPORTING
       iv_today          TYPE d
     RETURNING
       VALUE(rt_overdue) TYPE zif_cd_hck_types=>tt_overdue.
 
-  "! Oldest-due open owned exceptions (all modules), at most iv_max_rows
+  "! Oldest-due open owned exceptions (all payment engine areas), at most iv_max_rows
   METHODS get_open_exceptions
     IMPORTING
       iv_max_rows          TYPE i

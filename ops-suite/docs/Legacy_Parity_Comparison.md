@@ -56,7 +56,7 @@
 | Message 010 defined twice (I and E) | ZBAI message class | Wrong text at runtime | Single class ZCD_OPS with ranges |
 | Flow derivation by amount sign / DFKKOP `AUGBL = … OR …` full scan | ZFIR_BANK_POST_VALIDATION_V2 | Wrong flow; database load | Configured patterns and account default |
 | NOC app reads DFKKRNP/DFKKRNIT | NOC_Fiori_App | Tables do not exist in this landscape | FMON lot reader configured for DFKKNRK/DFKKNRP |
-| Free-text dynamic SQL from customizing; `WRITE` lists; `GUID_CREATE` | Morning report (Z_HEALTH_CHECK_REPORT_FINAL) | SQL injection surface; no ALV/background output | Whitelisted, DDIC-validated aggregate checks; ALV + HTML e-mail (HCK module) |
+| Free-text dynamic SQL from customizing; `WRITE` lists; `GUID_CREATE` | Morning report (Z_HEALTH_CHECK_REPORT_FINAL) | SQL injection surface; no ALV/background output | Whitelisted, DDIC-validated aggregate checks; ALV + HTML e-mail (HCK payment engine area) |
 
 ## 3a. Third reference: first framework `jaideep247/src` (`ZCL_CD_BANK_VAL_*`)
 
@@ -86,11 +86,11 @@ Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git hi
 | validator, dao, helper, cfg, config, types | Code-specific validators, DAOs, key normalisation, constants | Rule engine, BTC map, `ZCL_CD_EBS_SAP_DAO`, parameters | Covered — conflicts C1–C7 above |
 | cache | TTL cache (300 s) | Kernel table buffering of customizing; no ABAP cache | Not taken (stale data in a financial check) |
 | exc | One exception class per failed check | Findings; `ZCX_CD_OPS_ERROR` for technical failure only | Not taken (review 3.7) |
-| factory (12), injector | A factory per concern | One factory + injector per module | Covered |
+| factory (12), injector | A factory per concern | One factory + injector per payment engine area | Covered |
 | log, msg, util (BAL wrapper, message wrapper) | Application log, messages | APPLOG channel, message class ZCD_OPS | Covered |
 | util — notification service | E-mail, Teams, Slack, critical / health / performance alerts | Alert router: rules, throttle, quiet hours, escalation; EMAIL, APPLOG, HTTP webhook (Teams via SM59) | Covered, more configurable |
 | util — parameter loader, SQL utilities, query builder | ZZCD_PARAMS by area; dynamic query builder | ZCD_OPS_PARAM; DDIC-validated, whitelisted dynamic SQL with injection tests | Covered |
-| monitor — health check | Tables exist (DD02L), parameters present, authorisation, performance | HCK module, health of the health check | Covered for runtime health. Configuration completeness is covered by R14 (unmapped codes) and DDIC validation at run time, not by a separate check |
+| monitor — health check | Tables exist (DD02L), parameters present, authorisation, performance | HCK payment engine area, health of the health check | Covered for runtime health. Configuration completeness is covered by R14 (unmapped codes) and DDIC validation at run time, not by a separate check |
 | monitor — metrics, performance profiler | Timers per step, statistics | Run runtime, HCK runtime per check with timeout guard | Covered at run / check level; no per-rule timing (add only if QA1 performance needs it) |
 | report — job / dump monitor | TBTCO, dumps, mail | HCK job cycle, SNAP, TBTCO checks, morning report | Covered |
 | report — business report | Result list | ALV in the three reports, CDS analytics | Covered |
@@ -104,7 +104,7 @@ Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git hi
 | database, ddic | Result, summary, audit, parameter tables; CDS on FEBEP | 30 tables, 11 CDS | Covered |
 | docs, improvements, operations (79 md) | Design notes | Archived in `legacy/framework_v1_docs` | — |
 
-**Gaps to close (proposed):** G1 retention — a purge report for runs, findings, alert log, FMON events and HCK metrics, with retention days per table in ZCD_OPS_PARAM and a test mode. G2 exception maintenance — assign, resolve and waive with reason, history and authorisation (ALV report, or a RAP business object with a Fiori elements app). G3 authorisation — object `ZCD_OPS` (activity, module, company code) used by the three reports and by G2.
+**Gaps to close (proposed):** G1 retention — a purge report for runs, findings, alert log, FMON events and HCK metrics, with retention days per table in ZCD_OPS_PARAM and a test mode. G2 exception maintenance — assign, resolve and waive with reason, history and authorisation (ALV report, or a RAP business object with a Fiori elements app). G3 authorisation — object `ZCD_OPS` (activity, payment engine area, company code) used by the three reports and by G2.
 
 ## 4. How parity is confirmed before go-live (QA1)
 

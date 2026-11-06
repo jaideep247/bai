@@ -12,7 +12,7 @@
 *&    with TRANSPORT_REQUEST, CREATE, UPDATE, DELETE (REF TO data).
 *& If the names differ, adapt only this method; the gate and the behaviour
 *& pools do not change. Fallback if the API is not available: function
-*& modules TR_OBJECTS_CHECK / TR_OBJECTS_INSERT with E071K TABU keys
+*& payment engine areas TR_OBJECTS_CHECK / TR_OBJECTS_INSERT with E071K TABU keys
 *& (VERIFY-SE37).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).

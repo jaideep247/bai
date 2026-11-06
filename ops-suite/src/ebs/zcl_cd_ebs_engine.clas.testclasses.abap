@@ -69,7 +69,7 @@ ENDCLASS.
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
     mv_starts += 1.
-    rs_run-module    = iv_module.
+    rs_run-pe_area    = iv_pe_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
     rs_run-status    = zif_cd_ops_types=>gc_run_status-running.

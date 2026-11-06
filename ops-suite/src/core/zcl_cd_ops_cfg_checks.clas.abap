@@ -3,7 +3,7 @@
 *& Purpose:
 *& Field checks of the configuration apps, shared by all four behaviour
 *& pools: DDIC name syntax, table / field existence (RTTI), plug-in class
-*& implements its module interface, allowed values, time windows,
+*& implements its payment engine area interface, allowed values, time windows,
 *& threshold order, rule groups without active rules. No SQL; RTTI reads
 *& dictionary metadata only. Messages are chosen by the caller.
 *& Modification log:

@@ -10,10 +10,10 @@
 INTERFACE zif_cd_ops_alert_dao
   PUBLIC.
 
-  "! Active rules of a module plus rules for module '*'
+  "! Active rules of a payment engine area plus rules for payment engine area '*'
   METHODS get_rules
     IMPORTING
-      iv_module       TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area       TYPE zif_cd_ops_types=>ty_pe_area
     RETURNING
       VALUE(rt_rules) TYPE zif_cd_ops_types=>tt_alert_rule.
 

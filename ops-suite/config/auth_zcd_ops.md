@@ -1,7 +1,7 @@
 # Authorisation object ZCD_OPS — definition sheet (SU20 / SU21 / roles)
 
 > **First principle:** one object guards every operations action, so a role says in one place who may run, change, release or approve.
-> **Analogy:** one keycard system for the whole building — the card says which floors (modules) and which doors (activities), not a different key per room.
+> **Analogy:** one keycard system for the whole building — the card says which floors (payment engine areas) and which doors (activities), not a different key per room.
 
 Created once per landscape by security / Basis (DV1, transported to QA1 / PS4). The code checks it only through `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`).
 
@@ -9,7 +9,7 @@ Created once per landscape by security / Basis (DV1, transported to QA1 / PS4). 
 
 | Field | Data element | Domain | Type | Values |
 |---|---|---|---|---|
-| `ZCD_MODULE` | `ZCD_OPS_MODULE` (create in SE11: short text "Operations suite module", domain `ZCD_OPS_MODULE`) | `ZCD_OPS_MODULE`, CHAR 4, fixed values below | CHAR 4 | `EBS` EBS validation · `FMON` file monitoring · `HCK` health check / morning report · `CORE` alerting, parameters, purge |
+| `ZCD_PE_AREA` | `ZCD_PE_AREA` (create in SE11: short text "Operations suite payment engine area", domain `ZCD_PE_AREA`) | `ZCD_PE_AREA`, CHAR 4, fixed values below | CHAR 4 | `EBS` EBS validation · `FMON` file monitoring · `HCK` health check / morning report · `CORE` alerting, parameters, purge |
 
 The data element is not delivered as abapGit XML (the repository serializer does not generate DTEL/DOMA); create it in SE11 before SU20.
 
@@ -17,7 +17,7 @@ The data element is not delivered as abapGit XML (the repository serializer does
 
 | Object | Class | Fields | Text |
 |---|---|---|---|
-| `ZCD_OPS` | create class `ZCD` (or the landscape's custom class) | `ACTVT`, `ZCD_MODULE`, `BUKRS` | Payment engine operations suite |
+| `ZCD_OPS` | create class `ZCD` (or the landscape's custom class) | `ACTVT`, `ZCD_PE_AREA`, `BUKRS` | Payment engine operations suite |
 
 Permitted activities (SU21 → Activities):
 
@@ -31,7 +31,7 @@ Permitted activities (SU21 → Activities):
 | 43 | Release | EBS blocked-line release request |
 | 85 | Approve (second person) | Waiver approval, EBS release approval |
 
-`BUKRS`: company code of the object where it has one (bank account, statement, check threshold row); module-wide checks pass it as `DUMMY`.
+`BUKRS`: company code of the object where it has one (bank account, statement, check threshold row); payment engine area-wide checks pass it as `DUMMY`.
 
 ## 3. Roles (PFCG) — proposal
 
@@ -41,6 +41,6 @@ Permitted activities (SU21 → Activities):
 | `Z_CD_OPS_BATCH` (Control-M job user) | EBS, FMON, HCK, CORE | 16 | * |
 | `Z_CD_OPS_OPERATOR` (RTB operations) | EBS, FMON, HCK | 02, 03, 43 | own company codes |
 | `Z_CD_OPS_APPROVER` (team lead, not the operator) | EBS, FMON, HCK | 03, 85 | own company codes |
-| `Z_CD_OPS_CONFIG` (configuration owner) | per module | 01, 02, 03, 06 | * |
+| `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 | * |
 
-Segregation of duties: the same user must not hold 43 and 85 for the same module and company code; the apps additionally refuse an approval by the requester (four-eyes).
+Segregation of duties: the same user must not hold 43 and 85 for the same payment engine area and company code; the apps additionally refuse an approval by the requester (four-eyes).

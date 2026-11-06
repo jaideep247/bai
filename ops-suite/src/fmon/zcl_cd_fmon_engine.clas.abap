@@ -9,7 +9,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run header committed at start; results committed before alerts;
 *&              failed registry save rolled back; READ TABLE replaces OPTIONAL + sy-subrc.
-*& 2026-11-06 | Run lock for the whole module (shared registry); body moved to execute( ).
+*& 2026-11-06 | Run lock for the whole payment engine area (shared registry); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: evaluated files reconciled before the commit.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
@@ -38,7 +38,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
 
   PRIVATE SECTION.
     "! Lock variant: one monitor run at a time for all interfaces - the registry,
-    "! event numbering and lots are shared (design: module + variant; FMON uses '*')
+    "! event numbering and lots are shared (design: payment engine area + variant; FMON uses '*')
     CONSTANTS gc_lock_variant TYPE zif_cd_ops_types=>ty_variant VALUE '*'.
 
     "! The run itself, under the run lock taken by run( )
@@ -243,10 +243,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                              iv_variant = gc_lock_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                          iv_variant = gc_lock_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -286,7 +286,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-file_monitor
+      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                 iv_variant = gc_lock_variant ).
     ENDIF.
   ENDMETHOD.
@@ -298,7 +298,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           iv_test_mode     = iv_test_mode ).
 
     DATA(ls_run) = mo_store->start_run(
-      iv_module    = zif_cd_ops_types=>gc_module-file_monitor
+      iv_pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
       iv_variant   = COND #( WHEN iv_iface_id IS INITIAL THEN 'ALL' ELSE iv_iface_id )
       iv_test_mode = iv_test_mode ).
     IF mv_test_mode = abap_false.

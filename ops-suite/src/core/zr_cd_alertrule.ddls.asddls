@@ -8,8 +8,8 @@ define view entity ZR_CD_AlertRule
       @EndUserText.label: 'Rule ID'
   key rule_id as RuleId,
       1 as SingletonID,
-      @EndUserText.label: 'Module'
-      module as Module,
+      @EndUserText.label: 'Payment engine area'
+      pe_area as PaymentEngineArea,
       @EndUserText.label: 'Minimum severity'
       min_severity as MinSeverity,
       @EndUserText.label: 'Rule pattern'

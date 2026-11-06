@@ -1,6 +1,6 @@
 // Artifact: zi_cd_opsruncube.ddls.asddls
 // Purpose: Analytical cube of suite runs: runs, runtime, items and findings per
-//          module / day / RAG. Release-dependent annotations: verify on target release.
+//          payment engine area / day / RAG. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite runs - cube'
@@ -12,7 +12,7 @@ define view entity ZI_CD_OpsRunCube
   as select from ZI_CD_OpsRun
 {
   key RunId,
-      Module,
+      PaymentEngineArea,
       Variant,
       RunDate,
       RunStatus,

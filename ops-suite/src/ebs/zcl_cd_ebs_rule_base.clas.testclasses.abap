@@ -17,7 +17,7 @@ ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
-    rs_run-module = iv_module.
+    rs_run-pe_area = iv_pe_area.
   ENDMETHOD.
   METHOD zif_cd_ops_store~save_findings.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
@@ -434,7 +434,7 @@ CLASS ltc_line_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " R05: a return reason not mapped to an FI-CA reason fails
+  " R05: a return reason not mapped to an payment engine reason fails
   METHOD r05_unknown_reason_fails.
     DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
     ls_reason-reason      = 'R01'.

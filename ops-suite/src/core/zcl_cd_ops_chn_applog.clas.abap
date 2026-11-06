@@ -3,7 +3,7 @@
 *& Purpose:
 *& Alert channel APPLOG: writes the alert to the application log (SLG1).
 *& Destination 'OBJECT/SUBOBJECT', default ZCD_OPS/ALERT. Thin wrapper over the
-*& BAL function modules - covered by the QA1 integration test.
+*& BAL function payment engine areas - covered by the QA1 integration test.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*

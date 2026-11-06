@@ -6,8 +6,8 @@
 define table zcd_ops_alert_rule {
   key mandt       : abap.clnt not null;
   key rule_id     : abap.char(10) not null;
-  // HCK / FMON / EBS or * for every module
-  module          : abap.char(4);
+  // HCK / FMON / EBS or * for every payment engine area
+  pe_area          : abap.char(4);
   // B, E, W or I - lowest severity that triggers
   min_severity    : abap.char(1);
   // CP patterns on the finding; blank = any

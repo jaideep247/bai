@@ -168,8 +168,8 @@ BUILTIN = {  # type -> (INTTYPE, intlen(fn of len), DATATYPE, leng(fn of len))
 }
 FIELD = re.compile(r'^\s*(key\s+)?([a-z_0-9]+)\s*:\s*([a-z_0-9.]+)(?:\((\d+)(?:,(\d+))?\))?\s*(not null)?\s*;', re.I)
 unknown = []
-for module in ('core', 'ebs', 'fmon', 'hck'):
-    ddic = os.path.join(ROOT, 'ddic', module)
+for pe_area in ('core', 'ebs', 'fmon', 'hck'):
+    ddic = os.path.join(ROOT, 'ddic', pe_area)
     if not os.path.isdir(ddic):
         continue
     for f in sorted(os.listdir(ddic)):
@@ -240,7 +240,7 @@ for module in ('core', 'ebs', 'fmon', 'hck'):
                 (tag('PROTOKOLL', 'X') if customizing else '') +
                 tag('BUFALLOW', 'X' if customizing else 'N') + '   </DD09L>\n'
                 '   <DD03P_TABLE>\n' + ''.join(fields) + '   </DD03P_TABLE>\n')
-        target = os.path.join(SRC, module, f.replace('.tabl.ddl', '.tabl.xml'))
+        target = os.path.join(SRC, pe_area, f.replace('.tabl.ddl', '.tabl.xml'))
         changed += write(target, wrap('LCL_OBJECT_TABL', body))
 
 # message class

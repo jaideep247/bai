@@ -14,7 +14,7 @@ INTERFACE zif_cd_ops_exc_dao
   "! Open (O) or assigned (A) exceptions of an object; check code blank = any
   METHODS find_open
     IMPORTING
-      iv_module      TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area      TYPE zif_cd_ops_types=>ty_pe_area
       iv_object_key  TYPE zif_cd_ops_types=>ty_object_key
       iv_check_code  TYPE zif_cd_ops_types=>ty_check_code OPTIONAL
     RETURNING

@@ -1,13 +1,13 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_c_overdue_exc.clas.abap
 *& Purpose:
-*& Exception queues: owned exceptions of every suite module (ZCD_OPS_FINDING)
+*& Exception queues: owned exceptions of every suite payment engine area (ZCD_OPS_FINDING)
 *& that are still open or assigned after their SLA due date.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Health check - overdue owned exceptions per module</p>
-"! Metrics per module (DIM1): OVERDUE (items past due date, disposition O
+"! <p class="shorttext synchronized">Health check - overdue exceptions per payment engine area</p>
+"! Metrics per payment engine area (DIM1): OVERDUE (items past due date, disposition O
 "! or A) and OLDEST_OVERDUE_DAYS. Thresholds in ZCD_HCK_THRESH.
 CLASS zcl_cd_hck_c_overdue_exc DEFINITION
   PUBLIC
@@ -37,10 +37,10 @@ CLASS zcl_cd_hck_c_overdue_exc IMPLEMENTATION.
       RETURN.
     ENDIF.
     LOOP AT lt_overdue INTO DATA(ls_overdue).
-      INSERT VALUE #( metric = gc_metric-overdue dim1 = ls_overdue-module value = ls_overdue-item_count )
+      INSERT VALUE #( metric = gc_metric-overdue dim1 = ls_overdue-pe_area value = ls_overdue-item_count )
         INTO TABLE rs_result-metrics.
       INSERT VALUE #( metric = gc_metric-oldest_days
-                      dim1   = ls_overdue-module
+                      dim1   = ls_overdue-pe_area
                       value  = is_context-now_date - ls_overdue-oldest_due ) INTO TABLE rs_result-metrics.
     ENDLOOP.
   ENDMETHOD.

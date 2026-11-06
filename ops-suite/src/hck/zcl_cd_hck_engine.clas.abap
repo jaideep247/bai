@@ -16,9 +16,9 @@
 "! TIMEOUT_SEC (overrun = finding; a synchronous call cannot be killed),
 "! any exception -> PLUGIN_ERROR finding and the run continues, metrics
 "! evaluated against ZCD_HCK_THRESH ('*' fallback, z-score / IQR baseline),
-"! findings and metrics persisted per check (module HCK, object type CHECK,
+"! findings and metrics persisted per check (payment engine area HCK, object type CHECK,
 "! GROUP1 = category, GROUP2 = check id). Health of the health check: the
-"! modules in HCK_WATCH_MODULES must have run within HCK_MAX_AGE_HOURS.
+"! payment engine areas in HCK_WATCH_MODULES must have run within HCK_MAX_AGE_HOURS.
 "! Test mode: nothing saved, nothing committed, no alert, no e-mail.
 CLASS zcl_cd_hck_engine DEFINITION
   PUBLIC
@@ -29,7 +29,7 @@ CLASS zcl_cd_hck_engine DEFINITION
 
     CONSTANTS:
       BEGIN OF gc_param,
-        watch_modules TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_MODULES',
+        watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_MODULES',
         max_age_hours TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
         timeout_sec   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
         lookback      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
@@ -131,13 +131,13 @@ CLASS zcl_cd_hck_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    METHODS module_status
+    METHODS pe_area_status
       RETURNING
-        VALUE(rt_modules) TYPE zif_cd_hck_types=>tt_module_status.
+        VALUE(rt_pe_areas) TYPE zif_cd_hck_types=>tt_pe_area_status.
 
     METHODS self_check
       IMPORTING
-        it_modules       TYPE zif_cd_hck_types=>tt_module_status
+        it_pe_areas       TYPE zif_cd_hck_types=>tt_pe_area_status
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result.
 
@@ -200,10 +200,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF is_selection-test_mode = abap_false.
-      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_module  = zif_cd_ops_types=>gc_module-health_check
+      IF zcl_cd_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                              iv_variant = is_selection-variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_module  = zif_cd_ops_types=>gc_module-health_check
+        DATA(ls_refusal) = zcl_cd_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                          iv_variant = is_selection-variant
                                                          iv_holder  = lv_holder ).
         rs_report-run         = ls_refusal-run.
@@ -239,7 +239,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF is_selection-test_mode = abap_false.
-      zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-health_check
+      zcl_cd_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                 iv_variant = is_selection-variant ).
     ENDIF.
   ENDMETHOD.
@@ -253,7 +253,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_today) = mo_clock->today( ).
     rs_report-report_date = COND #( WHEN is_selection-report_date IS INITIAL THEN lv_today
                                     ELSE is_selection-report_date ).
-    rs_report-run = mo_store->start_run( iv_module    = zif_cd_ops_types=>gc_module-health_check
+    rs_report-run = mo_store->start_run( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-health_check
                                          iv_variant   = is_selection-variant
                                          iv_test_mode = is_selection-test_mode ).
     IF rs_report-run-started_at IS INITIAL.
@@ -286,9 +286,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       INSERT ls_result INTO TABLE rs_report-results.
     ENDLOOP.
 
-    IF is_selection-include_modules = abap_true.
-      rs_report-modules = module_status( ).
-      ls_result = self_check( rs_report-modules ).
+    IF is_selection-include_pe_areas = abap_true.
+      rs_report-pe_areas = pe_area_status( ).
+      ls_result = self_check( rs_report-pe_areas ).
       IF is_selection-test_mode = abap_false.
         persist_result( EXPORTING is_result = ls_result
                         CHANGING  cs_run    = rs_report-run ).
@@ -536,24 +536,24 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD module_status.
-    DATA ls_status TYPE zif_cd_hck_types=>ty_module_status.
+  METHOD pe_area_status.
+    DATA ls_status TYPE zif_cd_hck_types=>ty_pe_area_status.
 
     DATA(lv_now) = mo_clock->now( ).
     DATA(lv_default_age) = param_int( iv_name = gc_param-max_age_hours iv_default = 26 ).
-    DATA(lt_modules) = zcl_cd_ops_util=>split_list(
-      mo_store->get_param( iv_name = gc_param-watch_modules iv_default = `EBS,FMON,HCK` ) ).
+    DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
+      mo_store->get_param( iv_name = gc_param-watch_pe_areas iv_default = `EBS,FMON,HCK` ) ).
 
-    LOOP AT lt_modules INTO DATA(lv_module).
+    LOOP AT lt_pe_areas INTO DATA(lv_pe_area).
       CLEAR ls_status.
-      ls_status-module        = to_upper( lv_module ).
-      ls_status-max_age_hours = param_int( iv_name    = CONV #( |HCK_MAX_AGE_H_{ ls_status-module }| )
+      ls_status-pe_area        = to_upper( lv_pe_area ).
+      ls_status-max_age_hours = param_int( iv_name    = CONV #( |HCK_MAX_AGE_H_{ ls_status-pe_area }| )
                                            iv_default = lv_default_age ).
-      DATA(ls_last) = mo_store->get_last_run( ls_status-module ).
+      DATA(ls_last) = mo_store->get_last_run( ls_status-pe_area ).
       IF ls_last-run_id IS INITIAL.
         ls_status-stale = abap_true.
         ls_status-rag   = zif_cd_ops_types=>gc_rag-red.
-        INSERT ls_status INTO TABLE rt_modules.
+        INSERT ls_status INTO TABLE rt_pe_areas.
         CONTINUE.
       ENDIF.
       ls_status-last_run_at   = ls_last-started_at.
@@ -571,7 +571,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
             ls_status-warning_count = ls_status-warning_count + 1.
         ENDCASE.
       ENDLOOP.
-      INSERT ls_status INTO TABLE rt_modules.
+      INSERT ls_status INTO TABLE rt_pe_areas.
     ENDLOOP.
   ENDMETHOD.
 
@@ -581,15 +581,15 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-description = 'Health of the health check (EBS, FMON, HCK ran)'.
     rs_result-category    = zif_cd_hck_types=>gc_category-technical.
     rs_result-priority    = zif_cd_hck_types=>gc_priority-high.
-    LOOP AT it_modules INTO DATA(ls_module) WHERE stale = abap_true.
-      INSERT VALUE #( object_key = ls_module-module
-                      check_code = zif_cd_hck_types=>gc_code-module_stale
+    LOOP AT it_pe_areas INTO DATA(ls_pe_area) WHERE stale = abap_true.
+      INSERT VALUE #( object_key = ls_pe_area-pe_area
+                      check_code = zif_cd_hck_types=>gc_code-pe_area_stale
                       severity   = zif_cd_ops_types=>gc_severity-error
                       action     = zif_cd_ops_types=>gc_action-notify
-                      message    = COND #( WHEN ls_module-last_run_at IS INITIAL
-                                           THEN |Module { ls_module-module } has never run|
-                                           ELSE |Module { ls_module-module } last ran { ls_module-age_hours } h ago |
-                                             && |(max { ls_module-max_age_hours } h)| ) )
+                      message    = COND #( WHEN ls_pe_area-last_run_at IS INITIAL
+                                           THEN |Payment engine area { ls_pe_area-pe_area } has never run|
+                                           ELSE |Payment engine area { ls_pe_area-pe_area } last ran { ls_pe_area-age_hours } h ago |
+                                             && |(max { ls_pe_area-max_age_hours } h)| ) )
         INTO TABLE rs_result-findings.
     ENDLOOP.
     finalize_result( CHANGING cs_result = rs_result ).

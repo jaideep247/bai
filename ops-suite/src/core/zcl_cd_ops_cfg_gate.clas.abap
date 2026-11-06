@@ -38,7 +38,7 @@ CLASS zcl_cd_ops_cfg_gate DEFINITION
 
     METHODS is_authorized
       IMPORTING
-        iv_module         TYPE zif_cd_ops_cfg_types=>ty_module
+        iv_pe_area         TYPE zif_cd_ops_cfg_types=>ty_pe_area
         iv_actvt          TYPE zif_cd_ops_cfg_types=>ty_actvt
       RETURNING
         VALUE(rv_allowed) TYPE abap_bool.
@@ -109,7 +109,7 @@ CLASS zcl_cd_ops_cfg_gate IMPLEMENTATION.
 
 
   METHOD is_authorized.
-    rv_allowed = mo_auth->is_authorized( iv_module = iv_module
+    rv_allowed = mo_auth->is_authorized( iv_pe_area = iv_pe_area
                                          iv_actvt  = iv_actvt ).
   ENDMETHOD.
 

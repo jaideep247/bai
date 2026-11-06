@@ -2,7 +2,7 @@
 *& Artifact: zif_cd_fmon_calendar.intf.abap
 *& Purpose:
 *& Factory calendar seam (banking days). The implementation is the only
-*& place that calls the standard factory calendar function modules.
+*& place that calls the standard factory calendar function payment engine areas.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*

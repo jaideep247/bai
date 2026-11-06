@@ -77,7 +77,7 @@ ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
-    rs_run-module = iv_module.
+    rs_run-pe_area = iv_pe_area.
   ENDMETHOD.
   METHOD zif_cd_ops_store~save_findings.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
@@ -175,7 +175,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-channel_cl
                                         io_instance   = mo_channel ).
     CLEAR ms_run.
-    ms_run-module = zif_cd_ops_types=>gc_module-ebs.
+    ms_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
     ms_run-status = zif_cd_ops_types=>gc_run_status-error.
     ms_run-rag    = zif_cd_ops_types=>gc_rag-red.
     TRY.
@@ -203,7 +203,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     DATA ls_log     TYPE zif_cd_ops_types=>ty_alert_log.
 
     ls_rule-rule_id         = gc_test-rule_id.
-    ls_rule-module          = zif_cd_ops_types=>gc_module-ebs.
+    ls_rule-pe_area          = zif_cd_ops_types=>gc_pe_area-ebs.
     ls_rule-min_severity    = zif_cd_ops_types=>gc_severity-error.
     ls_rule-channel         = zif_cd_ops_types=>gc_channel-email.
     ls_rule-destination     = gc_test-dest.

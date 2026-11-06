@@ -286,7 +286,7 @@ INTERFACE zif_cd_ebs_types
     END OF ty_flow_pattern.
   TYPES tt_flow_pattern TYPE STANDARD TABLE OF ty_flow_pattern WITH EMPTY KEY.
 
-  "! ZCD_EBS_RSN_MAP - NACHA return / NOC reason to FI-CA return reason
+  "! ZCD_EBS_RSN_MAP - NACHA return / NOC reason to payment engine return reason
   TYPES:
     BEGIN OF ty_reason_map,
       reason      TYPE c LENGTH 4,

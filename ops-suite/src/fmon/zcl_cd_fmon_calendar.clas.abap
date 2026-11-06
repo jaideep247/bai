@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_fmon_calendar.clas.abap
 *& Purpose:
-*& Thin wrapper over the standard factory calendar function modules
+*& Thin wrapper over the standard factory calendar function payment engine areas
 *& DATE_CONVERT_TO_FACTORYDATE / FACTORYDATE_CONVERT_TO_DATE. The only
 *& FMON class that calls them; deliberately not unit tested (see doc).
 *& Modification log:

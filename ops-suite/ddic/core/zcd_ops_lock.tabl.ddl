@@ -5,8 +5,8 @@
 @AbapCatalog.dataMaintenance : #DISPLAY
 define table zcd_ops_lock {
   key mandt     : abap.clnt not null;
-  // Module (EBS / FMON / HCK) and run variant; '*' = whole module
-  key module    : abap.char(4) not null;
+  // Payment engine area (EBS / FMON / HCK) and run variant; '*' = whole payment engine area
+  key pe_area    : abap.char(4) not null;
   key variant   : abap.char(30) not null;
 }
 // Never written: the key is only the lock argument of ENQUEUE_E_TABLE / DEQUEUE_E_TABLE

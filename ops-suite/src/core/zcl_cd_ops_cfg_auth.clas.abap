@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ops_cfg_auth.clas.abap
 *& Purpose:
 *& Authorisation check of the configuration apps on object ZCD_OPS (design
-*& 1): ACTVT and ZCD_MODULE, company code not restricted (module-wide
+*& 1): ACTVT and ZCD_MODULE, company code not restricted (payment engine area-wide
 *& customizing). Temporary seam - replaced by ZCL_CD_OPS_AUTH of the core
 *& build at merge. The object is created in SU21 by security (design 1).
 *& Modification log:
@@ -27,7 +27,7 @@ CLASS zcl_cd_ops_cfg_auth IMPLEMENTATION.
   METHOD zif_cd_ops_cfg_auth~is_authorized.
     " One implementation of the ZCD_OPS check for the whole suite (merge of phases 1 and 2)
     rv_allowed = zcl_cd_ops_factory=>get_auth( )->is_allowed( iv_activity = CONV #( iv_actvt )
-                                                              iv_module   = CONV #( iv_module ) ).
+                                                              iv_pe_area   = CONV #( iv_pe_area ) ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_ops_store.intf.abap
 *& Purpose:
-*& One auditable store for all modules: run headers (ZCD_OPS_RUN),
+*& One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
 *& findings (ZCD_OPS_FINDING) and runtime parameters (ZCD_OPS_PARAM).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -9,7 +9,7 @@
 *& 2026-11-06 | Exception carry-forward: reconcile( ) (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared result store and parameters</p>
-"! One auditable store for all modules: run headers (ZCD_OPS_RUN),
+"! One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
 "! findings (ZCD_OPS_FINDING) and runtime parameters (ZCD_OPS_PARAM).
 INTERFACE zif_cd_ops_store
   PUBLIC.
@@ -17,7 +17,7 @@ INTERFACE zif_cd_ops_store
   "! Create a run header in status RUNNING (persisted unless test mode)
   METHODS start_run
     IMPORTING
-      iv_module     TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area     TYPE zif_cd_ops_types=>ty_pe_area
       iv_variant    TYPE zif_cd_ops_types=>ty_variant OPTIONAL
       iv_test_mode  TYPE abap_bool DEFAULT abap_false
     RETURNING
@@ -26,7 +26,7 @@ INTERFACE zif_cd_ops_store
       zcx_cd_ops_error.
 
   "! Append findings to a run; cs_run-finding_count is advanced. An exception (B/E/W)
-  "! raised again for the same module, object and check code inherits disposition,
+  "! raised again for the same payment engine area, object and check code inherits disposition,
   "! owner, due date and first-seen time of the open one, which becomes superseded (S).
   METHODS save_findings
     IMPORTING
@@ -45,7 +45,7 @@ INTERFACE zif_cd_ops_store
 
   METHODS commit.
 
-  "! Auto-resolve open exceptions (O, A) of earlier runs of the module whose object
+  "! Auto-resolve open exceptions (O, A) of earlier runs of the payment engine area whose object
   "! key (it_object_keys) or GROUP2 (it_groups) this run evaluated without raising
   "! them again. Exceptions raised again were already carried forward by
   "! save_findings; waived exceptions (W) are never touched.
@@ -69,17 +69,17 @@ INTERFACE zif_cd_ops_store
     RETURNING
       VALUE(rv_value) TYPE string.
 
-  "! Most recent completed run of a module (and variant, when given)
+  "! Most recent completed run of a payment engine area (and variant, when given)
   METHODS get_last_run
     IMPORTING
-      iv_module     TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area     TYPE zif_cd_ops_types=>ty_pe_area
       iv_variant    TYPE zif_cd_ops_types=>ty_variant OPTIONAL
     RETURNING
       VALUE(rs_run) TYPE zif_cd_ops_types=>ty_run.
 
   METHODS get_runs_since
     IMPORTING
-      iv_module      TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area      TYPE zif_cd_ops_types=>ty_pe_area
       iv_since       TYPE timestampl
     RETURNING
       VALUE(rt_runs) TYPE zif_cd_ops_types=>tt_run.

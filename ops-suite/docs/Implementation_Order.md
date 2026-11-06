@@ -1,6 +1,6 @@
 # Implementation order — DV1 activation and transport
 
-> **First principle:** activate what others depend on first, and ship each module as one object set — a runtime switch cannot protect against an inactive class.
+> **First principle:** activate what others depend on first, and ship each payment engine area as one object set — a runtime switch cannot protect against an inactive class.
 > **Analogy:** building a house — foundation (DDIC), walls (interfaces), wiring (classes), then switching the power on (customizing and jobs).
 
 Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`.
@@ -18,7 +18,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | 0.5 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
 | 0.6 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
 | 0.7 | Domain `CCCORACTIV` fixed values confirmed (configuration-app client policy) | SE11 | Values match `ZCL_CD_OPS_CFG_CLIENT` |
-| 0.8 | Authorisation object `ZCD_OPS` (field `ZCD_MODULE`, data element / domain `ZCD_OPS_MODULE`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
+| 0.8 | Authorisation object `ZCD_OPS` (field `ZCD_PE_AREA`, data element / domain `ZCD_PE_AREA`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
 
 ## Step 1 — DDIC (SE11 / ADT)
 
@@ -57,9 +57,9 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 ## Step 3 — Customizing (transport, client-dependent)
 
-1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see module docs).
+1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see payment engine area docs).
 2. `ZCD_OPS_ALERT_CHN` and `ZCD_OPS_ALERT_RULE` from `config/alert_seed.md` (HTTP channel inactive until Basis creates the SM59 destination).
-3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (FI-CA reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account.
+3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (payment engine reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account.
 4. FMON: `config/fmon_seed.md` once step 0.3 is done.
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).
 6. TVARVC `ZCD_EBS_VALIDATION_MODE` = `M` (monitor) for go-live; `E` only after the QA1 shadow run is signed off.

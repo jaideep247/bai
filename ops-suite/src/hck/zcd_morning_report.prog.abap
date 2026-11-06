@@ -5,7 +5,7 @@
 *& the scorecard and results in ALV, mails the HTML report, exports CSV.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Authorisation ZCD_OPS activity 16 module HCK at start.
+*& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area HCK at start.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *&---------------------------------------------------------------------*
 *& Presentation layer only: no SQL here. Engine ZCL_CD_HCK_ENGINE, renderer
@@ -142,7 +142,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD run.
     TRY.
         zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
-                                                iv_module   = zif_cd_ops_types=>gc_module-health_check ).
+                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ).
       CATCH zcx_cd_ops_error INTO DATA(lx_auth).
         MESSAGE lx_auth TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
@@ -186,7 +186,7 @@ CLASS lcl_app IMPLEMENTATION.
     rs_selection-categories      = CORRESPONDING #( s_cat[] ).
     rs_selection-priorities      = CORRESPONDING #( s_prio[] ).
     rs_selection-check_ids       = CORRESPONDING #( s_check[] ).
-    rs_selection-include_modules = p_mods.
+    rs_selection-include_pe_areas = p_mods.
     rs_selection-send_mail       = xsdbool( p_mail = abap_true AND p_test = abap_false ).
     rs_selection-test_mode       = p_test.
     rs_selection-variant         = sy-slset.
@@ -259,7 +259,7 @@ CLASS lcl_app IMPLEMENTATION.
                                 CHANGING  t_table      = ms_report-exceptions ).
         lo_alv->get_functions( )->set_default( abap_true ).
         lo_alv->get_columns( )->set_optimize( abap_true ).
-        lo_alv->get_display_settings( )->set_list_header( 'Oldest open exceptions (all modules)' ).
+        lo_alv->get_display_settings( )->set_list_header( 'Oldest open exceptions (all payment engine areas)' ).
         lo_alv->display( ).
       CATCH cx_salv_msg INTO DATA(lx_salv).
         MESSAGE lx_salv TYPE 'S' DISPLAY LIKE 'E'.
@@ -294,15 +294,15 @@ CLASS lcl_app IMPLEMENTATION.
                             text   = |{ zcl_cd_hck_report_html=>rag_text( ls_category-rag ) } | &&
                                      |({ ls_category-red_count } red, { ls_category-amber_count } amber of { ls_category-check_count })| ).
     ENDLOOP.
-    LOOP AT ms_report-modules INTO DATA(ls_module).
+    LOOP AT ms_report-pe_areas INTO DATA(ls_pe_area).
       lv_row = lv_row + 1.
-      ro_grid->create_label( row = lv_row column = 1 text = |Module { ls_module-module }| ).
+      ro_grid->create_label( row = lv_row column = 1 text = |Payment engine area { ls_pe_area-pe_area }| ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = COND string( WHEN ls_module-last_run_at IS INITIAL THEN `never ran - STALE`
-                                                  ELSE |last run { ls_module-last_run_at TIMESTAMP = ISO }, | &&
-                                                       |{ ls_module-age_hours } h ago, { ls_module-error_count } errors| &&
-                                                       COND string( WHEN ls_module-stale = abap_true THEN ` - STALE` ) ) ).
+                            text   = COND string( WHEN ls_pe_area-last_run_at IS INITIAL THEN `never ran - STALE`
+                                                  ELSE |last run { ls_pe_area-last_run_at TIMESTAMP = ISO }, | &&
+                                                       |{ ls_pe_area-age_hours } h ago, { ls_pe_area-error_count } errors| &&
+                                                       COND string( WHEN ls_pe_area-stale = abap_true THEN ` - STALE` ) ) ).
     ENDLOOP.
   ENDMETHOD.
 

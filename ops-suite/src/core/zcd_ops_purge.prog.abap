@@ -3,7 +3,7 @@
 *& Purpose:
 *& Retention purge of the operations suite's history (ZCL_CD_OPS_PURGE):
 *& runs with findings, alert log, FMON events, HCK metrics. Test mode (default)
-*& only counts. Authorisation ZCD_OPS activity 16 module CORE. Scheduled monthly
+*& only counts. Authorisation ZCD_OPS activity 16 payment engine area CORE. Scheduled monthly
 *& by Control-M with test mode off. One job-log message per target; ALV result
 *& in dialog. No WRITE lists.
 *& Modification log:
@@ -30,7 +30,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD main.
     TRY.
         zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
-                                                iv_module   = zif_cd_ops_types=>gc_module-core ).
+                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-core ).
         mt_results = NEW zcl_cd_ops_purge( )->run( xsdbool( p_test = abap_true ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.

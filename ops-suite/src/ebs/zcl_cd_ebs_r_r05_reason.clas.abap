@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ebs_r_r05_reason.clas.abap
 *& Purpose:
 *& R05: a NACHA return reason (R01-R85) or NOC code (C01-C07) must be mapped
-*& to an FI-CA return reason in ZCD_EBS_RSN_MAP. PARAM1 = REQUIRED also
+*& to an payment engine return reason in ZCD_EBS_RSN_MAP. PARAM1 = REQUIRED also
 *& fails entries without a reason. Without any mapping only the format is checked.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -40,7 +40,7 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
         IF NOT line_exists( lt_reasons[ reason = ls_line-return_reason ] ).
           INSERT zcl_cd_ebs_finding=>for_rule_line(
                    is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_UNMAPPED'
-                   iv_message = |Reason { ls_line-return_reason } not mapped to an FI-CA return reason| )
+                   iv_message = |Reason { ls_line-return_reason } not mapped to an payment engine return reason| )
             INTO TABLE rt_findings.
         ENDIF.
       ELSEIF NOT matches( val = ls_line-return_reason pcre = gc_reason_pattern ).

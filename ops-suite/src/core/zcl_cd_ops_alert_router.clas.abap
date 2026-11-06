@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ops_alert_router.clas.abap
 *& Purpose:
-*& Configurable alert router for every module. Reads ZCD_OPS_ALERT_RULE and
+*& Configurable alert router for every payment engine area. Reads ZCD_OPS_ALERT_RULE and
 *& ZCD_OPS_ALERT_CHN through the alert DAO, lets ZCL_CD_OPS_ALERT_POLICY decide
 *& (severity, patterns, quiet hours, throttling, escalation) and delivers via
 *& channel plug-ins. Every decision is logged in ZCD_OPS_ALERT_LOG. A failing
@@ -74,7 +74,7 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     mo_policy = NEW #( ).
 
     DATA(lo_dao) = zcl_cd_ops_factory=>get_alert_dao( ).
-    DATA(lt_rules) = lo_dao->get_rules( is_run-module ).
+    DATA(lt_rules) = lo_dao->get_rules( is_run-pe_area ).
     IF lt_rules IS INITIAL.
       RETURN.
     ENDIF.
@@ -268,7 +268,7 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     ls_log-rule_id     = iv_rule_id.
     ls_log-channel     = iv_channel.
     ls_log-run_id      = is_run-run_id.
-    ls_log-module      = is_run-module.
+    ls_log-pe_area      = is_run-pe_area.
     ls_log-sent_at     = zcl_cd_ops_factory=>get_clock( )->now( ).
     ls_log-status      = iv_status.
     ls_log-destination = iv_destination.

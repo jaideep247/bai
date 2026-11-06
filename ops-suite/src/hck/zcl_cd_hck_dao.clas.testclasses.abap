@@ -44,7 +44,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS add_finding
       IMPORTING
         iv_no          TYPE i
-        iv_module      TYPE zif_cd_ops_types=>ty_module
+        iv_pe_area      TYPE zif_cd_ops_types=>ty_pe_area
         iv_disposition TYPE zif_cd_hck_types=>ty_disposition
         iv_due         TYPE d.
 
@@ -91,7 +91,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA ls_row TYPE zcd_ops_finding.
     ls_row-run_id      = '0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A'.
     ls_row-finding_no  = iv_no.
-    ls_row-module      = iv_module.
+    ls_row-pe_area      = iv_pe_area.
     ls_row-severity    = zif_cd_ops_types=>gc_severity-error.
     ls_row-disposition = iv_disposition.
     ls_row-due_date    = iv_due.
@@ -176,17 +176,17 @@ CLASS ltc_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: overdue = disposition O or A with due date before today, counted per module
+  " Rule: overdue = disposition O or A with due date before today, counted per payment engine area
   METHOD overdue_open_and_assigned.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_overdue.
     TRY.
-        add_finding( iv_no = 1 iv_module = 'EBS'  iv_disposition = 'O' iv_due = '20261101' ).
-        add_finding( iv_no = 2 iv_module = 'EBS'  iv_disposition = 'A' iv_due = '20261103' ).
-        add_finding( iv_no = 3 iv_module = 'EBS'  iv_disposition = 'R' iv_due = '20261101' ).
-        add_finding( iv_no = 4 iv_module = 'FMON' iv_disposition = 'O' iv_due = '20261110' ).
-        add_finding( iv_no = 5 iv_module = 'FMON' iv_disposition = 'I' iv_due = '00000000' ).
+        add_finding( iv_no = 1 iv_pe_area = 'EBS'  iv_disposition = 'O' iv_due = '20261101' ).
+        add_finding( iv_no = 2 iv_pe_area = 'EBS'  iv_disposition = 'A' iv_due = '20261103' ).
+        add_finding( iv_no = 3 iv_pe_area = 'EBS'  iv_disposition = 'R' iv_due = '20261101' ).
+        add_finding( iv_no = 4 iv_pe_area = 'FMON' iv_disposition = 'O' iv_due = '20261110' ).
+        add_finding( iv_no = 5 iv_pe_area = 'FMON' iv_disposition = 'I' iv_due = '00000000' ).
         go_env->insert_test_data( mt_findings ).
-        INSERT VALUE #( module = 'EBS' item_count = 2 oldest_due = '20261101' ) INTO TABLE lt_exp.
+        INSERT VALUE #( pe_area = 'EBS' item_count = 2 oldest_due = '20261101' ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_overdue_exceptions( gc_today )
                                             exp = lt_exp
                                             msg = 'Only open/assigned EBS items past due count' ).

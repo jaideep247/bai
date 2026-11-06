@@ -8,11 +8,11 @@ Decisions taken with the business owner (2026-11-06):
 | # | Decision |
 |---|---|
 | D-1 | `ops-suite` is the final product: EBS validation, file monitoring, morning report. Legacy and `jaideep247/src` are references only |
-| D-2 | **One configuration app per module** (EBS, FMON, HCK, Alerting) |
+| D-2 | **One configuration app per payment engine area** (EBS, FMON, HCK, Alerting) |
 | D-3 | **New configuration entries via transport** (created in DV1, recorded on a customizing request); **existing entries editable directly in production** (no transport; change-logged, authorised) |
 | D-4 | Operations apps: exception disposition, EBS blocked-line release, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
 | D-5 | Also in this build: retention purge (G1), authorisation object `ZCD_OPS` (G3), run lock, exception carry-forward |
-| D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCD_PE_AREA` (data element `ZCD_PE_AREA`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. Done as one mechanical rename pass after phases 1–3 are merged, verified by lint and tests |
+| D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCD_PE_AREA` (data element `ZCD_PE_AREA`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. **Done 2026-11-06 (phase 4)** as one mechanical rename after phases 1–3, verified by lint and tests; CDS element `PaymentEngineArea`, label "Payment engine area" |
 
 Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; **RAP managed BOs with draft** for the apps, OData V4 UI service, Fiori elements. House rules (`DEVELOPMENT_STANDARDS.md`) apply to every class.
 
@@ -21,25 +21,25 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 | Field | Data element | Values |
 |---|---|---|
 | `ACTVT` | standard | 03 display, 02 change, 01 create, 06 delete, 16 execute (run reports / purge), 43 release (EBS line release), 85 approve / waive (second person) |
-| `ZCD_MODULE` → `ZCD_PE_AREA` (D-6) | `ZCD_PE_AREA` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
-| `BUKRS` | standard | Company code; `*` for module-wide objects |
+| `ZCD_PE_AREA` (was `ZCD_MODULE`, D-6) | `ZCD_PE_AREA` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
+| `BUKRS` | standard | Company code; `*` for payment engine area-wide objects |
 
 - One wrapper `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`, injectable through `ZCL_CD_OPS_INJECTOR`) — engines and RAP handlers never write `AUTHORITY-CHECK` themselves.
-- Reports `ZCD_EBS_VALIDATE`, `ZCD_FMON_MONITOR`, `ZCD_MORNING_REPORT`, `ZCD_OPS_PURGE` check `16` for their module at start.
+- Reports `ZCD_EBS_VALIDATE`, `ZCD_FMON_MONITOR`, `ZCD_MORNING_REPORT`, `ZCD_OPS_PURGE` check `16` for their payment engine area at start.
 - RAP: `authorization master ( global )` → activity per operation; instance authorisation by `BUKRS` where the entity has one.
 - SU21 / SU20 objects are delivered as a definition sheet (`config/auth_zcd_ops.md`) — created once by Basis/security.
 
 ## 2. Run lock
 
-- Table `ZCD_OPS_LOCK` (key MODULE, VARIANT; delivery class L) used only as the lock argument of standard lock object `E_TABLE` (`ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE`, `_SCOPE = '1'` so the lock survives the per-package `COMMIT WORK`). Isolated in `ZCL_CD_OPS_LOCK` (`ZIF_CD_OPS_LOCK`, injectable; `VERIFY-SE37` on the FM interface).
-- EBS, FMON and HCK take the lock for module + variant before `start_run`; a held lock → no run, finding-free result with message, alert rule `RUN_LOCKED` (severity E) through the router, report message. Test mode does not lock.
+- Table `ZCD_OPS_LOCK` (key PAYMENT ENGINE AREA, VARIANT; delivery class L) used only as the lock argument of standard lock object `E_TABLE` (`ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE`, `_SCOPE = '1'` so the lock survives the per-package `COMMIT WORK`). Isolated in `ZCL_CD_OPS_LOCK` (`ZIF_CD_OPS_LOCK`, injectable; `VERIFY-SE37` on the FM interface).
+- EBS, FMON and HCK take the lock for payment engine area + variant before `start_run`; a held lock → no run, finding-free result with message, alert rule `RUN_LOCKED` (severity E) through the router, report message. Test mode does not lock.
 - Released at the end of the run (also on exception via `CLEANUP`).
 
 ## 3. Exception carry-forward
 
 - New fields on `ZCD_OPS_FINDING`: `FIRST_SEEN_AT` (timestampl), `OCCURRENCES` (int4), `SUPERSEDED_BY` (sysuuid_x16, run that replaced it).
-- `save_findings`: for a finding of rank ≥ 2, look up the open exception (disposition O or A) for the same MODULE + OBJECT_TYPE + OBJECT_KEY + CHECK_CODE from an earlier run. Found → the new row inherits `DISPOSITION`, `OWNER`, `DUE_DATE`, `FIRST_SEEN_AT`, `OCCURRENCES + 1`; the old row gets disposition `S` (superseded) and `SUPERSEDED_BY`.
-- New store method `reconcile( is_run, it_scope )`: `it_scope` = object keys the run actually evaluated. Open exceptions of the module for keys in scope that were **not** found again → disposition `R`, `RESOLUTION = 'Passed on re-run <run id>'`, resolved by the run user. Each engine passes its scope (EBS: lines validated; FMON: files evaluated; HCK: checks executed).
+- `save_findings`: for a finding of rank ≥ 2, look up the open exception (disposition O or A) for the same PAYMENT ENGINE AREA + OBJECT_TYPE + OBJECT_KEY + CHECK_CODE from an earlier run. Found → the new row inherits `DISPOSITION`, `OWNER`, `DUE_DATE`, `FIRST_SEEN_AT`, `OCCURRENCES + 1`; the old row gets disposition `S` (superseded) and `SUPERSEDED_BY`.
+- New store method `reconcile( is_run, it_scope )`: `it_scope` = object keys the run actually evaluated. Open exceptions of the payment engine area for keys in scope that were **not** found again → disposition `R`, `RESOLUTION = 'Passed on re-run <run id>'`, resolved by the run user. Each engine passes its scope (EBS: lines validated; FMON: files evaluated; HCK: checks executed).
 - Waived (W) exceptions are not reopened by re-runs while the waiver is valid (see §6.1).
 
 ## 4. Retention purge (G1)
@@ -51,7 +51,7 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 
 ## 5. Configuration apps (D-2, D-3)
 
-Pattern: SAP **business-configuration maintenance** shape — a **singleton root** per module (`SingletonID = 1`), every customizing table a **child entity** of it, draft on the whole, lock on the root, total ETag = max of the children's `LAST_CHANGED_AT`.
+Pattern: SAP **business-configuration maintenance** shape — a **singleton root** per payment engine area (`SingletonID = 1`), every customizing table a **child entity** of it, draft on the whole, lock on the root, total ETag = max of the children's `LAST_CHANGED_AT`.
 
 | App (service) | Root | Children (tables) |
 |---|---|---|
@@ -107,6 +107,6 @@ All five apps built as designed (`RAP_Ops_Apps.md`). Deviations:
 
 ## 7. Delivery and verification
 
-- RAP sources in abapGit format under `src/<module>/` (DDLS, DDLX, BDEF, SRVD, draft TABL, behaviour pools); service bindings created and published in ADT after import (`Implementation_Order.md`).
+- RAP sources in abapGit format under `src/<pe_area>/` (DDLS, DDLX, BDEF, SRVD, draft TABL, behaviour pools); service bindings created and published in ADT after import (`Implementation_Order.md`).
 - Pure classes (policy, release / suppression matching, carry-forward, purge selection) test first; RAP handlers thin; DAO SQL with `cl_osql_test_environment`.
 - abaplint + ATC-equivalent + portable checks green before each commit; nothing here is executed in SAP until DV1.

@@ -28,10 +28,10 @@ ENDCLASS.
 CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_exc_dao~find_open.
-    " index ZCD_OPS_FINDING~OBJ: MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY
     SELECT run_id, finding_no
       FROM zcd_ops_finding
-      WHERE module     = @iv_module
+      WHERE pe_area     = @iv_pe_area
         AND object_key = @iv_object_key
         AND ( check_code = @iv_check_code OR @iv_check_code = @space )
         AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,

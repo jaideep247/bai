@@ -40,7 +40,7 @@ ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
-    rs_run-module = iv_module.
+    rs_run-pe_area = iv_pe_area.
   ENDMETHOD.
   METHOD zif_cd_ops_store~save_findings.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).

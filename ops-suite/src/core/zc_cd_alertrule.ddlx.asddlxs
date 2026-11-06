@@ -14,7 +14,7 @@ annotate entity ZC_CD_AlertRule with
 
   @UI.lineItem: [{ position: 20 }]
   @UI.identification: [{ position: 20 }]
-  Module;
+  PaymentEngineArea;
 
   @UI.lineItem: [{ position: 30 }]
   @UI.identification: [{ position: 30 }]

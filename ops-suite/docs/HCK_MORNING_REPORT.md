@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Module** | HCK — Health Check (operations suite) |
+| **Payment engine area** | HCK — Health Check (operations suite) |
 | **Program** | `ZCD_MORNING_REPORT` |
 | **Landscape** | S/4HANA 2023, SAP_BASIS 7.58 — DV1 → QA1 → PS4 |
 | **Status** | Built and lint-clean offline; **not yet activated or executed in an SAP system** |
@@ -22,9 +22,9 @@ The morning report is a daily scorecard of the **payment engine**. It runs a con
 
 - a **health score 0–100** and an overall **RAG** (red / amber / green);
 - a **RAG per category** (A–E, below);
-- the status of the other monitoring modules (bank statement validation **EBS**, file monitoring **FMON**, and the health check itself) — the "health of the health check";
+- the status of the other monitoring payment engine areas (bank statement validation **EBS**, file monitoring **FMON**, and the health check itself) — the "health of the health check";
 - the list of **checks** with a one-line summary each, drill-down to the individual findings;
-- the **oldest open exceptions** across all modules with their owner, due date and age.
+- the **oldest open exceptions** across all payment engine areas with their owner, due date and age.
 
 It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and is available in SAP (`ZCD_MORNING_REPORT`) with drill-down. Every red or amber finding becomes an **owned exception** with a due date in the shared exception store; nothing is "just a log line".
 
@@ -67,14 +67,14 @@ It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and
 | **B** `THRESHOLD_*` on `ERR_RATE_PCT` | Log object / subobject | Master-data errors in a mass run, interface errors | SLG1 for object/subobject and date; fix data; rerun the affected interval |
 | **B** volume `BASELINE_OUTLIER` / `THRESHOLD_RED` (low) | Source / LOB, day | Missing inbound file, PRISM hold, source outage | FMON file status; confirm with the source system; do **not** start payment runs on partial input |
 | **B** `STEP_FAILED` / `STEP_MISSED` / `STEP_STUCK` / `STEP_BLOCKED` | Cycle / step, job name | Cancelled job, Control-M did not trigger, predecessor failed | Control-M runbook: map Control-M name → SAP job → program + variant; fix predecessor first; rerun; list every downstream step to rerun |
-| **C** `THRESHOLD_*` on `OVERDUE` | Module with overdue items | Exceptions not worked, owner absent | Owner's lead reassigns; waive only with a reason (audited) |
+| **C** `THRESHOLD_*` on `OVERDUE` | Payment engine area with overdue items | Exceptions not worked, owner absent | Owner's lead reassigns; waive only with a reason (audited) |
 | **C** PPO backlog | Business process | Postprocessing not worked | Responsible team works the PPO queue |
 | **D** `CONFIG_DRIFT` | Table name, baseline taker | Direct change in production, transport not baselined | Find the change (table change logs / transport); if approved, take a new baseline; if not, revert and raise a security incident |
 | **D** `CONFIG_NO_BASELINE` | Table name | New table under control | Take the baseline after the next approved transport |
 | **E** `JOB_CANCELLED` / `JOB_LATE_START` / `JOB_LONG_RUNNING` | Job name / count | Cancelled step, missing Control-M trigger, runaway job | SM37 job log; Basis if system-related |
 | **E** `SHORT_DUMPS` / `UPDATE_ERRORS` / `LOCK_MAX_AGE_MIN` | Count / age | Program error, failed update task, orphan lock | ST22 / SM13 / SM12; Basis; never delete a lock held by an active payment run |
 | **E** `ALERT_FAILED` | Channel | Mail server / webhook down | Alerts are not reaching people — treat as RED for operations |
-| `HCK_SELF` `MODULE_STALE` | Module | Monitoring job (EBS, FMON or HCK) did not run | Restart the monitoring job; until then, nobody is watching that area |
+| `HCK_SELF` `PE_AREA_STALE` | Payment engine area | Monitoring job (EBS, FMON or HCK) did not run | Restart the monitoring job; until then, nobody is watching that area |
 | `PLUGIN_ERROR` / `AGG_CONFIG_INVALID` | Message text | Configuration error (unknown field, table not whitelisted) or program error | Fix the customizing row; the rest of the report is still valid |
 | `TIMEOUT_OVERRUN` | Runtime vs budget | Check too slow for the volume | Performance review of the check (index, narrower window) |
 
@@ -88,7 +88,7 @@ Many "failures" are timing: if a behaviour is working as designed, record it as 
 
 1. The scheduled run (Control-M → SAP job running `ZCD_MORNING_REPORT` with the productive variant) finishes before the first business payment cycle; the e-mail reaches the RTB distribution list.
 2. The RTB analyst on duty reads the scorecard, works RED first, then AMBER, using §3.
-3. Every RED/AMBER finding is already an owned exception (module HCK) with a due date; assign the owner the same morning.
+3. Every RED/AMBER finding is already an owned exception (payment engine area HCK) with a due date; assign the owner the same morning.
 4. Persistent false positives are a **threshold change** (customizing, §13) — never "ignore the colour".
 
 ---
@@ -117,7 +117,7 @@ classDiagram
     +take_baseline(iv_test_mode) i
     -execute_check() timeout guard, PLUGIN_ERROR
     -evaluate_metrics()
-    -module_status() health of health
+    -pe_area_status() health of health
   }
   class ZIF_CD_HCK_CHECK {
     <<interface>>
@@ -212,7 +212,7 @@ sequenceDiagram
   E->>A: dispatch(run, findings) (not in test mode)
   E->>A: send(MORNING, HTML) if requested (not in test mode)
   E->>S: save ALERT_FAILED findings + finish_run + commit (only on a delivery failure)
-  E-->>R: report (score, categories, results, modules, exceptions)
+  E-->>R: report (score, categories, results, pe_areas, exceptions)
   Note over E: run lock released (also on exception)
 ```
 
@@ -236,7 +236,7 @@ sequenceDiagram
 | Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` / `ZCD_OPS_PARAM` | A / A / C | — | Run header, findings / owned exceptions, parameters (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
 | Core `ZCD_OPS_ALERT_LOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
 
-Every HCK finding: module `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `GROUP2` = check id. Severity B/E/W → owned exception with SLA (`SLA_DAYS_HCK_<sev>`).
+Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `GROUP2` = check id. Severity B/E/W → owned exception with SLA (`SLA_DAYS_HCK_<sev>`).
 
 ## 7. Check catalog
 
@@ -252,12 +252,12 @@ Every HCK finding: module `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `
 | `ZCL_CD_HCK_C_APPLOG` | B | P1 log objects, P2 subobjects, P3 day offset (1) | `ERR_RATE_PCT`, `ERR_MESSAGES` (object/subobject / day) | — |
 | `ZCL_CD_HCK_C_VOLUME` | B | P1 offset (1), P2 days (1); rows in ZCD_HCK_AGG | `<AGG_ID>` per source/LOB / day | `AGG_CONFIG_INVALID` |
 | `ZCL_CD_HCK_C_JOB_CYCLE` | B | P1 cycle date offset (0), P2 cycle ids | `STEPS_NOT_OK`, `STEPS_COMPLETED` (cycle / date) + step board | `STEP_MISSED/FAILED/STUCK/OVERRUN/BLOCKED` |
-| `ZCL_CD_HCK_C_OVERDUE_EXC` | C | — | `OVERDUE`, `OLDEST_OVERDUE_DAYS` (module) | — |
+| `ZCL_CD_HCK_C_OVERDUE_EXC` | C | — | `OVERDUE`, `OLDEST_OVERDUE_DAYS` (payment engine area) | — |
 | `ZCL_CD_HCK_C_CONFIG_DRIFT` | D | rows in ZCD_HCK_DRIFT | `DRIFTED_TABLES` (*) | `CONFIG_DRIFT` (E), `CONFIG_NO_BASELINE` (W) |
 | `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
 | `ZCL_CD_HCK_C_TECH_SYS` | E | — | `SHORT_DUMPS`, `UPDATE_ERRORS`, `LOCK_ENTRIES`, `LOCK_MAX_AGE_MIN` (*) | — |
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
-| built-in `HCK_SELF` | E | `HCK_WATCH_MODULES`, `HCK_MAX_AGE_HOURS`, `HCK_MAX_AGE_H_<module>` | — | `MODULE_STALE` (E) |
+| built-in `HCK_SELF` | E | `HCK_WATCH_PE_AREAS`, `HCK_MAX_AGE_HOURS`, `HCK_MAX_AGE_H_<pe_area>` | — | `PE_AREA_STALE` (E) |
 
 Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BASELINE_OUTLIER` (W), `TIMEOUT_OVERRUN` (W), `PLUGIN_ERROR` (E), `ALERT_FAILED` (W).
 
@@ -321,13 +321,13 @@ Sources in `cds/` (ADT text sources; release-dependent annotations marked *verif
 
 | View | Type | Content |
 |---|---|---|
-| `ZI_CD_OpsRun` | basic | Run headers (all modules), `RunDate` |
-| `ZI_CD_OpsRunCube` / `ZC_CD_OpsRunQry` | cube / query | Runs, red runs, findings, runtime (sum, max, average formula) per module/day |
+| `ZI_CD_OpsRun` | basic | Run headers (all payment engine areas), `RunDate` |
+| `ZI_CD_OpsRunCube` / `ZC_CD_OpsRunQry` | cube / query | Runs, red runs, findings, runtime (sum, max, average formula) per payment engine area/day |
 | `ZI_CD_OpsFinding` | basic | Findings / owned exceptions with `IsOverdue`, `DaysPastDue`, `CreatedDate` |
-| `ZI_CD_OpsFindingCube` / `ZC_CD_OpsFindingQry` | cube / query | Finding, open, overdue counts, max days past due, amount per module/category/check/severity/owner |
+| `ZI_CD_OpsFindingCube` / `ZC_CD_OpsFindingQry` | cube / query | Finding, open, overdue counts, max days past due, amount per payment engine area/category/check/severity/owner |
 | `ZI_CD_HckCheck` | dimension | Check text, category, priority |
 | `ZI_CD_HckMetric` / `ZI_CD_HckMetricCube` / `ZC_CD_HckMetricQry` | basic / cube / query | Metric trend (volumes per source/LOB per day, durations, error rates) |
-| `ZI_CD_OpsAnalytics` (DCL) | role | `pfcg_auth( ZCD_OPS, ZCD_MODULE, ACTVT = '03' )` on basic views and cubes — authorization object `ZCD_OPS` must be created (SU21) |
+| `ZI_CD_OpsAnalytics` (DCL) | role | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on basic views and cubes — authorization object `ZCD_OPS` must be created (SU21) |
 
 Amounts are DEC without currency reference: always slice by `Currency` before reading totals. Recommended consumption: Fiori "Analytical List Page" / KPI tiles or Analysis for Office on the three queries; test mode runs are filtered out of the run cube and filterable in the findings query.
 
@@ -347,14 +347,14 @@ Selection screen (maintain selection texts / text symbols):
 | TEXT-B04 | Administration |
 | P_TODAY / P_YDAY / P_CUST / P_DATE | Today / Yesterday / Custom date / Report date |
 | S_CAT / S_PRIO / S_CHECK | Category (A–E) / Priority (H, M, L) / Check ID |
-| P_MODS | Include EBS / FMON / HCK module status |
+| P_MODS | Include EBS / FMON / HCK payment engine area status |
 | P_TEST | Test mode (nothing saved, no mail) — default ON for dialog use |
 | P_MAIL | Send morning report e-mail (route MORNING) |
 | P_EXC | Show open exceptions list |
 | P_EXP / P_FILE | Export CSV to application server / file path (AUTHORITY_CHECK_DATASET) |
 | P_BASE | Take configuration baseline (S_TABU_NAM 02 on ZCD_HCK_BASELINE) |
 
-Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG per category, module status), exception-column lights, double-click → findings popup (job-cycle checks show the step board; checks without findings show their metrics); then the open-exception list. In background both lists go to the spool. Schedule with a variant `P_TEST = space`, `P_MAIL = X`.
+Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG per category, payment engine area status), exception-column lights, double-click → findings popup (job-cycle checks show the step board; checks without findings show their metrics); then the open-exception list. In background both lists go to the spool. Schedule with a variant `P_TEST = space`, `P_MAIL = X`.
 
 ## 13. Extension guide — customizing only
 
@@ -372,11 +372,11 @@ Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG pe
 | **New volume source / LOB** | `ZCD_HCK_TABWL` + `ZCD_HCK_AGG` row under `B_VOLUME` (DAY mode set by the check; group field = source/LOB) + optional threshold |
 | **New SLG1 object** | Extend `PARAM1` of `B_APPLOG` |
 | **New table under drift control** | `ZCD_HCK_DRIFT` row, then take a baseline |
-| **Watch another module** | `ZCD_OPS_PARAM` `HCK_WATCH_MODULES`, optional `HCK_MAX_AGE_H_<module>` |
-| **Who is alerted** | Core `ZCD_OPS_ALERT_RULE` (module HCK, severity, group/check pattern, channel) — not an HCK table |
+| **Watch another payment engine area** | `ZCD_OPS_PARAM` `HCK_WATCH_PE_AREAS`, optional `HCK_MAX_AGE_H_<pe_area>` |
+| **Who is alerted** | Core `ZCD_OPS_ALERT_RULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
 | New check *logic* (only when no existing class fits) | New class implementing `ZIF_CD_HCK_CHECK` (only SQL via a DAO method), then a `ZCD_HCK_DEF` row |
 
-Acceptance test 4 of the master prompt (statement balance rule) belongs to the EBS module's rule tables; for HCK the equivalent proof is that limits and rules are rows in `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` (QA1 case HCK-QA-04).
+Acceptance test 4 of the master prompt (statement balance rule) belongs to the EBS payment engine area's rule tables; for HCK the equivalent proof is that limits and rules are rows in `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` (QA1 case HCK-QA-04).
 
 ## 14. Testing
 
@@ -407,7 +407,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | Check plug-ins `ZCL_CD_HCK_C_*` | Glue: parameter → DAO → pure helper; no own rules | Pure tests of `agg_query`, `cycle_eval`, `param`; engine tests through LTD plug-ins; QA1 cases |
 | `ZCL_CD_HCK_ENGINE=>take_baseline` | AUTHORITY-CHECK + DAO wrapper | QA1 HCK-QA-05 |
 | `ZCD_MORNING_REPORT` (SALV, OPEN DATASET) | Presentation only | QA1 HCK-QA-11 |
-| E-mail delivery (core `send` / `dispatch`, BCS) | Core module | Engine tests assert the calls; QA1 HCK-QA-12 |
+| E-mail delivery (core `send` / `dispatch`, BCS) | Core payment engine area | Engine tests assert the calls; QA1 HCK-QA-12 |
 | CDS views and DCL | Not executable offline | QA1 HCK-QA-13 (data preview / RSRT) |
 
 **Recommended QA1 functional test cases**
@@ -417,7 +417,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-01 | **Acceptance test 1**: add "return debits aging > 10 days by company code" by customizing only | Seed §4 rows: TABWL `DFKKOP`, AGG `A_RET_AGED/RET_AGED`, DEF `A_RET_AGED`, THRESH `*` 1/25 + one company-code row; test data: open return-debit items due 11+ days ago in two company codes | Report shows `A_RET_AGED` with one metric per company code; the company with ≥ 25 items is RED with `THRESHOLD_RED`; the override company uses its own limits; no transport of code objects |
 | HCK-QA-02 | Invalid aggregate row is contained | AGG row with a misspelled field / table not whitelisted | `AGG_CONFIG_INVALID` (messages 304 / 302) for that row; other rows and checks still measured |
 | HCK-QA-03 | Plug-in failure does not abort | `ZCD_HCK_DEF` row with a non-existent class name | That check RED with `PLUGIN_ERROR` (message 030/300); report complete |
-| HCK-QA-04 | **Acceptance test 4 (HCK counterpart)**: change a rule / limit by customizing only | Change `ZCD_HCK_THRESH` `C_OVERDUE_EXC/OVERDUE/*` red from 20 to 1; next run | Same data now RED; no code change. (The statement-balance rule of test 4 itself is proven in the EBS module.) |
+| HCK-QA-04 | **Acceptance test 4 (HCK counterpart)**: change a rule / limit by customizing only | Change `ZCD_HCK_THRESH` `C_OVERDUE_EXC/OVERDUE/*` red from 20 to 1; next run | Same data now RED; no code change. (The statement-balance rule of test 4 itself is proven in the EBS payment engine area.) |
 | HCK-QA-05 | Config drift and baseline | Take baseline (P_BASE), change one row of `ZCD_HCK_THRESH` in QA1, run | `D_CONFIG_DRIFT` RED with `CONFIG_DRIFT` naming the table, baseline time and user; re-baseline → GREEN; user without S_TABU_NAM 02 gets message 041 |
 | HCK-QA-06 | **Acceptance test 5**: add a job-cycle step by customizing only | Insert `ZCD_JOB_STEP DISB_DAY/035` (seed §7) | Next run's `B_CYCLE_TODAY` drill-down lists step 035 with its state |
 | HCK-QA-07 | Job-cycle states | Schedule a test job matching a step pattern: (a) cancel it, (b) let it exceed MAX_RUNTIME_MIN, (c) never schedule it and wait past WINDOW_TO, (d) cancel the predecessor | (a) FAILED, (b) STUCK, (c) MISSED (E if critical), (d) successor NOT_STARTED + `STEP_BLOCKED` |
@@ -427,7 +427,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-11 | Report in dialog and background | Run interactively in test mode; then as background job with productive variant and CSV export | Dialog: scorecard + ALV + drill-downs, nothing saved; background: spool lists, ZCD_OPS_RUN/FINDING rows, ZCD_HCK_METRIC rows, CSV file on the application server |
 | HCK-QA-12 | Mail and alerts | ALERT_MORNING maintained; P_MAIL = X; one red finding | One HTML mail (renders on phone and desktop, RAG chips); core `dispatch` logs to ZCD_OPS_ALERT_LOG per alert rule; test mode sends nothing |
 | HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_MODULE = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
-| HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `MODULE_STALE` for EBS |
+| HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `PE_AREA_STALE` for EBS |
 
 ## 15. VERIFY-DDIC register and what is not verified
 
@@ -440,7 +440,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 1. `TBTCO`-JOBNAME, JOBCOUNT, STATUS, SDLSTRTDT, SDLSTRTTM, STRTDATE, STRTTIME, ENDDATE, ENDTIME (`get_job_runs`)
 2. `BALHDR`-OBJECT, SUBOBJECT, ALDATE, MSG_CNT_AL, MSG_CNT_E, MSG_CNT_A (`get_applog_stats`)
 3. `DFKKKO`-BUDAT (`get_fikeys_without_gl`)
-4. `BKPF`-AWKEY carries the FIKEY of the FI-CA transfer (confirmed path names BSEG-AWKEY; BKPF chosen for its AWTYP/AWKEY index) (`get_fikeys_without_gl`)
+4. `BKPF`-AWKEY carries the FIKEY of the payment engine transfer (confirmed path names BSEG-AWKEY; BKPF chosen for its AWTYP/AWKEY index) (`get_fikeys_without_gl`)
 5. `SNAP_BEG`-DATUM (else SNAP with SEQNO = '000') (`count_short_dumps`)
 6. `VBHDR`-VBRC <> 0 = update request in error (`count_update_errors`)
 7. `SEQG3`-GTDATE / GTTIME (`read_lock_stats`)

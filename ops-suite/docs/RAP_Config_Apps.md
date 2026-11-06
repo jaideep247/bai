@@ -7,7 +7,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 
 ## 1. The four apps
 
-| App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Module (ZCD_OPS) |
+| App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
@@ -48,7 +48,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 
 ## 3. Authorisation
 
-`authorization master ( global )` on each root: `ZCD_OPS` with `ACTVT 02` and `ZCD_MODULE` = the app's module covers update, Edit and create-by-association of every child. Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the temporary seam `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH` — **switched to `ZCL_CD_OPS_AUTH` (design §1) at merge**.
+`authorization master ( global )` on each root: `ZCD_OPS` with `ACTVT 02` and `ZCD_PE_AREA` = the app's payment engine area covers update, Edit and create-by-association of every child. Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the temporary seam `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH` — **switched to `ZCL_CD_OPS_AUTH` (design §1) at merge**.
 
 ## 4. Field validations (on save and in Prepare)
 
@@ -69,7 +69,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
 | HCK | HckDriftTable, HckWhitelist | Table exists | 411 |
 | HCK | JobStep | Window both times or neither | 414 |
-| CORE | AlertRule | Module, minimum severity, minimum RAG; quiet hours both or neither | 413, 414 |
+| CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither | 413, 414 |
 | CORE | AlertChannel | Class implements `ZIF_CD_OPS_ALERT_CHANNEL` | 410 |
 
 Names are checked for DDIC syntax (letters, digits, `_`, `/`) **before** the dictionary is asked, so no free text reaches RTTI. Keys are read-only after create; keys that may be blank (BTC map bank key = default row, flow-pattern priority, status value) are not mandatory.
@@ -80,7 +80,7 @@ Names are checked for DDIC syntax (letters, digits, `_`, `/`) **before** the dic
 |---|---|---|
 | `ZCL_CD_OPS_CFG_POLICY` | Domain | 11 — `dv1_allows_all_with_transport`, `production_updates_only`, `no_changes_client_updates_only`, `sandbox_needs_no_transport`, `production_role_wins`, `missing_request_is_rejected`, `unknown_request_is_rejected`, `workbench_request_rejected`, `released_request_rejected`, `open_cust_task_is_accepted`, `no_check_where_not_recorded` |
 | `ZCL_CD_OPS_CFG_CHECKS` | Domain (RTTI on T000 and suite classes) | 17 — DDIC name syntax, table / field existence, plug-in interface, allowed values incl. blank, time windows, threshold order both directions, missing rule groups |
-| `ZCL_CD_OPS_CFG_GATE` | Application (`LTD_CLIENT`, `LTD_TRANSPORT`, `LTD_AUTH` via `ZCL_CD_OPS_CFG_INJECTOR`) | 7 — production disables create/delete, DV1 enables, released request refused, no recording in production, DV1 records once on the request, ZCD_OPS asked with module + activity, T000 read once |
+| `ZCL_CD_OPS_CFG_GATE` | Application (`LTD_CLIENT`, `LTD_TRANSPORT`, `LTD_AUTH` via `ZCL_CD_OPS_CFG_INJECTOR`) | 7 — production disables create/delete, DV1 enables, released request refused, no recording in production, DV1 records once on the request, ZCD_OPS asked with payment engine area + activity, T000 read once |
 | Behaviour pools, CDS, BDEF, SRVD | — | Not unit tested (thin; generated). Covered by the gate / checks tests and the DV1 / QA1 cases below. A RAP BO test double (`cl_botd_txbufdbl_bo_test_env`) suite can be added after the first activation |
 
 Tests were written before the classes; the red state (47 "method not found" findings) was observed in abaplint before the implementations existed. No test has run in SAP yet.
@@ -97,7 +97,7 @@ Static checks: abaplint now also runs `cds_parser_error` and `bdef_parser_error`
 2. Activate in order: tables (incl. 23 changed + 27 draft tables) → `ZI_CD_*CfgChg` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
 3. Create and **publish** the service bindings (ADT → New → Service Binding, binding type **OData V4 – UI**): `ZUI_CD_EBS_CFG_O4`, `ZUI_CD_FMON_CFG_O4`, `ZUI_CD_HCK_CFG_O4`, `ZUI_CD_OPS_CFG_O4`. Preview opens the Fiori elements object page of the singleton.
 4. Fiori launchpad: one tile per app (target mapping to the generated app or a Fiori tools app on the binding); business role per team (EBS — payment engine RTB, FMON — operations, HCK — RTB, alerting — RTB lead).
-5. Authorisation: SU21 object `ZCD_OPS` (fields `ACTVT`, `ZCD_MODULE`, `BUKRS`) from the core build; roles with `ACTVT 02` per module; `S_SERVICE` for the four services.
+5. Authorisation: SU21 object `ZCD_OPS` (fields `ACTVT`, `ZCD_PE_AREA`, `BUKRS`) from the core build; roles with `ACTVT 02` per payment engine area; `S_SERVICE` for the four services.
 6. Basis: profile parameter `rec/client` so table logging records production edits (SCU3).
 7. Cases: DV1 create + update + delete on a request (E071K shows the keys); QA1 / PS4 create button greyed out, update of an existing row saved without request and visible in SCU3; each validation in §4 with one bad value.
 
@@ -122,6 +122,6 @@ Text for the shared documents (owned by the main checkout), to apply at merge:
 - **ATC_Validation.md** §4 exemptions, new row: "`ZBP_R_CD_*` behaviour pools — `check_abstract` (ABAP mandates `ABSTRACT FINAL … FOR BEHAVIOR OF`) and `unused_methods` (handlers are called by the RAP framework). Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these." §2: abaplint now also runs `cds_parser_error`, `bdef_parser_error` in `abaplint.json`.
 - **Class_Purpose_and_Modification_Log.md**: rows for `ZIF_CD_OPS_CFG_TYPES`, `ZIF_CD_OPS_CFG_CLIENT`, `ZIF_CD_OPS_CFG_TRANSPORT`, `ZIF_CD_OPS_CFG_AUTH`, `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE`, `ZCL_CD_OPS_CFG_CLIENT`, `ZCL_CD_OPS_CFG_TRANSPORT`, `ZCL_CD_OPS_CFG_AUTH`, `ZCL_CD_OPS_CFG_FACTORY`, `ZCL_CD_OPS_CFG_INJECTOR`, `ZBP_R_CD_EBSCFGALL` / `FMONCFGALL` / `HCKCFGALL` / `OPSCFGALL` (purpose = header text of each).
 - **DEVELOPMENT_STANDARDS.md** §3: "Configuration is maintained only through the four RAP configuration apps (`RAP_Config_Apps.md`); SM30 maintenance views are not delivered. New customizing table → add it to the spec in `tools/rap_generate.py`, add the three admin fields, regenerate."
-- **Operations_Runbook.md** §4: "Change a threshold / SLA / rule parameter in production: open the module's configuration app, Edit, change the existing row, Save (no transport; logged in SCU3). New rows only via DV1 and transport."
+- **Operations_Runbook.md** §4: "Change a threshold / SLA / rule parameter in production: open the payment engine area's configuration app, Edit, change the existing row, Save (no transport; logged in SCU3). New rows only via DV1 and transport."
 - **Message class ZCD_OPS**: range 400–449 added in `config/zcd_ops_messages.md` (401–408, 410–417) — already in this branch.
 - **At merge, switch authorisation**: replace `zcl_cd_ops_cfg_factory=>get_auth( )` / `ZIF_CD_OPS_CFG_AUTH` by `ZCL_CD_OPS_AUTH` (design §1) and delete the seam + `LTD_AUTH`, or keep the seam as an adapter to `ZCL_CD_OPS_AUTH`.

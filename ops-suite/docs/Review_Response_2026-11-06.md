@@ -13,8 +13,8 @@
 | 3.1 | FEBEP keyed by BELNR/GJAHR instead of KUKEY/ESNUM | No | Lines are keyed `FEB<KUKEY>/<ESNUM>` (`ZCL_CD_EBS_SRC_FEB`, test `lines_keyed_to_statement`); findings by RUN_ID + FINDING_NO. BELNR is data only (rules R19/R20) |
 | 3.2a | `SORTED … UNIQUE KEY` on DOC1R / SELW1 / ZTNUM / AUGBL → `ITAB_DUPLICATE_KEY` | No | Every DAO SELECT target is a STANDARD table; unique keys are used only for customizing primary keys, key lists built with `INSERT` (duplicates ignored, no dump) and hashed aggregates |
 | 3.2b | ZTNUM unique only per house bank; DOC1R not unique in DPAYH | **Yes (latent)** | `TY_CHECK` carries HBKID/HKTID; R07C/R08/R12 use `checks_for_line( )` scoped to the statement's house bank account (test `r08_other_house_bank_ignored`). DPAYH read excludes proposal runs (`XVORL = space`, VERIFY-DDIC) and is ordered newest run first |
-| 3.3 | Factory proliferation, duplicate `*_enh` classes, global test doubles | No | One factory + injector per module (4) as per house standard; no duplicate classes; all test doubles are local `LTD_*` classes in test includes; DAO tests use `cl_osql_test_environment` |
-| 3.4 | Giant constants class, wrapping `abap_true` / `sy-subrc`, `TYPE string` constants | No | `abap_true`, `abap_false`, `sy-subrc` used directly; constants are domain values in each module's types interface, typed with named fixed-length types |
+| 3.3 | Factory proliferation, duplicate `*_enh` classes, global test doubles | No | One factory + injector per payment engine area (4) as per house standard; no duplicate classes; all test doubles are local `LTD_*` classes in test includes; DAO tests use `cl_osql_test_environment` |
+| 3.4 | Giant constants class, wrapping `abap_true` / `sy-subrc`, `TYPE string` constants | No | `abap_true`, `abap_false`, `sy-subrc` used directly; constants are domain values in each payment engine area's types interface, typed with named fixed-length types |
 | 3.5a | Custom TTL cache instead of table buffering | **Partly** | Customizing tables now generated with **full buffering** (DD09L BUFALLOW/PUFFERUNG); application tables unbuffered. The store's parameter read and the engine's per-run configuration copy remain (one read per run, bounded) |
 | 3.5b | Unbounded memory in long batch runs | **Yes (latent)** | EBS engine keeps at most `EBS_RESULT_MAX` findings in memory; counts and RAG cover all, every finding is saved per package (test `kept_findings_are_capped`). Lines kept for display were already capped |
 | 3.6 | RAP LUW: `cl_bcs` / `BAL_DB_SAVE` in behaviour handlers; missing SRVD/SRVB | No RAP BO in the suite | Reports run in their own LUW; documented rule: the alert router and channels must never be called from RAP handlers (use bgPF). Analytics are read-only CDS analytical queries (no OData service binding needed for Multidimensional Reports) |
@@ -44,7 +44,7 @@ Second review, this time of `ops-suite` itself (engines and FMON DAO). Each find
 
 **Not done in this change (proposed, awaiting decision):**
 - A durable alert outbox with retry. Today: alerts go out after the commit; failed deliveries are findings and appear in morning report category E.
-- A run lock per module + variant, and carrying forward open exceptions across re-runs (owner and due date kept, auto-resolved when the item passes).
+- A run lock per payment engine area + variant, and carrying forward open exceptions across re-runs (owner and due date kept, auto-resolved when the item passes).
 
 **Verification:** abaplint 0 issues / 309 files; ATC-equivalent set: 2 documented exemptions; portable checks 13/13; 321 unit test methods. None executed in SAP yet.
 

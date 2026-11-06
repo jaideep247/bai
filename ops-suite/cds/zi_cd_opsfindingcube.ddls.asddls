@@ -1,6 +1,6 @@
 // Artifact: zi_cd_opsfindingcube.ddls.asddls
 // Purpose: Analytical cube of findings / owned exceptions: counts, overdue counts
-//          and amounts per module, category, check, severity, day. Verify annotations on target release.
+//          and amounts per payment engine area, category, check, severity, day. Verify annotations on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite findings - cube'
@@ -14,7 +14,7 @@ define view entity ZI_CD_OpsFindingCube
 {
   key RunId,
   key FindingNo,
-      Module,
+      PaymentEngineArea,
       Group1,
       @ObjectModel.foreignKey.association: '_Check'
       Group2,

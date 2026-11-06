@@ -43,15 +43,15 @@ CLASS lhc_exception IMPLEMENTATION.
     DATA(lo_auth) = zcl_cd_ops_factory=>get_auth( ).
     READ ENTITIES OF zr_cd_opsexception IN LOCAL MODE
       ENTITY Exception
-        FIELDS ( Module ) WITH CORRESPONDING #( keys )
+        FIELDS ( PaymentEngineArea ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_exceptions).
     LOOP AT lt_exceptions INTO DATA(ls_exception).
       DATA(lv_change) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-change
-                                                         iv_module   = ls_exception-Module ) = abap_true
+                                                         iv_pe_area   = ls_exception-PaymentEngineArea ) = abap_true
                                 THEN if_abap_behv=>auth-allowed
                                 ELSE if_abap_behv=>auth-unauthorized ).
       DATA(lv_approve) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-approve
-                                                          iv_module   = ls_exception-Module ) = abap_true
+                                                          iv_pe_area   = ls_exception-PaymentEngineArea ) = abap_true
                                  THEN if_abap_behv=>auth-allowed
                                  ELSE if_abap_behv=>auth-unauthorized ).
       " answer only what the framework asked for

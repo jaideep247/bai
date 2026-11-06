@@ -11,7 +11,7 @@ define root view entity ZR_CD_OpsException
       @EndUserText.label: 'Finding'
   key finding_no    as FindingNo,
       @EndUserText.label: 'Area'
-      module        as Module,
+      pe_area        as PaymentEngineArea,
       @EndUserText.label: 'Object type'
       object_type   as ObjectType,
       @EndUserText.label: 'Object'

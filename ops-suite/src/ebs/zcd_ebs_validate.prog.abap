@@ -9,7 +9,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation; replaces
 *&            | Z_BAI_MASS_VALIDATION / ZFIR_BANK_POST_VALIDATION_V2).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
-*& 2026-11-06 | Authorisation ZCD_OPS activity 16 module EBS replaces S_PROGRAM.
+*& 2026-11-06 | Authorisation ZCD_OPS activity 16 payment engine area EBS replaces S_PROGRAM.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
 *&---------------------------------------------------------------------*
@@ -89,7 +89,7 @@ CLASS lcl_report IMPLEMENTATION.
   METHOD run.
     TRY.
         zcl_cd_ops_factory=>get_auth( )->check( iv_activity = zif_cd_ops_auth=>gc_activity-execute
-                                                iv_module   = zif_cd_ops_types=>gc_module-ebs ).
+                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-ebs ).
         DATA(ls_result) = NEW zcl_cd_ebs_engine( )->run( io_source    = build_source( )
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).

@@ -40,7 +40,7 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
       RETURNING
         VALUE(rv_value) TYPE string.
 
-    "! Bank reference -> FI-CA document number key (FEBEP-CHECT = DFKKOP-AUGBL)
+    "! Bank reference -> payment engine document number key (FEBEP-CHECT = DFKKOP-AUGBL)
     METHODS docno_key
       IMPORTING
         iv_reference  TYPE clike

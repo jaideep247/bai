@@ -169,12 +169,12 @@ src/core/zcd_ops_param.tabl.xml,abapGit,
 src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's history (ZCL_CD_OPS_PURGE):
 src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
-src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (module or '*'), channels and the delivery"
+src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_policy.clas.abap,ABAP,"Decides which alert rules fire for a run, whether quiet hours, throttling or"
 src/core/zcl_cd_ops_alert_policy.clas.testclasses.abap,ABAP,"Domain tests of the alert rules: severity floor, patterns, run-level RAG,"
 src/core/zcl_cd_ops_alert_policy.clas.xml,abapGit,
-src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every module. Reads ZCD_OPS_ALERT_RULE and
+src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every payment engine area. Reads ZCD_OPS_ALERT_RULE and
 src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests of the alert router with LTD_* doubles for the alert DAO,"
 src/core/zcl_cd_ops_alert_router.clas.xml,abapGit,
 src/core/zcl_cd_ops_auth.clas.abap,ABAP,The only AUTHORITY-CHECK on object ZCD_OPS. Thin wrapper - deliberately
@@ -239,7 +239,7 @@ src/core/zcx_cd_ops_error.clas.abap,ABAP,"Raise with message class ZCD_OPS, e.g.
 src/core/zcx_cd_ops_error.clas.xml,abapGit,
 src/core/zi_cd_opscfgchg.ddls.asddls,CDS,
 src/core/zi_cd_opscfgchg.ddls.xml,abapGit,
-src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every module. dispatch( ) applies the alert
+src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every payment engine area. dispatch( ) applies the alert
 src/core/zif_cd_ops_alert.intf.xml,abapGit,
 src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, application log, HTTP webhook). Channels are"
 src/core/zif_cd_ops_alert_channel.intf.xml,abapGit,
@@ -261,11 +261,11 @@ src/core/zif_cd_ops_exc_dao.intf.abap,ABAP,Repository for closing exceptions out
 src/core/zif_cd_ops_exc_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_exc_types.intf.abap,ABAP,"Types and constants of the exception lifecycle (exceptions app, design"
 src/core/zif_cd_ops_exc_types.intf.xml,abapGit,
-src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per module + variant at a time. The lock survives COMMIT WORK
+src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per payment engine area + variant at a time. The lock survives COMMIT WORK
 src/core/zif_cd_ops_lock.intf.xml,abapGit,
 src/core/zif_cd_ops_purge_dao.intf.abap,ABAP,"SQL for the retention purge: count and delete, one package at a time, the"
 src/core/zif_cd_ops_purge_dao.intf.xml,abapGit,
-src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all modules: run headers (ZCD_OPS_RUN),"
+src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),"
 src/core/zif_cd_ops_store.intf.xml,abapGit,
 src/core/zif_cd_ops_types.intf.abap,ABAP,"Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS)."
 src/core/zif_cd_ops_types.intf.xml,abapGit,
@@ -568,7 +568,7 @@ src/fmon/zcd_fmon_srcmap.tabl.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_generic.clas.abap,ABAP,Generic legacy source adapter: maps an existing custom table (e.g.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.testclasses.abap,ABAP,ltc_mapping: pure tests (no doubles) of legacy row -> status record.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.xml,abapGit,
-src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function modules
+src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function payment engine areas
 src/fmon/zcl_cd_fmon_calendar.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_ack_match.clas.abap,ABAP,Plug-in check ACK_COUNT_MISMATCH / ACK_AMOUNT_MISMATCH: the bank ack
 src/fmon/zcl_cd_fmon_chk_ack_match.clas.xml,abapGit,
@@ -609,7 +609,7 @@ src/fmon/zcl_cd_fmon_ops_policy.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_query.clas.abap,ABAP,Builds and validates reads of configured tables: every table and field
 src/fmon/zcl_cd_fmon_query.clas.testclasses.abap,ABAP,Pure unit tests (no doubles) for the DDIC validation of configured
 src/fmon/zcl_cd_fmon_query.clas.xml,abapGit,
-src/fmon/zcl_cd_fmon_rules.clas.abap,ABAP,"Pure FMON domain rules (no database, no clock, no function modules):"
+src/fmon/zcl_cd_fmon_rules.clas.abap,ABAP,"Pure FMON domain rules (no database, no clock, no function payment engine areas):"
 src/fmon/zcl_cd_fmon_rules.clas.testclasses.abap,ABAP,Pure unit tests (no doubles) for every FMON domain rule: interface
 src/fmon/zcl_cd_fmon_rules.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_status.clas.abap,ABAP,"File status state machine (pure domain logic, no database, no clock)."
@@ -745,13 +745,13 @@ src/hck/zcl_cd_hck_c_config_drift.clas.abap,ABAP,Configuration drift: SHA-256 of
 src/hck/zcl_cd_hck_c_config_drift.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_generic_agg.clas.abap,ABAP,"Generic aggregate check: COUNT/SUM with aging, grouping and up to three"
 src/hck/zcl_cd_hck_c_generic_agg.clas.xml,abapGit,
-src/hck/zcl_cd_hck_c_gl_transfer.clas.abap,ABAP,Financial integrity: every FI-CA reconciliation key with totals records
+src/hck/zcl_cd_hck_c_gl_transfer.clas.abap,ABAP,Financial integrity: every payment engine reconciliation key with totals records
 src/hck/zcl_cd_hck_c_gl_transfer.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_job_cycle.clas.abap,ABAP,"Job cycle monitor (Control-M fallback, monitoring only): state of each"
 src/hck/zcl_cd_hck_c_job_cycle.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_job_runtime.clas.abap,ABAP,Mass-run health: duration of finished background jobs (Control-M jobs
 src/hck/zcl_cd_hck_c_job_runtime.clas.xml,abapGit,
-src/hck/zcl_cd_hck_c_overdue_exc.clas.abap,ABAP,Exception queues: owned exceptions of every suite module (ZCD_OPS_FINDING)
+src/hck/zcl_cd_hck_c_overdue_exc.clas.abap,ABAP,Exception queues: owned exceptions of every suite payment engine area (ZCD_OPS_FINDING)
 src/hck/zcl_cd_hck_c_overdue_exc.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_cancel.clas.abap,ABAP,Check: paid payment request left CANCELLED (PCLM). CANCELLED means money
 src/hck/zcl_cd_hck_c_prq_cancel.clas.xml,abapGit,
@@ -766,7 +766,7 @@ src/hck/zcl_cd_hck_c_volume.clas.xml,abapGit,
 src/hck/zcl_cd_hck_cycle_eval.clas.abap,ABAP,Pure job-cycle rules: derive the state of a cycle step from TBTCO job
 src/hck/zcl_cd_hck_cycle_eval.clas.testclasses.abap,ABAP,"Unit tests of job-cycle step state derivation (NOT_STARTED, RUNNING,"
 src/hck/zcl_cd_hck_cycle_eval.clas.xml,abapGit,
-src/hck/zcl_cd_hck_dao.clas.abap,ABAP,"All SQL of the health check module: customizing, metric history, drift"
+src/hck/zcl_cd_hck_dao.clas.abap,ABAP,"All SQL of the health check payment engine area: customizing, metric history, drift"
 src/hck/zcl_cd_hck_dao.clas.testclasses.abap,ABAP,SQL tests of the HCK DAO on cl_osql_test_environment doubles: metric
 src/hck/zcl_cd_hck_dao.clas.xml,abapGit,
 src/hck/zcl_cd_hck_engine.clas.abap,ABAP,"Health check engine: runs the configured checks, guards each one,"
@@ -804,11 +804,11 @@ src/hck/zi_cd_hckcfgchg.ddls.asddls,CDS,
 src/hck/zi_cd_hckcfgchg.ddls.xml,abapGit,
 src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One class per check type; the
 src/hck/zif_cd_hck_check.intf.xml,abapGit,
-src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check module: customizing, metric history,"
+src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check payment engine area: customizing, metric history,"
 src/hck/zif_cd_hck_dao.intf.xml,abapGit,
 src/hck/zif_cd_hck_suppress_types.intf.abap,ABAP,Types and constants of the health-check suppression (design 6.3):
 src/hck/zif_cd_hck_suppress_types.intf.xml,abapGit,
-src/hck/zif_cd_hck_types.intf.abap,ABAP,"Types and constants of the health check (HCK) module: customizing rows,"
+src/hck/zif_cd_hck_types.intf.abap,ABAP,"Types and constants of the health check (HCK) payment engine area: customizing rows,"
 src/hck/zif_cd_hck_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_value_types.intf.abap,ABAP,Types of the value queries behind the USAA known-table checks (payment
 src/hck/zif_cd_hck_value_types.intf.xml,abapGit,

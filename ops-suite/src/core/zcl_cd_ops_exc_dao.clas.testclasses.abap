@@ -62,7 +62,7 @@ CLASS ltc_exc_dao IMPLEMENTATION.
     DATA ls_row TYPE zcd_ops_finding.
     ls_row-run_id      = gc_test-run_id.
     ls_row-finding_no  = iv_finding_no.
-    ls_row-module      = zif_cd_ops_types=>gc_module-ebs.
+    ls_row-pe_area      = zif_cd_ops_types=>gc_pe_area-ebs.
     ls_row-object_type = 'LINE'.
     ls_row-object_key  = gc_test-key.
     ls_row-check_code  = gc_test-code.
@@ -80,7 +80,7 @@ CLASS ltc_exc_dao IMPLEMENTATION.
         add_finding( iv_finding_no = 2 iv_disposition = zif_cd_ops_types=>gc_disposition-assigned ).
         add_finding( iv_finding_no = 3 iv_disposition = zif_cd_ops_types=>gc_disposition-resolved ).
         add_finding( iv_finding_no = 4 iv_disposition = zif_cd_ops_types=>gc_disposition-superseded ).
-        DATA(lt_keys) = mo_cut->find_open( iv_module     = zif_cd_ops_types=>gc_module-ebs
+        DATA(lt_keys) = mo_cut->find_open( iv_pe_area     = zif_cd_ops_types=>gc_pe_area-ebs
                                            iv_object_key = gc_test-key
                                            iv_check_code = gc_test-code ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_keys ) exp = 2

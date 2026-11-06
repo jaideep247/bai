@@ -30,11 +30,11 @@ INTERFACE zif_cd_ops_auth
       approve TYPE ty_activity VALUE '85',
     END OF gc_activity.
 
-  "! Is the user allowed? Company code initial = module-wide object (checked as DUMMY)
+  "! Is the user allowed? Company code initial = payment engine area-wide object (checked as DUMMY)
   METHODS is_allowed
     IMPORTING
       iv_activity       TYPE ty_activity
-      iv_module         TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area         TYPE zif_cd_ops_types=>ty_pe_area
       iv_bukrs          TYPE bukrs OPTIONAL
     RETURNING
       VALUE(rv_allowed) TYPE abap_bool.
@@ -43,7 +43,7 @@ INTERFACE zif_cd_ops_auth
   METHODS check
     IMPORTING
       iv_activity TYPE ty_activity
-      iv_module   TYPE zif_cd_ops_types=>ty_module
+      iv_pe_area   TYPE zif_cd_ops_types=>ty_pe_area
       iv_bukrs    TYPE bukrs OPTIONAL
     RAISING
       zcx_cd_ops_error.

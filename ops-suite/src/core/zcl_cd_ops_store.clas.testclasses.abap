@@ -132,7 +132,7 @@ CLASS ltc_store IMPLEMENTATION.
   " Test mode: neither run header nor findings reach the database
   METHOD test_mode_writes_nothing.
     TRY.
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs iv_test_mode = abap_true ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) )
                                CHANGING  cs_run      = ls_run ).
         SELECT COUNT(*) FROM zcd_ops_finding INTO @DATA(lv_count).
@@ -147,7 +147,7 @@ CLASS ltc_store IMPLEMENTATION.
   " An E finding is stored as an open, owned exception
   METHOD error_becomes_open_exception.
     TRY.
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) )
                                CHANGING  cs_run      = ls_run ).
         SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
@@ -166,7 +166,7 @@ CLASS ltc_store IMPLEMENTATION.
   " An I finding is information, not an exception to work
   METHOD info_is_not_an_exception.
     TRY.
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-info ) ) )
                                CHANGING  cs_run      = ls_run ).
         SELECT SINGLE disposition, due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
@@ -182,7 +182,7 @@ CLASS ltc_store IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " SLA_DAYS_<module>_<severity> drives the due date
+  " SLA_DAYS_<payment engine area>_<severity> drives the due date
   METHOD sla_param_sets_due_date.
     DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
     DATA ls_param TYPE zcd_ops_param.
@@ -191,7 +191,7 @@ CLASS ltc_store IMPLEMENTATION.
         ls_param-param_value = '0'.
         INSERT ls_param INTO TABLE lt_param.
         go_env->insert_test_data( lt_param ).
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-block ) ) )
                                CHANGING  cs_run      = ls_run ).
         SELECT SINGLE due_date FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
@@ -217,7 +217,7 @@ CLASS ltc_store IMPLEMENTATION.
     DATA ls_row TYPE zcd_ops_finding.
     ls_row-run_id        = gc_cf-prior_run.
     ls_row-finding_no    = lines( lt_rows ) + 1.
-    ls_row-module        = zif_cd_ops_types=>gc_module-ebs.
+    ls_row-pe_area        = zif_cd_ops_types=>gc_pe_area-ebs.
     ls_row-object_type   = 'LINE'.
     ls_row-object_key    = iv_object_key.
     ls_row-group2        = iv_group.
@@ -245,7 +245,7 @@ CLASS ltc_store IMPLEMENTATION.
 
 
   METHOD save_again.
-    rs_run = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+    rs_run = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
     mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) )
                            CHANGING  cs_run      = rs_run ).
   ENDMETHOD.
@@ -334,7 +334,7 @@ CLASS ltc_store IMPLEMENTATION.
   METHOD absent_exception_resolved.
     TRY.
         prior_exception( iv_object_key = gc_cf-key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->reconcile( is_run = ls_run it_object_keys = VALUE #( ( gc_cf-key ) ) ).
         DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
         cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-resolved
@@ -351,7 +351,7 @@ CLASS ltc_store IMPLEMENTATION.
   METHOD out_of_scope_stays_open.
     TRY.
         prior_exception( iv_object_key = gc_cf-other_key iv_disposition = zif_cd_ops_types=>gc_disposition-open ).
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->reconcile( is_run = ls_run it_object_keys = VALUE #( ( gc_cf-key ) ) ).
         DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
         cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-open
@@ -368,7 +368,7 @@ CLASS ltc_store IMPLEMENTATION.
         prior_exception( iv_object_key  = gc_cf-other_key
                          iv_disposition = zif_cd_ops_types=>gc_disposition-assigned
                          iv_group       = gc_cf-group ).
-        DATA(ls_run) = mo_cut->start_run( iv_module = zif_cd_ops_types=>gc_module-ebs ).
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->reconcile( is_run = ls_run it_groups = VALUE #( ( gc_cf-group ) ) ).
         DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
         cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-resolved

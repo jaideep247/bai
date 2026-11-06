@@ -7,7 +7,7 @@ define root view entity ZC_CD_OpsException
 {
   key RunId,
   key FindingNo,
-      Module,
+      PaymentEngineArea,
       ObjectType,
       ObjectKey,
       Group1,

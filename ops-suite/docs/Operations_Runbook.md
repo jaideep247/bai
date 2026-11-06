@@ -6,14 +6,14 @@
 ## 1. Every morning (by 7:00)
 
 1. Open the **morning report** e-mail (route MORNING) or run `ZCD_MORNING_REPORT` for today.
-2. Read the scorecard: overall score, RAG per category A–E, module status EBS / FMON / HCK, health of the health check.
-3. **Health of the health check red** → a module did not run or a run never closed (status R). Check the Control-M job and SM37 first; nothing else on the report can be trusted until this is green.
-4. Work the **top open exceptions** list (oldest due date first). Each row names module, object and check code — use the triage tables below.
+2. Read the scorecard: overall score, RAG per category A–E, payment engine area status EBS / FMON / HCK, health of the health check.
+3. **Health of the health check red** → a payment engine area did not run or a run never closed (status R). Check the Control-M job and SM37 first; nothing else on the report can be trusted until this is green.
+4. Work the **top open exceptions** list (oldest due date first). Each row names payment engine area, object and check code — use the triage tables below.
 5. Check **alert delivery** (category E): failed deliveries mean someone was not told.
 
-## 2. Triage by module
+## 2. Triage by payment engine area
 
-| Module | Where to look | Playbook |
+| Payment engine area | Where to look | Playbook |
 |---|---|---|
 | EBS validation | `ZCD_EBS_VALIDATE` (test mode to re-check), FEBAN/FPB7 for posting | `EBS_VALIDATION.md` §A3 |
 | File monitoring | `ZCD_FMON_MONITOR` file board | `FMON_FILE_MONITORING.md` part A |
@@ -22,7 +22,7 @@
 
 ## 3. Owned exceptions
 
-Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open) and a due date (`SLA_DAYS_<module>_<severity>`). Work them in the **Owned exceptions** app (`RAP_Ops_Apps.md`): *Assign* an owner (A), *Resolve* with a reason (R), or *Request waiver* (reason + end date) and have a **second person** *Approve waiver* (W). Every action is in the history of the exception. Overdue exceptions are a category C check on the morning report.
+Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open) and a due date (`SLA_DAYS_<pe_area>_<severity>`). Work them in the **Owned exceptions** app (`RAP_Ops_Apps.md`): *Assign* an owner (A), *Resolve* with a reason (R), or *Request waiver* (reason + end date) and have a **second person** *Approve waiver* (W). Every action is in the history of the exception. Overdue exceptions are a category C check on the morning report.
 
 | Situation | App | What you do | Second person? |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 | PRISM / ACK / bank confirmed a file stage that SAP never recorded | **Monitored files — manual status** | *Set status manually* with stage, reason and evidence; only forward moves are possible | No |
 | A PRISM payment request was handled outside SAP | **PRISM requests handled manually** | Record request, handling reference and reason; the exception closes. SAP re-sends nothing | No |
 
-**Re-runs do not reset the queue.** When the next run raises the same exception (same module, object and check), the new row keeps the owner, due date and first-seen time and counts the occurrence; the earlier row becomes S (superseded) — so each exception is listed once. A valid waiver stays W. When a run evaluates the object again and the finding is gone, the exception is resolved automatically ("Passed on re-run …"). A run in which a rule, check or source failed (PLUGIN_ERROR) resolves nothing.
+**Re-runs do not reset the queue.** When the next run raises the same exception (same payment engine area, object and check), the new row keeps the owner, due date and first-seen time and counts the occurrence; the earlier row becomes S (superseded) — so each exception is listed once. A valid waiver stays W. When a run evaluates the object again and the finding is gone, the exception is resolved automatically ("Passed on re-run …"). A run in which a rule, check or source failed (PLUGIN_ERROR) resolves nothing.
 
 ## 4. Emergency switches
 
@@ -42,7 +42,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 | Change a threshold / SLA / rule parameter in production | Configuration app of the area → Edit → change the existing row → Save | No transport; logged in SCU3. New rows only in DV1 and by transport |
 | A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. **EBS in enforce mode:** a failing rule blocks posting of its packages (fail closed). Deactivating the rule removes that check — get the rule owner's approval, or switch to `M` for the affected period |
 | Remove the suite | Unschedule the three jobs, set the switch to `O` | Back to previous behaviour in < 15 min |
-| Job refused with RUN_LOCKED (message 040) | Check SM37 for the run named in the message; wait for it, or — only if that job is gone — delete the lock in SM12 (table ZCD_OPS_LOCK, argument client + module + variant) | One run per module + variant (FMON: one per system); the refusal is alerted (rule RUN_LOCKED) |
+| Job refused with RUN_LOCKED (message 040) | Check SM37 for the run named in the message; wait for it, or — only if that job is gone — delete the lock in SM12 (table ZCD_OPS_LOCK, argument client + payment engine area + variant) | One run per payment engine area + variant (FMON: one per system); the refusal is alerted (rule RUN_LOCKED) |
 
 ## 5. Re-running
 

@@ -16,8 +16,8 @@ define view entity ZI_CD_HckMetric
   key metric                                              as Metric,
   key dim1                                                as Dimension1,
   key dim2                                                as Dimension2,
-      // constant module for the DCL (same authorization object as findings)
-      cast( 'HCK' as abap.char(4) )                       as Module,
+      // constant payment engine area for the DCL (same authorization object as findings)
+      cast( 'HCK' as abap.char(4) )                       as PaymentEngineArea,
       value                                               as MetricValue,
       measured_at                                         as MeasuredAt,
       // verify on target release: TIMESTAMPL -> TIMESTAMP cast, UTC calendar day

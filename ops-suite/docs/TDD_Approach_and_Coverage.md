@@ -5,7 +5,7 @@
 
 ## 1. Why the architecture is shaped this way
 
-- **Domain classes hold no SQL and call no function modules.** Rules (`ZCL_CD_EBS_R_*`), resolvers, policies (`ZCL_CD_OPS_ALERT_POLICY`), status machines (`ZCL_CD_FMON_STATUS`), evaluation rules (`ZCL_CD_FMON_RULES`, `ZCL_CD_HCK_CYCLE_EVAL`), statistics and renderers work on structures. Tests build them field by field and assert the result.
+- **Domain classes hold no SQL and call no function payment engine areas.** Rules (`ZCL_CD_EBS_R_*`), resolvers, policies (`ZCL_CD_OPS_ALERT_POLICY`), status machines (`ZCL_CD_FMON_STATUS`), evaluation rules (`ZCL_CD_FMON_RULES`, `ZCL_CD_HCK_CYCLE_EVAL`), statistics and renderers work on structures. Tests build them field by field and assert the result.
 - **Everything touching the outside world is behind an interface** — store, alert router, alert DAO, channels, clock, EBS/FMON/HCK repositories, parsers, sources, calendar, DDIC describer. Engines get them from the factories, so tests inject `LTD_*` doubles and assert what the engine *did*.
 - **Plug-ins are registry rows, not a `CASE`.** A new rule, check, adapter or channel is a new class plus a customizing row, so its test is new too — no existing test changes.
 
@@ -41,7 +41,7 @@
 
 ## 4. Coverage today — 455 ABAP Unit methods in 47 test includes
 
-| Module | Object (test include) | Methods | Level |
+| Payment engine area | Object (test include) | Methods | Level |
 |---|---|---|---|
 | Core | ZCL_CD_OPS_UTIL | 12 | Domain |
 | Core | ZCL_CD_OPS_ALERT_POLICY | 14 | Domain |
@@ -111,7 +111,7 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 | `ZCL_CD_HCK_DAO=>SELECT_VALUES` | Dynamic read of a validated query on landscape tables with unconfirmed fields | Builder tests; QA1 |
 | Behaviour pools `ZBP_R_CD_*CFGALL`, CDS, BDEF, SRVD of the configuration apps | Generated (`tools/rap_generate.py`), thin | Gate / checks tests; DV1 cases `RAP_Config_Apps.md` §6 |
 | ZCL_CD_OPS_CFG_CLIENT, ZCL_CD_OPS_CFG_TRANSPORT, ZCL_CD_OPS_CFG_AUTH | T000 / E070 reads, SAP CTS API wrapper, adapter to ZCL_CD_OPS_AUTH | Gate tests with doubles; DV1 |
-| ZCL_CD_OPS_AUTH | One `AUTHORITY-CHECK` on ZCD_OPS; a test would assert the kernel | Injected auth double (`injected_auth_is_returned`); QA1 role tests (allowed / refused per activity and module) |
+| ZCL_CD_OPS_AUTH | One `AUTHORITY-CHECK` on ZCD_OPS; a test would assert the kernel | Injected auth double (`injected_auth_is_returned`); QA1 role tests (allowed / refused per activity and payment engine area) |
 | ZCL_CD_OPS_LOCK | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` (`VERIFY-SE37`) | Engine tests with a lock double (held lock, release); QA1: two parallel runs of the same variant — the second is refused with RUN_LOCKED |
 | ZCL_CD_EBS_RULE_BASE | Abstract | Through the 26 rule classes |
 | ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
@@ -130,4 +130,4 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 | Every activation | The class's own test include |
 | Before releasing a transport | All HARMLESS test classes of the package (`ZCD_OPS*`) |
 | QA1 before go-live | Functional cases in `Test_and_Validation_Document.md`, the EBS shadow run against the legacy validators, the performance test |
-| Before a new bank / source / code goes live | Package run + the module's QA1 cases for that configuration |
+| Before a new bank / source / code goes live | Package run + the payment engine area's QA1 cases for that configuration |

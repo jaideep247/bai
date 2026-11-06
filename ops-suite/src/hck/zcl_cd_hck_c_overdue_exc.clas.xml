@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CD_HCK_C_OVERDUE_EXC</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Health check - overdue owned exceptions per module</DESCRIPT>
+    <DESCRIPT>Health check - overdue exceptions per payment engine area</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

@@ -12,7 +12,7 @@ define view entity ZI_CD_OpsRun
   as select from zcd_ops_run
 {
   key run_id                                              as RunId,
-      module                                              as Module,
+      pe_area                                              as PaymentEngineArea,
       variant                                             as Variant,
       test_mode                                           as IsTestMode,
       started_at                                          as StartedAt,

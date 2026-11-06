@@ -4,7 +4,7 @@
 > **Analogy:** a railway signal box — routes (rules) are set in the control panel (customizing), not by re-laying track (code).
 
 This page applies to every object in `ops-suite/`. Where two rules conflict, the order of precedence is:
-1. **abap-standards** (FS-CD / FI-CA house rules, below in §2) — authoritative
+1. **abap-standards** (payment engine house rules, below in §2) — authoritative
 2. **sap-engine-redesign-pattern** (layers, configuration over code, recovery)
 3. **sap-abap-unit-tests** (Clean ABAP test shape)
 4. **sap-dev-guardrails** — classic track (on-prem S/4HANA 2023, SAP_BASIS 7.58): modern syntax where it does not contradict 1–3.
@@ -12,7 +12,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 ## 1. Landscape (ground truth)
 
 - S/4HANA 2023, SAP_BASIS 7.58 SP01. Transport path DV1 → QA1 → PS4 (production).
-- In business-facing text the system is the **payment engine** (not "FI-CA" / "FS-CD").
+- In business-facing text the system is the **payment engine** (not "FI-CA" / "FS-CD"), and EBS validation, file monitoring and the morning report are **payment engine areas** (not "modules"; design D-6). Technical names follow: `PE_AREA`, `ZCD_PE_AREA`, `gc_pe_area`.
 - Middleware **PRISM** carries files and status; banks JPMC, BOA, PNC (BAI2, NACHA, Positive Pay); scheduling by Control-M.
 - Sources: PCLM, BASE, ALPA, ALPL, HAL, ORCI, DIS (+ Collections, Life & Annuity) — never assume one source's behaviour applies to another.
 - Confirmed join paths (do not invent others):
@@ -22,7 +22,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 | Bank line → payment (methods E G H I J K L) | FEBEP-CHECT = BSEG-XREF2 = DFKKOP-AUGBL |
 | Bank line → payment (method C, cheque) | DFKKCR-DOC1R = DFKKOP-AUGBL; DFKKCR-ZTNUM = FEBEP-CHECT |
 | Return → payment | DFKKRP-SELW1 = DFKKOP-AUGBL |
-| FI-CA postings reached GL | DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY |
+| payment engine postings reached GL | DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY |
 | Cumulation group from bank | DPAYH LAUFD + LAUFI where DOC1R is not initial |
 | Collections vs disbursements | TFK042Z-XEINZ |
 
@@ -41,7 +41,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 - ACK tables confirm payment-run files per pay cycle; Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK. Disbursements ACK per payment, collections per file.
 - Control-M schedules `JQ4SP*`; SAP jobs `ZCD_<function>_<ENTITY>`; most run `RFKK_MA_SCHEDULER` or `ZICD_CALL_SM69_COMMAND_NEW`.
 
-**Unverified DDIC.** Any field of a custom table (ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_ACH_RTRV_LOG, ZCDT_REGUT, ZCD_STRP_POUT_LOG …) or any standard field not listed above is *unverified*. Do not hard-code it: read it through configuration (table/field names in customizing, validated against the DDIC at runtime with `cl_abap_typedescr`) or isolate it in one DAO method marked `"VERIFY-DDIC:`. List every such marker in the module README.
+**Unverified DDIC.** Any field of a custom table (ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_ACH_RTRV_LOG, ZCDT_REGUT, ZCD_STRP_POUT_LOG …) or any standard field not listed above is *unverified*. Do not hard-code it: read it through configuration (table/field names in customizing, validated against the DDIC at runtime with `cl_abap_typedescr`) or isolate it in one DAO method marked `"VERIFY-DDIC:`. List every such marker in the payment engine area README.
 
 ## 2. abap-standards (house rules — authoritative)
 
@@ -52,14 +52,14 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 - `CHECK <driver> IS NOT INITIAL.` (or an `IF … IS INITIAL. RETURN.` guard) before **every** `FOR ALL ENTRIES`.
 - Do not pre-filter a sorted table in the caller when the DAO `WHERE` already filters.
 - After a method call with a `RETURNING` parameter assert on the returned value, never on `sy-subrc`.
-- No `TYPE c LENGTH n` directly on method parameters — use named types from the module's types interface.
+- No `TYPE c LENGTH n` directly on method parameters — use named types from the payment engine area's types interface.
 - No SQL outside DAO/repository classes. Constructors never read the database.
 - Explicit field lists in every `SELECT` (no `SELECT *`), `@` host variables.
 - Deliver complete files.
 
 ### Unit tests
 - `FOR TESTING RISK LEVEL HARMLESS DURATION SHORT` on every test class.
-- Business logic: local `LTD_*` test doubles injected through the module injector (`ZCL_CD_<MOD>_INJECTOR`) and the core injector `ZCL_CD_OPS_INJECTOR`; `teardown` calls the injectors' `reset( )`.
+- Business logic: local `LTD_*` test doubles injected through the payment engine area injector (`ZCL_CD_<MOD>_INJECTOR`) and the core injector `ZCL_CD_OPS_INJECTOR`; `teardown` calls the injectors' `reset( )`.
 - DAO tests: `cl_osql_test_environment` — create in `class_setup`, `clear_doubles` in `setup`, `destroy` in `class_teardown`.
 - Build test data with **individual field assignment**, not inline `VALUE #( … )` (type resolution inside the osql environment).
 - Wrap test method bodies in `TRY … CATCH cx_root` (except setup/teardown and methods that test exceptions) and fail with a message in the catch.
@@ -75,9 +75,9 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 ```
 
 - **Core** (`src/core`): `ZIF_CD_OPS_TYPES` (finding, run, severity, RAG, action), `ZCX_CD_OPS_ERROR` (T100 class ZCD_OPS), `ZIF_CD_OPS_STORE` (run + findings + params), `ZIF_CD_OPS_ALERT`, `ZIF_CD_OPS_CLOCK`, `ZCL_CD_OPS_FACTORY` / `ZCL_CD_OPS_INJECTOR`, `ZCL_CD_OPS_UTIL`.
-- Each module owns `ZIF_CD_<MOD>_TYPES`, its DAO interface(s), `ZCL_CD_<MOD>_FACTORY` (`GLOBAL FRIENDS zcl_cd_<mod>_injector`, getters `COND #( WHEN go_x_double IS BOUND THEN go_x_double ELSE NEW real( ) )`) and `ZCL_CD_<MOD>_INJECTOR` with `reset( )`.
-- Plug-ins (rules, checks, adapters) are configured by class name and created with `zcl_cd_ops_factory=>get_plugin( )`, then `CAST` to the module interface in `TRY/CATCH cx_sy_move_cast_error`.
-- Every module writes results only through `zcl_cd_ops_factory=>get_store( )` → one auditable store (ZCD_OPS_RUN / ZCD_OPS_FINDING). Findings of severity B/E/W become owned exceptions with an SLA due date.
+- Each payment engine area owns `ZIF_CD_<MOD>_TYPES`, its DAO interface(s), `ZCL_CD_<MOD>_FACTORY` (`GLOBAL FRIENDS zcl_cd_<mod>_injector`, getters `COND #( WHEN go_x_double IS BOUND THEN go_x_double ELSE NEW real( ) )`) and `ZCL_CD_<MOD>_INJECTOR` with `reset( )`.
+- Plug-ins (rules, checks, adapters) are configured by class name and created with `zcl_cd_ops_factory=>get_plugin( )`, then `CAST` to the payment engine area interface in `TRY/CATCH cx_sy_move_cast_error`.
+- Every payment engine area writes results only through `zcl_cd_ops_factory=>get_store( )` → one auditable store (ZCD_OPS_RUN / ZCD_OPS_FINDING). Findings of severity B/E/W become owned exceptions with an SLA due date.
 - Parameters: `store->get_param( iv_name = 'XYZ' iv_default = `...` )` — never hard-code thresholds, e-mail addresses, company codes, status literals.
 - Registry lookups fall back to a blank/`*` default row (a new source/bank/LOB costs configuration only).
 - Configuration is maintained only through the four RAP configuration apps (`RAP_Config_Apps.md`); SM30 maintenance views are not delivered. New customizing table → add it to the spec in `tools/rap_generate.py`, add the three admin fields, regenerate.
@@ -86,10 +86,10 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - **Durable before notified:** commit the run header at start; commit results and run end before any alert or mail (a channel may `COMMIT WORK` itself); never commit a half-written save — `store->rollback( )`.
 
 ### Message class ZCD_OPS ranges
-001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK. Each module documents its messages in `config/zcd_ops_messages.md`.
+001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK. Each payment engine area documents its messages in `config/zcd_ops_messages.md`.
 
 ### DDIC
-Tables as ADT DDL source in `ddic/<module>/<name>.tabl.ddl`. Delivery class C for customizing (SM30), A for application data. Note required secondary indexes in a comment.
+Tables as ADT DDL source in `ddic/<pe_area>/<name>.tabl.ddl`. Delivery class C for customizing (SM30), A for application data. Note required secondary indexes in a comment.
 
 ## 4. Verification
 

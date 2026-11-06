@@ -39,7 +39,7 @@ CLASS lhc_fmonfile IMPLEMENTATION.
     IF requested_authorizations-%action-setManualStatus = if_abap_behv=>mk-on.
       result-%action-setManualStatus = COND #( WHEN zcl_cd_ops_factory=>get_auth( )->is_allowed(
                                                       iv_activity = zif_cd_ops_auth=>gc_activity-change
-                                                      iv_module   = zif_cd_ops_types=>gc_module-file_monitor ) = abap_true
+                                                      iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
                                                THEN if_abap_behv=>auth-allowed
                                                ELSE if_abap_behv=>auth-unauthorized ).
     ENDIF.

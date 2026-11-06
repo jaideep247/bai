@@ -9,7 +9,7 @@
 *&---------------------------------------------------------------------*
 CLASS lhc_ebscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
-    CONSTANTS gc_module TYPE zif_cd_ops_cfg_types=>ty_module VALUE 'EBS'.
+    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'EBS'.
 
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR EbsCfgAll RESULT result.
@@ -22,9 +22,9 @@ ENDCLASS.
 CLASS lhc_ebscfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS activity 02 for the module: editing the singleton covers every child
+    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child
     DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(
-                                   iv_module = gc_module
+                                   iv_pe_area = gc_pe_area
                                    iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
                             THEN if_abap_behv=>auth-allowed
                             ELSE if_abap_behv=>auth-unauthorized ).

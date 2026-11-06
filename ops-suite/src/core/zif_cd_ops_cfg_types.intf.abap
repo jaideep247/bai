@@ -11,7 +11,7 @@
 INTERFACE zif_cd_ops_cfg_types
   PUBLIC.
 
-  TYPES ty_module        TYPE c LENGTH 4.
+  TYPES ty_pe_area        TYPE c LENGTH 4.
   TYPES ty_actvt         TYPE c LENGTH 2.
   TYPES ty_request       TYPE c LENGTH 20.
   TYPES ty_change_option TYPE c LENGTH 1.
@@ -106,12 +106,12 @@ INTERFACE zif_cd_ops_cfg_types
 
   "! Authorisation object ZCD_OPS, field ZCD_MODULE
   CONSTANTS:
-    BEGIN OF gc_module,
-      core TYPE ty_module VALUE 'CORE',
-      ebs  TYPE ty_module VALUE 'EBS',
-      fmon TYPE ty_module VALUE 'FMON',
-      hck  TYPE ty_module VALUE 'HCK',
-    END OF gc_module.
+    BEGIN OF gc_pe_area,
+      core TYPE ty_pe_area VALUE 'CORE',
+      ebs  TYPE ty_pe_area VALUE 'EBS',
+      fmon TYPE ty_pe_area VALUE 'FMON',
+      hck  TYPE ty_pe_area VALUE 'HCK',
+    END OF gc_pe_area.
 
   "! E070: TRSTATUS modifiable (D) / modifiable, protected (L);
   "! TRFUNCTION customizing request (W) / customizing task (Q)

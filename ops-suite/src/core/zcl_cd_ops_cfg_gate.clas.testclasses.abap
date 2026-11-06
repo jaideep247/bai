@@ -46,13 +46,13 @@ CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_cfg_auth.
     DATA mv_allowed TYPE abap_bool.
-    DATA mv_module  TYPE zif_cd_ops_cfg_types=>ty_module.
+    DATA mv_pe_area  TYPE zif_cd_ops_cfg_types=>ty_pe_area.
     DATA mv_actvt   TYPE zif_cd_ops_cfg_types=>ty_actvt.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
   METHOD zif_cd_ops_cfg_auth~is_authorized.
-    mv_module = iv_module.
+    mv_pe_area = iv_pe_area.
     mv_actvt  = iv_actvt.
     rv_allowed = mv_allowed.
   ENDMETHOD.
@@ -94,7 +94,7 @@ CLASS ltc_gate DEFINITION FINAL FOR TESTING
     METHODS dv1_rejects_released_request FOR TESTING.
     METHODS no_recording_in_production   FOR TESTING.
     METHODS dv1_records_on_request       FOR TESTING.
-    METHODS auth_asks_module_and_actvt   FOR TESTING.
+    METHODS auth_asks_area_and_actvt   FOR TESTING.
     METHODS client_is_read_once          FOR TESTING.
 ENDCLASS.
 
@@ -206,16 +206,16 @@ CLASS ltc_gate IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: authorisation object ZCD_OPS is asked for the app's module and the activity
-  METHOD auth_asks_module_and_actvt.
+  " Rule: authorisation object ZCD_OPS is asked for the app's payment engine area and the activity
+  METHOD auth_asks_area_and_actvt.
     TRY.
         configure_scenario( VALUE #( dv1 = abap_true authorized = abap_true ) ).
         cl_abap_unit_assert=>assert_true(
-          act = cut( )->is_authorized( iv_module = zif_cd_ops_cfg_types=>gc_module-fmon
+          act = cut( )->is_authorized( iv_pe_area = zif_cd_ops_cfg_types=>gc_pe_area-fmon
                                        iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change )
           msg = 'The answer of the authorisation check is returned' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_module exp = zif_cd_ops_cfg_types=>gc_module-fmon
-                                            msg = 'Module passed to the check' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_pe_area exp = zif_cd_ops_cfg_types=>gc_pe_area-fmon
+                                            msg = 'Payment engine area passed to the check' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_actvt exp = zif_cd_ops_cfg_types=>gc_actvt-change
                                             msg = 'Activity passed to the check' ).
       CATCH cx_root INTO DATA(lx_error).

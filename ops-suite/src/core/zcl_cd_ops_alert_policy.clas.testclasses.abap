@@ -60,14 +60,14 @@ CLASS ltc_alert_policy IMPLEMENTATION.
     mo_cut = NEW #( ).
     CLEAR: ms_rule, ms_run.
     ms_rule-rule_id      = gc_test-rule_id.
-    ms_rule-module       = zif_cd_ops_types=>gc_module-ebs.
+    ms_rule-pe_area       = zif_cd_ops_types=>gc_pe_area-ebs.
     ms_rule-min_severity = zif_cd_ops_types=>gc_severity-error.
     ms_rule-channel      = zif_cd_ops_types=>gc_channel-email.
     ms_rule-destination  = gc_test-dest.
     ms_rule-digest       = abap_true.
     ms_rule-max_items    = 2.
     ms_rule-active       = abap_true.
-    ms_run-module        = zif_cd_ops_types=>gc_module-ebs.
+    ms_run-pe_area        = zif_cd_ops_types=>gc_pe_area-ebs.
     ms_run-status        = zif_cd_ops_types=>gc_run_status-success.
     ms_run-rag           = zif_cd_ops_types=>gc_rag-green.
   ENDMETHOD.

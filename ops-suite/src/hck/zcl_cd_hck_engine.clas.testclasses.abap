@@ -26,7 +26,7 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
     mv_start_calls = mv_start_calls + 1.
     rs_run-run_id    = '0123456789ABCDEF0123456789ABCDEF'.
-    rs_run-module    = iv_module.
+    rs_run-pe_area    = iv_pe_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
     rs_run-status    = zif_cd_ops_types=>gc_run_status-running.
@@ -56,7 +56,7 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~get_last_run.
-    READ TABLE mt_last_runs INTO rs_run WITH KEY module = iv_module.
+    READ TABLE mt_last_runs INTO rs_run WITH KEY pe_area = iv_pe_area.
     IF sy-subrc <> 0.
       CLEAR rs_run.
     ENDIF.
@@ -226,7 +226,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         slow_clock      TYPE abap_bool,
         test_mode       TYPE abap_bool,
         send_mail       TYPE abap_bool,
-        include_modules TYPE abap_bool,
+        include_pe_areas TYPE abap_bool,
         ebs_never_ran   TYPE abap_bool,
       END OF ty_flags.
 
@@ -248,7 +248,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS test_mode_saves_nothing FOR TESTING.
     METHODS real_run_persists_dispatches FOR TESTING.
     METHODS mail_goes_to_morning_route FOR TESTING.
-    METHODS stale_module_fails_self FOR TESTING.
+    METHODS stale_area_fails_self FOR TESTING.
     METHODS category_rag_and_score FOR TESTING.
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS held_lock_skips_run FOR TESTING.
@@ -350,15 +350,15 @@ CLASS ltc_engine IMPLEMENTATION.
       INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
     ENDIF.
 
-    IF is_flags-include_modules = abap_true.
+    IF is_flags-include_pe_areas = abap_true.
       INSERT VALUE #( name = 'HCK_WATCH_MODULES' value = 'EBS,FMON' ) INTO TABLE mo_store->mt_params.
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
-      ls_last_run-module     = zif_cd_ops_types=>gc_module-file_monitor.
+      ls_last_run-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-started_at = ltd_clock=>gc_base.
       ls_last_run-rag        = gc_green.
       INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
       IF is_flags-ebs_never_ran = abap_false.
-        ls_last_run-module = zif_cd_ops_types=>gc_module-ebs.
+        ls_last_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
         INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
       ENDIF.
     ENDIF.
@@ -370,7 +370,7 @@ CLASS ltc_engine IMPLEMENTATION.
       VALUE #( report_date     = ltd_clock=>gc_today
                test_mode       = ms_flags-test_mode
                send_mail       = ms_flags-send_mail
-               include_modules = ms_flags-include_modules ) ).
+               include_pe_areas = ms_flags-include_pe_areas ) ).
   ENDMETHOD.
 
 
@@ -498,18 +498,18 @@ CLASS ltc_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a watched module without a recent run makes the self check RED (health of the health check)
-  METHOD stale_module_fails_self.
+  " Rule: a watched payment engine area without a recent run makes the self check RED (health of the health check)
+  METHOD stale_area_fails_self.
     TRY.
-        configure_scenario( VALUE #( include_modules = abap_true ebs_never_ran = abap_true ) ).
+        configure_scenario( VALUE #( include_pe_areas = abap_true ebs_never_ran = abap_true ) ).
         DATA(ls_report) = act( ).
         DATA(ls_self) = ls_report-results[ check_id = zif_cd_hck_types=>gc_self_check ].
         cl_abap_unit_assert=>assert_equals( act = ls_self-rag exp = gc_red msg = 'Self check must be RED' ).
         cl_abap_unit_assert=>assert_equals( act = lines( ls_self-findings ) exp = 1 msg = 'Only EBS is stale' ).
         cl_abap_unit_assert=>assert_equals( act = ls_self-findings[ 1 ]-object_key
                                             exp = 'EBS'
-                                            msg = 'The stale module is EBS' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_report-modules[ module = 'FMON' ]-stale
+                                            msg = 'The stale payment engine area is EBS' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-pe_areas[ pe_area = 'FMON' ]-stale
                                             exp = abap_false
                                             msg = 'FMON ran recently' ).
       CATCH cx_root INTO DATA(lx_error).

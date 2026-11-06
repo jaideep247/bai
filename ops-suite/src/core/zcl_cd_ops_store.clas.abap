@@ -14,7 +14,7 @@
 "! Repository for the shared result/exception store. The only class that
 "! writes ZCD_OPS_RUN and ZCD_OPS_FINDING. Findings of severity B/E/W are
 "! created as owned exceptions (status OPEN) with an SLA due date taken from
-"! ZCD_OPS_PARAM SLA_DAYS_<module>_<severity> (fallback SLA_DAYS_DEFAULT, 1).
+"! ZCD_OPS_PARAM SLA_DAYS_<payment engine area>_<severity> (fallback SLA_DAYS_DEFAULT, 1).
 CLASS zcl_cd_ops_store DEFINITION
   PUBLIC
   FINAL
@@ -43,7 +43,7 @@ CLASS zcl_cd_ops_store DEFINITION
     METHODS load_params.
 
     "! New exceptions inherit from the open / assigned / waived exception of an
-    "! earlier run (same module, object type, object key, check code), which is
+    "! earlier run (same payment engine area, object type, object key, check code), which is
     "! superseded. Only rows with disposition O are candidates.
     METHODS carry_forward
       IMPORTING
@@ -63,7 +63,7 @@ CLASS zcl_cd_ops_store DEFINITION
 
     METHODS sla_days
       IMPORTING
-        iv_module      TYPE zif_cd_ops_types=>ty_module
+        iv_pe_area      TYPE zif_cd_ops_types=>ty_pe_area
         iv_severity    TYPE zif_cd_ops_types=>ty_severity
       RETURNING
         VALUE(rv_days) TYPE i.
@@ -96,7 +96,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
           EXPORTING
             previous = lx_uuid.
     ENDTRY.
-    rs_run-module     = iv_module.
+    rs_run-pe_area     = iv_pe_area.
     rs_run-variant    = iv_variant.
     rs_run-test_mode  = iv_test_mode.
     rs_run-started_at = lo_clock->now( ).
@@ -135,7 +135,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       CLEAR ls_db.
       ls_db-run_id      = cs_run-run_id.
       ls_db-finding_no  = lv_seq.
-      ls_db-module      = cs_run-module.
+      ls_db-pe_area      = cs_run-pe_area.
       ls_db-object_type = ls_finding-object_type.
       ls_db-object_key  = ls_finding-object_key.
       ls_db-group1      = ls_finding-group1.
@@ -155,7 +155,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       ls_db-occurrences   = 1.
       IF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) >= 2.
         ls_db-disposition = gc_disposition-open.
-        ls_db-due_date    = lv_today + sla_days( iv_module   = cs_run-module
+        ls_db-due_date    = lv_today + sla_days( iv_pe_area   = cs_run-pe_area
                                                  iv_severity = ls_finding-severity ).
       ELSE.
         ls_db-disposition = gc_disposition-information.
@@ -205,13 +205,13 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     ENDLOOP.
     CHECK lt_keys IS NOT INITIAL.
 
-    " index ZCD_OPS_FINDING~OBJ: MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
            waiver_req_by, waiver_req_at, waiver_reason
       FROM zcd_ops_finding
       FOR ALL ENTRIES IN @lt_keys
-      WHERE module      = @is_run-module
+      WHERE pe_area      = @is_run-pe_area
         AND object_key  = @lt_keys-table_line
         AND run_id     <> @is_run-run_id
         AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
@@ -297,7 +297,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
              due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
         FROM zcd_ops_finding
         FOR ALL ENTRIES IN @it_object_keys
-        WHERE module      = @is_run-module
+        WHERE pe_area      = @is_run-pe_area
           AND object_key  = @it_object_keys-table_line
           AND run_id     <> @is_run-run_id
           AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
@@ -309,7 +309,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
              due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
         FROM zcd_ops_finding
         FOR ALL ENTRIES IN @it_groups
-        WHERE module      = @is_run-module
+        WHERE pe_area      = @is_run-pe_area
           AND group2      = @it_groups-table_line
           AND run_id     <> @is_run-run_id
           AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
@@ -369,22 +369,22 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~get_last_run.
     DATA lt_db TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
     IF iv_variant IS INITIAL.
-      SELECT run_id, module, variant, test_mode, started_at, ended_at, status, rag,
+      SELECT run_id, pe_area, variant, test_mode, started_at, ended_at, status, rag,
              total_items, passed_items, failed_items, blocked_items, warning_items,
              finding_count, runtime_ms, message, created_by
         FROM zcd_ops_run
-        WHERE module    = @iv_module
+        WHERE pe_area    = @iv_pe_area
           AND test_mode = @abap_false
           AND status   <> @zif_cd_ops_types=>gc_run_status-running
         ORDER BY started_at DESCENDING
         INTO CORRESPONDING FIELDS OF TABLE @lt_db
         UP TO 1 ROWS.
     ELSE.
-      SELECT run_id, module, variant, test_mode, started_at, ended_at, status, rag,
+      SELECT run_id, pe_area, variant, test_mode, started_at, ended_at, status, rag,
              total_items, passed_items, failed_items, blocked_items, warning_items,
              finding_count, runtime_ms, message, created_by
         FROM zcd_ops_run
-        WHERE module    = @iv_module
+        WHERE pe_area    = @iv_pe_area
           AND variant   = @iv_variant
           AND test_mode = @abap_false
           AND status   <> @zif_cd_ops_types=>gc_run_status-running
@@ -400,11 +400,11 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_store~get_runs_since.
-    SELECT run_id, module, variant, test_mode, started_at, ended_at, status, rag,
+    SELECT run_id, pe_area, variant, test_mode, started_at, ended_at, status, rag,
            total_items, passed_items, failed_items, blocked_items, warning_items,
            finding_count, runtime_ms, message, created_by
       FROM zcd_ops_run
-      WHERE module      = @iv_module
+      WHERE pe_area      = @iv_pe_area
         AND test_mode   = @abap_false
         AND started_at >= @iv_since
       ORDER BY started_at
@@ -439,7 +439,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
   METHOD sla_days.
     DATA(lv_value) = zif_cd_ops_store~get_param(
-      iv_name    = CONV #( |SLA_DAYS_{ iv_module }_{ iv_severity }| )
+      iv_name    = CONV #( |SLA_DAYS_{ iv_pe_area }_{ iv_severity }| )
       iv_default = zif_cd_ops_store~get_param( iv_name    = 'SLA_DAYS_DEFAULT'
                                                iv_default = `1` ) ).
     rv_days = zcl_cd_ops_util=>to_decimal( iv_value = lv_value iv_default = 1 ).
@@ -448,7 +448,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
   METHOD map_run_to_db.
     rs_db-run_id        = is_run-run_id.
-    rs_db-module        = is_run-module.
+    rs_db-pe_area        = is_run-pe_area.
     rs_db-variant       = is_run-variant.
     rs_db-test_mode     = is_run-test_mode.
     rs_db-started_at    = is_run-started_at.
@@ -469,7 +469,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
   METHOD map_run_from_db.
     rs_run-run_id        = is_db-run_id.
-    rs_run-module        = is_db-module.
+    rs_run-pe_area        = is_db-pe_area.
     rs_run-variant       = is_db-variant.
     rs_run-test_mode     = is_db-test_mode.
     rs_run-started_at    = is_db-started_at.

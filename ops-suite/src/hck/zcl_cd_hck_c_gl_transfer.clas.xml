@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CD_HCK_C_GL_TRANSFER</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Health check - FI-CA to GL transfer completeness</DESCRIPT>
+    <DESCRIPT>Health check - payment engine to GL transfer completeness</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
