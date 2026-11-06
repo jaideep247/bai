@@ -180,4 +180,4 @@ The audit reviewed `main` at `8cdfdce`; all fixes below are on branch `claude/lo
 | A104 | Fixed (documentation) — QA case EBS-13 on the FEB source, EBS-13a file source; see Audit_Response_EBS.md |
 | A105 | Fixed (documentation) — 195 parity corrected (run-level vs payment-level), legacy references pinned, PAR-195; see Audit_Response_EBS.md |
 
-**Verification (offline):** abaplint 2.120.92 (`v758` = S/4HANA 2023) 0 issues; ATC-equivalent rule set: 3 documented exemptions (`ATC_Validation.md` §4); portable checks 15/15; generator fixture tests OK; 648 ABAP Unit test methods declared (not executed); CI green on every push.
+**Verification (offline):** abaplint 2.120.92 (`v758` = S/4HANA 2023) 0 issues; ATC-equivalent rule set: 3 documented exemptions (`ATC_Validation.md` §4); portable checks 15/15; generator fixture tests OK; 698 ABAP Unit test methods declared (not executed); CI green on every push up to the last CI run; later pushes marked [skip ci], verified locally.
