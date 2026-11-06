@@ -70,14 +70,31 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 Launchpad space **Production Support** → *File monitoring dashboard* (read-only; details `Dashboard_File_Monitoring.md`). Work it in this order, every time:
 
-1. **Stale monitor first.** Header / tile *Stale monitor*: as of = end of the last completed FMON run. **Stale (red, older than 15 min or no run)** → nothing else on the page is current. Check SM37 / Control-M job `ZCD_FMON_MONITOR_ALL` (aborted? RUN_LOCKED? not scheduled?) and the morning report category *health of the health check*; escalate to the batch owner. Do not report "no rejected files" from a stale page.
+1. **Stale monitor first.** Header / tile *Stale monitor*: as of = end of the last completed FMON run. **Stale (red, older than 15 min or no run)** → nothing else on the page is current. Check SM37 job `ZCD_FMON_MONITOR_ALL` (SM36 periodic job every 5 minutes — aborted? RUN_LOCKED? not released?) and the morning report category *health of the health check*; escalate to the batch owner. Do not report "no rejected files" from a stale page.
 2. **Breached SLA.** Filter SLA status = BREACHED (tile *Breached SLA*). Each file missed an SLA stage (NO_PRISM_HANDOFF, NO_BANK_ACK, …): open the file → *Open exceptions* → follow `FMON_FILE_MONITORING.md` §A5 for the check code. Then tile *Missing files* (FILE_MISSING has no file row).
-3. **Rejected / errored.** Flow bucket REJECTED (tile *Rejected today*): NACK from the bank, inbound processing FAILED, or PRISM_FAILED once the PRISM status API is live. Open the file → *Events* shows who said so and when.
+3. **Rejected / errored.** Flow bucket REJECTED (tile *Rejected today*): NACK from the bank, inbound processing FAILED, or PRISM_FAILED (PRISM status API, §4c). Open the file → *Events* shows who said so and when.
 4. **Unprocessed / partial.** Tile *Unprocessed* or bucket PARTIAL: returns / NOC items not yet accounted for (LOT_UNPROCESSED); work the lot (FP09 / NOC application) and wait for the next run.
 5. **Drill to the file → events → open exceptions → payment trace.** Events = the evidence timeline of the file; open exceptions = what the monitor concluded (work them in the owned-exceptions app, never here). For a payment inside the file, run `ZCD_OPS_PAYMENT_TRACE` with the FIN / document from the incident (the trace does not take a file reference yet — navigation is proposed).
 6. **Hand off.** Copy business date, interface, file name, bucket, SLA status, as of and the check code into the ticket. Recovery (re-send, re-load, manual status) is done by the owning team under its runbook; the dashboard changes nothing. Never type personal data into manual-status reasons — they are shown on the dashboard's events.
 
 UNKNOWN bucket → a stage the dashboard does not map yet: tell the suite admin (mapping table in the dashboard doc §3). Only interfaces with a `ZCD_FMON_IFACE` row are shown — an absent interface is not a healthy one (`Interface_Inventory.md`).
+
+## 4c. PRISM status API — PRISM milestones (L1 / L2)
+
+PRISM reports every file / message it receives, delivers or cannot deliver (`PRISM_Status_API.md`); FMON shows them as `PRISM_RECEIVED`, `PRISM_DELIVERED`, `PRISM_FAILED` within seconds (bgPF unit) and at the latest with the next 5-minute run. Never change a payment file, job or routing from here.
+
+| Situation | What it means | Next diagnostic check (no change to anything) | Owner |
+|---|---|---|---|
+| **PRISM_FAILED** (R) | PRISM gave up processing or delivering the file | SE16 `ZCD_FMON_PRISM` by file reference: `ERROR_CODE`, `ERROR_TEXT`, `PRISM_REF`, `COUNTERPARTY`; look the transfer up in the PRISM console. PRISM retries on its own — a later `DELIVERED` supersedes the failure and the next 5-minute run resolves the exception. Re-send only by the owning team under its runbook | Integration (PRISM) |
+| **NO_PRISM_RECEIVED** / **PRISM_RECEIVED_LATE** — missing PRISM receipt | SAP handed the file over (SENT_TO_PRISM), PRISM did not confirm receipt within the SLA | 1) Is the API reachable? SE16 `ZCD_FMON_PRISM` — newest `RECEIVED_AT` of today; no rows at all for an hour = PRISM is not calling (ICF node inactive, credentials, network) → SICF / SMICM log, ask PRISM for their 4xx/5xx log. 2) Rows exist but not for this file → PRISM transfer job / OS command (`ZICD_CALL_SM69_COMMAND_NEW`), PRISM inbound queue | Integration (PRISM) / Basis |
+| **PRISM_UNKNOWN_FILE** (A) | PRISM reported an outbound file SAP has no generation / send record of (after `GRACE_MIN`) | Compare `FILE_REF` with the SAP file name / key (`ZCDT_REGUT`): a renamed file, a manual transfer outside SAP, or PRISM sending another reference than FMON keys the flow by (`PRISM_Status_API.md` §8) | Integration / suite admin |
+| **PRISM_NOT_LOADED** (A) | PRISM delivered an inbound file SAP has not received after `GRACE_MIN` | Load job of the flow (SM37), AL11 inbound directory, then the SAP-side evidence table | Payment operations |
+| **UNMAPPED_FILE** with source `PRISM` (A) | A PRISM event whose reference matches no interface and carries no known `interfaceId` — never dropped, stays unprocessed and is reported every run | Add the interface row / name pattern (DV1, transport) or agree the `interfaceId` with PRISM; the events are applied by the next run after the transport | Suite admin |
+| PRISM events stay unprocessed (`PROCESSED_AT` initial for more than 10 min) | The instant unit did not run or finish | **SBGRFCMON** — bgPF units of queue / destination for bgPF (name `ZCD_FMON_PRISM`): failed or waiting units, error text; restart or delete a failed unit there. The 5-minute run applies the events anyway (safety net), so the monitor stays complete — only the latency is lost | Basis / suite admin |
+| PRISM receives 403 / 401 | The technical user lacks `Z_CD_OPS_PRISM` / S_ICF, or its certificate / password changed | SU53 / ST01 for the PRISM user; STRUST certificate mapping | Security / Basis |
+| PRISM receives 409 | PRISM reused an event ID for another payload | Nothing on SAP side — the first event stays; PRISM defect | PRISM |
+
+Switch off (emergency, e.g. a flood of calls): deactivate the SICF node `/sap/zcd_ops/prism_status` — PRISM then gets 403/404 and buffers; FMON keeps working from SAP's own evidence. Stopping only the instant units: `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` = blank (registry only) or lock the bgPF destination in SBGRFCCONF (the 5-minute run takes over).
 
 ## 5. Re-running
 

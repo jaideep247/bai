@@ -18,12 +18,14 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | Authorization object `ZCD_OPS`, field `ZCD_PE_AREA`, roles incl. `S_TABU_NAM` | SU21 / PFCG | 0, 1c.3 |
 | Customizing rows (`config/*.csv`, `*_seed.md`) — the pull loads no data | Configuration apps / SM30, customizing request | 3 |
 | Job variants and Control-M jobs | SE38 / Control-M | 4 |
+| SICF node `/sap/zcd_ops/prism_status` (inactive), PRISM technical user and role `Z_CD_OPS_PRISM`, bgPF / bgRFC inbound destination | SICF / SU01 / PFCG / SBGRFCCONF | 1e |
 
 **Read-only rollout scope.** This release observes and reports: EBS shadow validation after statement import, posting and payment clearing; FMON; HCK; the payment trace. Kept outside the transport:
 - the *Blocked line releases* app (`ZR_/ZC_CD_EBSRELEASE`, behaviour pool `ZBP_R_CD_EBSRELEASE`, service definition `ZUI_CD_EBS_REL`) — listed in the `IGNORE` section of `/.abapgit.xml`, so abapGit does not pull it; no other object references it;
 - the reprocessing / clarification navigation targets (step 1c.7) — not created;
 - posting enforcement: the pre-posting path inside `ZCL_CD_EBS_ENGINE` (and its release table / DAO, which the engine needs to activate) is transported but dormant — no BAdI implementation exists and `ZCD_EBS_VALIDATION_MODE` = `O`;
-- integration changes: the HTTP alert channel class is transported but inactive (no SM59 destination, no active channel row).
+- integration changes: the HTTP alert channel class is transported but inactive (no SM59 destination, no active channel row);
+- the **PRISM status API** (step 1e): its table and classes are transported, the SICF node is created **inactive** and the PRISM technical user gets no role — a new callback is outside the read-only rollout and is switched on only as its own CAB-approved change (switch **S-PRISM**).
 
 ## Step 0 — Pre-checks (blocking)
 
@@ -83,6 +85,18 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 | 1d.6 | Optional: `cds/ZI_CD_FmonFlowCube`, `cds/ZC_CD_FmonFlowQry` with step 2.7 (grant in `ZI_CD_OpsAnalytics`) for Analysis for Office | Query opens in RSRT / Analysis for Office |
 
 Not in this step: navigation to the payment trace (proposed — the trace does not accept a file reference yet) and the overall overview page (later job, reuses `FileFlowKpi` and `LatestFailure`).
+
+## Step 1e — PRISM status API (own approved change, switch S-PRISM; `PRISM_Status_API.md`)
+
+| # | Item | Done when |
+|---|---|---|
+| 1e.1 | abapGit pull activates `ZCD_FMON_PRISM` (indexes UNP, REF, BDT), `ZIF_CD_FMON_PRISM_TYPES`, `ZIF_/ZCL_CD_FMON_PRISM_DAO`, `ZIF_/ZCL_CD_FMON_PRISM_QUEUE`, `ZCL_CD_FMON_PRISM_OP`, `ZCL_CD_FMON_PRISM_PROC`, `ZCL_CD_FMON_PRISM_EVENT`, `ZCL_CD_FMON_PRISM_API`, `ZCL_CD_FMON_PRISM_HTTP`, `ZCL_CD_FMON_ADAPTER_PRISM`, `ZCL_CD_FMON_CHK_PRISM_FILE` with the FMON group of step 2. **VERIFY-ADT:** `IF_BGMC_OP_SINGLE_TX_UNCONTR`, `CL_BGMC_PROCESS_FACTORY`, `CX_BGMC` exist on SAP_BASIS 7.58 SP01 with the signatures used (`PRISM_Status_API.md` §13); the abaplint stub in `ops-suite/lint_stubs/` is not pulled | All active; ABAP Unit of the PRISM test includes green |
+| 1e.2 | **bgPF prerequisites (Basis, per client, VERIFY-ADT against the SAP documentation for 7.58):** SBGRFCCONF — define the bgRFC inbound destination bgPF uses (default destination for background processing / bgPF, with its queue prefix) and the supervisor destination; scheduler active (SBGRFCCONF → scheduler: system / application server); SBGRFCMON shows the destination. Without it `save_for_execution` raises `CX_BGMC` — the API still stores the event (202) and the 5-minute job applies it | A test event's unit appears in SBGRFCMON and ends successfully |
+| 1e.3 | SICF (Basis): node `/sap/zcd_ops/prism_status`, handler `ZCL_CD_FMON_PRISM_HTTP`, logon *required* (X.509 client certificate, or basic over TLS), security requirement SSL, SAP authorisation value `ZCD_PRISM`, **no fixed user**, **inactive**; Workbench request (`PRISM_Status_API.md` §10). Not serialized by abapGit (system-specific parent GUID; a pulled node would be active) | Node exists, inactive; transported with the release |
+| 1e.4 | Security: technical user `PRISM_FMON` (type B), certificate mapping in STRUST if X.509; role `Z_CD_OPS_PRISM` = `ZCD_OPS` ACTVT 01 / `ZCD_PE_AREA` FMON / `BUKRS` DUMMY + `S_ICF` (ICF_FIELD SERVICE, ICF_VALUE `ZCD_PRISM`) — created, **assigned only at go-live** (`config/auth_zcd_ops.md`) | Role exists; SU53 clean in QA1 |
+| 1e.5 | Customizing (`config/fmon_seed.md`): `ZCD_FMON_SRC` row `PRISM` (adapter `ZCL_CD_FMON_ADAPTER_PRISM`), `ZCD_FMON_SRCMAP` RECEIVED / DELIVERED / FAILED, `ZCD_FMON_TABWL` `ZCD_FMON_PRISM`, check rows `F_PRISMRCV`, `F_PRISMDLV`, `F_FILERCV`, `F_PRFAIL`, `F_PRFILE`, PRISM SLA rows of the seeded interfaces; `ZCD_OPS_PARAM` `FMON_PRISM_MAX_BYTES`, `FMON_PRISM_INSTANT` | Rows in the customizing request; the 5-minute run shows no PLUGIN_ERROR for source PRISM |
+| 1e.6 | QA1: cases PRISM-01..15 (`Test_and_Validation_Document.md` §6.8) with the PRISM test harness; PRISM's retry policy (§5 of the API document) agreed and tested | Signed off by the PRISM team and payment operations |
+| 1e.7 | **Switch S-PRISM** (PS4, after CAB approval of the new integration): assign `Z_CD_OPS_PRISM` to `PRISM_FMON`, activate the SICF node, PRISM enables the calls per flow (`PRISM_Status_API.md` §8). Off again: deactivate the node (PRISM buffers / retries); FMON continues from SAP's own evidence | First events visible in `ZCD_FMON_PRISM` and on the FMON board within seconds |
 
 ## Step 2 — Classes, in dependency order (activate each group together)
 

@@ -101,7 +101,7 @@ Tables as ADT DDL source in `ddic/<pe_area>/<name>.tabl.ddl`. Delivery class C f
 
 Lint (offline, no SAP system): from `ops-suite/` run
 `/tmp/claude-0/-home-user-bai/914e445a-1a4a-59f8-9715-e9953e835f40/scratchpad/lint/node_modules/.bin/abaplint`
-The config pins v758-compatible syntax and pulls SAP stubs from `abaplint/deps`. A clean lint proves syntax and typing against stubs only — **not** activation, DDIC existence or ABAP Unit execution. Say so in every hand-over.
+The config pins v758-compatible syntax and pulls SAP stubs from `abaplint/deps`. SAP objects missing there are stubbed in `ops-suite/lint_stubs/` (second, local dependency of `abaplint.json` and `abaplint.atc.json`; outside `src/`, so abapGit never pulls them): today only `IF_BGMC_OP_SINGLE_TX_UNCONTR` (bgPF, PRISM status API). A stub is a lint aid, never evidence that the SAP object exists — each is a VERIFY-ADT item. A clean lint proves syntax and typing against stubs only — **not** activation, DDIC existence or ABAP Unit execution. Say so in every hand-over.
 
 ## 5. TDD and artefact headers (house approach)
 

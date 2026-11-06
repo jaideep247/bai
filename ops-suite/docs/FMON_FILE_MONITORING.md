@@ -29,11 +29,20 @@ stateDiagram-v2
     direction LR
     state Outbound {
         GENERATED_IN_SAP --> SENT_TO_PRISM
+        SENT_TO_PRISM --> PRISM_RECEIVED
+        PRISM_RECEIVED --> PRISM_DELIVERED
+        PRISM_RECEIVED --> PRISM_FAILED
+        PRISM_FAILED --> PRISM_DELIVERED : PRISM retry
         SENT_TO_PRISM --> FORWARDED_TO_BANK
+        PRISM_DELIVERED --> ACK_RECEIVED
         FORWARDED_TO_BANK --> ACK_RECEIVED
         FORWARDED_TO_BANK --> NACK_REJECTED
     }
     state Inbound {
+        PRISM_RECEIVED_I : PRISM_RECEIVED
+        PRISM_DELIVERED_I : PRISM_DELIVERED
+        PRISM_RECEIVED_I --> PRISM_DELIVERED_I
+        PRISM_DELIVERED_I --> FILE_RECEIVED
         FILE_RECEIVED --> FILE_LOADED
         FILE_LOADED --> FULLY_PROCESSED
         FILE_LOADED --> PARTIALLY_PROCESSED
@@ -52,6 +61,17 @@ Rules (implemented in `ZCL_CD_FMON_STATUS`, unit-tested without doubles):
 4. **Inbound outcomes may only improve on a re-run:** FAILED → PARTIALLY_PROCESSED → FULLY_PROCESSED. FULLY_PROCESSED is final.
 5. PARTIALLY_PROCESSED keeps its outcome and refreshes the **unprocessed count** on every run.
 6. For returns/NOC files the **lot decides the outcome**, not the source table: a source saying "processed" is recorded in the audit trail but only moves the file to FILE_LOADED while a transaction is still open.
+7. **PRISM milestones (PRISM status API, `PRISM_Status_API.md`)** belong to both directions. Outbound: GENERATED_IN_SAP < SENT_TO_PRISM < **PRISM_RECEIVED** < **PRISM_DELIVERED** (= rank of FORWARDED_TO_BANK) < ACK_RECEIVED / NACK_REJECTED. Inbound: **PRISM_RECEIVED** < **PRISM_DELIVERED** < FILE_RECEIVED < FILE_LOADED < outcomes. **PRISM_FAILED** is a failure outcome at the rank of PRISM_DELIVERED; any later stage of the same or higher rank (PRISM retried and delivered, the bank acknowledged, SAP received the file) supersedes it. A PRISM milestone reported after a final ACK, or after SAP received an inbound file, is history only.
+8. **File instance origin (A49 with PRISM):** outbound only GENERATED_IN_SAP opens the instance of its business date; inbound every stage up to FILE_RECEIVED does, because PRISM sees an inbound file before SAP. Stage values are fixed (a dashboard maps them): `PRISM_RECEIVED`, `PRISM_DELIVERED`, `PRISM_FAILED`.
+
+### Two paths into the register (2026-11-06)
+
+| Path | Trigger | Scope | Latency |
+|---|---|---|---|
+| **Event-driven PRISM** | Each PRISM status API call queues a bgPF unit (`ZCL_CD_FMON_PRISM_OP` → `ZCL_CD_FMON_PRISM_PROC` → `ZCL_CD_FMON_ENGINE=>RUN_EVENT`) | The one event's file: stage, event, the SLA / reject / PRISM-file checks, findings, alert router. Only files FMON already knows (inbound: also the PRISM origin); unknown outbound files, conflicts and unmapped events are left to the polling path. No run lock (variant `PRISM`), no reconcile, no lots / calendar | seconds |
+| **5-minute polling** | SM36 periodic job `ZCD_FMON_MONITOR_ALL` every 5 minutes (no Control-M) | Every source incl. PRISM events still unprocessed (safety net), lots, calendar, all checks, reconcile of earlier exceptions, alerts | ≤ 5 min (dashboard stale threshold 15 min) |
+
+Overlap is safe without a shared lock: the registry save is version-checked (A04 — a stale version is never written, PERSIST_CONFLICT; the unit retries once, then leaves the event to the polling run), the event insert is idempotent (unique index SRC) and the status model never regresses.
 
 ## A3. SLA board
 
@@ -103,6 +123,9 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 | LOT_UNPROCESSED | R | Returns/NOC transactions not yet accounted for | Work the open items (FP09 returns lot / NOC application); re-run the monitor |
 | NOC_AGING | R | NOC beyond 6 banking days — NACHA compliance | Apply the change today; inform compliance |
 | FILE_FAILED | R | Inbound file failed to load/process | Re-load after fixing; outcome may improve on re-run |
+| PRISM_FAILED | R | PRISM could not process or deliver the file (PRISM's error code in `ZCD_FMON_PRISM`) | Check the PRISM console with `prismReference`; PRISM retries — a later DELIVERED supersedes the failure (Runbook §4c) |
+| NO_PRISM_RECEIVED / PRISM_RECEIVED_LATE | R / A | SAP handed the file over, PRISM did not confirm receipt within the SLA | Check the PRISM inbound queue / transfer; is the PRISM status API reachable (Runbook §4c)? |
+| PRISM_UNKNOWN_FILE / PRISM_NOT_LOADED | A | PRISM reported a file SAP has no generation of / delivered a file SAP has not received (after GRACE_MIN) | Compare the reference with SAP's file name / key; inbound: check the load job and directory |
 | PLUGIN_ERROR / PERSIST_ERROR / ALERT_FAILED | R | The monitor itself could not check something | IT: fix the configuration named in the message; the rest of the run is valid |
 | FILE_LATE, *_LATE (e.g. PRISM_HANDOFF_LATE) | A | Arrived or moved later than the window/SLA | Note for SLA reporting; watch the next cycle |
 | SIZE_OUT_OF_BOUNDS | A | Size outside the usual range | Compare volume with the source system |
@@ -145,8 +168,9 @@ Application data (delivery class A):
 |---|---|---|
 | ZCD_FMON_FILE | FILE_ID (UUID) | Registry: interface, file reference, direction, type, source, LOB, payment method, name, business date, size, record count, control total, checksum, stage, outcome, unprocessed count, ack/NACK counts, ack amount, origin rows, first/last event, source. Identity of a file instance: IFACE_ID + FILE_REF + BUSINESS_DATE. Indexes REF (unique: IFACE_ID, FILE_REF, BUSINESS_DATE), BDT, OUT, NAM, CHK. Saved only while CHANGED_AT is unchanged since the read (version check) |
 | ZCD_FMON_EVENT | FILE_ID, EVENT_NO | Audit trail of every reported stage (also capped or ignored ones). Unique index SRC: FILE_ID, SRC_ID, SRC_KEY, STAGE → idempotent re-runs per file instance |
+| ZCD_FMON_PRISM | EVENT_ID | PRISM status API events (one row per call, PRISM's ID as key): reference, interface, direction, milestone, occurredAt (UTC), counterparty, PRISM reference, count, total, error code / masked text, business date, receipt, PROCESSED_AT. Indexes UNP (PROCESSED_AT, RECEIVED_AT), REF, BDT. Read by `ZCL_CD_FMON_ADAPTER_PRISM` (`PRISM_Status_API.md`) |
 
-Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS. Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
+Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT. Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
 
 ## B2. Class model
 
@@ -194,6 +218,10 @@ classDiagram
     ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_SIZE
     ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_LOT
     ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_NOC_AGING
+    ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_PRISM_FILE
+    ZIF_CD_FMON_ADAPTER <|.. ZCL_CD_FMON_ADAPTER_PRISM
+    class ZCL_CD_FMON_PRISM_PROC { +process(event_id) }
+    ZCL_CD_FMON_PRISM_PROC --> ZCL_CD_FMON_ENGINE : run_event()
     ZCL_CD_FMON_INJECTOR ..> ZCL_CD_FMON_FACTORY : friend
 ```
 
@@ -247,6 +275,10 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | 247 | &1 of &2 &3 item(s) open |
 | 248 | Factory calendar &1: banking-day age unknown, no aging verdict: |
 | 249 | Field &1 of table &2 is not approved for file monitoring (ZCD_FMON_TABWL) |
+| 250–264, 268 | PRISM status API: field and request errors returned to PRISM, bgPF queue failure (`PRISM_Status_API.md` §4) |
+| 265 | &1: PRISM could not process or deliver the file (direction &2) |
+| 266 | &1: reported by PRISM, but SAP has no generation record of it |
+| 267 | &1: delivered by PRISM &2 min ago, not yet received in SAP |
 
 Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class), 032 (class does not implement interface). 207, 210, 212–219, 221–299 are free. These rows still have to be added to `config/zcd_ops_messages.md` (shared file, not edited by FMON).
 
@@ -264,6 +296,14 @@ Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class
 | ZCL_CD_FMON_ADAPTER_GENERIC / ltc_read | LTD DDIC + DAO | unknown_field_stops_before_sql |
 | ZCL_CD_FMON_LOT_READER / ltc_lot_reader | LTD DDIC + DAO | one_open_item_is_counted, lot_items_read_by_lot_key, incomplete_config_is_refused, row_cap_marks_truncated, below_cap_is_complete |
 | ZCL_CD_FMON_ENGINE / ltc_engine | LTD DAO, adapter, lot reader, calendar, store, alert, clock, lock, failing check | partial_returns_stay_partial, open_item_gives_one_finding, partial_returns_are_alerted (acceptance test 8), source_cannot_close_open_lot, acked_file_ends_ack_received, duplicate_rows_one_event, failing_check_does_not_abort, failing_source_does_not_abort, test_mode_writes_nothing, unmapped_status_is_reported, noc_age_is_in_banking_days, alerts_sent_after_commit, persist_error_rolls_back, held_lock_skips_run, lock_released_after_run, evaluated_files_reconciled, check_failure_no_reconcile, save_conflict_is_reported, sql_error_ends_run_failed, same_name_next_day_new_file, late_ack_goes_to_its_day, undated_ref_ambiguous, payment_acks_deduplicated, ack_count_never_decreases, truncated_lot_not_completed, calendar_failure_no_aging, malformed_row_quarantined, source_full_event_is_capped |
+| ZCL_CD_FMON_STATUS / ltc_status (PRISM, 2026-11-06) | pure | prism_received_after_sent, prism_delivered_before_ack, prism_after_ack_is_ignored, inbound_prism_before_receipt, receipt_not_back_to_prism, prism_failed_is_outcome, prism_failed_superseded, prism_stage_fits_both, origin_rules_per_direction |
+| ZCL_CD_FMON_ENGINE / ltc_engine (PRISM) | LTD doubles | prism_events_become_stages, prism_only_file_surfaces |
+| ZCL_CD_FMON_PRISM_EVENT / ltc_event | pure | 20 methods: every milestone and direction, missing / invalid / future / non-UTC values, truncation, masking, counterparty format, malformed JSON, array, nested member, business date, idempotent payload, answer JSON |
+| ZCL_CD_FMON_PRISM_API / ltc_api | LTD PRISM DAO, queue, auth, store, clock | 202 (unit queued before commit), 200, 409, 500 (rollback), 400, 405, 403, 415, UTF-8 accepted, 413, queue failure still 202 |
+| ZCL_CD_FMON_PRISM_DAO / ltc_prism_dao | cl_osql_test_environment (ZCD_FMON_PRISM) | insert_new_event, same_payload_is_duplicate, other_payload_is_conflict, unprocessed_read_skips_done, mark_keeps_first_time |
+| ZCL_CD_FMON_PRISM_PROC / ltc_proc | real engine + LTD FMON DAO, PRISM DAO, store, alert, clock | unit_applies_prism_stage, late_event_opens_sla_finding, failed_event_opens_finding, unknown_file_is_deferred, conflict_left_to_batch_run, processed_event_not_reapplied, registry_only_without_instant |
+| ZCL_CD_FMON_ADAPTER_PRISM / ltc_adapter_prism | LTD PRISM DAO | rows_become_prism_stages, interface_id_wins, batch_reads_unprocessed, unknown_field_is_refused |
+| ZCL_CD_FMON_CHK_PRISM_FILE / ltc_prism_file, ZCL_CD_FMON_CHK_REJECT / ltc_reject | pure | grace period, outbound unknown / known, inbound not loaded / received; OUTCOME=PRISM_FAILED, default unchanged |
 | ZCL_CD_FMON_DAO / ltc_dao | cl_osql_test_environment (ZCD_FMON_FILE, ZCD_FMON_EVENT, ZCD_FMON_TABWL), LTD DDIC | same_event_is_stored_once, repeat_insert_reports_false, events_numbered_per_file, saved_file_found_by_ref, open_old_file_is_evaluated, history_found_by_checksum, later_open_file_not_evaluated, newer_registry_not_overwritten, unchanged_registry_is_saved, event_belongs_to_its_instance, older_instances_not_prefetched, unapproved_table_is_refused, read_without_auth_is_refused, approved_table_is_read |
 
 Deliberately not unit tested:
@@ -276,6 +316,8 @@ Deliberately not unit tested:
 | ZCL_CD_FMON_CHK_* (9 classes) | Thin loops over the context calling the pure rules | Rules in ltc_rules; wiring of all nine through the engine tests (all nine are configured in ltc_engine) |
 | ZCL_CD_FMON_FACTORY / INJECTOR | No logic beyond double slots | Every application test resolves its CUT through the factory |
 | ZCD_FMON_MONITOR | Presentation only (SALV) | QA1 case FMON-QA-12 |
+| ZCL_CD_FMON_PRISM_HTTP | ICF boundary only (copies method, content type, body; writes status and JSON) | Every decision in ltc_api; QA1 cases PRISM-01..11 |
+| ZCL_CD_FMON_PRISM_QUEUE / ZCL_CD_FMON_PRISM_OP | Thin bgPF wrappers (CL_BGMC_PROCESS_FACTORY, IF_BGMC_OP_SINGLE_TX_UNCONTR) | ltc_api (queue seam), ltc_proc (unit body); QA1 case PRISM-12 |
 
 Recommended QA1 functional test cases (Test & Validation document):
 

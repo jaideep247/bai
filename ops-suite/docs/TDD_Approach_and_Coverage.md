@@ -137,6 +137,8 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
 | ZCL_CD_EBS_SAP_DAO (retrievals, checks, FI lines, G/L balance) | Fields `VERIFY-DDIC` until SE11 confirms them | Rule tests with SAP-DAO double; OSQL tests for confirmed paths; QA1 |
 | ZCL_CD_FMON_DAO=>INSERT_EVENT — EVENT_NO collision retry | A collision needs two sessions inserting at once; one OSQL session always sees its own MAX | OSQL tests for idempotency and numbering; QA1: two parallel `ZCD_FMON_MONITOR` runs for the same date, then every source event recorded exactly once |
+| ZCL_CD_FMON_PRISM_HTTP (ICF handler of the PRISM status API) | Copies method, content type and body across the ICF boundary and writes the answer back; every decision is in `ZCL_CD_FMON_PRISM_API` | `ltc_api` (11 methods, every HTTP status); QA1 PRISM-01 … 15 |
+| ZCL_CD_FMON_PRISM_QUEUE, ZCL_CD_FMON_PRISM_OP (bgPF) | Thin wrappers over CL_BGMC_PROCESS_FACTORY / IF_BGMC_OP_SINGLE_TX_UNCONTR (VERIFY-ADT); a double would assert the framework | Queue seam in `ltc_api`, unit body in `ltc_proc` (real engine); QA1 PRISM-12 |
 | ZCL_CD_FMON_CALENDAR, ZCL_CD_FMON_DDIC, ZCL_CD_FMON_DAO=>READ_LEGACY | Factory calendar FMs, RTTI, unknown legacy structures | Pure rules + engine with doubles; QA1 FMON 01, 05, 07, 08, 10, 11 |
 | 9 FMON check classes, 11 HCK check classes | Thin loops over pure rule classes | Rule tests + engine tests with every check configured |
 | ZCL_CD_HCK_DAO technical reads (TBTCO, BALHDR, SNAP, VBHDR, ENQUEUE_READ) | Standard tables / FMs with unverified fields | Pure evaluators + QA1 |
