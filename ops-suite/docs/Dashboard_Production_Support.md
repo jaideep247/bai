@@ -11,7 +11,7 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 
 | Card | Card type | Entity (overview service) | Shows | Navigates to |
 |---|---|---|---|---|
-| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold (45 min / 26 h / 26 h), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
+| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold (15 min / 26 h / 26 h), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
 | **Open critical exceptions** | List | `CriticalException` (selection variant `Overdue` as tab) | Open / assigned B and E findings of every area, overdue first: area, check code, object, owner, due date, days overdue | Owned-exceptions app (`ZCDOpsException-manage`, `ZUI_CD_OPS_EXC_O4`) |
 | **Files** | KPI + analytical | `FileFlowKpi` (variant `Today`, chart `FilesByBucket`, data points `Rejected`, `Unprocessed`, `Breached`, `MonitorAge`) | Files per flow bucket today, rejected / unprocessed / breached | `ZCDFileFlow-analyze` (file monitoring ALP) |
 | Files – latest failures | List | `FileFailure` | Rejected, partial, SLA-breached files | `ZCDFileFlow-analyze` |
@@ -37,7 +37,7 @@ Alternative: an OVP over the four area services as separate data sources (`dataS
 
 | Entity | CDS | Rule |
 |---|---|---|
-| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 45 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions are live — no row |
+| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions are live — no row |
 | `CriticalException` | `ZR_CD_OpsCritExc` over `ZCD_OPS_FINDING` | Disposition O / A, severity B / E, all areas; GROUP1 never exposed; EBS bank-file statement messages hidden; `DaysOverdue` = today − due date |
 
 DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on both — the area of each row.
@@ -93,7 +93,7 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | ID | Case | Expected |
 |---|---|---|
 | OVP-01 | Open the overview with all monitors fresh | Freshness card: three green rows; each card shows today's numbers equal to its area dashboard |
-| OVP-02 | Stop the FMON job > 45 min | Freshness: FMON red; tile *Stale monitors* = 1; Files card still shows the last numbers with their as-of |
+| OVP-02 | Stop the FMON job > 15 min | Freshness: FMON red; tile *Stale monitors* = 1; Files card still shows the last numbers with their as-of |
 | OVP-03 | Open B finding in EBS, overdue E in FMON | Critical exceptions card lists both, overdue first; HCK warnings not listed |
 | OVP-04 | Tap each card | Opens the area dashboard (intent per §4) |
 | OVP-05 | User with HCK only | Health cards filled; other cards and rows empty (DCL) |

@@ -7,7 +7,7 @@
 
 Launchpad space **Production Support** → page *Overview* → *Production support overview* (read-only; `Dashboard_Production_Support.md`). Always in this order:
 
-1. **Monitor freshness card first.** One row per batch monitor: FMON (stale after 45 min), EBS (26 h), HCK (26 h). A **red** row means that area's cards show old numbers — do not report "nothing failed" for it. Check the Control-M / SM37 job of that monitor (`ZCD_FMON_MONITOR_ALL`, `ZCD_EBS_VALIDATE`, `ZCD_MORNING_REPORT`), escalate to the batch owner, then continue with the other areas. The transactions cards are live and never stale.
+1. **Monitor freshness card first.** One row per batch monitor: FMON (stale after 15 min), EBS (26 h), HCK (26 h). A **red** row means that area's cards show old numbers — do not report "nothing failed" for it. Check the job of that monitor in SM37 (native SAP jobs for FMON and the morning report; Control-M for EBS) (`ZCD_FMON_MONITOR_ALL`, `ZCD_EBS_VALIDATE`, `ZCD_MORNING_REPORT`), escalate to the batch owner, then continue with the other areas. The transactions cards are live and never stale.
 2. **Open critical exceptions card.** Open / assigned B and E exceptions of every area, overdue first. Tap → owned-exceptions app: assign an owner the same shift; overdue ones go to the team lead.
 3. **Health checks card.** Overall RAG of the last morning report and the red / amber checks → §1 below and the health check dashboard (category → check → metric history → findings).
 4. **Files card** (rejected, unprocessed, breached, latest failures) → §4b.

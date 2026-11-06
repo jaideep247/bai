@@ -142,7 +142,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | ID | Case | Expected |
 |---|---|---|
 | FMD-01 | Monitor run (test mode off), open the dashboard | As of = end of that run; age < 30 min; not stale |
-| FMD-02 | No monitor run for > 45 min | Header, rows and tile *Stale monitor* red — never shown as a quiet day |
+| FMD-02 | No monitor run for > 15 min | Header, rows and tile *Stale monitor* red — never shown as a quiet day |
 | FMD-03 | Single-interface run and test-mode run | As of unchanged |
 | FMD-04 | Outbound ACH file generated → sent → ACK | RECEIVED → SENT → ACKNOWLEDGED; successful only after the ACK |
 | FMD-05 | BlackLine file (no ACK) sent to PRISM | SENT, successful |
