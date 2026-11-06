@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S05 - statement date sanity</p>
 CLASS zcl_cd_ebs_r_s05_date DEFINITION
@@ -31,17 +32,17 @@ CLASS zcl_cd_ebs_r_s05_date IMPLEMENTATION.
     LOOP AT it_statements INTO DATA(ls_statement).
       IF ls_statement-stmt_date IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_DATE_MISSING'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_date_missing
                  iv_message = 'Statement has no date' ) INTO TABLE rt_findings.
       ELSEIF ls_statement-stmt_date > lv_today.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_DATE_FUTURE'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_date_future
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_date_future
                                                      iv_v1    = |{ ls_statement-stmt_date DATE = ISO }| ) )
           INTO TABLE rt_findings.
       ELSEIF lv_today - ls_statement-stmt_date > lv_window.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_DATE_STALE'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_date_stale
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_date_stale
                                                      iv_v1    = |{ ls_statement-stmt_date DATE = ISO }|
                                                      iv_v2    = lv_window ) )

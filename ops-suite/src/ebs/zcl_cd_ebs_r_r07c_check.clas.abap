@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check register scoped to house bank account; DPAYH proposal runs excluded (review 3.2).
 *& 2026-11-06 | Any forbidden register row fails; HOUSE_BANK_AMBIGUOUS reported (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07C - check in register, not cancelled</p>
 CLASS zcl_cd_ebs_r_r07c_check DEFINITION
@@ -43,7 +44,7 @@ CLASS zcl_cd_ebs_r_r07c_check IMPLEMENTATION.
       ENDIF.
       IF house_bank_ambiguous( it_checks = lt_checks is_line = ls_line it_statements = it_statements ) = abap_true.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'HOUSE_BANK_AMBIGUOUS'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-house_bank_ambiguous
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-house_bank_ambiguous
                                                      iv_v1    = lv_ztnum ) )
           INTO TABLE rt_findings.
@@ -52,7 +53,7 @@ CLASS zcl_cd_ebs_r_r07c_check IMPLEMENTATION.
       DATA(lt_line_checks) = checks_for_line( it_checks = lt_checks is_line = ls_line it_statements = it_statements ).
       IF lt_line_checks IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_NOT_FOUND'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-check_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_not_found
                                           iv_v1 = lv_ztnum ) ) INTO TABLE rt_findings.
@@ -62,7 +63,7 @@ CLASS zcl_cd_ebs_r_r07c_check IMPLEMENTATION.
       LOOP AT lt_line_checks INTO DATA(ls_check).
         IF in_list( iv_value = ls_check-crstatus it_list = lt_forbidden ) = abap_true.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = 'CHECK_STATUS'
+                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-check_status
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-check_status
                                                        iv_v1    = lv_ztnum
                                                        iv_v2    = ls_check-crstatus ) )

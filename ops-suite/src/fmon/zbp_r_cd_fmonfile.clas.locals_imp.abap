@@ -8,6 +8,7 @@
 *& reconciles the exceptions of the file (store reconcile, phase 1).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 CLASS lcl_buffer DEFINITION FINAL.
   PUBLIC SECTION.
@@ -66,7 +67,7 @@ CLASS lhc_fmonfile IMPLEMENTATION.
       IF ls_decision-allowed = abap_false.
         APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmonfile.
         APPEND VALUE #( %tky = ls_row-%tky
-                        %msg = new_message( id = 'ZCD_OPS' number = ls_decision-msgno
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error
                                             v1 = ls_decision-v1 v2 = ls_row-FileName v3 = ls_row-Stage ) )
           TO reported-fmonfile.

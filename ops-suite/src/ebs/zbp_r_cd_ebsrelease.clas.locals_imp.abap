@@ -7,6 +7,7 @@
 *& exception of the line and check code is resolved (additional save).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 CLASS lhc_release DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -97,7 +98,7 @@ CLASS lhc_release IMPLEMENTATION.
       IF ls_decision-allowed = abap_false.
         APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
         APPEND VALUE #( %tky = ls_release-%tky
-                        %msg = new_message( id = 'ZCD_OPS' number = ls_decision-msgno
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
           TO reported-release.
       ENDIF.
@@ -117,7 +118,7 @@ CLASS lhc_release IMPLEMENTATION.
       IF ls_decision-allowed = abap_false.
         APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
         APPEND VALUE #( %tky = ls_release-%tky
-                        %msg = new_message( id = 'ZCD_OPS' number = ls_decision-msgno
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
           TO reported-release.
         CONTINUE.
@@ -146,7 +147,7 @@ CLASS lhc_release IMPLEMENTATION.
       IF ls_release-Status <> zif_cd_ebs_release_types=>gc_status-requested.
         APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
         APPEND VALUE #( %tky = ls_release-%tky
-                        %msg = new_message( id = 'ZCD_OPS' number = zif_cd_ebs_release_types=>gc_msg-not_requested
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ebs_release_types=>gc_msg-not_requested
                                             severity = if_abap_behv_message=>severity-error v1 = ls_release-Status ) )
           TO reported-release.
         CONTINUE.
@@ -207,7 +208,7 @@ CLASS lsc_release IMPLEMENTATION.
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the release itself is saved; the exception stays open and is visible in the app
           APPEND VALUE #( %tky = ls_release-%tky
-                          %msg = new_message( id = 'ZCD_OPS' number = '000'
+                          %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
                                               v1 = lx_error->get_text( ) ) ) TO reported-release.
       ENDTRY.

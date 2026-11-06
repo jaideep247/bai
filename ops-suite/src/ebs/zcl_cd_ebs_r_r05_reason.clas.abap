@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R05 - valid return / NOC reason</p>
 CLASS zcl_cd_ebs_r_r05_reason DEFINITION
@@ -32,7 +33,7 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
       IF ls_line-return_reason IS INITIAL.
         IF to_upper( condense( CONV string( is_rule-param1 ) ) ) = `REQUIRED`.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_MISSING'
+                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_missing
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_missing
                                                        iv_v1    = ls_line-btc_code ) ) INTO TABLE rt_findings.
         ENDIF.
@@ -41,14 +42,14 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
       IF lt_reasons IS NOT INITIAL.
         IF NOT line_exists( lt_reasons[ reason = ls_line-return_reason ] ).
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_UNMAPPED'
+                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_unmapped
                                                        iv_v1    = ls_line-return_reason ) )
             INTO TABLE rt_findings.
         ENDIF.
       ELSEIF NOT matches( val = ls_line-return_reason pcre = gc_reason_pattern ).
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'REASON_INVALID'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_invalid
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_invalid
                                                      iv_v1    = ls_line-return_reason ) ) INTO TABLE rt_findings.
       ENDIF.

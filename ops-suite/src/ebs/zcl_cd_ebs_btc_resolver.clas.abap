@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -147,7 +148,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_line(
                  is_line       = <ls_line>
                  iv_rule_id    = gc_rule_unmapped
-                 iv_check_code = 'UNMAPPED_BTC'
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-unmapped_btc
                  iv_severity   = zif_cd_ops_types=>gc_severity-block
                  iv_action     = zif_cd_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unmapped_btc
@@ -171,7 +172,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_line(
                  is_line       = <ls_line>
                  iv_rule_id    = gc_rule_unmapped
-                 iv_check_code = 'MAP_ACTION_BLOCK'
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-map_action_block
                  iv_severity   = zif_cd_ops_types=>gc_severity-info
                  iv_action     = zif_cd_ops_types=>gc_action-block
                  iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-map_action_block

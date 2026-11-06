@@ -6,6 +6,7 @@
 *& delivery. Severity B is never held back by quiet hours.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
 CLASS zcl_cd_ops_alert_policy DEFINITION
@@ -15,6 +16,22 @@ CLASS zcl_cd_ops_alert_policy DEFINITION
 
   PUBLIC SECTION.
     CONSTANTS gc_default_max_items TYPE i VALUE 50.
+    "! Markup of the alert e-mail - not text; words are text symbols / ZCD_OPS messages
+    CONSTANTS:
+      BEGIN OF gc_html,
+        p_open       TYPE string VALUE `<p>`,
+        p_close      TYPE string VALUE `</p>`,
+        p_bold_open  TYPE string VALUE `<p><b>`,
+        p_bold_close TYPE string VALUE `</b></p>`,
+        table_open   TYPE string VALUE `<table border="1" cellpadding="4" style="border-collapse:collapse">`,
+        table_close  TYPE string VALUE `</table>`,
+        tr_open      TYPE string VALUE `<tr>`,
+        tr_close     TYPE string VALUE `</tr>`,
+        th_open      TYPE string VALUE `<th>`,
+        th_close     TYPE string VALUE `</th>`,
+        td_open      TYPE string VALUE `<td>`,
+        td_close     TYPE string VALUE `</td>`,
+      END OF gc_html.
 
     TYPES:
       BEGIN OF ty_selection,
@@ -246,14 +263,31 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     rs_message-item_count  = iv_total.
     rs_message-subject     = COND #(
       WHEN is_selection-run_level = abap_true
-      THEN |[{ is_run-pe_area }] run { is_run-variant } ended { is_run-status } / RAG { is_run-rag }|
+      THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_subject_run
+                                  iv_v1    = is_run-pe_area
+                                  iv_v2    = is_run-variant
+                                  iv_v3    = is_run-status
+                                  iv_v4    = is_run-rag )
       WHEN iv_total = 1 AND lines( it_findings ) = 1
       THEN |[{ is_run-pe_area }][{ lv_worst }] { it_findings[ 1 ]-rule_id } { it_findings[ 1 ]-message }|
-      ELSE |[{ is_run-pe_area }][{ lv_worst }] { iv_total } finding(s) - rule { is_selection-rule-rule_id }| ).
-    rs_message-html = |<p><b>{ zcl_cd_ops_util=>html_escape( rs_message-subject ) }</b></p>|
-                   && |<p>Run { is_run-variant } status { is_run-status }, RAG { is_run-rag }, |
-                   && |items { is_run-total_items }, failed { is_run-failed_items }, |
-                   && |blocked { is_run-blocked_items }.</p>|
+      ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_subject_count
+                                  iv_v1    = is_run-pe_area
+                                  iv_v2    = lv_worst
+                                  iv_v3    = iv_total
+                                  iv_v4    = is_selection-rule-rule_id ) ).
+    rs_message-html = gc_html-p_bold_open && zcl_cd_ops_util=>html_escape( rs_message-subject ) && gc_html-p_bold_close
+                   && gc_html-p_open
+                   && zcl_cd_ops_util=>html_escape(
+                        zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_run_line_1
+                                               iv_v1    = is_run-variant
+                                               iv_v2    = is_run-status
+                                               iv_v3    = is_run-rag
+                                               iv_v4    = is_run-total_items )
+                        && ` ` &&
+                        zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_run_line_2
+                                               iv_v1    = is_run-failed_items
+                                               iv_v2    = is_run-blocked_items ) )
+                   && gc_html-p_close
                    && findings_html( it_findings = it_findings iv_total = iv_total ).
     rs_message-text = rs_message-subject.
     LOOP AT it_findings INTO DATA(ls_finding).
@@ -267,22 +301,32 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     IF it_findings IS INITIAL.
       RETURN.
     ENDIF.
-    rv_html = |<table border="1" cellpadding="4" style="border-collapse:collapse">|
-           && |<tr><th>Severity</th><th>Rule</th><th>Check</th><th>Object</th>|
-           && |<th>Reference</th><th>Amount</th><th>Message</th></tr>|.
-    LOOP AT it_findings INTO DATA(ls_finding).
-      rv_html = rv_html
-             && |<tr><td>{ zcl_cd_ops_util=>html_escape( ls_finding-severity ) }</td>|
-             && |<td>{ zcl_cd_ops_util=>html_escape( ls_finding-rule_id ) }</td>|
-             && |<td>{ zcl_cd_ops_util=>html_escape( ls_finding-check_code ) }</td>|
-             && |<td>{ zcl_cd_ops_util=>html_escape( ls_finding-object_key ) }</td>|
-             && |<td>{ zcl_cd_ops_util=>html_escape( ls_finding-reference ) }</td>|
-             && |<td>{ ls_finding-amount } { zcl_cd_ops_util=>html_escape( ls_finding-currency ) }</td>|
-             && |<td>{ zcl_cd_ops_util=>html_escape( ls_finding-message ) }</td></tr>|.
+    rv_html = gc_html-table_open && gc_html-tr_open.
+    LOOP AT VALUE string_table( ( CONV #( TEXT-c01 ) ) ( CONV #( TEXT-c02 ) ) ( CONV #( TEXT-c03 ) )
+                                ( CONV #( TEXT-c04 ) ) ( CONV #( TEXT-c05 ) ) ( CONV #( TEXT-c06 ) )
+                                ( CONV #( TEXT-c07 ) ) ) INTO DATA(lv_title).
+      rv_html = rv_html && gc_html-th_open && zcl_cd_ops_util=>html_escape( lv_title ) && gc_html-th_close.
     ENDLOOP.
-    rv_html = rv_html && |</table>|.
+    rv_html = rv_html && gc_html-tr_close.
+    LOOP AT it_findings INTO DATA(ls_finding).
+      rv_html = rv_html && gc_html-tr_open
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-severity ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-rule_id ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-check_code ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-object_key ) && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-reference ) && gc_html-td_close
+             && gc_html-td_open && |{ ls_finding-amount } | && zcl_cd_ops_util=>html_escape( ls_finding-currency )
+             && gc_html-td_close
+             && gc_html-td_open && zcl_cd_ops_util=>html_escape( ls_finding-message ) && gc_html-td_close
+             && gc_html-tr_close.
+    ENDLOOP.
+    rv_html = rv_html && gc_html-table_close.
     IF iv_total > lines( it_findings ).
-      rv_html = rv_html && |<p>{ iv_total - lines( it_findings ) } more finding(s) in ZCD_OPS_FINDING.</p>|.
+      rv_html = rv_html && gc_html-p_open
+             && zcl_cd_ops_util=>html_escape( zcl_cd_ops_util=>text(
+                                                iv_msgno = zif_cd_ops_types=>gc_msg-alert_more_findings
+                                                iv_v1    = iv_total - lines( it_findings ) ) )
+             && gc_html-p_close.
     ENDIF.
   ENDMETHOD.
 

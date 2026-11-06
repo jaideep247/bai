@@ -23,6 +23,36 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>[&amp;1] run &amp;2 ended &amp;3 / RAG &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>[&amp;1][&amp;2] &amp;3 finding(s) - rule &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Run &amp;1 status &amp;2, RAG &amp;3, items &amp;4,</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>failed &amp;1, blocked &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>&amp;1 more finding(s) in ZCD_OPS_FINDING.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>010</MSGNR>
      <TEXT>Insert into table &amp;1 failed</TEXT>
     </T100>
@@ -515,6 +545,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>158</MSGNR>
+     <TEXT>Account &amp;1 trailer 49</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>159</MSGNR>
      <TEXT>Opening &amp;1 &lt;&gt; prior closing &amp;2</TEXT>
     </T100>
@@ -637,6 +673,126 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>179</MSGNR>
      <TEXT>Released by &amp;1 (requested by &amp;2):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>180</MSGNR>
+     <TEXT>&amp;1 control total</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>181</MSGNR>
+     <TEXT>&amp;1 number of records</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>182</MSGNR>
+     <TEXT>Group &amp;1 trailer 98</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>183</MSGNR>
+     <TEXT>&amp;1 number of accounts</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>184</MSGNR>
+     <TEXT>File trailer 99 control total</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>185</MSGNR>
+     <TEXT>File trailer 99 number of groups</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>186</MSGNR>
+     <TEXT>File trailer 99 number of records</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>187</MSGNR>
+     <TEXT>Account &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>188</MSGNR>
+     <TEXT>&amp;1 total credits (100)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>189</MSGNR>
+     <TEXT>&amp;1 total debits (400)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>190</MSGNR>
+     <TEXT>&amp;1 credit item count (100)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>191</MSGNR>
+     <TEXT>&amp;1 debit item count (400)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>192</MSGNR>
+     <TEXT>Statement &amp;1 TxsSummry</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>193</MSGNR>
+     <TEXT>&amp;1 TtlNtries/NbOfNtries</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>194</MSGNR>
+     <TEXT>&amp;1 TtlNtries/Sum</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>195</MSGNR>
+     <TEXT>&amp;1 TtlNtries/TtlNetNtry (signed)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>196</MSGNR>
+     <TEXT>&amp;1 TtlCdtNtries</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>197</MSGNR>
+     <TEXT>&amp;1 TtlDbtNtries</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>198</MSGNR>
+     <TEXT>&amp;1/NbOfNtries</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>199</MSGNR>
+     <TEXT>&amp;1/Sum</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1231,6 +1387,42 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>417</MSGNR>
      <TEXT>&amp;1 must be greater than zero</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>500</MSGNR>
+     <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>501</MSGNR>
+     <TEXT>Account record 03 in line &amp;1 outside a group; expected 02 before 03</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>502</MSGNR>
+     <TEXT>Detail record 16 in line &amp;1 outside an account; expected 03 before 16</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>503</MSGNR>
+     <TEXT>Account trailer 49 in line &amp;1 without an open account; expected 03 first</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>504</MSGNR>
+     <TEXT>Group trailer 98 in line &amp;1 without an open group; expected 02 first</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>505</MSGNR>
+     <TEXT>Record &amp;1 in line &amp;2 found after file trailer 99; expected end of file</TEXT>
     </T100>
    </T100>
   </asx:values>

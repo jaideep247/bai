@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S03 - statement number continuity</p>
 CLASS zcl_cd_ebs_r_s03_sequence DEFINITION
@@ -45,7 +46,7 @@ CLASS zcl_cd_ebs_r_s03_sequence IMPLEMENTATION.
       DATA(lv_actual) = CONV i( lv_number ).
       IF lv_actual > lv_expected.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_NO_GAP'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_no_gap
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_no_gap
                                                      iv_v1    = lv_actual
                                                      iv_v2    = lv_prior
@@ -53,7 +54,7 @@ CLASS zcl_cd_ebs_r_s03_sequence IMPLEMENTATION.
           INTO TABLE rt_findings.
       ELSEIF lv_actual < lv_expected.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'STMT_NO_REPEAT'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_no_repeat
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_no_repeat
                                                      iv_v1    = lv_actual
                                                      iv_v2    = lv_prior ) )

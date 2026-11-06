@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S02 - opening + credits - debits = closing</p>
 CLASS zcl_cd_ebs_r_s02_balance DEFINITION
@@ -40,7 +41,7 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
       lv_difference = ls_statement-opening_bal + lv_credits - lv_debits - ls_statement-closing_bal.
       IF abs( lv_difference ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'BALANCE_ARITHMETIC'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-balance_arithmetic
                  iv_amount = lv_difference
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-balance_arithmetic
                                                      iv_v1    = ls_statement-opening_bal
@@ -54,7 +55,7 @@ CLASS zcl_cd_ebs_r_s02_balance IMPLEMENTATION.
                           - ls_statement-total_debits - ls_statement-closing_bal.
         IF abs( lv_declared ) > tolerance( is_rule ).
           INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                   is_rule = is_rule is_statement = ls_statement iv_check_code = 'DECLARED_TOTALS'
+                   is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-declared_totals
                    iv_amount = lv_declared
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-declared_totals
                                                        iv_v1    = lv_declared ) ) INTO TABLE rt_findings.

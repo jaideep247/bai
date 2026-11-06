@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Missing G/L account reported as GL_ACCOUNT_NOT_MAPPED instead of skipped (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check R18 - bank G/L balance = closing</p>
 CLASS zcl_cd_ebs_r_r18_gl_balance DEFINITION
@@ -34,7 +35,7 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
         " No silent pass: a statement that cannot be reconciled is reported
         " (an account missing from ZCD_EBS_ACCT altogether is S04's finding)
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'GL_ACCOUNT_NOT_MAPPED'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-gl_account_not_mapped
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-gl_account_not_mapped
                                                      iv_v1    = ls_statement-account_no ) )
           INTO TABLE rt_findings.
@@ -46,7 +47,7 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
                                                      iv_date       = ls_statement-stmt_date ).
       IF abs( lv_balance - ls_statement-closing_bal ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'GL_NE_CLOSING'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-gl_ne_closing
                  iv_amount = lv_balance - ls_statement-closing_bal
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-gl_ne_closing
                                                      iv_v1    = lv_gl_account

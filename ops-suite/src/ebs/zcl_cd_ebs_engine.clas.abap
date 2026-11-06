@@ -16,6 +16,7 @@
 *& 2026-11-06 | Exception carry-forward: each package's lines and statements reconciled.
 *& 2026-11-06 | Posting gate honours approved blocked-line releases (design 6.2).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -299,7 +300,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         DATA(ls_breaker) = VALUE zif_cd_ops_types=>ty_finding(
           object_type = zcl_cd_ebs_finding=>gc_object_type-run
           rule_id     = 'CB'
-          check_code  = 'CIRCUIT_BREAKER'
+          check_code  = zif_cd_ebs_types=>gc_check_code-circuit_breaker
           severity    = zif_cd_ops_types=>gc_severity-error
           action      = zif_cd_ops_types=>gc_action-notify
           message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-circuit_breaker

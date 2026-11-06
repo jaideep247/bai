@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).
@@ -713,7 +714,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
   METHOD open_statement.
     mv_stmt_index += 1.
     CLEAR ms_stmt.
-    ms_stmt-stmt = VALUE #( stmt_key       = |S{ mv_stmt_index WIDTH = 4 ALIGN = RIGHT PAD = '0' }|
+    ms_stmt-stmt = VALUE #( stmt_key       = zif_cd_ebs_types=>gc_file_stmt_prefix
+                                             && |{ mv_stmt_index WIDTH = 4 ALIGN = RIGHT PAD = '0' }|
                             format         = ms_file-format
                             source         = zif_cd_ebs_types=>gc_source-file
                             declared_count = gc_not_declared ).
@@ -835,7 +837,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     DATA lv_found TYPE ty_amount.
     DATA lv_expected TYPE ty_amount.
     DATA(ls_declared) = ms_stmt-declared.
-    DATA(lv_label) = |Statement { ms_stmt-stmt-stmt_id } TxsSummry|.
+    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-statement_txssummry
+                                            iv_v1    = ms_stmt-stmt-stmt_id ).
     ms_stmt-stmt-has_totals    = xsdbool( ls_declared-credit-present = abap_true OR ls_declared-debit-present = abap_true ).
     ms_stmt-stmt-total_credits = ls_declared-credit-sum.
     ms_stmt-stmt-credit_count  = ls_declared-credit-count.
@@ -844,7 +847,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF ls_declared-total-has_count = abap_true.
       ms_stmt-stmt-declared_count = ls_declared-total-count.
       check_count( is_check    = stmt_check( iv_check_code = gc_check-entry_count
-                                             iv_label      = |{ lv_label } TtlNtries/NbOfNtries| )
+                                             iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ttlntries_nbofntries
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ls_declared-total-count
                    iv_found    = ms_stmt-entries ).
     ELSEIF ls_declared-credit-has_count = abap_true AND ls_declared-debit-has_count = abap_true.
@@ -854,7 +858,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       " TtlNtries/Sum is the sum of the absolute entry amounts
       lv_found = ms_stmt-credit-sum + ms_stmt-debit-sum.
       check_total( is_check    = stmt_check( iv_check_code = gc_check-sum_mismatch
-                                             iv_label      = |{ lv_label } TtlNtries/Sum| )
+                                             iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ttlntries_sum
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ls_declared-total-sum
                    iv_found    = lv_found ).
     ENDIF.
@@ -863,7 +868,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       lv_expected = COND #( WHEN ls_declared-net_is_debit = abap_true THEN - ls_declared-net_amount
                             ELSE ls_declared-net_amount ).
       check_total( is_check    = stmt_check( iv_check_code = gc_check-net_mismatch
-                                             iv_label      = |{ lv_label } TtlNtries/TtlNetNtry (signed)| )
+                                             iv_label      =
+                                               zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ttlntries_ttlnetntry_signed
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = lv_expected
                    iv_found    = lv_found ).
     ENDIF.
@@ -871,23 +878,27 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
                    is_parsed     = ms_stmt-credit
                    iv_count_code = gc_check-cdt_entry_count
                    iv_sum_code   = gc_check-cdt_sum
-                   iv_label      = |{ lv_label } TtlCdtNtries| ).
+                   iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ttlcdtntries iv_v1 = lv_label ) ).
     validate_side( is_declared   = ls_declared-debit
                    is_parsed     = ms_stmt-debit
                    iv_count_code = gc_check-dbt_entry_count
                    iv_sum_code   = gc_check-dbt_sum
-                   iv_label      = |{ lv_label } TtlDbtNtries| ).
+                   iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-ttldbtntries iv_v1 = lv_label ) ).
   ENDMETHOD.
 
 
   METHOD validate_side.
     IF is_declared-has_count = abap_true.
-      check_count( is_check    = stmt_check( iv_check_code = iv_count_code iv_label = |{ iv_label }/NbOfNtries| )
+      check_count( is_check    = stmt_check( iv_check_code = iv_count_code iv_label =
+        zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-nbofntries
+                                                                                                             iv_v1    = iv_label ) )
                    iv_expected = is_declared-count
                    iv_found    = is_parsed-count ).
     ENDIF.
     IF is_declared-has_sum = abap_true.
-      check_total( is_check    = stmt_check( iv_check_code = iv_sum_code iv_label = |{ iv_label }/Sum| )
+      check_total( is_check    = stmt_check( iv_check_code = iv_sum_code iv_label =
+        zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-sum
+                                                                                                           iv_v1    = iv_label ) )
                    iv_expected = is_declared-sum
                    iv_found    = is_parsed-sum ).
     ENDIF.

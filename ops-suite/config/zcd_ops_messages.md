@@ -7,6 +7,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 |---|---|
 | 000 | &1 &2 &3 &4 |
 | 001 | Run ID could not be generated |
+| 002 | [&1] run &2 ended &3 / RAG &4 |
+| 003 | [&1][&2] &3 finding(s) - rule &4 |
+| 004 | Run &1 status &2, RAG &3, items &4, |
+| 005 | failed &1, blocked &2. |
+| 006 | &1 more finding(s) in ZCD_OPS_FINDING. |
 | 010 | Insert into table &1 failed |
 | 011 | Update of table &1 failed |
 | 012 | Read of table &1 failed |
@@ -89,6 +94,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 155 | Entry &1 &2 has no FI document |
 | 156 | FI document &1 &2 &3 not found |
 | 157 | FI document &1 &2 is not cleared |
+| 158 | Account &1 trailer 49 |
 | 159 | Opening &1 <> prior closing &2 |
 | 160 | Release is not waiting for approval (status &1) |
 | 161 | Line (object key) and check code are required for a release |
@@ -110,6 +116,26 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 177 | Unknown record &1 in line &2 ignored (valid: 01 02 03 16 49 88 98 99) |
 | 178 | Group &1 (originator &2): no group trailer 98 before line &3 |
 | 179 | Released by &1 (requested by &2): |
+| 180 | &1 control total |
+| 181 | &1 number of records |
+| 182 | Group &1 trailer 98 |
+| 183 | &1 number of accounts |
+| 184 | File trailer 99 control total |
+| 185 | File trailer 99 number of groups |
+| 186 | File trailer 99 number of records |
+| 187 | Account &1 |
+| 188 | &1 total credits (100) |
+| 189 | &1 total debits (400) |
+| 190 | &1 credit item count (100) |
+| 191 | &1 debit item count (400) |
+| 192 | Statement &1 TxsSummry |
+| 193 | &1 TtlNtries/NbOfNtries |
+| 194 | &1 TtlNtries/Sum |
+| 195 | &1 TtlNtries/TtlNetNtry (signed) |
+| 196 | &1 TtlCdtNtries |
+| 197 | &1 TtlDbtNtries |
+| 198 | &1/NbOfNtries |
+| 199 | &1/Sum |
 | 200 | Table &1 not found in the DDIC or not a flat DDIC structure |
 | 201 | Field &1 does not exist in table &2 |
 | 202 | &1 is not a valid DDIC name |
@@ -209,3 +235,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 415 | Amber &1 and red &2 are in the wrong order for &3 |
 | 416 | Rule group &1 has no active rule in ZCD_BTC_RULE |
 | 417 | &1 must be greater than zero |
+| 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
+| 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
+| 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
+| 503 | Account trailer 49 in line &1 without an open account; expected 03 first |
+| 504 | Group trailer 98 in line &1 without an open group; expected 02 first |
+| 505 | Record &1 in line &2 found after file trailer 99; expected end of file |

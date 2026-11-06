@@ -38,7 +38,7 @@ SYNTAX = [
     re.compile(r"\bDISPLAY\s+LIKE\s*$", re.I),
     re.compile(r"\bFORMAT\s*$", re.I),
 ]
-SEPARATOR = re.compile(r"^[\s,;:/\-–()\[\]\.=<>|#%+*&]*$")
+SEPARATOR = re.compile(r"^[\s,;:/\-–()\[\]\.=<>|#%+*&\x01]*$")
 WORDS = re.compile(r"[A-Za-z]{2,}[a-z][A-Za-z]*\s+\S|[a-z]{3,}")
 
 
@@ -84,7 +84,8 @@ def statements(text):
                 while j < n:
                     d = raw[j]
                     if depth == 0 and d == '\\' and j + 1 < n:
-                        buf += raw[j + 1]
+                        # \n \r \t are control characters, not letters
+                        buf += '\x01' if raw[j + 1] in 'nrt' else raw[j + 1]
                         j += 2
                         continue
                     if d == '{':

@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R19 - FI posting exists / cleared</p>
 CLASS zcl_cd_ebs_r_r19_fi_document DEFINITION
@@ -44,7 +45,7 @@ CLASS zcl_cd_ebs_r_r19_fi_document IMPLEMENTATION.
       IF ls_line-belnr IS INITIAL.
         IF to_upper( condense( CONV string( is_rule-param3 ) ) ) <> `OPTIONAL`.
           INSERT zcl_cd_ebs_finding=>for_rule_line(
-                   is_rule = is_rule is_line = ls_line iv_check_code = 'NOT_POSTED'
+                   is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-not_posted
                    iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-not_posted
                                                        iv_v1    = ls_line-btc_code
                                                        iv_v2    = ls_line-reference ) )
@@ -63,7 +64,7 @@ CLASS zcl_cd_ebs_r_r19_fi_document IMPLEMENTATION.
       ENDLOOP.
       IF lv_found = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'FI_DOC_NOT_FOUND'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-fi_doc_not_found
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-fi_doc_not_found
                                                      iv_v1    = lv_bukrs
                                                      iv_v2    = ls_line-belnr
@@ -71,7 +72,7 @@ CLASS zcl_cd_ebs_r_r19_fi_document IMPLEMENTATION.
           INTO TABLE rt_findings.
       ELSEIF lv_need_cleared = abap_true AND lv_cleared = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'FI_DOC_NOT_CLEARED'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-fi_doc_not_cleared
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-fi_doc_not_cleared
                                                      iv_v1    = ls_line-belnr
                                                      iv_v2    = ls_line-gjahr ) ) INTO TABLE rt_findings.

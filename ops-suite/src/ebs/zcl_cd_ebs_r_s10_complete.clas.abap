@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S10 - every entry accounted for</p>
 CLASS zcl_cd_ebs_r_s10_complete DEFINITION
@@ -35,7 +36,7 @@ CLASS zcl_cd_ebs_r_s10_complete IMPLEMENTATION.
       ENDLOOP.
       IF lv_open > 0.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'ENTRIES_NOT_ACCOUNTED'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-entries_not_accounted
                  iv_amount = lv_amount
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-entries_not_accounted
                                                      iv_v1    = lv_open

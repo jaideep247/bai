@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Any productive run with an allowed status passes; message lists every status (audit 2026-11-06).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION
@@ -49,13 +50,13 @@ CLASS zcl_cd_ebs_r_r07_payment IMPLEMENTATION.
       ENDLOOP.
       IF lv_found = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'PAYMENT_NOT_FOUND'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-payment_not_found
                                           iv_v1 = lv_key ) ) INTO TABLE rt_findings.
       ELSEIF lv_ok = abap_false.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'PAYMENT_STATUS'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-payment_status
                                                      iv_v1    = lv_key
                                                      iv_v2    = lv_statuses

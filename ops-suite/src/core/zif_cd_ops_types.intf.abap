@@ -10,6 +10,7 @@
 *& 2026-11-06 | Object-key and group sets (reconciliation scope).
 *& 2026-11-06 | Message class constant and message number / variable types (texts as messages).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -36,6 +37,8 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
   "! Message type used when a text is only built, never shown
   CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
+  "! Message 000 (&1 &2 &3 &4): carries a text that is already a message
+  CONSTANTS gc_msgno_free TYPE ty_msgno VALUE '000'.
   TYPES ty_action      TYPE c LENGTH 10.
   TYPES ty_param_name  TYPE c LENGTH 30.
   TYPES ty_param_value TYPE c LENGTH 255.
@@ -246,5 +249,15 @@ INTERFACE zif_cd_ops_types
       error       TYPE ty_message,
     END OF ty_alert_log.
   TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
+
+  "! Message numbers (class ZCD_OPS) of this area's user-facing texts
+  CONSTANTS:
+    BEGIN OF gc_msg,
+      alert_subject_run           TYPE zif_cd_ops_types=>ty_msgno VALUE '002',
+      alert_subject_count         TYPE zif_cd_ops_types=>ty_msgno VALUE '003',
+      alert_run_line_1            TYPE zif_cd_ops_types=>ty_msgno VALUE '004',
+      alert_run_line_2            TYPE zif_cd_ops_types=>ty_msgno VALUE '005',
+      alert_more_findings         TYPE zif_cd_ops_types=>ty_msgno VALUE '006',
+    END OF gc_msg.
 
 ENDINTERFACE.

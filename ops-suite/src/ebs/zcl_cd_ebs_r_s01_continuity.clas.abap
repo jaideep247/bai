@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Nearest predecessor by date and number; stored statement wins when nearer (audit A15).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S01 - opening = prior closing</p>
 CLASS zcl_cd_ebs_r_s01_continuity DEFINITION
@@ -64,7 +65,7 @@ CLASS zcl_cd_ebs_r_s01_continuity IMPLEMENTATION.
       ENDIF.
       IF lv_found = abap_true AND abs( ls_statement-opening_bal - lv_prior ) > tolerance( is_rule ).
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
-                 is_rule = is_rule is_statement = ls_statement iv_check_code = 'OPENING_NE_PRIOR_CLOSING'
+                 is_rule = is_rule is_statement = ls_statement iv_check_code = zif_cd_ebs_types=>gc_check_code-opening_ne_prior_closing
                  iv_amount = ls_statement-opening_bal - lv_prior
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-opening_ne_prior_closing
                                                      iv_v1    = ls_statement-opening_bal

@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R15 - posting rule resolves</p>
 CLASS zcl_cd_ebs_r_r15_posting_rule DEFINITION
@@ -27,12 +28,12 @@ CLASS zcl_cd_ebs_r_r15_posting_rule IMPLEMENTATION.
     LOOP AT it_lines INTO DATA(ls_line).
       IF ls_line-map_posting IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'POSTING_RULE_MISSING'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_missing
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_rule_missing
                                                      iv_v1    = ls_line-btc_code ) ) INTO TABLE rt_findings.
       ELSEIF ls_line-posting_rule IS NOT INITIAL AND ls_line-posting_rule <> ls_line-map_posting.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'POSTING_RULE_MISMATCH'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_mismatch
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_rule_mismatch
                                                      iv_v1    = ls_line-posting_rule
                                                      iv_v2    = ls_line-map_posting ) )

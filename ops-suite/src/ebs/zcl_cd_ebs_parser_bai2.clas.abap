@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -679,8 +680,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     mv_line_no = is_record-line_no.
     mv_file_records += is_record-phys_count.
     IF mv_file_closed = abap_true.
-      add_order_finding( |Record { excerpt( is_record-raw ) } in line { is_record-line_no } | &&
-                         |found after the file trailer 99; expected end of file| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-record_after_trailer
+                                                iv_v1    = excerpt( is_record-raw )
+                                                iv_v2    = is_record-line_no ) ).
       RETURN.
     ENDIF.
     DATA(lt_fields) = split_fields( is_record-raw ).
@@ -707,7 +709,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
   METHOD on_file_header.
     IF mv_header_seen = abap_true.
-      add_order_finding( |Second file header 01 in line { is_record-line_no } ignored; expected one 01 per file| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-second_file_header iv_v1 = is_record-line_no ) ).
       RETURN.
     ENDIF.
     mv_header_seen = abap_true.
@@ -736,7 +738,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD on_account.
     close_account( abap_false ).
     IF ms_group-is_open = abap_false.
-      add_order_finding( |Account record 03 in line { is_record-line_no } outside a group; expected 02 before 03| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_outside_group iv_v1 = is_record-line_no ) ).
     ENDIF.
     open_account( it_fields ).
     ms_group-account_count += 1.
@@ -751,7 +753,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     DATA(lv_currency) = field( it_fields = it_fields iv_index = gc_pos-acct_currency ).
     ms_account = VALUE #( is_open = abap_true ).
     ms_account-stmt = VALUE #(
-      stmt_key       = |S{ mv_stmt_index WIDTH = 4 ALIGN = RIGHT PAD = '0' }|
+      stmt_key       = zif_cd_ebs_types=>gc_file_stmt_prefix && |{ mv_stmt_index WIDTH = 4 ALIGN = RIGHT PAD = '0' }|
       format         = zif_cd_ebs_types=>gc_format-bai2
       source         = zif_cd_ebs_types=>gc_source-file
       bank_id        = ms_group-originator
@@ -849,7 +851,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD on_detail.
     count_record( is_record-phys_count ).
     IF ms_account-is_open = abap_false.
-      add_order_finding( |Detail record 16 in line { is_record-line_no } outside an account; expected 03 before 16| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-detail_outside_account iv_v1 = is_record-line_no ) ).
       RETURN.
     ENDIF.
     DATA(lv_code) = field( it_fields = it_fields iv_index = gc_pos-dtl_type_code ).
@@ -969,18 +971,21 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD on_account_trailer.
     count_record( is_record-phys_count ).
     IF ms_account-is_open = abap_false.
-      add_order_finding( |Account trailer 49 in line { is_record-line_no } without an open account; expected 03 before 49| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-acct_trailer_no_account iv_v1 = is_record-line_no ) ).
       RETURN.
     ENDIF.
-    DATA(lv_label) = |Account { ms_account-stmt-account_no } trailer 49|.
+    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_trailer_49
+                                            iv_v1    = ms_account-stmt-account_no ).
     DATA(lv_total) = declared_amount( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_total )
                                       iv_default = ms_account-computed_total ).
     check_total( is_check    = stmt_check( iv_check_code = gc_check-acct_ctrl_total
-                                           iv_label      = |{ lv_label } control total| )
+                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
+                                                                                  iv_v1    = lv_label ) )
                  iv_expected = lv_total
                  iv_found    = ms_account-computed_total ).
     check_count( is_check    = stmt_check( iv_check_code = gc_check-record_count
-                                           iv_label      = |{ lv_label } number of records| )
+                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
+                                                                                  iv_v1    = lv_label ) )
                  iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
                                                iv_default = ms_account-record_count )
                  iv_found    = ms_account-record_count ).
@@ -991,24 +996,27 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   METHOD on_group_trailer.
     close_account( abap_false ).
     IF ms_group-is_open = abap_false.
-      add_order_finding( |Group trailer 98 in line { is_record-line_no } without an open group; expected 02 before 98| ).
+      add_order_finding( zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_no_group iv_v1 = is_record-line_no ) ).
       RETURN.
     ENDIF.
     count_record( is_record-phys_count ).
-    DATA(lv_label) = |Group { ms_group-group_no } trailer 98|.
+    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_98 iv_v1 = ms_group-group_no ).
     DATA(lv_total) = declared_amount( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_total )
                                       iv_default = ms_group-child_total ).
     check_total( is_check    = file_check( iv_check_code = gc_check-group_ctrl_total
-                                           iv_label      = |{ lv_label } control total| )
+                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
+                                                                                  iv_v1    = lv_label ) )
                  iv_expected = lv_total
                  iv_found    = ms_group-child_total ).
     check_count( is_check    = file_check( iv_check_code = gc_check-account_count
-                                           iv_label      = |{ lv_label } number of accounts| )
+                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_accounts
+                                                                                  iv_v1    = lv_label ) )
                  iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
                                                iv_default = ms_group-account_count )
                  iv_found    = ms_group-account_count ).
     check_count( is_check    = file_check( iv_check_code = gc_check-record_count
-                                           iv_label      = |{ lv_label } number of records| )
+                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
+                                                                                  iv_v1    = lv_label ) )
                  iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
                                                iv_default = ms_group-record_count )
                  iv_found    = ms_group-record_count ).
@@ -1025,16 +1033,22 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       ms_file-control_total = lv_total.
     ENDIF.
     check_total( is_check    = file_check( iv_check_code = gc_check-file_ctrl_total
-                                           iv_label      = |File trailer 99 control total| )
+                                           iv_label      =
+                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_control_tot
+                                                                    ) )
                  iv_expected = lv_total
                  iv_found    = mv_file_total ).
     check_count( is_check    = file_check( iv_check_code = gc_check-group_count
-                                           iv_label      = |File trailer 99 number of groups| )
+                                           iv_label      =
+                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of
+                                                                    ) )
                  iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
                                                iv_default = mv_group_count )
                  iv_found    = mv_group_count ).
     check_count( is_check    = file_check( iv_check_code = gc_check-record_count
-                                           iv_label      = |File trailer 99 number of records| )
+                                           iv_label      =
+                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of_2
+                                                                    ) )
                  iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
                                                iv_default = mv_file_records )
                  iv_found    = mv_file_records ).
@@ -1092,28 +1106,33 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
 
   METHOD check_statement_totals.
-    DATA(lv_label) = |Account { ms_account-stmt-account_no }|.
+    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account iv_v1 = ms_account-stmt-account_no ).
     IF ms_account-has_credit_tot = abap_true.
       check_total( is_check    = stmt_check( iv_check_code = gc_check-credit_sum
-                                             iv_label      = |{ lv_label } total credits (100)| )
+                                             iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-total_credits_100
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ms_account-stmt-total_credits
                    iv_found    = ms_account-credit_sum ).
     ENDIF.
     IF ms_account-has_debit_tot = abap_true.
       check_total( is_check    = stmt_check( iv_check_code = gc_check-debit_sum
-                                             iv_label      = |{ lv_label } total debits (400)| )
+                                             iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-total_debits_400
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ms_account-stmt-total_debits
                    iv_found    = ms_account-debit_sum ).
     ENDIF.
     IF ms_account-has_credit_cnt = abap_true.
       check_count( is_check    = stmt_check( iv_check_code = gc_check-item_count
-                                             iv_label      = |{ lv_label } credit item count (100)| )
+                                             iv_label      =
+                                               zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-credit_item_count_100
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ms_account-stmt-credit_count
                    iv_found    = ms_account-credit_lines ).
     ENDIF.
     IF ms_account-has_debit_cnt = abap_true.
       check_count( is_check    = stmt_check( iv_check_code = gc_check-item_count
-                                             iv_label      = |{ lv_label } debit item count (400)| )
+                                             iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-debit_item_count_400
+                                                                                    iv_v1    = lv_label ) )
                    iv_expected = ms_account-stmt-debit_count
                    iv_found    = ms_account-debit_lines ).
     ENDIF.

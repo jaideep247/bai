@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R02 - amount bounds</p>
 CLASS zcl_cd_ebs_r_r02_bounds DEFINITION
@@ -30,13 +31,13 @@ CLASS zcl_cd_ebs_r_r02_bounds IMPLEMENTATION.
     LOOP AT it_lines INTO DATA(ls_line).
       IF is_rule-param1 IS NOT INITIAL AND ls_line-amount < lv_min.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'AMOUNT_BELOW_MIN'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-amount_below_min
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-amount_below_min
                                                      iv_v1    = ls_line-amount
                                                      iv_v2    = lv_min ) ) INTO TABLE rt_findings.
       ELSEIF is_rule-param2 IS NOT INITIAL AND ls_line-amount > lv_max.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = 'AMOUNT_ABOVE_MAX'
+                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-amount_above_max
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-amount_above_max
                                                      iv_v1    = ls_line-amount
                                                      iv_v2    = lv_max ) ) INTO TABLE rt_findings.

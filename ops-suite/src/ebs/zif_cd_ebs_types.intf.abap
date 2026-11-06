@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -297,6 +298,62 @@ INTERFACE zif_cd_ebs_types
     END OF ty_reason_map.
   TYPES tt_reason_map TYPE SORTED TABLE OF ty_reason_map WITH UNIQUE KEY reason.
 
+  "! Statement keys of a parsed file (not yet imported): S0001, S0002, ...
+  CONSTANTS gc_file_stmt_prefix TYPE c LENGTH 1 VALUE 'S'.
+
+  "! Check codes of the EBS rules (finding CHECK_CODE)
+  CONSTANTS:
+    BEGIN OF gc_check_code,
+      account_currency               TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_CURRENCY',
+      account_not_configured         TYPE zif_cd_ops_types=>ty_check_code VALUE 'ACCOUNT_NOT_CONFIGURED',
+      amount_above_max               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_ABOVE_MAX',
+      amount_below_min               TYPE zif_cd_ops_types=>ty_check_code VALUE 'AMOUNT_BELOW_MIN',
+      balance_arithmetic             TYPE zif_cd_ops_types=>ty_check_code VALUE 'BALANCE_ARITHMETIC',
+      btc_coverage                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BTC_COVERAGE',
+      check_amount_mismatch          TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_AMOUNT_MISMATCH',
+      check_not_found                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_NOT_FOUND',
+      check_status                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_STATUS',
+      circuit_breaker                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CIRCUIT_BREAKER',
+      code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
+      code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
+      currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
+      declared_totals                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DECLARED_TOTALS',
+      duplicate_entry                TYPE zif_cd_ops_types=>ty_check_code VALUE 'DUPLICATE_ENTRY',
+      entries_not_accounted          TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRIES_NOT_ACCOUNTED',
+      entry_count                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRY_COUNT',
+      fi_doc_not_cleared             TYPE zif_cd_ops_types=>ty_check_code VALUE 'FI_DOC_NOT_CLEARED',
+      fi_doc_not_found               TYPE zif_cd_ops_types=>ty_check_code VALUE 'FI_DOC_NOT_FOUND',
+      gl_account_not_mapped          TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_ACCOUNT_NOT_MAPPED',
+      gl_ne_closing                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'GL_NE_CLOSING',
+      house_bank_ambiguous           TYPE zif_cd_ops_types=>ty_check_code VALUE 'HOUSE_BANK_AMBIGUOUS',
+      map_action_block               TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_ACTION_BLOCK',
+      not_posted                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOT_POSTED',
+      opening_ne_prior_closing       TYPE zif_cd_ops_types=>ty_check_code VALUE 'OPENING_NE_PRIOR_CLOSING',
+      payment_not_found              TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_FOUND',
+      payment_status                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_STATUS',
+      posting_rule_mismatch          TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISMATCH',
+      posting_rule_missing           TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_RULE_MISSING',
+      reason_invalid                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_INVALID',
+      reason_missing                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_MISSING',
+      reason_unmapped                TYPE zif_cd_ops_types=>ty_check_code VALUE 'REASON_UNMAPPED',
+      ref_format                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_FORMAT',
+      ref_missing                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_MISSING',
+      retrieval_not_found            TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETRIEVAL_NOT_FOUND',
+      retrieval_status               TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETRIEVAL_STATUS',
+      return_item_not_found          TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_ITEM_NOT_FOUND',
+      return_lot_status              TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_LOT_STATUS',
+      sign_mismatch                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'SIGN_MISMATCH',
+      stmt_already_imported          TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_ALREADY_IMPORTED',
+      stmt_date_future               TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_DATE_FUTURE',
+      stmt_date_missing              TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_DATE_MISSING',
+      stmt_date_stale                TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_DATE_STALE',
+      stmt_duplicate_in_file         TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_DUPLICATE_IN_FILE',
+      stmt_no_gap                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_NO_GAP',
+      stmt_no_repeat                 TYPE zif_cd_ops_types=>ty_check_code VALUE 'STMT_NO_REPEAT',
+      unmapped_btc                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
+      value_date_window              TYPE zif_cd_ops_types=>ty_check_code VALUE 'VALUE_DATE_WINDOW',
+    END OF gc_check_code.
+
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
@@ -355,6 +412,7 @@ INTERFACE zif_cd_ebs_types
       not_posted                  TYPE zif_cd_ops_types=>ty_msgno VALUE '155',
       fi_doc_not_found            TYPE zif_cd_ops_types=>ty_msgno VALUE '156',
       fi_doc_not_cleared          TYPE zif_cd_ops_types=>ty_msgno VALUE '157',
+      account_trailer_49          TYPE zif_cd_ops_types=>ty_msgno VALUE '158',
       opening_ne_prior_closing    TYPE zif_cd_ops_types=>ty_msgno VALUE '159',
       balance_arithmetic          TYPE zif_cd_ops_types=>ty_msgno VALUE '162',
       declared_totals             TYPE zif_cd_ops_types=>ty_msgno VALUE '163',
@@ -374,6 +432,32 @@ INTERFACE zif_cd_ebs_types
       unknown_record              TYPE zif_cd_ops_types=>ty_msgno VALUE '177',
       group_trailer_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '178',
       released_by                 TYPE zif_cd_ops_types=>ty_msgno VALUE '179',
+      control_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '180',
+      number_of_records           TYPE zif_cd_ops_types=>ty_msgno VALUE '181',
+      group_trailer_98            TYPE zif_cd_ops_types=>ty_msgno VALUE '182',
+      number_of_accounts          TYPE zif_cd_ops_types=>ty_msgno VALUE '183',
+      file_trailer_99_control_tot TYPE zif_cd_ops_types=>ty_msgno VALUE '184',
+      file_trailer_99_number_of   TYPE zif_cd_ops_types=>ty_msgno VALUE '185',
+      file_trailer_99_number_of_2 TYPE zif_cd_ops_types=>ty_msgno VALUE '186',
+      account                     TYPE zif_cd_ops_types=>ty_msgno VALUE '187',
+      total_credits_100           TYPE zif_cd_ops_types=>ty_msgno VALUE '188',
+      total_debits_400            TYPE zif_cd_ops_types=>ty_msgno VALUE '189',
+      credit_item_count_100       TYPE zif_cd_ops_types=>ty_msgno VALUE '190',
+      debit_item_count_400        TYPE zif_cd_ops_types=>ty_msgno VALUE '191',
+      statement_txssummry         TYPE zif_cd_ops_types=>ty_msgno VALUE '192',
+      ttlntries_nbofntries        TYPE zif_cd_ops_types=>ty_msgno VALUE '193',
+      ttlntries_sum               TYPE zif_cd_ops_types=>ty_msgno VALUE '194',
+      ttlntries_ttlnetntry_signed TYPE zif_cd_ops_types=>ty_msgno VALUE '195',
+      ttlcdtntries                TYPE zif_cd_ops_types=>ty_msgno VALUE '196',
+      ttldbtntries                TYPE zif_cd_ops_types=>ty_msgno VALUE '197',
+      nbofntries                  TYPE zif_cd_ops_types=>ty_msgno VALUE '198',
+      sum                         TYPE zif_cd_ops_types=>ty_msgno VALUE '199',
+      second_file_header          TYPE zif_cd_ops_types=>ty_msgno VALUE '500',
+      account_outside_group       TYPE zif_cd_ops_types=>ty_msgno VALUE '501',
+      detail_outside_account      TYPE zif_cd_ops_types=>ty_msgno VALUE '502',
+      acct_trailer_no_account     TYPE zif_cd_ops_types=>ty_msgno VALUE '503',
+      group_trailer_no_group      TYPE zif_cd_ops_types=>ty_msgno VALUE '504',
+      record_after_trailer        TYPE zif_cd_ops_types=>ty_msgno VALUE '505',
     END OF gc_msg.
 
 ENDINTERFACE.

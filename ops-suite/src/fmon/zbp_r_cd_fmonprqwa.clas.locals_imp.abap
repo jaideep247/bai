@@ -8,6 +8,7 @@
 *& resolved with action MANUAL and the handling reference.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *&---------------------------------------------------------------------*
 CLASS lhc_handled DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -60,7 +61,7 @@ CLASS lhc_handled IMPLEMENTATION.
       IF ls_decision-allowed = abap_false.
         APPEND VALUE #( %tky = ls_row-%tky ) TO failed-handled.
         APPEND VALUE #( %tky = ls_row-%tky
-                        %msg = new_message( id = 'ZCD_OPS' number = ls_decision-msgno
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error ) )
           TO reported-handled.
       ENDIF.
@@ -99,7 +100,7 @@ CLASS lsc_handled IMPLEMENTATION.
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the record itself is saved; the exception stays open and visible in the exceptions app
           APPEND VALUE #( %tky = ls_row-%tky
-                          %msg = new_message( id = 'ZCD_OPS' number = '000'
+                          %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
                                               v1 = lx_error->get_text( ) ) ) TO reported-handled.
       ENDTRY.
