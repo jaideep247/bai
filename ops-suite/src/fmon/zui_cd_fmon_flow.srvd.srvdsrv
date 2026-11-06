@@ -1,0 +1,12 @@
+@EndUserText.label: 'FMON file monitoring dashboard (read-only)'
+@ObjectModel.leadingEntity.name: 'ZC_CD_FMONFLOW'
+// Binding to create in ADT: ZUI_CD_FMON_FLOW_O4 (OData V4 - UI). Read-only: no behaviour definition.
+define service ZUI_CD_FMON_FLOW {
+  expose ZC_CD_FmonFlow     as FileFlow;
+  expose ZC_CD_FmonFlowEvt  as FileEvent;
+  expose ZC_CD_FmonFlowFind as OpenException;
+  expose ZC_CD_FmonAsOf     as MonitorAsOf;
+  // Tiles and the production-support overview page (KPI / list cards)
+  expose ZC_CD_FmonFlowKpi  as FileFlowKpi;
+  expose ZC_CD_FmonFlowFail as LatestFailure;
+}

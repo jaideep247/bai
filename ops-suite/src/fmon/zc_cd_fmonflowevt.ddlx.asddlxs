@@ -1,0 +1,53 @@
+// UI annotations: FMON file monitoring - file events
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Event', typeNamePlural: 'Events',
+                  title: { type: #STANDARD, value: 'Stage' },
+                  description: { type: #STANDARD, value: 'SourceId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'EventNo', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_FmonFlowEvt with
+{
+  @UI.facet: [ { id: 'Event', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Event', position: 10 } ]
+  @UI.hidden: true
+  FileId;
+  @EndUserText.label: 'Event no.'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  EventNo;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Stage reported'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  Stage;
+  @EndUserText.label: 'Event time (UTC)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  EventAt;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  SourceId;
+  @EndUserText.label: 'Source reference'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  SourceKey;
+  @EndUserText.label: 'Records'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 60 } ]
+  RecordCount;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  Amount;
+  @EndUserText.label: 'Information'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  @UI.identification: [ { position: 80 } ]
+  EventInfo;
+  @EndUserText.label: 'Recorded by'
+  @UI.identification: [ { position: 90 } ]
+  CreatedBy;
+  @EndUserText.label: 'Recorded at'
+  @UI.identification: [ { position: 100 } ]
+  CreatedAt;
+}
