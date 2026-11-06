@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -98,7 +99,7 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
 
   METHOD is_valid_name.
     DATA(lv_name) = to_upper( condense( iv_name ) ).
-    rv_valid = xsdbool( matches( val = lv_name regex = gc_name_pattern ) ).
+    rv_valid = xsdbool( matches( val = lv_name pcre = gc_name_pattern ) ).
   ENDMETHOD.
 
 

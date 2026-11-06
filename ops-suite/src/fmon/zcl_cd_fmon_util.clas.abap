@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A52: IS_NUMBER for numeric source fields.
 *& 2026-11-06 | Long references keep their identity through a SHA-1 digest; IS_DIGEST_REF, CANONICAL_NAME (audit A100).
+*& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -120,7 +121,7 @@ ENDCLASS.
 CLASS zcl_cd_fmon_util IMPLEMENTATION.
 
   METHOD is_number.
-    rv_ok = xsdbool( matches( val = condense( CONV string( iv_text ) ) regex = gc_number_pattern ) ).
+    rv_ok = xsdbool( matches( val = condense( CONV string( iv_text ) ) pcre = gc_number_pattern ) ).
   ENDMETHOD.
 
 
