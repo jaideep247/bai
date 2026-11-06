@@ -3,11 +3,13 @@
 *& Purpose:
 *& RTTI-based DDIC describer: returns the field list of a configured
 *& table so ZCL_CD_FMON_QUERY can validate names before any dynamic SQL.
-*& Thin wrapper over CL_ABAP_TYPEDESCR; no database access.
+*& Thin wrapper over CL_ABAP_TYPEDESCR; no database access. The S_TABU_NAM
+*& check sits in test seam TABLE_AUTH (own test include).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A51: S_TABU_NAM display check for the dynamic reader.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Test seam TABLE_AUTH around the S_TABU_NAM check (coverage gap closure).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC describer (RTTI)</p>
 CLASS zcl_cd_fmon_ddic DEFINITION
@@ -26,10 +28,12 @@ CLASS zcl_cd_fmon_ddic IMPLEMENTATION.
 
   METHOD zif_cd_fmon_ddic~may_read.
     DATA(lv_table) = to_upper( condense( CONV string( iv_table ) ) ).
-    AUTHORITY-CHECK OBJECT zif_cd_fmon_types=>gc_table_auth-object
-      ID zif_cd_fmon_types=>gc_table_auth-id_actvt FIELD zif_cd_fmon_types=>gc_table_auth-display
-      ID zif_cd_fmon_types=>gc_table_auth-id_table FIELD lv_table.
-    rv_allowed = xsdbool( sy-subrc = 0 ).
+    TEST-SEAM table_auth.
+      AUTHORITY-CHECK OBJECT zif_cd_fmon_types=>gc_table_auth-object
+        ID zif_cd_fmon_types=>gc_table_auth-id_actvt FIELD zif_cd_fmon_types=>gc_table_auth-display
+        ID zif_cd_fmon_types=>gc_table_auth-id_table FIELD lv_table.
+      rv_allowed = xsdbool( sy-subrc = 0 ).
+    END-TEST-SEAM.
   ENDMETHOD.
 
 

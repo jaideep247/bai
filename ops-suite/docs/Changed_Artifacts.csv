@@ -545,6 +545,7 @@ src/ebs/zcl_cd_ebs_engine.clas.abap,ABAP,"EBS validation engine (chain of respon
 src/ebs/zcl_cd_ebs_engine.clas.testclasses.abap,ABAP,"Application tests of the EBS engine with LTD_* doubles for the source,"
 src/ebs/zcl_cd_ebs_engine.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_factory.clas.abap,ABAP,Resolves EBS repositories and parsers. Test doubles come from
+src/ebs/zcl_cd_ebs_factory.clas.testclasses.abap,ABAP,"Unit tests of the EBS factory: injected doubles win (ZCL_CD_EBS_INJECTOR),"
 src/ebs/zcl_cd_ebs_factory.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_feb_dao.clas.abap,ABAP,"SQL for imported bank statements: FEBKO headers in scope, FEBEP items per"
 src/ebs/zcl_cd_ebs_feb_dao.clas.testclasses.abap,ABAP,OSQL tests of the FEBKO repository: the prior statement is the latest one
@@ -849,6 +850,7 @@ src/fmon/zcl_cd_fmon_adapter_prism.clas.abap,ABAP,Source adapter of ZCD_FMON_PRI
 src/fmon/zcl_cd_fmon_adapter_prism.clas.testclasses.abap,ABAP,Unit tests of the PRISM source adapter with an LTD_* PRISM DAO: configured
 src/fmon/zcl_cd_fmon_adapter_prism.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function payment engine areas
+src/fmon/zcl_cd_fmon_calendar.clas.testclasses.abap,ABAP,Unit tests of the factory calendar wrapper through test seams
 src/fmon/zcl_cd_fmon_calendar.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_ack_match.clas.abap,ABAP,Plug-in check ACK_COUNT_MISMATCH / ACK_AMOUNT_MISMATCH: the bank ack
 src/fmon/zcl_cd_fmon_chk_ack_match.clas.xml,abapGit,
@@ -876,6 +878,7 @@ src/fmon/zcl_cd_fmon_dao.clas.abap,ABAP,"FMON repository - the only FMON class w
 src/fmon/zcl_cd_fmon_dao.clas.testclasses.abap,ABAP,SQL tests of the FMON repository on cl_osql_test_environment doubles of
 src/fmon/zcl_cd_fmon_dao.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_ddic.clas.abap,ABAP,RTTI-based DDIC describer: returns the field list of a configured
+src/fmon/zcl_cd_fmon_ddic.clas.testclasses.abap,ABAP,Unit tests of the RTTI DDIC describer: fields and key flags of a DDIC
 src/fmon/zcl_cd_fmon_ddic.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_engine.clas.abap,ABAP,FMON application service for one business date: sync the registry from
 src/fmon/zcl_cd_fmon_engine.clas.testclasses.abap,ABAP,"Application tests of the FMON engine with LTD_* doubles (DAO, adapter,"
@@ -903,13 +906,16 @@ src/fmon/zcl_cd_fmon_prism_event.clas.abap,ABAP,PRISM status API - pure domain l
 src/fmon/zcl_cd_fmon_prism_event.clas.testclasses.abap,ABAP,"Pure unit tests of the PRISM status API event logic: parsing, field rules,"
 src/fmon/zcl_cd_fmon_prism_event.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_http.clas.abap,ABAP,"ICF handler of the PRISM status API (SICF node /sap/zcd_ops/prism_status,"
+src/fmon/zcl_cd_fmon_prism_http.clas.testclasses.abap,ABAP,Unit tests of the ICF handler of the PRISM status API with local doubles
 src/fmon/zcl_cd_fmon_prism_http.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_op.clas.abap,ABAP,"bgPF operation (transactional, uncontrolled - the FMON store commits itself)"
+src/fmon/zcl_cd_fmon_prism_op.clas.testclasses.abap,ABAP,Unit test of the bgPF operation: execute( ) hands the event ID it was
 src/fmon/zcl_cd_fmon_prism_op.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_proc.clas.abap,ABAP,Instant processing of one stored PRISM event (body of the bgPF unit): read
 src/fmon/zcl_cd_fmon_prism_proc.clas.testclasses.abap,ABAP,Application tests of the instant PRISM unit through the real FMON engine
 src/fmon/zcl_cd_fmon_prism_proc.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_prism_queue.clas.abap,ABAP,bgPF implementation of ZIF_CD_FMON_PRISM_QUEUE: one background process per
+src/fmon/zcl_cd_fmon_prism_queue.clas.testclasses.abap,ABAP,Unit test of the bgPF queue through test seam BGPF: a process saved for
 src/fmon/zcl_cd_fmon_prism_queue.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_query.clas.abap,ABAP,Builds and validates reads of configured tables: every table and field
 src/fmon/zcl_cd_fmon_query.clas.testclasses.abap,ABAP,Pure unit tests (no doubles) for the DDIC validation of configured

@@ -4,9 +4,11 @@
 *& bgPF operation (transactional, uncontrolled - the FMON store commits itself)
 *& of one PRISM event: runs ZCL_CD_FMON_PRISM_PROC=>PROCESS for the event ID it
 *& carries. Never raises: an event the unit could not apply stays unprocessed
-*& and the 5-minute run applies it. Thin - covered by QA case PRISM-12.
+*& and the 5-minute run applies it. Thin: own test include (event ID handed
+*& to the unit); bgPF execution itself is QA case PRISM-12.
 *& Modification log:
 *& 2026-11-06 | Initial version (instant PRISM processing, user decision 2026-11-06).
+*& 2026-11-06 | Header: own test include (coverage gap closure); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - bgPF operation for one event</p>
 "! VERIFY-ADT: interface IF_BGMC_OP_SINGLE_TX_UNCONTR (method EXECUTE, serializable object)

@@ -4,10 +4,11 @@
 *& ICF handler of the PRISM status API (SICF node /sap/zcd_ops/prism_status,
 *& inactive until CAB approval). Thin: copies method, content type and body
 *& to ZCL_CD_FMON_PRISM_API and writes its status and JSON answer back.
-*& Deliberately not unit tested (it only moves data across the ICF boundary);
+*& Own test include with local ICF doubles proves the copy in both directions;
 *& every decision is tested in ZCL_CD_FMON_PRISM_API / _EVENT / _DAO.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
+*& 2026-11-06 | Header: own test include (coverage gap closure); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - ICF handler (REST JSON)</p>
 "! Plain REST JSON over HTTPS, no OData, no CSRF token (machine-to-machine call of a

@@ -3,10 +3,13 @@
 *& Purpose:
 *& Thin wrapper over the standard factory calendar function payment engine areas
 *& DATE_CONVERT_TO_FACTORYDATE / FACTORYDATE_CONVERT_TO_DATE. The only
-*& FMON class that calls them; deliberately not unit tested (see doc).
+*& FMON class that calls them; each call sits in a test seam (TO_FACTORY_DATE,
+*& TO_DATE), so the own test include proves month end, working days and the
+*& error mapping; the calendar data itself is a QA1 case.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A41: receipt-date correction from the age basis.
+*& 2026-11-06 | Test seams TO_FACTORY_DATE / TO_DATE; return codes in locals (coverage gap closure).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - factory calendar (FM wrapper)</p>
 CLASS zcl_cd_fmon_calendar DEFINITION
@@ -95,21 +98,25 @@ CLASS zcl_cd_fmon_calendar IMPLEMENTATION.
 
   METHOD to_factory_date.
     DATA lv_indicator TYPE c LENGTH 1.
+    DATA lv_subrc TYPE sysubrc.
 
     CLEAR: ev_factory_date, ev_working_day.
     "VERIFY-DDIC: parameter names of DATE_CONVERT_TO_FACTORYDATE (SE37 before transport)
-    CALL FUNCTION 'DATE_CONVERT_TO_FACTORYDATE'
-      EXPORTING
-        correct_option       = iv_correct
-        date                 = iv_date
-        factory_calendar_id  = iv_calendar_id
-      IMPORTING
-        factorydate          = ev_factory_date
-        workingday_indicator = lv_indicator
-      EXCEPTIONS
-        error_message        = 98
-        OTHERS               = 99.
-    IF sy-subrc <> 0.
+    TEST-SEAM to_factory_date.
+      CALL FUNCTION 'DATE_CONVERT_TO_FACTORYDATE'
+        EXPORTING
+          correct_option       = iv_correct
+          date                 = iv_date
+          factory_calendar_id  = iv_calendar_id
+        IMPORTING
+          factorydate          = ev_factory_date
+          workingday_indicator = lv_indicator
+        EXCEPTIONS
+          error_message        = 98
+          OTHERS               = 99.
+      lv_subrc = sy-subrc.
+    END-TEST-SEAM.
+    IF lv_subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e206(zcd_ops) WITH iv_calendar_id iv_date.
     ENDIF.
@@ -119,17 +126,21 @@ CLASS zcl_cd_fmon_calendar IMPLEMENTATION.
 
 
   METHOD to_date.
+    DATA lv_subrc TYPE sysubrc.
     "VERIFY-DDIC: parameter names of FACTORYDATE_CONVERT_TO_DATE (SE37 before transport)
-    CALL FUNCTION 'FACTORYDATE_CONVERT_TO_DATE'
-      EXPORTING
-        factorydate         = iv_factory_date
-        factory_calendar_id = iv_calendar_id
-      IMPORTING
-        date                = rv_date
-      EXCEPTIONS
-        error_message       = 98
-        OTHERS              = 99.
-    IF sy-subrc <> 0.
+    TEST-SEAM to_date.
+      CALL FUNCTION 'FACTORYDATE_CONVERT_TO_DATE'
+        EXPORTING
+          factorydate         = iv_factory_date
+          factory_calendar_id = iv_calendar_id
+        IMPORTING
+          date                = rv_date
+        EXCEPTIONS
+          error_message       = 98
+          OTHERS              = 99.
+      lv_subrc = sy-subrc.
+    END-TEST-SEAM.
+    IF lv_subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e206(zcd_ops) WITH iv_calendar_id iv_factory_date.
     ENDIF.

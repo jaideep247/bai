@@ -3,6 +3,7 @@ ZCL_CD_EBS_BTC_RESOLVER,20,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,9,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,21,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,68,90,,Not run in target SAP
+ZCL_CD_EBS_FACTORY,4,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,7,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_BAI2,27,90,,Not run in target SAP
@@ -16,9 +17,11 @@ ZCL_CD_EBS_SRC_FEB,11,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,10,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_PRISM,4,90,,Not run in target SAP
+ZCL_CD_FMON_CALENDAR,9,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_PRISM_FILE,5,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_REJECT,2,90,,Not run in target SAP
 ZCL_CD_FMON_DAO,17,90,,Not run in target SAP
+ZCL_CD_FMON_DDIC,6,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,33,90,,Not run in target SAP
 ZCL_CD_FMON_FLOW_CDS_TEST,19,90,,Not run in target SAP
 ZCL_CD_FMON_LOT_READER,7,90,,Not run in target SAP
@@ -26,7 +29,10 @@ ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_API,11,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_DAO,5,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_EVENT,20,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_HTTP,2,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_OP,1,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_PROC,7,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_QUEUE,1,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,24,90,,Not run in target SAP
