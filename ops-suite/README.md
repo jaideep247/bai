@@ -43,3 +43,12 @@ python3 tools/portable_checks.py "$(command -v abaplint)"
 ```
 
 **What this proves and what it does not:** abaplint checks syntax and typing against SAP stubs at 7.58 rules; the portable checks prove house-rule compliance. Neither proves activation, DDIC existence, ATC or ABAP Unit results — those happen in DV1 (`Test_and_Validation_Document.md` §5). Fields marked `VERIFY-DDIC` in the DAO classes must be confirmed in SE11 first.
+
+## Keeping local and cloud in sync
+
+GitHub (`jaideep247/bai`, branch `claude/loving-albattani-qexsjc`) is the master copy. Cloud sessions (phone or browser) commit and push there; the local clone pulls from it.
+
+- VS Code user settings: `git.autofetch` (every 120 s), `git.postCommitCommand: sync`, `git.confirmSync: false`, `git.pullBeforeCheckout`.
+- Commit when a piece of work is done — VS Code pushes it; a cloud session sees it after `git fetch`.
+- Never edit the same file in two places between syncs; if it happens, VS Code shows the merge side by side.
+- SAP side: abapGit in DV1 pulls `ops-suite/src` from the same repository.
