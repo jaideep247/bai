@@ -13,7 +13,16 @@
 
 **Red** — write the failing test in the class that owns the behaviour, named after the rule (`unmapped_btc_always_blocks`, `partial_returns_stay_partial`, `stuck_step_after_max_runtime`). **Green** — make it pass in the smallest correct place. **Refactor** — move shared logic into the base/helper classes with the tests as the safety net. **Parity** — any behaviour change against the legacy validators gets a row in `Legacy_Parity_Comparison.md` in the same change.
 
-During this build every test include was written before its class and failed lint (unknown class/method) before the class existed; that red state is the evidence the test targets the new code.
+### How strictly the loop was followed in this build (honest record)
+
+| Order | Objects | Evidence |
+|---|---|---|
+| **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 26 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB` | Red state observed by the lead developer in the lint output |
+| **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
+| **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
+| **No unit test by design** | See §5 | Covered by the listed alternative |
+
+**What "red" and "green" mean here.** In this build red was a test that did not compile against missing code and green was a clean abaplint run. That proves each test targets the new code; it does **not** prove the tests pass. True red/green — an assertion failing, then passing — happens at the first ABAP Unit run in DV1. Until then no test result exists.
 
 ## 3. Test levels
 
@@ -24,7 +33,7 @@ During this build every test include was written before its class and failed lin
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 296 ABAP Unit methods in 29 test includes
+## 4. Coverage today — 314 ABAP Unit methods in 33 test includes
 
 | Module | Object (test include) | Methods | Level |
 |---|---|---|---|
@@ -32,7 +41,11 @@ During this build every test include was written before its class and failed lin
 | Core | ZCL_CD_OPS_ALERT_POLICY | 14 | Domain |
 | Core | ZCL_CD_OPS_ALERT_ROUTER | 8 | Application |
 | Core | ZCL_CD_OPS_STORE | 5 | OSQL |
+| Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seam) | 6 | Domain |
+| Core | ZCL_CD_OPS_CHN_HTTP (`TO_JSON` only) | 3 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 13 | Domain |
+| EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
+| EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
 | EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 26 rule classes) | 35 | Domain / Application |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 17 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 14 | Domain |
@@ -69,12 +82,11 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 
 | Object | Reason | Covered instead by |
 |---|---|---|
-| ZCL_CD_OPS_CHN_EMAIL / _APPLOG / _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT; a double would only assert that we call what we call | Router tests with a channel double; QA1 alert cases; `ZCL_CD_OPS_CHN_HTTP=>to_json` is pure |
+| ZCL_CD_OPS_CHN_EMAIL / _APPLOG, delivery part of _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT; a double would only assert that we call what we call | Router tests with a channel double; QA1 alert cases; the JSON body of _HTTP is unit tested |
 | ZCL_CD_OPS_ALERT_DAO | Three SELECTs and one INSERT | Router tests with DAO double; QA1 |
-| ZCL_CD_OPS_FACTORY / _INJECTOR, ZCL_CD_EBS/_FMON/_HCK_FACTORY / _INJECTOR | Construction only | Every application test resolves its CUT through them |
+| ZCL_CD_OPS_INJECTOR, ZCL_CD_EBS/_FMON/_HCK_FACTORY / _INJECTOR | Construction only | Every application test resolves its CUT through them; plug-in creation of the core factory is unit tested |
 | ZCL_CD_OPS_CLOCK | Two system-field reads | Injected clock doubles in every time-dependent test |
 | ZCL_CD_EBS_RULE_BASE | Abstract | Through the 26 rule classes |
-| ZCL_CD_EBS_SRC_FILE | Delegates to the parser | Parser tests + QA1 file cases |
 | ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
 | ZCL_CD_EBS_SAP_DAO (retrievals, checks, FI lines, G/L balance) | Fields `VERIFY-DDIC` until SE11 confirms them | Rule tests with SAP-DAO double; OSQL tests for confirmed paths; QA1 |
 | ZCL_CD_FMON_CALENDAR, ZCL_CD_FMON_DDIC, ZCL_CD_FMON_DAO=>READ_LEGACY | Factory calendar FMs, RTTI, unknown legacy structures | Pure rules + engine with doubles; QA1 FMON 01, 05, 07, 08, 10, 11 |

@@ -65,8 +65,10 @@ src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests o
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
 src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
 src/core/zcl_cd_ops_chn_http.clas.abap,ABAP,Alert channel HTTP: POSTs the alert as JSON to an SM59 destination (e.g. a
+src/core/zcl_cd_ops_chn_http.clas.testclasses.abap,ABAP,"Domain tests of the webhook JSON body (TO_JSON): fields present, quotes and"
 src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
 src/core/zcl_cd_ops_factory.clas.abap,ABAP,"Resolves shared services (store, alert router, alert DAO, clock) and creates"
+src/core/zcl_cd_ops_factory.clas.testclasses.abap,ABAP,Tests of plug-in creation by class name (the mechanism behind every
 src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
 src/core/zcl_cd_ops_store.clas.abap,ABAP,Repository for the shared result/exception store. The only class that
 src/core/zcl_cd_ops_store.clas.testclasses.abap,ABAP,"OSQL tests of the shared store: test-mode runs write nothing, findings of"
@@ -91,6 +93,7 @@ src/ebs/zcl_cd_ebs_factory.clas.abap,ABAP,Resolves EBS repositories and parsers.
 src/ebs/zcl_cd_ebs_feb_dao.clas.abap,ABAP,"SQL for imported bank statements: FEBKO headers in scope, FEBEP items per"
 src/ebs/zcl_cd_ebs_feb_dao.clas.testclasses.abap,ABAP,OSQL tests of the FEBKO repository: the prior statement is the latest one
 src/ebs/zcl_cd_ebs_finding.clas.abap,ABAP,Builds EBS findings for statements and lines in one consistent shape
+src/ebs/zcl_cd_ebs_finding.clas.testclasses.abap,ABAP,"Domain tests of the finding builder: object key, grouping, signed amount and"
 src/ebs/zcl_cd_ebs_injector.clas.abap,ABAP,Unit tests only: writes the double slots of ZCL_CD_EBS_FACTORY. Always call
 src/ebs/zcl_cd_ebs_parser_bai2.clas.abap,ABAP,Parses a BAI2 bank file into the format-neutral EBS model and reports
 src/ebs/zcl_cd_ebs_parser_bai2.clas.testclasses.abap,ABAP,"ABAP Unit tests for the BAI2 parser: records, 88 continuation, funds"
@@ -129,6 +132,7 @@ src/ebs/zcl_cd_ebs_sap_dao.clas.testclasses.abap,ABAP,OSQL tests of the payment 
 src/ebs/zcl_cd_ebs_src_feb.clas.abap,ABAP,"Source of imported statements: reads FEBKO headers once, then hands them to"
 src/ebs/zcl_cd_ebs_src_feb.clas.testclasses.abap,ABAP,Tests the mapping of imported statements (FEBKO/FEBEP rows from LTD_FEB_DAO)
 src/ebs/zcl_cd_ebs_src_file.clas.abap,ABAP,Source for one bank file before import: parses it with the parser of its
+src/ebs/zcl_cd_ebs_src_file.clas.testclasses.abap,ABAP,Application tests of the bank-file source with an LTD_* parser double
 src/ebs/zif_cd_ebs_cfg_dao.intf.abap,ABAP,"ZCD_BTC_MAP, ZCD_BTC_RULE + ZCD_EBS_RULE_DEF, ZCD_EBS_ACCT,"
 src/ebs/zif_cd_ebs_feb_dao.intf.abap,ABAP,Raw reads only; conversion to the format-neutral model happens in
 src/ebs/zif_cd_ebs_parser.intf.abap,ABAP,"Implementations: ZCL_CD_EBS_PARSER_BAI2, ZCL_CD_EBS_PARSER_CAMT."

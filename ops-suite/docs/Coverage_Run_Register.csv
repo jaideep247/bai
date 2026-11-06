@@ -3,11 +3,13 @@ ZCL_CD_EBS_BTC_RESOLVER,13,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,3,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,11,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,3,90,,Not run in target SAP
+ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_BAI2,17,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_CAMT,14,90,,Not run in target SAP
 ZCL_CD_EBS_RULE_BASE,35,90,,Not run in target SAP
 ZCL_CD_EBS_SAP_DAO,3,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FEB,6,90,,Not run in target SAP
+ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,6,90,,Not run in target SAP
 ZCL_CD_FMON_DAO,6,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,11,90,,Not run in target SAP
@@ -26,5 +28,7 @@ ZCL_CD_HCK_STATS,12,90,,Not run in target SAP
 ZCL_CD_HCK_THRESHOLD,11,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_POLICY,14,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_ROUTER,8,90,,Not run in target SAP
+ZCL_CD_OPS_CHN_HTTP,3,90,,Not run in target SAP
+ZCL_CD_OPS_FACTORY,6,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,5,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,12,90,,Not run in target SAP
