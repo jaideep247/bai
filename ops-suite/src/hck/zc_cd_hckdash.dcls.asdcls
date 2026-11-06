@@ -1,0 +1,26 @@
+// Artifact: zc_cd_hckdash.dcls.asdcls
+// Purpose: Read access to the health check dashboard (service ZUI_CD_HCK_DASH): authorization
+//          object ZCD_OPS with ZCD_PE_AREA = HCK and ACTVT 03 (display), as the file monitoring
+//          dashboard role ZC_CD_FMONFLOW. Every entity carries PaymentEngineArea (HCK on every row).
+// Modification log: 2026-11-06 | Initial version (health check dashboard).
+// VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58).
+@EndUserText.label: 'HCK health check dashboard - read access'
+@MappingRole: true
+define role ZC_CD_HckDash {
+  grant select on ZC_CD_HckCheck
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckCategory
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckRun
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckMetric
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckFind
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckAsOf
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckKpi
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+  grant select on ZC_CD_HckRed
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' );
+}

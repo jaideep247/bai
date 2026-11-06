@@ -1,0 +1,66 @@
+// UI annotations: HCK health check as of (last completed run)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Morning report as of', typeNamePlural: 'Morning report as of',
+                  title: { type: #STANDARD, value: 'AsOfAt' } }
+annotate entity ZC_CD_HckAsOf with
+{
+  @UI.facet: [ { id: 'AsOf', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Morning report run', position: 10 } ]
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Report variant'
+  @UI.identification: [ { position: 10 } ]
+  RunVariant;
+  @EndUserText.label: 'As of (end of last completed run, UTC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  AsOfAt;
+  @EndUserText.label: 'Run started'
+  @UI.identification: [ { position: 30 } ]
+  RunStartedAt;
+  @EndUserText.label: 'Run status (S, W, E)'
+  @UI.identification: [ { position: 40 } ]
+  RunStatus;
+  @EndUserText.label: 'Overall RAG'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'RagCriticality' } ]
+  @UI.identification: [ { position: 50, criticality: 'RagCriticality' } ]
+  RunRag;
+  @UI.hidden: true
+  RagCriticality;
+  @EndUserText.label: 'Checks'
+  @UI.identification: [ { position: 60 } ]
+  CheckCount;
+  @EndUserText.label: 'Green checks'
+  @UI.identification: [ { position: 70 } ]
+  GreenCheckCount;
+  @EndUserText.label: 'Amber checks'
+  @UI.identification: [ { position: 80 } ]
+  AmberCheckCount;
+  @EndUserText.label: 'Red / not executed checks'
+  @UI.identification: [ { position: 90 } ]
+  RedCheckCount;
+  @EndUserText.label: 'Checks in baseline warm-up'
+  @UI.identification: [ { position: 100 } ]
+  WarmupCheckCount;
+  @EndUserText.label: 'Findings of the run'
+  @UI.identification: [ { position: 110 } ]
+  RunFindingCount;
+  @EndUserText.label: 'Health score and critical / high counts'
+  @UI.identification: [ { position: 120 } ]
+  RunMessage;
+  @EndUserText.label: 'Age (minutes)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 130, criticality: 'StaleCriticality' } ]
+  @UI.dataPoint: { qualifier: 'ReportAge', title: 'Report age (minutes)', criticality: 'StaleCriticality' }
+  AgeMinutes;
+  @EndUserText.label: 'Stale after (minutes)'
+  @UI.identification: [ { position: 140 } ]
+  StaleAfterMinutes;
+  @EndUserText.label: 'Stale (older than 26 hours)'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 150, criticality: 'StaleCriticality' } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+}
