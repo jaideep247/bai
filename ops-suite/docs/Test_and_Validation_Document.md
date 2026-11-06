@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-648 methods in 51 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+698 methods in 55 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 648 / 648 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 698 / 698 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -113,6 +113,21 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | HCK-QA-15 | `C_PRQ_NO_SPE` with one failed request without SPE row and one with SUCCESS after the failure | `config/hck_seed.md` rows, SE11 names filled | One finding (the first request); the second is not failed | pending |
 | HCK-QA-16 | `C_CHQ_STATUS` with a cheque history 10 → 2 and one 10 → 9 | — | One finding (10 → 2); 10 → 9 allowed | pending |
 | HCK-QA-17 | `C_PRQ_CANCEL` with a PCLM request CANCELLED whose open item is cleared | — | One finding PRQ_PAID_CANCELLED | pending |
+
+### 6.6 Payment trace (`ZCD_OPS_PAYMENT_TRACE`, `Payment_Trace.md`)
+
+| ID | Scenario | Configuration | Expected | Result |
+|---|---|---|---|---|
+| TRC-01 | PCLM claims ACH payment, FIN + source | `TRACE_SRC_*` filled (VERIFY-SE11 done) | Every stage VERIFIED with table, key and time; verdict COMPLETE; matches FPL9 / FEBAN / FPG1 | pending |
+| TRC-02 | Cheque mailed and encashed, by cheque number | `TRACE_SRC_CHQ_HIST` | DFKKCR, cheque status, FEBEP by ZTNUM VERIFIED | pending |
+| TRC-03 | One collection (direct debit) | — | BANK_ACK at file level (FMON); collection path end to end | pending |
+| TRC-04 | Payment returned and reissued | DFKKRAPT history fields confirmed | Two attempts; return and bank line under the original clearing reference; current attempt drives the verdict | pending |
+| TRC-05 | Reversed item whose history row is absent / history not configured | — | REVERSAL_HISTORY_MISSING (MISSING / UNAVAILABLE); never COMPLETE | pending |
+| TRC-06 | FIN with two SUCCESS rows; FEBEP with two lines for one reference | — | AMBIGUOUS, all candidates listed | pending |
+| TRC-07 | File sent to PRISM, no ACK; ACK without statement line | — | First gap BANK_ACK resp. SETTLEMENT; INCOMPLETE | pending |
+| TRC-08 | User without ZCD_OPS 03 for the item's company code | Role | Item row NOT_AUTHORISED, no key shown, nothing MISSING | pending |
+| TRC-09 | Side effects | ST05 during TRC-01..08 | SELECT only; no change in any business table, job, lock, file or interface; nothing written to ZCD_OPS_* | pending |
+| TRC-10 | Performance | 20 traces at peak | Each trace < 5 s; FEBEP / DFKKOP / BUT000 reads use an index | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

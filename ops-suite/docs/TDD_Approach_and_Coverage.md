@@ -21,6 +21,7 @@
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
 | **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
+| **Test first, payment trace 2026-11-06** — engine tests written against the draft before the review fixes (partner mismatch, history unavailable on reversal, cheque history unavailable, digest file reference); lint red until the code existed; not executed | `ZCL_CD_OPS_TRACE_ENGINE` (21), `ZCL_CD_OPS_TRACE_DAO` (8) | `Payment_Trace.md` §10 |
 | **Test first, core controls 2026-11-06** — test written before the code it drives; lint red until the code existed; not executed | `ZCL_CD_OPS_RUN_GUARD`, `ZCL_CD_OPS_PURGE`, `ZCL_CD_OPS_PURGE_DAO`, store carry-forward / `reconcile` (7 OSQL tests), engine lock and reconciliation tests (EBS 4, FMON 4, HCK 3), `injected_auth_is_returned` | `RAP_Apps_Design.md` §1–§4; commit history of 2026-11-06 |
 | **Test first, configuration apps** — red observed in abaplint (47 "not found") before the classes existed | `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE` | Phase 2 hand-over |
 | **Test first, EBS rule audit** (part C) | 7 rule tests (`r07_any_run_with_status_ok` … `r18_unmapped_gl_reported`) written before the fixes | `Review_Response_2026-11-06.md` part C |
@@ -40,7 +41,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 648 ABAP Unit methods in 51 test includes
+## 4. Coverage today — 698 ABAP Unit methods in 55 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -58,6 +59,8 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seams) | 11 | Domain |
 | Core | ZCL_CD_OPS_PURGE (retention rules, packages, test mode) | 5 | Domain / Application |
 | Core | ZCL_CD_OPS_PURGE_DAO | 7 | OSQL |
+| Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 8 | OSQL |
+| Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 21 | Application |
 | Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
 | Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 16 | OSQL |
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |

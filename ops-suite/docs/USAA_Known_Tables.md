@@ -36,6 +36,7 @@ Field names **not** in the reference (still `VERIFY-SE11`): the FIN-number and t
 | Paid payment request left **CANCELLED** (PCLM) | HCK check (new check class) | CANCELLED = money will not leave; a paid request must never be CANCELLED | Paid indicator (via FIN number → DFKKOP / DPAYH) |
 | Handled-manually record for payment requests | FMON operations app (§6.5 of `RAP_Apps_Design.md`) | Request reference as delivered by PRISM | — |
 | EBS: BAI 143 / 452 | EBS | Known unmapped codes in production | **Built (2026-11-06):** 143 → rule group BAI166C on collection accounts only (disbursement stays blocked by R14); 452 → BAI468D |
+| 360° payment trace (`ZCD_OPS_PAYMENT_TRACE`, **built 2026-11-06**, `Payment_Trace.md`) | Core (read-only) | SUCCESS row, never highest COUNTER; FIN = `DFKKOP-ZZ_FIN_TRANS_NUM`; partner with SOURCE first, then without; FEBEP-CHECT = AUGBL (E G H I J K L) / ZTNUM (C); DFKKCR-DOC1R = AUGBL; DFKKRP-SELW1 = AUGBL; DFKKSUMC/DFKKKO/BKPF FIKEY; TFK042Z-XEINZ; ZECT_STATUS 3/4/9 | DFKKRAPT history fields, ZCDT_REGUT LAUFD/LAUFI → file key, request FIN / time fields, ACK payment key, `DFKKOP-AUGRD` / `DFKKKO-STBEL` (reversal), BUT000 source field |
 | EBS: BAI 452 has a non-blank XBLNR | EBS (rule R-level check once mapped) | `XBLNR` never blank for 452 | — |
 
 Every field name above that is not confirmed goes into configuration (not code) and is validated against the DDIC at runtime, so a wrong name produces a PLUGIN_ERROR / configuration finding instead of a wrong result.
