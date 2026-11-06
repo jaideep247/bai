@@ -172,7 +172,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-hckcheckdef.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckcheckdef.
       IF ls_row-ClassName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_hck_check ) ) = abap_false.
@@ -193,8 +193,8 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-hckcheckdef.
-        APPEND INITIAL LINE TO reported-hckcheckdef ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckcheckdef.
+        INSERT INITIAL LINE INTO TABLE reported-hckcheckdef ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -225,12 +225,12 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckcheckdef.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckcheckdef.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckcheckdef.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckcheckdef.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -238,7 +238,7 @@ CLASS lhc_hckcheckdef IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckcheckdef.
+        INTO TABLE reported-hckcheckdef.
     ENDLOOP.
   ENDMETHOD.
 
@@ -284,7 +284,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-hckthreshold.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckthreshold.
       IF zcl_cd_ops_cfg_checks=>thresholds_ordered( iv_amber           = CONV #( ls_row-Amber )
                                                    iv_red             = CONV #( ls_row-Red )
                                                    iv_higher_is_worse = ls_row-HigherIsWorse )
@@ -300,8 +300,8 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-hckthreshold.
-        APPEND INITIAL LINE TO reported-hckthreshold ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckthreshold.
+        INSERT INITIAL LINE INTO TABLE reported-hckthreshold ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -332,12 +332,12 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckthreshold.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckthreshold.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckthreshold.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckthreshold.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -345,7 +345,7 @@ CLASS lhc_hckthreshold IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckthreshold.
+        INTO TABLE reported-hckthreshold.
     ENDLOOP.
   ENDMETHOD.
 
@@ -391,7 +391,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-hckaggregate.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckaggregate.
       IF ls_row-Tabname IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
@@ -465,8 +465,8 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-hckaggregate.
-        APPEND INITIAL LINE TO reported-hckaggregate ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckaggregate.
+        INSERT INITIAL LINE INTO TABLE reported-hckaggregate ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -497,12 +497,12 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckaggregate.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckaggregate.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckaggregate.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckaggregate.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -510,7 +510,7 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckaggregate.
+        INTO TABLE reported-hckaggregate.
     ENDLOOP.
   ENDMETHOD.
 
@@ -552,12 +552,12 @@ CLASS lhc_hckagggroup IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckagggroup.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckagggroup.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckagggroup.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckagggroup.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -565,7 +565,7 @@ CLASS lhc_hckagggroup IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckagggroup.
+        INTO TABLE reported-hckagggroup.
     ENDLOOP.
   ENDMETHOD.
 
@@ -611,7 +611,7 @@ CLASS lhc_hckdrifttable IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-hckdrifttable.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckdrifttable.
       IF ls_row-Tabname IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
@@ -619,8 +619,8 @@ CLASS lhc_hckdrifttable IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-hckdrifttable.
-        APPEND INITIAL LINE TO reported-hckdrifttable ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckdrifttable.
+        INSERT INITIAL LINE INTO TABLE reported-hckdrifttable ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -651,12 +651,12 @@ CLASS lhc_hckdrifttable IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckdrifttable.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckdrifttable.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckdrifttable.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckdrifttable.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -664,7 +664,7 @@ CLASS lhc_hckdrifttable IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckdrifttable.
+        INTO TABLE reported-hckdrifttable.
     ENDLOOP.
   ENDMETHOD.
 
@@ -710,7 +710,7 @@ CLASS lhc_hckwhitelist IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-hckwhitelist.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckwhitelist.
       IF ls_row-Tabname IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
@@ -718,8 +718,8 @@ CLASS lhc_hckwhitelist IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-hckwhitelist.
-        APPEND INITIAL LINE TO reported-hckwhitelist ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckwhitelist.
+        INSERT INITIAL LINE INTO TABLE reported-hckwhitelist ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -750,12 +750,12 @@ CLASS lhc_hckwhitelist IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-hckwhitelist.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckwhitelist.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-hckwhitelist.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckwhitelist.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -763,7 +763,7 @@ CLASS lhc_hckwhitelist IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-hckwhitelist.
+        INTO TABLE reported-hckwhitelist.
     ENDLOOP.
   ENDMETHOD.
 
@@ -805,12 +805,12 @@ CLASS lhc_jobcycle IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-jobcycle.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-jobcycle.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-jobcycle.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-jobcycle.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -818,7 +818,7 @@ CLASS lhc_jobcycle IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-jobcycle.
+        INTO TABLE reported-jobcycle.
     ENDLOOP.
   ENDMETHOD.
 
@@ -864,7 +864,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-jobstep.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-jobstep.
       IF zcl_cd_ops_cfg_checks=>window_complete( iv_from = ls_row-WindowFrom
                                                 iv_to   = ls_row-WindowTo ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-window_incomplete v1 = lif_c=>gc_el-windowfrom v2 = lif_c=>gc_el-windowto
@@ -872,8 +872,8 @@ CLASS lhc_jobstep IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-jobstep.
-        APPEND INITIAL LINE TO reported-jobstep ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-jobstep.
+        INSERT INITIAL LINE INTO TABLE reported-jobstep ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -904,12 +904,12 @@ CLASS lhc_jobstep IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-jobstep.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-jobstep.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-jobstep.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-jobstep.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -917,7 +917,7 @@ CLASS lhc_jobstep IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
-        TO reported-jobstep.
+        INTO TABLE reported-jobstep.
     ENDLOOP.
   ENDMETHOD.
 
@@ -961,7 +961,6 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
 
 
   METHOD cleanup_finalize.
-    RETURN.
   ENDMETHOD.
 
 ENDCLASS.

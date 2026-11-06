@@ -113,23 +113,23 @@ CLASS ltc_parser_camt IMPLEMENTATION.
 
   METHOD configure_scenario.
     mv_content =
-      `<?xml version="1.0" encoding="UTF-8"?>` &&
-      `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt>` &&
-      `<GrpHdr><MsgId>MSG-20261104-0001</MsgId><CreDtTm>2026-11-04T06:30:15</CreDtTm>` &&
-      `<MsgRcpt><Nm>EXAMPLE LIFE INSURANCE CO</Nm><Id><OrgId><AnyBIC>EXLIUS33XXX</AnyBIC></OrgId></Id>` &&
-      `</MsgRcpt></GrpHdr>` &&
-      `<Stmt><Id>STMT-20261103-001</Id><ElctrncSeqNb>307</ElctrncSeqNb><LglSeqNb>41</LglSeqNb>` &&
-      `<CreDtTm>2026-11-04T06:30:00</CreDtTm>` &&
-      `<FrToDt><FrDtTm>2026-11-03T00:00:00</FrDtTm><ToDtTm>2026-11-03T23:59:59</ToDtTm></FrToDt>` &&
-      `<Acct><Id><Othr><Id>000123456789</Id></Othr></Id><Ccy>USD</Ccy>` &&
-      `<Svcr><FinInstnId><BICFI>EXMPUS33XXX</BICFI></FinInstnId></Svcr></Acct>` &&
-      `<Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">1000.00</Amt>` &&
-      `<CdtDbtInd>DBIT</CdtDbtInd><Dt><Dt>2026-11-03</Dt></Dt></Bal>` &&
-      `<Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">250.00</Amt>` &&
-      `<CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-11-03</Dt></Dt></Bal>` &&
+      |<?xml version="1.0" encoding="UTF-8"?>| &&
+      |<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt>| &&
+      |<GrpHdr><MsgId>MSG-20261104-0001</MsgId><CreDtTm>2026-11-04T06:30:15</CreDtTm>| &&
+      |<MsgRcpt><Nm>EXAMPLE LIFE INSURANCE CO</Nm><Id><OrgId><AnyBIC>EXLIUS33XXX</AnyBIC></OrgId></Id>| &&
+      |</MsgRcpt></GrpHdr>| &&
+      |<Stmt><Id>STMT-20261103-001</Id><ElctrncSeqNb>307</ElctrncSeqNb><LglSeqNb>41</LglSeqNb>| &&
+      |<CreDtTm>2026-11-04T06:30:00</CreDtTm>| &&
+      |<FrToDt><FrDtTm>2026-11-03T00:00:00</FrDtTm><ToDtTm>2026-11-03T23:59:59</ToDtTm></FrToDt>| &&
+      |<Acct><Id><Othr><Id>000123456789</Id></Othr></Id><Ccy>USD</Ccy>| &&
+      |<Svcr><FinInstnId><BICFI>EXMPUS33XXX</BICFI></FinInstnId></Svcr></Acct>| &&
+      |<Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">1000.00</Amt>| &&
+      |<CdtDbtInd>DBIT</CdtDbtInd><Dt><Dt>2026-11-03</Dt></Dt></Bal>| &&
+      |<Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">250.00</Amt>| &&
+      |<CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-11-03</Dt></Dt></Bal>| &&
       summary( is_flags ) &&
       entries( is_flags ) &&
-      `</Stmt></BkToCstmrStmt></Document>`.
+      |</Stmt></BkToCstmrStmt></Document>|.
   ENDMETHOD.
 
   METHOD summary.
@@ -137,15 +137,15 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF is_flags-inconsistent_summary = abap_true.
-      rv_xml = `<TxsSummry><TtlNtries><NbOfNtries>3</NbOfNtries><Sum>1800.00</Sum></TtlNtries>` &&
-               `<TtlCdtNtries><NbOfNtries>1</NbOfNtries><Sum>1500.00</Sum></TtlCdtNtries>` &&
-               `<TtlDbtNtries><NbOfNtries>2</NbOfNtries><Sum>300.00</Sum></TtlDbtNtries></TxsSummry>`.
+      rv_xml = |<TxsSummry><TtlNtries><NbOfNtries>3</NbOfNtries><Sum>1800.00</Sum></TtlNtries>| &&
+               |<TtlCdtNtries><NbOfNtries>1</NbOfNtries><Sum>1500.00</Sum></TtlCdtNtries>| &&
+               |<TtlDbtNtries><NbOfNtries>2</NbOfNtries><Sum>300.00</Sum></TtlDbtNtries></TxsSummry>|.
       RETURN.
     ENDIF.
-    rv_xml = `<TxsSummry><TtlNtries><NbOfNtries>2</NbOfNtries><Sum>1750.00</Sum>` &&
-             `<TtlNetNtry><Amt>1250.00</Amt><CdtDbtInd>CRDT</CdtDbtInd></TtlNetNtry></TtlNtries>` &&
-             `<TtlCdtNtries><NbOfNtries>1</NbOfNtries><Sum>1500.00</Sum></TtlCdtNtries>` &&
-             `<TtlDbtNtries><NbOfNtries>1</NbOfNtries><Sum>250.00</Sum></TtlDbtNtries></TxsSummry>`.
+    rv_xml = |<TxsSummry><TtlNtries><NbOfNtries>2</NbOfNtries><Sum>1750.00</Sum>| &&
+             |<TtlNetNtry><Amt>1250.00</Amt><CdtDbtInd>CRDT</CdtDbtInd></TtlNetNtry></TtlNtries>| &&
+             |<TtlCdtNtries><NbOfNtries>1</NbOfNtries><Sum>1500.00</Sum></TtlCdtNtries>| &&
+             |<TtlDbtNtries><NbOfNtries>1</NbOfNtries><Sum>250.00</Sum></TtlDbtNtries></TxsSummry>|.
   ENDMETHOD.
 
   METHOD entries.
@@ -154,54 +154,54 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF is_flags-prtry_reversal_entry = abap_true.
-      rv_xml = `<Ntry><Amt Ccy="USD">75.25</Amt><CdtDbtInd>DBIT</CdtDbtInd><RvslInd>true</RvslInd>` &&
-               `<Sts><Cd>BOOK</Cd></Sts>` &&
-               `<BookgDt><DtTm>2026-11-03T10:15:00</DtTm></BookgDt>` &&
-               `<BkTxCd><Prtry><Cd>NTRF+166</Cd><Issr>BAI</Issr></Prtry></BkTxCd>` &&
-               `<NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId><InstrId>INS-9</InstrId>` &&
-               `</Refs></TxDtls></NtryDtls><AddtlNtryInf>REVERSAL OF PREMIUM 1001</AddtlNtryInf></Ntry>`.
+      rv_xml = |<Ntry><Amt Ccy="USD">75.25</Amt><CdtDbtInd>DBIT</CdtDbtInd><RvslInd>true</RvslInd>| &&
+               |<Sts><Cd>BOOK</Cd></Sts>| &&
+               |<BookgDt><DtTm>2026-11-03T10:15:00</DtTm></BookgDt>| &&
+               |<BkTxCd><Prtry><Cd>NTRF+166</Cd><Issr>BAI</Issr></Prtry></BkTxCd>| &&
+               |<NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId><InstrId>INS-9</InstrId>| &&
+               |</Refs></TxDtls></NtryDtls><AddtlNtryInf>REVERSAL OF PREMIUM 1001</AddtlNtryInf></Ntry>|.
       RETURN.
     ENDIF.
     IF is_flags-batch_without_amount = abap_true.
-      rv_xml = `<Ntry><Amt Ccy="USD">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
-               `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0009</AcctSvcrRef>` &&
-               `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>BOOK</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
-               `<NtryDtls><TxDtls><Refs><EndToEndId>E2E-A</EndToEndId></Refs></TxDtls>` &&
-               `<TxDtls><Refs><EndToEndId>E2E-B</EndToEndId></Refs></TxDtls></NtryDtls></Ntry>`.
+      rv_xml = |<Ntry><Amt Ccy="USD">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>| &&
+               |<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0009</AcctSvcrRef>| &&
+               |<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>BOOK</SubFmlyCd></Fmly></Domn></BkTxCd>| &&
+               |<NtryDtls><TxDtls><Refs><EndToEndId>E2E-A</EndToEndId></Refs></TxDtls>| &&
+               |<TxDtls><Refs><EndToEndId>E2E-B</EndToEndId></Refs></TxDtls></NtryDtls></Ntry>|.
       RETURN.
     ENDIF.
-    rv_xml = `<Ntry><NtryRef>1</NtryRef><Amt Ccy="USD">1500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>` &&
-             `<Sts><Cd>BOOK</Cd></Sts><BookgDt><Dt>2026-11-03</Dt></BookgDt><ValDt><Dt>2026-11-04</Dt></ValDt>` &&
-             `<AcctSvcrRef>BNK-0001</AcctSvcrRef>` &&
-             `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
-             `<NtryDtls><TxDtls><Refs><MsgId>PAYER-MSG-77</MsgId><EndToEndId>E2E-PREM-1001</EndToEndId></Refs>` &&
-             `<Amt Ccy="USD">1500.00</Amt><AddtlTxInf>PREMIUM POLICY 1001</AddtlTxInf></TxDtls></NtryDtls></Ntry>` &&
-             `<Ntry><Amt Ccy="USD">250.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
-             `<BookgDt><Dt>2026-11-03</Dt></BookgDt><ValDt><Dt>2026-11-03</Dt></ValDt>` &&
-             `<AcctSvcrRef>BNK-0002</AcctSvcrRef>` &&
-             `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICHQ</Cd><SubFmlyCd>CCHQ</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
-             `<NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId><ChqNb>10045</ChqNb></Refs>` &&
-             `</TxDtls></NtryDtls></Ntry>`.
+    rv_xml = |<Ntry><NtryRef>1</NtryRef><Amt Ccy="USD">1500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>| &&
+             |<Sts><Cd>BOOK</Cd></Sts><BookgDt><Dt>2026-11-03</Dt></BookgDt><ValDt><Dt>2026-11-04</Dt></ValDt>| &&
+             |<AcctSvcrRef>BNK-0001</AcctSvcrRef>| &&
+             |<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn></BkTxCd>| &&
+             |<NtryDtls><TxDtls><Refs><MsgId>PAYER-MSG-77</MsgId><EndToEndId>E2E-PREM-1001</EndToEndId></Refs>| &&
+             |<Amt Ccy="USD">1500.00</Amt><AddtlTxInf>PREMIUM POLICY 1001</AddtlTxInf></TxDtls></NtryDtls></Ntry>| &&
+             |<Ntry><Amt Ccy="USD">250.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>| &&
+             |<BookgDt><Dt>2026-11-03</Dt></BookgDt><ValDt><Dt>2026-11-03</Dt></ValDt>| &&
+             |<AcctSvcrRef>BNK-0002</AcctSvcrRef>| &&
+             |<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICHQ</Cd><SubFmlyCd>CCHQ</SubFmlyCd></Fmly></Domn></BkTxCd>| &&
+             |<NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId><ChqNb>10045</ChqNb></Refs>| &&
+             |</TxDtls></NtryDtls></Ntry>|.
   ENDMETHOD.
 
   METHOD configure_return_notification.
     mv_content =
-      `<?xml version="1.0" encoding="UTF-8"?>` &&
-      `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02"><BkToCstmrDbtCdtNtfctn>` &&
-      `<GrpHdr><MsgId>NTF-20261104-0007</MsgId><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm></GrpHdr>` &&
-      `<Ntfctn><Id>NTF-0007-01</Id><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm>` &&
-      `<Acct><Id><Othr><Id>000555000111</Id></Othr></Id><Ccy>USD</Ccy></Acct>` &&
-      `<Ntry><Amt Ccy="USD">300.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>` &&
-      `<BookgDt><Dt>2026-11-04</Dt></BookgDt><ValDt><Dt>2026-11-04</Dt></ValDt>` &&
-      `<AcctSvcrRef>RTN-BATCH-77</AcctSvcrRef>` &&
-      `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>RRTN</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
-      `<NtryDtls><TxDtls><Refs><EndToEndId>DISB-000001</EndToEndId></Refs>` &&
-      `<AmtDtls><TxAmt><Amt Ccy="USD">100.00</Amt></TxAmt></AmtDtls>` &&
-      `<RtrInf><Rsn><Cd>R01</Cd></Rsn></RtrInf></TxDtls>` &&
-      `<TxDtls><Refs><InstrId>INS-000002</InstrId><EndToEndId>DISB-000002</EndToEndId></Refs>` &&
-      `<AmtDtls><TxAmt><Amt Ccy="USD">200.00</Amt></TxAmt></AmtDtls>` &&
-      `<RtrInf><Rsn><Cd>R03</Cd></Rsn></RtrInf></TxDtls></NtryDtls></Ntry>` &&
-      `</Ntfctn></BkToCstmrDbtCdtNtfctn></Document>`.
+      |<?xml version="1.0" encoding="UTF-8"?>| &&
+      |<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02"><BkToCstmrDbtCdtNtfctn>| &&
+      |<GrpHdr><MsgId>NTF-20261104-0007</MsgId><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm></GrpHdr>| &&
+      |<Ntfctn><Id>NTF-0007-01</Id><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm>| &&
+      |<Acct><Id><Othr><Id>000555000111</Id></Othr></Id><Ccy>USD</Ccy></Acct>| &&
+      |<Ntry><Amt Ccy="USD">300.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>| &&
+      |<BookgDt><Dt>2026-11-04</Dt></BookgDt><ValDt><Dt>2026-11-04</Dt></ValDt>| &&
+      |<AcctSvcrRef>RTN-BATCH-77</AcctSvcrRef>| &&
+      |<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>RRTN</SubFmlyCd></Fmly></Domn></BkTxCd>| &&
+      |<NtryDtls><TxDtls><Refs><EndToEndId>DISB-000001</EndToEndId></Refs>| &&
+      |<AmtDtls><TxAmt><Amt Ccy="USD">100.00</Amt></TxAmt></AmtDtls>| &&
+      |<RtrInf><Rsn><Cd>R01</Cd></Rsn></RtrInf></TxDtls>| &&
+      |<TxDtls><Refs><InstrId>INS-000002</InstrId><EndToEndId>DISB-000002</EndToEndId></Refs>| &&
+      |<AmtDtls><TxAmt><Amt Ccy="USD">200.00</Amt></TxAmt></AmtDtls>| &&
+      |<RtrInf><Rsn><Cd>R03</Cd></Rsn></RtrInf></TxDtls></NtryDtls></Ntry>| &&
+      |</Ntfctn></BkToCstmrDbtCdtNtfctn></Document>|.
   ENDMETHOD.
 
   METHOD parse.
@@ -471,8 +471,8 @@ CLASS ltc_parser_camt IMPLEMENTATION.
 
   " Unsupported message: a Document that is not camt.053/054 (here pain.001) raises (152)
   METHOD unsupported_message_raises.
-    mv_content = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">` &&
-                 `<CstmrCdtTrfInitn><GrpHdr><MsgId>X</MsgId></GrpHdr></CstmrCdtTrfInitn></Document>`.
+    mv_content = |<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">| &&
+                 |<CstmrCdtTrfInitn><GrpHdr><MsgId>X</MsgId></GrpHdr></CstmrCdtTrfInitn></Document>|.
     TRY.
         parse( ).
         cl_abap_unit_assert=>fail( msg = 'pain.001 content must raise ZCX_CD_OPS_ERROR' ).
@@ -561,9 +561,9 @@ CLASS ltc_parser_camt IMPLEMENTATION.
 
   " A94: a document with a second message body is not accepted (blocking CAMT_DOCUMENT)
   METHOD second_body_blocked.
-    mv_content = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">` &&
-                 `<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr></BkToCstmrStmt>` &&
-                 `<BkToCstmrStmt><GrpHdr><MsgId>B</MsgId></GrpHdr></BkToCstmrStmt></Document>`.
+    mv_content = |<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">| &&
+                 |<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr></BkToCstmrStmt>| &&
+                 |<BkToCstmrStmt><GrpHdr><MsgId>B</MsgId></GrpHdr></BkToCstmrStmt></Document>|.
     assert_finding( iv_check_code = 'CAMT_DOCUMENT'
                     iv_severity   = zif_cd_ops_types=>gc_severity-block
                     iv_msg        = 'A second message body must block' ).
@@ -580,9 +580,9 @@ CLASS ltc_parser_camt IMPLEMENTATION.
 
   " A94: a camt.054 Ntfctn inside a camt.053 message is not read as a statement
   METHOD cross_format_child_blocked.
-    mv_content = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">` &&
-                 `<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr>` &&
-                 `<Ntfctn><Id>N1</Id></Ntfctn></BkToCstmrStmt></Document>`.
+    mv_content = |<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">| &&
+                 |<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr>| &&
+                 |<Ntfctn><Id>N1</Id></Ntfctn></BkToCstmrStmt></Document>|.
     DATA(ls_file) = assert_finding( iv_check_code = 'CAMT_DOCUMENT'
                                     iv_severity   = zif_cd_ops_types=>gc_severity-block
                                     iv_msg        = 'A statement element of another message type must block' ).

@@ -31,7 +31,7 @@ CLASS zcl_cd_fmon_chk_duplicate IMPLEMENTATION.
                                                             iv_name    = 'ORIGIN_ROWS'
                                                             iv_default = `Y` ) <> `N` ).
     DATA(lt_pool) = is_ctx-files.
-    APPEND LINES OF is_ctx-history TO lt_pool.
+    INSERT LINES OF is_ctx-history INTO TABLE lt_pool.
 
     LOOP AT is_ctx-files ASSIGNING FIELD-SYMBOL(<ls_file>).
       IF <ls_file>-origin_rows > 1 AND lv_rows_check = abap_true.

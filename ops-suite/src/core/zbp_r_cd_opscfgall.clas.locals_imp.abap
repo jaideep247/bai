@@ -129,7 +129,7 @@ CLASS lhc_alertrule IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-alertrule.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-alertrule.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-PaymentEngineArea )
                                         iv_list  = lif_c=>gc_val-alertrule_paymentenginearea ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-PaymentEngineArea
@@ -155,8 +155,8 @@ CLASS lhc_alertrule IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-alertrule.
-        APPEND INITIAL LINE TO reported-alertrule ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-alertrule.
+        INSERT INITIAL LINE INTO TABLE reported-alertrule ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -187,12 +187,12 @@ CLASS lhc_alertrule IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-alertrule.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-alertrule.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-alertrule.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-alertrule.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -200,7 +200,7 @@ CLASS lhc_alertrule IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
                                              opscfgall-SingletonID = 1 ) )
-        TO reported-alertrule.
+        INTO TABLE reported-alertrule.
     ENDLOOP.
   ENDMETHOD.
 
@@ -246,7 +246,7 @@ CLASS lhc_alertchannel IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-alertchannel.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-alertchannel.
       IF ls_row-ClassName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_ops_alert_channel ) ) = abap_false.
@@ -255,8 +255,8 @@ CLASS lhc_alertchannel IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-alertchannel.
-        APPEND INITIAL LINE TO reported-alertchannel ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-alertchannel.
+        INSERT INITIAL LINE INTO TABLE reported-alertchannel ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -287,12 +287,12 @@ CLASS lhc_alertchannel IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-alertchannel.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-alertchannel.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-alertchannel.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-alertchannel.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -300,7 +300,7 @@ CLASS lhc_alertchannel IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
                                              opscfgall-SingletonID = 1 ) )
-        TO reported-alertchannel.
+        INTO TABLE reported-alertchannel.
     ENDLOOP.
   ENDMETHOD.
 
@@ -342,12 +342,12 @@ CLASS lhc_opsparam IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-opsparam.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-opsparam.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-opsparam.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-opsparam.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -355,7 +355,7 @@ CLASS lhc_opsparam IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
                                              opscfgall-SingletonID = 1 ) )
-        TO reported-opsparam.
+        INTO TABLE reported-opsparam.
     ENDLOOP.
   ENDMETHOD.
 
@@ -394,7 +394,6 @@ CLASS lsc_zr_cd_opscfgall IMPLEMENTATION.
 
 
   METHOD cleanup_finalize.
-    RETURN.
   ENDMETHOD.
 
 ENDCLASS.

@@ -175,18 +175,19 @@ CLASS lcl_report IMPLEMENTATION.
             CLEAR lv_line.
             READ DATASET p_path INTO lv_line.
             DATA(lv_subrc) = sy-subrc.
-            IF lv_subrc = 0.
-              INSERT lv_line INTO TABLE lt_lines.
-            ELSEIF lv_subrc = gc_subrc_eof.
-              IF lv_line IS NOT INITIAL.
+            CASE lv_subrc.
+              WHEN 0.
                 INSERT lv_line INTO TABLE lt_lines.
-              ENDIF.
-              EXIT.
-            ELSE.
-              DATA(lv_read) = lines( lt_lines ).
-              RAISE EXCEPTION TYPE zcx_cd_ops_error
-                MESSAGE e531(zcd_ops) WITH p_path lv_subrc lv_read.
-            ENDIF.
+              WHEN gc_subrc_eof.
+                IF lv_line IS NOT INITIAL.
+                  INSERT lv_line INTO TABLE lt_lines.
+                ENDIF.
+                EXIT.
+              WHEN OTHERS.
+                DATA(lv_read) = lines( lt_lines ).
+                RAISE EXCEPTION TYPE zcx_cd_ops_error
+                  MESSAGE e531(zcd_ops) WITH p_path lv_subrc lv_read.
+            ENDCASE.
           ENDDO.
         CATCH cx_sy_conversion_codepage INTO DATA(lx_codepage).
           CLOSE DATASET p_path.

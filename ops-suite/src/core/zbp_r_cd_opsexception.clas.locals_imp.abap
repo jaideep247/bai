@@ -69,7 +69,7 @@ CLASS lhc_exception IMPLEMENTATION.
                                  THEN if_abap_behv=>auth-allowed
                                  ELSE if_abap_behv=>auth-unauthorized ).
       " answer only what the framework asked for
-      APPEND VALUE #( %tky                     = <ls_exception>-%tky
+      INSERT VALUE #( %tky                     = <ls_exception>-%tky
                       %action-assignOwner      = COND #( WHEN requested_authorizations-%action-assignOwner = if_abap_behv=>mk-on
                                                          THEN lv_change )
                       %action-resolveException = COND #( WHEN requested_authorizations-%action-resolveException = if_abap_behv=>mk-on
@@ -77,7 +77,7 @@ CLASS lhc_exception IMPLEMENTATION.
                       %action-requestWaiver    = COND #( WHEN requested_authorizations-%action-requestWaiver = if_abap_behv=>mk-on
                                                          THEN lv_change )
                       %action-approveWaiver    = COND #( WHEN requested_authorizations-%action-approveWaiver = if_abap_behv=>mk-on
-                                                         THEN lv_approve ) ) TO result.
+                                                         THEN lv_approve ) ) INTO TABLE result.
     ENDLOOP.
   ENDMETHOD.
 
@@ -89,7 +89,7 @@ CLASS lhc_exception IMPLEMENTATION.
       RESULT DATA(lt_exceptions).
     LOOP AT lt_exceptions INTO DATA(ls_exception).
       DATA(lv_open) = zcl_cd_ops_exc_policy=>is_open( ls_exception-Disposition ).
-      APPEND VALUE #( %tky = ls_exception-%tky ) TO result ASSIGNING FIELD-SYMBOL(<ls_result>).
+      INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE result ASSIGNING FIELD-SYMBOL(<ls_result>).
       IF requested_features-%action-assignOwner = if_abap_behv=>mk-on.
         <ls_result>-%action-assignOwner = fc( lv_open ).
       ENDIF.
@@ -121,11 +121,11 @@ CLASS lhc_exception IMPLEMENTATION.
                                                 waiver_req_by = ls_exception-WaiverReqBy )
                             iv_owner = ls_key-%param-Owner ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_exception-%tky ) TO failed-exception.
-        APPEND VALUE #( %tky = ls_exception-%tky
+        INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE failed-exception.
+        INSERT VALUE #( %tky = ls_exception-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-exception.
+          INTO TABLE reported-exception.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
@@ -165,11 +165,11 @@ CLASS lhc_exception IMPLEMENTATION.
                                                  waiver_req_by = ls_exception-WaiverReqBy )
                             iv_reason = ls_key-%param-Reason ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_exception-%tky ) TO failed-exception.
-        APPEND VALUE #( %tky = ls_exception-%tky
+        INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE failed-exception.
+        INSERT VALUE #( %tky = ls_exception-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-exception.
+          INTO TABLE reported-exception.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
@@ -215,11 +215,11 @@ CLASS lhc_exception IMPLEMENTATION.
                             iv_valid_to = ls_key-%param-ValidTo
                             iv_today    = lo_clock->today( ) ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_exception-%tky ) TO failed-exception.
-        APPEND VALUE #( %tky = ls_exception-%tky
+        INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE failed-exception.
+        INSERT VALUE #( %tky = ls_exception-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-exception.
+          INTO TABLE reported-exception.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE
@@ -261,11 +261,11 @@ CLASS lhc_exception IMPLEMENTATION.
                                                    waiver_req_by = ls_exception-WaiverReqBy )
                             iv_approver = sy-uname ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_exception-%tky ) TO failed-exception.
-        APPEND VALUE #( %tky = ls_exception-%tky
+        INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE failed-exception.
+        INSERT VALUE #( %tky = ls_exception-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-exception.
+          INTO TABLE reported-exception.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_opsexception IN LOCAL MODE

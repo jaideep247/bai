@@ -482,12 +482,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD call_plugin.
     " A62: the factory checks ZIF_CD_HCK_CHECK by RTTI before the class is created
     " (message 032 names class and interface)
-    DATA(lo_check) = CAST zif_cd_hck_check( zcl_cd_ops_factory=>get_plugin(
-      iv_class_name = is_def-class_name
-      iv_interface  = zif_cd_hck_types=>gc_check_intf ) ).
-    rs_result = lo_check->execute( is_def        = is_def
-                                   it_thresholds = it_thresholds
-                                   is_context    = is_context ).
+    rs_result = CAST zif_cd_hck_check( zcl_cd_ops_factory=>get_plugin(
+                  iv_class_name = is_def-class_name
+                  iv_interface  = zif_cd_hck_types=>gc_check_intf ) )->execute( is_def        = is_def
+                                                                               it_thresholds = it_thresholds
+                                                                               is_context    = is_context ).
   ENDMETHOD.
 
 

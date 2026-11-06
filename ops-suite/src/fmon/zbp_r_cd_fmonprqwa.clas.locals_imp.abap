@@ -60,11 +60,11 @@ CLASS lhc_handled IMPLEMENTATION.
                                                                  iv_reference   = <ls_row>-Reference
                                                                  iv_reason      = <ls_row>-Reason ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = <ls_row>-%tky ) TO failed-handled.
-        APPEND VALUE #( %tky = <ls_row>-%tky
+        INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-handled.
+        INSERT VALUE #( %tky = <ls_row>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error ) )
-          TO reported-handled.
+          INTO TABLE reported-handled.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -100,10 +100,10 @@ CLASS lsc_handled IMPLEMENTATION.
                                iv_at        = lv_now ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the record itself is saved; the exception stays open and visible in the exceptions app
-          APPEND VALUE #( %tky = <ls_row>-%tky
+          INSERT VALUE #( %tky = <ls_row>-%tky
                           %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
-                                              v1 = lx_error->get_text( ) ) ) TO reported-handled.
+                                              v1 = lx_error->get_text( ) ) ) INTO TABLE reported-handled.
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.

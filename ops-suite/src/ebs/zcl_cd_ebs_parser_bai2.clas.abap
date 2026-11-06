@@ -622,7 +622,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     LOOP AT lt_raw ASSIGNING FIELD-SYMBOL(<lv_raw>).
       DATA(lv_line) = trim( <lv_raw> ).
       IF lv_line IS NOT INITIAL.
-        APPEND lv_line TO rt_lines.
+        INSERT lv_line INTO TABLE rt_lines.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -645,10 +645,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
         append_continuation( EXPORTING iv_line   = lv_line
                              CHANGING  cs_record = <ls_last> ).
       ELSE.
-        APPEND VALUE #( rec_type   = lv_type
+        INSERT VALUE #( rec_type   = lv_type
                         raw        = strip_terminator( iv_rec_type = lv_type iv_raw = lv_line )
                         phys_count = 1
-                        line_no    = lv_line_no ) TO rt_records.
+                        line_no    = lv_line_no ) INTO TABLE rt_records.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -868,10 +868,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
 
   METHOD add_balance.
-    APPEND VALUE #( bal_type = iv_bal_type
+    INSERT VALUE #( bal_type = iv_bal_type
                     amount   = iv_amount
                     currency = ms_account-stmt-currency
-                    bal_date = ms_group-as_of_date ) TO ms_account-stmt-balances.
+                    bal_date = ms_group-as_of_date ) INTO TABLE ms_account-stmt-balances.
     CASE iv_bal_type.
       WHEN zif_cd_ebs_types=>gc_balance-opening_booked.
         ms_account-stmt-has_opening = abap_true.
@@ -933,7 +933,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       addtl_info   = detail_text( it_fields = it_fields iv_index = lv_text_index ) ).
     ls_line-reference = COND #( WHEN ls_line-cust_ref IS NOT INITIAL THEN ls_line-cust_ref ELSE ls_line-bank_ref ).
     ls_line-check_no  = check_number( iv_code = iv_code iv_cust_ref = ls_line-cust_ref ).
-    APPEND ls_line TO ms_account-lines.
+    INSERT ls_line INTO TABLE ms_account-lines.
     IF iv_cdi = zif_cd_ebs_types=>gc_cdi-credit.
       ms_account-credit_lines += 1.
       ms_account-credit_sum   += ls_line-amount.
@@ -1008,7 +1008,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     " The text is the remainder of the record and may itself contain commas
     DATA lt_parts TYPE string_table.
     LOOP AT it_fields ASSIGNING FIELD-SYMBOL(<lv_part>) FROM iv_index.
-      APPEND <lv_part> TO lt_parts.
+      INSERT <lv_part> INTO TABLE lt_parts.
     ENDLOOP.
     rv_text = trim( concat_lines_of( table = lt_parts sep = gc_delimiter ) ).
   ENDMETHOD.
@@ -1135,8 +1135,8 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     ms_group-child_total += COND ty_amount( WHEN iv_has_trailer = abap_true THEN iv_trailer_total
                                             ELSE ms_account-computed_total ).
-    APPEND ms_account-stmt TO ms_file-statements.
-    APPEND LINES OF ms_account-lines TO ms_file-lines.
+    INSERT ms_account-stmt INTO TABLE ms_file-statements.
+    INSERT LINES OF ms_account-lines INTO TABLE ms_file-lines.
     CLEAR ms_account.
   ENDMETHOD.
 
@@ -1288,14 +1288,14 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       WHEN iv_amount IS INITIAL THEN space
       WHEN ms_account-is_open = abap_true THEN ms_account-stmt-currency
       ELSE ms_group-currency ).
-    APPEND VALUE #( object_type = is_check-object_type
+    INSERT VALUE #( object_type = is_check-object_type
                     object_key  = is_check-object_key
                     rule_id     = iv_rule_id
                     check_code  = is_check-check_code
                     severity    = iv_severity
                     amount      = iv_amount
                     currency    = lv_currency
-                    message     = iv_message ) TO ms_file-findings.
+                    message     = iv_message ) INTO TABLE ms_file-findings.
   ENDMETHOD.
 
 
@@ -1340,10 +1340,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     DO.
       DATA(lv_comma) = find( val = iv_raw sub = gc_delimiter off = lv_offset ).
       IF lv_comma < 0.
-        APPEND substring( val = iv_raw off = lv_offset ) TO rt_fields.
+        INSERT substring( val = iv_raw off = lv_offset ) INTO TABLE rt_fields.
         RETURN.
       ENDIF.
-      APPEND substring( val = iv_raw off = lv_offset len = lv_comma - lv_offset ) TO rt_fields.
+      INSERT substring( val = iv_raw off = lv_offset len = lv_comma - lv_offset ) INTO TABLE rt_fields.
       lv_offset = lv_comma + 1.
     ENDDO.
   ENDMETHOD.

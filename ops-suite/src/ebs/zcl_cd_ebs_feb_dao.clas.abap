@@ -34,8 +34,7 @@ CLASS zcl_cd_ebs_feb_dao DEFINITION
     "! Component name prefix of the flags in ty_item_row (FLAG1..FLAG4)
     CONSTANTS gc_flag_prefix TYPE string VALUE `FLAG`.
 
-    TYPES:
-      BEGIN OF ty_item_row.
+    TYPES BEGIN OF ty_item_row.
         INCLUDE TYPE zif_cd_ebs_feb_dao=>ty_item.
     TYPES:
         flag1 TYPE c LENGTH 1,

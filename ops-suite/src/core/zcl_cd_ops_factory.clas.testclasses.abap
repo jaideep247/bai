@@ -39,7 +39,6 @@ CLASS ltd_auth IMPLEMENTATION.
     rv_allowed = abap_true.
   ENDMETHOD.
   METHOD zif_cd_ops_auth~check.
-    RETURN.
   ENDMETHOD.
 ENDCLASS.
 

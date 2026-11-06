@@ -999,22 +999,22 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     ELSE.
       cs_run-rag = zif_cd_ops_types=>gc_rag-red.
     ENDIF.
-    cs_run-message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_1
-                                            iv_v1    = cs_run-total_items
-                                            iv_v2    = cs_run-passed_items
-                                            iv_v3    = cs_run-failed_items )
-                  && ` `
-                  && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_2
-                                            iv_v1    = cs_run-blocked_items
-                                            iv_v2    = cs_run-warning_items ).
+    cs_run-message = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_1
+                                               iv_v1    = cs_run-total_items
+                                               iv_v2    = cs_run-passed_items
+                                               iv_v3    = cs_run-failed_items ) } {
+                        zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-run_counts_2
+                                               iv_v1    = cs_run-blocked_items
+                                               iv_v2    = cs_run-warning_items ) }|.
     IF iv_unevaluated > iv_posting_open.
-      cs_run-message = cs_run-message && ` ` && zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unevaluated
-                                                                      iv_v1    = iv_unevaluated - iv_posting_open ).
+      cs_run-message = |{ cs_run-message } {
+                          zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-unevaluated
+                                                 iv_v1    = iv_unevaluated - iv_posting_open ) }|.
     ENDIF.
     IF iv_posting_open > 0.
-      cs_run-message = cs_run-message && ` ` && zcl_cd_ops_util=>text(
-                                                  iv_msgno = zif_cd_ebs_types=>gc_msg-posting_unevaluated
-                                                  iv_v1    = iv_posting_open ).
+      cs_run-message = |{ cs_run-message } {
+                          zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-posting_unevaluated
+                                                 iv_v1    = iv_posting_open ) }|.
     ENDIF.
   ENDMETHOD.
 

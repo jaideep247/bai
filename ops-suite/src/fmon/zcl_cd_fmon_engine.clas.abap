@@ -464,7 +464,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
       DATA(lt_src_groups) = aggregate( is_src     = ls_src
                                        it_records = lt_records ).
-      APPEND LINES OF lt_src_groups TO lt_groups.
+      INSERT LINES OF lt_src_groups INTO TABLE lt_groups.
     ENDLOOP.
 
     " Apply all sources in event-time order: terminal outcomes are final, so a
@@ -1072,7 +1072,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       TRY.
           lt_found = zcl_cd_fmon_factory=>get_check( ls_check-class_name )->execute( is_ctx   = ls_ctx
                                                                                       is_check = ls_check ).
-          APPEND LINES OF lt_found TO mt_findings.
+          INSERT LINES OF lt_found INTO TABLE mt_findings.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
                           iv_key     = zif_cd_fmon_types=>gc_engine_key-check && ls_check-check_id
@@ -1239,7 +1239,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                        iv_tail  = lx_alert->get_text( ) ) ) ) ).
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
-          APPEND LINES OF lt_alert_error TO mt_findings.
+          INSERT LINES OF lt_alert_error INTO TABLE mt_findings.
           mo_store->finish_run( cs_run ).
           mo_store->commit( ).
       ENDTRY.

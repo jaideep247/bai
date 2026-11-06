@@ -60,7 +60,7 @@ CLASS lhc_release IMPLEMENTATION.
       RESULT DATA(lt_releases).
     LOOP AT lt_releases INTO DATA(ls_release).
       DATA(lv_open) = xsdbool( ls_release-Status = zif_cd_ebs_release_types=>gc_status-requested ).
-      APPEND VALUE #( %tky = ls_release-%tky ) TO result ASSIGNING FIELD-SYMBOL(<ls_result>).
+      INSERT VALUE #( %tky = ls_release-%tky ) INTO TABLE result ASSIGNING FIELD-SYMBOL(<ls_result>).
       " four-eyes: the requester never sees an enabled Approve button
       IF requested_features-%action-approveRelease = if_abap_behv=>mk-on.
         <ls_result>-%action-approveRelease = COND #( WHEN lv_open = abap_true AND ls_release-RequestedBy <> sy-uname
@@ -97,11 +97,11 @@ CLASS lhc_release IMPLEMENTATION.
                                                                     iv_check_code = <ls_release>-CheckCode
                                                                     iv_reason     = <ls_release>-Reason ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = <ls_release>-%tky ) TO failed-release.
-        APPEND VALUE #( %tky = <ls_release>-%tky
+        INSERT VALUE #( %tky = <ls_release>-%tky ) INTO TABLE failed-release.
+        INSERT VALUE #( %tky = <ls_release>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-release.
+          INTO TABLE reported-release.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -117,11 +117,11 @@ CLASS lhc_release IMPLEMENTATION.
                                                                   iv_requested_by = ls_release-RequestedBy
                                                                   iv_approver     = sy-uname ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
-        APPEND VALUE #( %tky = ls_release-%tky
+        INSERT VALUE #( %tky = ls_release-%tky ) INTO TABLE failed-release.
+        INSERT VALUE #( %tky = ls_release-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-release.
+          INTO TABLE reported-release.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_ebsrelease IN LOCAL MODE
@@ -146,11 +146,11 @@ CLASS lhc_release IMPLEMENTATION.
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
     LOOP AT lt_releases INTO DATA(ls_release).
       IF ls_release-Status <> zif_cd_ebs_release_types=>gc_status-requested.
-        APPEND VALUE #( %tky = ls_release-%tky ) TO failed-release.
-        APPEND VALUE #( %tky = ls_release-%tky
+        INSERT VALUE #( %tky = ls_release-%tky ) INTO TABLE failed-release.
+        INSERT VALUE #( %tky = ls_release-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ebs_release_types=>gc_msg-not_requested
                                             severity = if_abap_behv_message=>severity-error v1 = ls_release-Status ) )
-          TO reported-release.
+          INTO TABLE reported-release.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_ebsrelease IN LOCAL MODE
@@ -208,10 +208,10 @@ CLASS lsc_release IMPLEMENTATION.
                                iv_at        = lv_now ).
         CATCH zcx_cd_ops_error INTO DATA(lx_error).
           " the release itself is saved; the exception stays open and is visible in the app
-          APPEND VALUE #( %tky = <ls_release>-%tky
+          INSERT VALUE #( %tky = <ls_release>-%tky
                           %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = zif_cd_ops_types=>gc_msgno_free
                                               severity = if_abap_behv_message=>severity-warning
-                                              v1 = lx_error->get_text( ) ) ) TO reported-release.
+                                              v1 = lx_error->get_text( ) ) ) INTO TABLE reported-release.
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.

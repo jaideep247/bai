@@ -179,7 +179,7 @@ CLASS lhc_fmoniface IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmoniface.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmoniface.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Direction )
                                         iv_list  = lif_c=>gc_val-fmoniface_direction ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Direction
@@ -188,8 +188,8 @@ CLASS lhc_fmoniface IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmoniface.
-        APPEND INITIAL LINE TO reported-fmoniface ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmoniface.
+        INSERT INITIAL LINE INTO TABLE reported-fmoniface ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -220,12 +220,12 @@ CLASS lhc_fmoniface IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmoniface.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmoniface.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmoniface.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmoniface.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -233,7 +233,7 @@ CLASS lhc_fmoniface IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmoniface.
+        INTO TABLE reported-fmoniface.
     ENDLOOP.
   ENDMETHOD.
 
@@ -279,7 +279,7 @@ CLASS lhc_fmonsla IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmonsla.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmonsla.
       IF ls_row-MaxMinutes <= 0.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-maxminutes element = lif_c=>gc_el-maxminutes )
           INTO TABLE lt_msg.
@@ -292,8 +292,8 @@ CLASS lhc_fmonsla IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmonsla.
-        APPEND INITIAL LINE TO reported-fmonsla ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmonsla.
+        INSERT INITIAL LINE INTO TABLE reported-fmonsla ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -324,12 +324,12 @@ CLASS lhc_fmonsla IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmonsla.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmonsla.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmonsla.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmonsla.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -337,7 +337,7 @@ CLASS lhc_fmonsla IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmonsla.
+        INTO TABLE reported-fmonsla.
     ENDLOOP.
   ENDMETHOD.
 
@@ -383,7 +383,7 @@ CLASS lhc_fmonsource IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmonsource.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmonsource.
       IF ls_row-TableName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-TableName ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-TableName
@@ -475,8 +475,8 @@ CLASS lhc_fmonsource IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmonsource.
-        APPEND INITIAL LINE TO reported-fmonsource ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmonsource.
+        INSERT INITIAL LINE INTO TABLE reported-fmonsource ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -507,12 +507,12 @@ CLASS lhc_fmonsource IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmonsource.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmonsource.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmonsource.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmonsource.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -520,7 +520,7 @@ CLASS lhc_fmonsource IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmonsource.
+        INTO TABLE reported-fmonsource.
     ENDLOOP.
   ENDMETHOD.
 
@@ -562,12 +562,12 @@ CLASS lhc_fmonsourcemap IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmonsourcemap.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmonsourcemap.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmonsourcemap.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmonsourcemap.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -575,7 +575,7 @@ CLASS lhc_fmonsourcemap IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmonsourcemap.
+        INTO TABLE reported-fmonsourcemap.
     ENDLOOP.
   ENDMETHOD.
 
@@ -621,7 +621,7 @@ CLASS lhc_fmoncheck IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmoncheck.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmoncheck.
       IF ls_row-ClassName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_fmon_check ) ) = abap_false.
@@ -636,8 +636,8 @@ CLASS lhc_fmoncheck IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmoncheck.
-        APPEND INITIAL LINE TO reported-fmoncheck ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmoncheck.
+        INSERT INITIAL LINE INTO TABLE reported-fmoncheck ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -668,12 +668,12 @@ CLASS lhc_fmoncheck IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmoncheck.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmoncheck.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmoncheck.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmoncheck.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -681,7 +681,7 @@ CLASS lhc_fmoncheck IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmoncheck.
+        INTO TABLE reported-fmoncheck.
     ENDLOOP.
   ENDMETHOD.
 
@@ -727,7 +727,7 @@ CLASS lhc_fmonlotcfg IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmonlotcfg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmonlotcfg.
       IF ls_row-HdrTable IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-HdrTable ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-HdrTable
@@ -782,8 +782,8 @@ CLASS lhc_fmonlotcfg IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmonlotcfg.
-        APPEND INITIAL LINE TO reported-fmonlotcfg ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmonlotcfg.
+        INSERT INITIAL LINE INTO TABLE reported-fmonlotcfg ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -814,12 +814,12 @@ CLASS lhc_fmonlotcfg IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmonlotcfg.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmonlotcfg.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmonlotcfg.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmonlotcfg.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -827,7 +827,7 @@ CLASS lhc_fmonlotcfg IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmonlotcfg.
+        INTO TABLE reported-fmonlotcfg.
     ENDLOOP.
   ENDMETHOD.
 
@@ -873,7 +873,7 @@ CLASS lhc_fmoncalendar IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmoncalendar.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmoncalendar.
       IF zcl_cd_ops_cfg_checks=>window_complete( iv_from = ls_row-WindowFrom
                                                 iv_to   = ls_row-WindowTo ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-window_incomplete v1 = lif_c=>gc_el-windowfrom v2 = lif_c=>gc_el-windowto
@@ -881,8 +881,8 @@ CLASS lhc_fmoncalendar IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmoncalendar.
-        APPEND INITIAL LINE TO reported-fmoncalendar ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmoncalendar.
+        INSERT INITIAL LINE INTO TABLE reported-fmoncalendar ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -913,12 +913,12 @@ CLASS lhc_fmoncalendar IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmoncalendar.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmoncalendar.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmoncalendar.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmoncalendar.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -926,7 +926,7 @@ CLASS lhc_fmoncalendar IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmoncalendar.
+        INTO TABLE reported-fmoncalendar.
     ENDLOOP.
   ENDMETHOD.
 
@@ -972,7 +972,7 @@ CLASS lhc_fmontableallow IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmontableallow.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmontableallow.
       IF ls_row-TableName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-TableName ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-TableName
@@ -980,8 +980,8 @@ CLASS lhc_fmontableallow IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmontableallow.
-        APPEND INITIAL LINE TO reported-fmontableallow ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmontableallow.
+        INSERT INITIAL LINE INTO TABLE reported-fmontableallow ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -1012,12 +1012,12 @@ CLASS lhc_fmontableallow IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmontableallow.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmontableallow.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmontableallow.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmontableallow.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -1025,7 +1025,7 @@ CLASS lhc_fmontableallow IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
-        TO reported-fmontableallow.
+        INTO TABLE reported-fmontableallow.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1069,7 +1069,6 @@ CLASS lsc_zr_cd_fmoncfgall IMPLEMENTATION.
 
 
   METHOD cleanup_finalize.
-    RETURN.
   ENDMETHOD.
 
 ENDCLASS.

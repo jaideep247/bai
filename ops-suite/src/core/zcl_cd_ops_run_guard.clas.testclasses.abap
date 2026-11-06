@@ -17,7 +17,6 @@ ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
   METHOD zif_cd_ops_alert~send.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatch_calls += 1.

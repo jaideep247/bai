@@ -224,7 +224,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         WHERE checksum       = @it_checksums-table_line
           AND business_date >= @iv_since
         INTO CORRESPONDING FIELDS OF TABLE @lt_by_sum.
-      APPEND LINES OF lt_by_sum TO rt_files.
+      INSERT LINES OF lt_by_sum INTO TABLE rt_files.
     ENDIF.
 
     SORT rt_files BY file_id.

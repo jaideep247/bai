@@ -27,7 +27,6 @@ CLASS ltd_file IMPLEMENTATION.
     INSERT |{ iv_file }={ iv_line }| INTO TABLE mt_written.
   ENDMETHOD.
   METHOD zif_cd_hck_file~close.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_hck_file~delete.
     INSERT iv_file INTO TABLE mt_deleted.

@@ -182,7 +182,7 @@ CLASS lhc_btcmap IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-btcmap.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-btcmap.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Scheme )
                                         iv_list  = lif_c=>gc_val-btcmap_scheme ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Scheme
@@ -225,8 +225,8 @@ CLASS lhc_btcmap IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-btcmap.
-        APPEND INITIAL LINE TO reported-btcmap ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-btcmap.
+        INSERT INITIAL LINE INTO TABLE reported-btcmap ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -257,12 +257,12 @@ CLASS lhc_btcmap IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-btcmap.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-btcmap.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-btcmap.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-btcmap.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -270,7 +270,7 @@ CLASS lhc_btcmap IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-btcmap.
+        INTO TABLE reported-btcmap.
     ENDLOOP.
   ENDMETHOD.
 
@@ -316,7 +316,7 @@ CLASS lhc_btcrule IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-btcrule.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-btcrule.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
                                         iv_list  = lif_c=>gc_val-btcrule_severity ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Severity
@@ -337,8 +337,8 @@ CLASS lhc_btcrule IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-btcrule.
-        APPEND INITIAL LINE TO reported-btcrule ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-btcrule.
+        INSERT INITIAL LINE INTO TABLE reported-btcrule ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -369,12 +369,12 @@ CLASS lhc_btcrule IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-btcrule.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-btcrule.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-btcrule.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-btcrule.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -382,7 +382,7 @@ CLASS lhc_btcrule IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-btcrule.
+        INTO TABLE reported-btcrule.
     ENDLOOP.
   ENDMETHOD.
 
@@ -428,7 +428,7 @@ CLASS lhc_ruledef IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-ruledef.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-ruledef.
       IF ls_row-ClassName IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-ClassName )
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_ebs_rule ) ) = abap_false.
@@ -455,8 +455,8 @@ CLASS lhc_ruledef IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-ruledef.
-        APPEND INITIAL LINE TO reported-ruledef ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-ruledef.
+        INSERT INITIAL LINE INTO TABLE reported-ruledef ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -487,12 +487,12 @@ CLASS lhc_ruledef IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-ruledef.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-ruledef.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-ruledef.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-ruledef.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -500,7 +500,7 @@ CLASS lhc_ruledef IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-ruledef.
+        INTO TABLE reported-ruledef.
     ENDLOOP.
   ENDMETHOD.
 
@@ -546,7 +546,7 @@ CLASS lhc_housebankacct IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-housebankacct.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-housebankacct.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-FlowDefault )
                                         iv_list  = lif_c=>gc_val-housebankacct_flowdefault ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-FlowDefault
@@ -555,8 +555,8 @@ CLASS lhc_housebankacct IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-housebankacct.
-        APPEND INITIAL LINE TO reported-housebankacct ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-housebankacct.
+        INSERT INITIAL LINE INTO TABLE reported-housebankacct ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -587,12 +587,12 @@ CLASS lhc_housebankacct IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-housebankacct.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-housebankacct.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-housebankacct.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-housebankacct.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -600,7 +600,7 @@ CLASS lhc_housebankacct IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-housebankacct.
+        INTO TABLE reported-housebankacct.
     ENDLOOP.
   ENDMETHOD.
 
@@ -646,7 +646,7 @@ CLASS lhc_flowpattern IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-flowpattern.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-flowpattern.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-FlowType )
                                         iv_list  = lif_c=>gc_val-flowpattern_flowtype ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-FlowType
@@ -655,8 +655,8 @@ CLASS lhc_flowpattern IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-flowpattern.
-        APPEND INITIAL LINE TO reported-flowpattern ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-flowpattern.
+        INSERT INITIAL LINE INTO TABLE reported-flowpattern ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -687,12 +687,12 @@ CLASS lhc_flowpattern IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-flowpattern.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-flowpattern.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-flowpattern.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-flowpattern.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -700,7 +700,7 @@ CLASS lhc_flowpattern IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-flowpattern.
+        INTO TABLE reported-flowpattern.
     ENDLOOP.
   ENDMETHOD.
 
@@ -742,12 +742,12 @@ CLASS lhc_reasonmap IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-reasonmap.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-reasonmap.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-reasonmap.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-reasonmap.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -755,7 +755,7 @@ CLASS lhc_reasonmap IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-reasonmap.
+        INTO TABLE reported-reasonmap.
     ENDLOOP.
   ENDMETHOD.
 
@@ -801,7 +801,7 @@ CLASS lhc_ebslookup IMPLEMENTATION.
 
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
-      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-ebslookup.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-ebslookup.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-KeyKind )
                                         iv_list  = lif_c=>gc_val-ebslookup_keykind ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-KeyKind
@@ -827,8 +827,8 @@ CLASS lhc_ebslookup IMPLEMENTATION.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-ebslookup.
-        APPEND INITIAL LINE TO reported-ebslookup ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-ebslookup.
+        INSERT INITIAL LINE INTO TABLE reported-ebslookup ASSIGNING FIELD-SYMBOL(<ls_reported>).
         <ls_reported>-%tky        = ls_row-%tky.
         <ls_reported>-%state_area = gc_area_fields.
         <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
@@ -859,12 +859,12 @@ CLASS lhc_ebslookup IMPLEMENTATION.
     DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
                      VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
     LOOP AT keys INTO DATA(ls_key).
-      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-ebslookup.
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-ebslookup.
       IF ls_msg-number IS INITIAL.
         CONTINUE.
       ENDIF.
-      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-ebslookup.
-      APPEND VALUE #( %tky        = ls_key-%tky
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-ebslookup.
+      INSERT VALUE #( %tky        = ls_key-%tky
                       %state_area = gc_area_transport
                       %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
                                                  number   = ls_msg-number
@@ -872,7 +872,7 @@ CLASS lhc_ebslookup IMPLEMENTATION.
                                                  v1       = ls_msg-v1 )
                       %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
                                              ebscfgall-SingletonID = 1 ) )
-        TO reported-ebslookup.
+        INTO TABLE reported-ebslookup.
     ENDLOOP.
   ENDMETHOD.
 
@@ -915,7 +915,6 @@ CLASS lsc_zr_cd_ebscfgall IMPLEMENTATION.
 
 
   METHOD cleanup_finalize.
-    RETURN.
   ENDMETHOD.
 
 ENDCLASS.

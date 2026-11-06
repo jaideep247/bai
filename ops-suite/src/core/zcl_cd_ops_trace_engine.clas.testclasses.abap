@@ -363,8 +363,8 @@ CLASS ltc_trace IMPLEMENTATION.
 
     " Sources (names are examples - VERIFY-SE11 in the target system)
     param( iv_name  = zif_cd_ops_trace_types=>gc_param-src_request
-           iv_value = `TABLE=ZCD_PAYM_REQ_LOG;KEY=ZZ_FIN_TRANS_NUM;KEY2=SOURCE;REF=COUNTER;` &&
-                      `STATUS=ZZ_STATUS;DATE=ERDAT;TIME=ERZET;INFO=ZZ_MEMBER_NO` ).
+           iv_value = |TABLE=ZCD_PAYM_REQ_LOG;KEY=ZZ_FIN_TRANS_NUM;KEY2=SOURCE;REF=COUNTER;| &&
+                      |STATUS=ZZ_STATUS;DATE=ERDAT;TIME=ERZET;INFO=ZZ_MEMBER_NO| ).
     IF is_flags-no_history_cfg = abap_false.
       param( iv_name = zif_cd_ops_trace_types=>gc_param-src_history
              iv_value = `TABLE=DFKKRAPT;KEY=OPBEL;REF=AUGBL;DATE=RADAT;TIME=RATIM` ).

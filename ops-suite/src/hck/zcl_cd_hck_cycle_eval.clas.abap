@@ -182,29 +182,29 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
       WHEN zif_cd_hck_types=>gc_step_state-stuck.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_stuck.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
-        ls_finding-message    = ls_finding-message && ` `
-                             && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-after_min_max
-                                                       iv_v1    = is_status-runtime_min
-                                                       iv_v2    = is_step-max_runtime_min ).
+        ls_finding-message    = |{ ls_finding-message } {
+                                 zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-after_min_max
+                                                        iv_v1    = is_status-runtime_min
+                                                        iv_v2    = is_step-max_runtime_min ) }|.
       WHEN zif_cd_hck_types=>gc_step_state-completed.
         " A42: a completed step can still be late or retried - one finding each
         DATA(ls_base) = ls_finding.
         IF is_status-late_start = abap_true.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-step_late.
           ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-          ls_finding-message    = ls_base-message && ` `
-                               && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_started_late
-                                                         iv_v1    = |{ is_status-started_at TIME = ISO }|
-                                                         iv_v2    = |{ is_step-window_to TIME = ISO }| ).
+          ls_finding-message    = |{ ls_base-message } {
+                                   zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_started_late
+                                                          iv_v1    = |{ is_status-started_at TIME = ISO }|
+                                                          iv_v2    = |{ is_step-window_to TIME = ISO }| ) }|.
           INSERT ls_finding INTO TABLE rt_findings.
         ENDIF.
         IF is_status-retried = abap_true.
           ls_finding-check_code = zif_cd_hck_types=>gc_code-step_retried.
           ls_finding-severity   = zif_cd_ops_types=>gc_severity-info.
-          ls_finding-message    = ls_base-message && ` `
-                               && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_retried
-                                                         iv_v1    = is_status-attempts
-                                                         iv_v2    = |{ is_status-started_at TIME = ISO }| ).
+          ls_finding-message    = |{ ls_base-message } {
+                                   zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_retried
+                                                          iv_v1    = is_status-attempts
+                                                          iv_v2    = |{ is_status-started_at TIME = ISO }| ) }|.
           INSERT ls_finding INTO TABLE rt_findings.
         ENDIF.
         IF is_status-overrun = abap_false.
@@ -212,19 +212,19 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_overrun.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-        ls_finding-message    = ls_base-message && ` `
-                             && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-in_min_max
-                                                       iv_v1    = is_status-runtime_min
-                                                       iv_v2    = is_step-max_runtime_min ).
+        ls_finding-message    = |{ ls_base-message } {
+                                 zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-in_min_max
+                                                        iv_v1    = is_status-runtime_min
+                                                        iv_v2    = is_step-max_runtime_min ) }|.
       WHEN OTHERS.
         IF is_status-blocked = abap_false.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_blocked.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-        ls_finding-message    = ls_finding-message && `, `
-                             && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-blocked_by_predecessor
-                                                       iv_v1    = is_step-pred_step ).
+        ls_finding-message    = |{ ls_finding-message }, {
+                                 zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-blocked_by_predecessor
+                                                        iv_v1    = is_step-pred_step ) }|.
     ENDCASE.
     INSERT ls_finding INTO TABLE rt_findings.
   ENDMETHOD.

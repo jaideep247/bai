@@ -175,7 +175,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
                                                   iv_ref_date    = is_query-ref_date ).
     DATA(lv_select) = COND string( WHEN ls_query-group_field IS NOT INITIAL
                                    THEN |{ ls_query-group_field } AS group_value, | ).
-    lv_select = lv_select && `COUNT(*) AS row_count`.
+    lv_select = |{ lv_select }COUNT(*) AS row_count|.
     IF ls_query-agg_func = zif_cd_hck_types=>gc_agg_func-sum.
       lv_select = |{ lv_select }, SUM( { ls_query-sum_field } ) AS total|.
     ENDIF.

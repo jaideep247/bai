@@ -229,7 +229,7 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
 
     LOOP AT it_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true.
       DATA(lv_pattern) = to_upper( condense( CONV string( <ls_iface>-name_pattern ) ) ).
-      IF lv_pattern IS INITIAL OR NOT lv_name CP lv_pattern.
+      IF lv_pattern IS INITIAL OR lv_name NP lv_pattern.
         CONTINUE.
       ENDIF.
       IF dimension_matches( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_false

@@ -306,11 +306,11 @@ CLASS lcl_app IMPLEMENTATION.
                              text   = |{ <ls_category>-category } { zcl_cd_hck_report_html=>category_text( <ls_category>-category ) }| ).
       ro_grid->create_text( row    = lv_row
                             column = 2
-                            text   = zcl_cd_hck_report_html=>rag_text( <ls_category>-rag ) && ` ` &&
-                                     zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_category
-                                                            iv_v1    = <ls_category>-red_count
-                                                            iv_v2    = <ls_category>-amber_count
-                                                            iv_v3    = <ls_category>-check_count ) ).
+                            text   = |{ zcl_cd_hck_report_html=>rag_text( <ls_category>-rag ) } {
+                                         zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-report_category
+                                                                iv_v1    = <ls_category>-red_count
+                                                                iv_v2    = <ls_category>-amber_count
+                                                                iv_v3    = <ls_category>-check_count ) }| ).
     ENDLOOP.
     LOOP AT ms_report-pe_areas ASSIGNING FIELD-SYMBOL(<ls_pe_area>).
       lv_row = lv_row + 1.

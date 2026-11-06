@@ -61,7 +61,7 @@ CLASS lhc_suppression IMPLEMENTATION.
       RESULT DATA(lt_rows).
     DATA(lv_today) = zcl_cd_ops_factory=>get_clock( )->today( ).
     LOOP AT lt_rows INTO DATA(ls_row).
-      APPEND VALUE #( %tky = ls_row-%tky ) TO result ASSIGNING FIELD-SYMBOL(<ls_result>).
+      INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE result ASSIGNING FIELD-SYMBOL(<ls_result>).
       " four-eyes: the creator never sees an enabled Approve button
       IF requested_features-%action-approveSuppression = if_abap_behv=>mk-on.
         <ls_result>-%action-approveSuppression =
@@ -112,12 +112,12 @@ CLASS lhc_suppression IMPLEMENTATION.
                                                                  iv_from     = <ls_row>-ValidFrom
                                                                  iv_to       = <ls_row>-ValidTo ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = <ls_row>-%tky ) TO failed-suppression.
-        APPEND VALUE #( %tky = <ls_row>-%tky
+        INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-suppression.
+        INSERT VALUE #( %tky = <ls_row>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error
                                             v1 = |{ <ls_row>-ValidFrom DATE = ISO }| v2 = |{ <ls_row>-ValidTo DATE = ISO }| ) )
-          TO reported-suppression.
+          INTO TABLE reported-suppression.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -133,11 +133,11 @@ CLASS lhc_suppression IMPLEMENTATION.
                                                                iv_created_by = ls_row-CreatedBy
                                                                iv_approver   = sy-uname ).
       IF ls_decision-allowed = abap_false.
-        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-suppression.
-        APPEND VALUE #( %tky = ls_row-%tky
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-suppression.
+        INSERT VALUE #( %tky = ls_row-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
-          TO reported-suppression.
+          INTO TABLE reported-suppression.
         CONTINUE.
       ENDIF.
       MODIFY ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE

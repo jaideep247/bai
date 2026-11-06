@@ -192,7 +192,7 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
            && section_pe_areas( is_report )
            && section_checks( is_report )
            && section_exceptions( is_report )
-           && gc_html-legend_open && esc( TEXT-002 ) && ` ` && esc( TEXT-012 ) && ` ` && esc( TEXT-003 )
+           && gc_html-legend_open && |{ esc( TEXT-002 ) } { esc( TEXT-012 ) } { esc( TEXT-003 ) }|
            && gc_html-p_close
            && gc_html-page_close.
   ENDMETHOD.
@@ -232,14 +232,13 @@ CLASS zcl_cd_hck_report_html IMPLEMENTATION.
 
 
   METHOD subject.
-    rv_text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-mail_subject_1
-                                     iv_v1    = |{ is_report-report_date DATE = ISO }|
-                                     iv_v2    = rag_text( is_report-overall_rag )
-                                     iv_v3    = is_report-score )
-           && ` `
-           && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-mail_subject_2
-                                     iv_v1    = is_report-critical_count
-                                     iv_v2    = is_report-high_count ).
+    rv_text = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-mail_subject_1
+                                        iv_v1    = |{ is_report-report_date DATE = ISO }|
+                                        iv_v2    = rag_text( is_report-overall_rag )
+                                        iv_v3    = is_report-score ) } {
+                 zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-mail_subject_2
+                                        iv_v1    = is_report-critical_count
+                                        iv_v2    = is_report-high_count ) }|.
   ENDMETHOD.
 
 

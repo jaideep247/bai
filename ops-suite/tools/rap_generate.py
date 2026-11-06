@@ -642,15 +642,15 @@ def bp_locals(app, tables):
                       '    ENDLOOP.']
             o += ['', '    LOOP AT lt_rows INTO DATA(ls_row).',
                   '      CLEAR lt_msg.',
-                  f'      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-{al}.']
+                  f'      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-{al}.']
             body = []
             for chk in t['checks']:
                 body += abap_check(t, chk, root)
             o += ['  ' + line if line else line for line in body]
             o += ['',
                   '      LOOP AT lt_msg INTO DATA(ls_msg).',
-                  f'        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-{al}.',
-                  f'        APPEND INITIAL LINE TO reported-{al} ASSIGNING FIELD-SYMBOL(<ls_reported>).',
+                  f'        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-{al}.',
+                  f'        INSERT INITIAL LINE INTO TABLE reported-{al} ASSIGNING FIELD-SYMBOL(<ls_reported>).',
                   '        <ls_reported>-%tky        = ls_row-%tky.',
                   '        <ls_reported>-%state_area = gc_area_fields.',
                   "        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class",
@@ -679,12 +679,12 @@ def bp_locals(app, tables):
               '    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(',
               '                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).',
               '    LOOP AT keys INTO DATA(ls_key).',
-              f'      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-{al}.',
+              f'      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-{al}.',
               '      IF ls_msg-number IS INITIAL.',
               '        CONTINUE.',
               '      ENDIF.',
-              f'      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-{al}.',
-              f'      APPEND VALUE #( %tky        = ls_key-%tky',
+              f'      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-{al}.',
+              f'      INSERT VALUE #( %tky        = ls_key-%tky',
               '                      %state_area = gc_area_transport',
               "                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class",
               '                                                 number   = ls_msg-number',
@@ -692,7 +692,7 @@ def bp_locals(app, tables):
               '                                                 v1       = ls_msg-v1 )',
               f'                      %path       = VALUE #( {rl}-%is_draft   = ls_key-%is_draft',
               f'                                             {rl}-SingletonID = 1 ) )',
-              f'        TO reported-{al}.',
+              f'        INTO TABLE reported-{al}.',
               '    ENDLOOP.',
               '  ENDMETHOD.', '', 'ENDCLASS.']
 
@@ -723,7 +723,6 @@ def bp_locals(app, tables):
           '    ENDTRY.',
           '  ENDMETHOD.', '', '',
           '  METHOD cleanup_finalize.',
-          '    RETURN.',
           '  ENDMETHOD.', '', 'ENDCLASS.', '']
     iface = ['"! Values of this configuration app, generated from the spec in tools/rap_generate.py',
              '"! (element names, allowed values, interfaces, entities and tables) - one place, no literals',

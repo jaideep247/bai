@@ -40,10 +40,8 @@ CLASS ltd_store IMPLEMENTATION.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~finish_run.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
     rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
@@ -387,10 +385,10 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
 
   METHOD run.
     TRY.
-        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( iv_class ) ).
-        mt_findings = lo_rule->execute( is_rule       = is_rule
-                                        it_statements = mt_stmts
-                                        it_lines      = mt_lines ).
+        mt_findings = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( iv_class ) )->execute(
+                        is_rule       = is_rule
+                        it_statements = mt_stmts
+                        it_lines      = mt_lines ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Rule { iv_class } raised: { lx_error->get_text( ) }| ).
     ENDTRY.
@@ -1314,10 +1312,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
     add_statement( ).
     add_line( ).
     TRY.
-        DATA(lo_rule) = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R21_LOOKUP' ) ).
-        lo_rule->execute( is_rule       = rule( iv_rule_id = 'R21' iv_param1 = 'NOSUCH' )
-                          it_statements = mt_stmts
-                          it_lines      = mt_lines ).
+        CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( 'ZCL_CD_EBS_R_R21_LOOKUP' ) )->execute(
+          is_rule       = rule( iv_rule_id = 'R21' iv_param1 = 'NOSUCH' )
+          it_statements = mt_stmts
+          it_lines      = mt_lines ).
       CATCH zcx_cd_ops_error INTO lx_expected.
         cl_abap_unit_assert=>assert_bound( act = lx_expected msg = 'Unknown lookup must raise' ).
       CATCH cx_root INTO DATA(lx_other).

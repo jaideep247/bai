@@ -58,10 +58,8 @@ CLASS ltd_store IMPLEMENTATION.
     cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~finish_run.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
     rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).

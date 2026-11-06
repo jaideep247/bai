@@ -78,7 +78,7 @@ CLASS ltd_dao IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
     ENDIF.
     IF mv_sql_error = abap_true.
-      RAISE EXCEPTION TYPE cx_sy_open_sql_db.
+      RAISE EXCEPTION NEW cx_sy_open_sql_db( ).
     ENDIF.
     mt_saved = it_files.
     IF mv_conflict_all = abap_true.

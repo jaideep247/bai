@@ -77,8 +77,8 @@ CLASS ltc_report_html IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_report_html=>rag_chip( zif_cd_ops_types=>gc_rag-red )
-          exp = `<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;`
-             && `font-weight:bold;color:#ffffff;background:#c62828;">RED</span>`
+          exp = |<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;|
+             && |font-weight:bold;color:#ffffff;background:#c62828;">RED</span>|
           msg = 'Red chip markup' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

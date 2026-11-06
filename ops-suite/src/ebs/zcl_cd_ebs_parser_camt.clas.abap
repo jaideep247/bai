@@ -627,7 +627,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
   METHOD open_element.
     DATA(lv_name) = CONV ty_name( io_element->qname-name ).
-    APPEND lv_name TO mt_path.
+    INSERT lv_name INTO TABLE mt_path.
     DATA(lv_depth) = lines( mt_path ).
     IF lv_depth = gc_depth-root.
       mv_namespace = io_element->qname-namespace.
@@ -738,18 +738,19 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
   METHOD close_element.
     DATA(lv_depth) = lines( mt_path ).
-    IF lv_depth = mv_tx_depth.
-      APPEND ms_tx TO ms_entry-txs.
-      CLEAR: ms_tx, mv_tx_depth.
-    ELSEIF lv_depth = mv_ntry_depth.
-      close_entry( ).
-    ELSEIF lv_depth = mv_bal_depth.
-      close_balance( ).
-    ELSEIF lv_depth = mv_stmt_depth.
-      close_statement( ).
-    ELSEIF lv_depth = mv_hdr_depth.
-      CLEAR mv_hdr_depth.
-    ENDIF.
+    CASE lv_depth.
+      WHEN mv_tx_depth.
+        INSERT ms_tx INTO TABLE ms_entry-txs.
+        CLEAR: ms_tx, mv_tx_depth.
+      WHEN mv_ntry_depth.
+        close_entry( ).
+      WHEN mv_bal_depth.
+        close_balance( ).
+      WHEN mv_stmt_depth.
+        close_statement( ).
+      WHEN mv_hdr_depth.
+        CLEAR mv_hdr_depth.
+    ENDCASE.
     DELETE mt_path INDEX lv_depth.
   ENDMETHOD.
 
@@ -884,8 +885,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-statement_expected_entries
                                                         iv_v1    = ms_stmt-stmt-stmt_id ) ).
     ENDIF.
-    APPEND ms_stmt-stmt TO ms_file-statements.
-    APPEND LINES OF ms_stmt-lines TO ms_file-lines.
+    INSERT ms_stmt-stmt INTO TABLE ms_file-statements.
+    INSERT LINES OF ms_stmt-lines INTO TABLE ms_file-lines.
     CLEAR: ms_stmt, mv_stmt_depth.
   ENDMETHOD.
 
@@ -1018,7 +1019,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     IF ms_bal-is_debit = abap_true.
       ms_bal-balance-amount = - ms_bal-balance-amount.
     ENDIF.
-    APPEND ms_bal-balance TO ms_stmt-stmt-balances.
+    INSERT ms_bal-balance INTO TABLE ms_stmt-stmt-balances.
     CLEAR: ms_bal, mv_bal_depth.
   ENDMETHOD.
 
@@ -1235,7 +1236,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     apply_code( EXPORTING is_btc  = COND #( WHEN is_tx-btc-present = abap_true THEN is_tx-btc ELSE ms_entry-btc )
                 CHANGING  cs_line = ls_line ).
     ls_line-reference = primary_reference( ls_line ).
-    APPEND ls_line TO ms_stmt-lines.
+    INSERT ls_line INTO TABLE ms_stmt-lines.
   ENDMETHOD.
 
 
@@ -1296,14 +1297,14 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
 
   METHOD add_finding.
-    APPEND VALUE #( object_type = is_check-object_type
+    INSERT VALUE #( object_type = is_check-object_type
                     object_key  = is_check-object_key
                     rule_id     = iv_rule_id
                     check_code  = is_check-check_code
                     severity    = iv_severity
                     amount      = iv_amount
                     currency    = COND #( WHEN iv_amount IS NOT INITIAL THEN ms_stmt-stmt-currency )
-                    message     = iv_message ) TO ms_file-findings.
+                    message     = iv_message ) INTO TABLE ms_file-findings.
   ENDMETHOD.
 
 

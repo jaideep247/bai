@@ -162,10 +162,10 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     ls_message-severity    = zif_cd_ops_types=>gc_severity-info.
     ls_message-extnumber   = |{ iv_route }|.
     TRY.
-        DATA(lo_channel) = CAST zif_cd_ops_alert_channel(
+        CAST zif_cd_ops_alert_channel(
           zcl_cd_ops_factory=>get_plugin( iv_class_name = ls_channel-class_name
-                                          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
-        lo_channel->deliver( ls_message ).
+                                          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel )
+        )->deliver( ls_message ).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
                  iv_status = zif_cd_ops_types=>gc_alert_status-sent
                  iv_destination = ls_message-destination iv_subject = iv_subject

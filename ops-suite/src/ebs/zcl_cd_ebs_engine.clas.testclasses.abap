@@ -131,7 +131,6 @@ ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
   METHOD zif_cd_ops_alert~send.
-    RETURN.
   ENDMETHOD.
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatched += 1.
@@ -1326,7 +1325,7 @@ CLASS ltc_engine IMPLEMENTATION.
     DATA ls_diagnostic TYPE zif_cd_ops_types=>ty_finding.
     TEST-INJECTION tvarvc_read.
       IF lv_subrc = 0.
-        RAISE EXCEPTION TYPE cx_sy_open_sql_db.
+        RAISE EXCEPTION NEW cx_sy_open_sql_db( ).
       ENDIF.
     END-TEST-INJECTION.
     TRY.

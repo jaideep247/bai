@@ -81,10 +81,10 @@ CLASS zcl_cd_ebs_release_policy IMPLEMENTATION.
       <ls_finding>-severity  = zif_cd_ops_types=>gc_severity-info.
       <ls_finding>-action    = zif_cd_ops_types=>gc_action-notify.
       <ls_finding>-reference = |{ ls_release-release_uuid }|.
-      <ls_finding>-message   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-released_by
-                                                      iv_v1    = ls_release-approved_by
-                                                      iv_v2    = ls_release-requested_by )
-                            && ` ` && <ls_finding>-message.
+      <ls_finding>-message   = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-released_by
+                                                         iv_v1    = ls_release-approved_by
+                                                         iv_v2    = ls_release-requested_by ) } {
+                                  <ls_finding>-message }|.
     ENDLOOP.
   ENDMETHOD.
 
