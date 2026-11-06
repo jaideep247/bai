@@ -11,6 +11,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Authorisation ZCD_OPS activity 16 module EBS replaces S_PROGRAM.
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
+*& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -43,7 +44,7 @@ SELECTION-SCREEN BEGIN OF BLOCK b_fil WITH FRAME TITLE TEXT-b03.
 SELECTION-SCREEN END OF BLOCK b_fil.
 
 SELECTION-SCREEN BEGIN OF BLOCK b_run WITH FRAME TITLE TEXT-b04.
-  PARAMETERS p_var  TYPE c LENGTH 30 DEFAULT 'DAILY'.
+  PARAMETERS p_var  TYPE zif_cd_ops_types=>ty_variant DEFAULT 'DAILY'.
   PARAMETERS p_test AS CHECKBOX DEFAULT 'X'.
   PARAMETERS p_all  AS CHECKBOX.
 SELECTION-SCREEN END OF BLOCK b_run.

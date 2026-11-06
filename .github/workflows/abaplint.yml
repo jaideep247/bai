@@ -16,10 +16,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+      # Pinned to the version used for the offline evidence (audit A01/A24): a floating
+      # @2 tag ran 2.120.19 in CI while the evidence was produced with 2.120.92
       - name: Install abaplint
-        run: npm install -g @abaplint/cli@2
+        run: npm install -g @abaplint/cli@2.120.92
       - name: Syntax and house rules (abaplint.json)
         run: abaplint abaplint.json
+      - name: Show versions
+        run: abaplint --version && python3 --version
       - name: ATC-equivalent checks (abaplint.atc.json)
         run: python3 tools/portable_checks.py "$(command -v abaplint)"

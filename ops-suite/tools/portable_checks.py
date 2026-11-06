@@ -105,11 +105,21 @@ ATC_KNOWN = {('src/hck/zcl_cd_hck_dao.clas.abap', 'select_add_order_by'),
              ('src/fmon/zcl_cd_fmon_dao.clas.abap', 'db_operation_in_loop')}
 atc_detail, atc_failures = 'ATC-equivalent set not run (no binary given)', ['not run']
 if lint_bin:
-    out = subprocess.run([lint_bin, 'abaplint.atc.json'], cwd=ROOT, capture_output=True, text=True).stdout
+    proc = subprocess.run([lint_bin, 'abaplint.atc.json'], cwd=ROOT, capture_output=True, text=True)
+    out = proc.stdout
     found = re.findall(r'^(\S+)\[\d+, \d+\].*\((\w+)\) \[', out, re.M)
-    atc_failures = [f'{f} {r}' for f, r in found if (f, r) not in ATC_KNOWN]
-    atc_detail = (f'ATC-equivalent abaplint rule set: {len(found)} finding(s), '
-                  f'{len(found) - len(atc_failures)} documented exemption(s).')
+    summary = re.search(r'^abaplint: (\d+) issue\(s\) found, (\d+) file\(s\) analyzed', out, re.M)
+    # Audit A24: a run that did not complete (exit code other than 0 / 1, no summary line,
+    # no files, or a finding count that differs from the parsed lines) never passes
+    if proc.returncode not in (0, 1) or not summary or int(summary.group(2)) == 0 \
+            or int(summary.group(1)) != len(found):
+        atc_failures = [f'abaplint ATC run incomplete (exit {proc.returncode}, '
+                        f'summary {"found" if summary else "missing"})']
+        atc_detail = 'ATC-equivalent abaplint rule set did not complete: ' + (proc.stderr or out)[-300:]
+    else:
+        atc_failures = [f'{f} {r}' for f, r in found if (f, r) not in ATC_KNOWN]
+        atc_detail = (f'ATC-equivalent abaplint rule set: {len(found)} finding(s) over '
+                      f'{summary.group(2)} file(s), {len(found) - len(atc_failures)} documented exemption(s).')
 check('atc_equivalent_clean', atc_failures, atc_detail)
 
 docs = os.path.join(ROOT, 'docs')
