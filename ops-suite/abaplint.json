@@ -93,6 +93,7 @@
     "change_if_to_case": true,
     "omit_preceding_zeros": true,
     "sql_value_conversion": true,
-    "unnecessary_pragma": true
+    "unnecessary_pragma": true,
+    "prefer_returning_to_exporting": true
   }
 }

@@ -19,6 +19,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reasons: return rows show DFKKRP-RLGRD (different reasons = AMBIGUOUS row);
 *&            | NOC evidence row per attempt (DFKKNRP by INFOF), informational - never decides the verdict.
+*& 2026-11-06 | stage_file returns the file links (RETURNING instead of a single EXPORTING parameter).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -174,10 +175,10 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
 
     METHODS stage_file
       IMPORTING
-        is_attempt TYPE ty_attempt
-        it_runs    TYPE zif_cd_ops_trace_types=>tt_payment_run
-      EXPORTING
-        et_links   TYPE tt_file_link.
+        is_attempt      TYPE ty_attempt
+        it_runs         TYPE zif_cd_ops_trace_types=>tt_payment_run
+      RETURNING
+        VALUE(rt_links) TYPE tt_file_link.
 
     METHODS stage_prism
       IMPORTING
@@ -776,9 +777,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       stage_clearing_and_gl( is_attempt = is_attempt iv_cheque = lv_cheque ).
       RETURN.
     ENDIF.
-    stage_file( EXPORTING is_attempt = is_attempt
-                          it_runs    = lt_runs
-                IMPORTING et_links   = DATA(lt_links) ).
+    DATA(lt_links) = stage_file( is_attempt = is_attempt
+                                 it_runs    = lt_runs ).
     stage_prism( EXPORTING is_attempt = is_attempt
                            it_runs    = lt_runs
                            it_links   = lt_links
@@ -857,7 +857,6 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
 
   METHOD stage_file.
-    CLEAR et_links.
     IF it_runs IS INITIAL.
       add_no_link( is_attempt = is_attempt iv_stage = zif_cd_ops_trace_types=>gc_stage-file
                    iv_after = zif_cd_ops_trace_types=>gc_stage-payment ).
@@ -896,7 +895,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       " Same correlation key as file monitoring (long references: digest, audit A100)
       INSERT VALUE #( ref  = zcl_cd_fmon_util=>normalize_ref( <ls_row>-ref )
-                      name = zcl_cd_fmon_util=>canonical_name( <ls_row>-ref ) ) INTO TABLE et_links.
+                      name = zcl_cd_fmon_util=>canonical_name( <ls_row>-ref ) ) INTO TABLE rt_links.
       ls_base-record_key    = key_text( iv_part1 = <ls_row>-ref iv_part2 = <ls_row>-key1 iv_part3 = <ls_row>-key2 ).
       ls_base-evidence_date = to_date( <ls_row>-ev_date ).
       ls_base-evidence_time = to_time( <ls_row>-ev_time ).
