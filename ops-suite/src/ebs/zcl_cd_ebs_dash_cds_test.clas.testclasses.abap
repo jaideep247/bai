@@ -51,6 +51,9 @@ CLASS lcl_rows DEFINITION FINAL FOR TESTING.
         iv_esnum       TYPE zif_cd_ebs_types=>ty_esnum
         iv_reference   TYPE clike OPTIONAL
         iv_belnr       TYPE clike OPTIONAL
+        iv_bai_code    TYPE clike OPTIONAL
+        iv_dc_ind      TYPE clike OPTIONAL
+        iv_amount      TYPE febep-kwbtr OPTIONAL
       RETURNING
         VALUE(rs_line) TYPE febep.
 
@@ -126,6 +129,9 @@ CLASS lcl_rows IMPLEMENTATION.
     rs_line-budat = today( ).
     rs_line-chect = iv_reference.
     rs_line-belnr = iv_belnr.
+    rs_line-vorgc = iv_bai_code.
+    rs_line-epvoz = iv_dc_ind.
+    rs_line-kwbtr = iv_amount.
   ENDMETHOD.
 
 
@@ -218,6 +224,7 @@ CLASS ltc_statement DEFINITION FINAL
     METHODS lines_counted_per_statement FOR TESTING.
     METHODS line_status_from_line_finding FOR TESTING.
     METHODS rows_carry_validation_as_of FOR TESTING.
+    METHODS amounts_total_per_bai_code FOR TESTING.
 
     METHODS add_finding
       IMPORTING
@@ -397,6 +404,46 @@ CLASS ltc_statement IMPLEMENTATION.
                                             msg = 'Line findings count for their statement' ).
         cl_abap_unit_assert=>assert_equals( act = ls_blocked-duplicatecount exp = 1
                                             msg = 'Duplicate rule R09 is counted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD amounts_total_per_bai_code.
+    CONSTANTS lc_credit_code TYPE c LENGTH 3 VALUE '165'.
+    CONSTANTS lc_debit_code TYPE c LENGTH 3 VALUE '475'.
+    CONSTANTS lc_credit TYPE c LENGTH 1 VALUE 'H'.
+    CONSTANTS lc_debit TYPE c LENGTH 1 VALUE 'S'.
+    DATA lt_stmts TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA lt_lines TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    TRY.
+        INSERT lcl_rows=>statement( gc_kukey-clean ) INTO TABLE lt_stmts.
+        INSERT lcl_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_1 iv_bai_code = lc_credit_code
+                               iv_dc_ind = lc_credit iv_amount = '100.00' ) INTO TABLE lt_lines.
+        INSERT lcl_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = gc_line_2 iv_bai_code = lc_credit_code
+                               iv_dc_ind = lc_credit iv_amount = '50.25' ) INTO TABLE lt_lines.
+        INSERT lcl_rows=>line( iv_kukey = gc_kukey-clean iv_esnum = '00003' iv_bai_code = lc_debit_code
+                               iv_dc_ind = lc_debit iv_amount = '30.00' ) INTO TABLE lt_lines.
+        go_env->insert_test_data( i_data = lt_stmts ).
+        go_env->insert_test_data( i_data = lt_lines ).
+
+        " The analytical list page sums Amount per BAI code, debit / credit and currency
+        SELECT baicode, debitcreditind, currency, SUM( amount ) AS total, SUM( linecount ) AS lines
+          FROM zr_cd_ebsline
+          GROUP BY baicode, debitcreditind, currency
+          ORDER BY baicode
+          INTO TABLE @DATA(lt_totals).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_totals ) exp = 2 msg = 'One total per BAI code and direction' ).
+        DATA(ls_credit) = VALUE #( lt_totals[ baicode = lc_credit_code ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_credit-total exp = '150.25' msg = 'Credit lines of code 165 summed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_credit-lines exp = 2 msg = 'Two lines behind the total' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_credit-currency exp = lcl_rows=>gc_currency
+                                            msg = 'Line without currency takes the statement currency' ).
+        DATA(ls_debit) = VALUE #( lt_totals[ baicode = lc_debit_code ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_debit-total exp = '30.00' msg = 'Debit code 475 separate' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_debit-debitcreditind exp = lc_debit msg = 'Direction kept' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

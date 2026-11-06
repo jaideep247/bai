@@ -10,9 +10,25 @@
                measures: [ 'LineCount' ],
                dimensionAttributes: [ { dimension: 'BaiCode', role: #CATEGORY },
                                       { dimension: 'ValidationStatus', role: #SERIES } ],
-               measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 } ] } ]
+               measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 } ] },
+             { qualifier: 'AmountByCode',
+               title: 'Line amounts by BAI code (debit / credit, per currency)',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'BaiCode', 'DebitCreditInd', 'Currency' ],
+               measures: [ 'Amount' ],
+               dimensionAttributes: [ { dimension: 'BaiCode', role: #CATEGORY },
+                                      { dimension: 'DebitCreditInd', role: #SERIES },
+                                      { dimension: 'Currency', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'Amount', role: #AXIS_1 } ] } ]
 @UI.presentationVariant: [ { sortOrder: [ { by: 'Esnum', direction: #ASC } ],
                              visualizations: [ { type: #AS_CHART, qualifier: 'LinesByCode' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'AmountByCode',
+                             groupBy: [ 'BaiCode', 'DebitCreditInd', 'Currency' ],
+                             totalBy: [ 'BaiCode' ],
+                             total: [ 'Amount', 'LineCount' ],
+                             sortOrder: [ { by: 'BaiCode', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'AmountByCode' },
                                                { type: #AS_LINEITEM } ] } ]
 annotate entity ZC_CD_EbsLine with
 {
@@ -64,14 +80,18 @@ annotate entity ZC_CD_EbsLine with
   @UI.identification: [ { position: 90 } ]
   PostingRule;
   @EndUserText.label: 'Debit / credit'
+  @UI.lineItem: [ { position: 45, importance: #MEDIUM } ]
   @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 60 } ]
   DebitCreditInd;
   @EndUserText.label: 'Amount'
   @UI.lineItem: [ { position: 50, importance: #HIGH } ]
   @UI.identification: [ { position: 110 } ]
   Amount;
   @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 55, importance: #MEDIUM } ]
   @UI.identification: [ { position: 120 } ]
+  @UI.selectionField: [ { position: 70 } ]
   Currency;
   @EndUserText.label: 'Booking date'
   @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]

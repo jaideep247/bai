@@ -16,6 +16,7 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_EBS_DASH`, ma
 | Chart (default) | Statements by **house bank**, stacked by **validation status**. Alternatives: lines and lines with findings per statement date; open findings (B / E / W) by house bank and account ID |
 | Table | One row per imported statement (FEBKO, statement date in the last 31 days): date, company code, house bank, account ID, statement number, status (coloured), worst severity, lines, posted lines, open findings, duplicates, as of |
 | Object page | Statement attributes, line and finding counts, validation as of; **Lines** (FEBEP) → line object page with its **open findings** and **returns / NOC lot items**; **Open findings** of the statement and its lines |
+| Lines (`EbsLine`) | Every FEBEP line as its own record (BAI code, posting rule, debit / credit, amount, currency, dates, bank reference, posting document, status). **Amount totals by BAI code**: presentation variant `AmountByCode` sums `Amount` (and the line count) per BAI code, debit / credit and currency, with a total per BAI code; chart *Line amounts by BAI code* (stacked by debit / credit). Amounts are never added across currencies — the currency is part of every group; filter one currency for a single total. Removing the grouping returns to the individual lines |
 | App "EBS findings" (`EbsFinding`) | Findings by **rule and severity** (default chart), by BAI code and category; selection variant *Open*; one row per finding with rule text, check code, owner, due date |
 | App "EBS runs" (`EbsRun`) | Run history: **lines by outcome per run date** (passed, warning, failed, blocked, not evaluated); findings of each run |
 
@@ -121,7 +122,7 @@ ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_OPS_FINDIN
 
 | Class | Tests |
 |---|---|
-| `ltc_statement` (`ZR_CD_EBSSTMT`, `ZR_CD_EBSLINE`) | `status_follows_worst_finding`, `closed_findings_are_ignored`, `lines_counted_per_statement`, `line_status_from_line_finding`, `rows_carry_validation_as_of` |
+| `ltc_statement` (`ZR_CD_EBSSTMT`, `ZR_CD_EBSLINE`) | `status_follows_worst_finding`, `closed_findings_are_ignored`, `lines_counted_per_statement`, `line_status_from_line_finding`, `rows_carry_validation_as_of`, `amounts_total_per_bai_code` |
 | `ltc_finding` (`ZR_CD_EBSFIND`) | `account_is_masked`, `file_stmt_message_hidden`, `line_key_gives_line_number` |
 | `ltc_run` (`ZR_CD_EBSRUN`, `ZR_CD_EBSKPI`, `ZR_CD_EBSASOF`) | `unevaluated_is_the_remainder`, `run_counts_s13_and_duplicates`, `kpi_shows_last_run_of_day`, `as_of_skips_running_and_test`, `stale_when_no_completed_run`, `stale_after_26_hours` |
 | `ltc_returns` (`ZR_CD_EBSRETNOC`) | `return_reason_from_dfkkrp`, `noc_reason_via_infof` |
@@ -134,6 +135,7 @@ ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_OPS_FINDIN
 | EBD-02 | No EBS run for > 26 h (or QA1 without runs) | Header / rows stale (red); tile *Stale validation* = 1 |
 | EBD-03 | Test-mode run, then an aborted run | As of does not move |
 | EBD-04 | Statement with an unmapped BAI code (R14 B) | Status BLOCKED; line BLOCKED; finding listed with BAI code and rule text |
+| EBD-04a | Statement with two 165 credit lines (100.00, 50.25 USD) and one 475 debit line (30.00 USD); Lines app, variant *Amounts by BAI code* | 165 / credit: 150.25 USD, 2 lines; 475 / debit: 30.00 USD, 1 line; a second currency appears as its own total, never added |
 | EBD-05 | Statement imported before FEBP finished (S13) | Status POSTING_INCOMPLETE; latest run *not evaluated* > 0 = total − passed − warning − failed − blocked of `ZCD_OPS_RUN` |
 | EBD-06 | Resolve the finding in the exceptions app and re-run | Status NO_FINDINGS; finding no longer open |
 | EBD-07 | Duplicate entry (R09 / R22) | Duplicate count 1 on statement and run |

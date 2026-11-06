@@ -24,6 +24,9 @@ define root view entity ZC_CD_EbsLine
       BaiCode,
       PostingRule,
       DebitCreditInd,
+      // Totals per BAI code / debit-credit / currency: summed per group; the currency is part of
+      // every group (amount semantics), so different currencies are never added together
+      @Aggregation.default: #SUM
       Amount,
       Currency,
       BookingDate,
