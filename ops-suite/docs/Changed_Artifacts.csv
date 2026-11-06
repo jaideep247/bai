@@ -32,6 +32,7 @@ ddic/core/zcd_d_param.tabl.ddl,DDIC,
 ddic/core/zcd_ops_alert_chn.tabl.ddl,DDIC,
 ddic/core/zcd_ops_alert_log.tabl.ddl,DDIC,
 ddic/core/zcd_ops_alert_rule.tabl.ddl,DDIC,
+ddic/core/zcd_ops_exc_hist.tabl.ddl,DDIC,
 ddic/core/zcd_ops_finding.tabl.ddl,DDIC,
 ddic/core/zcd_ops_lock.tabl.ddl,DDIC,
 ddic/core/zcd_ops_param.tabl.ddl,DDIC,
@@ -109,9 +110,18 @@ docs/text_elements/zcd_morning_report.prog.texts.md,Doc,
 docs/text_elements/zcd_ops_purge.prog.texts.md,Doc,
 src/package.devc.xml,abapGit,
 src/core/package.devc.xml,abapGit,
+src/core/za_cd_excassign.ddls.asddls,CDS,
+src/core/za_cd_excassign.ddls.xml,abapGit,
+src/core/za_cd_excreason.ddls.asddls,CDS,
+src/core/za_cd_excreason.ddls.xml,abapGit,
+src/core/za_cd_excwaiver.ddls.asddls,CDS,
+src/core/za_cd_excwaiver.ddls.xml,abapGit,
 src/core/zbp_r_cd_opscfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_OpsCfgAll (Alerting and parameters). Handlers and
 src/core/zbp_r_cd_opscfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of Alerting and parameters: ZCD_OPS authorisation, create /"
 src/core/zbp_r_cd_opscfgall.clas.xml,abapGit,
+src/core/zbp_r_cd_opsexception.clas.abap,ABAP,"Behaviour pool of ZR_CD_OpsException (exceptions app, design 6.1)."
+src/core/zbp_r_cd_opsexception.clas.locals_imp.abap,ABAP,Handler of the exceptions app: instance authorisation (ZCD_OPS 02 per
+src/core/zbp_r_cd_opsexception.clas.xml,abapGit,
 src/core/zc_cd_alertchannel.ddls.asddls,CDS,
 src/core/zc_cd_alertchannel.ddls.xml,abapGit,
 src/core/zc_cd_alertchannel.ddlx.asddlxs,CDS,
@@ -126,6 +136,16 @@ src/core/zc_cd_opscfgall.ddls.asddls,CDS,
 src/core/zc_cd_opscfgall.ddls.xml,abapGit,
 src/core/zc_cd_opscfgall.ddlx.asddlxs,CDS,
 src/core/zc_cd_opscfgall.ddlx.xml,abapGit,
+src/core/zc_cd_opsexception.bdef.asbdef,RAP,
+src/core/zc_cd_opsexception.bdef.xml,abapGit,
+src/core/zc_cd_opsexception.ddls.asddls,CDS,
+src/core/zc_cd_opsexception.ddls.xml,abapGit,
+src/core/zc_cd_opsexception.ddlx.asddlxs,CDS,
+src/core/zc_cd_opsexception.ddlx.xml,abapGit,
+src/core/zc_cd_opsexchist.ddls.asddls,CDS,
+src/core/zc_cd_opsexchist.ddls.xml,abapGit,
+src/core/zc_cd_opsexchist.ddlx.asddlxs,CDS,
+src/core/zc_cd_opsexchist.ddlx.xml,abapGit,
 src/core/zc_cd_opsparam.ddls.asddls,CDS,
 src/core/zc_cd_opsparam.ddls.xml,abapGit,
 src/core/zc_cd_opsparam.ddlx.asddlxs,CDS,
@@ -138,6 +158,7 @@ src/core/zcd_ops.msag.xml,abapGit,
 src/core/zcd_ops_alert_chn.tabl.xml,abapGit,
 src/core/zcd_ops_alert_log.tabl.xml,abapGit,
 src/core/zcd_ops_alert_rule.tabl.xml,abapGit,
+src/core/zcd_ops_exc_hist.tabl.xml,abapGit,
 src/core/zcd_ops_finding.tabl.xml,abapGit,
 src/core/zcd_ops_lock.tabl.xml,abapGit,
 src/core/zcd_ops_param.tabl.xml,abapGit,
@@ -182,6 +203,12 @@ src/core/zcl_cd_ops_chn_http.clas.testclasses.abap,ABAP,"Domain tests of the web
 src/core/zcl_cd_ops_chn_http.clas.xml,abapGit,
 src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
 src/core/zcl_cd_ops_clock.clas.xml,abapGit,
+src/core/zcl_cd_ops_exc_dao.clas.abap,ABAP,Exception repository: finds the open exceptions of an object and closes
+src/core/zcl_cd_ops_exc_dao.clas.testclasses.abap,ABAP,OSQL tests of the exception repository: only open / assigned exceptions
+src/core/zcl_cd_ops_exc_dao.clas.xml,abapGit,
+src/core/zcl_cd_ops_exc_policy.clas.abap,ABAP,Exception lifecycle rules for the exceptions app (design 6.1): assign to
+src/core/zcl_cd_ops_exc_policy.clas.testclasses.abap,ABAP,"Pure tests of the exception lifecycle rules (design 6.1): who may assign,"
+src/core/zcl_cd_ops_exc_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_factory.clas.abap,ABAP,"Resolves shared services (store, alert router, alert DAO, clock) and creates"
 src/core/zcl_cd_ops_factory.clas.testclasses.abap,ABAP,Tests of plug-in creation by class name (the mechanism behind every
 src/core/zcl_cd_ops_factory.clas.xml,abapGit,
@@ -226,6 +253,10 @@ src/core/zif_cd_ops_cfg_types.intf.abap,ABAP,"Named types and constants of the R
 src/core/zif_cd_ops_cfg_types.intf.xml,abapGit,
 src/core/zif_cd_ops_clock.intf.abap,ABAP,Operations suite - clock (injectable for tests)
 src/core/zif_cd_ops_clock.intf.xml,abapGit,
+src/core/zif_cd_ops_exc_dao.intf.abap,ABAP,Repository for closing exceptions outside the exceptions business object
+src/core/zif_cd_ops_exc_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_exc_types.intf.abap,ABAP,"Types and constants of the exception lifecycle (exceptions app, design"
+src/core/zif_cd_ops_exc_types.intf.xml,abapGit,
 src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per module + variant at a time. The lock survives COMMIT WORK
 src/core/zif_cd_ops_lock.intf.xml,abapGit,
 src/core/zif_cd_ops_purge_dao.intf.abap,ABAP,"SQL for the retention purge: count and delete, one package at a time, the"
@@ -242,10 +273,18 @@ src/core/zr_cd_opscfgall.bdef.asbdef,RAP,
 src/core/zr_cd_opscfgall.bdef.xml,abapGit,
 src/core/zr_cd_opscfgall.ddls.asddls,CDS,
 src/core/zr_cd_opscfgall.ddls.xml,abapGit,
+src/core/zr_cd_opsexception.bdef.asbdef,RAP,
+src/core/zr_cd_opsexception.bdef.xml,abapGit,
+src/core/zr_cd_opsexception.ddls.asddls,CDS,
+src/core/zr_cd_opsexception.ddls.xml,abapGit,
+src/core/zr_cd_opsexchist.ddls.asddls,CDS,
+src/core/zr_cd_opsexchist.ddls.xml,abapGit,
 src/core/zr_cd_opsparam.ddls.asddls,CDS,
 src/core/zr_cd_opsparam.ddls.xml,abapGit,
 src/core/zui_cd_ops_cfg.srvd.srvdsrv,RAP,
 src/core/zui_cd_ops_cfg.srvd.xml,abapGit,
+src/core/zui_cd_ops_exc.srvd.srvdsrv,RAP,
+src/core/zui_cd_ops_exc.srvd.xml,abapGit,
 src/ebs/package.devc.xml,abapGit,
 src/ebs/zbp_r_cd_ebscfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_EbsCfgAll (EBS rules and mapping). Handlers and
 src/ebs/zbp_r_cd_ebscfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of EBS rules and mapping: ZCD_OPS authorisation, create /"

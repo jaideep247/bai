@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Exception carry-forward: inherit, supersede, auto-resolve, waived kept.
+*& 2026-11-06 | pending_waiver_is_carried (exceptions app).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -62,7 +63,8 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_object_key  TYPE zif_cd_ops_types=>ty_object_key
         iv_disposition TYPE zif_cd_ops_types=>ty_disposition
-        iv_group       TYPE zif_cd_ops_types=>ty_group OPTIONAL.
+        iv_group       TYPE zif_cd_ops_types=>ty_group OPTIONAL
+        iv_waiver_req  TYPE abap_bool DEFAULT abap_false.
     METHODS save_again
       RETURNING
         VALUE(rs_run) TYPE zif_cd_ops_types=>ty_run
@@ -87,6 +89,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS absent_exception_resolved    FOR TESTING.
     METHODS out_of_scope_stays_open      FOR TESTING.
     METHODS group_scope_resolves         FOR TESTING.
+    METHODS pending_waiver_is_carried    FOR TESTING.
 ENDCLASS.
 
 
@@ -230,6 +233,12 @@ CLASS ltc_store IMPLEMENTATION.
     IF iv_disposition = zif_cd_ops_types=>gc_disposition-waived.
       ls_row-waiver_until = gc_cf-waiver_end.
     ENDIF.
+    IF iv_waiver_req = abap_true.
+      ls_row-waiver_req_by = gc_cf-owner.
+      ls_row-waiver_req_at = gc_cf-first_seen.
+      ls_row-waiver_reason = 'Known bank issue'.
+      ls_row-waiver_until  = gc_cf-waiver_end.
+    ENDIF.
     INSERT ls_row INTO TABLE lt_rows.
     go_env->insert_test_data( lt_rows ).
   ENDMETHOD.
@@ -364,6 +373,29 @@ CLASS ltc_store IMPLEMENTATION.
         DATA(ls_old) = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 ).
         cl_abap_unit_assert=>assert_equals( act = ls_old-disposition exp = zif_cd_ops_types=>gc_disposition-resolved
                                             msg = 'A check that passed must resolve its exceptions' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (exceptions app): a waiver request waiting for approval survives a re-run -
+  " the new row carries requester, reason and requested end date
+  METHOD pending_waiver_is_carried.
+    TRY.
+        prior_exception( iv_object_key  = gc_cf-key
+                         iv_disposition = zif_cd_ops_types=>gc_disposition-assigned
+                         iv_waiver_req  = abap_true ).
+        DATA(ls_run) = save_again( ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-waiver_req_by exp = gc_cf-owner
+                                            msg = 'The requester must be carried forward' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-waiver_reason exp = 'Known bank issue'
+                                            msg = 'The waiver reason must be carried forward' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-waiver_until exp = gc_cf-waiver_end
+                                            msg = 'The requested end date must be carried forward' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-disposition exp = zif_cd_ops_types=>gc_disposition-assigned
+                                            msg = 'The request does not change the disposition' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

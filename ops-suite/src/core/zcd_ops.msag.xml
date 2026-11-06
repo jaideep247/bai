@@ -125,6 +125,48 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>061</MSGNR>
+     <TEXT>Exception is closed (disposition &amp;1): no further action possible</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>062</MSGNR>
+     <TEXT>A reason is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>063</MSGNR>
+     <TEXT>Four-eyes: &amp;1 requested this and cannot approve it</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>064</MSGNR>
+     <TEXT>No waiver request is pending for this exception</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>065</MSGNR>
+     <TEXT>Waiver end date &amp;1 is in the past</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>066</MSGNR>
+     <TEXT>An owner (user) is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>067</MSGNR>
+     <TEXT>A waiver request by &amp;1 is already pending</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>150</MSGNR>
      <TEXT>Content is not a BAI2 file: first record &amp;1 (expected type 01)</TEXT>
     </T100>

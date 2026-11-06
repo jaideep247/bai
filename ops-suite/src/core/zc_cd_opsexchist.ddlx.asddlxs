@@ -1,0 +1,24 @@
+// UI annotations: Exception action history
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Action', typeNamePlural: 'Actions' }
+annotate entity ZC_CD_OpsExcHist with
+{
+  @UI.lineItem: [ { position: 10 } ]
+  CreatedAt;
+  @UI.lineItem: [ { position: 20 } ]
+  HistAction;
+  @UI.lineItem: [ { position: 30 } ]
+  FromDisp;
+  @UI.lineItem: [ { position: 40 } ]
+  ToDisp;
+  @UI.lineItem: [ { position: 50 } ]
+  CreatedBy;
+  @UI.lineItem: [ { position: 60 } ]
+  Owner;
+  @UI.lineItem: [ { position: 70 } ]
+  Reason;
+  @UI.lineItem: [ { position: 80 } ]
+  Reference;
+  @UI.hidden: true
+  HistUuid;
+}

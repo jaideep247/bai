@@ -35,6 +35,11 @@ define table zcd_ops_finding {
   superseded_by : sysuuid_x16;
   // Waiver valid until (disposition W); a re-run keeps the waiver while valid
   waiver_until  : abap.dats;
+  // Waiver request (exceptions app, four-eyes): requester, time and reason;
+  // approved by a different user (RESOLVED_BY), then disposition W
+  waiver_req_by : syuname;
+  waiver_req_at : timestampl;
+  waiver_reason : abap.char(255);
   created_by    : syuname;
   created_at    : timestampl;
 }

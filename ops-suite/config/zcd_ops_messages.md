@@ -24,6 +24,13 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 050 | Configuration missing: &1 &2 |
 | 051 | Configuration value &1 for &2 is invalid |
 | 060 | Purge &1: &2 row(s) older than &3 (&4) |
+| 061 | Exception is closed (disposition &1): no further action possible |
+| 062 | A reason is required |
+| 063 | Four-eyes: &1 requested this and cannot approve it |
+| 064 | No waiver request is pending for this exception |
+| 065 | Waiver end date &1 is in the past |
+| 066 | An owner (user) is required |
+| 067 | A waiver request by &1 is already pending |
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |
 | 151 | XML content could not be parsed: &1 |
 | 152 | Unsupported XML message &1/&2; expected camt.053 or camt.054 |

@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | rollback( ) added.
 *& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
+*& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -206,7 +207,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
     " index ZCD_OPS_FINDING~OBJ: MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
-           due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+           due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
+           waiver_req_by, waiver_req_at, waiver_reason
       FROM zcd_ops_finding
       FOR ALL ENTRIES IN @lt_keys
       WHERE module      = @is_run-module
@@ -272,6 +274,13 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       WHEN OTHERS.
         cs_new-disposition = is_prev-disposition.
         cs_new-due_date    = is_prev-due_date.
+        " a waiver request waiting for the second user survives the re-run
+        IF is_prev-waiver_req_by IS NOT INITIAL.
+          cs_new-waiver_req_by = is_prev-waiver_req_by.
+          cs_new-waiver_req_at = is_prev-waiver_req_at.
+          cs_new-waiver_reason = is_prev-waiver_reason.
+          cs_new-waiver_until  = is_prev-waiver_until.
+        ENDIF.
     ENDCASE.
   ENDMETHOD.
 

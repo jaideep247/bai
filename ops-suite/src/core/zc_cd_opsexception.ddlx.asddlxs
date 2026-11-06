@@ -1,0 +1,82 @@
+// UI annotations: Owned exceptions (exceptions app)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
+                  title: { type: #STANDARD, value: 'CheckCode' },
+                  description: { type: #STANDARD, value: 'ObjectKey' } }
+annotate entity ZC_CD_OpsException with
+{
+  @UI.facet: [ { id: 'Exception', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Exception', position: 10 },
+               { id: 'History', purpose: #STANDARD, type: #LINEITEM_REFERENCE, label: 'History', position: 20,
+                 targetElement: '_History' } ]
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_ACTION, dataAction: 'assignOwner', label: 'Assign' },
+                  { type: #FOR_ACTION, dataAction: 'resolveException', label: 'Resolve' },
+                  { type: #FOR_ACTION, dataAction: 'requestWaiver', label: 'Request waiver' },
+                  { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' } ]
+  @UI.identification: [ { position: 10 },
+                        { type: #FOR_ACTION, dataAction: 'assignOwner', label: 'Assign' },
+                        { type: #FOR_ACTION, dataAction: 'resolveException', label: 'Resolve' },
+                        { type: #FOR_ACTION, dataAction: 'requestWaiver', label: 'Request waiver' },
+                        { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Module;
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  CheckCode;
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  ObjectKey;
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Severity;
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Disposition;
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  Owner;
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  DueDate;
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  Message;
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  Amount;
+  @UI.identification: [ { position: 100 } ]
+  Currency;
+  @UI.identification: [ { position: 110 } ]
+  Reference;
+  @UI.identification: [ { position: 120 } ]
+  RuleId;
+  @UI.identification: [ { position: 130 } ]
+  Group1;
+  @UI.identification: [ { position: 140 } ]
+  Group2;
+  @UI.identification: [ { position: 150 } ]
+  Occurrences;
+  @UI.identification: [ { position: 160 } ]
+  FirstSeenAt;
+  @UI.identification: [ { position: 170 } ]
+  WaiverReqBy;
+  @UI.identification: [ { position: 180 } ]
+  WaiverReason;
+  @UI.identification: [ { position: 190 } ]
+  WaiverUntil;
+  @UI.identification: [ { position: 200 } ]
+  ResolvedBy;
+  @UI.identification: [ { position: 210 } ]
+  ResolvedAt;
+  @UI.identification: [ { position: 220 } ]
+  Resolution;
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  FindingNo;
+}

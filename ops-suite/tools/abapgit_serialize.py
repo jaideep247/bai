@@ -115,7 +115,8 @@ for d, _, files in os.walk(SRC):
         low = f.split('.')[0].lower()
         if f.endswith('.ddls.asddls'):
             text = open(p, encoding='utf-8').read()
-            kind = 'P' if re.search(r'\bas\s+projection\s+on\b', text, re.I) else 'W'
+            kind = ('A' if re.search(r'\bdefine\s+abstract\s+entity\b', text, re.I)
+                    else 'P' if re.search(r'\bas\s+projection\s+on\b', text, re.I) else 'W')
             body = '   <DDLS>\n' + tag('DDLNAME', name) + tag('DDLANGUAGE', 'E') + \
                    tag('DDTEXT', label_of(text, name)) + tag('SOURCE_TYPE', kind) + '   </DDLS>\n'
             changed += write(p.replace('.ddls.asddls', '.ddls.xml'), wrap('LCL_OBJECT_DDLS', body))
