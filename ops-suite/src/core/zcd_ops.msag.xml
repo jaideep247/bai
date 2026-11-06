@@ -1241,6 +1241,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>269</MSGNR>
+     <TEXT>&amp;1: PRISM queue of &amp;2 file(s) exceeds the maximum of &amp;3 - check PRISM</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>270</MSGNR>
+     <TEXT>&amp;1: &amp;2 after &amp;3 min (SLA &amp;4 min incl. PRISM queue allowance)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
     </T100>

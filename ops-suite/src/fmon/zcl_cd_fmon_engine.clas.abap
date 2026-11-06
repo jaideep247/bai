@@ -25,6 +25,8 @@
 *& 2026-11-06 | run_event( ): single-event entry point of the instant PRISM unit (bgPF); the
 *&              batch path run( ) is unchanged.
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | PRISM throttle (user 2026-11-06): throttle settings and PRISM queue in the check
+*&              context for the batch run and run_event alike (same rule, no copy).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -293,6 +295,21 @@ CLASS zcl_cd_fmon_engine DEFINITION
     METHODS build_context
       RETURNING
         VALUE(rs_ctx) TYPE zif_cd_fmon_types=>ty_check_ctx.
+
+    "! PRISM throttle settings from ZCD_OPS_PARAM (FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
+    METHODS throttle_settings
+      RETURNING
+        VALUE(rs_throttle) TYPE zif_cd_fmon_types=>ty_throttle.
+
+    "! PRISM queues of the business dates of the throttled files in the run. Files and events
+    "! in memory are used as they are; a business date the run did not load completely (single
+    "! event, one interface, open file of an older date) is read from the registry - other
+    "! interfaces' throttled files share the queue (scope A)
+    METHODS build_queue
+      IMPORTING
+        is_throttle     TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rt_queue) TYPE zif_cd_fmon_types=>tt_queue.
 
     METHODS run_checks.
 
@@ -1131,6 +1148,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-slas          = mt_slas.
     rs_ctx-expects       = mt_expects.
     rs_ctx-lots          = mt_lots.
+    rs_ctx-throttle      = throttle_settings( ).
+    rs_ctx-queue         = build_queue( rs_ctx-throttle ).
 
     LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_named>).
       IF <ls_named>-file_name IS NOT INITIAL.
@@ -1149,6 +1168,75 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-history = mo_dao->get_history( it_names     = lt_names
                                           it_checksums = lt_checksums
                                           iv_since     = lv_since ).
+  ENDMETHOD.
+
+
+  METHOD throttle_settings.
+    rs_throttle-minutes   = int_param( iv_name    = zif_cd_fmon_types=>gc_param-throttle_min
+                                       iv_default = zif_cd_fmon_types=>gc_param_default-throttle_min ).
+    rs_throttle-scope     = to_upper( mo_store->get_param(
+                              iv_name    = zif_cd_fmon_types=>gc_param-throttle_scope
+                              iv_default = CONV #( zif_cd_fmon_types=>gc_param_default-throttle_scope ) ) ).
+    rs_throttle-methods   = mo_store->get_param( iv_name    = zif_cd_fmon_types=>gc_param-throttle_methods
+                                                 iv_default = zif_cd_fmon_types=>gc_param_default-throttle_methods ).
+    rs_throttle-queue_max = int_param( iv_name    = zif_cd_fmon_types=>gc_param-queue_max
+                                       iv_default = zif_cd_fmon_types=>gc_param_default-queue_max ).
+  ENDMETHOD.
+
+
+  METHOD build_queue.
+    TYPES tt_date_set TYPE SORTED TABLE OF d WITH UNIQUE KEY table_line.
+    DATA lt_dates TYPE tt_date_set.
+    DATA lt_files TYPE zif_cd_fmon_types=>tt_file.
+    DATA lt_extra_ids TYPE tt_id_set.
+    DATA lv_covered_from TYPE d.
+
+    IF is_throttle-minutes <= 0.
+      RETURN.
+    ENDIF.
+    lt_files = VALUE #( FOR ls_file IN mt_files ( ls_file ) ).
+    DATA(lt_events) = mt_events.
+    " Business dates of the throttled files with PRISM receipt evidence in this run
+    LOOP AT zcl_cd_fmon_rules=>build_queue( it_files    = lt_files
+                                            it_events   = lt_events
+                                            it_ifaces   = mt_ifaces
+                                            is_throttle = is_throttle ) ASSIGNING FIELD-SYMBOL(<ls_own>).
+      INSERT <ls_own>-business_date INTO TABLE lt_dates.
+    ENDLOOP.
+    IF lt_dates IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    " The full batch run holds every file of its lookback window in memory
+    IF mv_single = abap_false AND mv_iface IS INITIAL.
+      lv_covered_from = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 ).
+    ENDIF.
+    LOOP AT lt_dates ASSIGNING FIELD-SYMBOL(<lv_date>).
+      IF lv_covered_from IS NOT INITIAL AND <lv_date> BETWEEN lv_covered_from AND mv_date.
+        CONTINUE.
+      ENDIF.
+      LOOP AT mo_dao->get_eval_files( iv_date_from  = <lv_date>
+                                      iv_date_to    = <lv_date>
+                                      iv_open_since = <lv_date> ) ASSIGNING FIELD-SYMBOL(<ls_peer>).
+        IF <ls_peer>-business_date = <lv_date>
+           AND NOT line_exists( mt_files[ file_id = <ls_peer>-file_id ] )
+           AND NOT line_exists( lt_extra_ids[ table_line = <ls_peer>-file_id ] ).
+          INSERT <ls_peer>-file_id INTO TABLE lt_extra_ids.
+          INSERT <ls_peer> INTO TABLE lt_files.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+    IF lt_extra_ids IS NOT INITIAL.
+      LOOP AT mo_dao->get_events( VALUE #( FOR lv_id IN lt_extra_ids ( lv_id ) ) ) ASSIGNING FIELD-SYMBOL(<ls_event>).
+        IF line_exists( lt_extra_ids[ table_line = <ls_event>-file_id ] ).
+          INSERT <ls_event> INTO TABLE lt_events.
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
+    rt_queue = zcl_cd_fmon_rules=>build_queue( it_files    = lt_files
+                                               it_events   = lt_events
+                                               it_ifaces   = mt_ifaces
+                                               is_throttle = is_throttle ).
   ENDMETHOD.
 
 

@@ -7,7 +7,7 @@
   "passed": 18,
   "total": 18,
   "abap_files": 303,
-  "declared_unit_methods": 1015,
+  "declared_unit_methods": 1031,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (1992 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (2004 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "324 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "326 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {

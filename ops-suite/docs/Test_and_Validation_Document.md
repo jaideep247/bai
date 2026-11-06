@@ -142,7 +142,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | ID | Case | Expected |
 |---|---|---|
 | FMD-01 | Monitor run (test mode off), open the dashboard | As of = end of that run; age < 30 min; not stale |
-| FMD-02 | No monitor run for > 45 min | Header, rows and tile *Stale monitor* red — never shown as a quiet day |
+| FMD-02 | No monitor run for > 15 min | Header, rows and tile *Stale monitor* red — never shown as a quiet day |
 | FMD-03 | Single-interface run and test-mode run | As of unchanged |
 | FMD-04 | Outbound ACH file generated → sent → ACK | RECEIVED → SENT → ACKNOWLEDGED; successful only after the ACK |
 | FMD-05 | BlackLine file (no ACK) sent to PRISM | SENT, successful |
@@ -157,7 +157,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 
 ### 6.8 PRISM status API (`POST /sap/zcd_ops/prism_status`, `PRISM_Status_API.md`)
 
-Own approved change (switch S-PRISM); QA1 with the SICF node active for the test user only. ABAP Unit: `ZCL_CD_FMON_PRISM_EVENT` (20), `_API` (11), `_DAO` (5, OSQL), `_PROC` (7, real engine), `ZCL_CD_FMON_ADAPTER_PRISM` (4), `ZCL_CD_FMON_CHK_PRISM_FILE` (5), `ZCL_CD_FMON_CHK_REJECT` (2), PRISM tests of `ZCL_CD_FMON_STATUS` (9) and `ZCL_CD_FMON_ENGINE` (2). Harness: Postman / curl over HTTPS with the QA1 technical user's certificate.
+Own approved change (switch S-PRISM); QA1 with the SICF node active for the test user only. ABAP Unit: `ZCL_CD_FMON_PRISM_EVENT` (20), `_API` (11), `_DAO` (5, OSQL), `_PROC` (11, real engine, incl. 4 PRISM-throttle cases), `ZCL_CD_FMON_ADAPTER_PRISM` (4), `ZCL_CD_FMON_CHK_PRISM_FILE` (5), `ZCL_CD_FMON_CHK_REJECT` (2), PRISM tests of `ZCL_CD_FMON_STATUS` (9) and `ZCL_CD_FMON_ENGINE` (2), PRISM throttle `ZCL_CD_FMON_RULES` / ltc_throttle (11). Harness: Postman / curl over HTTPS with the QA1 technical user's certificate.
 
 | ID | Case | Expected |
 |---|---|---|
@@ -175,6 +175,10 @@ Own approved change (switch S-PRISM); QA1 with the SICF node active for the test
 | PRISM-12 | bgPF: destination locked in SBGRFCCONF, post an event, unlock | 202; unit waits / fails in SBGRFCMON; the 5-minute run applies the event (safety net); after unlock no double event |
 | PRISM-13 | Concurrency: post events while the 5-minute run is active on the same file | No RUN_LOCKED for either; no stale overwrite (at most PERSIST_CONFLICT, then the next run converges); one event per milestone |
 | PRISM-14 | SLA: SENT_TO_PRISM, PRISM_RECEIVED after 25 min (SLA 15) | PRISM_RECEIVED_LATE (W) at once from the unit; on time → no finding; never received → NO_PRISM_RECEIVED (E) from the 5-minute run |
+| PRISM-16 | **PRISM throttle** (user 2026-11-06: ACH and wire files 2 min per file): 5 ACH files of `ACH_PNC_DISB_OUT` sent together; PRISM posts RECEIVED for all five within a minute, then DELIVERED one every 2 minutes; SLA `PRISM_DELIVERED` 5 P, `FMON_PRISM_THROTTLE_MIN` 2 | The 5th file, DELIVERED about 10 min after its RECEIVED, is on time (allowed 5 + 4 × 2 = 13 min): no PRISM_DELIVERED_LATE for any of the five; a DELIVERED of the 5th file after 14 min → PRISM_DELIVERED_LATE (W), text "SLA 13 min incl. PRISM queue allowance" |
+| PRISM-17 | Queue of 31 ACH files (`FMON_PRISM_QUEUE_MAX` 30): RECEIVED for all, DELIVERED withheld | PRISM_QUEUE_LONG (W) on the 31st file (once, from check `F_PRISMDLV`); its delivery allowance stops at 29 files ahead (5 + 58 min); NO_PRISM_DELIVERED only after that |
+| PRISM-18 | Not throttled: an IRIS cheque print file and a positive pay file (`CHECK_POSPAY_OUT`) sent in the same cycle as 5 ACH files | Their delivery SLA has no allowance (base minutes only) and they are not counted in the ACH queue (the 5th ACH file keeps 4 files ahead) |
+| PRISM-19 | Scope and switch: repeat PRISM-16 with an ACH file to PNC and a wire to JPMC, `FMON_PRISM_THROTTLE_SCOPE` A, then C; then `FMON_PRISM_THROTTLE_MIN` 0 | A: the wire waits behind the ACH files; C: the wire has nobody ahead; 0: no allowance, results as before 2026-11-06 |
 | PRISM-15 | ST05 / SAT during PRISM-01 | Writes only `ZCD_FMON_PRISM`, `ZCD_FMON_FILE`, `ZCD_FMON_EVENT`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING`, alert log; no business table, file, job or routing touched |
 
 ### 6.9 EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`, `Dashboard_EBS_Validation.md`)

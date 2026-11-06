@@ -35,12 +35,23 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | ACH_RET_PNC_IN | FULLY_PROCESSED | 480 | G | E | FP09 lot complete same day ‹confirm› |
 | NOC_PNC_IN | FILE_LOADED | 60 | P | W | |
 | ACH_PNC_DISB_OUT | PRISM_RECEIVED | 15 | P | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |
-| ACH_PNC_DISB_OUT | PRISM_DELIVERED | 30 | P | E | PRISM delivered to the bank within 30 min of its receipt ‹confirm with PRISM› |
+| ACH_PNC_DISB_OUT | PRISM_DELIVERED | 5 | P | E | **base** 5 min from PRISM's receipt + PRISM throttle 2 min × ACH / wire files ahead in the queue (added by FMON, see below) ‹confirm base with PRISM› |
 | WIRE_JPMC_OUT | PRISM_RECEIVED | 15 | P | E | |
-| WIRE_JPMC_OUT | PRISM_DELIVERED | 15 | P | E | wires are time-critical ‹confirm› |
+| WIRE_JPMC_OUT | PRISM_DELIVERED | 5 | P | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
 | BAI_JPMC_IN | FILE_RECEIVED | 30 | P | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
 
 SLA rows for the other PRISM-routed flows (`docs/PRISM_Status_API.md` §8) are **to configure** once their interface rows exist; no example is given for unseeded interfaces.
+
+**PRISM throttle (confirmed by the user 2026-11-06): PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank; positive pay and stop pay are not throttled.** Maintain the `PRISM_DELIVERED` / `FORWARDED_TO_BANK` row of a throttled interface as the **base** time PRISM needs for one file; FMON adds `FMON_PRISM_THROTTLE_MIN` × the ACH / wire files queued ahead of it (same business date, queue scope `FMON_PRISM_THROTTLE_SCOPE`), capped at a queue of `FMON_PRISM_QUEUE_MAX` files (`docs/FMON_FILE_MONITORING.md` §A3a). Worked example for `ACH_PNC_DISB_OUT`:
+
+| Stage | Row | Allowed for a file alone | Allowed for the 5th of 5 files handed over together |
+|---|---|---|---|
+| SENT_TO_PRISM → PRISM_RECEIVED | 15 P | 15 min | 15 min (PRISM's receipt is not throttled) |
+| PRISM_RECEIVED → PRISM_DELIVERED | 5 P | 5 min | 5 + 4 × 2 = 13 min |
+| ACK_RECEIVED | 240 G | 240 min | 240 + 8 = 248 min (measured from generation, so the queue wait is inside it) |
+| ACK_RECEIVED (if configured with basis P) | 60 P | 60 min after delivery | 60 min after delivery (the wait is already behind the basis) |
+
+Throttled = outbound interface with `PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS`: `ACH_PNC_DISB_OUT`, `ACH_COLL_OUT` (ACH), `WIRE_JPMC_OUT` (WIRE). `CHECK_POSPAY_OUT` (`CHECK`), `BLACKLINE_OUT`, inbound rows: not throttled. A future stop pay row must not use `ACH` / `WIRE` as payment method.
 
 ## ZCD_FMON_CAL (expected files; times in `FMON_TIME_ZONE`)
 
@@ -141,7 +152,7 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_LOT | ZCL_CD_FMON_CHK_LOT | E | |
 | F_NOCAGE | ZCL_CD_FMON_CHK_NOC_AGING | E | |
 | F_PRISMRCV | ZCL_CD_FMON_CHK_SLA | E | STAGE=PRISM_RECEIVED;LATE_SEVERITY=W |
-| F_PRISMDLV | ZCL_CD_FMON_CHK_SLA | E | STAGE=PRISM_DELIVERED;LATE_SEVERITY=W |
+| F_PRISMDLV | ZCL_CD_FMON_CHK_SLA | E | STAGE=PRISM_DELIVERED;LATE_SEVERITY=W (also reports PRISM_QUEUE_LONG, W) |
 | F_FILERCV | ZCL_CD_FMON_CHK_SLA | E | STAGE=FILE_RECEIVED;LATE_SEVERITY=W |
 | F_PRFAIL | ZCL_CD_FMON_CHK_REJECT | E | OUTCOME=PRISM_FAILED |
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
@@ -162,6 +173,10 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | FMON_MAX_ROWS | 50000 | row cap per legacy read; a lot scan reaching it is `LOT_SCAN_TRUNCATED` and derives no lot outcome (audit A38) |
 | FMON_PRISM_MAX_BYTES | 16384 | body limit of the PRISM status API (413 above) |
 | FMON_PRISM_INSTANT | X | X = the instant PRISM unit saves findings and alerts; blank = registry only, findings and alerts from the 5-minute run |
+| FMON_PRISM_THROTTLE_MIN | 2 | minutes PRISM waits per throttled file before sending it to the bank (user 2026-11-06); `0` = no queue allowance (behaviour before 2026-11-06) |
+| FMON_PRISM_THROTTLE_SCOPE | A | `A` = one PRISM queue for all throttled files; `C` = one queue per bank (`ZCD_FMON_IFACE-BANK_KEY`) ‹confirm with the PRISM team› |
+| FMON_PRISM_THROTTLE_METHODS | ACH,WIRE | payment methods (`ZCD_FMON_IFACE-PAY_METHOD`) PRISM throttles; positive pay / stop pay are not throttled |
+| FMON_PRISM_QUEUE_MAX | 30 | longest PRISM queue (files incl. the file) the allowance covers; a longer one is `PRISM_QUEUE_LONG` (W) |
 | FMON_AGE_BASIS | A | NOC / returns age in working days: `A` counts from the first working day **after** receipt, `N` treats a receipt on a non-working day as received on the next working day (audit A41). If the factory calendar cannot convert the dates the age is unknown: no aging finding, warning 248 instead |
 
 ## Alerting

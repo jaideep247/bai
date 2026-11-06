@@ -55,6 +55,7 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS recent_run_is_kept         FOR TESTING.
     METHODS old_alert_log_is_deleted   FOR TESTING.
     METHODS old_fmon_event_is_deleted  FOR TESTING.
+    METHODS old_prism_event_is_deleted FOR TESTING.
 ENDCLASS.
 
 
@@ -63,7 +64,7 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' )
-                                   ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ) ).
+                                   ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ( 'ZCD_FMON_PRISM' ) ) ).
   ENDMETHOD.
 
 
@@ -231,6 +232,33 @@ CLASS ltc_purge_dao IMPLEMENTATION.
                                         iv_max    = 100 )
           exp = 1
           msg = 'Only the old event must be deleted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Rule: PRISM status events are purged by their receipt time, recent ones are kept
+  METHOD old_prism_event_is_deleted.
+    DATA lt_prism TYPE STANDARD TABLE OF zcd_fmon_prism WITH EMPTY KEY.
+    TRY.
+        lt_prism = VALUE #( ( event_id = 'PRISM-OLD' received_at = gc-old )
+                            ( event_id = 'PRISM-NEW' received_at = gc-recent ) ).
+        go_env->insert_test_data( lt_prism ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->count_purgeable( iv_target = zif_cd_ops_purge_dao=>gc_target-fmon_prism
+                                         iv_cutoff = gc-cutoff
+                                         iv_today  = gc-today )
+          exp = 1
+          msg = 'One PRISM event is older than the cutoff' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->delete_package( iv_target = zif_cd_ops_purge_dao=>gc_target-fmon_prism
+                                        iv_cutoff = gc-cutoff
+                                        iv_today  = gc-today
+                                        iv_max    = 100 )
+          exp = 1
+          msg = 'Only the old PRISM event must be deleted' ).
+        SELECT COUNT(*) FROM zcd_fmon_prism INTO @DATA(lv_left).
+        cl_abap_unit_assert=>assert_equals( act = lv_left exp = 1 msg = 'The recent PRISM event stays' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

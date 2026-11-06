@@ -11,6 +11,7 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -128,7 +129,8 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
     rt_targets = VALUE #( ( target = zif_cd_ops_purge_dao=>gc_target-run        default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-alert_log  default_days = 180 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-fmon_event default_days = 400 )
-                          ( target = zif_cd_ops_purge_dao=>gc_target-hck_metric default_days = 400 ) ).
+                          ( target = zif_cd_ops_purge_dao=>gc_target-hck_metric default_days = 400 )
+                          ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 ) ).
   ENDMETHOD.
 
 

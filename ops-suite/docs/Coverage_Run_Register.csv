@@ -31,10 +31,10 @@ ZCL_CD_FMON_PRISM_DAO,5,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_EVENT,20,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_HTTP,2,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_OP,1,90,,Not run in target SAP
-ZCL_CD_FMON_PRISM_PROC,7,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_PROC,11,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_QUEUE,1,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
-ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
+ZCL_CD_FMON_RULES,55,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,24,90,,Not run in target SAP
 ZCL_CD_FMON_UTIL,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,14,90,,Not run in target SAP
@@ -88,7 +88,7 @@ ZCL_CD_OPS_FACTORY,11,90,,Not run in target SAP
 ZCL_CD_OPS_LOCK,4,90,,Not run in target SAP
 ZCL_CD_OPS_OVW_CDS_TEST,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE,5,90,,Not run in target SAP
-ZCL_CD_OPS_PURGE_DAO,7,90,,Not run in target SAP
+ZCL_CD_OPS_PURGE_DAO,8,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,4,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,18,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_DAO,9,90,,Not run in target SAP

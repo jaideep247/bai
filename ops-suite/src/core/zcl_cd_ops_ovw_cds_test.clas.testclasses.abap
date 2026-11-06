@@ -3,7 +3,7 @@
 *& Purpose:
 *& CDS tests of the production-support overview page on
 *& cl_cds_test_environment doubles of ZCD_OPS_RUN and ZCD_OPS_FINDING:
-*& monitor freshness per area with the area's own stale threshold (FMON 45
+*& monitor freshness per area with the area's own stale threshold (FMON 15
 *& minutes and full runs only, EBS and HCK 26 hours, no completed run =
 *& stale), open critical exceptions across areas (B / E, open or assigned
 *& only), overdue days, and the hidden message of EBS bank-file statement
@@ -28,7 +28,7 @@ CLASS ltc_freshness DEFINITION FINAL
     CONSTANTS gc_variant_iface TYPE zif_cd_ops_types=>ty_variant VALUE 'ACH_PNC_OUT'.
     CONSTANTS gc_seconds_fresh TYPE i VALUE 600.
     CONSTANTS gc_seconds_old TYPE i VALUE 108000.
-    CONSTANTS gc_fmon_minutes TYPE i VALUE 45.
+    CONSTANTS gc_fmon_minutes TYPE i VALUE 15.
     CONSTANTS gc_areas TYPE i VALUE 3.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
@@ -102,7 +102,7 @@ CLASS ltc_freshness IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_fmon-runid exp = gc_run-fmon
                                             msg = 'FMON freshness = last full run, not a single-interface run' ).
         cl_abap_unit_assert=>assert_equals( act = ls_fmon-staleafterminutes exp = gc_fmon_minutes
-                                            msg = 'FMON applies its 45-minute threshold' ).
+                                            msg = 'FMON applies its 15-minute threshold' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

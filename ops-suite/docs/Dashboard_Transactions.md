@@ -76,7 +76,7 @@ Bucket (chart) → list of transactions → object page → payment runs / retur
 ## 7. Performance, bounds and sensitive data
 
 - **Bounded live reads:** open items by **BUDAT ≥ today − 30** and **FIN not blank** (driver of every view); DPAYH rows, FEBEP lines by LAUFD / BUDAT ≥ today − 45; DFKKCR, DFKKRP, DFKKNRP only joined **from** the bounded item set (never aggregated on their own). Aggregation is pushed down (`group by` in CDS, `$apply`).
-- **Indexes VERIFY-SE11** (no `Performance_Review.md` exists): DFKKOP-BUDAT / ZZ_FIN_TRANS_NUM, FEBEP-CHECT, DPAYH-DOC1R, DFKKCR-DOC1R, DFKKRP-SELW1, DFKKNRP-INFOF (not a key). On HANA the date predicate is a column scan; record ST05 / PlanViz at peak in QA1 (TXD-12).
+- **Indexes VERIFY-SE11:** listed with all other index checks in `Performance_Review.md` §8 (DFKKOP-BUDAT / ZZ_FIN_TRANS_NUM, FEBEP-CHECT, DPAYH-DOC1R, DFKKCR-DOC1R, DFKKRP-SELW1, DFKKNRP-INFOF). On HANA the date predicate is a column scan; record ST05 / PlanViz at peak in QA1 (TXD-12).
 - Older transactions: the payment trace (per FIN), not the dashboard.
 - **No member number, business partner, contract account or bank account** is selected (test `no_partner_or_member_exposed`); the request side never selects ZZ_MEMBER_NO. FIN numbers and document numbers are shown (needed for the trace).
 - Amounts: signed as stored (BETRW in WAERS, BETRH in the company code currency); aggregate per currency and direction.

@@ -18,6 +18,8 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | PRISM status API: stages PRISM_RECEIVED / PRISM_DELIVERED / PRISM_FAILED
 *&              (both directions), check codes and messages of the PRISM checks.
+*& 2026-11-06 | PRISM throttle (user 2026-11-06: ACH and wire files 2 min per file): queue
+*&              scope, throttle settings, queue entries in the check context, PRISM_QUEUE_LONG.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -73,6 +75,9 @@ INTERFACE zif_cd_fmon_types
   TYPES ty_age_basis    TYPE c LENGTH 1.
   "! Factory-calendar correction option of DATE_CONVERT_TO_FACTORYDATE ('+' next, '-' previous)
   TYPES ty_fcal_correct TYPE c LENGTH 1.
+  "! PRISM queue scope (FMON_PRISM_THROTTLE_SCOPE): A = one queue for all throttled files,
+  "! C = one queue per counterparty (bank key of the interface)
+  TYPES ty_queue_scope  TYPE c LENGTH 1.
 
   "! File reference longer than the correlation key (audit A100): first PREFIX characters of the
   "! canonical name + MARKER + SHA-1 hex of the whole canonical name = exactly WIDTH characters
@@ -240,6 +245,8 @@ INTERFACE zif_cd_fmon_types
       prism_unknown    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_UNKNOWN_FILE',
       "! Inbound: PRISM delivered the file, SAP has not received it after the grace period
       prism_not_loaded TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_NOT_LOADED',
+      "! Outbound: more throttled files queued in PRISM ahead of the file than FMON_PRISM_QUEUE_MAX
+      prism_queue_long TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCD_OPS_PARAM (defaults in brackets)
@@ -263,6 +270,14 @@ INTERFACE zif_cd_fmon_types
       max_rows      TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_MAX_ROWS',
       "! Banking-day age basis: A strictly after receipt, N from next working day [A]
       age_basis     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_AGE_BASIS',
+      "! Minutes PRISM waits per throttled file before sending it to the bank; 0 = no allowance [2]
+      throttle_min  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_MIN',
+      "! Queue scope: A one PRISM queue for all throttled files, C one per counterparty [A]
+      throttle_scope TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_SCOPE',
+      "! Payment methods (ZCD_FMON_IFACE-PAY_METHOD, comma list) PRISM throttles [ACH,WIRE]
+      throttle_methods TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_METHODS',
+      "! Queue length (files incl. the file itself) covered by the allowance; longer = PRISM_QUEUE_LONG [30]
+      queue_max     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_QUEUE_MAX',
     END OF gc_param.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
@@ -616,6 +631,54 @@ INTERFACE zif_cd_fmon_types
     END OF ty_expect.
   TYPES tt_expect TYPE SORTED TABLE OF ty_expect WITH UNIQUE KEY iface_id.
 
+  " ---------------------------------------------------------------- PRISM throttle
+  "! PRISM releases throttled outbound files (ACH, wire) one at a time, MINUTES apart
+  "! (user 2026-11-06). MINUTES = 0 switches the allowance off.
+  CONSTANTS:
+    BEGIN OF gc_queue_scope,
+      all          TYPE ty_queue_scope VALUE 'A',
+      counterparty TYPE ty_queue_scope VALUE 'C',
+    END OF gc_queue_scope.
+
+  TYPES:
+    BEGIN OF ty_throttle,
+      minutes   TYPE i,
+      scope     TYPE ty_queue_scope,
+      "! Payment methods PRISM throttles (comma list)
+      methods   TYPE ty_value_list,
+      "! Longest queue (files incl. the file itself) the allowance covers
+      queue_max TYPE i,
+    END OF ty_throttle.
+
+  "! One throttled file in a PRISM queue: PRISM's receipt and the moment it left the queue
+  "! (first event at delivery rank or later: PRISM_DELIVERED, FORWARDED_TO_BANK, PRISM_FAILED, ACK)
+  TYPES:
+    BEGIN OF ty_queue_entry,
+      file_id       TYPE ty_file_id,
+      business_date TYPE d,
+      "! Blank for scope A; the interface's bank key (blank = '*') for scope C
+      queue_key     TYPE ty_bank_key,
+      received_at   TYPE timestampl,
+      left_at       TYPE timestampl,
+    END OF ty_queue_entry.
+  TYPES tt_queue TYPE SORTED TABLE OF ty_queue_entry WITH UNIQUE KEY file_id
+                 WITH NON-UNIQUE SORTED KEY by_queue COMPONENTS business_date queue_key.
+
+  "! Position of a file in its PRISM queue when PRISM received it
+  TYPES:
+    BEGIN OF ty_queue_pos,
+      "! The file is throttled, PRISM's receipt is evidenced and the throttle is on
+      queued    TYPE abap_bool,
+      "! Files received earlier (or at the same time) and not yet sent on at that moment
+      ahead     TYPE i,
+      "! Files ahead the allowance counts (at most QUEUE_MAX - 1)
+      counted   TYPE i,
+      "! Allowance in minutes = COUNTED x MINUTES
+      delay_min TYPE i,
+      "! Queue length (AHEAD + 1) above QUEUE_MAX: PRISM_QUEUE_LONG
+      long      TYPE abap_bool,
+    END OF ty_queue_pos.
+
   "! Everything a check may look at. Checks are pure: no SQL, no clock.
   TYPES:
     BEGIN OF ty_check_ctx,
@@ -629,6 +692,10 @@ INTERFACE zif_cd_fmon_types
       lots          TYPE tt_lot_status,
       "! Older registry entries with the same name or checksum (duplicate check)
       history       TYPE tt_file,
+      "! PRISM throttle settings (ZCD_OPS_PARAM FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
+      throttle      TYPE ty_throttle,
+      "! Throttled outbound files with PRISM receipt evidence (same business dates as the files)
+      queue         TYPE tt_queue,
     END OF ty_check_ctx.
 
   "! SLA verdict: ' ' = met or not yet due, M = stage not reached and overdue,
@@ -643,12 +710,16 @@ INTERFACE zif_cd_fmon_types
       inferred TYPE ty_sla_state VALUE 'I',
     END OF gc_sla_state.
 
+  "! ALLOWED_MIN = SLA minutes + QUEUE_MIN, the PRISM queue allowance applied to this verdict
+
   TYPES:
     BEGIN OF ty_sla_verdict,
       state       TYPE ty_sla_state,
       elapsed_min TYPE i,
       basis_at    TYPE timestampl,
       reached_at  TYPE timestampl,
+      allowed_min TYPE i,
+      queue_min   TYPE i,
     END OF ty_sla_verdict.
 
   " ---------------------------------------------------------------- result
@@ -690,6 +761,11 @@ INTERFACE zif_cd_fmon_types
   CONSTANTS:
     BEGIN OF gc_param_default,
       factory_cal TYPE string VALUE `US`,
+      "! PRISM throttle (user 2026-11-06): 2 minutes per ACH / wire file, one queue to confirm
+      throttle_min     TYPE i VALUE 2,
+      throttle_scope   TYPE ty_queue_scope VALUE 'A',
+      throttle_methods TYPE string VALUE `ACH,WIRE`,
+      queue_max        TYPE i VALUE 30,
     END OF gc_param_default.
 
   "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
@@ -751,6 +827,8 @@ INTERFACE zif_cd_fmon_types
       prism_failed                TYPE zif_cd_ops_types=>ty_msgno VALUE '265',
       prism_unknown_file          TYPE zif_cd_ops_types=>ty_msgno VALUE '266',
       prism_not_loaded            TYPE zif_cd_ops_types=>ty_msgno VALUE '267',
+      prism_queue_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '269',
+      after_min_sla_queue_min     TYPE zif_cd_ops_types=>ty_msgno VALUE '270',
     END OF gc_msg.
 
 ENDINTERFACE.
