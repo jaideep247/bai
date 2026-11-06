@@ -12,6 +12,7 @@ Decisions taken with the business owner (2026-11-06):
 | D-3 | **New configuration entries via transport** (created in DV1, recorded on a customizing request); **existing entries editable directly in production** (no transport; change-logged, authorised) |
 | D-4 | Operations apps: exception disposition, EBS blocked-line release, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
 | D-5 | Also in this build: retention purge (G1), authorisation object `ZCD_OPS` (G3), run lock, exception carry-forward |
+| D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCD_PE_AREA` (data element `ZCD_PE_AREA`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. Done as one mechanical rename pass after phases 1–3 are merged, verified by lint and tests |
 
 Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; **RAP managed BOs with draft** for the apps, OData V4 UI service, Fiori elements. House rules (`DEVELOPMENT_STANDARDS.md`) apply to every class.
 
@@ -20,7 +21,7 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 | Field | Data element | Values |
 |---|---|---|
 | `ACTVT` | standard | 03 display, 02 change, 01 create, 06 delete, 16 execute (run reports / purge), 43 release (EBS line release), 85 approve / waive (second person) |
-| `ZCD_MODULE` | `ZCD_OPS_MODULE` (CHAR 4) | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
+| `ZCD_MODULE` → `ZCD_PE_AREA` (D-6) | `ZCD_PE_AREA` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
 | `BUKRS` | standard | Company code; `*` for module-wide objects |
 
 - One wrapper `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`, injectable through `ZCL_CD_OPS_INJECTOR`) — engines and RAP handlers never write `AUTHORITY-CHECK` themselves.
