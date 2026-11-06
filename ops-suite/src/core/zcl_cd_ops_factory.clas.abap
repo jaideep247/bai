@@ -102,7 +102,7 @@ CLASS zcl_cd_ops_factory DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! Per-session store instance so parameter reads are cached once per run
+    "! Per-session store instance; its parameter snapshot is renewed by each start_run (A64)
     CLASS-DATA go_store TYPE REF TO zif_cd_ops_store.
 
 ENDCLASS.

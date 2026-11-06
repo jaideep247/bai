@@ -8,6 +8,7 @@
 *& 2026-11-06 | rollback( ) added (DEFAULT IGNORE).
 *& 2026-11-06 | Exception carry-forward: reconcile( ) (DEFAULT IGNORE).
 *& 2026-11-06 | get_stale_runs( ) for hung / dumped runs (audit A06, DEFAULT IGNORE).
+*& 2026-11-06 | refresh_params: parameter snapshot per run (audit A64).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared result store and parameters</p>
 "! One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
@@ -62,7 +63,14 @@ INTERFACE zif_cd_ops_store
   "! Callers commit the run header first, so the run itself survives.
   METHODS rollback DEFAULT IGNORE.
 
-  "! Read a parameter from ZCD_OPS_PARAM; returns iv_default when not maintained
+  "! Drop the parameter snapshot: the next get_param reads ZCD_OPS_PARAM again.
+  "! start_run calls it, so every run sees the parameters valid at its start, also when
+  "! several runs share one internal session (audit A64). Entry points that validate
+  "! without a run (e.g. EBS validate_for_posting) call it themselves.
+  METHODS refresh_params DEFAULT IGNORE.
+
+  "! Read a parameter from ZCD_OPS_PARAM; returns iv_default when not maintained.
+  "! Values are a snapshot per run (see refresh_params).
   METHODS get_param
     IMPORTING
       iv_name         TYPE zif_cd_ops_types=>ty_param_name

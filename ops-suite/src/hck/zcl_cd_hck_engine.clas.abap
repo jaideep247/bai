@@ -16,6 +16,7 @@
 *&              result, grey never SUCCESS (A60); history as-of (A58), flat tolerance (A59).
 *& 2026-11-06 | Each check receives a deadline (start + TIMEOUT_SEC) in its context (audit A18).
 *& 2026-11-06 | Check interface verified by the factory before instantiation (audit A62).
+*& 2026-11-06 | Baseline refreshes the parameter snapshot; runs get it from start_run (audit A64).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -390,6 +391,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     ENDIF.
 
     mo_store = zcl_cd_ops_factory=>get_store( ).
+    " A64: a baseline is taken without a run - it reads the current parameters itself
+    mo_store->refresh_params( ).
     mo_clock = zcl_cd_ops_factory=>get_clock( ).
     mo_dao   = zcl_cd_hck_factory=>get_dao( ).
 

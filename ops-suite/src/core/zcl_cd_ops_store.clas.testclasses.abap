@@ -10,6 +10,7 @@
 *& 2026-11-06 | Exception carry-forward: inherit, supersede, auto-resolve, waived kept.
 *& 2026-11-06 | pending_waiver_is_carried (exceptions app).
 *& 2026-11-06 | stale_running_run_is_found (audit A06).
+*& 2026-11-06 | Parameter snapshot per run (audit A64).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -92,6 +93,13 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS group_scope_resolves         FOR TESTING.
     METHODS pending_waiver_is_carried    FOR TESTING.
     METHODS stale_running_run_is_found   FOR TESTING.
+    METHODS next_run_sees_changed_param  FOR TESTING.
+    METHODS param_stable_within_run      FOR TESTING.
+    "! Replace the maintained parameters (test data)
+    METHODS set_param
+      IMPORTING
+        iv_name  TYPE zif_cd_ops_types=>ty_param_name
+        iv_value TYPE string.
 
     "! A run header in the store (test data)
     METHODS store_run
@@ -446,6 +454,51 @@ CLASS ltc_store IMPLEMENTATION.
                                             msg = 'Only the old run still in status R is stale' ).
         cl_abap_unit_assert=>assert_equals( act = lt_stale[ 1 ]-run_id exp = lc_hung
                                             msg = 'The stale run must be the hung one' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD set_param.
+    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    INSERT VALUE #( param_name = iv_name param_value = iv_value ) INTO TABLE lt_param.
+    go_env->insert_test_data( lt_param ).
+  ENDMETHOD.
+
+
+  " Audit A64: two runs in one internal session - the second run sees a parameter that
+  " was changed between the runs (the cache is not session-wide)
+  METHOD next_run_sees_changed_param.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
+    TRY.
+        set_param( iv_name = lc_name iv_value = `8` ).
+        mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `8`
+                                            msg = 'The first run reads the maintained value' ).
+        set_param( iv_name = lc_name iv_value = `12` ).
+        mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `12`
+                                            msg = 'The next run must see the changed parameter' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A64: inside one run the parameters are a snapshot taken at start_run
+  METHOD param_stable_within_run.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
+    TRY.
+        set_param( iv_name = lc_name iv_value = `8` ).
+        mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
+        set_param( iv_name = lc_name iv_value = `12` ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `8`
+                                            msg = 'A running run keeps its start snapshot' ).
+        mo_cut->refresh_params( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `12`
+                                            msg = 'refresh_params reads the table again' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
