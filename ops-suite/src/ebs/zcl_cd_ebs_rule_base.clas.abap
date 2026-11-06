@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A25: account_key / account_of - one canonical account identity for all rules.
 *& 2026-11-06 | Audit A07: company code in the register match; canonical check numbers (leading zeros).
 *& 2026-11-06 | Audit A65: document keys checked against the DDIC key width and format before conversion (no truncation).
+*& 2026-11-06 | FS-CD review: in-flight grace - not found within EBS_INFLIGHT_HOURS is AWAITING_LOT_TRANSFER (W, NOTIFY).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -27,6 +28,11 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
 
     "! Default length of check-number keys: 0 = as delivered (ZCD_OPS_PARAM EBS_KEYLEN_ZTNUM)
     CONSTANTS gc_default_ztnum_length TYPE i VALUE 0.
+
+    "! In-flight grace in hours when EBS_INFLIGHT_HOURS is not maintained: off
+    CONSTANTS gc_default_inflight_hours TYPE i VALUE 0.
+    CONSTANTS gc_seconds_per_hour TYPE i VALUE 3600.
+    CONSTANTS gc_seconds_per_day TYPE i VALUE 86400.
 
     "! A65: characters a document-number key may contain (checked before conversion)
     CONSTANTS gc_key_alphabet TYPE string VALUE `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`.
@@ -107,6 +113,29 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
         is_line           TYPE zif_cd_ebs_types=>ty_line
       RETURNING
         VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+
+    "! FS-CD review: the finding for a lookup that found nothing. While the statement is
+    "! younger than EBS_INFLIGHT_HOURS (default 0 = off) the payment / returns lot can
+    "! still be in transfer: the finding is then AWAITING_LOT_TRANSFER (W, NOTIFY, the
+    "! original message in DETAILS), otherwise the rule's own not-found finding.
+    METHODS not_found_finding
+      IMPORTING
+        is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
+        is_line           TYPE zif_cd_ebs_types=>ty_line
+        it_statements     TYPE zif_cd_ebs_types=>tt_statement
+        iv_check_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_message        TYPE clike
+      RETURNING
+        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+
+    "! Age of the line's statement in seconds: from its creation date/time, else from the
+    "! start of its statement date (the longest possible age); -1 = unknown
+    METHODS statement_age
+      IMPORTING
+        is_line          TYPE zif_cd_ebs_types=>ty_line
+        it_statements    TYPE zif_cd_ebs_types=>tt_statement
+      RETURNING
+        VALUE(rv_age) TYPE i.
 
     "! EBS_KEYLEN_DOCNO, default gc_default_docno_length
     METHODS docno_length
@@ -309,6 +338,50 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
                                                      is_line       = is_line
                                                      iv_check_code = lv_problem
                                                      iv_message    = lv_message ).
+  ENDMETHOD.
+
+
+  METHOD not_found_finding.
+    DATA(lv_hours) = CONV i( zcl_cd_ops_util=>to_decimal(
+      iv_value   = param( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_default = |{ gc_default_inflight_hours }| )
+      iv_default = gc_default_inflight_hours ) ).
+    DATA(lv_age) = COND i( WHEN lv_hours > 0 THEN statement_age( is_line = is_line it_statements = it_statements )
+                           ELSE -1 ).
+    IF lv_age < 0 OR lv_age >= lv_hours * gc_seconds_per_hour.
+      rs_finding = zcl_cd_ebs_finding=>for_rule_line( is_rule       = is_rule
+                                                       is_line       = is_line
+                                                       iv_check_code = iv_check_code
+                                                       iv_message    = iv_message ).
+      RETURN.
+    ENDIF.
+    rs_finding = zcl_cd_ebs_finding=>for_rule_line(
+                   is_rule       = is_rule
+                   is_line       = is_line
+                   iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                   iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-awaiting_lot_transfer
+                                                          iv_v1    = zcl_cd_ebs_finding=>line_key( is_line )
+                                                          iv_v2    = iv_check_code
+                                                          iv_v3    = lv_hours )
+                   iv_details    = CONV #( iv_message ) ).
+    rs_finding-severity = zif_cd_ops_types=>gc_severity-warning.
+    rs_finding-action   = zif_cd_ops_types=>gc_action-notify.
+  ENDMETHOD.
+
+
+  METHOD statement_age.
+    rv_age = -1.
+    DATA(ls_statement) = VALUE #( it_statements[ stmt_key = is_line-stmt_key ] OPTIONAL ).
+    DATA(lv_date) = COND d( WHEN ls_statement-created_date IS NOT INITIAL THEN ls_statement-created_date
+                            ELSE ls_statement-stmt_date ).
+    IF lv_date IS INITIAL.
+      RETURN.
+    ENDIF.
+    " VERIFY: FEBKO / bank file creation times are system local time, like the clock's today/time
+    DATA(lv_time) = COND t( WHEN ls_statement-created_date IS NOT INITIAL THEN ls_statement-created_time ).
+    DATA(lo_clock) = zcl_cd_ops_factory=>get_clock( ).
+    rv_age = ( lo_clock->today( ) - lv_date ) * gc_seconds_per_day + ( lo_clock->time( ) - lv_time ).
+    " A creation time in the future is treated as just created
+    rv_age = nmax( val1 = rv_age val2 = 0 ).
   ENDMETHOD.
 
 

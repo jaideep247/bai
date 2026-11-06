@@ -287,3 +287,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 529 | &1 entries not evaluated (a rule could not run) |
 | 530 | File &1 is not valid UTF-8 (after line &2) - not validated |
 | 531 | File &1: read error (return code &2) after line &3 - not validated |
+| 532 | Entry &1: &2 not found yet - statement within the &3 h in-flight window |

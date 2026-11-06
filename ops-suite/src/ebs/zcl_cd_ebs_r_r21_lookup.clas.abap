@@ -12,6 +12,7 @@
 *& 2026-11-06 | Initial version (phase 5: new codes and validations by configuration).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A65: reference checked against the width of the lookup key kind (no truncation).
+*& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R21 - configurable table lookup</p>
 CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
@@ -95,8 +96,9 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
         lv_statuses = condense( |{ lv_statuses } { ls_row-status }| ).
       ENDLOOP.
       IF lv_found = abap_false.
-        INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = lv_not_found
+        INSERT not_found_finding(
+                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 iv_check_code = lv_not_found
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-lookup_not_found
                                                      iv_v1    = ls_lookup-lookup_id
                                                      iv_v2    = lv_key

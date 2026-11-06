@@ -20,6 +20,7 @@
 *& 2026-11-06 | Audit A66/A68: NO_DATA check code, EBS_EMPTY_FEED_OK, messages 527-529.
 *& 2026-11-06 | Audit A69: messages for server file encoding and read errors.
 *& 2026-11-06 | Audit A85: map action carried on the line.
+*& 2026-11-06 | FS-CD review: in-flight grace (EBS_INFLIGHT_HOURS, AWAITING_LOT_TRANSFER).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -387,6 +388,8 @@ INTERFACE zif_cd_ebs_types
       feb_reason_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_REASON_FIELD',
       "! A68: X = a run without statements is an intentionally empty feed (closes green)
       empty_feed_ok      TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_EMPTY_FEED_OK',
+      "! FS-CD review: in-flight grace in hours (0 = off) for not-found payment/lot lookups
+      inflight_hours     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_INFLIGHT_HOURS',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
@@ -450,6 +453,8 @@ INTERFACE zif_cd_ebs_types
       circuit_breaker                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CIRCUIT_BREAKER',
       "! A68: the run selected no statement - nothing was evaluated
       no_data                        TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_DATA',
+      "! FS-CD review: not found yet, statement within EBS_INFLIGHT_HOURS (W, NOTIFY)
+      awaiting_lot_transfer          TYPE zif_cd_ops_types=>ty_check_code VALUE 'AWAITING_LOT_TRANSFER',
       code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
       code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
       currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
@@ -632,6 +637,7 @@ INTERFACE zif_cd_ebs_types
       unevaluated                 TYPE zif_cd_ops_types=>ty_msgno VALUE '529',
       file_encoding               TYPE zif_cd_ops_types=>ty_msgno VALUE '530',
       file_read_error             TYPE zif_cd_ops_types=>ty_msgno VALUE '531',
+      awaiting_lot_transfer       TYPE zif_cd_ops_types=>ty_msgno VALUE '532',
     END OF gc_msg.
 
 ENDINTERFACE.

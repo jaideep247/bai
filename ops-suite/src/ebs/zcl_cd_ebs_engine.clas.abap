@@ -22,6 +22,7 @@
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker; alerts over complete summaries;
 *&            | exact line cap; NO_DATA run.
 *& 2026-11-06 | Audit A85: typed posting disposition per line (BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST).
+*& 2026-11-06 | In-flight grace: AWAITING_LOT_TRANSFER lines are EXCEPTION in the posting disposition.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -133,7 +134,8 @@ CLASS zcl_cd_ebs_engine DEFINITION
     "! scope), the map row (NOT_POSTED, action) and the mode. A finding contributes BLOCK
     "! (severity B or action BLOCK - the A27 flag sets the latter), EXCEPTION (action
     "! EXCEPTION, or blank action with severity E) or ON_ACCOUNT (its action); NOTIFY and
-    "! released findings contribute nothing. Outside ENFORCE a BLOCK becomes EXCEPTION.
+    "! released findings contribute nothing; AWAITING_LOT_TRANSFER (in-flight grace) is
+    "! EXCEPTION, never AUTO_POST. Outside ENFORCE a BLOCK becomes EXCEPTION.
     METHODS dispositions
       IMPORTING
         iv_mode                TYPE ty_mode
@@ -620,6 +622,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD finding_disposition.
     rv_disposition = COND #(
+      " In-flight grace: held for the transfer - never auto-posted on a missing lot / payment
+      WHEN is_finding-check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+        THEN zif_cd_ops_types=>gc_action-exception
       WHEN is_finding-severity = zif_cd_ops_types=>gc_severity-block
         OR is_finding-action   = zif_cd_ops_types=>gc_action-block      THEN zif_cd_ops_types=>gc_action-block
       WHEN is_finding-action   = zif_cd_ops_types=>gc_action-exception

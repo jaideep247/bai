@@ -293,6 +293,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS disposition_on_account       FOR TESTING.
     METHODS disposition_block_wins       FOR TESTING.
     METHODS disposition_monitor_no_block FOR TESTING.
+    METHODS disposition_awaiting_held    FOR TESTING.
     "! A85: disposition of the first line of the first package (ENFORCE)
     METHODS first_disposition
       IMPORTING
@@ -1195,6 +1196,25 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = first_disposition( zcl_cd_ebs_engine=>gc_mode-monitor )
                                             exp = zif_cd_ops_types=>gc_action-exception
                                             msg = 'Monitor mode must never return BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " In-flight grace: a line awaiting the lot transfer (W, NOTIFY) is held as EXCEPTION, never AUTO_POST
+  METHOD disposition_awaiting_held.
+    TRY.
+        sign_scenario( default_flags( ) ).
+        ASSIGN mo_source->mt_packages[ 1 ] TO FIELD-SYMBOL(<ls_package>).
+        INSERT VALUE #( object_type = 'LINE'
+                        object_key  = zcl_cd_ebs_finding=>line_key( <ls_package>-lines[ 1 ] )
+                        rule_id     = 'R07R'
+                        check_code  = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                        severity    = zif_cd_ops_types=>gc_severity-warning
+                        action      = zif_cd_ops_types=>gc_action-notify ) INTO TABLE <ls_package>-findings.
+        cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-exception
+                                            msg = 'A line awaiting the lot transfer must not be auto-posted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

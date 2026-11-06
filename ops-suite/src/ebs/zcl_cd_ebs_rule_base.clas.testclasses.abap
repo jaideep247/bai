@@ -17,6 +17,7 @@
 *& 2026-11-06 | Audit A26 / A32 / A34: sweeps not posted, imported entry without posting rule, sign and gross totals.
 *& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
 *& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
+*& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -673,6 +674,10 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r07_key_length_over_width    FOR TESTING.
     METHODS r07_ref_format_rejected      FOR TESTING.
     METHODS r21_key_length_over_width    FOR TESTING.
+    METHODS r07r_in_flight_awaits        FOR TESTING.
+    METHODS r07r_after_grace_fails       FOR TESTING.
+    METHODS r07l_lot_in_flight_awaits    FOR TESTING.
+    METHODS r07_creation_time_decides    FOR TESTING.
     METHODS add_lookup
       IMPORTING
         iv_allowed TYPE clike DEFAULT 'OK'.
@@ -1087,6 +1092,77 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config
                          iv_msg        = 'A lookup key length above the key width must be rejected' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: lot item not found 8 h after the start of the statement date, grace 24 h:
+  " AWAITING_LOT_TRANSFER (W, NOTIFY), the original message kept in DETAILS
+  METHOD r07r_in_flight_awaits.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A lot item not found inside the grace window must await the transfer' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Awaiting lot transfer is a warning' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action exp = zif_cd_ops_types=>gc_action-notify
+                                            msg = 'Awaiting lot transfer only notifies' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mt_findings[ 1 ]-details
+                                                 msg = 'The original not-found message must be kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: after the grace window (4 h, statement 8 h old) the not-found stands
+  METHOD r07r_after_grace_fails.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '4' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
+                         iv_msg        = 'After the grace window the lot item must be found' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: 166D chain - retrieval AF logged, returns lot not yet created, inside the window
+  METHOD r07l_lot_in_flight_awaits.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        INSERT VALUE #( augbl = gc_test-docno status = 'AF' ) INTO TABLE mo_sap_dao->mt_retrievals.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL'
+             is_rule  = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' iv_param3 = zif_cd_ebs_types=>gc_rule_keyword-lot ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A returns lot not yet created inside the window must await the transfer' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: the creation time decides when present - created 07:00, now 08:00, grace 2 h
+  METHOD r07_creation_time_decides.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '2' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        mt_stmts[ 1 ]-created_date = gc_test-today.
+        mt_stmts[ 1 ]-created_time = '070000'.
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A statement created one hour ago is inside a two-hour window' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -1694,6 +1694,12 @@
      <MSGNR>531</MSGNR>
      <TEXT>File &amp;1: read error (return code &amp;2) after line &amp;3 - not validated</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>532</MSGNR>
+     <TEXT>Entry &amp;1: &amp;2 not found yet - statement within the &amp;3 h in-flight window</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

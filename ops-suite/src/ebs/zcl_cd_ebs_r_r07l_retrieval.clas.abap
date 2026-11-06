@@ -13,6 +13,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A11: PARAM2 statuses pass alone (AP), PARAM3 LOT requires a returns-lot entry.
 *& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
+*& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07L - ACH retrieval log status</p>
 CLASS zcl_cd_ebs_r_r07l_retrieval DEFINITION
@@ -69,16 +70,18 @@ CLASS zcl_cd_ebs_r_r07l_retrieval IMPLEMENTATION.
         ENDIF.
       ENDLOOP.
       IF lv_found = abap_false.
-        INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_not_found
+        INSERT not_found_finding(
+                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-retrieval_not_found
                                           iv_v1 = lv_key ) ) INTO TABLE rt_findings.
       ELSEIF lv_alone = abap_true.
         CONTINUE.
       ELSEIF lv_ok = abap_true AND lv_need_lot = abap_true AND NOT line_exists( lt_items[ selw1 = lv_key ] ).
-        INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
+        INSERT not_found_finding(
+                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-return_item_not_found
                                                      iv_v1    = lv_key ) ) INTO TABLE rt_findings.
       ELSEIF lv_ok = abap_false.

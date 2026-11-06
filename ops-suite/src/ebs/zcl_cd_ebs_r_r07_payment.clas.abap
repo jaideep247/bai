@@ -10,6 +10,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
+*& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION
@@ -55,8 +56,9 @@ CLASS zcl_cd_ebs_r_r07_payment IMPLEMENTATION.
         lv_statuses = condense( |{ lv_statuses } { ls_payment-status }| ).
       ENDLOOP.
       IF lv_found = abap_false.
-        INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_not_found
+        INSERT not_found_finding(
+                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_not_found
                  iv_message =
                    zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-payment_not_found
                                           iv_v1 = lv_key ) ) INTO TABLE rt_findings.
