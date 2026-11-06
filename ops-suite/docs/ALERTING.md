@@ -17,7 +17,10 @@ The morning report itself is sent as a report (route `MORNING`), not as an alert
 
 | Status in log | Meaning | Action |
 |---|---|---|
-| S | Delivered | — |
+| S | **Submitted** — the channel accepted the alert: e-mail send request accepted by BCS and committed to SAPconnect, application log saved, HTTP 2xx received. For e-mail this is not proof of delivery to the mailbox (audit A99) | Delivery to the recipient is in SAPconnect (SOST); check SOST for payment-critical routes during QA1 and when the morning report shows send errors |
+| C | Claimed — delivery in progress (written and committed before sending, audit A17) | A C row older than the run means the run ended during delivery (dump); review and re-send, then set it to F |
+| R | Repeat suppressed — the exception was only carried forward from an earlier run and its severity did not change | None — by design; escalation rules still alert |
+| P | Partially delivered (e.g. application log saved with fewer messages than requested) | Treat as failed for follow-up |
 | F | Channel failed (address, destination, log object) | Fix the channel or destination; the morning report's alert-delivery check turns amber/red |
 | T | Throttled (same rule alerted within the window) | None — by design |
 | Q | Held: quiet hours | Appears in the next morning report |

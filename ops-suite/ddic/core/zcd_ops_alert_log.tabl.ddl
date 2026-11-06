@@ -11,7 +11,7 @@ define table zcd_ops_alert_log {
   run_id        : sysuuid_x16;
   pe_area       : abap.char(4);
   sent_at       : timestampl;
-  // S sent, F failed, T throttled, Q quiet hours
+  // S submitted (accepted by the channel), F failed, T throttled, Q quiet hours, C claimed, R repeat, P partial
   status        : abap.char(1);
   destination   : abap.char(255);
   subject       : abap.char(255);
@@ -25,5 +25,5 @@ define table zcd_ops_alert_log {
 // @index RUL: MANDT, RULE_ID, SENT_AT
 // Secondary index INT (UNIQUE): one dispatcher per alert intent and attempt (audit A17)
 // @index INT UNIQUE: MANDT, INTENT_KEY, ATTEMPT
-// Status: S sent, F failed, T throttled, Q quiet hours, C claimed (in delivery), R repeat
+// Status: S submitted (channel accepted; e-mail delivery is in SOST), F failed, T throttled, Q quiet hours, C claimed (in delivery), R repeat
 //   (carried-forward exception, not re-alerted), P partially delivered
