@@ -7,6 +7,7 @@
 *& Thin wrapper over CL_HTTP_CLIENT - covered by the QA1 integration test.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel HTTP webhook</p>
 CLASS zcl_cd_ops_chn_http DEFINITION
@@ -81,7 +82,7 @@ CLASS zcl_cd_ops_chn_http IMPLEMENTATION.
 
   METHOD to_json.
     rv_json = |\{"ruleId":{ json_string( is_message-rule_id ) },|
-           && |"payment engine area":{ json_string( is_message-pe_area ) },|
+           && |"peArea":{ json_string( is_message-pe_area ) },|
            && |"severity":{ json_string( is_message-severity ) },|
            && |"subject":{ json_string( is_message-subject ) },|
            && |"items":{ is_message-item_count },|

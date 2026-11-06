@@ -31,14 +31,14 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 
 ## 2. Run lock
 
-- Table `ZCD_OPS_LOCK` (key PAYMENT ENGINE AREA, VARIANT; delivery class L) used only as the lock argument of standard lock object `E_TABLE` (`ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE`, `_SCOPE = '1'` so the lock survives the per-package `COMMIT WORK`). Isolated in `ZCL_CD_OPS_LOCK` (`ZIF_CD_OPS_LOCK`, injectable; `VERIFY-SE37` on the FM interface).
+- Table `ZCD_OPS_LOCK` (key PE_AREA, VARIANT; delivery class L) used only as the lock argument of standard lock object `E_TABLE` (`ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE`, `_SCOPE = '1'` so the lock survives the per-package `COMMIT WORK`). Isolated in `ZCL_CD_OPS_LOCK` (`ZIF_CD_OPS_LOCK`, injectable; `VERIFY-SE37` on the FM interface).
 - EBS, FMON and HCK take the lock for payment engine area + variant before `start_run`; a held lock → no run, finding-free result with message, alert rule `RUN_LOCKED` (severity E) through the router, report message. Test mode does not lock.
 - Released at the end of the run (also on exception via `CLEANUP`).
 
 ## 3. Exception carry-forward
 
 - New fields on `ZCD_OPS_FINDING`: `FIRST_SEEN_AT` (timestampl), `OCCURRENCES` (int4), `SUPERSEDED_BY` (sysuuid_x16, run that replaced it).
-- `save_findings`: for a finding of rank ≥ 2, look up the open exception (disposition O or A) for the same PAYMENT ENGINE AREA + OBJECT_TYPE + OBJECT_KEY + CHECK_CODE from an earlier run. Found → the new row inherits `DISPOSITION`, `OWNER`, `DUE_DATE`, `FIRST_SEEN_AT`, `OCCURRENCES + 1`; the old row gets disposition `S` (superseded) and `SUPERSEDED_BY`.
+- `save_findings`: for a finding of rank ≥ 2, look up the open exception (disposition O or A) for the same PE_AREA + OBJECT_TYPE + OBJECT_KEY + CHECK_CODE from an earlier run. Found → the new row inherits `DISPOSITION`, `OWNER`, `DUE_DATE`, `FIRST_SEEN_AT`, `OCCURRENCES + 1`; the old row gets disposition `S` (superseded) and `SUPERSEDED_BY`.
 - New store method `reconcile( is_run, it_scope )`: `it_scope` = object keys the run actually evaluated. Open exceptions of the payment engine area for keys in scope that were **not** found again → disposition `R`, `RESOLUTION = 'Passed on re-run <run id>'`, resolved by the run user. Each engine passes its scope (EBS: lines validated; FMON: files evaluated; HCK: checks executed).
 - Waived (W) exceptions are not reopened by re-runs while the waiver is valid (see §6.1).
 

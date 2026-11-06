@@ -44,5 +44,5 @@ define table zcd_ops_finding {
   created_at    : timestampl;
 }
 // Secondary indexes:
-//   ZCD_OPS_FINDING~OPN : MANDT, PAYMENT ENGINE AREA, DISPOSITION, DUE_DATE   (exception queue / aging)
-//   ZCD_OPS_FINDING~OBJ : MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)
+//   ZCD_OPS_FINDING~OPN : MANDT, PE_AREA, DISPOSITION, DUE_DATE   (exception queue / aging)
+//   ZCD_OPS_FINDING~OBJ : MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)

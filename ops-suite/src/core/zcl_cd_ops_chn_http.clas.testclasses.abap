@@ -7,6 +7,7 @@
 *& runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (TDD gap closure).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 CLASS ltc_http_json DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -39,6 +40,8 @@ CLASS ltc_http_json IMPLEMENTATION.
   METHOD body_carries_rule_and_items.
     DATA(lv_json) = zcl_cd_ops_chn_http=>to_json( message( ) ).
     cl_abap_unit_assert=>assert_char_cp( act = lv_json exp = '*"ruleId":"EBS_BLOCK"*' msg = 'ruleId must be sent' ).
+    cl_abap_unit_assert=>assert_char_cp( act = lv_json exp = '*"peArea":"EBS"*'
+                                         msg = 'payment engine area must be sent under key peArea' ).
     cl_abap_unit_assert=>assert_char_cp( act = lv_json exp = '*"severity":"B"*' msg = 'severity must be sent' ).
     cl_abap_unit_assert=>assert_char_cp( act = lv_json exp = '*"items":3*' msg = 'item count must be a number' ).
   ENDMETHOD.

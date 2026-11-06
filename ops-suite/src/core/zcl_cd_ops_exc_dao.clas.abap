@@ -7,6 +7,7 @@
 *& payment request handled manually). No commit - caller's LUW.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception repository</p>
 CLASS zcl_cd_ops_exc_dao DEFINITION
@@ -28,7 +29,7 @@ ENDCLASS.
 CLASS zcl_cd_ops_exc_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_exc_dao~find_open.
-    " index ZCD_OPS_FINDING~OBJ: MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY
     SELECT run_id, finding_no
       FROM zcd_ops_finding
       WHERE pe_area     = @iv_pe_area

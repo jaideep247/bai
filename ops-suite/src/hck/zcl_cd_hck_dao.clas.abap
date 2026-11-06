@@ -8,6 +8,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | get_suppressions: active suppressions of the day (design 6.3).
 *& 2026-11-06 | select_values: validated value queries (known-table checks).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -375,7 +376,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_overdue_exceptions.
     CONSTANTS lc_no_date TYPE d VALUE '00000000'.
-    " index ZCD_OPS_FINDING~OPN: CLIENT, PAYMENT ENGINE AREA, DISPOSITION, DUE_DATE
+    " index ZCD_OPS_FINDING~OPN: CLIENT, PE_AREA, DISPOSITION, DUE_DATE
     SELECT pe_area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
       FROM zcd_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )

@@ -9,6 +9,7 @@
 *& 2026-11-06 | rollback( ) added.
 *& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
 *& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -205,7 +206,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     ENDLOOP.
     CHECK lt_keys IS NOT INITIAL.
 
-    " index ZCD_OPS_FINDING~OBJ: MANDT, PAYMENT ENGINE AREA, OBJECT_TYPE, OBJECT_KEY
+    " index ZCD_OPS_FINDING~OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
            waiver_req_by, waiver_req_at, waiver_reason

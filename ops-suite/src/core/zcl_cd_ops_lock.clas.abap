@@ -2,12 +2,13 @@
 *& Artifact: zcl_cd_ops_lock.clas.abap
 *& Purpose:
 *& Run lock over the standard generic lock object E_TABLE with table
-*& ZCD_OPS_LOCK (key MANDT, PAYMENT ENGINE AREA, VARIANT) as argument. _SCOPE '1': the lock
+*& ZCD_OPS_LOCK (key MANDT, PE_AREA, VARIANT) as argument. _SCOPE '1': the lock
 *& belongs to the program, not to the update task, so it survives the engines'
 *& COMMIT WORK per package. Thin wrapper - deliberately not unit tested; engines
 *& are tested with an injected double.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
+*& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - run lock (E_TABLE on ZCD_OPS_LOCK)</p>
 CLASS zcl_cd_ops_lock DEFINITION
@@ -78,7 +79,7 @@ CLASS zcl_cd_ops_lock IMPLEMENTATION.
 
 
   METHOD varkey.
-    " Fixed positions of the ZCD_OPS_LOCK key: MANDT (3), PAYMENT ENGINE AREA (4), VARIANT (30)
+    " Fixed positions of the ZCD_OPS_LOCK key: MANDT (3), PE_AREA (4), VARIANT (30)
     DATA lv_pe_area  TYPE zif_cd_ops_types=>ty_pe_area.
     DATA lv_variant TYPE zif_cd_ops_types=>ty_variant.
     lv_pe_area  = iv_pe_area.

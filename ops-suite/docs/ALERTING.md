@@ -54,7 +54,7 @@ The router and its channels commit (BCS sends on commit, BAL saves to the databa
 
 ### Customizing
 
-`ZCD_OPS_ALERT_RULE` (key RULE_ID): PAYMENT ENGINE AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
+`ZCD_OPS_ALERT_RULE` (key RULE_ID): PE_AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
 `ZCD_OPS_ALERT_CHN` (key CHANNEL): CLASS_NAME, default DESTINATION, ACTIVE — a new channel is a class implementing `ZIF_CD_OPS_ALERT_CHANNEL` plus one row.
 `ZCD_OPS_PARAM`: `ALERT_<route>` and `ALERT_DEFAULT` recipient lists for `send( )`; `ALERT_ESCALATION_WINDOW_H` (default 24).
 
@@ -64,8 +64,8 @@ Example rows: `config/alert_seed.md`.
 
 | Change | Customizing |
 |---|---|
-| Page the on-call team for any blocked bank line | Rule: PAYMENT ENGINE AREA EBS, MIN_SEVERITY B, CHANNEL HTTP, DESTINATION = SM59 webhook |
-| Send NOC aging to compliance daily | Rule: PAYMENT ENGINE AREA FMON, CHECK_PATTERN `NOC_AGING*`, THROTTLE_MIN 1440 |
+| Page the on-call team for any blocked bank line | Rule: PE_AREA EBS, MIN_SEVERITY B, CHANNEL HTTP, DESTINATION = SM59 webhook |
+| Send NOC aging to compliance daily | Rule: PE_AREA FMON, CHECK_PATTERN `NOC_AGING*`, THROTTLE_MIN 1440 |
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = lead DL |
 | Add Microsoft Teams | SM59 destination (Basis) + rule with CHANNEL HTTP |
