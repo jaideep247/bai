@@ -21,6 +21,7 @@
 *& 2026-11-06 | Audit A69: messages for server file encoding and read errors.
 *& 2026-11-06 | Audit A85: map action carried on the line.
 *& 2026-11-06 | FS-CD review: in-flight grace (EBS_INFLIGHT_HOURS, AWAITING_LOT_TRANSFER).
+*& 2026-11-06 | Audit A62: plug-in interface names for the factory RTTI check.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -366,6 +367,13 @@ INTERFACE zif_cd_ebs_types
       ztnum     TYPE c LENGTH 10 VALUE 'ZTNUM',
       reference TYPE c LENGTH 10 VALUE 'REFERENCE',
     END OF gc_lookup_key.
+  "! A62: interfaces the core factory checks by RTTI before it creates an EBS plug-in
+  CONSTANTS:
+    BEGIN OF gc_plugin_interface,
+      rule   TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_EBS_RULE',
+      parser TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_EBS_PARSER',
+    END OF gc_plugin_interface.
+
   "! Customizing table of rule R21 (named in configuration messages)
   CONSTANTS gc_lookup_table TYPE c LENGTH 30 VALUE 'ZCD_EBS_LOOKUP'.
 

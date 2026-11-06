@@ -14,6 +14,7 @@
 *& 2026-11-06 | Audit A27/A86: parser (package) findings honour the blocks-posting flag.
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker, alert after cap, exact line cap, NO_DATA run.
 *& 2026-11-06 | Audit A85: posting disposition per line, precedence and monitor mode.
+*& 2026-11-06 | Audit A64: posting check refreshes the parameter snapshot.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -67,6 +68,8 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_commits  TYPE i.
     DATA mv_starts   TYPE i.
     DATA mv_reconciles TYPE i.
+    "! A64: parameter snapshot refreshes
+    DATA mv_refreshes TYPE i.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
 ENDCLASS.
 
@@ -93,6 +96,9 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~refresh_params.
+    mv_refreshes += 1.
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
     rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
@@ -294,6 +300,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS disposition_block_wins       FOR TESTING.
     METHODS disposition_monitor_no_block FOR TESTING.
     METHODS disposition_awaiting_held    FOR TESTING.
+    METHODS posting_check_refreshes_params FOR TESTING.
     "! A85: disposition of the first line of the first package (ENFORCE)
     METHODS first_disposition
       IMPORTING
@@ -1215,6 +1222,19 @@ CLASS ltc_engine IMPLEMENTATION.
                         action      = zif_cd_ops_types=>gc_action-notify ) INTO TABLE <ls_package>-findings.
         cl_abap_unit_assert=>assert_equals( act = first_disposition( ) exp = zif_cd_ops_types=>gc_action-exception
                                             msg = 'A line awaiting the lot transfer must not be auto-posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A64: validate_for_posting starts no run - it refreshes the parameter snapshot once per call
+  METHOD posting_check_refreshes_params.
+    TRY.
+        sign_scenario( default_flags( ) ).
+        first_disposition( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_refreshes exp = 1
+                                            msg = 'One parameter refresh per posting check' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

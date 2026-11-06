@@ -23,6 +23,7 @@
 *&            | exact line cap; NO_DATA run.
 *& 2026-11-06 | Audit A85: typed posting disposition per line (BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST).
 *& 2026-11-06 | In-flight grace: AWAITING_LOT_TRANSFER lines are EXCEPTION in the posting disposition.
+*& 2026-11-06 | Audit A62/A64: rule plug-ins created with interface check; parameter snapshot refreshed per posting check.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -527,6 +528,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     IF iv_mode = gc_mode-off.
       RETURN.
     ENDIF.
+    " A64: no run is started here, so the parameter snapshot is refreshed once per call
+    zcl_cd_ops_factory=>get_store( )->refresh_params( ).
     TRY.
         rs_decision-findings = validate_package( CHANGING cs_package = rs_decision-package ).
       CATCH cx_root INTO DATA(lx_error).
@@ -774,7 +777,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         IF sy-subrc = 0.
           lo_rule = ls_plugin-rule.
         ELSE.
-          lo_rule = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin( is_rule-class_name ) ).
+          " A62: the factory checks the interface by RTTI before CREATE OBJECT
+          lo_rule = CAST zif_cd_ebs_rule( zcl_cd_ops_factory=>get_plugin(
+                                            iv_class_name = is_rule-class_name
+                                            iv_interface  = zif_cd_ebs_types=>gc_plugin_interface-rule ) ).
           INSERT VALUE #( class_name = is_rule-class_name rule = lo_rule ) INTO TABLE mt_plugins.
         ENDIF.
         rt_findings = lo_rule->execute( is_rule       = is_rule

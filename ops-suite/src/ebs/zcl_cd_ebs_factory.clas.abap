@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Release repository seam (design 6.2).
+*& 2026-11-06 | Audit A62: parser plug-in created with interface check (RTTI before CREATE OBJECT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -91,10 +92,12 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
       iv_name    = CONV #( |EBS_PARSER_{ iv_format }| )
       iv_default = lv_default ).
     TRY.
-        ro_parser = CAST zif_cd_ebs_parser( zcl_cd_ops_factory=>get_plugin( CONV #( lv_class ) ) ).
+        ro_parser = CAST zif_cd_ebs_parser( zcl_cd_ops_factory=>get_plugin(
+                                              iv_class_name = CONV #( lv_class )
+                                              iv_interface  = zif_cd_ebs_types=>gc_plugin_interface-parser ) ).
       CATCH cx_sy_move_cast_error.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH lv_class 'ZIF_CD_EBS_PARSER'.
+          MESSAGE e032(zcd_ops) WITH lv_class zif_cd_ebs_types=>gc_plugin_interface-parser.
     ENDTRY.
   ENDMETHOD.
 
