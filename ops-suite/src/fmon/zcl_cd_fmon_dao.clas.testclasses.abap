@@ -100,6 +100,7 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS newer_registry_not_overwritten FOR TESTING.
     METHODS unchanged_registry_is_saved FOR TESTING.
     METHODS event_belongs_to_its_instance FOR TESTING.
+    METHODS cross_interface_ref_own_event FOR TESTING.
     METHODS older_instances_not_prefetched FOR TESTING.
     METHODS unapproved_table_is_refused FOR TESTING.
     METHODS read_without_auth_is_refused FOR TESTING.
@@ -420,6 +421,27 @@ CLASS ltc_dao IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
+
+  " Audit A90: two interfaces reuse the same file reference on the same source and stage.
+  " Each interface has its own file instance (FILE_ID), so each file keeps its own event.
+  METHOD cross_interface_ref_own_event.
+    TRY.
+        DATA(ls_iface_a) = new_event( zif_cd_fmon_types=>gc_stage-ack ).
+        DATA(ls_iface_b) = ls_iface_a.
+        ls_iface_b-file_id = CONV zif_cd_fmon_types=>ty_file_id( 3 ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->insert_event( ls_iface_a )
+                                          msg = 'The first interface file must get its event' ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->insert_event( ls_iface_b )
+                                          msg = 'The second interface file must get its own event' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->insert_event( ls_iface_b )
+                                           msg = 'A replay for the same file must stay idempotent' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
 
 
   " Audit A49: instances of the same reference older than the watch window are not read

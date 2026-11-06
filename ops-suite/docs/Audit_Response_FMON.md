@@ -44,6 +44,12 @@ Verdicts: **Confirmed** = the defect existed as described; **Partly** = some of 
 
 None in ABAP source. Open ADT verifications are listed in the residual column (FOR UPDATE in the OSQL test environment, OSQL redirect of the dynamic FROM, index creation by abapGit) and in `docs/FMON_FILE_MONITORING.md` B6. The generated FmonTableAllow behaviour carries the generator's existing `VERIFY-ADT` (delete as validation trigger).
 
+## A90 (later checkpoint) — event identity across interfaces
+
+| Finding | Verdict | Fix | Tests |
+|---|---|---|---|
+| A90 Event dedupe key omits interface / file ID; two interfaces reusing a reference on one source and stage could leave the second file without its event | **Fixed by the A49 change**: FILE_ID (one per interface + reference + business date) is in the event lookup (`EVENT_EXISTS`) and in the unique index `ZCD_FMON_EVENT~SRC` (MANDT, FILE_ID, SRC_ID, SRC_KEY, STAGE) | None needed beyond A49 | `event_belongs_to_its_instance`, new `cross_interface_ref_own_event` (two interface files, then a replay stays idempotent), `same_event_is_stored_once` |
+
 ## Merge notes
 
 Shared files this stream did not edit; please apply at merge:
