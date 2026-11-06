@@ -1682,6 +1682,18 @@
      <MSGNR>529</MSGNR>
      <TEXT>&amp;1 entries not evaluated (a rule could not run)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>530</MSGNR>
+     <TEXT>File &amp;1 is not valid UTF-8 (after line &amp;2) - not validated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>531</MSGNR>
+     <TEXT>File &amp;1: read error (return code &amp;2) after line &amp;3 - not validated</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

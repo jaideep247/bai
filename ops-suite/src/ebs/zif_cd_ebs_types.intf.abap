@@ -18,6 +18,7 @@
 *& 2026-11-06 | Audit A86: message TRAILER_FIELD_MISSING.
 *& 2026-11-06 | Audit A65: key width check codes, messages and EBS_KEYLEN_DOCNO constant.
 *& 2026-11-06 | Audit A66/A68: NO_DATA check code, EBS_EMPTY_FEED_OK, messages 527-529.
+*& 2026-11-06 | Audit A69: messages for server file encoding and read errors.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -626,6 +627,8 @@ INTERFACE zif_cd_ebs_types
       date_range                  TYPE zif_cd_ops_types=>ty_msgno VALUE '527',
       no_data                     TYPE zif_cd_ops_types=>ty_msgno VALUE '528',
       unevaluated                 TYPE zif_cd_ops_types=>ty_msgno VALUE '529',
+      file_encoding               TYPE zif_cd_ops_types=>ty_msgno VALUE '530',
+      file_read_error             TYPE zif_cd_ops_types=>ty_msgno VALUE '531',
     END OF gc_msg.
 
 ENDINTERFACE.
