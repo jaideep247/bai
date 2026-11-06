@@ -8,6 +8,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A86: an empty total/count of a present 49/98/99 trailer is TRAILER_FIELD_MISSING, never the computed value.
+*& 2026-11-06 | Audit A95/A96: missing 49/98/99 blocks (B); funds-type layout validated before references are read.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -127,6 +129,16 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         detailed    TYPE ty_funds_type VALUE 'D',
       END OF gc_funds.
 
+    "! A96: supported one-character funds types besides blank (BAI2: 0, 1, 2, Z, V, S, D)
+    CONSTANTS gc_funds_codes TYPE string VALUE `012ZVSD`.
+    "! A96: why a funds-type layout cannot be read (message variable)
+    CONSTANTS:
+      BEGIN OF gc_layout,
+        funds_type   TYPE string VALUE `FUNDS_TYPE`,
+        distribution TYPE string VALUE `DISTRIBUTION_COUNT`,
+        fields       TYPE string VALUE `FIELD_COUNT`,
+      END OF gc_layout.
+
     "! Fields used by a funds-type block (funds type field included)
     CONSTANTS:
       BEGIN OF gc_funds_fields,
@@ -192,6 +204,10 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         invalid_date     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_DATE',
         invalid_code     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_TYPE_CODE',
         info_skipped     TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
+        "! A86: a required total/count of a present 49/98/99 trailer is empty
+        trailer_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
+        "! A96: funds type not supported, distribution count malformed or fields missing
+        funds_layout     TYPE zif_cd_ops_types=>ty_check_code VALUE 'FUNDS_LAYOUT',
       END OF gc_check.
 
     CONSTANTS:
@@ -342,6 +358,15 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         is_record TYPE ty_record
         it_fields TYPE string_table.
 
+    "! A96: blank when the funds-type block of a 16 record can be read; otherwise the
+    "! reason (unsupported funds type, malformed distribution count, fields missing) -
+    "! references are never taken from a shifted position
+    METHODS funds_layout_problem
+      IMPORTING
+        it_fields        TYPE string_table
+      RETURNING
+        VALUE(rv_reason) TYPE string.
+
     METHODS append_line
       IMPORTING
         it_fields TYPE string_table
@@ -434,21 +459,30 @@ CLASS zcl_cd_ebs_parser_bai2 DEFINITION
         iv_expected TYPE i
         iv_found    TYPE i.
 
-    "! Declared amount of a trailer field; iv_default when the field is empty
-    METHODS declared_amount
+    "! A86: compares the declared control total of a trailer with the computed one. An
+    "! empty field is TRAILER_FIELD_MISSING (S06, B) - never replaced by the computed value.
+    "! Returns the declared total, or the computed one when nothing was declared.
+    METHODS compare_total
       IMPORTING
+        is_check         TYPE ty_check
         iv_raw           TYPE string
-        iv_default       TYPE ty_amount
+        iv_found         TYPE ty_amount
       RETURNING
         VALUE(rv_amount) TYPE ty_amount.
 
-    "! Declared count of a trailer field; iv_default when the field is empty
-    METHODS declared_count
+    "! A86: compares a declared trailer count with the computed one. An empty field is
+    "! TRAILER_FIELD_MISSING (S12) - omission is not zero and is never self-satisfied.
+    METHODS compare_count
       IMPORTING
-        iv_raw          TYPE string
-        iv_default      TYPE i
-      RETURNING
-        VALUE(rv_count) TYPE i.
+        is_check TYPE ty_check
+        iv_raw   TYPE string
+        iv_found TYPE i.
+
+    METHODS field_missing
+      IMPORTING
+        is_check    TYPE ty_check
+        iv_rule_id  TYPE zif_cd_ops_types=>ty_rule_id
+        iv_severity TYPE zif_cd_ops_types=>ty_severity.
 
     METHODS add_finding
       IMPORTING
@@ -862,6 +896,17 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       skip_detail( iv_code = lv_code iv_line_no = is_record-line_no ).
       RETURN.
     ENDIF.
+    DATA(lv_layout) = funds_layout_problem( it_fields ).
+    IF lv_layout IS NOT INITIAL.
+      add_finding( is_check    = stmt_check( gc_check-funds_layout )
+                   iv_rule_id  = gc_rule-structure
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-funds_layout
+                                                        iv_v1    = lv_code
+                                                        iv_v2    = is_record-line_no
+                                                        iv_v3    = lv_layout ) ).
+      RETURN.
+    ENDIF.
     append_line( it_fields = it_fields
                  iv_code   = lv_code
                  iv_cdi    = lv_cdi
@@ -976,19 +1021,17 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_trailer_49
                                             iv_v1    = ms_account-stmt-account_no ).
-    DATA(lv_total) = declared_amount( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_total )
-                                      iv_default = ms_account-computed_total ).
-    check_total( is_check    = stmt_check( iv_check_code = gc_check-acct_ctrl_total
-                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
-                                                                                  iv_v1    = lv_label ) )
-                 iv_expected = lv_total
-                 iv_found    = ms_account-computed_total ).
-    check_count( is_check    = stmt_check( iv_check_code = gc_check-record_count
-                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
-                                                                                  iv_v1    = lv_label ) )
-                 iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
-                                               iv_default = ms_account-record_count )
-                 iv_found    = ms_account-record_count ).
+    DATA(lv_total) = compare_total( is_check = stmt_check( iv_check_code = gc_check-acct_ctrl_total
+                                                           iv_label      = zcl_cd_ops_util=>text(
+                                                                             iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
+                                                                             iv_v1    = lv_label ) )
+                                    iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_total )
+                                    iv_found = ms_account-computed_total ).
+    compare_count( is_check = stmt_check( iv_check_code = gc_check-record_count
+                                          iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
+                                                                                 iv_v1    = lv_label ) )
+                   iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
+                   iv_found = ms_account-record_count ).
     close_account( iv_has_trailer = abap_true iv_trailer_total = lv_total ).
   ENDMETHOD.
 
@@ -1001,25 +1044,22 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     ENDIF.
     count_record( is_record-phys_count ).
     DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_98 iv_v1 = ms_group-group_no ).
-    DATA(lv_total) = declared_amount( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_total )
-                                      iv_default = ms_group-child_total ).
-    check_total( is_check    = file_check( iv_check_code = gc_check-group_ctrl_total
-                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
-                                                                                  iv_v1    = lv_label ) )
-                 iv_expected = lv_total
-                 iv_found    = ms_group-child_total ).
-    check_count( is_check    = file_check( iv_check_code = gc_check-account_count
-                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_accounts
-                                                                                  iv_v1    = lv_label ) )
-                 iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
-                                               iv_default = ms_group-account_count )
-                 iv_found    = ms_group-account_count ).
-    check_count( is_check    = file_check( iv_check_code = gc_check-record_count
-                                           iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
-                                                                                  iv_v1    = lv_label ) )
-                 iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
-                                               iv_default = ms_group-record_count )
-                 iv_found    = ms_group-record_count ).
+    DATA(lv_total) = compare_total( is_check = file_check( iv_check_code = gc_check-group_ctrl_total
+                                                           iv_label      = zcl_cd_ops_util=>text(
+                                                                             iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
+                                                                             iv_v1    = lv_label ) )
+                                    iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_total )
+                                    iv_found = ms_group-child_total ).
+    compare_count( is_check = file_check( iv_check_code = gc_check-account_count
+                                          iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_accounts
+                                                                                 iv_v1    = lv_label ) )
+                   iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
+                   iv_found = ms_group-account_count ).
+    compare_count( is_check = file_check( iv_check_code = gc_check-record_count
+                                          iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-number_of_records
+                                                                                 iv_v1    = lv_label ) )
+                   iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
+                   iv_found = ms_group-record_count ).
     close_group( iv_has_trailer = abap_true iv_trailer_total = lv_total ).
   ENDMETHOD.
 
@@ -1028,30 +1068,24 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     close_account( abap_false ).
     close_group( abap_false ).
     DATA(lv_total_raw) = field( it_fields = it_fields iv_index = gc_pos-trl_total ).
-    DATA(lv_total) = declared_amount( iv_raw = lv_total_raw iv_default = mv_file_total ).
-    IF lv_total_raw IS NOT INITIAL.
+    DATA(lv_total_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_control_tot ).
+    DATA(lv_total) = compare_total( is_check = file_check( iv_check_code = gc_check-file_ctrl_total
+                                                           iv_label      = lv_total_label )
+                                    iv_raw   = lv_total_raw
+                                    iv_found = mv_file_total ).
+    IF strlen( condense( lv_total_raw ) ) > 0.
       ms_file-control_total = lv_total.
     ENDIF.
-    check_total( is_check    = file_check( iv_check_code = gc_check-file_ctrl_total
-                                           iv_label      =
-                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_control_tot
-                                                                    ) )
-                 iv_expected = lv_total
-                 iv_found    = mv_file_total ).
-    check_count( is_check    = file_check( iv_check_code = gc_check-group_count
-                                           iv_label      =
-                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of
-                                                                    ) )
-                 iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
-                                               iv_default = mv_group_count )
-                 iv_found    = mv_group_count ).
-    check_count( is_check    = file_check( iv_check_code = gc_check-record_count
-                                           iv_label      =
-                                             zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of_2
-                                                                    ) )
-                 iv_expected = declared_count( iv_raw     = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
-                                               iv_default = mv_file_records )
-                 iv_found    = mv_file_records ).
+    compare_count( is_check = file_check( iv_check_code = gc_check-group_count
+                                          iv_label      = zcl_cd_ops_util=>text(
+                                                            iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of ) )
+                   iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_count_1 )
+                   iv_found = mv_group_count ).
+    compare_count( is_check = file_check( iv_check_code = gc_check-record_count
+                                          iv_label      = zcl_cd_ops_util=>text(
+                                                            iv_msgno = zif_cd_ebs_types=>gc_msg-file_trailer_99_number_of_2 ) )
+                   iv_raw   = field( it_fields = it_fields iv_index = gc_pos-trl_count_2 )
+                   iv_found = mv_file_records ).
     mv_file_closed = abap_true.
   ENDMETHOD.
 
@@ -1082,9 +1116,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF iv_has_trailer = abap_false.
+      " A95: a missing mandatory trailer blocks - totals and counts of the account are unproven
       add_finding( is_check    = stmt_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_expected_account_tr
                                                         iv_v1    = ms_account-stmt-account_no
                                                         iv_v2    = mv_line_no ) ).
@@ -1149,7 +1184,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF iv_has_trailer = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-group_trailer_missing
                                                         iv_v1    = ms_group-group_no
                                                         iv_v2    = ms_group-originator
@@ -1167,7 +1202,7 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
     IF mv_file_closed = abap_false.
       add_finding( is_check    = file_check( gc_check-missing_trailer )
                    iv_rule_id  = gc_rule-structure
-                   iv_severity = zif_cd_ops_types=>gc_severity-error
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-file_expected_file_trailer
                                                         iv_v1    = file_key( ) ) ).
     ENDIF.
@@ -1212,13 +1247,38 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD declared_amount.
-    rv_amount = COND #( WHEN iv_raw IS INITIAL THEN iv_default ELSE to_amount( iv_raw ) ).
+  METHOD compare_total.
+    IF strlen( condense( iv_raw ) ) = 0.
+      field_missing( is_check    = is_check
+                     iv_rule_id  = gc_rule-control_total
+                     iv_severity = zif_cd_ops_types=>gc_severity-block ).
+      rv_amount = iv_found.
+      RETURN.
+    ENDIF.
+    rv_amount = to_amount( iv_raw ).
+    check_total( is_check = is_check iv_expected = rv_amount iv_found = iv_found ).
   ENDMETHOD.
 
 
-  METHOD declared_count.
-    rv_count = COND #( WHEN iv_raw IS INITIAL THEN iv_default ELSE to_count( iv_raw ) ).
+  METHOD compare_count.
+    IF strlen( condense( iv_raw ) ) = 0.
+      field_missing( is_check    = is_check
+                     iv_rule_id  = gc_rule-count
+                     iv_severity = zif_cd_ops_types=>gc_severity-error ).
+      RETURN.
+    ENDIF.
+    check_count( is_check = is_check iv_expected = to_count( iv_raw ) iv_found = iv_found ).
+  ENDMETHOD.
+
+
+  METHOD field_missing.
+    DATA(ls_check) = is_check.
+    ls_check-check_code = gc_check-trailer_missing.
+    add_finding( is_check    = ls_check
+                 iv_rule_id  = iv_rule_id
+                 iv_severity = iv_severity
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-trailer_field_missing
+                                                      iv_v1    = is_check-label ) ).
   ENDMETHOD.
 
 
@@ -1290,6 +1350,29 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
   METHOD field.
     rv_value = condense( VALUE string( it_fields[ iv_index ] OPTIONAL ) ).
+  ENDMETHOD.
+
+
+  METHOD funds_layout_problem.
+    DATA(lv_type) = to_upper( condense( field( it_fields = it_fields iv_index = gc_pos-dtl_funds_type ) ) ).
+    IF lv_type IS NOT INITIAL AND ( strlen( lv_type ) <> 1 OR lv_type CN gc_funds_codes ).
+      rv_reason = gc_layout-funds_type.
+      RETURN.
+    ENDIF.
+    IF lv_type = gc_funds-detailed.
+      DATA(lv_count) = condense( field( it_fields = it_fields iv_index = gc_pos-dtl_funds_type + 1 ) ).
+      IF lv_count IS INITIAL OR lv_count CN gc_digits OR strlen( lv_count ) > gc_max_count_digits
+         OR CONV i( lv_count ) = 0.
+        rv_reason = gc_layout-distribution.
+        RETURN.
+      ENDIF.
+    ENDIF.
+    " Every field of the funds-type block must be present (trailing empty references may be
+    " dropped by the record split, so they are not required)
+    DATA(ls_funds) = funds_info( it_fields = it_fields iv_index = gc_pos-dtl_funds_type ).
+    IF lines( it_fields ) < gc_pos-dtl_funds_type + ls_funds-field_count - 1.
+      rv_reason = gc_layout-fields.
+    ENDIF.
   ENDMETHOD.
 
 

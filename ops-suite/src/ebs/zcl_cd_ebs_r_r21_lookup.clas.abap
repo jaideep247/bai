@@ -11,6 +11,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (phase 5: new codes and validations by configuration).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A65: reference checked against the width of the lookup key kind (no truncation).
+*& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R21 - configurable table lookup</p>
 CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
@@ -29,6 +31,15 @@ CLASS zcl_cd_ebs_r_r21_lookup DEFINITION
         is_line       TYPE zif_cd_ebs_types=>ty_line
       RETURNING
         VALUE(rv_key) TYPE zif_cd_ebs_sap_dao=>ty_lookup_key.
+
+    "! A65: the line's reference cannot become the lookup key (width of the key kind)
+    METHODS lookup_rejection
+      IMPORTING
+        is_rule           TYPE zif_cd_ebs_types=>ty_rule_cfg
+        is_lookup         TYPE zif_cd_ebs_types=>ty_lookup_cfg
+        is_line           TYPE zif_cd_ebs_types=>ty_line
+      RETURNING
+        VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
 
 ENDCLASS.
 
@@ -65,6 +76,11 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
     DATA(lt_rows) = sap_dao( )->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
 
     LOOP AT it_lines INTO DATA(ls_line).
+      DATA(ls_rejection) = lookup_rejection( is_rule = is_rule is_lookup = ls_lookup is_line = ls_line ).
+      IF ls_rejection IS NOT INITIAL.
+        INSERT ls_rejection INTO TABLE rt_findings.
+        CONTINUE.
+      ENDIF.
       DATA(lv_key) = lookup_key( is_lookup = ls_lookup is_line = ls_line ).
       IF lv_key IS INITIAL.
         CONTINUE.
@@ -80,8 +96,9 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
         lv_statuses = condense( |{ lv_statuses } { ls_row-status }| ).
       ENDLOOP.
       IF lv_found = abap_false.
-        INSERT zcl_cd_ebs_finding=>for_rule_line(
-                 is_rule = is_rule is_line = ls_line iv_check_code = lv_not_found
+        INSERT not_found_finding(
+                 is_rule = is_rule is_line = ls_line it_statements = it_statements
+                 iv_check_code = lv_not_found
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-lookup_not_found
                                                      iv_v1    = ls_lookup-lookup_id
                                                      iv_v2    = lv_key
@@ -96,6 +113,24 @@ CLASS zcl_cd_ebs_r_r21_lookup IMPLEMENTATION.
                                                      iv_v4    = ls_lookup-allowed_values ) ) INTO TABLE rt_findings.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD lookup_rejection.
+    DATA lv_ztnum TYPE zif_cd_ebs_sap_dao=>ty_ztnum.
+    DATA lv_generic TYPE zif_cd_ebs_sap_dao=>ty_lookup_key.
+    rs_finding = SWITCH #( is_lookup-key_kind
+                           WHEN zif_cd_ebs_types=>gc_lookup_key-docno
+                           THEN docno_rejection( is_rule = is_rule is_line = is_line )
+                           WHEN zif_cd_ebs_types=>gc_lookup_key-ztnum
+                           THEN key_rejection( is_rule   = is_rule
+                                               is_line   = is_line
+                                               iv_length = ztnum_length( )
+                                               iv_width  = key_width( lv_ztnum ) )
+                           ELSE key_rejection( is_rule   = is_rule
+                                               is_line   = is_line
+                                               iv_length = is_lookup-key_length
+                                               iv_width  = key_width( lv_generic ) ) ).
   ENDMETHOD.
 
 

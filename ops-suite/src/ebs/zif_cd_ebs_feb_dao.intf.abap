@@ -5,6 +5,7 @@
 *& ZCL_CD_EBS_SRC_FEB so the mapping is unit-testable without a database.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A14: get_recent_items (history of an account, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - imported bank statements (FEBKO/FEBEP)</p>
 "! Raw reads only; conversion to the format-neutral model happens in
@@ -90,6 +91,18 @@ INTERFACE zif_cd_ebs_feb_dao
       iv_aznum         TYPE ty_header-aznum OPTIONAL
     RETURNING
       VALUE(rs_header) TYPE ty_header.
+
+  "! A14: items of the house bank account's statements dated within [iv_from, iv_to]
+  "! (history for the cross-statement duplicate rule R22)
+  METHODS get_recent_items DEFAULT IGNORE
+    IMPORTING
+      iv_bukrs        TYPE ty_header-bukrs
+      iv_hbkid        TYPE ty_header-hbkid
+      iv_hktid        TYPE ty_header-hktid
+      iv_from         TYPE d
+      iv_to           TYPE d
+    RETURNING
+      VALUE(rt_items) TYPE tt_item.
 
   "! Already imported statement with the same account, number and date
   METHODS statement_exists

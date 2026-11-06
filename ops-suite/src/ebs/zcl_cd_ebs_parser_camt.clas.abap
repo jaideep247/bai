@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A92-A94: CAMT document gate, booked entries only, details reconciled to their entry; invalid amount / count block.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).
@@ -64,6 +65,8 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
         addtl_info   TYPE zif_cd_ebs_types=>ty_line-addtl_info,
         btc          TYPE ty_btc,
         txs          TYPE tt_tx,
+        "! A93: Sts (v02-v06) or Sts/Cd (v08+)
+        status       TYPE zif_cd_ebs_types=>ty_line-entry_status,
       END OF ty_entry.
 
     TYPES:
@@ -125,6 +128,8 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
         ntry         TYPE ty_name VALUE `Ntry`,
         tx_dtls      TYPE ty_name VALUE `TxDtls`,
         amt          TYPE ty_name VALUE `Amt`,
+        "! camt.052 report element - not accepted (A94)
+        rpt          TYPE ty_name VALUE `Rpt`,
       END OF gc_el.
 
     CONSTANTS gc_attr_ccy TYPE ty_name VALUE `Ccy`.
@@ -183,6 +188,9 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
         ref_msg_id      TYPE string VALUE `Refs/MsgId`,
         rtr_reason      TYPE string VALUE `RtrInf/Rsn/Cd`,
         addtl_tx_inf    TYPE string VALUE `AddtlTxInf`,
+        "! A93: entry status, both layouts
+        sts             TYPE string VALUE `Sts`,
+        sts_cd          TYPE string VALUE `Sts/Cd`,
       END OF gc_path.
 
     "! Element depths: 1 Document, 2 message, 3 GrpHdr / Stmt / Ntfctn
@@ -220,13 +228,40 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
         no_entries      TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_ENTRIES',
         invalid_amount  TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_AMOUNT',
         invalid_date    TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_DATE',
+        "! A94: namespace / version, message body or statement element not accepted
+        camt_document   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DOCUMENT',
+        invalid_count   TYPE zif_cd_ops_types=>ty_check_code VALUE 'INVALID_COUNT',
+        "! A93: entry not booked (PDNG / INFO / missing status) - quarantined
+        not_booked      TYPE zif_cd_ops_types=>ty_check_code VALUE 'ENTRY_NOT_BOOKED',
+        "! A92: transaction details do not reconcile to their entry / a detail has no amount
+        batch_mismatch  TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_BATCH_MISMATCH',
+        detail_amount   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CAMT_DETAIL_AMOUNT_MISSING',
       END OF gc_check.
 
     CONSTANTS:
       BEGIN OF gc_object,
         file      TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE',
         statement TYPE zif_cd_ops_types=>ty_object_type VALUE 'STMT',
+        line      TYPE zif_cd_ops_types=>ty_object_type VALUE 'LINE',
       END OF gc_object.
+
+    "! A93: the approved posting profile - only booked entries become postable lines
+    CONSTANTS gc_status_booked TYPE zif_cd_ebs_types=>ty_line-entry_status VALUE 'BOOK'.
+
+    "! A94: approved ISO 20022 namespaces = prefix + one of the approved message versions
+    CONSTANTS gc_ns_prefix TYPE string VALUE `urn:iso:std:iso:20022:tech:xsd:`.
+    "! Message variant and approved versions (camt.053.001.02-08, camt.054.001.02-08)
+    CONSTANTS gc_variant TYPE string VALUE `001.`.
+    CONSTANTS gc_approved_versions TYPE string VALUE `02,03,04,05,06,07,08`.
+    CONSTANTS gc_type_053 TYPE string VALUE `camt.053.`.
+    CONSTANTS gc_type_054 TYPE string VALUE `camt.054.`.
+    "! A94: what was not accepted (message variable)
+    CONSTANTS:
+      BEGIN OF gc_doc_reason,
+        namespace   TYPE string VALUE `NAMESPACE`,
+        second_body TYPE string VALUE `SECOND_MESSAGE_BODY`,
+        element     TYPE string VALUE `STATEMENT_ELEMENT`,
+      END OF gc_doc_reason.
 
     CONSTANTS gc_not_provided TYPE string VALUE `NOTPROVIDED`.
     CONSTANTS gc_true TYPE string VALUE `true`.
@@ -258,6 +293,8 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
     DATA mv_stmt_index TYPE i.
     DATA mv_amt_ccy TYPE zif_cd_ops_types=>ty_currency.
     DATA mv_receiver_by_id TYPE abap_bool.
+    "! A94: namespace of the Document element
+    DATA mv_namespace TYPE string.
     DATA ms_stmt TYPE ty_stmt_ctx.
     DATA ms_bal TYPE ty_balance_ctx.
     DATA ms_entry TYPE ty_entry.
@@ -302,6 +339,20 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
       IMPORTING
         iv_name  TYPE ty_name
         iv_depth TYPE i.
+
+    "! A94: namespace and version against the approved list, matching the message type
+    METHODS check_namespace.
+
+    "! A94: blocking CAMT_DOCUMENT finding on the file
+    METHODS document_finding
+      IMPORTING
+        iv_reason TYPE string
+        iv_value  TYPE clike.
+
+    "! A92: why the transaction details of the entry cannot be posted as lines (check code)
+    METHODS detail_problem
+      RETURNING
+        VALUE(rv_check_code) TYPE zif_cd_ops_types=>ty_check_code.
 
     METHODS attribute_value
       IMPORTING
@@ -526,7 +577,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
   METHOD reset_state.
     CLEAR: mt_path, mv_root_name, mv_hdr_depth, mv_stmt_depth, mv_bal_depth, mv_ntry_depth,
-           mv_tx_depth, mv_stmt_index, mv_amt_ccy, mv_receiver_by_id, ms_stmt, ms_bal, ms_entry, ms_tx.
+           mv_tx_depth, mv_stmt_index, mv_amt_ccy, mv_receiver_by_id, ms_stmt, ms_bal, ms_entry, ms_tx,
+           mv_namespace.
     ms_file = VALUE #( file_name = iv_file_name ).
   ENDMETHOD.
 
@@ -576,6 +628,9 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
     DATA(lv_name) = CONV ty_name( io_element->qname-name ).
     APPEND lv_name TO mt_path.
     DATA(lv_depth) = lines( mt_path ).
+    IF lv_depth = gc_depth-root.
+      mv_namespace = io_element->qname-namespace.
+    ENDIF.
     check_document( iv_name = lv_name iv_depth = lv_depth ).
     IF lv_name = gc_el-amt.
       mv_amt_ccy = attribute_value( io_element = io_element iv_name = gc_attr_ccy ).
@@ -593,6 +648,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         ENDIF.
       WHEN gc_depth-message.
         IF ms_file-format IS NOT INITIAL.
+          " A94: exactly one message body per document
+          document_finding( iv_reason = gc_doc_reason-second_body iv_value = iv_name ).
           RETURN.
         ENDIF.
         CASE iv_name.
@@ -603,7 +660,33 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
           WHEN OTHERS.
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e152(zcd_ops) WITH mv_root_name iv_name.
         ENDCASE.
+        check_namespace( ).
     ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD check_namespace.
+    DATA(lv_namespace) = condense( mv_namespace ).
+    DATA(lv_type) = COND string( WHEN ms_file-format = zif_cd_ebs_types=>gc_format-camt053 THEN gc_type_053
+                                 ELSE gc_type_054 ).
+    DATA(lv_stem) = gc_ns_prefix && lv_type && gc_variant.
+    DATA(lv_version) = COND string( WHEN find( val = lv_namespace sub = lv_stem ) = 0
+                                    THEN substring( val = lv_namespace off = strlen( lv_stem ) ) ).
+    DATA(lt_approved) = zcl_cd_ops_util=>split_list( gc_approved_versions ).
+    IF lv_version IS INITIAL OR NOT line_exists( lt_approved[ table_line = lv_version ] ).
+      document_finding( iv_reason = gc_doc_reason-namespace iv_value = lv_namespace ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD document_finding.
+    add_finding( is_check    = file_check( gc_check-camt_document )
+                 iv_rule_id  = gc_rule-structure
+                 iv_severity = zif_cd_ops_types=>gc_severity-block
+                 iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-camt_document
+                                                      iv_v1    = file_key( )
+                                                      iv_v2    = iv_reason
+                                                      iv_v3    = iv_value ) ).
   ENDMETHOD.
 
 
@@ -613,9 +696,15 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         IF iv_depth = gc_depth-child.
           mv_hdr_depth = iv_depth.
         ENDIF.
-      WHEN gc_el-stmt OR gc_el-ntfctn.
+      WHEN gc_el-stmt OR gc_el-ntfctn OR gc_el-rpt.
         IF iv_depth = gc_depth-child.
-          open_statement( iv_depth ).
+          " A94: the statement element must match the message type (053 Stmt, 054 Ntfctn)
+          IF ( iv_name = gc_el-stmt AND ms_file-format = zif_cd_ebs_types=>gc_format-camt053 )
+             OR ( iv_name = gc_el-ntfctn AND ms_file-format = zif_cd_ebs_types=>gc_format-camt054 ).
+            open_statement( iv_depth ).
+          ELSE.
+            document_finding( iv_reason = gc_doc_reason-element iv_value = iv_name ).
+          ENDIF.
         ENDIF.
       WHEN gc_el-bal.
         IF mv_stmt_depth > 0 AND iv_depth = mv_stmt_depth + 1.
@@ -958,6 +1047,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         ms_entry-bank_ref = iv_value.
       WHEN gc_path-addtl_ntry_inf.
         ms_entry-addtl_info = iv_value.
+      WHEN gc_path-sts OR gc_path-sts_cd.
+        ms_entry-status = to_upper( iv_value ).
       WHEN OTHERS.
         apply_btc( EXPORTING iv_path  = iv_path
                              iv_value = iv_value
@@ -967,6 +1058,20 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
 
 
   METHOD close_entry.
+    " A93: only booked entries are postable; pending / information entries are quarantined
+    IF ms_entry-status <> gc_status_booked.
+      ms_stmt-entries -= 1.
+      add_finding( is_check    = stmt_check( gc_check-not_booked )
+                   iv_rule_id  = gc_rule-structure
+                   iv_severity = zif_cd_ops_types=>gc_severity-warning
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-entry_not_booked
+                                                        iv_v1    = ms_entry-bank_ref
+                                                        iv_v2    = ms_entry-amount
+                                                        iv_v3    = ms_entry-cdi
+                                                        iv_v4    = ms_entry-status ) ).
+      CLEAR: ms_entry, mv_ntry_depth.
+      RETURN.
+    ENDIF.
     CASE ms_entry-cdi.
       WHEN zif_cd_ebs_types=>gc_cdi-credit.
         ms_stmt-credit-count += 1.
@@ -975,15 +1080,64 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         ms_stmt-debit-count += 1.
         ms_stmt-debit-sum   += ms_entry-amount.
     ENDCASE.
-    IF split_by_transaction( ) = abap_true.
+    " A92: details become lines only when they reconcile to the entry
+    DATA(lv_problem) = detail_problem( ).
+    IF lv_problem IS INITIAL AND split_by_transaction( ) = abap_true.
       LOOP AT ms_entry-txs INTO DATA(ls_tx).
         append_line( is_tx = ls_tx iv_amount = ls_tx-amount iv_currency = ls_tx-currency ).
       ENDLOOP.
-    ELSE.
+    ELSEIF lv_problem IS INITIAL.
       DATA(ls_first) = VALUE ty_tx( ms_entry-txs[ 1 ] OPTIONAL ).
       append_line( is_tx = ls_first iv_amount = ms_entry-amount iv_currency = ms_entry-currency ).
+    ELSE.
+      " One entry-level line: the whole-entry amount never carries one detail's references
+      append_line( is_tx = VALUE #( ) iv_amount = ms_entry-amount iv_currency = ms_entry-currency ).
+      DATA(ls_entry_line) = ms_stmt-lines[ lines( ms_stmt-lines ) ].
+      DATA(lv_details) = REDUCE ty_amount( INIT lv_sum = CONV ty_amount( 0 )
+                                           FOR ls_detail IN ms_entry-txs WHERE ( has_amount = abap_true )
+                                           NEXT lv_sum = lv_sum + ls_detail-amount ).
+      add_finding( is_check    = VALUE #( object_type = gc_object-line
+                                          object_key  = zcl_cd_ebs_finding=>line_key( ls_entry_line )
+                                          check_code  = lv_problem )
+                   iv_rule_id  = gc_rule-control_total
+                   iv_severity = COND #( WHEN lv_problem = gc_check-batch_mismatch
+                                         THEN zif_cd_ops_types=>gc_severity-block
+                                         ELSE zif_cd_ops_types=>gc_severity-error )
+                   iv_message  = COND #( WHEN lv_problem = gc_check-batch_mismatch
+                                         THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-batch_mismatch
+                                                                     iv_v1    = ms_entry-bank_ref
+                                                                     iv_v2    = lv_details
+                                                                     iv_v3    = ms_entry-amount
+                                                                     iv_v4    = ms_entry-currency )
+                                         ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-batch_detail_amount
+                                                                     iv_v1    = ms_entry-bank_ref ) ) ).
     ENDIF.
     CLEAR: ms_entry, mv_ntry_depth.
+  ENDMETHOD.
+
+
+  METHOD detail_problem.
+    IF ms_entry-txs IS INITIAL.
+      RETURN.
+    ENDIF.
+    IF lines( ms_entry-txs ) > 1 AND line_exists( ms_entry-txs[ has_amount = abap_false ] ).
+      rv_check_code = gc_check-detail_amount.
+      RETURN.
+    ENDIF.
+    IF NOT line_exists( ms_entry-txs[ has_amount = abap_true ] ).
+      RETURN.
+    ENDIF.
+    DATA(lv_sum) = CONV ty_amount( 0 ).
+    LOOP AT ms_entry-txs INTO DATA(ls_tx) WHERE has_amount = abap_true.
+      lv_sum += ls_tx-amount.
+      IF ls_tx-currency IS NOT INITIAL AND ms_entry-currency IS NOT INITIAL AND ls_tx-currency <> ms_entry-currency.
+        rv_check_code = gc_check-batch_mismatch.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+    IF lv_sum <> ms_entry-amount.
+      rv_check_code = gc_check-batch_mismatch.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -1067,6 +1221,7 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       amount        = abs( iv_amount )
       currency      = COND #( WHEN iv_currency IS NOT INITIAL THEN iv_currency ELSE ms_stmt-stmt-currency )
       reversal      = ms_entry-reversal
+      entry_status  = ms_entry-status
       booking_date  = ms_entry-booking_date
       value_date    = ms_entry-value_date
       end_to_end_id = is_tx-end_to_end_id
@@ -1184,9 +1339,10 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
       rv_amount = CONV decfloat34( iv_value ).
       RETURN.
     ENDIF.
+    " A94: an amount that is not a decimal blocks - never a silent zero
     add_finding( is_check    = current_check( gc_check-invalid_amount )
                  iv_rule_id  = gc_rule-structure
-                 iv_severity = zif_cd_ops_types=>gc_severity-error
+                 iv_severity = zif_cd_ops_types=>gc_severity-block
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-element_expected_decimal_am
                                                       iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
                                                       iv_v2    = iv_value ) ).
@@ -1196,6 +1352,16 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
   METHOD to_count.
     IF iv_value IS NOT INITIAL AND iv_value CO gc_digits AND strlen( iv_value ) <= gc_max_count_digits.
       rv_count = iv_value.
+      RETURN.
+    ENDIF.
+    " A94: a count that is not a number blocks - never a silent zero
+    IF iv_value IS NOT INITIAL.
+      add_finding( is_check    = current_check( gc_check-invalid_count )
+                   iv_rule_id  = gc_rule-structure
+                   iv_severity = zif_cd_ops_types=>gc_severity-block
+                   iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-invalid_count
+                                                        iv_v1    = concat_lines_of( table = mt_path sep = gc_path_separator )
+                                                        iv_v2    = iv_value ) ).
     ENDIF.
   ENDMETHOD.
 

@@ -93,6 +93,7 @@ ddic/hck/zcd_job_cycle.tabl.ddl,DDIC,
 ddic/hck/zcd_job_step.tabl.ddl,DDIC,
 docs/ALERTING.md,Doc,
 docs/ATC_Validation.md,Doc,
+docs/Audit_Response_EBS.md,Doc,
 docs/Audit_Response_FMON.md,Doc,
 docs/Audit_Response_HCK_CORE.md,Doc,
 docs/Changed_Artifacts.csv,Doc,
@@ -425,6 +426,8 @@ src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.abap,ABAP,"R19: the FI document of an 
 src/ebs/zcl_cd_ebs_r_r19_fi_document.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_r21_lookup.clas.abap,ABAP,"R21: generic configurable lookup. PARAM1 names a ZCD_EBS_LOOKUP row (table,"
 src/ebs/zcl_cd_ebs_r_r21_lookup.clas.xml,abapGit,
+src/ebs/zcl_cd_ebs_r_r22_dup_history.clas.abap,ABAP,R22: an entry must not already be in another imported statement of the same
+src/ebs/zcl_cd_ebs_r_r22_dup_history.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.abap,ABAP,S01: the opening balance must equal the closing balance of the previous
 src/ebs/zcl_cd_ebs_r_s01_continuity.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s02_balance.clas.abap,ABAP,S02: opening + credit entries - debit entries must equal the closing
@@ -886,3 +889,4 @@ tools/portable_checks.py,Other,
 tools/rap_generate.py,Other,
 tools/__pycache__/literal_scan.cpython-313.pyc,Other,
 tools/tests/test_abapgit_serialize.py,Other,
+tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,

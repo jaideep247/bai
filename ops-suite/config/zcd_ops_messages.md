@@ -291,3 +291,31 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 510 | Enter the bank file path (P_PATH) to validate a file |
 | 511 | Lookup &1: &2 not found in &3 |
 | 512 | Lookup &1: &2 has status &3, expected &4 |
+| 513 | Rule group &1 has no usable rule assignment (configuration) |
+| 514 | Rule &1 of group &2 is missing or inactive in ZCD_EBS_RULE_DEF |
+| 515 | Entry &1: currency missing on the entry or its statement |
+| 516 | Account &1: currency missing in the statement or in ZCD_EBS_ACCT |
+| 517 | Entry &1 already in statement &2 of the account (reference &3) |
+| 518 | Statement &1: &2 entries without debit/credit indicator |
+| 519 | Declared credits &1, entries &2 |
+| 520 | Declared debits &1, entries &2 |
+| 521 | Entry &1 imported without posting rule; map prescribes &2 |
+| 522 | Reason &1: mapping in ZCD_EBS_RSN_MAP incomplete (&2) |
+| 523 | Reason &1 is not a &2 code |
+| 524 | &1: not declared on the trailer (computed value not accepted) |
+| 525 | Reference &1 has &2 characters; the key holds &3 |
+| 526 | Key length &1 exceeds the key width &2 (configuration) |
+| 527 | Date range invalid: from &1 is after to &2 |
+| 528 | No statement selected - nothing evaluated (variant &1) |
+| 529 | &1 entries not evaluated (a rule could not run) |
+| 530 | File &1 is not valid UTF-8 (after line &2) - not validated |
+| 531 | File &1: read error (return code &2) after line &3 - not validated |
+| 532 | Entry &1: &2 not found yet - statement within the &3 h in-flight window |
+| 533 | Kill switch &1: &2 - validation mode M (monitor) used |
+| 534 | ZCD_BTC_MAP rows for &1 &2 bank &3 flow &4 contradict each other (blank flow = *) |
+| 535 | Entry type &1 in line &2: funds-type layout invalid (&3) - entry not read |
+| 536 | CAMT document &1: &2 &3 not accepted |
+| 537 | Element &1: '&2' is not a count |
+| 538 | Entry &1 (&2 &3) has status '&4' - not booked, not posted |
+| 539 | Entry &1: transaction details &2 do not reconcile to the entry &3 (&4) |
+| 540 | Entry &1: a transaction detail has no amount - the batch stays one entry line |

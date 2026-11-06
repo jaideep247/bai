@@ -6,6 +6,7 @@
 *& Inputs are inline XML strings; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A92-A94: entry status in fixtures; batch reconciliation, status layouts, document gate, invalid amount / count.
 *&---------------------------------------------------------------------*
 CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -19,6 +20,8 @@ CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
         no_summary           TYPE abap_bool,
         prtry_reversal_entry TYPE abap_bool,
         batch_without_amount TYPE abap_bool,
+        "! A92/A93: replaces the entries of the statement
+        entries_xml          TYPE string,
       END OF ty_flags.
 
     CONSTANTS gc_file_name TYPE string VALUE `CAMT053_20261104.XML`.
@@ -83,6 +86,25 @@ CLASS ltc_parser_camt DEFINITION FINAL FOR TESTING
     METHODS empty_content_is_s11 FOR TESTING.
     METHODS malformed_xml_raises FOR TESTING.
     METHODS unsupported_message_raises FOR TESTING.
+    METHODS batch_details_mismatch FOR TESTING.
+    METHODS batch_detail_currency_differs FOR TESTING.
+    METHODS pending_v08_quarantined FOR TESTING.
+    METHODS info_v02_quarantined FOR TESTING.
+    METHODS booked_v02_layout_postable FOR TESTING.
+    METHODS second_body_blocked FOR TESTING.
+    METHODS wrong_namespace_blocked FOR TESTING.
+    METHODS cross_format_child_blocked FOR TESTING.
+    METHODS invalid_amount_blocks FOR TESTING.
+    METHODS invalid_count_blocks FOR TESTING.
+
+    "! Parse and require one finding with check code and severity
+    METHODS assert_finding
+      IMPORTING
+        iv_check_code TYPE zif_cd_ops_types=>ty_check_code
+        iv_severity   TYPE zif_cd_ops_types=>ty_severity
+        iv_msg        TYPE string
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file.
 
 ENDCLASS.
 
@@ -127,8 +149,13 @@ CLASS ltc_parser_camt IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD entries.
+    IF is_flags-entries_xml IS NOT INITIAL.
+      rv_xml = is_flags-entries_xml.
+      RETURN.
+    ENDIF.
     IF is_flags-prtry_reversal_entry = abap_true.
       rv_xml = `<Ntry><Amt Ccy="USD">75.25</Amt><CdtDbtInd>DBIT</CdtDbtInd><RvslInd>true</RvslInd>` &&
+               `<Sts><Cd>BOOK</Cd></Sts>` &&
                `<BookgDt><DtTm>2026-11-03T10:15:00</DtTm></BookgDt>` &&
                `<BkTxCd><Prtry><Cd>NTRF+166</Cd><Issr>BAI</Issr></Prtry></BkTxCd>` &&
                `<NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId><InstrId>INS-9</InstrId>` &&
@@ -136,7 +163,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF is_flags-batch_without_amount = abap_true.
-      rv_xml = `<Ntry><Amt Ccy="USD">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>` &&
+      rv_xml = `<Ntry><Amt Ccy="USD">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
                `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0009</AcctSvcrRef>` &&
                `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>BOOK</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
                `<NtryDtls><TxDtls><Refs><EndToEndId>E2E-A</EndToEndId></Refs></TxDtls>` &&
@@ -149,7 +176,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
              `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
              `<NtryDtls><TxDtls><Refs><MsgId>PAYER-MSG-77</MsgId><EndToEndId>E2E-PREM-1001</EndToEndId></Refs>` &&
              `<Amt Ccy="USD">1500.00</Amt><AddtlTxInf>PREMIUM POLICY 1001</AddtlTxInf></TxDtls></NtryDtls></Ntry>` &&
-             `<Ntry><Amt Ccy="USD">250.00</Amt><CdtDbtInd>DBIT</CdtDbtInd>` &&
+             `<Ntry><Amt Ccy="USD">250.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
              `<BookgDt><Dt>2026-11-03</Dt></BookgDt><ValDt><Dt>2026-11-03</Dt></ValDt>` &&
              `<AcctSvcrRef>BNK-0002</AcctSvcrRef>` &&
              `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICHQ</Cd><SubFmlyCd>CCHQ</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
@@ -164,7 +191,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
       `<GrpHdr><MsgId>NTF-20261104-0007</MsgId><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm></GrpHdr>` &&
       `<Ntfctn><Id>NTF-0007-01</Id><CreDtTm>2026-11-04T07:05:00+00:00</CreDtTm>` &&
       `<Acct><Id><Othr><Id>000555000111</Id></Othr></Id><Ccy>USD</Ccy></Acct>` &&
-      `<Ntry><Amt Ccy="USD">300.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>` &&
+      `<Ntry><Amt Ccy="USD">300.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>` &&
       `<BookgDt><Dt>2026-11-04</Dt></BookgDt><ValDt><Dt>2026-11-04</Dt></ValDt>` &&
       `<AcctSvcrRef>RTN-BATCH-77</AcctSvcrRef>` &&
       `<BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>RRTN</SubFmlyCd></Fmly></Domn></BkTxCd>` &&
@@ -270,7 +297,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
         DATA(ls_file) = parse( ).
         DATA(lt_exp) = VALUE zif_cd_ebs_types=>tt_line(
           stmt_key = gc_stmt_key scheme = zif_cd_ebs_types=>gc_scheme-iso domain = 'PMNT'
-          currency = gc_usd booking_date = gc_book_date
+          currency = gc_usd booking_date = gc_book_date entry_status = 'BOOK'
           ( line_no = 1 btc_code = 'PMNT-RCDT-ESCT' family = 'RCDT' subfamily = 'ESCT'
             cdi = zif_cd_ebs_types=>gc_cdi-credit amount = '1500.00' value_date = '20261104'
             reference = 'E2E-PREM-1001' end_to_end_id = 'E2E-PREM-1001' bank_ref = 'BNK-0001'
@@ -350,7 +377,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
           ( stmt_key = gc_stmt_key line_no = 1 scheme = zif_cd_ebs_types=>gc_scheme-prtry
             btc_code = 'NTRF+166' prtry_code = 'NTRF+166' prtry_issuer = 'BAI'
             cdi = zif_cd_ebs_types=>gc_cdi-debit amount = '75.25' currency = gc_usd reversal = abap_true
-            booking_date = gc_book_date reference = 'INS-9' instr_id = 'INS-9'
+            booking_date = gc_book_date reference = 'INS-9' instr_id = 'INS-9' entry_status = 'BOOK'
             addtl_info = 'REVERSAL OF PREMIUM 1001' ) ).
         cl_abap_unit_assert=>assert_equals( act = ls_file-lines
                                             exp = lt_exp
@@ -360,15 +387,20 @@ CLASS ltc_parser_camt IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
-  " Several TxDtls without per-transaction amount: keep one line for the entry (first TxDtls refs)
+  " A92: several TxDtls without per-transaction amount: one entry-level line (entry references,
+  " never the first detail's) plus a CAMT_DETAIL_AMOUNT_MISSING exception
   METHOD batch_no_tx_amount_one_line.
     TRY.
         configure_scenario( VALUE #( no_summary = abap_true batch_without_amount = abap_true ) ).
         DATA(ls_file) = parse( ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE string_table( FOR l IN ls_file-lines ( |{ l-line_no }/{ l-amount }/{ l-reference }| ) )
-          exp = VALUE string_table( ( `1/500.00/E2E-A` ) )
-          msg = 'Batch entry without transaction amounts must stay one line' ).
+          exp = VALUE string_table( ( `1/500.00/BNK-0009` ) )
+          msg = 'Batch entry without transaction amounts must stay one entry-level line' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_file-findings[ check_code = 'CAMT_DETAIL_AMOUNT_MISSING'
+                                                        severity   = zif_cd_ops_types=>gc_severity-error ] ) )
+          msg = 'A detail without amount must give a batch-level exception' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
@@ -383,6 +415,7 @@ CLASS ltc_parser_camt IMPLEMENTATION.
           stmt_key = gc_stmt_key scheme = zif_cd_ebs_types=>gc_scheme-iso btc_code = 'PMNT-ICDT-RRTN'
           domain = 'PMNT' family = 'ICDT' subfamily = 'RRTN' cdi = zif_cd_ebs_types=>gc_cdi-credit
           currency = gc_usd booking_date = '20261104' value_date = '20261104' bank_ref = 'RTN-BATCH-77'
+          entry_status = 'BOOK'
           ( line_no = 1 amount = '100.00' reference = 'DISB-000001' end_to_end_id = 'DISB-000001'
             return_reason = 'R01' )
           ( line_no = 2 amount = '200.00' reference = 'DISB-000002' end_to_end_id = 'DISB-000002'
@@ -448,6 +481,131 @@ CLASS ltc_parser_camt IMPLEMENTATION.
                                             exp = gc_msgno_unsupported
                                             msg = 'Message 152 expected for unsupported message type' ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD assert_finding.
+    TRY.
+        rs_file = parse( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( rs_file-findings[ check_code = iv_check_code severity = iv_severity ] ) )
+          msg = iv_msg ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A92: details 100.00 + 150.00 against an entry of 500.00 - no detail lines, one blocked entry line
+  METHOD batch_details_mismatch.
+    configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+      `<Ntry><Amt Ccy="USD">500.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
+      `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0010</AcctSvcrRef>` &&
+      `<NtryDtls><TxDtls><Refs><EndToEndId>E2E-A</EndToEndId></Refs><Amt Ccy="USD">100.00</Amt></TxDtls>` &&
+      `<TxDtls><Refs><EndToEndId>E2E-B</EndToEndId></Refs><Amt Ccy="USD">150.00</Amt></TxDtls></NtryDtls></Ntry>` ) ).
+    DATA(ls_file) = assert_finding( iv_check_code = 'CAMT_BATCH_MISMATCH'
+                                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                                    iv_msg        = 'Details that do not add up to the entry must block' ).
+    cl_abap_unit_assert=>assert_equals(
+      act = VALUE string_table( FOR l IN ls_file-lines ( |{ l-amount }/{ l-reference }| ) )
+      exp = VALUE string_table( ( `500.00/BNK-0010` ) )
+      msg = 'Only one entry-level line may be emitted for an unreconciled batch' ).
+  ENDMETHOD.
+
+  " A92: a detail in another currency than its entry does not reconcile
+  METHOD batch_detail_currency_differs.
+    configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+      `<Ntry><Amt Ccy="USD">300.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
+      `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0011</AcctSvcrRef>` &&
+      `<NtryDtls><TxDtls><Amt Ccy="USD">100.00</Amt></TxDtls>` &&
+      `<TxDtls><Amt Ccy="EUR">200.00</Amt></TxDtls></NtryDtls></Ntry>` ) ).
+    assert_finding( iv_check_code = 'CAMT_BATCH_MISMATCH'
+                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_msg        = 'A detail currency other than the entry currency must block' ).
+  ENDMETHOD.
+
+  " A93: v08 layout Sts/Cd = PDNG - quarantined as a finding, no line, not counted as booked
+  METHOD pending_v08_quarantined.
+    configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+      `<Ntry><Amt Ccy="USD">80.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>PDNG</Cd></Sts>` &&
+      `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0012</AcctSvcrRef></Ntry>` ) ).
+    DATA(ls_file) = assert_finding( iv_check_code = 'ENTRY_NOT_BOOKED'
+                                    iv_severity   = zif_cd_ops_types=>gc_severity-warning
+                                    iv_msg        = 'A pending entry must be quarantined as a finding' ).
+    cl_abap_unit_assert=>assert_initial( act = ls_file-lines msg = 'A pending entry must not become a line' ).
+  ENDMETHOD.
+
+  " A93: v02 layout Sts = INFO - quarantined as well
+  METHOD info_v02_quarantined.
+    configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+      `<Ntry><Amt Ccy="USD">80.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>INFO</Sts>` &&
+      `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0013</AcctSvcrRef></Ntry>` ) ).
+    DATA(ls_file) = assert_finding( iv_check_code = 'ENTRY_NOT_BOOKED'
+                                    iv_severity   = zif_cd_ops_types=>gc_severity-warning
+                                    iv_msg        = 'An information entry must be quarantined as a finding' ).
+    cl_abap_unit_assert=>assert_initial( act = ls_file-lines msg = 'An information entry must not become a line' ).
+  ENDMETHOD.
+
+  " A93: v02 layout Sts = BOOK is postable and carries its status into the line
+  METHOD booked_v02_layout_postable.
+    TRY.
+        configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+          `<Ntry><Amt Ccy="USD">80.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>` &&
+          `<BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BNK-0014</AcctSvcrRef></Ntry>` ) ).
+        DATA(ls_file) = parse( ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( ls_file-lines[ 1 ]-entry_status OPTIONAL ) exp = 'BOOK'
+                                            msg = 'A booked entry must become a line with status BOOK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A94: a document with a second message body is not accepted (blocking CAMT_DOCUMENT)
+  METHOD second_body_blocked.
+    mv_content = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">` &&
+                 `<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr></BkToCstmrStmt>` &&
+                 `<BkToCstmrStmt><GrpHdr><MsgId>B</MsgId></GrpHdr></BkToCstmrStmt></Document>`.
+    assert_finding( iv_check_code = 'CAMT_DOCUMENT'
+                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_msg        = 'A second message body must block' ).
+  ENDMETHOD.
+
+  " A94: a namespace / version outside the approved list is not accepted
+  METHOD wrong_namespace_blocked.
+    configure_scenario( VALUE #( ) ).
+    REPLACE FIRST OCCURRENCE OF `camt.053.001.08` IN mv_content WITH `camt.053.001.99`.
+    assert_finding( iv_check_code = 'CAMT_DOCUMENT'
+                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_msg        = 'An unapproved namespace version must block' ).
+  ENDMETHOD.
+
+  " A94: a camt.054 Ntfctn inside a camt.053 message is not read as a statement
+  METHOD cross_format_child_blocked.
+    mv_content = `<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">` &&
+                 `<BkToCstmrStmt><GrpHdr><MsgId>A</MsgId></GrpHdr>` &&
+                 `<Ntfctn><Id>N1</Id></Ntfctn></BkToCstmrStmt></Document>`.
+    DATA(ls_file) = assert_finding( iv_check_code = 'CAMT_DOCUMENT'
+                                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                                    iv_msg        = 'A statement element of another message type must block' ).
+    cl_abap_unit_assert=>assert_initial( act = ls_file-statements msg = 'The foreign element must not become a statement' ).
+  ENDMETHOD.
+
+  " A94: an amount that is not a decimal blocks (no silent zero)
+  METHOD invalid_amount_blocks.
+    configure_scenario( VALUE #( no_summary = abap_true entries_xml =
+      `<Ntry><Amt Ccy="USD">12,50</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>` &&
+      `<BookgDt><Dt>2026-11-03</Dt></BookgDt></Ntry>` ) ).
+    assert_finding( iv_check_code = 'INVALID_AMOUNT'
+                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_msg        = 'An invalid amount must block' ).
+  ENDMETHOD.
+
+  " A94: a count that is not a number blocks (no silent zero)
+  METHOD invalid_count_blocks.
+    configure_scenario( VALUE #( ) ).
+    REPLACE FIRST OCCURRENCE OF `<NbOfNtries>2</NbOfNtries>` IN mv_content WITH `<NbOfNtries>two</NbOfNtries>`.
+    assert_finding( iv_check_code = 'INVALID_COUNT'
+                    iv_severity   = zif_cd_ops_types=>gc_severity-block
+                    iv_msg        = 'An invalid count must block' ).
   ENDMETHOD.
 
 ENDCLASS.

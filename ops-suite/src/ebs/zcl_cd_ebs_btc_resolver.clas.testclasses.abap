@@ -9,6 +9,8 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A25: imported statement gets its account number from ZCD_EBS_ACCT.
+*& 2026-11-06 | Audit A98: blank and * map rows - conflict blocks, identical rows are one.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -69,6 +71,8 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS flow_row_beats_any_flow_row  FOR TESTING.
     METHODS unmapped_btc_always_blocks   FOR TESTING.
     METHODS inactive_row_is_unmapped     FOR TESTING.
+    METHODS blank_and_star_conflict      FOR TESTING.
+    METHODS blank_and_star_identical_ok  FOR TESTING.
     METHODS iso_family_row_covers_subfam FOR TESTING.
     METHODS camt_bai_prtry_reuses_bai    FOR TESTING.
     METHODS bai_fallback_can_be_disabled FOR TESTING.
@@ -80,6 +84,8 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS sweep_275_575_not_validated  FOR TESTING.
     METHODS bai143_collections_only      FOR TESTING.
     METHODS bai452_validated_as_468      FOR TESTING.
+    METHODS imported_stmt_gets_account   FOR TESTING.
+    METHODS not_posted_disposition_taken FOR TESTING.
 ENDCLASS.
 
 
@@ -491,6 +497,74 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = first_line( )-rule_group exp = 'BAI468D'
                                             msg = '452 must run the 468D rules' ).
         cl_abap_unit_assert=>assert_false( act = first_line( )-blocked msg = '452 must not be blocked' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25: FEBKO carries no account number - enrichment fills it from the house bank account,
+  " so every rule sees the same canonical account identity
+  METHOD imported_stmt_gets_account.
+    TRY.
+        CLEAR mt_stmts[ 1 ]-account_no.
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_equals( act = mt_stmts[ 1 ]-account_no exp = gc_test-account
+                                            msg = 'The imported statement must get the configured account number' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A26: the map row's disposition NOT_POSTED reaches the line (sweeps 275 / 575)
+  METHOD not_posted_disposition_taken.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        mt_map[ 1 ]-disposition = zif_cd_ebs_types=>gc_disposition-not_posted.
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_true( act = first_line( )-not_posted
+                                          msg = 'A NOT_POSTED map row must mark the line as not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A98: a blank-flow row and a '*' row of the same code with contradictory actions are
+  " invalid customizing - MAP_CONFLICT blocks the line instead of the first row winning
+  METHOD blank_and_star_conflict.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_flow = space iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-auto_post ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 iv_action = zif_cd_ops_types=>gc_action-exception ).
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_true( act = first_line( )-blocked msg = 'A contradictory mapping must block the line' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( mt_findings[ 1 ]-check_code OPTIONAL ) exp = zif_cd_ebs_types=>gc_check_code-map_conflict
+          msg = 'The conflict must be reported as MAP_CONFLICT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A98: blank and '*' rows that say the same thing are one canonical row - no finding
+  METHOD blank_and_star_identical_ok.
+    TRY.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_flow = space iv_category = gc_test-cat_d02 ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        add_line( iv_code = gc_test-code_168 ).
+        run_resolver( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Identical normalised rows are not a conflict' ).
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-category exp = gc_test-cat_d02
+                                            msg = 'The canonical row maps the line' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

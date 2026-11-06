@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A35: lines read by statement key.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S09 - 100 % BTC mapping coverage</p>
 CLASS zcl_cd_ebs_r_s09_coverage DEFINITION
@@ -29,7 +30,7 @@ CLASS zcl_cd_ebs_r_s09_coverage IMPLEMENTATION.
     LOOP AT it_statements INTO DATA(ls_statement).
       DATA(lv_total) = 0.
       DATA(lv_unmapped) = 0.
-      LOOP AT it_lines INTO DATA(ls_line) WHERE stmt_key = ls_statement-stmt_key.
+      LOOP AT it_lines INTO DATA(ls_line) USING KEY stmt WHERE stmt_key = ls_statement-stmt_key.
         lv_total += 1.
         IF ls_line-category = zif_cd_ebs_types=>gc_category_unmapped.
           lv_unmapped += 1.

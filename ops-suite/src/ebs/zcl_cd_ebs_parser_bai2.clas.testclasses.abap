@@ -6,6 +6,8 @@
 *& strings (no file access); does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A86: negative fixtures for empty 49/98/99 trailer fields (TRAILER_FIELD_MISSING).
+*& 2026-11-06 | Audit A95/A96: missing 49/98 block, missing-99 expectation B; funds-type layout negatives.
 *&---------------------------------------------------------------------*
 CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -19,6 +21,10 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
         bad_record_count  TYPE abap_bool,
         no_file_trailer   TYPE abap_bool,
         bad_item_count    TYPE abap_bool,
+        "! A86: replaces the 49 / 98 / 99 trailer of the base file
+        account_trailer   TYPE string,
+        group_trailer     TYPE string,
+        file_trailer      TYPE string,
       END OF ty_flags.
 
     CONSTANTS gc_file_name TYPE string VALUE `BAI2_20261104.TXT`.
@@ -35,6 +41,7 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
         missing_trl  TYPE zif_cd_ops_types=>ty_check_code VALUE 'MISSING_TRAILER',
         empty_file   TYPE zif_cd_ops_types=>ty_check_code VALUE 'EMPTY_FILE',
         info_skipped TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFO_CODE_SKIPPED',
+        trl_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'TRAILER_FIELD_MISSING',
       END OF gc_check.
 
     DATA mv_content TYPE string.
@@ -76,6 +83,38 @@ CLASS ltc_parser_bai2 DEFINITION FINAL FOR TESTING
     METHODS missing_99_is_s00 FOR TESTING.
     METHODS empty_content_is_s11 FOR TESTING.
     METHODS not_bai2_raises FOR TESTING.
+    METHODS trailer_49_total_missing FOR TESTING.
+    METHODS trailer_49_count_missing FOR TESTING.
+    METHODS trailer_98_fields_missing FOR TESTING.
+    METHODS trailer_99_fields_missing FOR TESTING.
+    METHODS trailer_zero_is_declared FOR TESTING.
+    METHODS missing_49_blocks FOR TESTING.
+    METHODS missing_98_blocks FOR TESTING.
+    METHODS funds_type_unsupported FOR TESTING.
+    METHODS distribution_count_missing FOR TESTING.
+    METHODS distribution_count_oversized FOR TESTING.
+
+    "! Removes the first occurrence of iv_text from the scenario (a record with its newline)
+    METHODS drop
+      IMPORTING
+        iv_text TYPE string.
+
+    "! Replaces the first 16 record (code 165) of the scenario by iv_detail
+    METHODS with_detail
+      IMPORTING
+        iv_detail TYPE string.
+
+    "! Layout finding present and no line with the code
+    METHODS assert_layout_rejected
+      IMPORTING
+        iv_code TYPE zif_cd_ebs_types=>ty_btc_code.
+
+    "! Findings as OBJECT_TYPE/RULE_ID/CHECK_CODE/SEVERITY
+    METHODS finding_codes
+      IMPORTING
+        it_findings     TYPE zif_cd_ops_types=>tt_finding
+      RETURNING
+        VALUE(rt_codes) TYPE string_table.
 
 ENDCLASS.
 
@@ -86,10 +125,14 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
     DATA(lv_account_trailer) = COND string(
       WHEN is_flags-bad_account_total = abap_true THEN `49,+604000099,5/`
       WHEN is_flags-bad_record_count = abap_true  THEN `49,+604000000,6/`
+      WHEN is_flags-account_trailer IS NOT INITIAL THEN is_flags-account_trailer
       ELSE `49,+604000000,5/` ).
     DATA(lv_credit_count) = COND string( WHEN is_flags-bad_item_count = abap_true THEN `3` ELSE `2` ).
     DATA(lv_file_trailer) = COND string( WHEN is_flags-no_file_trailer = abap_true THEN ``
+                                         WHEN is_flags-file_trailer IS NOT INITIAL THEN |\n{ is_flags-file_trailer }|
                                          ELSE |\n99,+604000000,1,9/| ).
+    DATA(lv_group_trailer) = COND string( WHEN is_flags-group_trailer IS NOT INITIAL THEN is_flags-group_trailer
+                                          ELSE `98,+604000000,1,7/` ).
     mv_content = |01,BANKSNDR,CUSTRCVR,261104,0630,1104A,80,,2/\n| &&
                  |02,CUSTRCVR,999000001,1,261103,2400,USD,2/\n| &&
                  |03,000123456789,USD,010,+150000000,,,015,+151250000,,,040,148000000,,,| &&
@@ -98,7 +141,7 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
                  |16,195,500000,V,261104,0900,BR0002,,WIRE IN, REF 77/\n| &&
                  |16,475,750000,0,BR0003,10045/\n| &&
                  |{ lv_account_trailer }\n| &&
-                 |98,+604000000,1,7/| &&
+                 lv_group_trailer &&
                  lv_file_trailer.
   ENDMETHOD.
 
@@ -408,15 +451,15 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
-  " BAI2 99: a file without file trailer is structurally incomplete (S00 MISSING_TRAILER, E)
+  " BAI2 99: a file without file trailer is structurally incomplete (S00 MISSING_TRAILER, B - A95)
   METHOD missing_99_is_s00.
     TRY.
         configure_scenario( VALUE #( no_file_trailer = abap_true ) ).
         DATA(lt_findings) = parse( )-findings.
         cl_abap_unit_assert=>assert_equals(
           act = VALUE string_table( FOR f IN lt_findings ( |{ f-object_type }/{ f-rule_id }/{ f-check_code }/{ f-severity }| ) )
-          exp = VALUE string_table( ( |FILE/S00/{ gc_check-missing_trl }/E| ) )
-          msg = 'Missing 99 must give exactly one S00 MISSING_TRAILER finding' ).
+          exp = VALUE string_table( ( |FILE/S00/{ gc_check-missing_trl }/B| ) )
+          msg = 'Missing 99 must give exactly one blocking S00 MISSING_TRAILER finding (A95)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
@@ -450,6 +493,155 @@ CLASS ltc_parser_bai2 IMPLEMENTATION.
                                             exp = gc_msgno_not_bai2
                                             msg = 'Message 150 expected for non-BAI2 content' ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD finding_codes.
+    rt_codes = VALUE #( FOR f IN it_findings ( |{ f-object_type }/{ f-rule_id }/{ f-check_code }/{ f-severity }| ) ).
+  ENDMETHOD.
+
+  " A86 BAI2 49: an empty account control total is TRAILER_FIELD_MISSING (S06, B), not the computed total
+  METHOD trailer_49_total_missing.
+    TRY.
+        configure_scenario( VALUE #( account_trailer = `49,,5/` ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = finding_codes( parse( )-findings )
+          exp = VALUE string_table( ( |STMT/S06/{ gc_check-trl_missing }/B| ) )
+          msg = 'An empty 49 control total must be reported as missing, never self-satisfied' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A86 BAI2 49: an empty number of records is TRAILER_FIELD_MISSING (S12, E), not the computed count
+  METHOD trailer_49_count_missing.
+    TRY.
+        configure_scenario( VALUE #( account_trailer = `49,+604000000,/` ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = finding_codes( parse( )-findings )
+          exp = VALUE string_table( ( |STMT/S12/{ gc_check-trl_missing }/E| ) )
+          msg = 'An empty 49 record count must be reported as missing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A86 BAI2 98: empty group total, number of accounts and number of records - one finding each
+  METHOD trailer_98_fields_missing.
+    TRY.
+        configure_scenario( VALUE #( group_trailer = `98,,,/` ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = finding_codes( parse( )-findings )
+          exp = VALUE string_table( ( |FILE/S06/{ gc_check-trl_missing }/B| )
+                                    ( |FILE/S12/{ gc_check-trl_missing }/E| )
+                                    ( |FILE/S12/{ gc_check-trl_missing }/E| ) )
+          msg = 'Each empty 98 field must be reported as missing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A86 BAI2 99: a trailer without total and counts (99/) - one finding each, file total stays undeclared
+  METHOD trailer_99_fields_missing.
+    TRY.
+        configure_scenario( VALUE #( file_trailer = `99/` ) ).
+        DATA(ls_file) = parse( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = finding_codes( ls_file-findings )
+          exp = VALUE string_table( ( |FILE/S06/{ gc_check-trl_missing }/B| )
+                                    ( |FILE/S12/{ gc_check-trl_missing }/E| )
+                                    ( |FILE/S12/{ gc_check-trl_missing }/E| ) )
+          msg = 'Each missing 99 field must be reported as missing' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_file-control_total
+                                             msg = 'A missing file total must not be filled with the computed total' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A86: zero is a declaration, not an omission - a declared 0 is compared (mismatch), not 'missing'
+  METHOD trailer_zero_is_declared.
+    TRY.
+        configure_scenario( VALUE #( account_trailer = `49,+604000000,0/` ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = finding_codes( parse( )-findings )
+          exp = VALUE string_table( ( |STMT/S12/{ gc_check-record_count }/E| ) )
+          msg = 'A declared zero count must be compared, not treated as missing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD drop.
+    REPLACE FIRST OCCURRENCE OF iv_text IN mv_content WITH ``.
+  ENDMETHOD.
+
+  METHOD with_detail.
+    REPLACE FIRST OCCURRENCE OF `16,165,1500000,0,BR0001,INV20261103,ACH CREDIT ACME CORP/` IN mv_content WITH iv_detail.
+  ENDMETHOD.
+
+  METHOD assert_layout_rejected.
+    TRY.
+        DATA(ls_file) = parse( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_file-findings[ check_code = 'FUNDS_LAYOUT'
+                                                        severity   = zif_cd_ops_types=>gc_severity-block ] ) )
+          msg = 'A funds-type layout that cannot be read must give a blocking FUNDS_LAYOUT finding' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_file-lines[ btc_code = iv_code ] ) )
+                                           msg = 'No line with shifted or blank references may be emitted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A95 BAI2 49: an account without its trailer is blocked (S00 MISSING_TRAILER, B)
+  METHOD missing_49_blocks.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        drop( |49,+604000000,5/\n| ).
+        DATA(lt_codes) = finding_codes( parse( )-findings ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_codes[ table_line = |STMT/S00/{ gc_check-missing_trl }/B| ] ) )
+          msg = 'A missing 49 must give a blocking MISSING_TRAILER finding on the statement' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A95 BAI2 98: a group without its trailer is blocked (S00 MISSING_TRAILER, B)
+  METHOD missing_98_blocks.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        drop( `98,+604000000,1,7/` ).
+        DATA(lt_codes) = finding_codes( parse( )-findings ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( lt_codes[ table_line = |FILE/S00/{ gc_check-missing_trl }/B| ] ) )
+          msg = 'A missing 98 must give a blocking MISSING_TRAILER finding on the file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " A96: funds type X is not a BAI2 funds type - the entry is not read with guessed positions
+  METHOD funds_type_unsupported.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,X,BR0001,INV20261103,ACH CREDIT ACME CORP/` ).
+    assert_layout_rejected( '165' ).
+  ENDMETHOD.
+
+  " A96: funds type D without a distribution count would shift every reference
+  METHOD distribution_count_missing.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,D,,BR0001,INV20261103/` ).
+    assert_layout_rejected( '165' ).
+  ENDMETHOD.
+
+  " A96: a distribution count larger than the record (9 pairs announced, 1 present)
+  METHOD distribution_count_oversized.
+    configure_scenario( VALUE #( ) ).
+    with_detail( `16,165,1500000,D,9,1,1500000,BR0001/` ).
+    assert_layout_rejected( '165' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -10,6 +10,14 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A11: 166 disbursement retrieval-log chain (R07L PARAM2 AP, PARAM3 LOT).
+*& 2026-11-06 | Audit A25 / A33: canonical account identity, missing currencies.
+*& 2026-11-06 | Audit A07 / A08: company code in the register match, leading zeros, R12 populations.
+*& 2026-11-06 | Audit A14: cross-statement duplicate look-back (R22).
+*& 2026-11-06 | Audit A26 / A32 / A34: sweeps not posted, imported entry without posting rule, sign and gross totals.
+*& 2026-11-06 | Audit A28: incomplete reason mapping, NOC vs return.
+*& 2026-11-06 | Audit A65: references sharing 12 characters, key length above width, malformed reference.
+*& 2026-11-06 | FS-CD review: in-flight grace AWAITING_LOT_TRANSFER (window, after window, 166D lot, creation time).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -71,6 +79,7 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mt_fi_lines   TYPE zif_cd_ebs_sap_dao=>tt_fi_line.
     DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
+    DATA mt_ztnum_seen TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
     DATA mt_lookup_rows TYPE zif_cd_ebs_sap_dao=>tt_lookup_row.
     DATA ms_lookup_used TYPE zif_cd_ebs_types=>ty_lookup_cfg.
 ENDCLASS.
@@ -101,6 +110,7 @@ CLASS ltd_sap_dao IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_ebs_sap_dao~get_checks.
+    mt_ztnum_seen = it_ztnum.
     LOOP AT mt_checks INTO DATA(ls_check).
       IF line_exists( it_ztnum[ table_line = ls_check-ztnum ] ).
         INSERT ls_check INTO TABLE rt_checks.
@@ -132,6 +142,8 @@ CLASS ltd_feb_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_feb_dao.
     DATA ms_prior  TYPE zif_cd_ebs_feb_dao=>ty_header.
     DATA mv_exists TYPE abap_bool.
+    DATA mt_recent TYPE zif_cd_ebs_feb_dao=>tt_item.
+    DATA mv_from   TYPE d.
 ENDCLASS.
 
 CLASS ltd_feb_dao IMPLEMENTATION.
@@ -146,6 +158,10 @@ CLASS ltd_feb_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_feb_dao~statement_exists.
     rv_exists = mv_exists.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_feb_dao~get_recent_items.
+    mv_from  = iv_from.
+    rt_items = mt_recent.
   ENDMETHOD.
 ENDCLASS.
 
@@ -215,6 +231,7 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
         iv_rule_id     TYPE zif_cd_ops_types=>ty_rule_id
         iv_param1      TYPE clike OPTIONAL
         iv_param2      TYPE clike OPTIONAL
+        iv_param3      TYPE clike OPTIONAL
         iv_tolerance   TYPE zif_cd_ops_types=>ty_amount OPTIONAL
         iv_window_days TYPE i OPTIONAL
       RETURNING
@@ -287,6 +304,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
     rs_rule-action      = zif_cd_ops_types=>gc_action-exception.
     rs_rule-param1      = iv_param1.
     rs_rule-param2      = iv_param2.
+    rs_rule-param3      = iv_param3.
     rs_rule-tolerance   = iv_tolerance.
     rs_rule-window_days = iv_window_days.
     rs_rule-active      = abap_true.
@@ -367,6 +385,8 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS teardown.
     METHODS r01_debit_on_credit_code     FOR TESTING.
+    METHODS r15_imported_without_rule    FOR TESTING.
+    METHODS r03_missing_currency         FOR TESTING.
     METHODS r01_reversal_may_flip_sign   FOR TESTING.
     METHODS r02_amount_above_max_fails   FOR TESTING.
     METHODS r03_foreign_currency_fails   FOR TESTING.
@@ -374,6 +394,9 @@ CLASS ltc_line_rules DEFINITION FINAL FOR TESTING
     METHODS r04_alnum_format_enforced    FOR TESTING.
     METHODS r05_unknown_reason_fails     FOR TESTING.
     METHODS r05_mapped_reason_passes     FOR TESTING.
+    METHODS r05_placeholder_rejected     FOR TESTING.
+    METHODS r05_noc_on_return_entry      FOR TESTING.
+    METHODS r05_required_without_map     FOR TESTING.
     METHODS r09_second_identical_entry   FOR TESTING.
     METHODS r10_value_date_out_of_window FOR TESTING.
     METHODS r15_posting_rule_mismatch    FOR TESTING.
@@ -393,6 +416,42 @@ CLASS ltc_line_rules IMPLEMENTATION.
 
 
   " R01: a debit on a code that expects credits is a sign error
+  " A33: a line without currency cannot be compared - reported instead of skipped
+  METHOD r03_missing_currency.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        CLEAR mt_lines[ 1 ]-currency.
+        run( iv_class = 'ZCL_CD_EBS_R_R03_CURRENCY' is_rule = rule( 'R03' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-currency_missing
+                         iv_msg        = 'A line without currency must be reported by R03' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A32: an imported entry without posting rule (FEBEP-VGINT) is reported - FF_5 could not
+  " interpret it; a parsed file (not yet imported) has no posting rule yet and is not reported
+  METHOD r15_imported_without_rule.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-map_posting = '0001'.
+        run( iv_class = 'ZCL_CD_EBS_R_R15_POSTING_RULE' is_rule = rule( 'R15' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-posting_rule_unresolved
+                         iv_msg        = 'An imported entry without posting rule must be reported' ).
+        CLEAR mt_findings.
+        mt_stmts[ 1 ]-source = zif_cd_ebs_types=>gc_source-file.
+        run( iv_class = 'ZCL_CD_EBS_R_R15_POSTING_RULE' is_rule = rule( 'R15' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A parsed file has no posting rule yet - not reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD r01_debit_on_credit_code.
     add_statement( ).
     add_line( iv_cdi = zif_cd_ebs_types=>gc_cdi-debit iv_exp_cdi = zif_cd_ebs_types=>gc_cdi-credit ).
@@ -477,6 +536,60 @@ CLASS ltc_line_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " A28: a mapping row without an effective payment engine reason (placeholder) is incomplete
+  METHOD r05_placeholder_rejected.
+    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
+    TRY.
+        ls_reason-reason      = 'R01'.
+        ls_reason-fica_reason = '<PE'.
+        INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'R01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( 'R05' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_map_incomplete
+                         iv_msg        = 'A placeholder mapping must not count as mapped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A28: a NOC code on an entry routed as a return (PARAM2 RETURN) is the wrong kind
+  METHOD r05_noc_on_return_entry.
+    DATA ls_reason TYPE zif_cd_ebs_types=>ty_reason_map.
+    TRY.
+        ls_reason-reason      = 'C01'.
+        ls_reason-fica_reason = '051'.
+        ls_reason-is_noc      = abap_true.
+        INSERT ls_reason INTO TABLE mo_cfg_dao->mt_reasons.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'C01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param2 = 'RETURN' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_kind
+                         iv_msg        = 'A NOC code on a return entry must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A28: a required reason cannot be validated without any mapping - incomplete configuration
+  METHOD r05_required_without_map.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-return_reason = 'R01'.
+        run( iv_class = 'ZCL_CD_EBS_R_R05_REASON' is_rule = rule( iv_rule_id = 'R05' iv_param1 = 'REQUIRED' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_map_incomplete
+                         iv_msg        = 'A required reason without mapping must be reported, not format-checked' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " R09: the second identical entry (reference, amount, sign, value date) is a duplicate
   METHOD r09_second_identical_entry.
     add_statement( ).
@@ -535,14 +648,36 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r19_missing_doc_fails        FOR TESTING.
     METHODS r07_any_run_with_status_ok   FOR TESTING.
     METHODS r07l_any_af_attempt_passes   FOR TESTING.
+    METHODS r07l_ap_passes_without_lot   FOR TESTING.
+    METHODS r07l_af_with_lot_passes      FOR TESTING.
+    METHODS r07l_af_without_lot_fails    FOR TESTING.
+    METHODS r07l_chain_no_retrieval      FOR TESTING.
+    METHODS r07l_chain_other_status      FOR TESTING.
+    METHODS run_166d_chain
+      IMPORTING
+        iv_status TYPE zif_cd_ebs_sap_dao=>ty_retrieval-status OPTIONAL
+        iv_lot    TYPE abap_bool DEFAULT abap_false.
     METHODS r07r_any_done_lot_passes     FOR TESTING.
     METHODS r07c_any_cancelled_row_fails FOR TESTING.
     METHODS r08_unknown_bank_ambiguous   FOR TESTING.
     METHODS r08_unknown_bank_single_ok   FOR TESTING.
+    METHODS r08_other_company_ignored    FOR TESTING.
+    METHODS r08_leading_zeros_match      FOR TESTING.
+    METHODS r08_bank_zeros_register_none FOR TESTING.
+    METHODS r12_equal_total_other_count  FOR TESTING.
+    METHODS r12_register_row_not_reused  FOR TESTING.
     METHODS r21_missing_record_reported  FOR TESTING.
     METHODS r21_any_allowed_status_ok    FOR TESTING.
     METHODS r21_status_not_allowed       FOR TESTING.
     METHODS r21_unknown_lookup_raises    FOR TESTING.
+    METHODS r07_refs_share_12_chars      FOR TESTING.
+    METHODS r07_key_length_over_width    FOR TESTING.
+    METHODS r07_ref_format_rejected      FOR TESTING.
+    METHODS r21_key_length_over_width    FOR TESTING.
+    METHODS r07r_in_flight_awaits        FOR TESTING.
+    METHODS r07r_after_grace_fails       FOR TESTING.
+    METHODS r07l_lot_in_flight_awaits    FOR TESTING.
+    METHODS r07_creation_time_decides    FOR TESTING.
     METHODS add_lookup
       IMPORTING
         iv_allowed TYPE clike DEFAULT 'OK'.
@@ -723,6 +858,87 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " A11 (business decision): 166 disbursement - retrieval-log chain. R07L with PARAM1 AF,
+  " PARAM2 AP (passes alone) and PARAM3 LOT (AF needs a returns-lot entry by SELW1)
+  METHOD run_166d_chain.
+    DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
+    DATA ls_item      TYPE zif_cd_ebs_sap_dao=>ty_return_item.
+    IF iv_status IS NOT INITIAL.
+      ls_retrieval-augbl  = gc_test-docno.
+      ls_retrieval-status = iv_status.
+      INSERT ls_retrieval INTO TABLE mo_sap_dao->mt_retrievals.
+    ENDIF.
+    IF iv_lot = abap_true.
+      ls_item-selw1     = gc_test-docno.
+      ls_item-opbel     = '000000000001'.
+      ls_item-lot_stars = '1'.
+      INSERT ls_item INTO TABLE mo_sap_dao->mt_items.
+    ENDIF.
+    add_statement( ).
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL'
+         is_rule  = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' iv_param2 = 'AP' iv_param3 = 'LOT' ) ).
+  ENDMETHOD.
+
+
+  " A11: retrieval status AP passes on its own - no returns lot needed
+  METHOD r07l_ap_passes_without_lot.
+    TRY.
+        run_166d_chain( iv_status = 'AP' ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AP must pass without a returns lot' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: retrieval status AF plus a returns-lot entry passes
+  METHOD r07l_af_with_lot_passes.
+    TRY.
+        run_166d_chain( iv_status = 'AF' iv_lot = abap_true ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AF with a returns lot must pass' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: AF without a returns-lot entry fails
+  METHOD r07l_af_without_lot_fails.
+    TRY.
+        run_166d_chain( iv_status = 'AF' ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
+                         iv_msg        = 'AF without a returns lot must fail' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: no retrieval at all fails, even when a returns lot exists
+  METHOD r07l_chain_no_retrieval.
+    TRY.
+        run_166d_chain( iv_lot = abap_true ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_not_found
+                         iv_msg        = 'A missing retrieval must fail the chain' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A11: a retrieval in another status (neither AP nor AF) fails
+  METHOD r07l_chain_other_status.
+    TRY.
+        run_166d_chain( iv_status = 'ER' iv_lot = abap_true ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_status
+                         iv_msg        = 'A retrieval neither AP nor AF must fail the chain' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " Payment in two returns lots: a lot with the required status satisfies R07R
   METHOD r07r_any_done_lot_passes.
     DATA ls_item TYPE zif_cd_ebs_sap_dao=>ty_return_item.
@@ -812,6 +1028,147 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
 
   " Generic lookup R21 (new BAI codes need configuration only): PARAM1 names a ZCD_EBS_LOOKUP
   " row - table, key field, key kind, status field, allowed values
+  " A65: two 13-character references sharing their first 12 characters are rejected
+  " (REF_TOO_LONG), never truncated onto document 123456789012; a 12-character one matches
+  METHOD r07_refs_share_12_chars.
+    TRY.
+        INSERT VALUE #( doc1r = '123456789012' status = 'PAID' ) INTO TABLE mo_sap_dao->mt_payments.
+        add_statement( ).
+        add_line( iv_reference = '1234567890123' ).
+        add_line( iv_reference = '1234567890124' ).
+        add_line( iv_reference = '123456789012' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE string_table( FOR f IN mt_findings ( CONV string( f-check_code ) ) )
+          exp = VALUE string_table( ( CONV string( zif_cd_ebs_types=>gc_check_code-ref_too_long ) )
+                                    ( CONV string( zif_cd_ebs_types=>gc_check_code-ref_too_long ) ) )
+          msg = 'Both overlength references must be rejected, not matched on their first 12 characters' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mt_docno_seen
+                                            exp = VALUE zif_cd_ebs_sap_dao=>tt_docno( ( '123456789012' ) )
+                                            msg = 'Only the reference that fits may be queried' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: EBS_KEYLEN_DOCNO above the 12-character key width is a configuration finding
+  METHOD r07_key_length_over_width.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-keylen_docno value = '15' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config
+                         iv_msg        = 'A key length above the DDIC width must be rejected explicitly' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: a reference with characters outside 0-9 / A-Z cannot be a document number (REF_FORMAT)
+  METHOD r07_ref_format_rejected.
+    TRY.
+        add_statement( ).
+        add_line( iv_reference = 'AB-12' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-ref_format
+                         iv_msg        = 'A malformed reference must be rejected before conversion' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A65: a REFERENCE lookup whose key length exceeds the lookup key width is rejected
+  METHOD r21_key_length_over_width.
+    TRY.
+        add_lookup( ).
+        mo_cfg_dao->mt_lookups[ lookup_id = 'TESTLKP' ]-key_kind   = zif_cd_ebs_types=>gc_lookup_key-reference.
+        mo_cfg_dao->mt_lookups[ lookup_id = 'TESTLKP' ]-key_length = 80.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R21_LOOKUP' is_rule = rule( iv_rule_id = 'R21' iv_param1 = 'TESTLKP' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-key_length_config
+                         iv_msg        = 'A lookup key length above the key width must be rejected' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: lot item not found 8 h after the start of the statement date, grace 24 h:
+  " AWAITING_LOT_TRANSFER (W, NOTIFY), the original message kept in DETAILS
+  METHOD r07r_in_flight_awaits.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A lot item not found inside the grace window must await the transfer' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Awaiting lot transfer is a warning' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action exp = zif_cd_ops_types=>gc_action-notify
+                                            msg = 'Awaiting lot transfer only notifies' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mt_findings[ 1 ]-details
+                                                 msg = 'The original not-found message must be kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: after the grace window (4 h, statement 8 h old) the not-found stands
+  METHOD r07r_after_grace_fails.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '4' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
+                         iv_msg        = 'After the grace window the lot item must be found' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: 166D chain - retrieval AF logged, returns lot not yet created, inside the window
+  METHOD r07l_lot_in_flight_awaits.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        INSERT VALUE #( augbl = gc_test-docno status = 'AF' ) INTO TABLE mo_sap_dao->mt_retrievals.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL'
+             is_rule  = rule( iv_rule_id = 'R07L' iv_param1 = 'AF' iv_param3 = zif_cd_ebs_types=>gc_rule_keyword-lot ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A returns lot not yet created inside the window must await the transfer' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " FS-CD review: the creation time decides when present - created 07:00, now 08:00, grace 2 h
+  METHOD r07_creation_time_decides.
+    TRY.
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '2' ) INTO TABLE mo_store->mt_params.
+        add_statement( ).
+        mt_stmts[ 1 ]-created_date = gc_test-today.
+        mt_stmts[ 1 ]-created_time = '070000'.
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
+                         iv_msg        = 'A statement created one hour ago is inside a two-hour window' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD add_lookup.
     DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
     ls_lookup-lookup_id      = 'TESTLKP'.
@@ -902,6 +1259,116 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " A07: the same house bank ID in another company code is another account - its register
+  " row (company code from DFKKCR) is ignored
+  METHOD r08_other_company_ignored.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-bukrs  = gc_test-bukrs.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-bukrs  = 'CA01'.
+        ls_check-amount = '999.00'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'A register row of another company code must be ignored' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Leading zeros: the bank strips them, the register keeps them (EBS_KEYLEN_ZTNUM = 13)
+  METHOD r08_leading_zeros_match.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        INSERT VALUE #( name = 'EBS_KEYLEN_ZTNUM' value = '13' ) INTO TABLE mo_store->mt_params.
+        ls_check-ztnum  = '0000000012345'.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = '12345 and 0000000012345 must be the same check' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Leading zeros the other way round: the bank sends them, the register does not
+  METHOD r08_bank_zeros_register_none.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( iv_reference = '0000000012345' ).
+        run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = '0000000012345 from the bank must match register 12345' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A08: equal totals with unequal counts fail - one bank entry against two register rows
+  METHOD r12_equal_total_other_count.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-doc1r  = '000000000001'.
+        ls_check-amount = '125.00'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        ls_check-doc1r  = '000000000002'.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-code_count_mismatch
+                         iv_msg        = 'One bank entry against two register rows must fail on count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A08: a repeated bank reference must not reuse the same register row
+  METHOD r12_register_row_not_reused.
+    DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
+    TRY.
+        ls_check-ztnum  = gc_test-ref.
+        ls_check-hbkid  = gc_test-hbkid.
+        ls_check-hktid  = gc_test-hktid.
+        ls_check-amount = gc_test-amount.
+        INSERT ls_check INTO TABLE mo_sap_dao->mt_checks.
+        add_statement( ).
+        add_line( ).
+        add_line( ).
+        run( iv_class = 'ZCL_CD_EBS_R_R12_CODE_TOTAL' is_rule = rule( 'R12' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 2
+                                            msg = 'Two bank entries on one register row: total and count fail' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " R12 (legacy 581D TOTAL_SUM_MISMATCH): code total per statement must equal the register total
   METHOD r12_code_total_mismatch.
     DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
@@ -959,6 +1426,27 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS s01_opening_ne_prior_closing FOR TESTING.
     METHODS s01_deviation_within_toler   FOR TESTING.
     METHODS s01_nearest_package_prior    FOR TESTING.
+    METHODS s01_other_account_not_prior  FOR TESTING.
+    METHODS s07_two_accounts_same_number FOR TESTING.
+    METHODS r22_entry_in_earlier_stmt    FOR TESTING.
+    METHODS s10_unposted_sweep_ok        FOR TESTING.
+    METHODS s02_unknown_cdi_reported     FOR TESTING.
+    METHODS s02_gross_totals_compared    FOR TESTING.
+    METHODS r22_own_statement_ignored    FOR TESTING.
+    METHODS r22_other_amount_not_dup     FOR TESTING.
+    METHODS r22_window_from_rule         FOR TESTING.
+    METHODS add_history_item
+      IMPORTING
+        iv_kukey  TYPE zif_cd_ebs_types=>ty_kukey
+        iv_amount TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_test-amount.
+    METHODS run_r22.
+    METHODS r18_gl_by_house_bank         FOR TESTING.
+    METHODS s04_house_bank_preferred     FOR TESTING.
+    METHODS s04_missing_currency         FOR TESTING.
+    METHODS add_second_account_statement
+      IMPORTING
+        iv_opening TYPE zif_cd_ops_types=>ty_amount OPTIONAL
+        iv_closing TYPE zif_cd_ops_types=>ty_amount OPTIONAL.
     METHODS s01_newer_stored_prior_wins  FOR TESTING.
     METHODS s02_arithmetic_break_fails   FOR TESTING.
     METHODS s02_balanced_statement_ok    FOR TESTING.
@@ -1001,6 +1489,222 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
   " S01 / acceptance test 4: a deviation up to the configured 0.01 tolerance passes
   " Audit A15: the nearest earlier statement of the account (date, then number) is the
   " predecessor - not the last one in table order
+  " Second statement of the same date and number on another house bank account; both
+  " imported (FEBKO has no account number) - only the house bank identity tells them apart
+  METHOD add_second_account_statement.
+    add_statement( iv_opening = iv_opening iv_closing = iv_closing ).
+    DATA(lv_last) = lines( mt_stmts ).
+    mt_stmts[ lv_last ]-stmt_key = 'S0002'.
+    mt_stmts[ lv_last ]-hbkid    = 'BOFA1'.
+    mt_stmts[ lv_last ]-hktid    = 'COLL1'.
+    LOOP AT mt_stmts ASSIGNING FIELD-SYMBOL(<ls_stmt>).
+      CLEAR <ls_stmt>-account_no.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " A25: a statement of another house bank account is never the predecessor
+  METHOD s01_other_account_not_prior.
+    TRY.
+        add_statement( iv_opening = '500.00' iv_closing = '600.00' ).
+        add_second_account_statement( iv_opening = '100.00' iv_closing = '999.00' ).
+        mt_stmts[ 2 ]-stmt_date = gc_test-today - 1.
+        CLEAR mt_stmts[ 2 ]-has_opening.
+        run( iv_class = 'ZCL_CD_EBS_R_S01_CONTINUITY' is_rule = rule( 'S01' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Another account''s closing must not be compared' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25: two accounts with the same statement date and number in one package are no duplicate
+  METHOD s07_two_accounts_same_number.
+    TRY.
+        add_statement( ).
+        add_second_account_statement( ).
+        run( iv_class = 'ZCL_CD_EBS_R_S07_DUPLICATE' is_rule = rule( 'S07' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Different house bank accounts must not collide in S07' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A25 / A16: the G/L account is found through the house bank identity of an imported statement
+  METHOD r18_gl_by_house_bank.
+    TRY.
+        mo_sap_dao->mv_gl_balance = '1150.00'.
+        add_statement( iv_opening = '1000.00' iv_closing = '1150.00' ).
+        CLEAR mt_stmts[ 1 ]-account_no.
+        run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'R18 must find the G/L account by house bank account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A33: the SAP house bank identity wins over an account number configured elsewhere
+  METHOD s04_house_bank_preferred.
+    DATA ls_other TYPE zif_cd_ebs_types=>ty_account_cfg.
+    TRY.
+        ls_other-bukrs      = gc_test-bukrs.
+        ls_other-hbkid      = 'BOFA1'.
+        ls_other-hktid      = 'COLL1'.
+        ls_other-account_no = '000999999999'.
+        ls_other-currency   = 'EUR'.
+        ls_other-active     = abap_true.
+        INSERT ls_other INTO TABLE mo_cfg_dao->mt_accounts.
+        add_statement( ).
+        mt_stmts[ 1 ]-account_no = ls_other-account_no.
+        run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'The house bank account (USD) must be used, not the EUR one' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A33: a statement without currency cannot be checked - reported instead of skipped
+  METHOD s04_missing_currency.
+    TRY.
+        add_statement( ).
+        CLEAR mt_stmts[ 1 ]-currency.
+        run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-account_currency_missing
+                         iv_msg        = 'A statement without currency must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_history_item.
+    DATA ls_item TYPE zif_cd_ebs_feb_dao=>ty_item.
+    ls_item-kukey = iv_kukey.
+    ls_item-esnum = 1.
+    ls_item-vorgc = '168'.
+    ls_item-epvoz = 'H'.
+    ls_item-kwbtr = iv_amount.
+    ls_item-chect = gc_test-ref.
+    ls_item-budat = gc_test-today - 1.
+    INSERT ls_item INTO TABLE mo_feb_dao->mt_recent.
+  ENDMETHOD.
+
+
+  METHOD run_r22.
+    add_statement( ).
+    mt_stmts[ 1 ]-kukey = '00000009'.
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R22_DUP_HISTORY' is_rule = rule( iv_rule_id = 'R22' iv_window_days = 5 ) ).
+  ENDMETHOD.
+
+
+  " A14 (business decision): the same entry already imported in another statement of the
+  " account within the look-back window is reported
+  METHOD r22_entry_in_earlier_stmt.
+    TRY.
+        add_history_item( '00000008' ).
+        run_r22( ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-duplicate_history
+                         iv_msg        = 'An entry already in an earlier statement must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: the statement's own entries (same KUKEY) are not a duplicate
+  METHOD r22_own_statement_ignored.
+    TRY.
+        add_history_item( '00000009' ).
+        run_r22( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'The statement itself must be excluded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: a different amount is a different entry
+  METHOD r22_other_amount_not_dup.
+    TRY.
+        add_history_item( iv_kukey = '00000008' iv_amount = '999.00' ).
+        run_r22( ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'Another amount must not be a duplicate' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: the look-back window comes from the rule (WINDOW_DAYS) - 5 days before the statement date
+  METHOD r22_window_from_rule.
+    TRY.
+        run_r22( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_feb_dao->mv_from exp = CONV d( gc_test-today - 5 )
+                                            msg = 'The history must be read from the statement date minus WINDOW_DAYS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A26: a sweep the business does not post (map disposition NOT_POSTED) is complete unposted
+  METHOD s10_unposted_sweep_ok.
+    TRY.
+        add_statement( ).
+        add_line( ).
+        mt_lines[ 1 ]-not_posted = abap_true.
+        run( iv_class = 'ZCL_CD_EBS_R_S10_COMPLETE' is_rule = rule( 'S10' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'An unposted sweep (NOT_POSTED) must not be incomplete' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A34: an entry without debit/credit indicator cannot be balanced - reported, never treated as credit
+  METHOD s02_unknown_cdi_reported.
+    TRY.
+        add_statement( iv_opening = '1000.00' iv_closing = '1250.00' ).
+        add_line( iv_cdi = space iv_amount = '250.00' ).
+        run( iv_class = 'ZCL_CD_EBS_R_S02_BALANCE' is_rule = rule( 'S02' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-cdi_unknown
+                         iv_msg        = 'An entry without debit/credit indicator must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A34: declared gross credits and debits are compared separately - equal overstatements on
+  " both sides cancel out in the net, not in the gross comparison
+  METHOD s02_gross_totals_compared.
+    TRY.
+        add_statement( iv_opening = '1000.00' iv_closing = '1250.00' ).
+        mt_stmts[ 1 ]-has_totals    = abap_true.
+        mt_stmts[ 1 ]-total_credits = '300.00'.
+        mt_stmts[ 1 ]-total_debits  = '50.00'.
+        add_line( iv_cdi = zif_cd_ebs_types=>gc_cdi-credit iv_amount = '250.00' ).
+        run( iv_class = 'ZCL_CD_EBS_R_S02_BALANCE' is_rule = rule( 'S02' ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 2
+                                            msg = 'Credits 250 vs 300 and debits 0 vs 50 must both be reported' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mt_findings[ check_code = zif_cd_ebs_types=>gc_check_code-gross_totals ] ) )
+          msg = 'The gross deviation must be reported as GROSS_TOTALS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD s01_nearest_package_prior.
     TRY.
         " day 3 statement, opening 500 = closing of day 2

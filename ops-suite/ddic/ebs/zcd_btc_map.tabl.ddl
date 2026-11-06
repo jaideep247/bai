@@ -26,6 +26,8 @@ define table zcd_btc_map {
   action       : abap.char(10);
   active       : abap_boolean;
   description  : abap.char(60);
+  // A26: expected disposition - blank = posted as usual, NOT_POSTED = never posted (sweeps)
+  disposition  : abap.char(10);
   changed_by   : syuname;
   changed_at   : timestampl;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

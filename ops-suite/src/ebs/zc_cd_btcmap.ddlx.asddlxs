@@ -55,6 +55,9 @@ annotate entity ZC_CD_BtcMap with
   @UI.identification: [{ position: 130 }]
   Description;
 
+  @UI.identification: [{ position: 140 }]
+  Disposition;
+
   @UI.hidden: true
   ChangedBy;
 

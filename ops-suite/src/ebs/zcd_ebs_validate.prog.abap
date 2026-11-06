@@ -13,6 +13,8 @@
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A68: FEB date range validated (selection screen and source).
+*& 2026-11-06 | Audit A69: server file read rejects encoding and read errors, distinguishes end of file, always closes.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -57,6 +59,9 @@ CONSTANTS gc_ucomm_execute TYPE sy-ucomm VALUE 'ONLI'.
 CONSTANTS gc_upload_filetype TYPE char10 VALUE 'ASC'.
 "! SAP code page 4110 = UTF-8
 CONSTANTS gc_codepage_utf8 TYPE abap_encod VALUE '4110'.
+"! READ DATASET return code at end of file (VERIFY: an unterminated last line may come
+"! with this code - it is kept, never dropped)
+CONSTANTS gc_subrc_eof TYPE sysubrc VALUE 4.
 
 CLASS lcl_report DEFINITION FINAL.
   PUBLIC SECTION.
@@ -127,6 +132,7 @@ CLASS lcl_report IMPLEMENTATION.
       ls_selection-kukey     = s_kukey[].
       ls_selection-date_from = p_from.
       ls_selection-date_to   = p_to.
+      zcl_cd_ebs_src_feb=>check_selection( ls_selection ).
       ro_source = NEW zcl_cd_ebs_src_feb( is_selection = ls_selection iv_package_size = p_pack ).
     ELSE.
       ro_source = NEW zcl_cd_ebs_src_file( iv_content   = read_file( )
@@ -157,24 +163,46 @@ CLASS lcl_report IMPLEMENTATION.
         RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path.
       ENDIF.
     ELSE.
+      " A69: no IGNORING CONVERSION ERRORS - a file that is not UTF-8 is rejected, not
+      " validated with replaced characters; only end of file ends the read; the dataset is
+      " closed on every path
       TRY.
-          OPEN DATASET p_path FOR INPUT IN TEXT MODE ENCODING UTF-8 IGNORING CONVERSION ERRORS.
+          OPEN DATASET p_path FOR INPUT IN TEXT MODE ENCODING UTF-8.
           IF sy-subrc <> 0.
             RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path.
           ENDIF.
           DO.
+            CLEAR lv_line.
             READ DATASET p_path INTO lv_line.
-            IF sy-subrc <> 0.
+            DATA(lv_subrc) = sy-subrc.
+            IF lv_subrc = 0.
+              INSERT lv_line INTO TABLE lt_lines.
+            ELSEIF lv_subrc = gc_subrc_eof.
+              IF lv_line IS NOT INITIAL.
+                INSERT lv_line INTO TABLE lt_lines.
+              ENDIF.
               EXIT.
+            ELSE.
+              DATA(lv_read) = lines( lt_lines ).
+              RAISE EXCEPTION TYPE zcx_cd_ops_error
+                MESSAGE e531(zcd_ops) WITH p_path lv_subrc lv_read.
             ENDIF.
-            INSERT lv_line INTO TABLE lt_lines.
           ENDDO.
+        CATCH cx_sy_conversion_codepage INTO DATA(lx_codepage).
           CLOSE DATASET p_path.
+          DATA(lv_read_ok) = lines( lt_lines ).
+          RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e530(zcd_ops) WITH p_path lv_read_ok
+            EXPORTING
+              previous = lx_codepage.
         CATCH cx_sy_file_access_error INTO DATA(lx_file).
+          CLOSE DATASET p_path.
           RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path
             EXPORTING
               previous = lx_file.
+        CLEANUP.
+          CLOSE DATASET p_path.
       ENDTRY.
+      CLOSE DATASET p_path.
     ENDIF.
     rv_content = concat_lines_of( table = lt_lines sep = cl_abap_char_utilities=>newline ).
   ENDMETHOD.
@@ -223,6 +251,10 @@ ENDCLASS.
 AT SELECTION-SCREEN.
   IF sscrfields-ucomm = gc_ucomm_execute AND p_file = abap_true AND p_path IS INITIAL.
     MESSAGE e510(zcd_ops).
+  ENDIF.
+  " A68: an inverted date range is rejected on the selection screen
+  IF sscrfields-ucomm = gc_ucomm_execute AND p_feb = abap_true AND p_from > p_to.
+    MESSAGE e527(zcd_ops) WITH p_from p_to.
   ENDIF.
 
 START-OF-SELECTION.

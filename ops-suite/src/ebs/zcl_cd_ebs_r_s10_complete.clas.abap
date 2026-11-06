@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A26 / A35: NOT_POSTED entries complete; statement key.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S10 - every entry accounted for</p>
 CLASS zcl_cd_ebs_r_s10_complete DEFINITION
@@ -29,8 +30,10 @@ CLASS zcl_cd_ebs_r_s10_complete IMPLEMENTATION.
     LOOP AT it_statements INTO DATA(ls_statement) WHERE source = zif_cd_ebs_types=>gc_source-feb.
       DATA(lv_open) = 0.
       DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( 0 ).
-      LOOP AT it_lines INTO DATA(ls_line)
-           WHERE stmt_key = ls_statement-stmt_key AND belnr IS INITIAL AND blocked = abap_false.
+      " A26: an entry the business never posts (NOT_POSTED, e.g. sweeps) is complete unposted
+      LOOP AT it_lines INTO DATA(ls_line) USING KEY stmt
+           WHERE stmt_key = ls_statement-stmt_key AND belnr IS INITIAL AND blocked = abap_false
+             AND not_posted = abap_false.
         lv_open += 1.
         lv_amount += ls_line-amount.
       ENDLOOP.

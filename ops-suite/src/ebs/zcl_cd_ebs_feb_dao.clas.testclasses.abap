@@ -6,6 +6,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A14: recent items of an account (R22 history).
 *&---------------------------------------------------------------------*
 CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -27,13 +28,14 @@ CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
     METHODS prior_is_latest_before_date  FOR TESTING.
     METHODS same_day_lower_number_prior  FOR TESTING.
     METHODS imported_statement_exists    FOR TESTING.
+    METHODS recent_items_of_account      FOR TESTING.
 ENDCLASS.
 
 
 CLASS ltc_feb_dao IMPLEMENTATION.
 
   METHOD class_setup.
-    go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'FEBKO' ) ) ).
+    go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'FEBKO' ) ( 'FEBEP' ) ) ).
   ENDMETHOD.
 
 
@@ -99,6 +101,32 @@ CLASS ltc_feb_dao IMPLEMENTATION.
           act = mo_cut->statement_exists( iv_bukrs = 'US01' iv_hbkid = 'JPMC1' iv_hktid = 'DISB1'
                                           iv_aznum = '00042' iv_azdat = '20261105' )
           msg = 'Statement 42 of 5 Nov must exist' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A14: items of the account's statements within the window - older statements excluded
+  METHOD recent_items_of_account.
+    DATA lt_febep TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
+    DATA ls_febep TYPE febep.
+    TRY.
+        ls_febep-kukey = '00000001'.
+        ls_febep-esnum = 1.
+        ls_febep-chect = '12345'.
+        INSERT ls_febep INTO TABLE lt_febep.
+        ls_febep-kukey = '00000002'.
+        INSERT ls_febep INTO TABLE lt_febep.
+        ls_febep-kukey = '00000003'.
+        INSERT ls_febep INTO TABLE lt_febep.
+        go_env->insert_test_data( lt_febep ).
+        DATA(lt_items) = mo_cut->get_recent_items( iv_bukrs = 'US01' iv_hbkid = 'JPMC1' iv_hktid = 'DISB1'
+                                                   iv_from  = '20261104' iv_to = '20261105' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_items ) exp = 2
+                                            msg = 'Only the statements of 04 and 05 Nov are in the window' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_items[ kukey = '00000001' ] ) )
+                                           msg = 'The 03 Nov statement is outside the window' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

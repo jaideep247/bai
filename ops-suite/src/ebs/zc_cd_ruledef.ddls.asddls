@@ -14,6 +14,7 @@ define view entity ZC_CD_RuleDef
       DefaultAction,
       Description,
       Active,
+      BlocksPosting,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

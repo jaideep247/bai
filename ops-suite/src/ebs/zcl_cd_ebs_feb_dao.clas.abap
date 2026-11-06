@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Audit A14: get_recent_items for rule R22.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION
@@ -61,6 +62,22 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
       INTO CORRESPONDING FIELDS OF TABLE @lt_headers
       UP TO 1 ROWS.
     rs_header = VALUE #( lt_headers[ 1 ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_feb_dao~get_recent_items.
+    " A14: history of the account for the cross-statement duplicate rule R22.
+    " VERIFY-DDIC: FEBEP-VORGC / VGEXT / EPVOZ as in get_items
+    SELECT p~kukey, p~esnum, p~vorgc, p~vgext, p~vgint, p~epvoz, p~kwbtr, p~kwaer, p~budat, p~valut,
+           p~chect, p~xblnr, p~belnr, p~gjahr
+      FROM febep AS p
+      INNER JOIN febko AS k ON k~kukey = p~kukey
+      WHERE k~bukrs = @iv_bukrs
+        AND k~hbkid = @iv_hbkid
+        AND k~hktid = @iv_hktid
+        AND k~azdat BETWEEN @iv_from AND @iv_to
+      ORDER BY p~kukey, p~esnum
+      INTO CORRESPONDING FIELDS OF TABLE @rt_items.
   ENDMETHOD.
 
 

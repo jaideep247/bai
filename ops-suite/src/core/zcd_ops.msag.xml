@@ -1718,6 +1718,174 @@
      <MSGNR>512</MSGNR>
      <TEXT>Lookup &amp;1: &amp;2 has status &amp;3, expected &amp;4</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>513</MSGNR>
+     <TEXT>Rule group &amp;1 has no usable rule assignment (configuration)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>514</MSGNR>
+     <TEXT>Rule &amp;1 of group &amp;2 is missing or inactive in ZCD_EBS_RULE_DEF</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>515</MSGNR>
+     <TEXT>Entry &amp;1: currency missing on the entry or its statement</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>516</MSGNR>
+     <TEXT>Account &amp;1: currency missing in the statement or in ZCD_EBS_ACCT</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>517</MSGNR>
+     <TEXT>Entry &amp;1 already in statement &amp;2 of the account (reference &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>518</MSGNR>
+     <TEXT>Statement &amp;1: &amp;2 entries without debit/credit indicator</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>519</MSGNR>
+     <TEXT>Declared credits &amp;1, entries &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>520</MSGNR>
+     <TEXT>Declared debits &amp;1, entries &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>521</MSGNR>
+     <TEXT>Entry &amp;1 imported without posting rule; map prescribes &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>522</MSGNR>
+     <TEXT>Reason &amp;1: mapping in ZCD_EBS_RSN_MAP incomplete (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>523</MSGNR>
+     <TEXT>Reason &amp;1 is not a &amp;2 code</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>524</MSGNR>
+     <TEXT>&amp;1: not declared on the trailer (computed value not accepted)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>525</MSGNR>
+     <TEXT>Reference &amp;1 has &amp;2 characters; the key holds &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>526</MSGNR>
+     <TEXT>Key length &amp;1 exceeds the key width &amp;2 (configuration)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>527</MSGNR>
+     <TEXT>Date range invalid: from &amp;1 is after to &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>528</MSGNR>
+     <TEXT>No statement selected - nothing evaluated (variant &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>529</MSGNR>
+     <TEXT>&amp;1 entries not evaluated (a rule could not run)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>530</MSGNR>
+     <TEXT>File &amp;1 is not valid UTF-8 (after line &amp;2) - not validated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>531</MSGNR>
+     <TEXT>File &amp;1: read error (return code &amp;2) after line &amp;3 - not validated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>532</MSGNR>
+     <TEXT>Entry &amp;1: &amp;2 not found yet - statement within the &amp;3 h in-flight window</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>533</MSGNR>
+     <TEXT>Kill switch &amp;1: &amp;2 - validation mode M (monitor) used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>534</MSGNR>
+     <TEXT>ZCD_BTC_MAP rows for &amp;1 &amp;2 bank &amp;3 flow &amp;4 contradict each other (blank f</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>535</MSGNR>
+     <TEXT>Entry type &amp;1 in line &amp;2: funds-type layout invalid (&amp;3) - entry not read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>536</MSGNR>
+     <TEXT>CAMT document &amp;1: &amp;2 &amp;3 not accepted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>537</MSGNR>
+     <TEXT>Element &amp;1: '&amp;2' is not a count</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>538</MSGNR>
+     <TEXT>Entry &amp;1 (&amp;2 &amp;3) has status '&amp;4' - not booked, not posted</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>539</MSGNR>
+     <TEXT>Entry &amp;1: transaction details &amp;2 do not reconcile to the entry &amp;3 (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>540</MSGNR>
+     <TEXT>Entry &amp;1: a transaction detail has no amount - the batch stays one entry </TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
