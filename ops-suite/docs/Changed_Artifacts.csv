@@ -67,6 +67,7 @@ docs/HCK_MORNING_REPORT.md,Doc,
 docs/Implementation_Order.md,Doc,
 docs/Legacy_Parity_Comparison.md,Doc,
 docs/Operations_Runbook.md,Doc,
+docs/RAP_Apps_Design.md,Doc,
 docs/Review_Response_2026-11-06.md,Doc,
 docs/TDD_Approach_and_Coverage.md,Doc,
 docs/Test_and_Validation_Document.md,Doc,
@@ -91,6 +92,25 @@ src/core/zcl_cd_ops_alert_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every module. Reads ZCD_OPS_ALERT_RULE and
 src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests of the alert router with LTD_* doubles for the alert DAO,"
 src/core/zcl_cd_ops_alert_router.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_auth.clas.abap,ABAP,Authorisation check of the configuration apps on object ZCD_OPS (design
+src/core/zcl_cd_ops_cfg_auth.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_checks.clas.abap,ABAP,"Field checks of the configuration apps, shared by all four behaviour"
+src/core/zcl_cd_ops_cfg_checks.clas.testclasses.abap,ABAP,Domain tests of the field checks used by the configuration apps: DDIC
+src/core/zcl_cd_ops_cfg_checks.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_client.clas.abap,ABAP,Repository for the system settings the configuration apps depend on:
+src/core/zcl_cd_ops_cfg_client.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_factory.clas.abap,ABAP,Resolves the gate of the configuration apps and its seams (T000 / E070
+src/core/zcl_cd_ops_cfg_factory.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_gate.clas.abap,ABAP,The single entry point of the four configuration behaviour pools:
+src/core/zcl_cd_ops_cfg_gate.clas.testclasses.abap,ABAP,Application tests of the configuration gate used by every RAP
+src/core/zcl_cd_ops_cfg_gate.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_injector.clas.abap,ABAP,Unit tests only: writes the double slots of ZCL_CD_OPS_CFG_FACTORY. Always
+src/core/zcl_cd_ops_cfg_injector.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_policy.clas.abap,ABAP,Change policy of the configuration apps (design D-3): new entries only
+src/core/zcl_cd_ops_cfg_policy.clas.testclasses.abap,ABAP,Domain tests of the configuration change policy: new entries only where
+src/core/zcl_cd_ops_cfg_policy.clas.xml,abapGit,
+src/core/zcl_cd_ops_cfg_transport.clas.abap,ABAP,Records the customizing rows changed in one RAP save on a customizing
+src/core/zcl_cd_ops_cfg_transport.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
 src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
@@ -119,6 +139,14 @@ src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, 
 src/core/zif_cd_ops_alert_channel.intf.xml,abapGit,
 src/core/zif_cd_ops_alert_dao.intf.abap,ABAP,"Repository for alert configuration (ZCD_OPS_ALERT_RULE, ZCD_OPS_ALERT_CHN)"
 src/core/zif_cd_ops_alert_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_cfg_auth.intf.abap,ABAP,"Authorisation seam of the configuration apps (object ZCD_OPS, design 1)."
+src/core/zif_cd_ops_cfg_auth.intf.xml,abapGit,
+src/core/zif_cd_ops_cfg_client.intf.abap,ABAP,System reads the configuration apps depend on: client settings (T000)
+src/core/zif_cd_ops_cfg_client.intf.xml,abapGit,
+src/core/zif_cd_ops_cfg_transport.intf.abap,ABAP,Records the changed customizing rows of one RAP save on a customizing
+src/core/zif_cd_ops_cfg_transport.intf.xml,abapGit,
+src/core/zif_cd_ops_cfg_types.intf.abap,ABAP,"Named types and constants of the RAP configuration apps (EBS, FMON,"
+src/core/zif_cd_ops_cfg_types.intf.xml,abapGit,
 src/core/zif_cd_ops_clock.intf.abap,ABAP,Operations suite - clock (injectable for tests)
 src/core/zif_cd_ops_clock.intf.xml,abapGit,
 src/core/zif_cd_ops_store.intf.abap,ABAP,"One auditable store for all modules: run headers (ZCD_OPS_RUN),"

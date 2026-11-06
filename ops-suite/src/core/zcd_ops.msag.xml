@@ -308,6 +308,102 @@
      <MSGNR>318</MSGNR>
      <TEXT>SUM field &amp;1 of table &amp;2 is not numeric</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>401</MSGNR>
+     <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>402</MSGNR>
+     <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>403</MSGNR>
+     <TEXT>Transport request &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>404</MSGNR>
+     <TEXT>&amp;1 is not a customizing request or customizing task</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>405</MSGNR>
+     <TEXT>Transport request &amp;1 is released or no longer modifiable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>406</MSGNR>
+     <TEXT>Entries are deleted in DV1 and transported (client &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>407</MSGNR>
+     <TEXT>No authorization for &amp;1 of &amp;2 configuration (object ZCD_OPS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>408</MSGNR>
+     <TEXT>Changes could not be recorded on transport request &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>410</MSGNR>
+     <TEXT>Class &amp;1 does not exist or does not implement &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>411</MSGNR>
+     <TEXT>Table &amp;1 does not exist in the ABAP dictionary</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>412</MSGNR>
+     <TEXT>Field &amp;1 does not exist in table &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>413</MSGNR>
+     <TEXT>Value &amp;1 is not allowed for &amp;2 (allowed: &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>414</MSGNR>
+     <TEXT>Enter both &amp;1 and &amp;2, or neither</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>415</MSGNR>
+     <TEXT>Amber &amp;1 and red &amp;2 are in the wrong order for &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>416</MSGNR>
+     <TEXT>Rule group &amp;1 has no active rule in ZCD_BTC_RULE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>417</MSGNR>
+     <TEXT>&amp;1 must be greater than zero</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
