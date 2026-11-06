@@ -10,6 +10,7 @@
 *& 2026-11-06 | 275/575 not validated (business decision): R20 removed, sweep test.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
+*& 2026-11-06 | Audit A27 blocks-posting flag and A03 required rules (RULE_GROUP_EMPTY, RULE_UNUSABLE, NONE row).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -252,6 +253,11 @@ INTERFACE zif_cd_ebs_types
       window_days TYPE i,
       active      TYPE abap_bool,
       description TYPE c LENGTH 60,
+      "! Findings of this assignment block posting in enforce mode (A27): rule default
+      "! (ZCD_EBS_RULE_DEF-BLOCKS_POSTING) unless ZCD_BTC_RULE-BLOCKS_POSTING overrides
+      blocks_posting TYPE abap_bool,
+      "! Assignment is active but its rule definition is missing or inactive (A03)
+      unusable    TYPE abap_bool,
     END OF ty_rule_cfg.
   TYPES tt_rule_cfg TYPE STANDARD TABLE OF ty_rule_cfg WITH EMPTY KEY.
 
@@ -264,6 +270,17 @@ INTERFACE zif_cd_ebs_types
 
   "! Rule group that applies to every statement / every mapped line
   CONSTANTS gc_rule_group_all TYPE ty_rule_group VALUE '*'.
+
+  "! Rule ID of an assignment row that declares a rule group as intentionally without
+  "! code-specific rules (A03: every other mapped group needs a usable rule)
+  CONSTANTS gc_rule_none TYPE zif_cd_ops_types=>ty_rule_id VALUE 'NONE'.
+
+  "! ZCD_BTC_RULE-BLOCKS_POSTING: Y = blocks, N = does not block, blank = rule default
+  CONSTANTS:
+    BEGIN OF gc_blocks_override,
+      yes TYPE c LENGTH 1 VALUE 'Y',
+      no  TYPE c LENGTH 1 VALUE 'N',
+    END OF gc_blocks_override.
 
   "! ZCD_EBS_ACCT - house bank account configuration
   TYPES:
@@ -410,6 +427,8 @@ INTERFACE zif_cd_ebs_types
       ref_format                     TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_FORMAT',
       ref_missing                    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REF_MISSING',
       retrieval_not_found            TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETRIEVAL_NOT_FOUND',
+      rule_group_empty               TYPE zif_cd_ops_types=>ty_check_code VALUE 'RULE_GROUP_EMPTY',
+      rule_unusable                  TYPE zif_cd_ops_types=>ty_check_code VALUE 'RULE_UNUSABLE',
       retrieval_status               TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETRIEVAL_STATUS',
       return_item_not_found          TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_ITEM_NOT_FOUND',
       return_lot_status              TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_LOT_STATUS',
@@ -536,6 +555,8 @@ INTERFACE zif_cd_ebs_types
       report_path_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '510',
       lookup_not_found            TYPE zif_cd_ops_types=>ty_msgno VALUE '511',
       lookup_status               TYPE zif_cd_ops_types=>ty_msgno VALUE '512',
+      rule_group_empty            TYPE zif_cd_ops_types=>ty_msgno VALUE '513',
+      rule_unusable               TYPE zif_cd_ops_types=>ty_msgno VALUE '514',
     END OF gc_msg.
 
 ENDINTERFACE.

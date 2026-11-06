@@ -115,6 +115,7 @@ etag master LocalLastChangedAt
     Tolerance = tolerance;
     WindowDays = window_days;
     Active = active;
+    BlocksPosting = blocks_posting;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;
@@ -149,6 +150,7 @@ etag master LocalLastChangedAt
     DefaultAction = default_action;
     Description = description;
     Active = active;
+    BlocksPosting = blocks_posting;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

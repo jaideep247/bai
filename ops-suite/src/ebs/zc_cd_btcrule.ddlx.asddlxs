@@ -49,6 +49,9 @@ annotate entity ZC_CD_BtcRule with
   @UI.identification: [{ position: 110 }]
   Active;
 
+  @UI.identification: [{ position: 120 }]
+  BlocksPosting;
+
   @UI.hidden: true
   ChangedBy;
 

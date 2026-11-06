@@ -10,6 +10,7 @@
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: package scope reconciled; skipped after a rule failure.
 *& 2026-11-06 | Release tests approved_release_unblocks, other_block_still_blocks, rule_failure_not_releasable.
+*& 2026-11-06 | Audit A27 / A03: blocking flag, empty and unusable rule groups.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -274,6 +275,14 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS lock_released_after_run      FOR TESTING.
     METHODS validated_lines_reconciled   FOR TESTING.
     METHODS failed_rule_skips_reconcile  FOR TESTING.
+    METHODS blocking_rule_blocks_posting FOR TESTING.
+    METHODS advisory_rule_never_blocks   FOR TESTING.
+    METHODS empty_rule_group_blocks      FOR TESTING.
+    METHODS none_row_makes_group_optional FOR TESTING.
+    METHODS unusable_rule_blocks         FOR TESTING.
+    METHODS decide
+      RETURNING
+        VALUE(rs_decision) TYPE zcl_cd_ebs_engine=>ty_decision.
 ENDCLASS.
 
 
@@ -755,6 +764,112 @@ CLASS ltc_engine IMPLEMENTATION.
           is_package = mo_source->mt_packages[ 1 ] ).
         cl_abap_unit_assert=>assert_true( act = ls_decision-block
                                           msg = 'A PLUGIN_ERROR must still block although a release exists' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD decide.
+    TRY.
+        rs_decision = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = mo_source->mt_packages[ 1 ] ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Posting check raised: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A27: a failed check of a rule whose 'blocks posting' flag is on blocks posting in enforce mode
+  METHOD blocking_rule_blocks_posting.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-assign_sign_rule = abap_true.
+        ls_flags-wrong_sign       = abap_true.
+        configure_scenario( ls_flags ).
+        mo_cfg->mt_rules[ 1 ]-blocks_posting = abap_true.
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A blocking rule that failed must block posting' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_decision-findings[ rule_id = 'R01' ]-action OPTIONAL )
+          exp = zif_cd_ops_types=>gc_action-block
+          msg = 'The finding of a blocking rule must carry action BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A27: an advisory rule (flag off) records its finding but never blocks posting
+  METHOD advisory_rule_never_blocks.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-assign_sign_rule = abap_true.
+        ls_flags-wrong_sign       = abap_true.
+        configure_scenario( ls_flags ).
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-block
+                                           msg = 'An advisory rule must not block posting' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( ls_decision-findings[ rule_id = 'R01' ] ) )
+                                          msg = 'The advisory finding must still be recorded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A03: a mapped rule group without any usable rule is a configuration gap - it blocks
+  METHOD empty_rule_group_blocks.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A mapped group without rules must block posting' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty ] ) )
+          msg = 'The gap must be recorded as RULE_GROUP_EMPTY' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A03: a NONE row declares a group intentionally without code-specific rules
+  METHOD none_row_makes_group_optional.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        add_rule( iv_group = gc_test-group_new iv_id = zif_cd_ebs_types=>gc_rule_none iv_class = space
+                  iv_level = zif_cd_ebs_types=>gc_level-line ).
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-block
+                                           msg = 'An explicitly optional group must not block' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_decision-findings
+                                             msg = 'An explicitly optional group raises no finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A03: an assignment whose rule definition is missing or inactive never silently disappears
+  METHOD unusable_rule_blocks.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-assign_sign_rule = abap_true.
+        ls_flags-wrong_sign       = abap_true.
+        configure_scenario( ls_flags ).
+        mo_cfg->mt_rules[ 1 ]-unusable = abap_true.
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'An unusable required rule must block posting' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = zif_cd_ebs_types=>gc_check_code-rule_unusable ] ) )
+          msg = 'The gap must be recorded as RULE_UNUSABLE' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = zif_cd_ebs_types=>gc_check_code-sign_mismatch ] ) )
+          msg = 'An unusable rule must not be executed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

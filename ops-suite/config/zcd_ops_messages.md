@@ -268,3 +268,5 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 510 | Enter the bank file path (P_PATH) to validate a file |
 | 511 | Lookup &1: &2 not found in &3 |
 | 512 | Lookup &1: &2 has status &3, expected &4 |
+| 513 | Rule group &1 has no usable rule assignment (configuration) |
+| 514 | Rule &1 of group &2 is missing or inactive in ZCD_EBS_RULE_DEF |

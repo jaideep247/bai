@@ -1580,6 +1580,18 @@
      <MSGNR>512</MSGNR>
      <TEXT>Lookup &amp;1: &amp;2 has status &amp;3, expected &amp;4</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>513</MSGNR>
+     <TEXT>Rule group &amp;1 has no usable rule assignment (configuration)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>514</MSGNR>
+     <TEXT>Rule &amp;1 of group &amp;2 is missing or inactive in ZCD_EBS_RULE_DEF</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

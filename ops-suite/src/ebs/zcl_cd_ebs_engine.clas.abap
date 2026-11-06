@@ -17,6 +17,7 @@
 *& 2026-11-06 | Posting gate honours approved blocked-line releases (design 6.2).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A03: configuration gaps (unusable assignment, group without usable rule) block; NONE rows skipped.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -150,6 +151,14 @@ CLASS zcl_cd_ebs_engine DEFINITION
     METHODS load_configuration
       RAISING
         zcx_cd_ops_error.
+
+    "! A03: assignments that cannot run and mapped rule groups without any usable rule
+    "! are configuration gaps - one finding with action BLOCK per affected line (or run)
+    METHODS configuration_gaps
+      IMPORTING
+        it_lines           TYPE zif_cd_ebs_types=>tt_line
+      RETURNING
+        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
 
     METHODS execute_rule
       IMPORTING
@@ -339,8 +348,12 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     INSERT LINES OF mo_resolver->resolve( EXPORTING it_statements = cs_package-statements
                                           CHANGING  ct_lines      = cs_package-lines ) INTO TABLE rt_findings.
 
+    " 0. Configuration gaps (A03) - never a silent pass
+    INSERT LINES OF configuration_gaps( cs_package-lines ) INTO TABLE rt_findings.
+
     " 1. Statement checks
-    LOOP AT mt_rules INTO DATA(ls_stmt_rule) WHERE level = zif_cd_ebs_types=>gc_level-statement.
+    LOOP AT mt_rules INTO DATA(ls_stmt_rule) WHERE level = zif_cd_ebs_types=>gc_level-statement
+                                               AND unusable = abap_false.
       INSERT LINES OF execute_rule( is_rule       = ls_stmt_rule
                                     it_statements = cs_package-statements
                                     it_lines      = cs_package-lines ) INTO TABLE rt_findings.
@@ -357,6 +370,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       ENDLOOP.
       LOOP AT mt_rules INTO DATA(ls_line_rule)
            WHERE level = zif_cd_ebs_types=>gc_level-line
+             AND unusable = abap_false
+             AND rule_id <> zif_cd_ebs_types=>gc_rule_none
              AND ( rule_group = lv_group OR rule_group = zif_cd_ebs_types=>gc_rule_group_all ).
         INSERT LINES OF execute_rule( is_rule       = ls_line_rule
                                       it_statements = cs_package-statements
@@ -446,6 +461,54 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DELETE mt_rules WHERE active = abap_false.
     SORT mt_rules BY level rule_group seq rule_id.
     mv_config_ready = abap_true.
+  ENDMETHOD.
+
+
+  METHOD configuration_gaps.
+    LOOP AT mt_rules INTO DATA(ls_run_rule) WHERE unusable = abap_true
+                                              AND rule_group = zif_cd_ebs_types=>gc_rule_group_all.
+      INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
+                      object_key  = ls_run_rule-rule_id
+                      group2      = ls_run_rule-rule_group
+                      rule_id     = ls_run_rule-rule_id
+                      check_code  = zif_cd_ebs_types=>gc_check_code-rule_unusable
+                      severity    = zif_cd_ops_types=>gc_severity-error
+                      action      = zif_cd_ops_types=>gc_action-block
+                      message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
+                                                           iv_v1    = ls_run_rule-rule_id
+                                                           iv_v2    = ls_run_rule-rule_group ) )
+        INTO TABLE rt_findings.
+    ENDLOOP.
+
+    LOOP AT it_lines INTO DATA(ls_line) WHERE blocked = abap_false.
+      IF ls_line-rule_group IS INITIAL OR ls_line-rule_group = zif_cd_ebs_types=>gc_rule_group_all.
+        CONTINUE.
+      ENDIF.
+      LOOP AT mt_rules INTO DATA(ls_rule) WHERE rule_group = ls_line-rule_group AND unusable = abap_true.
+        INSERT zcl_cd_ebs_finding=>for_line(
+                 is_line       = ls_line
+                 iv_rule_id    = ls_rule-rule_id
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_unusable
+                 iv_severity   = zif_cd_ops_types=>gc_severity-error
+                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_unusable
+                                                        iv_v1    = ls_rule-rule_id
+                                                        iv_v2    = ls_rule-rule_group ) )
+          INTO TABLE rt_findings.
+      ENDLOOP.
+      " a usable rule or an explicit NONE row (group intentionally without own rules)
+      IF NOT line_exists( mt_rules[ rule_group = ls_line-rule_group unusable = abap_false ] ).
+        INSERT zcl_cd_ebs_finding=>for_line(
+                 is_line       = ls_line
+                 iv_rule_id    = zif_cd_ebs_types=>gc_engine-rule_id
+                 iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty
+                 iv_severity   = zif_cd_ops_types=>gc_severity-error
+                 iv_action     = zif_cd_ops_types=>gc_action-block
+                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_group_empty
+                                                        iv_v1    = ls_line-rule_group ) )
+          INTO TABLE rt_findings.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

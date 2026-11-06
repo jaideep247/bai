@@ -1,27 +1,27 @@
-RULE_ID,RULE_LEVEL,CLASS_NAME,DEFAULT_SEVERITY,DEFAULT_ACTION,DESCRIPTION,ACTIVE
-S01,S,ZCL_CD_EBS_R_S01_CONTINUITY,E,EXCEPTION,Opening balance = prior statement closing,X
-S02,S,ZCL_CD_EBS_R_S02_BALANCE,B,BLOCK,Opening + credits - debits = closing,X
-S03,S,ZCL_CD_EBS_R_S03_SEQUENCE,E,EXCEPTION,Statement number continuity (no gap / repeat),X
-S04,S,ZCL_CD_EBS_R_S04_ACCOUNT,B,BLOCK,"Account configured, currency valid",X
-S05,S,ZCL_CD_EBS_R_S05_DATE,E,EXCEPTION,Statement date sanity,X
-S07,S,ZCL_CD_EBS_R_S07_DUPLICATE,B,BLOCK,Duplicate statement,X
-S09,S,ZCL_CD_EBS_R_S09_COVERAGE,E,NOTIFY,100 % BTC mapping coverage,X
-S10,S,ZCL_CD_EBS_R_S10_COMPLETE,W,EXCEPTION,Every entry posted or blocked (completeness),X
-S12,S,ZCL_CD_EBS_R_S12_COUNT,E,EXCEPTION,Entry count = declared count (imported),X
-R18,S,ZCL_CD_EBS_R_R18_GL_BALANCE,W,NOTIFY,Bank G/L balance = statement closing,X
-R01,L,ZCL_CD_EBS_R_R01_SIGN,E,EXCEPTION,Amount sign vs expected direction,X
-R02,L,ZCL_CD_EBS_R_R02_BOUNDS,W,EXCEPTION,Amount bounds (also R11 fee tolerance),X
-R03,L,ZCL_CD_EBS_R_R03_CURRENCY,E,EXCEPTION,Currency match,X
-R04,L,ZCL_CD_EBS_R_R04_REFERENCE,E,EXCEPTION,Required reference present,X
-R05,L,ZCL_CD_EBS_R_R05_REASON,E,EXCEPTION,"Valid NACHA return / NOC reason, mapped",X
-R07,L,ZCL_CD_EBS_R_R07_PAYMENT,E,EXCEPTION,Match to payment run (DPAYH) and status,X
-R07C,L,ZCL_CD_EBS_R_R07C_CHECK,E,EXCEPTION,"Match to check register, not cancelled",X
-R07L,L,ZCL_CD_EBS_R_R07L_RETRIEVAL,E,EXCEPTION,ACH retrieval log status,X
-R07R,L,ZCL_CD_EBS_R_R07R_RETURN_LOT,E,EXCEPTION,Returns lot item and lot status,X
-R08,L,ZCL_CD_EBS_R_R08_CHECK_AMOUNT,E,EXCEPTION,Amount matches original within tolerance,X
-R09,L,ZCL_CD_EBS_R_R09_DUPLICATE,W,EXCEPTION,Duplicate entry,X
-R10,L,ZCL_CD_EBS_R_R10_VALUE_DATE,W,NOTIFY,Value date window (also R13 reversal window),X
-R12,L,ZCL_CD_EBS_R_R12_CODE_TOTAL,E,EXCEPTION,Settlement total = register / run total,X
-R15,L,ZCL_CD_EBS_R_R15_POSTING_RULE,E,EXCEPTION,Posting rule resolves and matches map,X
-R19,L,ZCL_CD_EBS_R_R19_FI_DOCUMENT,E,EXCEPTION,FI posting exists / cleared,X
-R21,L,ZCL_CD_EBS_R_R21_LOOKUP,E,EXCEPTION,Configurable table lookup (ZCD_EBS_LOOKUP via PARAM1),X
+RULE_ID,RULE_LEVEL,CLASS_NAME,DEFAULT_SEVERITY,DEFAULT_ACTION,DESCRIPTION,ACTIVE,BLOCKS_POSTING
+S01,S,ZCL_CD_EBS_R_S01_CONTINUITY,E,EXCEPTION,Opening balance = prior statement closing,X,
+S02,S,ZCL_CD_EBS_R_S02_BALANCE,B,BLOCK,Opening + credits - debits = closing,X,X
+S03,S,ZCL_CD_EBS_R_S03_SEQUENCE,E,EXCEPTION,Statement number continuity (no gap / repeat),X,
+S04,S,ZCL_CD_EBS_R_S04_ACCOUNT,B,BLOCK,"Account configured, currency valid",X,X
+S05,S,ZCL_CD_EBS_R_S05_DATE,E,EXCEPTION,Statement date sanity,X,
+S07,S,ZCL_CD_EBS_R_S07_DUPLICATE,B,BLOCK,Duplicate statement,X,X
+S09,S,ZCL_CD_EBS_R_S09_COVERAGE,E,NOTIFY,100 % BTC mapping coverage,X,
+S10,S,ZCL_CD_EBS_R_S10_COMPLETE,W,EXCEPTION,Every entry posted or blocked (completeness),X,
+S12,S,ZCL_CD_EBS_R_S12_COUNT,E,EXCEPTION,Entry count = declared count (imported),X,
+R18,S,ZCL_CD_EBS_R_R18_GL_BALANCE,W,NOTIFY,Bank G/L balance = statement closing,X,
+R01,L,ZCL_CD_EBS_R_R01_SIGN,E,EXCEPTION,Amount sign vs expected direction,X,
+R02,L,ZCL_CD_EBS_R_R02_BOUNDS,W,EXCEPTION,Amount bounds (also R11 fee tolerance),X,
+R03,L,ZCL_CD_EBS_R_R03_CURRENCY,E,EXCEPTION,Currency match,X,
+R04,L,ZCL_CD_EBS_R_R04_REFERENCE,E,EXCEPTION,Required reference present,X,
+R05,L,ZCL_CD_EBS_R_R05_REASON,E,EXCEPTION,"Valid NACHA return / NOC reason, mapped",X,
+R07,L,ZCL_CD_EBS_R_R07_PAYMENT,E,EXCEPTION,Match to payment run (DPAYH) and status,X,X
+R07C,L,ZCL_CD_EBS_R_R07C_CHECK,E,EXCEPTION,"Match to check register, not cancelled",X,X
+R07L,L,ZCL_CD_EBS_R_R07L_RETRIEVAL,E,EXCEPTION,ACH retrieval log status,X,X
+R07R,L,ZCL_CD_EBS_R_R07R_RETURN_LOT,E,EXCEPTION,Returns lot item and lot status,X,X
+R08,L,ZCL_CD_EBS_R_R08_CHECK_AMOUNT,E,EXCEPTION,Amount matches original within tolerance,X,X
+R09,L,ZCL_CD_EBS_R_R09_DUPLICATE,W,EXCEPTION,Duplicate entry,X,
+R10,L,ZCL_CD_EBS_R_R10_VALUE_DATE,W,NOTIFY,Value date window (also R13 reversal window),X,
+R12,L,ZCL_CD_EBS_R_R12_CODE_TOTAL,E,EXCEPTION,Settlement total = register / run total,X,X
+R15,L,ZCL_CD_EBS_R_R15_POSTING_RULE,E,EXCEPTION,Posting rule resolves and matches map,X,
+R19,L,ZCL_CD_EBS_R_R19_FI_DOCUMENT,E,EXCEPTION,FI posting exists / cleared,X,X
+R21,L,ZCL_CD_EBS_R_R21_LOOKUP,E,EXCEPTION,Configurable table lookup (ZCD_EBS_LOOKUP via PARAM1),X,X

@@ -7,6 +7,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Audit A03: configuration gaps are never releasable.
 *&---------------------------------------------------------------------*
 CLASS ltc_release_policy DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -36,6 +37,7 @@ CLASS ltc_release_policy DEFINITION FINAL
     METHODS requester_cannot_approve     FOR TESTING.
     METHODS second_user_may_approve      FOR TESTING.
     METHODS request_needs_line_and_check FOR TESTING.
+    METHODS config_gap_never_released    FOR TESTING.
 ENDCLASS.
 
 
@@ -157,6 +159,23 @@ CLASS ltc_release_policy IMPLEMENTATION.
                                                           iv_reason     = space )-msgno
           exp = zif_cd_ebs_release_types=>gc_msg-no_reason
           msg = 'A request without reason must be refused (062)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A03: a configuration gap (no usable rule for the line) is fixed in configuration, never
+  " released line by line - even an approved release for that check code changes nothing
+  METHOD config_gap_never_released.
+    TRY.
+        DATA(lt_releases) = approved_release( ).
+        lt_releases[ 1 ]-check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty.
+        DATA(lt_findings) = zcl_cd_ebs_release_policy=>apply(
+          it_findings = VALUE #( ( block_finding( iv_check_code = zif_cd_ebs_types=>gc_check_code-rule_group_empty ) ) )
+          it_releases = lt_releases ).
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-action exp = zif_cd_ops_types=>gc_action-block
+                                            msg = 'A configuration gap must never be released' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
