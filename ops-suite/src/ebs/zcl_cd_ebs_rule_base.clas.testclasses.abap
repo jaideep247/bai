@@ -852,6 +852,8 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS teardown.
     METHODS s01_opening_ne_prior_closing FOR TESTING.
     METHODS s01_deviation_within_toler   FOR TESTING.
+    METHODS s01_nearest_package_prior    FOR TESTING.
+    METHODS s01_newer_stored_prior_wins  FOR TESTING.
     METHODS s02_arithmetic_break_fails   FOR TESTING.
     METHODS s02_balanced_statement_ok    FOR TESTING.
     METHODS s03_number_gap_detected      FOR TESTING.
@@ -891,6 +893,55 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
 
 
   " S01 / acceptance test 4: a deviation up to the configured 0.01 tolerance passes
+  " Audit A15: the nearest earlier statement of the account (date, then number) is the
+  " predecessor - not the last one in table order
+  METHOD s01_nearest_package_prior.
+    TRY.
+        " day 3 statement, opening 500 = closing of day 2
+        add_statement( iv_opening = '500.00' iv_closing = '600.00' ).
+        " day 2 (nearest) closes at 500
+        add_statement( iv_opening = '400.00' iv_closing = '500.00' ).
+        mt_stmts[ 2 ]-stmt_key  = 'S0002'.
+        mt_stmts[ 2 ]-stmt_no   = '00041'.
+        mt_stmts[ 2 ]-stmt_date = gc_test-today - 1.
+        " day 1 closes at 400 and comes last in the table
+        add_statement( iv_opening = '300.00' iv_closing = '400.00' ).
+        mt_stmts[ 3 ]-stmt_key  = 'S0003'.
+        mt_stmts[ 3 ]-stmt_no   = '00040'.
+        mt_stmts[ 3 ]-stmt_date = gc_test-today - 2.
+        CLEAR: mt_stmts[ 2 ]-has_opening, mt_stmts[ 3 ]-has_opening.
+        run( iv_class = 'ZCL_CD_EBS_R_S01_CONTINUITY' is_rule = rule( 'S01' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Day 3 must be compared with day 2, the nearest predecessor' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A15: a stored statement newer than every in-package candidate is the predecessor
+  METHOD s01_newer_stored_prior_wins.
+    TRY.
+        mo_feb_dao->ms_prior-aznum = '00041'.
+        mo_feb_dao->ms_prior-azdat = gc_test-today - 1.
+        mo_feb_dao->ms_prior-esbtr = '500.00'.
+        mo_feb_dao->ms_prior-esvoz = 'H'.
+        add_statement( iv_opening = '500.00' iv_closing = '600.00' ).
+        " in-package candidate two days back closes at 400
+        add_statement( iv_opening = '300.00' iv_closing = '400.00' ).
+        mt_stmts[ 2 ]-stmt_key  = 'S0003'.
+        mt_stmts[ 2 ]-stmt_no   = '00040'.
+        mt_stmts[ 2 ]-stmt_date = gc_test-today - 2.
+        CLEAR mt_stmts[ 2 ]-has_opening.
+        run( iv_class = 'ZCL_CD_EBS_R_S01_CONTINUITY' is_rule = rule( 'S01' ) ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'The stored day-2 statement is nearer than the package day-1 one' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD s01_deviation_within_toler.
     mo_feb_dao->ms_prior-aznum = '00041'.
     mo_feb_dao->ms_prior-azdat = '20261104'.
