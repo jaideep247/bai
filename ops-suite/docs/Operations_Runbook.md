@@ -72,11 +72,21 @@ All three reports are re-runnable: EBS and HCK create a new run; FMON registry e
 
 **FMON after a network or interface outage.** Once the connection is back (PRISM, bank SFTP, ACK feed), simply re-run `ZCD_FMON_MONITOR` for the affected business date — or wait for the next 30-minute cycle. The run reads the source tables again and writes each missing stage event once; events already registered are not duplicated (same source row + stage = one event), and SLA findings raised during the outage stay in that run's history — the re-run evaluates the late stage again (the exception carry-forward closes what is no longer found). For a business date older than the job variant's window, run it with that date in the selection. Nothing has to be deleted or reset first.
 
+## 5c. EBS POSTING_INCOMPLETE — posting not complete when the validation ran
+
+`ZCD_EBS_VALIDATE` runs after the statement import, the posting job (FEBP) and the payment clearing job (`EBS_VALIDATION.md` §A0). **POSTING_INCOMPLETE** (rule S13, one finding per statement, count and total of the lines; run message "… entries not evaluated (posting not complete)"; run amber or red, never green) means entries that should be posted were not posted when the run read FEBEP. Their posting-dependent checks (R07, R07L, R07R, R18, R19, R21, S10) were **not evaluated** — nothing was passed or failed for them, and their earlier exceptions stay open.
+
+1. **Predecessors.** In Control-M (and SM37 for the SAP jobs) check that the statement import, FEBP and the payment clearing job for that business date ended successfully *before* the validation started. A predecessor still running, failed or started late → let it finish (or have its owner re-run it under its own runbook); the suite never starts or reruns it.
+2. **Re-run the validation** once the predecessors have finished: start `ZCD_EBS_VALIDATE` with the same variant (Control-M rerun or SE38). The run is idempotent — it reads the statements again, raises an exception that is still true once (same owner, due date and first-seen time) and resolves POSTING_INCOMPLETE automatically when the lines are posted. Nothing has to be deleted first.
+3. **Still incomplete after the predecessors finished** → the lines were left unposted: work them in FEBAN post-processing (and FPCPL for payment-lot clarification) under the cash-management runbook, then re-run step 2.
+4. **Every statement of every run reports it** → check `EBS_FEB_POSTED_FIELDS` (VERIFY-SE11: VB1OK / VB2OK; if posting area 2 is not used set `VB1OK`). A name that is not a FEBEP field stops the run with message 051.
+
 ## 5b. Statuses introduced by the audit fixes
 
 | Where | Status / finding | Meaning | Action |
 |---|---|---|---|
 | Run header | **N** (no data) | The source delivered nothing to evaluate; RAG grey, never green | Check the FEB date range or the file path; if an empty feed is normal for that variant set `EBS_EMPTY_FEED_OK` |
+| EBS statement | POSTING_INCOMPLETE (S13, warning) | Entries expected to post were not posted when the run read FEBEP; their posting-dependent checks were not evaluated | §5c: check the predecessor jobs, re-run `ZCD_EBS_VALIDATE` |
 | EBS line | AWAITING_LOT_TRANSFER (warning) | Lookup not found while the statement is younger than `EBS_INFLIGHT_HOURS` — FPB7 / FP09 may still be running | None if it clears on the next run; otherwise investigate the lot transfer |
 | EBS line | Disposition NOT_POSTED / ON_ACCOUNT / EXCEPTION / BLOCK | What the posting caller must do with the line | Follow the disposition; BLOCK lines need a release (EBS release app) or a fix |
 | FMON file | PERSIST_CONFLICT | Another run (or a manual status) changed the file first; the newer state was kept | None unless it repeats |

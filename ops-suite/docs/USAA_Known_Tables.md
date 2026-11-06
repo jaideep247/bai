@@ -24,7 +24,7 @@ Facts below were confirmed in production work in 2026 (payment engine reference)
 | `EFKKCLEGPI` | FPY1 locks per partner **interval** (GPART_V..GPART_B, one RUNKEY + BUKRS, `_SCOPE 3`) | — |
 | **Do not exist** | `DFKKRNIT`, `DFKKRAFT` — never configure | — |
 
-Field names **not** in the reference (still `VERIFY-SE11`): the FIN-number and timestamp fields of `ZCD_PAYM_REQ_LOG`, every field of `ZCD_SPE_EXCP_LOG` and `ZCD_CHECK_HIST` other than the status domain, the ACK tables (`ZCD_ACH_ACK`, `ZCD_WIRE_ACK`), `ZCDT_REGUT`, `ZCD_STRP_POUT_LOG`, `ZCD_ACH_RTRV_LOG` status field (three candidate names, parity C4).
+Field names **not** in the reference (still `VERIFY-SE11`): `FEBEP-VB1OK` / `FEBEP-VB2OK` (posting area 1 / 2 completed — default of `EBS_FEB_POSTED_FIELDS`, the EBS posting state of the operating model 2026-11-06; confirm names, the value X and whether VB2OK is set for items without an area-2 posting), the FIN-number and timestamp fields of `ZCD_PAYM_REQ_LOG`, every field of `ZCD_SPE_EXCP_LOG` and `ZCD_CHECK_HIST` other than the status domain, the ACK tables (`ZCD_ACH_ACK`, `ZCD_WIRE_ACK`), `ZCDT_REGUT`, `ZCD_STRP_POUT_LOG`, `ZCD_ACH_RTRV_LOG` status field (three candidate names, parity C4).
 
 ## 2. How the suite uses them (phase 3 of the RAP build) — **built 2026-11-06**
 
