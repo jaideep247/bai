@@ -1,0 +1,66 @@
+// UI annotations: EBS rules and mapping - Rule assignments
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Rule assignment',
+                     typeNamePlural: 'Rule assignments',
+                     title: { type: #STANDARD, value: 'RuleGroup' } } }
+annotate entity ZC_CD_BtcRule with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  RuleGroup;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  RuleId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Seq;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Severity;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  ActionCode;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Param1;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  Param2;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Param3;
+
+  @UI.identification: [{ position: 90 }]
+  Tolerance;
+
+  @UI.identification: [{ position: 100 }]
+  WindowDays;
+
+  @UI.identification: [{ position: 110 }]
+  Active;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

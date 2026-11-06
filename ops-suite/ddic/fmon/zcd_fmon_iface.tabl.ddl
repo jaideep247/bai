@@ -27,5 +27,9 @@ define table zcd_fmon_iface {
   owner        : syuname;
   active       : abap_boolean;
   description  : abap.char(60);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Alert routing is not maintained here: ZCD_OPS_ALERT_RULE (module FMON, group1 = IFACE_ID pattern).

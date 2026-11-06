@@ -1,0 +1,8 @@
+@EndUserText.label: 'Alerting and parameters'
+@ObjectModel.leadingEntity.name: 'ZC_CD_OPSCFGALL'
+define service ZUI_CD_OPS_CFG {
+  expose ZC_CD_OpsCfgAll as OpsCfgAll;
+  expose ZC_CD_AlertRule as AlertRule;
+  expose ZC_CD_AlertChannel as AlertChannel;
+  expose ZC_CD_OpsParam as OpsParam;
+}

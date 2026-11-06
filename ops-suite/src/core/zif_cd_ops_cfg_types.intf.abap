@@ -59,6 +59,17 @@ INTERFACE zif_cd_ops_cfg_types
       v3     TYPE ty_msg_var,
     END OF ty_message.
 
+  "! Field check result of a behaviour pool: message + element to highlight
+  TYPES:
+    BEGIN OF ty_field_message,
+      number  TYPE ty_msg_number,
+      v1      TYPE ty_msg_var,
+      v2      TYPE ty_msg_var,
+      v3      TYPE ty_msg_var,
+      element TYPE ty_name,
+    END OF ty_field_message.
+  TYPES tt_field_message TYPE STANDARD TABLE OF ty_field_message WITH EMPTY KEY.
+
   "! RAP entity (alias) <-> customizing table, for transport recording
   TYPES:
     BEGIN OF ty_relation,

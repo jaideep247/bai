@@ -1,0 +1,85 @@
+projection;
+strict ( 2 );
+use draft;
+
+define behavior for ZC_CD_FmonCfgAll alias FmonCfgAll
+{
+  use update;
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Resume;
+  use action Prepare;
+
+  use association _FmonIface { create; with draft; }
+  use association _FmonSla { create; with draft; }
+  use association _FmonSource { create; with draft; }
+  use association _FmonSourceMap { create; with draft; }
+  use association _FmonCheck { create; with draft; }
+  use association _FmonLotCfg { create; with draft; }
+  use association _FmonCalendar { create; with draft; }
+}
+
+define behavior for ZC_CD_FmonIface alias FmonIface
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonSla alias FmonSla
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonSource alias FmonSource
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonSourceMap alias FmonSourceMap
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonCheck alias FmonCheck
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonLotCfg alias FmonLotCfg
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonCalendar alias FmonCalendar
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}

@@ -15,4 +15,8 @@ define table zcd_fmon_chk {
   // NAME=VALUE;NAME2=VALUE2, e.g. GRACE_MIN=60, STAGE=SENT_TO_PRISM, TOLERANCE=0.01
   params       : abap.char(255);
   description  : abap.char(60);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }

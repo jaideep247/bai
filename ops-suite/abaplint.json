@@ -68,6 +68,8 @@
     "exporting": true,
     "preferred_compare_operator": true,
     "use_new": true,
-    "check_comments": false
+    "check_comments": false,
+    "cds_parser_error": true,
+    "bdef_parser_error": true
   }
 }

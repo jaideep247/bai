@@ -1,0 +1,37 @@
+// UI annotations: Alerting and parameters - Runtime parameters
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Parameter',
+                     typeNamePlural: 'Runtime parameters',
+                     title: { type: #STANDARD, value: 'ParamName' } } }
+annotate entity ZC_CD_OpsParam with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  ParamName;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  ParamValue;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Description;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

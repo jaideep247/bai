@@ -1,0 +1,57 @@
+// UI annotations: EBS rules and mapping - House bank accounts
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'House bank account',
+                     typeNamePlural: 'House bank accounts',
+                     title: { type: #STANDARD, value: 'Bukrs' } } }
+annotate entity ZC_CD_HouseBankAcct with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Bukrs;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Hbkid;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Hktid;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  AccountNo;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  BankKey;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Format;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  FlowDefault;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Currency;
+
+  @UI.identification: [{ position: 90 }]
+  GlAccount;
+
+  @UI.identification: [{ position: 100 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

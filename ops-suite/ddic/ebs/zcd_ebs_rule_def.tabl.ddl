@@ -14,4 +14,8 @@ define table zcd_ebs_rule_def {
   default_action   : abap.char(10);
   description      : abap.char(60);
   active           : abap_boolean;
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }

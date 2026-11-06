@@ -1,0 +1,69 @@
+// UI annotations: File monitoring setup - Returns / NOC lots
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Lot configuration',
+                     typeNamePlural: 'Returns / NOC lots',
+                     title: { type: #STANDARD, value: 'IfaceId' } } }
+annotate entity ZC_CD_FmonLotCfg with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  IfaceId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  LotType;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  HdrTable;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  HdrLotField;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  HdrLinkField;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  ItemTable;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  ItemLotField;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  ItemKeyField;
+
+  @UI.identification: [{ position: 90 }]
+  ItemStatusField;
+
+  @UI.identification: [{ position: 100 }]
+  ItemLinkField;
+
+  @UI.identification: [{ position: 110 }]
+  LinkBy;
+
+  @UI.identification: [{ position: 120 }]
+  DoneValues;
+
+  @UI.identification: [{ position: 130 }]
+  NocSlaDays;
+
+  @UI.identification: [{ position: 140 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

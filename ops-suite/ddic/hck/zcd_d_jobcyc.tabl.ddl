@@ -1,0 +1,19 @@
+@EndUserText.label : 'Draft: Job cycles'
+@AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #RESTRICTED
+define table zcd_d_jobcyc {
+  key mandt : abap.clnt not null;
+  key cycleid : abap.char(20) not null;
+  singletonid : abap.int1;
+  description : abap.char(60);
+  calendar : abap.char(2);
+  active : abap_boolean;
+  changedby : syuname;
+  changedat : timestampl;
+  lastchangedby : abp_lastchange_user;
+  lastchangedat : abp_lastchange_tstmpl;
+  locallastchangedat : abp_locinst_lastchange_tstmpl;
+  "%admin" : include sych_bdl_draft_admin_inc;
+}

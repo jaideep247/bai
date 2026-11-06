@@ -79,7 +79,9 @@
       "skipNames": []
     },
     "unused_methods": {
-      "exclude": [],
+      "exclude": [
+        "zbp_r_cd_.*\\.clas\\.locals_imp\\.abap$"
+      ],
       "severity": "Error"
     },
     "unreachable_code": {
@@ -153,7 +155,9 @@
       "severity": "Error"
     },
     "check_abstract": {
-      "exclude": [],
+      "exclude": [
+        "zbp_r_cd_.*\\.clas\\.abap$"
+      ],
       "severity": "Error"
     },
     "call_transaction_authority_check": {

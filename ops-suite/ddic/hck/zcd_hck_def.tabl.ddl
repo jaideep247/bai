@@ -24,5 +24,9 @@ define table zcd_hck_def {
   timeout_sec   : abap.int4;
   changed_by    : syuname;
   changed_at    : timestampl;
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Alert routing is not a column here: ZCD_OPS_ALERT_RULE matches on module HCK and GROUP2 = check id.

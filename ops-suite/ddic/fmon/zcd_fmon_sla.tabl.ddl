@@ -13,4 +13,8 @@ define table zcd_fmon_sla {
   basis        : abap.char(1);
   // Severity when the stage is overdue (late arrival uses check parameter LATE_SEVERITY)
   severity     : abap.char(1);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }

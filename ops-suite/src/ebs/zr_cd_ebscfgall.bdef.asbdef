@@ -1,0 +1,244 @@
+managed implementation in class zbp_r_cd_ebscfgall unique;
+strict ( 2 );
+with draft;
+
+// EBS rules and mapping: singleton root (virtual, nothing persisted) - lock, total ETag,
+// draft and the customizing request; every customizing table is a child.
+define behavior for ZR_CD_EbsCfgAll alias EbsCfgAll
+with unmanaged save
+draft table zcd_d_ebscfg
+lock master
+total etag LastChangedAtMax
+authorization master ( global )
+##DRAFT_OP_NOT_REQUIRED
+{
+  update;
+  field ( readonly ) SingletonID, LastChangedAtMax;
+
+  association _BtcMap { create ( features : global ); with draft; }
+  association _BtcRule { create ( features : global ); with draft; }
+  association _RuleDef { create ( features : global ); with draft; }
+  association _HouseBankAcct { create ( features : global ); with draft; }
+  association _FlowPattern { create ( features : global ); with draft; }
+  association _ReasonMap { create ( features : global ); with draft; }
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation BtcMap ~ validateFields;
+    validation BtcMap ~ validateTransport;
+    validation BtcRule ~ validateFields;
+    validation BtcRule ~ validateTransport;
+    validation RuleDef ~ validateFields;
+    validation RuleDef ~ validateTransport;
+    validation HouseBankAcct ~ validateFields;
+    validation HouseBankAcct ~ validateTransport;
+    validation FlowPattern ~ validateFields;
+    validation FlowPattern ~ validateTransport;
+    validation ReasonMap ~ validateTransport;
+  }
+}
+
+define behavior for ZR_CD_BtcMap alias BtcMap
+persistent table zcd_btc_map
+with additional save
+draft table zcd_d_btcmap
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Scheme, BtcCode, BankKey, FlowType;
+  field ( mandatory : create ) Scheme, BtcCode, FlowType;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_btc_map
+  {
+    Scheme = scheme;
+    BtcCode = btc_code;
+    BankKey = bank_key;
+    FlowType = flow_type;
+    Category = category;
+    RuleGroup = rule_group;
+    ExpCdi = exp_cdi;
+    PayMethod = pay_method;
+    PostingRule = posting_rule;
+    RetReason = ret_reason;
+    ActionCode = action;
+    Active = active;
+    Description = description;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_BtcRule alias BtcRule
+persistent table zcd_btc_rule
+with additional save
+draft table zcd_d_btcrule
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) RuleGroup, RuleId;
+  field ( mandatory : create ) RuleGroup, RuleId;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_btc_rule
+  {
+    RuleGroup = rule_group;
+    RuleId = rule_id;
+    Seq = seq;
+    Severity = severity;
+    ActionCode = action;
+    Param1 = param1;
+    Param2 = param2;
+    Param3 = param3;
+    Tolerance = tolerance;
+    WindowDays = window_days;
+    Active = active;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_RuleDef alias RuleDef
+persistent table zcd_ebs_rule_def
+with additional save
+draft table zcd_d_ruledef
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) RuleId;
+  field ( mandatory : create ) RuleId;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ebs_rule_def
+  {
+    RuleId = rule_id;
+    RuleLevel = rule_level;
+    ClassName = class_name;
+    DefaultSeverity = default_severity;
+    DefaultAction = default_action;
+    Description = description;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_HouseBankAcct alias HouseBankAcct
+persistent table zcd_ebs_acct
+with additional save
+draft table zcd_d_ebsacct
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Bukrs, Hbkid, Hktid;
+  field ( mandatory : create ) Bukrs, Hbkid, Hktid;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ebs_acct
+  {
+    Bukrs = bukrs;
+    Hbkid = hbkid;
+    Hktid = hktid;
+    AccountNo = account_no;
+    BankKey = bank_key;
+    Format = format;
+    FlowDefault = flow_default;
+    Currency = currency;
+    GlAccount = gl_account;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FlowPattern alias FlowPattern
+persistent table zcd_ebs_flow_pat
+with additional save
+draft table zcd_d_flowpat
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Priority, Pattern;
+  field ( mandatory : create ) Pattern;
+  association _EbsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ebs_flow_pat
+  {
+    Priority = priority;
+    Pattern = pattern;
+    FlowType = flow_type;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_ReasonMap alias ReasonMap
+persistent table zcd_ebs_rsn_map
+with additional save
+draft table zcd_d_rsnmap
+lock dependent by _EbsCfgAll
+authorization dependent by _EbsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Reason;
+  field ( mandatory : create ) Reason;
+  association _EbsCfgAll { with draft; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ebs_rsn_map
+  {
+    Reason = reason;
+    FicaReason = fica_reason;
+    IsNoc = is_noc;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

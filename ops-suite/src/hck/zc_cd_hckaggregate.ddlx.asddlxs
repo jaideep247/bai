@@ -1,0 +1,90 @@
+// UI annotations: Health check setup - Generic aggregates
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Aggregate',
+                     typeNamePlural: 'Generic aggregates',
+                     title: { type: #STANDARD, value: 'CheckId' } } }
+annotate entity ZC_CD_HckAggregate with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  CheckId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  AggId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Description;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Tabname;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  AggFunc;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  SumField;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  DateField;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  DateMode;
+
+  @UI.identification: [{ position: 90 }]
+  AgeDaysMin;
+
+  @UI.identification: [{ position: 100 }]
+  GroupField;
+
+  @UI.identification: [{ position: 110 }]
+  Cond1Field;
+
+  @UI.identification: [{ position: 120 }]
+  Cond1Op;
+
+  @UI.identification: [{ position: 130 }]
+  Cond1Value;
+
+  @UI.identification: [{ position: 140 }]
+  Cond2Field;
+
+  @UI.identification: [{ position: 150 }]
+  Cond2Op;
+
+  @UI.identification: [{ position: 160 }]
+  Cond2Value;
+
+  @UI.identification: [{ position: 170 }]
+  Cond3Field;
+
+  @UI.identification: [{ position: 180 }]
+  Cond3Op;
+
+  @UI.identification: [{ position: 190 }]
+  Cond3Value;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

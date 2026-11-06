@@ -1,0 +1,84 @@
+// UI annotations: File monitoring setup - Source adapters
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Source adapter',
+                     typeNamePlural: 'Source adapters',
+                     title: { type: #STANDARD, value: 'SrcId' } } }
+annotate entity ZC_CD_FmonSource with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  SrcId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  IfaceId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  TableName;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  FileKeyField;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  FileNameField;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  DateField;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  TimeField;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  TsField;
+
+  @UI.identification: [{ position: 90 }]
+  StatusField;
+
+  @UI.identification: [{ position: 100 }]
+  CountField;
+
+  @UI.identification: [{ position: 110 }]
+  AmountField;
+
+  @UI.identification: [{ position: 120 }]
+  SizeField;
+
+  @UI.identification: [{ position: 130 }]
+  ChecksumField;
+
+  @UI.identification: [{ position: 140 }]
+  SourceField;
+
+  @UI.identification: [{ position: 150 }]
+  LobField;
+
+  @UI.identification: [{ position: 160 }]
+  DefaultStage;
+
+  @UI.identification: [{ position: 170 }]
+  AdapterClass;
+
+  @UI.identification: [{ position: 180 }]
+  Active;
+
+  @UI.identification: [{ position: 190 }]
+  Description;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

@@ -11,5 +11,9 @@ define table zcd_fmon_srcmap {
   // GENERATED_IN_SAP ... NACK_REJECTED / FILE_RECEIVED ... FAILED
   stage            : abap.char(20);
   info             : abap.char(60);
+  // RAP configuration apps (design 5): set by the framework, ignored by engines
+  last_changed_by       : abp_lastchange_user;
+  last_changed_at       : abp_lastchange_tstmpl;
+  local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Values without a row (and without '*') raise UNMAPPED_STATUS (W) - never silently dropped.
