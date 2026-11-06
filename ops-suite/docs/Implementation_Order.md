@@ -80,10 +80,14 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 | Job | Program / variant | When |
 |---|---|---|
-| ZCD_EBS_VALIDATE_ALL | `ZCD_EBS_VALIDATE`, FEB source, yesterday–today, test mode off | After each BAI load (JPMC/BOA 8:20 am cycle) |
+| ZCD_EBS_VALIDATE_ALL | `ZCD_EBS_VALIDATE`, FEB source, yesterday–today, test mode off | After each BAI load (JPMC/BOA 8:20 am cycle) **once the statement import, the posting job (FEBP) and the payment clearing job have completed** — a post-posting detective control (operating model 2026-11-06); a Control-M dependency on those three jobs, not a clock time |
 | ZCD_FMON_MONITOR_ALL | `ZCD_FMON_MONITOR`, business date today | Every 30 min, 4 am – 8 pm (an overlapping start is refused with RUN_LOCKED) |
 | ZCD_MORNING_REPORT | `ZCD_MORNING_REPORT`, all categories, e-mail on | 6:45 am, after the overnight cycle and before business hours |
 | ZCD_OPS_PURGE_MONTHLY | `ZCD_OPS_PURGE`, test mode off | Monthly, outside the payment windows (first Sunday, 3 am) |
+
+**Batch server group and runtime limits (Basis, before gate 3).** Run the three suite jobs and the purge on a dedicated batch server group — RZ12 (logon / RFC server groups) for the group, SM61 job server group `ZCD_OPS` naming the application servers and their background work processes — and set it as the *target server group* of each Control-M job (SM36 *Exec. target*). Keep the group off the servers that carry the FS-CD mass runs (FPY1, FPVA, FPVB, FP09, FPB7, FEBP) so the suite never competes for their background work processes; schedule job class C. Limit runtime in Control-M (max runtime alert per job, e.g. 30 min for the FMON cycle, 60 min for EBS and the morning report) — the run lock (RUN_LOCKED) stops overlapping starts, the stale-run check of the morning report shows a hung run.
+
+**No locks on standard tables.** The suite only reads FS-CD / FI tables (DFKKOP, DPAYH, DFKKCR, DFKKRP, FEBKO / FEBEP, BSEG, ACDOCA …) with Open SQL `SELECT`; it takes no ENQUEUE on them and never writes them. On SAP HANA a read sees committed data without read locks (MVCC), so a running FEBP / FPY1 is neither blocked nor slowed by a suite run. The only lock the suite takes is its own run lock (`E_TABLE` on `ZCD_OPS_LOCK`, client + payment engine area + variant).
 
 ## Step 5 — Rollback
 

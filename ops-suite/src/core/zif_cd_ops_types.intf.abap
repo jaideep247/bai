@@ -14,6 +14,7 @@
 *& 2026-11-06 | Alert claim / repeat / partial statuses, intent key, SLG1 external ID, escalation override (A17, A45, A46).
 *& 2026-11-06 | Plug-in interface names for the factory interface check (audit A62).
 *& 2026-11-06 | Run status NO_DATA (N) for runs without input (audit A68).
+*& 2026-11-06 | Alert message carries intent key and raise time (webhook de-duplication).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -269,6 +270,10 @@ INTERFACE zif_cd_ops_types
       item_count  TYPE i,
       "! External ID of the application log (SLG1): payment engine area / run / rule
       extnumber   TYPE ty_extnumber,
+      "! Alert intent (A17), equal for every attempt of the same alert: webhook dedupKey
+      intent_key  TYPE ty_intent_key,
+      "! UTC time the alert was raised (claim time)
+      occurred_at TYPE timestampl,
     END OF ty_alert_message.
   TYPES tt_alert_message TYPE STANDARD TABLE OF ty_alert_message WITH EMPTY KEY.
 

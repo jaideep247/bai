@@ -25,6 +25,16 @@
 | ALL_ABORT | * | B | | | | X | HTTP | ZCD_OPS_WEBHOOK | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | RTB support DL | | 10 | 60 | — | — |
 
+Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgement targets proposed, confirm with RTB operations):
+
+| RULE_ID | Priority | Acknowledge within |
+|---|---|---|
+| EBS_BLOCK, ALL_ABORT | P1 | 15 min, 24×7 |
+| EBS_ERROR, FMON_PART, FMON_SLA, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
+| EBS_LOG | P3 | Next business day (morning report) |
+
+For a webhook receiver map `dedupKey` to the de-duplication field (ServiceNow *Message key*, PagerDuty `dedup_key`).
+
 ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on
 EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends
 the series).

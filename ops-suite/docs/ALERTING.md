@@ -50,7 +50,7 @@ flowchart LR
 | ZCL_CD_OPS_ALERT_POLICY | Pure decisions (severity floor, CP patterns, run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
 | ZCL_CD_OPS_ALERT_ROUTER | Orchestration, logging, failure isolation | Application with doubles, 8 tests |
 | ZCL_CD_OPS_ALERT_DAO | ZCD_OPS_ALERT_RULE / _CHN / _LOG | OSQL (QA1) |
-| ZCL_CD_OPS_CHN_EMAIL / _APPLOG / _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT | Integration (QA1); `ZCL_CD_OPS_CHN_HTTP=>to_json` is pure |
+| ZCL_CD_OPS_CHN_EMAIL / _APPLOG / _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT | Integration (QA1); `ZCL_CD_OPS_CHN_HTTP=>to_json` / `dedup_key` are pure (9 domain tests) |
 
 ### LUW rule
 The router and its channels commit (BCS sends on commit, BAL saves to the database). They run at the end of a report run in its own LUW. **Never call `dispatch( )` or `send( )` from a RAP behaviour handler or inside an update task** — hand the request to bgPF instead.
@@ -88,6 +88,49 @@ Example rows: `config/alert_seed.md`.
 
 A claim left in status C by a dump blocks that intent until the operator completes or deletes the row
 (residual: the alert delivery health check counts F and T, not stale C rows yet). Residual: the index INT is a manual SE11 step (not serialized).
+
+### Webhook payload (HTTP channel)
+
+`ZCL_CD_OPS_CHN_HTTP` POSTs one JSON object per alert (`application/json; charset=utf-8`) to the SM59 destination. The keys are the receiver's interface: new keys may be added, existing keys are never renamed or removed.
+
+```json
+{"ruleId":"EBS_BLOCK","peArea":"EBS","severity":"B","subject":"…","items":3,"text":"…",
+ "runId":"6F1C…","dedupKey":"<SHA-1 alert intent>","eventAction":"trigger","source":"ZCD_OPS",
+ "system":"PS4/100","occurredAt":"2026-11-06T10:30:45Z",
+ "correlation":{"runId":"6F1C…","logId":"EBS/6F1C…/EBS_BLOCK"}}
+```
+
+| Key | Content | Use in the receiver |
+|---|---|---|
+| `ruleId` | Alert rule (`ZCD_OPS_ALERT_RULE`) | Routing / assignment group |
+| `peArea` | Payment engine area: EBS, FMON, HCK, CORE | Routing, CI / service mapping |
+| `severity` | B block, E error, W warning, I information | Priority (table below) |
+| `subject`, `text` | Digest subject and body (escaped JSON strings) | Short and long description |
+| `items` | Number of findings in the digest (number) | Description |
+| `runId` | Run ID (32 hex) of the run that raised the alert | Correlation with the run monitor and ZCD_OPS_RUN |
+| `dedupKey` | Alert intent key (SHA-1 over rule, run, channel, destination, subject; A17) — **identical for every attempt of the same alert**; when the hash is not available: `<area>/<run>/<rule>` (still deterministic) | De-duplication: ServiceNow Event Management *Message key*; PagerDuty Events v2 `dedup_key` |
+| `eventAction` | Always `trigger` — the suite raises events only; closing is done in the receiver | PagerDuty `event_action`; ServiceNow event *resolution state* New |
+| `source` | Always `ZCD_OPS` | Event source / integration filter |
+| `system` | `<SID>/<client>` of the sending system | Keeps QA and production events apart |
+| `occurredAt` | UTC raise time (claim time), ISO 8601 with `Z`; `null` when unknown | Event time; ordering across time zones |
+| `correlation.runId`, `correlation.logId` | Run ID and the SLG1 external ID `<area>/<run>/<rule>` | Drill-down from the incident to SLG1 and the run |
+
+**De-duplication guidance.** Map `dedupKey` to the receiver's de-duplication field (ServiceNow: *Message key* in the event rule or the inbound transform; PagerDuty: `dedup_key`). A retry of the same intent (new attempt after a failure, re-send of a stale claim) then updates the open incident instead of opening a second one. A new run raises a new intent and a new key, so a problem that persists across runs stays visible run by run; group those in the receiver by `ruleId` + `peArea` (ServiceNow alert correlation rule) if one incident per problem is wanted. PagerDuty needs the routing key in the destination (SM59 path or PRISM proxy), never in the payload.
+
+**Proof.** Unit tests of `ZCL_CD_OPS_CHN_HTTP` (`run_and_dedup_key_sent`, `dedup_key_stable_per_intent`, `dedup_key_without_intent`, `event_fields_sent`, `occurred_at_is_utc_iso`, `unknown_time_is_null`, escaping tests) and of the router (`claim_precedes_delivery`: the delivered message carries the claimed intent key and claim time). The receiver mapping is a QA1 integration case.
+
+### Priority mapping (P1–P3)
+
+Priority is derived **in the receiver** from `severity` (and, where needed, `ruleId`), so changing an acknowledgement target never needs an SAP transport. Proposed targets — to be confirmed by RTB operations before gate 3 (`Release_Readiness.md`):
+
+| Priority | Severity | Meaning | Acknowledge within | Channel in the seeds |
+|---|---|---|---|---|
+| **P1** | B, or a run stopped on the circuit breaker (ON_ABORT) | Money must not move / control did not run | 15 min, 24×7 (quiet hours never hold B) | HTTP page (`ALL_ABORT`), e-mail with escalation (`EBS_BLOCK`) |
+| **P2** | E | Exception needing action the same business day | 1 h in business hours | E-mail (`EBS_ERROR`, `FMON_PART`, `FMON_SLA`, `HCK_RED`, `RUN_LOCKED`, `NOC_AGING`) |
+| **P3** | W | Review in the morning report | Next business day | Application log (`EBS_LOG`), morning report |
+| — | I | Information (suppressed, released, carried forward) | No incident | Application log only |
+
+Per seed rule: `config/alert_seed.md` (column *Priority*). The acknowledgement window is enforced by the receiver's SLA definition; the suite's own evidence is the alert log (status S with time) and the escalation rules (`ESCALATE_AFTER`).
 
 ### Navigation from the operations apps
 
