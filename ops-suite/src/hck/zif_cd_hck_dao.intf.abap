@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | get_suppressions (design 6.3), DEFAULT IGNORE for existing doubles.
 *& 2026-11-06 | select_values for the known-table checks (DEFAULT IGNORE).
+*& 2026-11-06 | get_metric_history by distinct completed runs with as-of bound (audit A58).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -64,13 +65,16 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Last iv_max_rows values of a metric (newest first), current run excluded
+  "! Baseline history: the latest value of each of the last iv_max_rows COMPLETED runs
+  "! (status S / W / E, not test mode), newest run first, measured up to iv_as_of
+  "! (initial = no bound); running and aborted runs never contribute (audit A58)
   METHODS get_metric_history
     IMPORTING
       iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
       iv_metric        TYPE zif_cd_hck_types=>ty_metric_name
       iv_dim1          TYPE zif_cd_hck_types=>ty_dim
       iv_max_rows      TYPE i
+      iv_as_of         TYPE timestampl OPTIONAL
     RETURNING
       VALUE(rt_values) TYPE zif_cd_hck_types=>tt_value.
 

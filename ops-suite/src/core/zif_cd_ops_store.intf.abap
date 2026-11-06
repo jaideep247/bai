@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | rollback( ) added (DEFAULT IGNORE).
 *& 2026-11-06 | Exception carry-forward: reconcile( ) (DEFAULT IGNORE).
+*& 2026-11-06 | get_stale_runs( ) for hung / dumped runs (audit A06, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared result store and parameters</p>
 "! One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
@@ -83,6 +84,16 @@ INTERFACE zif_cd_ops_store
       iv_since       TYPE timestampl
     RETURNING
       VALUE(rt_runs) TYPE zif_cd_ops_types=>tt_run.
+
+  "! Runs still in status R (running) that started before iv_started_before: a run
+  "! that dumped or hangs (audit A06). iv_exclude_run = the caller's own run.
+  METHODS get_stale_runs DEFAULT IGNORE
+    IMPORTING
+      iv_pe_area         TYPE zif_cd_ops_types=>ty_pe_area
+      iv_started_before  TYPE timestampl
+      iv_exclude_run     TYPE zif_cd_ops_types=>ty_run_id OPTIONAL
+    RETURNING
+      VALUE(rt_runs)     TYPE zif_cd_ops_types=>tt_run.
 
   METHODS get_findings
     IMPORTING

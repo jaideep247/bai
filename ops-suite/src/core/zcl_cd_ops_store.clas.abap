@@ -11,6 +11,7 @@
 *& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | get_stale_runs: running runs older than a limit, own run excluded (audit A06).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -399,6 +400,25 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     IF sy-subrc = 0.
       rs_run = map_run_from_db( ls_db ).
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_store~get_stale_runs.
+    SELECT run_id, pe_area, variant, test_mode, started_at, ended_at, status, rag,
+           total_items, passed_items, failed_items, blocked_items, warning_items,
+           finding_count, runtime_ms, message, created_by
+      FROM zcd_ops_run
+      WHERE pe_area    = @iv_pe_area
+        AND test_mode  = @abap_false
+        AND status     = @zif_cd_ops_types=>gc_run_status-running
+        AND started_at < @iv_started_before
+        AND run_id    <> @iv_exclude_run
+      ORDER BY started_at, run_id
+      INTO TABLE @DATA(lt_db).
+    LOOP AT lt_db INTO DATA(ls_db).
+      DATA(ls_full) = CORRESPONDING zcd_ops_run( ls_db ).
+      INSERT map_run_from_db( ls_full ) INTO TABLE rt_runs.
+    ENDLOOP.
   ENDMETHOD.
 
 

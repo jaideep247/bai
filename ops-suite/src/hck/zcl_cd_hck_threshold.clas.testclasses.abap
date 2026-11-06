@@ -5,6 +5,7 @@
 *& and of static / baseline evaluation; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Flat-baseline tests (audit A59).
 *&---------------------------------------------------------------------*
 CLASS ltc_threshold DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -28,6 +29,9 @@ CLASS ltc_threshold DEFINITION FINAL FOR TESTING
     METHODS zscore_outlier_turns_amber FOR TESTING.
     METHODS short_history_no_baseline FOR TESTING.
     METHODS iqr_outlier_turns_amber FOR TESTING.
+    METHODS flat_unchanged_passes FOR TESTING.
+    METHODS flat_adverse_change_flagged FOR TESTING.
+    METHODS flat_favourable_change_ok FOR TESTING.
 
     METHODS threshold_row
       IMPORTING
@@ -40,6 +44,15 @@ CLASS ltc_threshold DEFINITION FINAL FOR TESTING
     METHODS history_246
       RETURNING
         VALUE(rt_values) TYPE zif_cd_hck_types=>tt_value.
+
+    "! Flat history: three identical points (standard deviation zero)
+    METHODS history_flat
+      RETURNING
+        VALUE(rt_values) TYPE zif_cd_hck_types=>tt_value.
+
+    METHODS zscore_row
+      RETURNING
+        VALUE(rs_row) TYPE zif_cd_hck_types=>ty_threshold.
 
 ENDCLASS.
 
@@ -66,6 +79,71 @@ CLASS ltc_threshold IMPLEMENTATION.
     INSERT lv_value INTO TABLE rt_values.
     lv_value = 6.
     INSERT lv_value INTO TABLE rt_values.
+  ENDMETHOD.
+
+
+  METHOD history_flat.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    lv_value = 100.
+    DO 3 TIMES.
+      INSERT lv_value INTO TABLE rt_values.
+    ENDDO.
+  ENDMETHOD.
+
+
+  METHOD zscore_row.
+    rs_row = threshold_row( iv_bukrs = gc_bukrs iv_amber = 0 iv_red = 0 ).
+    rs_row-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
+    rs_row-z_limit       = 3.
+  ENDMETHOD.
+
+
+  " Audit A59: a flat baseline (deviation zero) and an unchanged value is no outlier
+  METHOD flat_unchanged_passes.
+    TRY.
+        DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value        = 100
+                                                              is_threshold    = zscore_row( )
+                                                              it_history      = history_flat( )
+                                                              iv_flat_tol_pct = 10 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-green
+                                            msg = 'Unchanged value against a flat baseline must stay green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A59: a flat baseline gives z = 0; an adverse change beyond the tolerance
+  " must still be a baseline outlier
+  METHOD flat_adverse_change_flagged.
+    TRY.
+        DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value        = 150
+                                                              is_threshold    = zscore_row( )
+                                                              it_history      = history_flat( )
+                                                              iv_flat_tol_pct = 10 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-check_code
+                                            exp = zif_cd_hck_types=>gc_code-baseline_outlier
+                                            msg = '+50 % against a flat baseline of 100 must be an outlier' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-amber
+                                            msg = 'A baseline outlier is at least amber' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A59: a change in the favourable direction (higher is worse, value lower) is no outlier
+  METHOD flat_favourable_change_ok.
+    TRY.
+        DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value        = 50
+                                                              is_threshold    = zscore_row( )
+                                                              it_history      = history_flat( )
+                                                              iv_flat_tol_pct = 10 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evaluation-rag exp = zif_cd_ops_types=>gc_rag-green
+                                            msg = 'A favourable change must not be flagged' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

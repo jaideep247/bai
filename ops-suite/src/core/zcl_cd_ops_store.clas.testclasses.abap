@@ -9,6 +9,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Exception carry-forward: inherit, supersede, auto-resolve, waived kept.
 *& 2026-11-06 | pending_waiver_is_carried (exceptions app).
+*& 2026-11-06 | stale_running_run_is_found (audit A06).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -90,6 +91,14 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS out_of_scope_stays_open      FOR TESTING.
     METHODS group_scope_resolves         FOR TESTING.
     METHODS pending_waiver_is_carried    FOR TESTING.
+    METHODS stale_running_run_is_found   FOR TESTING.
+
+    "! A run header in the store (test data)
+    METHODS store_run
+      IMPORTING
+        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
+        iv_status     TYPE zif_cd_ops_types=>ty_run_status
+        iv_started_at TYPE timestampl.
 ENDCLASS.
 
 
@@ -396,6 +405,47 @@ CLASS ltc_store IMPLEMENTATION.
                                             msg = 'The requested end date must be carried forward' ).
         cl_abap_unit_assert=>assert_equals( act = ls_new-disposition exp = zif_cd_ops_types=>gc_disposition-assigned
                                             msg = 'The request does not change the disposition' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD store_run.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_ops_run.
+    ls_row-run_id     = iv_run_id.
+    ls_row-pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor.
+    ls_row-status     = iv_status.
+    ls_row-started_at = iv_started_at.
+    INSERT ls_row INTO TABLE lt_rows.
+    go_env->insert_test_data( lt_rows ).
+  ENDMETHOD.
+
+
+  " Audit A06: a run still in status R before the limit is found - finished runs,
+  " recent runs and the caller's own run are not
+  METHOD stale_running_run_is_found.
+    CONSTANTS lc_hung TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000B1'.
+    CONSTANTS lc_done TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000B2'.
+    CONSTANTS lc_young TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000B3'.
+    CONSTANTS lc_own TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000B4'.
+    TRY.
+        store_run( iv_run_id = lc_hung  iv_status = zif_cd_ops_types=>gc_run_status-running
+                   iv_started_at = '20261105010000.0000000' ).
+        store_run( iv_run_id = lc_done  iv_status = zif_cd_ops_types=>gc_run_status-success
+                   iv_started_at = '20261105010000.0000000' ).
+        store_run( iv_run_id = lc_young iv_status = zif_cd_ops_types=>gc_run_status-running
+                   iv_started_at = '20261105065900.0000000' ).
+        store_run( iv_run_id = lc_own   iv_status = zif_cd_ops_types=>gc_run_status-running
+                   iv_started_at = '20261105010000.0000000' ).
+        DATA(lt_stale) = mo_cut->get_stale_runs( iv_pe_area        = zif_cd_ops_types=>gc_pe_area-file_monitor
+                                                 iv_started_before = '20261105060000.0000000'
+                                                 iv_exclude_run    = lc_own ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_stale ) exp = 1
+                                            msg = 'Only the old run still in status R is stale' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_stale[ 1 ]-run_id exp = lc_hung
+                                            msg = 'The stale run must be the hung one' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

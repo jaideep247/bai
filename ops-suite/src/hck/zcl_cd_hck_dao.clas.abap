@@ -10,6 +10,7 @@
 *& 2026-11-06 | select_values: validated value queries (known-table checks).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Metric history by distinct completed runs, as-of bound (audit A58).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -32,6 +33,9 @@ CLASS zcl_cd_hck_dao DEFINITION
     CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
     CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
+    "! Metric points scanned to find the last N distinct runs (A58)
+    CONSTANTS gc_max_history_points TYPE i VALUE 5000.
+    CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
 
     METHODS sha256
       IMPORTING
@@ -172,15 +176,36 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_metric_history.
-    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, MEASURED_AT
-    SELECT value
-      FROM zcd_hck_metric
-      WHERE check_id = @iv_check_id
-        AND metric   = @iv_metric
-        AND dim1     = @iv_dim1
-      ORDER BY measured_at DESCENDING
-      INTO TABLE @rt_values
-      UP TO @iv_max_rows ROWS.
+    DATA lt_seen TYPE SORTED TABLE OF sysuuid_x16 WITH UNIQUE KEY table_line.
+    DATA lv_as_of TYPE timestampl.
+    CHECK iv_max_rows > 0.
+    lv_as_of = COND #( WHEN iv_as_of IS INITIAL THEN gc_max_timestamp ELSE iv_as_of ).
+    " index ZCD_HCK_METRIC~HST: CHECK_ID, METRIC, DIM1, MEASURED_AT. Several points of one
+    " run (job instances, backfilled days) count as one run: its latest point (A58)
+    SELECT m~run_id, m~value
+      FROM zcd_hck_metric AS m
+        INNER JOIN zcd_ops_run AS r ON r~run_id = m~run_id
+      WHERE m~check_id    = @iv_check_id
+        AND m~metric      = @iv_metric
+        AND m~dim1        = @iv_dim1
+        AND m~measured_at <= @lv_as_of
+        AND r~test_mode   = @abap_false
+        AND r~status IN ( @zif_cd_ops_types=>gc_run_status-success,
+                          @zif_cd_ops_types=>gc_run_status-warning,
+                          @zif_cd_ops_types=>gc_run_status-error )
+      ORDER BY m~measured_at DESCENDING, m~run_id DESCENDING
+      INTO TABLE @DATA(lt_points)
+      UP TO @gc_max_history_points ROWS.
+    LOOP AT lt_points INTO DATA(ls_point).
+      INSERT ls_point-run_id INTO TABLE lt_seen.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+      INSERT ls_point-value INTO TABLE rt_values.
+      IF lines( rt_values ) >= iv_max_rows.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

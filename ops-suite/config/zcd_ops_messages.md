@@ -239,6 +239,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 357 | (&1 red, &2 amber of &3) |
 | 358 | Payment engine area &1 |
 | 359 | last run &1, &2 h ago, &3 errors |
+| 360 | Payment engine area &1: &2 run(s) still running after &3 min |
+| 361 | No business check selected or active - the report proves nothing |
+| 362 | Health check configuration (selected and active checks) |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |

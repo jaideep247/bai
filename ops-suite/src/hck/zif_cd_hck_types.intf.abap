@@ -8,6 +8,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | RUN_HUNG, CHECKS_NOT_CONFIGURED, hung runs and check counts (audit A06, A60).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -162,6 +163,8 @@ INTERFACE zif_cd_hck_types
       config_drift     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_DRIFT',
       agg_invalid      TYPE zif_cd_ops_types=>ty_check_code VALUE 'AGG_CONFIG_INVALID',
       no_baseline      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_NO_BASELINE',
+      run_hung         TYPE zif_cd_ops_types=>ty_check_code VALUE 'RUN_HUNG',
+      no_checks        TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECKS_NOT_CONFIGURED',
     END OF gc_code.
 
   CONSTANTS:
@@ -193,6 +196,8 @@ INTERFACE zif_cd_hck_types
   CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'CHECK'.
   CONSTANTS gc_default_key TYPE ty_thresh_key VALUE '*'.
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
+  "! Result row raised when no business check is selected / active (audit A60)
+  CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
 
   "! ZCD_HCK_DEF
   TYPES:
@@ -512,6 +517,9 @@ INTERFACE zif_cd_hck_types
       age_hours     TYPE i,
       max_age_hours TYPE i,
       stale         TYPE abap_bool,
+      "! Runs still running past HCK_MAX_RUN_MIN_<area> (dump / hang) - audit A06
+      hung_runs     TYPE i,
+      max_run_min   TYPE i,
     END OF ty_pe_area_status.
   TYPES tt_pe_area_status TYPE STANDARD TABLE OF ty_pe_area_status WITH EMPTY KEY.
 
@@ -541,12 +549,16 @@ INTERFACE zif_cd_hck_types
       results        TYPE tt_check_result,
       pe_areas        TYPE tt_pe_area_status,
       exceptions     TYPE tt_open_exception,
+      "! Business checks selected and active / executed without plug-in error (A60)
+      configured_checks TYPE i,
+      executed_checks   TYPE i,
     END OF ty_report.
 
   "! Parameter-name prefixes completed by a payment engine area (e.g. HCK_MAX_AGE_H_EBS)
   CONSTANTS:
     BEGIN OF gc_param_prefix,
       max_age TYPE c LENGTH 14 VALUE 'HCK_MAX_AGE_H_',
+      max_run TYPE c LENGTH 16 VALUE 'HCK_MAX_RUN_MIN_',
     END OF gc_param_prefix.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
@@ -589,6 +601,9 @@ INTERFACE zif_cd_hck_types
       report_category             TYPE zif_cd_ops_types=>ty_msgno VALUE '357',
       report_area                 TYPE zif_cd_ops_types=>ty_msgno VALUE '358',
       report_last_run             TYPE zif_cd_ops_types=>ty_msgno VALUE '359',
+      area_runs_hung              TYPE zif_cd_ops_types=>ty_msgno VALUE '360',
+      no_business_checks          TYPE zif_cd_ops_types=>ty_msgno VALUE '361',
+      config_check_text           TYPE zif_cd_ops_types=>ty_msgno VALUE '362',
     END OF gc_msg.
 
 ENDINTERFACE.

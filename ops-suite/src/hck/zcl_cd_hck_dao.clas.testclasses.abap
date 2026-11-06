@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | only_active_suppressions (design 6.3).
+*& 2026-11-06 | History by distinct completed runs, as-of bound (audit A58).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -23,6 +24,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO zif_cd_hck_dao.
     DATA mt_metrics TYPE STANDARD TABLE OF zcd_hck_metric WITH EMPTY KEY.
     DATA mt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA mt_runs TYPE SORTED TABLE OF zcd_ops_run WITH UNIQUE KEY run_id.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -33,13 +35,20 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS saved_metric_is_read_back FOR TESTING.
     METHODS overdue_open_and_assigned FOR TESTING.
     METHODS only_active_suppressions FOR TESTING.
+    METHODS history_one_point_per_run FOR TESTING.
+    METHODS history_skips_unfinished_runs FOR TESTING.
+    METHODS history_as_of_excludes_later FOR TESTING.
 
     METHODS add_metric
       IMPORTING
         iv_run_no   TYPE i
         iv_dim1     TYPE zif_cd_hck_types=>ty_dim
         iv_value    TYPE zif_cd_hck_types=>ty_value
-        iv_at       TYPE timestampl.
+        iv_at       TYPE timestampl
+        iv_status   TYPE zif_cd_ops_types=>ty_run_status DEFAULT zif_cd_ops_types=>gc_run_status-success.
+
+    "! Metric rows and the run headers they belong to
+    METHODS insert_history.
 
     METHODS add_finding
       IMPORTING
@@ -57,6 +66,7 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_HCK_METRIC' )
                                                                             ( 'ZCD_OPS_FINDING' )
+                                                                            ( 'ZCD_OPS_RUN' )
                                                                             ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
 
@@ -68,7 +78,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
-    CLEAR: mt_metrics, mt_findings.
+    CLEAR: mt_metrics, mt_findings, mt_runs.
     mo_cut = zcl_cd_hck_factory=>get_dao( ).
   ENDMETHOD.
 
@@ -84,6 +94,18 @@ CLASS ltc_dao IMPLEMENTATION.
     ls_row-value       = iv_value.
     ls_row-measured_at = iv_at.
     INSERT ls_row INTO TABLE mt_metrics.
+    DATA ls_run TYPE zcd_ops_run.
+    ls_run-run_id     = lv_run_byte.
+    ls_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+    ls_run-status     = iv_status.
+    ls_run-started_at = iv_at.
+    INSERT ls_run INTO TABLE mt_runs.
+  ENDMETHOD.
+
+
+  METHOD insert_history.
+    go_env->insert_test_data( mt_metrics ).
+    go_env->insert_test_data( mt_runs ).
   ENDMETHOD.
 
 
@@ -107,7 +129,7 @@ CLASS ltc_dao IMPLEMENTATION.
         add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
         add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261103070000.0000000' ).
         add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_value = 30 iv_at = '20261104070000.0000000' ).
-        go_env->insert_test_data( mt_metrics ).
+        insert_history( ).
         lv_value = 30.
         INSERT lv_value INTO TABLE lt_exp.
         lv_value = 20.
@@ -131,7 +153,7 @@ CLASS ltc_dao IMPLEMENTATION.
     TRY.
         add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
         add_metric( iv_run_no = 1 iv_dim1 = gc_other iv_value = 99 iv_at = '20261102070000.0000000' ).
-        go_env->insert_test_data( mt_metrics ).
+        insert_history( ).
         lv_value = 10.
         INSERT lv_value INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
@@ -162,6 +184,12 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_metric-measured_at = '20261105070000.0000000'.
         INSERT ls_metric INTO TABLE lt_metrics.
         mo_cut->save_metrics( lt_metrics ).
+        DATA ls_run TYPE zcd_ops_run.
+        ls_run-run_id  = ls_metric-run_id.
+        ls_run-pe_area = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_run-status  = zif_cd_ops_types=>gc_run_status-success.
+        INSERT ls_run INTO TABLE mt_runs.
+        go_env->insert_test_data( mt_runs ).
         lv_value = '42.5'.
         INSERT lv_value INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
@@ -220,6 +248,79 @@ CLASS ltc_dao IMPLEMENTATION.
                                             msg = 'Only the active suppression valid today must be read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_active[ 1 ]-suppress_uuid exp = '000000000000000000000000000000C1'
                                             msg = 'The active suppression must be the one read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A58: the lookback counts runs, not rows - one point per run (its latest), runs newest first
+  METHOD history_one_point_per_run.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 15 iv_at = '20261102080000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261103070000.0000000' ).
+        insert_history( ).
+        lv_value = 20.
+        INSERT lv_value INTO TABLE lt_exp.
+        lv_value = 15.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_max_rows = 2 )
+                                            exp = lt_exp
+                                            msg = 'Two runs, one point each: run 2, then the latest point of run 1' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A58: points of running or aborted runs are not part of a baseline
+  METHOD history_skips_unfinished_runs.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261103070000.0000000'
+                    iv_status = zif_cd_ops_types=>gc_run_status-running ).
+        add_metric( iv_run_no = 3 iv_dim1 = gc_job iv_value = 30 iv_at = '20261104070000.0000000'
+                    iv_status = zif_cd_ops_types=>gc_run_status-aborted ).
+        insert_history( ).
+        lv_value = 10.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_max_rows = 8 )
+                                            exp = lt_exp
+                                            msg = 'Only the completed run may contribute' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A58: a backdated evaluation sees only history measured up to its as-of time
+  METHOD history_as_of_excludes_later.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_value.
+    DATA lv_value TYPE zif_cd_hck_types=>ty_value.
+    TRY.
+        add_metric( iv_run_no = 1 iv_dim1 = gc_job iv_value = 10 iv_at = '20261102070000.0000000' ).
+        add_metric( iv_run_no = 2 iv_dim1 = gc_job iv_value = 20 iv_at = '20261104070000.0000000' ).
+        insert_history( ).
+        lv_value = 10.
+        INSERT lv_value INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_metric_history( iv_check_id = gc_check
+                                                                              iv_metric   = gc_metric
+                                                                              iv_dim1     = gc_job
+                                                                              iv_max_rows = 8
+                                                                              iv_as_of    = '20261103000000.0000000' )
+                                            exp = lt_exp
+                                            msg = 'History after the as-of time must not be used' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -1409,6 +1409,24 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>360</MSGNR>
+     <TEXT>Payment engine area &amp;1: &amp;2 run(s) still running after &amp;3 min</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>361</MSGNR>
+     <TEXT>No business check selected or active - the report proves nothing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>362</MSGNR>
+     <TEXT>Health check configuration (selected and active checks)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>
