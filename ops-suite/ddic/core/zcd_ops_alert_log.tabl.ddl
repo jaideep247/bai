@@ -9,7 +9,7 @@ define table zcd_ops_alert_log {
   rule_id       : abap.char(10);
   channel       : abap.char(10);
   run_id        : sysuuid_x16;
-  pe_area        : abap.char(4);
+  pe_area       : abap.char(4);
   sent_at       : timestampl;
   // S sent, F failed, T throttled, Q quiet hours
   status        : abap.char(1);
@@ -17,5 +17,13 @@ define table zcd_ops_alert_log {
   subject       : abap.char(255);
   error         : abap.char(255);
   created_by    : syuname;
+  // Alert intent (SHA-1 of rule, run, channel, destination, subject) and attempt (A17)
+  intent_key    : abap.char(40);
+  attempt       : abap.int4;
 }
-// Secondary index ZCD_OPS_ALERT_LOG~RUL : MANDT, RULE_ID, SENT_AT (throttling / escalation)
+// Secondary index RUL: throttling / escalation
+// @index RUL: MANDT, RULE_ID, SENT_AT
+// Secondary index INT (UNIQUE): one dispatcher per alert intent and attempt (audit A17)
+// @index INT UNIQUE: MANDT, INTENT_KEY, ATTEMPT
+// Status: S sent, F failed, T throttled, Q quiet hours, C claimed (in delivery), R repeat
+//   (carried-forward exception, not re-alerted), P partially delivered

@@ -2,6 +2,7 @@
 // Purpose: Analytical cube of metric history for trend charts (volume per source/LOB
 //          per day, job duration, error rates). Verify annotations on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
+//                   2026-11-06 | Measures by metric semantics: volume SUM, level MAX / AVG, rate weighted (audit A88).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Health check metrics - cube'
 @Metadata.ignorePropagatedAnnotations: true
@@ -21,9 +22,27 @@ define view entity ZI_CD_HckMetricCube
       PaymentEngineArea,
       MeasuredDate,
       _Check.Category                                     as Category,
-      // SUM is right for volumes (counts); for durations / rates use MaxValue or divide by SampleCount
+      MetricKind,
+      // A88: a measure only aggregates the metrics it is meaningful for - volumes add up,
+      // levels (durations, ages) take MAX or AVG, rates are weighted by their denominator.
+      // Adding rates or durations (the former MetricValue SUM) is not offered any more.
       @Aggregation.default: #SUM
-      MetricValue,
+      case MetricKind when 'V' then MetricValue else cast( 0 as abap.dec( 31, 4 ) ) end as VolumeValue,
+      @Aggregation.default: #MAX
+      case MetricKind when 'L' then MetricValue else cast( 0 as abap.dec( 31, 4 ) ) end as LevelMax,
+      @Aggregation.default: #SUM
+      case MetricKind when 'L' then MetricValue else cast( 0 as abap.dec( 31, 4 ) ) end as LevelSum,
+      @Aggregation.default: #SUM
+      cast( case MetricKind when 'L' then 1 else 0 end as abap.int4 ) as LevelSamples,
+      // VERIFY-ADT: DEC -> DECFLOAT34 cast and product (avoids DEC(31) overflow of value * weight)
+      @Aggregation.default: #SUM
+      case MetricKind when 'R'
+           then cast( MetricValue as abap.decfloat34 ) * cast( Weight as abap.decfloat34 )
+           else cast( 0 as abap.decfloat34 ) end          as RateWeightedSum,
+      @Aggregation.default: #SUM
+      case MetricKind when 'R' then cast( Weight as abap.decfloat34 )
+           else cast( 0 as abap.decfloat34 ) end          as RateWeight,
+      // any kind: highest / lowest single measurement and number of measurements
       @Aggregation.default: #MAX
       MetricValue                                         as MaxValue,
       @Aggregation.default: #MIN

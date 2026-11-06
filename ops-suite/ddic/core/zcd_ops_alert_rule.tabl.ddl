@@ -29,6 +29,8 @@ define table zcd_ops_alert_rule {
   quiet_to        : abap.tims;
   escalate_after  : abap.int4;
   escalation_dest : abap.char(255);
+  // X = a due escalation is delivered even inside the throttle window (audit A46)
+  esc_override    : abap_boolean;
   active          : abap_boolean;
   changed_by      : syuname;
   changed_at      : timestampl;

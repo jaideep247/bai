@@ -23,4 +23,5 @@ define table zcd_hck_suppress {
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
   last_changed_at       : abp_lastchange_tstmpl;
 }
-// Secondary index ZCD_HCK_SUPPRESS~ACT : MANDT, STATUS, VALID_TO (active suppressions of a run)
+// Secondary index ACT: active suppressions of a run
+// @index ACT: MANDT, STATUS, VALID_TO

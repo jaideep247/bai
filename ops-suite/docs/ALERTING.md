@@ -70,3 +70,25 @@ Example rows: `config/alert_seed.md`.
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = lead DL |
 | Add Microsoft Teams | SM59 destination (Basis) + rule with CHANNEL HTTP |
 | Add a new channel type (e.g. SMS gateway) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALERT_CHN row |
+
+### Delivery guarantees (Phase 6 audit)
+
+| Guarantee | How | Finding |
+|---|---|---|
+| One alert per intent, even with two dispatchers | Claim row (status C, SHA-1 intent key, unique index INT) committed before the send, completed after | A17 |
+| A carried-forward exception is not re-alerted every run | Findings with occurrences > 1 are filtered (log R) unless the rule escalates | A17 |
+| No silent success | No recipient / inactive channel raise; BCS send result checked; partly written SLG1 log = P | A45 |
+| Escalation means "N runs in a row" | Counted over the area's run history; ESC_OVERRIDE passes the throttle | A46 |
+| A blocker is never cut by the cap | Severity-ordered cap, digest severity from the full selection, held-back count shown | A63 |
+| A misconfigured channel class never runs | Factory checks ZIF_CD_OPS_ALERT_CHANNEL by RTTI before CREATE OBJECT | A62 |
+| SLG1 entries are findable | External ID `<area>/<run>/<rule>`; BAL_LOG_REFRESH after save | SLG1 |
+
+A claim left in status C by a dump blocks that intent until the operator completes or deletes the row
+(residual: the alert delivery health check counts F and T, not stale C rows yet). Residual: the index INT is a manual SE11 step (not serialized).
+
+### Navigation from the operations apps
+
+Exceptions app and EBS release app offer FEBAN (custom semantic object `ZCDBankStatement`, action `reprocess`)
+and FPCPL (`ZCDPaymentLot`, action `clarify`). Create the launchpad target mappings to the SAP GUI
+transactions in the custom catalog of the operations role; parameters are passed by field name
+(ObjectKey, CompanyCode, Reference). VERIFY-ADT.

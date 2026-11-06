@@ -8,6 +8,12 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | RUN_HUNG, CHECKS_NOT_CONFIGURED, hung runs and check counts (audit A06, A60).
+*& 2026-11-06 | Job step program/variant, retries and late start; job read cap (audit A42, A44).
+*& 2026-11-06 | Aggregate query carries its definition for re-validation at the DAO (audit A56).
+*& 2026-11-06 | Baseline hash version; CONFIG_BASELINE_OUTDATED (audit A57).
+*& 2026-11-06 | Check time budget in the context; CHECK_BUDGET_EXHAUSTED (audit A18).
+*& 2026-11-06 | Metric kind and weight: aggregation by metric semantics (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -23,6 +29,17 @@ INTERFACE zif_cd_hck_types
   "! H high, M medium, L low
   TYPES ty_priority      TYPE c LENGTH 1.
   TYPES ty_metric_name   TYPE c LENGTH 30.
+  TYPES ty_metric_kind   TYPE c LENGTH 1.
+
+  "! How a metric aggregates across runs, days and dimensions (analytics, audit A88):
+  "! volumes add up, levels (durations, ages, sizes) take MAX / AVG, rates are weighted
+  "! by their denominator (WEIGHT). Blank is stored as volume.
+  CONSTANTS:
+    BEGIN OF gc_metric_kind,
+      volume TYPE ty_metric_kind VALUE 'V',
+      level  TYPE ty_metric_kind VALUE 'L',
+      rate   TYPE ty_metric_kind VALUE 'R',
+    END OF gc_metric_kind.
   TYPES ty_dim           TYPE c LENGTH 35.
   "! Threshold key: company code or another 4-character dimension value; '*' = default
   TYPES ty_thresh_key    TYPE c LENGTH 4.
@@ -30,6 +47,8 @@ INTERFACE zif_cd_hck_types
   TYPES ty_value         TYPE decfloat34.
   TYPES tt_value         TYPE STANDARD TABLE OF ty_value WITH EMPTY KEY.
   TYPES ty_baseline_mode TYPE c LENGTH 6.
+  "! Version of the drift-hash serialization (ZCL_CD_HCK_CANONICAL=>GC_HASH_VERSION)
+  TYPES ty_hash_version  TYPE c LENGTH 2.
   TYPES ty_tabname       TYPE c LENGTH 30.
   TYPES ty_fieldname     TYPE c LENGTH 30.
   TYPES ty_agg_id        TYPE c LENGTH 10.
@@ -162,6 +181,13 @@ INTERFACE zif_cd_hck_types
       config_drift     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_DRIFT',
       agg_invalid      TYPE zif_cd_ops_types=>ty_check_code VALUE 'AGG_CONFIG_INVALID',
       no_baseline      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_NO_BASELINE',
+      run_hung         TYPE zif_cd_ops_types=>ty_check_code VALUE 'RUN_HUNG',
+      no_checks        TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECKS_NOT_CONFIGURED',
+      step_retried     TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_RETRIED',
+      step_late        TYPE zif_cd_ops_types=>ty_check_code VALUE 'STEP_LATE',
+      job_read_capped  TYPE zif_cd_ops_types=>ty_check_code VALUE 'JOB_READ_CAPPED',
+      baseline_outdated TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_BASELINE_OUTDATED',
+      budget_exhausted TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
     END OF gc_code.
 
   CONSTANTS:
@@ -193,6 +219,12 @@ INTERFACE zif_cd_hck_types
   CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'CHECK'.
   CONSTANTS gc_default_key TYPE ty_thresh_key VALUE '*'.
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
+  "! Result row raised when no business check is selected / active (audit A60)
+  CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
+  "! Plug-in interface every configured check class implements (factory check, A62)
+  CONSTANTS gc_check_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
+  "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
+  CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
 
   "! ZCD_HCK_DEF
   TYPES:
@@ -271,6 +303,10 @@ INTERFACE zif_cd_hck_types
       sum_field    TYPE ty_fieldname,
       group_field  TYPE ty_fieldname,
       where_clause TYPE string,
+      "! Source of the query: the DAO rebuilds the SQL from it and ignores the strings
+      "! above (audit A56 - validation is enforced at the SQL boundary)
+      def          TYPE ty_agg_def,
+      ref_date     TYPE d,
     END OF ty_agg_query.
 
   TYPES:
@@ -288,6 +324,10 @@ INTERFACE zif_cd_hck_types
       dim1   TYPE ty_dim,
       dim2   TYPE ty_dim,
       value  TYPE ty_value,
+      "! aggregation semantics (gc_metric_kind; blank = volume)
+      kind   TYPE ty_metric_kind,
+      "! rates: the denominator the rate was computed over (e.g. messages read)
+      weight TYPE ty_value,
     END OF ty_metric.
   TYPES tt_metric TYPE STANDARD TABLE OF ty_metric WITH EMPTY KEY.
 
@@ -301,6 +341,8 @@ INTERFACE zif_cd_hck_types
       dim2        TYPE ty_dim,
       value       TYPE ty_value,
       measured_at TYPE timestampl,
+      kind        TYPE ty_metric_kind,
+      weight      TYPE ty_value,
     END OF ty_metric_hist.
   TYPES tt_metric_hist TYPE STANDARD TABLE OF ty_metric_hist WITH EMPTY KEY.
 
@@ -347,6 +389,9 @@ INTERFACE zif_cd_hck_types
       strttime  TYPE t,
       enddate   TYPE d,
       endtime   TYPE t,
+      "! Program and variant of the job's first step (TBTCP) - audit A42
+      progname  TYPE ty_program,
+      variant   TYPE ty_job_variant,
     END OF ty_job_run.
   TYPES tt_job_run TYPE STANDARD TABLE OF ty_job_run WITH EMPTY KEY.
 
@@ -364,6 +409,11 @@ INTERFACE zif_cd_hck_types
       runtime_min TYPE i,
       overrun     TYPE abap_bool,
       blocked     TYPE abap_bool,
+      "! Matching attempts in the window; a later success after an abort = retried (A42)
+      attempts    TYPE i,
+      retried     TYPE abap_bool,
+      "! The deciding attempt started after WINDOW_TO
+      late_start  TYPE abap_bool,
     END OF ty_step_status.
   TYPES tt_step_status TYPE STANDARD TABLE OF ty_step_status WITH EMPTY KEY.
 
@@ -411,6 +461,8 @@ INTERFACE zif_cd_hck_types
   TYPES:
     BEGIN OF ty_fikey_gap,
       fikey TYPE ty_fikey,
+      "! A gap is per company code: a partial transfer leaves the other company open (A43)
+      bukrs TYPE bukrs,
     END OF ty_fikey_gap.
   TYPES tt_fikey_gap TYPE STANDARD TABLE OF ty_fikey_gap WITH EMPTY KEY.
 
@@ -425,11 +477,12 @@ INTERFACE zif_cd_hck_types
   "! ZCD_HCK_BASELINE (and a freshly computed hash)
   TYPES:
     BEGIN OF ty_baseline,
-      tabname   TYPE ty_tabname,
-      hash      TYPE ty_hash,
-      row_count TYPE i,
-      taken_at  TYPE timestampl,
-      taken_by  TYPE syuname,
+      tabname      TYPE ty_tabname,
+      hash         TYPE ty_hash,
+      row_count    TYPE i,
+      taken_at     TYPE timestampl,
+      taken_by     TYPE syuname,
+      hash_version TYPE ty_hash_version,
     END OF ty_baseline.
   TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY.
 
@@ -458,6 +511,10 @@ INTERFACE zif_cd_hck_types
       now_time    TYPE t,
       run_id      TYPE zif_cd_ops_types=>ty_run_id,
       test_mode   TYPE abap_bool,
+      "! Time budget of the running check (start + TIMEOUT_SEC); checks that work in
+      "! items stop between items once it has passed (audit A18)
+      deadline    TYPE timestampl,
+      budget_sec  TYPE i,
     END OF ty_context.
 
   "! Result of one check (plug-in output enriched by the engine)
@@ -512,6 +569,9 @@ INTERFACE zif_cd_hck_types
       age_hours     TYPE i,
       max_age_hours TYPE i,
       stale         TYPE abap_bool,
+      "! Runs still running past HCK_MAX_RUN_MIN_<area> (dump / hang) - audit A06
+      hung_runs     TYPE i,
+      max_run_min   TYPE i,
     END OF ty_pe_area_status.
   TYPES tt_pe_area_status TYPE STANDARD TABLE OF ty_pe_area_status WITH EMPTY KEY.
 
@@ -541,12 +601,16 @@ INTERFACE zif_cd_hck_types
       results        TYPE tt_check_result,
       pe_areas        TYPE tt_pe_area_status,
       exceptions     TYPE tt_open_exception,
+      "! Business checks selected and active / executed without plug-in error (A60)
+      configured_checks TYPE i,
+      executed_checks   TYPE i,
     END OF ty_report.
 
   "! Parameter-name prefixes completed by a payment engine area (e.g. HCK_MAX_AGE_H_EBS)
   CONSTANTS:
     BEGIN OF gc_param_prefix,
       max_age TYPE c LENGTH 14 VALUE 'HCK_MAX_AGE_H_',
+      max_run TYPE c LENGTH 16 VALUE 'HCK_MAX_RUN_MIN_',
     END OF gc_param_prefix.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
@@ -589,6 +653,15 @@ INTERFACE zif_cd_hck_types
       report_category             TYPE zif_cd_ops_types=>ty_msgno VALUE '357',
       report_area                 TYPE zif_cd_ops_types=>ty_msgno VALUE '358',
       report_last_run             TYPE zif_cd_ops_types=>ty_msgno VALUE '359',
+      area_runs_hung              TYPE zif_cd_ops_types=>ty_msgno VALUE '360',
+      no_business_checks          TYPE zif_cd_ops_types=>ty_msgno VALUE '361',
+      config_check_text           TYPE zif_cd_ops_types=>ty_msgno VALUE '362',
+      step_retried                TYPE zif_cd_ops_types=>ty_msgno VALUE '363',
+      step_started_late           TYPE zif_cd_ops_types=>ty_msgno VALUE '364',
+      job_read_capped             TYPE zif_cd_ops_types=>ty_msgno VALUE '365',
+      gl_gaps_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '366',
+      baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
+      budget_exhausted            TYPE zif_cd_ops_types=>ty_msgno VALUE '369',
     END OF gc_msg.
 
 ENDINTERFACE.

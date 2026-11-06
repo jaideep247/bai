@@ -20,4 +20,6 @@ define table zcd_fmon_event {
   created_by   : syuname;
   created_at   : timestampl;
 }
-// Secondary index ZCD_FMON_EVENT~SRC (UNIQUE): MANDT, SRC_ID, SRC_KEY, STAGE  (idempotent event insert)
+// Secondary index ZCD_FMON_EVENT~SRC (UNIQUE): idempotent event insert per file instance (audit A05/A49);
+// FILE_ID is part of the key so that the same reference on another business date is a new event
+// @index SRC UNIQUE: MANDT, FILE_ID, SRC_ID, SRC_KEY, STAGE

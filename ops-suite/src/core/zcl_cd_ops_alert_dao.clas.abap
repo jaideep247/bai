@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | claim / complete (durable claim before send), get_repeat_keys (audit A17); escalation override read (A46).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert repository</p>
 CLASS zcl_cd_ops_alert_dao DEFINITION
@@ -27,7 +28,7 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
   METHOD zif_cd_ops_alert_dao~get_rules.
     SELECT rule_id, pe_area, min_severity, rule_pattern, check_pattern, group1_pattern,
            group2_pattern, min_rag, on_abort, channel, destination, digest, max_items,
-           throttle_min, quiet_from, quiet_to, escalate_after, escalation_dest, active
+           throttle_min, quiet_from, quiet_to, escalate_after, escalation_dest, esc_override, active
       FROM zcd_ops_alert_rule
       WHERE ( pe_area = @iv_pe_area OR pe_area = @gc_any_pe_area )
         AND active = @abap_true
@@ -45,7 +46,8 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_alert_dao~get_log.
-    SELECT alert_id, rule_id, channel, run_id, pe_area, sent_at, status, destination, subject, error
+    SELECT alert_id, rule_id, channel, run_id, pe_area, sent_at, status, destination, subject, error,
+           intent_key, attempt
       FROM zcd_ops_alert_log
       WHERE rule_id  = @iv_rule_id
         AND sent_at >= @iv_since
@@ -72,12 +74,74 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
       ls_db-destination = ls_log-destination.
       ls_db-subject     = ls_log-subject.
       ls_db-error       = ls_log-error.
+      ls_db-intent_key  = ls_log-intent_key.
+      ls_db-attempt     = ls_log-attempt.
       ls_db-created_by  = sy-uname.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " Audit rows; a duplicate key (UUID collision) must not lose the others, so
     " sy-subrc 4 (some rows skipped) is accepted deliberately
     INSERT zcd_ops_alert_log FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS. "#EC CI_SUBRC
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_alert_dao~claim.
+    DATA ls_db TYPE zcd_ops_alert_log.
+    " A17: an intent that is claimed (in delivery) or sent is never sent again; a failed
+    " intent may be retried with the next attempt number
+    SELECT intent_key, attempt, status
+      FROM zcd_ops_alert_log
+      WHERE intent_key = @is_log-intent_key
+      ORDER BY attempt DESCENDING
+      INTO TABLE @DATA(lt_attempts).
+    LOOP AT lt_attempts TRANSPORTING NO FIELDS
+         WHERE status = zif_cd_ops_types=>gc_alert_status-claimed
+            OR status = zif_cd_ops_types=>gc_alert_status-sent
+            OR status = zif_cd_ops_types=>gc_alert_status-partial.
+      rv_claimed_elsewhere = abap_true.
+      RETURN.
+    ENDLOOP.
+    ls_db-alert_id    = is_log-alert_id.
+    ls_db-rule_id     = is_log-rule_id.
+    ls_db-channel     = is_log-channel.
+    ls_db-run_id      = is_log-run_id.
+    ls_db-pe_area     = is_log-pe_area.
+    ls_db-sent_at     = is_log-sent_at.
+    ls_db-status      = zif_cd_ops_types=>gc_alert_status-claimed.
+    ls_db-destination = is_log-destination.
+    ls_db-subject     = is_log-subject.
+    ls_db-intent_key  = is_log-intent_key.
+    ls_db-attempt     = lines( lt_attempts ) + 1.
+    ls_db-created_by  = sy-uname.
+    " the unique index INT (MANDT, INTENT_KEY, ATTEMPT) rejects a parallel dispatcher
+    INSERT zcd_ops_alert_log FROM @ls_db.
+    rv_claimed_elsewhere = xsdbool( sy-subrc <> 0 ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_alert_dao~complete.
+    UPDATE zcd_ops_alert_log
+      SET status  = @is_log-status,
+          error   = @is_log-error,
+          sent_at = @is_log-sent_at
+      WHERE alert_id = @is_log-alert_id.
+    IF sy-subrc <> 0.
+      " the claim row is gone (purged): keep the evidence as a new row
+      INSERT zcd_ops_alert_log FROM @( CORRESPONDING #( is_log ) ).    "#EC CI_SUBRC
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_alert_dao~get_repeat_keys.
+    SELECT object_type, object_key, check_code
+      FROM zcd_ops_finding
+      WHERE run_id      = @iv_run_id
+        AND occurrences > 1
+      ORDER BY object_type, object_key, check_code
+      INTO TABLE @DATA(lt_rows).
+    LOOP AT lt_rows INTO DATA(ls_row).
+      INSERT CORRESPONDING #( ls_row ) INTO TABLE rt_keys.
+    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.

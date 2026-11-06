@@ -12,6 +12,12 @@
 *& 2026-11-06 | Active suppressions applied per check result (design 6.3).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Hung runs per area, own run excluded (A06); no business check = red config
+*&              result, grey never SUCCESS (A60); history as-of (A58), flat tolerance (A59).
+*& 2026-11-06 | Each check receives a deadline (start + TIMEOUT_SEC) in its context (audit A18).
+*& 2026-11-06 | Check interface verified by the factory before instantiation (audit A62).
+*& 2026-11-06 | Baseline refreshes the parameter snapshot; runs get it from start_run (audit A64).
+*& 2026-11-06 | Metric kind and weight passed to the history (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -42,6 +48,8 @@ CLASS zcl_cd_hck_engine DEFINITION
         weight_high   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
         weight_medium TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_M',
         weight_low    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_L',
+        max_run_min   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_RUN_MIN',
+        flat_tol_pct  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_FLAT_TOL_PCT',
       END OF gc_param.
 
     CONSTANTS gc_default_route TYPE zif_cd_ops_types=>ty_param_name VALUE 'MORNING'.
@@ -71,6 +79,10 @@ CLASS zcl_cd_hck_engine DEFINITION
     "! S_TABU_NAM check before a configuration baseline is written
     CONSTANTS gc_actvt_change TYPE activ_auth VALUE '02'.
     CONSTANTS gc_baseline_table TYPE tabname VALUE 'ZCD_HCK_BASELINE'.
+    "! A06: default runtime limit of a run before it counts as hung (HCK_MAX_RUN_MIN)
+    CONSTANTS gc_default_max_run_min TYPE i VALUE 120.
+    CONSTANTS gc_seconds_per_minute TYPE i VALUE 60.
+    CONSTANTS gc_end_of_day TYPE t VALUE '235959'.
 
     "! The run itself, under the run lock taken by run( )
     METHODS execute
@@ -100,6 +112,11 @@ CLASS zcl_cd_hck_engine DEFINITION
     "! Active suppressions of the report day (design 6.3), read once per run
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
     DATA mv_today TYPE d.
+    "! The current run: excluded from its own watchdog (A06)
+    DATA mv_run_id TYPE zif_cd_ops_types=>ty_run_id.
+    "! Baseline history is read as of this time (report date end or run start, A58)
+    DATA mv_as_of TYPE timestampl.
+    DATA mv_flat_tol_pct TYPE zif_cd_hck_types=>ty_value.
 
     METHODS execute_check
       IMPORTING
@@ -145,6 +162,20 @@ CLASS zcl_cd_hck_engine DEFINITION
         it_pe_areas       TYPE zif_cd_hck_types=>tt_pe_area_status
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result.
+
+    "! Red configuration result when no business check was selected / active (A60)
+    METHODS config_result
+      RETURNING
+        VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result.
+
+    "! End of the report date for a backdated report, else the run start (A58)
+    METHODS history_as_of
+      IMPORTING
+        iv_report_date  TYPE d
+        iv_today        TYPE d
+        iv_started_at   TYPE timestampl
+      RETURNING
+        VALUE(rv_as_of) TYPE timestampl.
 
     METHODS open_exceptions
       IMPORTING
@@ -276,6 +307,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                            test_mode   = is_selection-test_mode ).
 
     mv_today = lv_today.
+    mv_run_id = rs_report-run-run_id.
+    mv_as_of = history_as_of( iv_report_date = rs_report-report_date
+                              iv_today       = lv_today
+                              iv_started_at  = rs_report-run-started_at ).
+    mv_flat_tol_pct = param_int( iv_name    = gc_param-flat_tol_pct
+                                 iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
     mt_suppressions = mo_dao->get_suppressions( lv_today ).
 
     DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
@@ -289,7 +326,22 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                         CHANGING  cs_run    = rs_report-run ).
       ENDIF.
       INSERT ls_result INTO TABLE rs_report-results.
+      IF ls_result-plugin_error = abap_false.
+        rs_report-executed_checks = rs_report-executed_checks + 1.
+      ENDIF.
     ENDLOOP.
+    rs_report-configured_checks = lines( lt_defs ).
+
+    " A60: a report that executed no business check proves nothing - red, never SUCCESS,
+    " and a healthy self check alone cannot make it green
+    IF lt_defs IS INITIAL.
+      ls_result = config_result( ).
+      IF is_selection-test_mode = abap_false.
+        persist_result( EXPORTING is_result = ls_result
+                        CHANGING  cs_run    = rs_report-run ).
+      ENDIF.
+      INSERT ls_result INTO TABLE rs_report-results.
+    ENDIF.
 
     IF is_selection-include_pe_areas = abap_true.
       rs_report-pe_areas = pe_area_status( ).
@@ -340,6 +392,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     ENDIF.
 
     mo_store = zcl_cd_ops_factory=>get_store( ).
+    " A64: a baseline is taken without a run - it reads the current parameters itself
+    mo_store->refresh_params( ).
     mo_clock = zcl_cd_ops_factory=>get_clock( ).
     mo_dao   = zcl_cd_hck_factory=>get_dao( ).
 
@@ -363,11 +417,19 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD execute_check.
     DATA(lv_started) = mo_clock->now( ).
     DATA(lt_thresholds) = mo_dao->get_thresholds( is_def-check_id ).
+    DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
+                                   ELSE param_int( iv_name = gc_param-timeout_sec iv_default = 300 ) ).
+    " A18: the check gets its budget as a deadline; item-wise checks stop when it passes.
+    " A synchronous call cannot be interrupted - the overrun below stays the backstop.
+    DATA(ls_context) = is_context.
+    ls_context-budget_sec = lv_timeout_sec.
+    ls_context-deadline   = cl_abap_tstmp=>add( tstmp = lv_started
+                                                secs  = lv_timeout_sec ).
 
     TRY.
         rs_result = call_plugin( is_def        = is_def
                                  it_thresholds = lt_thresholds
-                                 is_context    = is_context ).
+                                 is_context    = ls_context ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
         CLEAR rs_result.
         rs_result-plugin_error = abap_true.
@@ -393,8 +455,6 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = lv_started
                                                          iv_to   = mo_clock->now( ) ).
 
-    DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
-                                   ELSE param_int( iv_name = gc_param-timeout_sec iv_default = 300 ) ).
     IF rs_result-runtime_ms > lv_timeout_sec * 1000.
       rs_result-timed_out = abap_true.
       INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-timeout
@@ -416,14 +476,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
 
   METHOD call_plugin.
-    DATA lo_check TYPE REF TO zif_cd_hck_check.
-    DATA(lo_object) = zcl_cd_ops_factory=>get_plugin( is_def-class_name ).
-    TRY.
-        lo_check ?= lo_object.
-      CATCH cx_sy_move_cast_error.
-        RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e300(zcd_ops) WITH is_def-check_id is_def-class_name.
-    ENDTRY.
+    " A62: the factory checks ZIF_CD_HCK_CHECK by RTTI before the class is created
+    " (message 032 names class and interface)
+    DATA(lo_check) = CAST zif_cd_hck_check( zcl_cd_ops_factory=>get_plugin(
+      iv_class_name = is_def-class_name
+      iv_interface  = zif_cd_hck_types=>gc_check_intf ) ).
     rs_result = lo_check->execute( is_def        = is_def
                                    it_thresholds = it_thresholds
                                    is_context    = is_context ).
@@ -448,11 +505,13 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
           iv_metric   = ls_metric-metric
           iv_dim1     = ls_metric-dim1
           iv_max_rows = COND #( WHEN ls_threshold-lookback_runs > 0 THEN ls_threshold-lookback_runs
-                                ELSE lv_default_lookback ) ).
+                                ELSE lv_default_lookback )
+          iv_as_of    = mv_as_of ).
       ENDIF.
-      DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value     = ls_metric-value
-                                                            is_threshold = ls_threshold
-                                                            it_history   = lt_history ).
+      DATA(ls_evaluation) = zcl_cd_hck_threshold=>evaluate( iv_value        = ls_metric-value
+                                                            is_threshold    = ls_threshold
+                                                            it_history      = lt_history
+                                                            iv_flat_tol_pct = mv_flat_tol_pct ).
       IF ls_evaluation-check_code IS INITIAL.
         CONTINUE.
       ENDIF.
@@ -536,6 +595,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_history-dim2        = ls_metric-dim2.
       ls_history-value       = ls_metric-value.
       ls_history-measured_at = lv_now.
+      ls_history-kind        = ls_metric-kind.
+      ls_history-weight      = ls_metric-weight.
       INSERT ls_history INTO TABLE lt_history.
     ENDLOOP.
     IF lt_history IS NOT INITIAL.
@@ -551,6 +612,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
     DATA(lv_now) = mo_clock->now( ).
     DATA(lv_default_age) = param_int( iv_name = gc_param-max_age_hours iv_default = 26 ).
+    DATA(lv_default_run) = param_int( iv_name = gc_param-max_run_min iv_default = gc_default_max_run_min ).
     DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
       mo_store->get_param( iv_name = gc_param-watch_pe_areas iv_default = `EBS,FMON,HCK` ) ).
 
@@ -559,6 +621,15 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_status-pe_area        = to_upper( lv_pe_area ).
       ls_status-max_age_hours = param_int( iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_age && ls_status-pe_area )
                                            iv_default = lv_default_age ).
+      " A06: runs still in status R past the area's runtime limit are evaluated on their own,
+      " independently of how fresh the last completed run is; the current run is excluded
+      ls_status-max_run_min = param_int( iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_run && ls_status-pe_area )
+                                         iv_default = lv_default_run ).
+      ls_status-hung_runs = lines( mo_store->get_stale_runs(
+        iv_pe_area        = ls_status-pe_area
+        iv_started_before = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
+                                                         secs  = ls_status-max_run_min * gc_seconds_per_minute )
+        iv_exclude_run    = mv_run_id ) ).
       DATA(ls_last) = mo_store->get_last_run( ls_status-pe_area ).
       IF ls_last-run_id IS INITIAL.
         ls_status-stale = abap_true.
@@ -573,6 +644,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_status-age_hours     = hours_between( iv_from = ls_last-started_at
                                                iv_to   = lv_now ).
       ls_status-stale         = xsdbool( ls_status-age_hours > ls_status-max_age_hours ).
+      IF ls_status-hung_runs > 0.
+        ls_status-rag = zif_cd_ops_types=>gc_rag-red.
+      ENDIF.
       LOOP AT mo_store->get_findings( ls_last-run_id ) INTO DATA(ls_finding).
         CASE zcl_cd_ops_util=>severity_rank( ls_finding-severity ).
           WHEN 3 OR 4.
@@ -591,6 +665,17 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-description = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-self_check_text ).
     rs_result-category    = zif_cd_hck_types=>gc_category-technical.
     rs_result-priority    = zif_cd_hck_types=>gc_priority-high.
+    LOOP AT it_pe_areas INTO DATA(ls_hung) WHERE hung_runs > 0.
+      INSERT VALUE #( object_key = ls_hung-pe_area
+                      check_code = zif_cd_hck_types=>gc_code-run_hung
+                      severity   = zif_cd_ops_types=>gc_severity-error
+                      action     = zif_cd_ops_types=>gc_action-notify
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-area_runs_hung
+                                                          iv_v1    = ls_hung-pe_area
+                                                          iv_v2    = ls_hung-hung_runs
+                                                          iv_v3    = ls_hung-max_run_min ) )
+        INTO TABLE rs_result-findings.
+    ENDLOOP.
     LOOP AT it_pe_areas INTO DATA(ls_pe_area) WHERE stale = abap_true.
       INSERT VALUE #( object_key = ls_pe_area-pe_area
                       check_code = zif_cd_hck_types=>gc_code-pe_area_stale
@@ -606,6 +691,31 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         INTO TABLE rs_result-findings.
     ENDLOOP.
     finalize_result( CHANGING cs_result = rs_result ).
+  ENDMETHOD.
+
+
+  METHOD config_result.
+    rs_result-check_id    = zif_cd_hck_types=>gc_config_check.
+    rs_result-description = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-config_check_text ).
+    rs_result-category    = zif_cd_hck_types=>gc_category-technical.
+    rs_result-priority    = zif_cd_hck_types=>gc_priority-high.
+    INSERT VALUE #( check_code = zif_cd_hck_types=>gc_code-no_checks
+                    severity   = zif_cd_ops_types=>gc_severity-error
+                    action     = zif_cd_ops_types=>gc_action-notify
+                    message    = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-no_business_checks ) )
+      INTO TABLE rs_result-findings.
+    finalize_result( CHANGING cs_result = rs_result ).
+  ENDMETHOD.
+
+
+  METHOD history_as_of.
+    rv_as_of = iv_started_at.
+    IF iv_report_date IS INITIAL OR iv_report_date >= iv_today.
+      RETURN.
+    ENDIF.
+    CONVERT DATE iv_report_date TIME gc_end_of_day
+      INTO TIME STAMP DATA(lv_end) TIME ZONE sy-zonlo.
+    rv_as_of = lv_end.
   ENDMETHOD.
 
 
@@ -700,10 +810,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     ENDLOOP.
     cs_report-run-total_items = lines( cs_report-results ).
     cs_report-run-rag         = cs_report-overall_rag.
+    " A60: only GREEN closes as SUCCESS; an unrated (grey) report is an error
     cs_report-run-status      = SWITCH #( cs_report-overall_rag
-                                          WHEN zif_cd_ops_types=>gc_rag-red   THEN zif_cd_ops_types=>gc_run_status-error
+                                          WHEN zif_cd_ops_types=>gc_rag-green THEN zif_cd_ops_types=>gc_run_status-success
                                           WHEN zif_cd_ops_types=>gc_rag-amber THEN zif_cd_ops_types=>gc_run_status-warning
-                                          ELSE zif_cd_ops_types=>gc_run_status-success ).
+                                          ELSE zif_cd_ops_types=>gc_run_status-error ).
     cs_report-run-ended_at    = mo_clock->now( ).
     cs_report-run-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = cs_report-run-started_at
                                                              iv_to   = cs_report-run-ended_at ).

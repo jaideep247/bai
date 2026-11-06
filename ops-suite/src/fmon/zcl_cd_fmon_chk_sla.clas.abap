@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Audit A40: INFERRED verdicts reported as information.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - stage SLA (PRISM handoff, bank ack)</p>
 "! Rules: ZCL_CD_FMON_RULES=>SLA_VERDICT / SLA_CODE. Params: STAGE=, LATE_SEVERITY=W
@@ -54,6 +55,9 @@ CLASS zcl_cd_fmon_chk_sla IMPLEMENTATION.
                  iv_code     = zcl_cd_fmon_rules=>sla_code( iv_stage = ls_sla-stage iv_state = ls_verdict-state )
                  iv_severity = COND #( WHEN ls_verdict-state = zif_cd_fmon_types=>gc_sla_state-late
                                        THEN lv_late_severity
+                                       " Audit A40: a stage passed without its own evidence - visible, not an error
+                                       WHEN ls_verdict-state = zif_cd_fmon_types=>gc_sla_state-inferred
+                                       THEN zif_cd_ops_types=>gc_severity-info
                                        ELSE ls_sla-severity )
                  iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-after_min_sla_min
                                                       iv_v1    = ls_file-file_name

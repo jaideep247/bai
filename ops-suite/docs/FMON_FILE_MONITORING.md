@@ -80,7 +80,8 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 - For each inbound file of type RETURNS or NOC, FMON finds its lot(s) and counts items whose status is in the configured "done" list versus all items.
 - Open items > 0 → outcome **PARTIALLY_PROCESSED**, unprocessed count = open items, finding **LOT_UNPROCESSED** (E) with up to five open lot/item keys → alert (acceptance test 8).
 - All items done → FULLY_PROCESSED. Loaded file but no lot at all → **LOT_NOT_FOUND** (W).
-- **NOC aging (NACHA):** an NOC must be applied within **6 banking days** of receipt. Day 6 with an open entry → **NOC_DUE_TODAY** (W); beyond day 6 → **NOC_AGING** (E, compliance). Banking days come from the factory calendar; a receipt on a non-banking day counts from the next banking day.
+- **NOC aging (NACHA):** an NOC must be applied within **6 banking days** of receipt. Day 6 with an open entry → **NOC_DUE_TODAY** (W); beyond day 6 → **NOC_AGING** (E, compliance). Banking days come from the factory calendar; parameter `FMON_AGE_BASIS` decides the boundary (`A` = counted from the first working day after receipt, `N` = a receipt on a non-working day counts as received on the next working day). If the calendar cannot convert the dates the age is **unknown**: no aging verdict, warning 248 instead (never "0 days").
+- A lot item scan that reaches `FMON_MAX_ROWS` proves nothing: **LOT_SCAN_TRUNCATED** (W), the outcome is not derived (no false FULLY_PROCESSED).
 - Files stay under watch until fully processed (parameter FMON_OPEN_DAYS, default 30 days), so aging keeps being reported every run.
 
 ## A5. RAG triage playbook
@@ -94,7 +95,7 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 | NO_PRISM_HANDOFF | R | Generated, but PRISM did not pick it up within the SLA | Check the PRISM transfer job / OS command (`ZICD_CALL_SM69_COMMAND_NEW`); call PRISM support |
 | NO_BANK_ACK | R | No ack within the SLA | Check PRISM for the bank response; check the ack load job (`ZPAYM_ACH_ACK` / `ZPAYM_WIRE_ACK`) |
 | NACK | R | The bank rejected the file or some payments | Open the ack detail, engage the bank, decide re-send vs re-issue with the business |
-| ACK_COUNT_MISMATCH / ACK_AMOUNT_MISMATCH | R | Bank confirmed a different count/amount than sent | Compare file control totals vs ack; escalate before the next cycle |
+| ACK_COUNT_MISMATCH / ACK_AMOUNT_MISMATCH | R | Bank confirmed a different count/amount than sent (only when the count was reported; payment-level ACKs are counted once per payment) | Compare file control totals vs ack; escalate before the next cycle |
 | DUPLICATE_FILE | R | Same file (name/checksum) generated or received twice | Stop the second transmission if not yet at the bank; check for double payments |
 | ZERO_BYTE | R | Empty file | Re-generate; check the payment run selection |
 | LOT_UNPROCESSED | R | Returns/NOC transactions not yet accounted for | Work the open items (FP09 returns lot / NOC application); re-run the monitor |
@@ -104,7 +105,9 @@ Expected files that did not arrive appear as their own row (`<interface>/<date>`
 | FILE_LATE, *_LATE (e.g. PRISM_HANDOFF_LATE) | A | Arrived or moved later than the window/SLA | Note for SLA reporting; watch the next cycle |
 | SIZE_OUT_OF_BOUNDS | A | Size outside the usual range | Compare volume with the source system |
 | NOC_DUE_TODAY, LOT_NOT_FOUND, UNEXPECTED_FILE | A | Deadline today / lot not yet created / file on a no-file day | Act within the day |
-| UNMAPPED_FILE / UNMAPPED_STATUS / FILE_REF_REUSED | A | A legacy row could not be placed (no silent drop) | IT: add the interface pattern / status mapping / unique file key |
+| UNMAPPED_FILE / UNMAPPED_STATUS / FILE_REF_AMBIGUOUS / MALFORMED_SOURCE_ROW | A | A legacy row could not be placed or read (no silent drop) | IT: add the interface pattern / status mapping / business date of the response / fix the source data |
+| *_INFERRED (e.g. BANK_ACK_INFERRED) | A | Only a later stage was reported, the SLA stage itself has no evidence | Confirm the stage in the source system; map its status |
+| LOT_SCAN_TRUNCATED / PERSIST_CONFLICT | A | Lot completion not provable (row cap) / registry changed by another process meanwhile | Raise FMON_MAX_ROWS or narrow the lot; re-run the monitor |
 
 Every R/A finding is an owned exception in `ZCD_OPS_FINDING` with a due date (`SLA_DAYS_FMON_<severity>`).
 
@@ -138,10 +141,10 @@ Application data (delivery class A):
 
 | Table | Key | Purpose / indexes |
 |---|---|---|
-| ZCD_FMON_FILE | FILE_ID (UUID) | Registry: interface, file reference, direction, type, source, LOB, payment method, name, business date, size, record count, control total, checksum, stage, outcome, unprocessed count, ack/NACK counts, ack amount, origin rows, first/last event, source. Indexes REF (unique: IFACE_ID, FILE_REF), BDT, OUT, NAM, CHK |
-| ZCD_FMON_EVENT | FILE_ID, EVENT_NO | Audit trail of every reported stage (also capped or ignored ones). Unique index SRC: SRC_ID, SRC_KEY, STAGE → idempotent re-runs |
+| ZCD_FMON_FILE | FILE_ID (UUID) | Registry: interface, file reference, direction, type, source, LOB, payment method, name, business date, size, record count, control total, checksum, stage, outcome, unprocessed count, ack/NACK counts, ack amount, origin rows, first/last event, source. Identity of a file instance: IFACE_ID + FILE_REF + BUSINESS_DATE. Indexes REF (unique: IFACE_ID, FILE_REF, BUSINESS_DATE), BDT, OUT, NAM, CHK. Saved only while CHANGED_AT is unchanged since the read (version check) |
+| ZCD_FMON_EVENT | FILE_ID, EVENT_NO | Audit trail of every reported stage (also capped or ignored ones). Unique index SRC: FILE_ID, SRC_ID, SRC_KEY, STAGE → idempotent re-runs per file instance |
 
-Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS. Example rows: `config/fmon_seed.md`.
+Runtime parameters (`ZCD_OPS_PARAM`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS. Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
 
 ## B2. Class model
 
@@ -192,9 +195,9 @@ classDiagram
     ZCL_CD_FMON_INJECTOR ..> ZCL_CD_FMON_FACTORY : friend
 ```
 
-Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole payment engine area (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → group by source/file/stage → apply all groups in event-time order through the state machine → **registry**: window files + open files + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; on failure **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CD_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
+Run sequence (`ZCL_CD_FMON_ENGINE->run`): **run lock** for the whole payment engine area (registry and event numbering are shared; an overlapping run is refused with RUN_LOCKED; not in test mode) → start run (store) + commit (not in test mode) → load customizing → **sync**: every active source → adapter → records → resolve interface (pattern + defaults) → quarantine malformed rows (MALFORMED_SOURCE_ROW) → group by source/file/business date/stage → resolve the file instance (same date; undated responses → latest earlier instance, several → FILE_REF_AMBIGUOUS) → apply all groups in event-time order through the state machine → **registry**: window files + open files + events → **lots**: lot reader per lot config → derive PARTIALLY/FULLY, banking-day age → **expectations** from calendar → **checks** (each isolated; failure = PLUGIN_ERROR) → persist registry and events (not in test mode; version-checked — a row changed meanwhile is not overwritten, PERSIST_CONFLICT; on failure, including a technical CX_SY_OPEN_SQL_DB, **rollback** + PERSIST_ERROR, never a half-written registry) → board → save findings → finish run → **reconcile** the evaluated files (skipped after PLUGIN_ERROR / PERSIST_ERROR) → commit → `ZIF_CD_OPS_ALERT~DISPATCH( run, findings )` (not in test mode; a delivery failure is saved as ALERT_FAILED and committed). Event numbers: MAX + 1 per file; on a key collision with a parallel run the business key (FILE_ID / SRC_ID / SRC_KEY / STAGE) decides — recorded means idempotent, otherwise up to 3 retries.
 
-Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYPEDESCR=>DESCRIBE_BY_NAME` (classic EXCEPTIONS) and `GET_DDIC_FIELD_LIST`; `ZCL_CD_FMON_QUERY=>VALIDATE` rejects any table/field name that is not a DDIC identifier (pattern check) or not in the table (200–203), requires a date or key restriction (209); the DAO builds `SELECT (fields) FROM (table) WHERE (validated name) BETWEEN @… / IN @…` — there is no free-text WHERE anywhere.
+Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYPEDESCR=>DESCRIBE_BY_NAME` (classic EXCEPTIONS) and `GET_DDIC_FIELD_LIST`; `ZCL_CD_FMON_QUERY=>VALIDATE` rejects any table/field name that is not a DDIC identifier (pattern check) or not in the table (200–203), requires a date or key restriction (209); at the read boundary the DAO additionally requires the table and every field to be approved in ZCD_FMON_TABWL (244 / 249) and the caller to hold S_TABU_NAM display for the table (245); it builds `SELECT (fields) FROM (table) WHERE (validated name) BETWEEN @… / >= @… AND < @… / IN @…` — timestamps as the half-open range [from, next midnight); there is no free-text WHERE anywhere.
 
 ## B3. Extension guide (customizing only)
 
@@ -232,6 +235,16 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | 209 | Read of table &1 has no date or key restriction |
 | 211 | File ID could not be generated |
 | 220 | File monitoring &1: &2 file(s), &3 finding(s), RAG &4 |
+| 240 | &1: newer registry state written by another process - not overwritten |
+| 241 | &1: lot item scan stopped at &2 row(s) - completion not proven |
+| 242 | Reference &1 of &2 matches files of several business dates - not applied |
+| 243 | Source &1: &2 row(s) skipped, field &3 malformed |
+| 244 | Table &1 is not approved for file monitoring (ZCD_FMON_TABWL) |
+| 245 | No display authorization for table &1 (S_TABU_NAM) |
+| 246 | Database error in file monitoring, registry not saved: |
+| 247 | &1 of &2 &3 item(s) open |
+| 248 | Factory calendar &1: banking-day age unknown, no aging verdict: |
+| 249 | Field &1 of table &2 is not approved for file monitoring (ZCD_FMON_TABWL) |
 
 Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class), 032 (class does not implement interface). 207, 210, 212–219, 221–299 are free. These rows still have to be added to `config/zcd_ops_messages.md` (shared file, not edited by FMON).
 
@@ -243,13 +256,13 @@ Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class
 | Test class (include) | Level | Test methods |
 |---|---|---|
 | ZCL_CD_FMON_STATUS / ltc_status | pure, no doubles | stage_advances_in_order, stage_may_skip_forward, stage_never_regresses, same_stage_is_idempotent, ack_is_never_overwritten, full_is_never_downgraded, partial_improves_to_full, failed_improves_to_partial, partial_count_is_updated, wrong_direction_is_rejected, unknown_stage_is_rejected |
-| ZCL_CD_FMON_RULES / ltc_rules | pure, no doubles | specific_source_beats_default, new_source_uses_default_iface, unmatched_file_has_no_iface, configured_iface_wins, non_working_day_is_holiday, last_workday_is_month_end, returns_weekday_is_returns_day, holiday_without_row_expects_0, month_end_falls_back_to_normal, short_after_grace_is_missing, short_within_grace_is_late, file_on_zero_day_is_unexpected, arrival_after_window_is_late, overdue_handoff_is_missing, slow_handoff_is_late, timely_handoff_is_ok, ack_sla_counts_from_generation, sla_code_names_the_stage, ack_count_differs_is_mismatch, nack_rows_count_as_responses, amount_within_tolerance_is_ok, later_same_checksum_is_dup, earlier_file_is_not_duplicate, zero_size_is_zero_byte, size_above_max_is_out_of_bound, unknown_size_is_not_checked, open_items_make_partial, no_open_items_make_full, missing_lot_derives_nothing, noc_older_6_bdays_is_error, noc_on_day_6_is_due_today, processed_noc_does_not_age, blank_token_matches_initial, lot_source_cannot_finish_file, lot_cfg_falls_back_to_default |
-| ZCL_CD_FMON_QUERY / ltc_query | pure, no doubles | valid_query_passes, unknown_field_is_rejected, injected_name_is_rejected, date_field_must_be_a_date, unrestricted_read_is_rejected |
-| ZCL_CD_FMON_ADAPTER_GENERIC / ltc_mapping | pure, no doubles | mapped_status_gives_stage, unmapped_status_stays_blank, wildcard_row_maps_the_rest, no_status_field_uses_default, file_key_is_correlation_ref |
+| ZCL_CD_FMON_RULES / ltc_rules | pure, no doubles | specific_source_beats_default, new_source_uses_default_iface, unmatched_file_has_no_iface, configured_iface_wins, non_working_day_is_holiday, last_workday_is_month_end, returns_weekday_is_returns_day, holiday_without_row_expects_0, month_end_falls_back_to_normal, short_after_grace_is_missing, short_within_grace_is_late, file_on_zero_day_is_unexpected, arrival_after_window_is_late, overdue_handoff_is_missing, slow_handoff_is_late, timely_handoff_is_ok, ack_sla_counts_from_generation, sla_code_names_the_stage, ack_count_differs_is_mismatch, nack_rows_count_as_responses, amount_within_tolerance_is_ok, later_same_checksum_is_dup, earlier_file_is_not_duplicate, zero_size_is_zero_byte, size_above_max_is_out_of_bound, unknown_size_is_not_checked, open_items_make_partial, no_open_items_make_full, missing_lot_derives_nothing, noc_older_6_bdays_is_error, noc_on_day_6_is_due_today, processed_noc_does_not_age, blank_token_matches_initial, lot_source_cannot_finish_file, lot_cfg_falls_back_to_default; audit 2026-11-06: known_zero_ack_is_mismatch, unreported_ack_count_unchecked, partial_never_meets_processing, later_stage_only_is_inferred, nack_meets_ack_sla, inferred_code_names_the_stage, truncated_lot_derives_nothing, unknown_age_does_not_age, age_counts_after_receipt |
+| ZCL_CD_FMON_QUERY / ltc_query | pure, no doubles | valid_query_passes, unknown_field_is_rejected, injected_name_is_rejected, date_field_must_be_a_date, unrestricted_read_is_rejected, approved_read_passes, unapproved_table_is_rejected, unapproved_field_is_rejected |
+| ZCL_CD_FMON_ADAPTER_GENERIC / ltc_mapping | pure, no doubles | mapped_status_gives_stage, unmapped_status_stays_blank, wildcard_row_maps_the_rest, no_status_field_uses_default, file_key_is_correlation_ref, malformed_count_quarantined, invalid_date_quarantined, payment_key_is_taken_over, day_range_is_half_open |
 | ZCL_CD_FMON_ADAPTER_GENERIC / ltc_read | LTD DDIC + DAO | unknown_field_stops_before_sql |
-| ZCL_CD_FMON_LOT_READER / ltc_lot_reader | LTD DDIC + DAO | one_open_item_is_counted, lot_items_read_by_lot_key, incomplete_config_is_refused |
-| ZCL_CD_FMON_ENGINE / ltc_engine | LTD DAO, adapter, lot reader, calendar, store, alert, clock, lock, failing check | partial_returns_stay_partial, open_item_gives_one_finding, partial_returns_are_alerted (acceptance test 8), source_cannot_close_open_lot, acked_file_ends_ack_received, duplicate_rows_one_event, failing_check_does_not_abort, failing_source_does_not_abort, test_mode_writes_nothing, unmapped_status_is_reported, noc_age_is_in_banking_days, alerts_sent_after_commit, persist_error_rolls_back, held_lock_skips_run, lock_released_after_run, evaluated_files_reconciled, check_failure_no_reconcile |
-| ZCL_CD_FMON_DAO / ltc_dao | cl_osql_test_environment (ZCD_FMON_FILE, ZCD_FMON_EVENT) | same_event_is_stored_once, repeat_insert_reports_false, events_numbered_per_file, saved_file_found_by_ref, open_old_file_is_evaluated, history_found_by_checksum |
+| ZCL_CD_FMON_LOT_READER / ltc_lot_reader | LTD DDIC + DAO | one_open_item_is_counted, lot_items_read_by_lot_key, incomplete_config_is_refused, row_cap_marks_truncated, below_cap_is_complete |
+| ZCL_CD_FMON_ENGINE / ltc_engine | LTD DAO, adapter, lot reader, calendar, store, alert, clock, lock, failing check | partial_returns_stay_partial, open_item_gives_one_finding, partial_returns_are_alerted (acceptance test 8), source_cannot_close_open_lot, acked_file_ends_ack_received, duplicate_rows_one_event, failing_check_does_not_abort, failing_source_does_not_abort, test_mode_writes_nothing, unmapped_status_is_reported, noc_age_is_in_banking_days, alerts_sent_after_commit, persist_error_rolls_back, held_lock_skips_run, lock_released_after_run, evaluated_files_reconciled, check_failure_no_reconcile, save_conflict_is_reported, sql_error_ends_run_failed, same_name_next_day_new_file, late_ack_goes_to_its_day, undated_ref_ambiguous, payment_acks_deduplicated, ack_count_never_decreases, truncated_lot_not_completed, calendar_failure_no_aging, malformed_row_quarantined, source_full_event_is_capped |
+| ZCL_CD_FMON_DAO / ltc_dao | cl_osql_test_environment (ZCD_FMON_FILE, ZCD_FMON_EVENT, ZCD_FMON_TABWL), LTD DDIC | same_event_is_stored_once, repeat_insert_reports_false, events_numbered_per_file, saved_file_found_by_ref, open_old_file_is_evaluated, history_found_by_checksum, later_open_file_not_evaluated, newer_registry_not_overwritten, unchanged_registry_is_saved, event_belongs_to_its_instance, older_instances_not_prefetched, unapproved_table_is_refused, read_without_auth_is_refused, approved_table_is_read |
 
 Deliberately not unit tested:
 
@@ -257,7 +270,7 @@ Deliberately not unit tested:
 |---|---|---|
 | ZCL_CD_FMON_CALENDAR | Thin wrapper over DATE_CONVERT_TO_FACTORYDATE / FACTORYDATE_CONVERT_TO_DATE; the result depends on the system's factory calendar (TFACD), so a unit test would test SAP, not FMON | Day-type and NOC-aging rules pure in ZCL_CD_FMON_RULES; engine tests with LTD calendar; QA1 cases FMON-QA-07/08 against the real calendar |
 | ZCL_CD_FMON_DDIC | Thin RTTI wrapper (DESCRIBE_BY_NAME, GET_DDIC_FIELD_LIST); its output is the system DDIC | Validation logic pure in ZCL_CD_FMON_QUERY; adapter test with LTD DDIC; QA1 case FMON-QA-10 |
-| ZCL_CD_FMON_DAO~READ_LEGACY | Dynamic SELECT on configured legacy tables; cl_osql_test_environment needs the real (unknown) tables | Query validation (pure) + adapter/lot reader tests with LTD DAO; QA1 cases FMON-QA-01/02/05 |
+| ZCL_CD_FMON_DAO~READ_LEGACY (the SELECT itself) | Dynamic SELECT on configured legacy tables; cl_osql_test_environment needs the real (unknown) tables. The approval / authorisation boundary before it is unit tested (ltc_dao) | Query validation (pure) + adapter/lot reader tests with LTD DAO; QA1 cases FMON-QA-01/02/05 |
 | ZCL_CD_FMON_CHK_* (9 classes) | Thin loops over the context calling the pure rules | Rules in ltc_rules; wiring of all nine through the engine tests (all nine are configured in ltc_engine) |
 | ZCL_CD_FMON_FACTORY / INJECTOR | No logic beyond double slots | Every application test resolves its CUT through the factory |
 | ZCD_FMON_MONITOR | Presentation only (SALV) | QA1 case FMON-QA-12 |
@@ -292,6 +305,7 @@ Recommended QA1 functional test cases (Test & Validation document):
   1. `SCAL-FACDATE` as the factory-date type.
   2. Parameter names of `DATE_CONVERT_TO_FACTORYDATE` (CORRECT_OPTION, DATE, FACTORY_CALENDAR_ID, FACTORYDATE, WORKINGDAY_INDICATOR).
   3. Parameter names of `FACTORYDATE_CONVERT_TO_DATE` (FACTORYDATE, FACTORY_CALENDAR_ID, DATE).
+- Open ADT verifications from the 2026-11-06 audit fixes (see `docs/Audit_Response_FMON.md`): `SELECT SINGLE FOR UPDATE` inside cl_osql_test_environment, redirect of the dynamic `FROM (table)` read of a test-double table (approved_table_is_read), and that abapGit creates the serialized secondary indexes (SE11 → Indexes).
 
 ## B7. Design decisions (changes to the original brief)
 
@@ -302,11 +316,12 @@ Recommended QA1 functional test cases (Test & Validation document):
 2. **Inbound outcome may improve FAILED → PARTIALLY_PROCESSED** (not only → FULLY) on re-run; outcomes can only get better. ACK/NACK stay final; a later payment NACK is still reported via the NACK count.
 3. **Lot decides the outcome** for returns/NOC interfaces: a source FULLY/PARTIALLY is capped at FILE_LOADED. Without this, a source flag could close a file with an open transaction (acceptance test 8 would fail).
 4. **Dynamic SQL in the DAO**, not in the adapter: the adapter/lot reader build and DDIC-validate the query; `ZIF_CD_FMON_DAO~READ_LEGACY` executes it (standards: no SQL outside the DAO). DDIC describer is its own seam (`ZIF_CD_FMON_DDIC`).
-5. **Events aggregated** per source + file + stage (one event, counts/amounts summed). Payment-level acks (one row per payment) would otherwise flood the audit trail. Event uniqueness: SRC_ID + SRC_KEY (= file reference) + STAGE; lot-derived events use SRC_ID `LOT`, SRC_KEY = file ID.
+5. **Events aggregated** per source + file + stage (one event, counts/amounts summed). Payment-level acks (one row per payment) would otherwise flood the audit trail. Event uniqueness: FILE_ID + SRC_ID + SRC_KEY (= file reference) + STAGE (the file instance is part of the key since 2026-11-06); lot-derived events use SRC_ID `LOT`, SRC_KEY = file ID.
 6. **Groups of all sources applied in event-time order** (not per source), so a terminal status from one table cannot overtake an earlier stage from another.
 7. **Added fields:** registry FILE_REF (cross-source key), SIZE_KNOWN, ACK_COUNT/ACK_AMOUNT/NACK_COUNT, ORIGIN_ROWS; SRC SIZE/CHECKSUM/SOURCE/LOB fields and DEFAULT_STAGE; LOTCFG header/item split and LINK_BY.
 8. **Alert route removed from ZCD_FMON_IFACE**: per addendum, the engine calls `ZIF_CD_OPS_ALERT~DISPATCH` once per run (never in test mode); thresholds and recipients live in `ZCD_OPS_ALERT_RULE`. FMON does not use `send( )`.
 9. **SLA check is one configurable class** (`ZCL_CD_FMON_CHK_SLA`) driven by ZCD_FMON_SLA rows; "no PRISM handoff" and "no bank ack" are check rows with `STAGE=`. Late-but-reached is reported separately (`*_LATE`, W).
 10. **Holiday without a calendar row expects nothing** (no fallback to NORMAL) — avoids false FILE_MISSING on bank holidays; files that day → UNEXPECTED_FILE.
-11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, FILE_REF_REUSED, LOT_NOT_FOUND.
+11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, LOT_NOT_FOUND; since 2026-11-06 FILE_REF_AMBIGUOUS, MALFORMED_SOURCE_ROW, LOT_SCAN_TRUNCATED, PERSIST_CONFLICT. FILE_REF_REUSED is retired: a reused reference on another business date is a new file instance.
 12. **Run lock (2026-11-06):** one monitor run at a time for the whole payment engine area (core message 040, RUN_LOCKED alert); the unique registry index still protects against double registration. Checksum-mismatch and archive-failure checks from the master prompt are possible as further `ZIF_CD_FMON_CHECK` rows once a source delivers those fields.
+13. **Audit hardening (2026-11-06, `docs/Audit_Response_FMON.md`):** version-checked registry save (A04), SQL errors handled at the LUW owner (A05), file instance = reference + business date (A49), SLA met only by admissible evidence — the stage itself or a NACK for an ACK SLA, a later stage alone is `*_INFERRED` (A40), ACK counts deduplicated per payment and cumulative, unknown ≠ zero (A39), truncated lot scans derive nothing (A38), age basis and calendar failure explicit (A41), open-file window bounded by the run date (A50), approved tables + S_TABU_NAM at the read boundary (A51), malformed rows quarantined and half-open timestamp range (A52).

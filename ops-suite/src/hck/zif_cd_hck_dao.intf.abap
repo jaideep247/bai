@@ -7,6 +7,9 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | get_suppressions (design 6.3), DEFAULT IGNORE for existing doubles.
 *& 2026-11-06 | select_values for the known-table checks (DEFAULT IGNORE).
+*& 2026-11-06 | get_metric_history by distinct completed runs with as-of bound (audit A58).
+*& 2026-11-06 | get_unresolved_jobs; job runs carry program/variant (audit A42, A44).
+*& 2026-11-06 | G/L transfer gaps per company code and reference type; total count (audit A43).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -64,13 +67,16 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Last iv_max_rows values of a metric (newest first), current run excluded
+  "! Baseline history: the latest value of each of the last iv_max_rows COMPLETED runs
+  "! (status S / W / E, not test mode), newest run first, measured up to iv_as_of
+  "! (initial = no bound); running and aborted runs never contribute (audit A58)
   METHODS get_metric_history
     IMPORTING
       iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
       iv_metric        TYPE zif_cd_hck_types=>ty_metric_name
       iv_dim1          TYPE zif_cd_hck_types=>ty_dim
       iv_max_rows      TYPE i
+      iv_as_of         TYPE timestampl OPTIONAL
     RETURNING
       VALUE(rt_values) TYPE zif_cd_hck_types=>tt_value.
 
@@ -123,7 +129,8 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rv_working) TYPE abap_bool.
 
-  "! Background job instances (TBTCO) planned or started in a date window
+  "! Background job instances (TBTCO) planned or started in a date window, with program
+  "! and variant of the first step (TBTCP); capped at ZIF_CD_HCK_TYPES=>GC_MAX_JOB_ROWS
   METHODS get_job_runs
     IMPORTING
       it_jobnames    TYPE zif_cd_hck_types=>tt_jobname_range
@@ -132,6 +139,14 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_runs) TYPE zif_cd_hck_types=>tt_job_run.
 
+  "! Jobs not finished (running, ready, released, active) regardless of their date -
+  "! an old stuck job never drops out of a date window (audit A44); capped at
+  "! ZIF_CD_HCK_TYPES=>GC_MAX_JOB_ROWS, oldest planned start first
+  METHODS get_unresolved_jobs DEFAULT IGNORE
+    IMPORTING
+      it_jobnames    TYPE zif_cd_hck_types=>tt_jobname_range
+    RETURNING
+      VALUE(rt_runs) TYPE zif_cd_hck_types=>tt_job_run.
   "! Application-log message counters (BALHDR) per object / subobject for a day
   METHODS get_applog_stats
     IMPORTING
@@ -155,15 +170,26 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_exceptions) TYPE zif_cd_hck_types=>tt_open_exception.
 
-  "! Reconciliation keys with totals records but no GL document
-  "! (DFKKSUMC-FIKEY = DFKKKO-FIKEY = AWKEY), posting date in window
+  "! Reconciliation key and company code with totals records (DFKKSUMC) but no
+  "! unreversed GL document of reference type iv_awtyp for that company code
+  "! (DFKKSUMC-FIKEY = DFKKKO-FIKEY = BKPF-AWKEY), posting date in window (A43);
+  "! at most iv_max_rows listed
   METHODS get_fikeys_without_gl
     IMPORTING
       iv_from        TYPE d
       iv_to          TYPE d
       iv_max_rows    TYPE i
+      iv_awtyp       TYPE awtyp
     RETURNING
       VALUE(rt_gaps) TYPE zif_cd_hck_types=>tt_fikey_gap.
+  "! Total number of gaps of get_fikeys_without_gl, independent of the display cap (A43)
+  METHODS count_fikeys_without_gl DEFAULT IGNORE
+    IMPORTING
+      iv_from         TYPE d
+      iv_to           TYPE d
+      iv_awtyp        TYPE awtyp
+    RETURNING
+      VALUE(rv_count) TYPE i.
 
   "! Number of short dumps on a date
   METHODS count_short_dumps

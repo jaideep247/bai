@@ -48,19 +48,23 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 
 ## ZCD_FMON_SRC (legacy source adapters — field names to be filled from SE11)
 
-| SRC_ID | IFACE_ID | TABLE_NAME | FILE_KEY_FIELD | FILE_NAME_FIELD | DATE_FIELD | TIME_FIELD | TS_FIELD | STATUS_FIELD | COUNT_FIELD | AMOUNT_FIELD | SIZE_FIELD | DEFAULT_STAGE | ADAPTER_CLASS |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| REGUT | (blank: by pattern) | ZCDT_REGUT | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 or blank› | ‹SE11› | ‹SE11› | ‹SE11› | GENERATED_IN_SAP | (blank) |
-| ACHACK | ACH_PNC_DISB_OUT | ZCD_ACH_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | (blank) |
-| WIREACK | WIRE_JPMC_OUT | ZCD_WIRE_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | ‹SE11› | | | (blank) |
-| CHKHIST | CHECK_POSPAY_OUT | ZCD_CHECK_HIST | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | | | | (blank) |
-| ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | (blank) |
-| STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | (blank) |
-| PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | FILE_RECEIVED | (blank) |
+| SRC_ID | IFACE_ID | TABLE_NAME | FILE_KEY_FIELD | FILE_NAME_FIELD | DATE_FIELD | TIME_FIELD | TS_FIELD | STATUS_FIELD | COUNT_FIELD | AMOUNT_FIELD | SIZE_FIELD | ITEM_KEY_FIELD | DEFAULT_STAGE | ADAPTER_CLASS |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| REGUT | (blank: by pattern) | ZCDT_REGUT | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 or blank› | ‹SE11› | ‹SE11› | ‹SE11› | | GENERATED_IN_SAP | (blank) |
+| ACHACK | ACH_PNC_DISB_OUT | ZCD_ACH_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 payment key, if one row per payment› | | (blank) |
+| WIREACK | WIRE_JPMC_OUT | ZCD_WIRE_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | ‹SE11› | | ‹SE11 wire reference› | | (blank) |
+| CHKHIST | CHECK_POSPAY_OUT | ZCD_CHECK_HIST | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | | | | | (blank) |
+| ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | | (blank) |
+| STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | | (blank) |
+| PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | | FILE_RECEIVED | (blank) |
 
 **PRISM payment requests (USAA reference).** Each request is one monitored "file" of interface `PAYREQ_PRISM_IN` keyed by the request reference (`FILE_KEY_FIELD`; the FMON object key is that reference in upper case — the PRISM handled-manually app resolves the exception by it). Confirmed: status field `ZZ_STATUS`, processed = `SUCCESS`, and the highest `COUNTER` is never used — the state machine makes `FULLY_PROCESSED` final, so a failed attempt written after the success cannot downgrade the request (tests `success_wins_over_later_fail`, `success_after_fail_wins`). The `SOURCE` field separates PCLM, ORCI, … — partition by a `ZCD_FMON_SRC` row per source with a condition on `SOURCE` when the adapter supports it, otherwise one interface per source ‹confirm›.
 
-`FILE_KEY_FIELD` must be **unique per file over time** and identical in every table of the same file (e.g. a run/file ID). If the only common value is a constant file name, the engine raises `FILE_REF_REUSED` instead of merging days.
+`FILE_KEY_FIELD` must be identical in every table of the same file (e.g. a run/file ID). A file instance is **interface + reference + business date** (audit A49): the same constant file name on another day is a new instance, never a merge. Response rows (ACK, NACK, return) with a business date attach to that day's instance; undated responses attach to the latest earlier instance, and when several open instances qualify the engine raises `FILE_REF_AMBIGUOUS` instead of guessing. Every adapter must therefore supply `DATE_FIELD` (or `TS_FIELD`).
+
+`ITEM_KEY_FIELD` (audit A39): payment key of a response table with one row per payment. When it is set, ACK/NACK counts are distinct payments (re-sent acknowledgements are not double counted) and accumulate across runs; when blank, a file-level row's `COUNT_FIELD` is taken as the acknowledged count. A file without any reported count is *unknown* and the ACK-count match is not evaluated; a reported zero is checked.
+
+Rows whose count, amount, size or date cannot be converted are quarantined (`MALFORMED_SOURCE_ROW`, audit A52) and never counted.
 
 ## ZCD_FMON_SRCMAP (status values — ‹confirm with each table's domain›)
 
@@ -77,6 +81,24 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | PAYREQ | SUCCESS | FULLY_PROCESSED |
 | PAYREQ | ‹confirm failure values› | FAILED |
 | PAYREQ | `*` | FILE_RECEIVED (any other status: request arrived, not yet processed) |
+
+## ZCD_FMON_TABWL (tables approved for the dynamic reader — audit A51)
+
+Every table named in `ZCD_FMON_SRC` or `ZCD_FMON_LOTCFG` must be approved here, and the batch user needs `S_TABU_NAM` (ACTVT 03, TABLE = the name) for it; otherwise the read is refused (messages 244 / 245 / 249). `FIELD_NAME = *` approves every field; list fields one row each to narrow it.
+
+| TABLE_NAME | FIELD_NAME | ACTIVE | DESCRIPTION |
+|---|---|---|---|
+| ZCDT_REGUT | * | X | Generated payment files |
+| ZCD_ACH_ACK | * | X | ACH bank acknowledgements |
+| ZCD_WIRE_ACK | * | X | Wire bank acknowledgements |
+| ZCD_CHECK_HIST | * | X | Check / positive pay history |
+| ZCD_ACH_RTRV_LOG | * | X | ACH returns retrieval log |
+| ZCD_STRP_POUT_LOG | * | X | Stripe payout log |
+| ZCD_PAYM_REQ_LOG | * | X | PRISM payment request log |
+| DFKKNRK | * | X | NOC lot header |
+| DFKKNRP | * | X | NOC lot items |
+| DFKKRP | * | X | Returns lot items |
+| ‹SE11: returns lot header› | * | X | Returns lot header |
 
 ## ZCD_FMON_LOTCFG
 
@@ -114,7 +136,8 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | FMON_FACTORY_CAL | ‹US› | factory calendar when ZCD_FMON_CAL has none |
 | FMON_RETURNS_WEEKDAYS | ‹1,2,3,4,5› | weekdays that are ACH returns cycle days |
 | FMON_NOC_SLA_DAYS | 6 | NACHA NOC limit in banking days |
-| FMON_MAX_ROWS | 50000 | row cap per legacy read |
+| FMON_MAX_ROWS | 50000 | row cap per legacy read; a lot scan reaching it is `LOT_SCAN_TRUNCATED` and derives no lot outcome (audit A38) |
+| FMON_AGE_BASIS | A | NOC / returns age in working days: `A` counts from the first working day **after** receipt, `N` treats a receipt on a non-working day as received on the next working day (audit A41). If the factory calendar cannot convert the dates the age is unknown: no aging finding, warning 248 instead |
 
 ## Alerting
 

@@ -11,6 +11,7 @@
 *& 2026-11-06 | Run lock seam added.
 *& 2026-11-06 | Retention purge DAO seam added.
 *& 2026-11-06 | Exception repository seam added (operations apps).
+*& 2026-11-06 | Required plug-in interface checked by RTTI before CREATE OBJECT (audit A62).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -60,10 +61,16 @@ CLASS zcl_cd_ops_factory DEFINITION
 
     "! Instantiate a configured plug-in class by name.
     "! An injected double for the same class name wins.
-    "! @raising zcx_cd_ops_error | class does not exist or is not instantiable
+    "! With iv_interface the class (or the double) must implement that interface; this is
+    "! checked by RTTI BEFORE the instance is created, so the constructor of a wrongly
+    "! configured class never runs (audit A62).
+    "! @parameter iv_interface | required plug-in interface, e.g. ZIF_CD_HCK_CHECK
+    "! @raising zcx_cd_ops_error | class does not exist, is not instantiable or does not
+    "! implement the interface; interface does not exist
     CLASS-METHODS get_plugin
       IMPORTING
         iv_class_name    TYPE zif_cd_ops_types=>ty_class_name
+        iv_interface     TYPE zif_cd_ops_types=>ty_class_name OPTIONAL
       RETURNING
         VALUE(ro_object) TYPE REF TO object
       RAISING
@@ -87,7 +94,15 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_exc_dao_double TYPE REF TO zif_cd_ops_exc_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
-    "! Per-session store instance so parameter reads are cached once per run
+    CLASS-METHODS describe_interface
+      IMPORTING
+        iv_interface   TYPE string
+      RETURNING
+        VALUE(ro_intf) TYPE REF TO cl_abap_intfdescr
+      RAISING
+        zcx_cd_ops_error.
+
+    "! Per-session store instance; its parameter snapshot is renewed by each start_run (A64)
     CLASS-DATA go_store TYPE REF TO zif_cd_ops_store.
 
 ENDCLASS.
@@ -154,11 +169,21 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
     DATA lo_descr TYPE REF TO cl_abap_typedescr.
     DATA lo_class TYPE REF TO cl_abap_classdescr.
 
+    DATA lo_intf  TYPE REF TO cl_abap_intfdescr.
+
     DATA(lv_name) = to_upper( condense( CONV string( iv_class_name ) ) ).
+    DATA(lv_intf) = to_upper( condense( CONV string( iv_interface ) ) ).
+    IF lv_intf IS NOT INITIAL.
+      lo_intf = describe_interface( lv_intf ).
+    ENDIF.
 
     READ TABLE gt_plugin_double INTO DATA(ls_double)
       WITH TABLE KEY class_name = CONV zif_cd_ops_types=>ty_class_name( lv_name ).
     IF sy-subrc = 0.
+      IF lo_intf IS BOUND AND lo_intf->applies_to( ls_double-instance ) = abap_false.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e032(zcd_ops) WITH lv_name lv_intf.
+      ENDIF.
       ro_object = ls_double-instance.
       RETURN.
     ENDIF.
@@ -188,6 +213,12 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
         MESSAGE e031(zcd_ops) WITH lv_name.
     ENDIF.
 
+    " A62: interface first - a class that is not a plug-in of this kind is never created
+    IF lo_intf IS BOUND AND lo_intf->applies_to_class( lv_name ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e032(zcd_ops) WITH lv_name lv_intf.
+    ENDIF.
+
     TRY.
         CREATE OBJECT ro_object TYPE (lv_name).
       CATCH cx_sy_create_object_error INTO DATA(lx_create).
@@ -196,6 +227,28 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
           EXPORTING
             previous = lx_create.
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD describe_interface.
+    DATA lo_descr TYPE REF TO cl_abap_typedescr.
+    cl_abap_typedescr=>describe_by_name(
+      EXPORTING
+        p_name         = iv_interface
+      RECEIVING
+        p_descr_ref    = lo_descr
+      EXCEPTIONS
+        type_not_found = 1
+        OTHERS         = 2 ).
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e033(zcd_ops) WITH iv_interface.
+    ENDIF.
+    IF lo_descr->kind <> cl_abap_typedescr=>kind_intf.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e033(zcd_ops) WITH iv_interface.
+    ENDIF.
+    ro_intf = CAST #( lo_descr ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -51,6 +51,7 @@ INTERFACE lif_c.
       fmonsla                        TYPE string VALUE `FmonSla`,
       fmonsource                     TYPE string VALUE `FmonSource`,
       fmonsourcemap                  TYPE string VALUE `FmonSourceMap`,
+      fmontableallow                 TYPE string VALUE `FmonTableAllow`,
     END OF gc_ent,
     BEGIN OF gc_if,
       zif_cd_fmon_adapter            TYPE string VALUE `ZIF_CD_FMON_ADAPTER`,
@@ -64,6 +65,7 @@ INTERFACE lif_c.
       fmonsla                        TYPE string VALUE `ZCD_FMON_SLA`,
       fmonsource                     TYPE string VALUE `ZCD_FMON_SRC`,
       fmonsourcemap                  TYPE string VALUE `ZCD_FMON_SRCMAP`,
+      fmontableallow                 TYPE string VALUE `ZCD_FMON_TABWL`,
     END OF gc_tab,
     BEGIN OF gc_val,
       fmoncheck_severity             TYPE string VALUE `,B,E,W,I`,
@@ -129,6 +131,9 @@ CLASS lhc_fmoncfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_FmonCalendar = if_abap_behv=>mk-on.
       result-%assoc-_FmonCalendar = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_FmonTableAllow = if_abap_behv=>mk-on.
+      result-%assoc-_FmonTableAllow = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -455,6 +460,12 @@ CLASS lhc_fmonsource IMPLEMENTATION.
                                                   iv_field = CONV #( ls_row-LobField ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-LobField v2 = ls_row-TableName
                         element = lif_c=>gc_el-lobfield ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-ItemKeyField IS NOT INITIAL AND ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>field_exists( iv_table = CONV #( ls_row-TableName )
+                                                  iv_field = CONV #( ls_row-ItemKeyField ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-field_invalid v1 = ls_row-ItemKeyField v2 = ls_row-TableName
+                        element = lif_c=>gc_el-itemkeyfield ) INTO TABLE lt_msg.
       ENDIF.
       IF ls_row-AdapterClass IS NOT INITIAL
          AND zcl_cd_ops_cfg_checks=>implements( iv_class     = CONV #( ls_row-AdapterClass )
@@ -922,6 +933,105 @@ CLASS lhc_fmoncalendar IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_fmontableallow DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR FmonTableAllow RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FmonTableAllow~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR FmonTableAllow~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_fmontableallow IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_fmoncfgall IN LOCAL MODE
+      ENTITY FmonTableAllow
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      APPEND VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) TO reported-fmontableallow.
+      IF ls_row-TableName IS NOT INITIAL
+         AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-TableName ) ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-TableName
+                        element = lif_c=>gc_el-tablename ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        APPEND VALUE #( %tky = ls_row-%tky ) TO failed-fmontableallow.
+        APPEND INITIAL LINE TO reported-fmontableallow ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-fmoncfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-fmoncfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_fmoncfgall IN LOCAL MODE
+      ENTITY FmonCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      APPEND VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) TO reported-fmontableallow.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      APPEND VALUE #( %tky = ls_key-%tky ) TO failed-fmontableallow.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
+                                             fmoncfgall-SingletonID = 1 ) )
+        TO reported-fmontableallow.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_cd_fmoncfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -946,7 +1056,8 @@ CLASS lsc_zr_cd_fmoncfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-fmonsourcemap table = lif_c=>gc_tab-fmonsourcemap )
             ( entity = lif_c=>gc_ent-fmoncheck table = lif_c=>gc_tab-fmoncheck )
             ( entity = lif_c=>gc_ent-fmonlotcfg table = lif_c=>gc_tab-fmonlotcfg )
-            ( entity = lif_c=>gc_ent-fmoncalendar table = lif_c=>gc_tab-fmoncalendar ) )
+            ( entity = lif_c=>gc_ent-fmoncalendar table = lif_c=>gc_tab-fmoncalendar )
+            ( entity = lif_c=>gc_ent-fmontableallow table = lif_c=>gc_tab-fmontableallow ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

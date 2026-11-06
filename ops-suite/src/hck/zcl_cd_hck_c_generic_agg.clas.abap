@@ -5,6 +5,7 @@
 *& conditions, defined only in ZCD_HCK_AGG (new checks by customizing).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Stops between aggregates when the time budget is used up (audit A18).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate check (ZCD_HCK_AGG)</p>
 "! One metric per ZCD_HCK_AGG row and group value (METRIC = AGG_ID,
@@ -35,6 +36,14 @@ CLASS zcl_cd_hck_c_generic_agg IMPLEMENTATION.
     ENDIF.
 
     LOOP AT lt_defs INTO DATA(ls_agg).
+      " A18: stop between aggregates once the check's time budget is used up
+      IF zcl_cd_hck_budget=>exhausted( is_context ) = abap_true.
+        INSERT zcl_cd_hck_budget=>stop_finding( iv_check_id = is_def-check_id
+                                                iv_done     = sy-tabix - 1
+                                                iv_total    = lines( lt_defs )
+                                                is_context  = is_context ) INTO TABLE rs_result-findings.
+        EXIT.
+      ENDIF.
       TRY.
           INSERT LINES OF zcl_cd_hck_agg_query=>measure( is_def      = ls_agg
                                                          iv_ref_date = is_context-report_date

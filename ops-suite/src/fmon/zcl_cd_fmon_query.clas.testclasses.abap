@@ -6,6 +6,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A51: approved table / field checks.
 *&---------------------------------------------------------------------*
 CLASS ltc_query DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -40,6 +41,16 @@ CLASS ltc_query DEFINITION FINAL
     METHODS injected_name_is_rejected FOR TESTING.
     METHODS date_field_must_be_a_date FOR TESTING.
     METHODS unrestricted_read_is_rejected FOR TESTING.
+    METHODS approved_read_passes FOR TESTING.
+    METHODS unapproved_table_is_rejected FOR TESTING.
+    METHODS unapproved_field_is_rejected FOR TESTING.
+
+    "! Returns the message number raised by the approval check, blank when approved
+    METHODS act_approval
+      IMPORTING
+        it_allow        TYPE zif_cd_fmon_types=>tt_tab_allow
+      RETURNING
+        VALUE(rv_msgno) TYPE symsgno.
 
 ENDCLASS.
 
@@ -122,6 +133,46 @@ CLASS ltc_query IMPLEMENTATION.
     configure_scenario( VALUE #( no_condition = abap_true ) ).
     cl_abap_unit_assert=>assert_equals( act = act( ) exp = '209'
                                         msg = 'Unrestricted read must raise 209' ).
+  ENDMETHOD.
+
+
+  METHOD act_approval.
+    TRY.
+        zcl_cd_fmon_query=>check_approved( is_query = ms_query
+                                           it_allow = it_allow ).
+      CATCH zcx_cd_ops_error INTO DATA(lx).
+        rv_msgno = lx->if_t100_message~t100key-msgno.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A51: an approved table with '*' allows every field of it
+  METHOD approved_read_passes.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_initial(
+      act = act_approval( VALUE #( ( table_name = gc_table field_name = zif_cd_fmon_types=>gc_wildcard ) ) )
+      msg = 'A table approved with * must pass' ).
+  ENDMETHOD.
+
+
+  " Audit A51: a valid DDIC identifier of a table nobody approved never reaches SQL (244)
+  METHOD unapproved_table_is_rejected.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_equals(
+      act = act_approval( VALUE #( ( table_name = 'ZCD_OTHER_TABLE' field_name = zif_cd_fmon_types=>gc_wildcard ) ) )
+      exp = '244'
+      msg = 'A table outside ZCD_FMON_TABWL must raise 244' ).
+  ENDMETHOD.
+
+
+  " Audit A51: with field-level approval, a field not listed is refused (249)
+  METHOD unapproved_field_is_rejected.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_equals(
+      act = act_approval( VALUE #( ( table_name = gc_table field_name = gc_file_fld )
+                                   ( table_name = gc_table field_name = gc_date_fld ) ) )
+      exp = '249'
+      msg = 'The status field is not approved and must raise 249' ).
   ENDMETHOD.
 
 ENDCLASS.

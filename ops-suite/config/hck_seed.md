@@ -16,8 +16,10 @@
 | HCK_WATCH_MODULES | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
 | HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
 | HCK_MAX_AGE_H_FMON | `2` | FMON runs every 15–30 min — stale after 2 h (confirm schedule) |
-| HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0 |
-| HCK_LOOKBACK_RUNS | `8` | Default baseline history points |
+| HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0; item-wise checks stop between items once it has passed (BUDGET_EXHAUSTED, A18) |
+| HCK_LOOKBACK_RUNS | `8` | Default baseline history points (one point per finished, non-test run — A59) |
+| HCK_MAX_RUN_MIN | `120` | A run of a watched area in status R longer than this is HUNG (red self-check, A06); per area `HCK_MAX_RUN_MIN_<AREA>` |
+| HCK_FLAT_TOL_PCT | `10` | Flat history (standard deviation 0): adverse change beyond this % of the mean is an outlier (A58) |
 | HCK_TOP_N | `20` | Open exceptions listed in the report |
 | HCK_MAIL_ROUTE | `MORNING` | Route of the morning report e-mail |
 | ALERT_MORNING | `<payment-engine RTB distribution list>` | Recipients of the morning report (**confirm**) |
@@ -37,6 +39,10 @@ digest per run, rule/group pattern `*` (confirm with the core owner).
 |---|---|---|---|---|---|---|---|---|---|---|
 | A_RET_AGED | Return debits aging > 10 days by company code | A | ZCL_CD_HCK_C_GENERIC_AGG | X | 10 | H | | | | 120 |
 | A_GL_TRANSFER | payment engine reconciliation keys reached the GL | A | ZCL_CD_HCK_C_GL_TRANSFER | X | 20 | H | `1` (lag days) | `7` (window days) | `500` (max keys) | 300 |
+
+A_GL_TRANSFER PARAM4 = BKPF-AWTYP of the transfer (default `FKKSU`, VERIFY-DDIC); a key counts as transferred
+per company code only with a non-reversed BKPF of that type (A43). Metric GL_MISSING_KEYS carries the
+uncapped count.
 | B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_*` | `1` (yesterday) | | 120 |
 | B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK*,ZCD*` (**confirm objects**) | | `1` | 120 |
 | B_VOLUME | Payment engine volumes (yesterday) | B | ZCL_CD_HCK_C_VOLUME | X | 50 | L | `1` (offset) | `1` (days) | | 300 |

@@ -70,6 +70,7 @@ etag master LocalLastChangedAt
     QuietTo = quiet_to;
     EscalateAfter = escalate_after;
     EscalationDest = escalation_dest;
+    EscOverride = esc_override;
     Active = active;
     ChangedBy = changed_by;
     ChangedAt = changed_at;

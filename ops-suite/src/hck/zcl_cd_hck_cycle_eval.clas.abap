@@ -7,11 +7,15 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Program/variant match, retries supersede aborts, late start (audit A42).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle step state rules (pure)</p>
-"! Step date = cycle date + DAY_OFFSET. The step's job instance is the
-"! earliest job matching the JOBNAME pattern (CP) that started - or was
-"! planned - on the step date at or after WINDOW_FROM.
+"! Step date = cycle date + DAY_OFFSET. Candidates: jobs matching the JOBNAME
+"! pattern (CP) and - when maintained - PROGRAM and VARIANT of the first step,
+"! started on the step date at or after WINDOW_FROM. Deciding attempt (A42): the
+"! earliest finished one; else the latest running; else the latest aborted. A
+"! success after an abort is a retry (information); a deciding attempt that
+"! started after WINDOW_TO is late (warning).
 "! A = FAILED, F = COMPLETED (overrun flag beyond MAX_RUNTIME_MIN),
 "! R = RUNNING or STUCK (beyond MAX_RUNTIME_MIN); no started instance =
 "! NOT_STARTED, or MISSED once WINDOW_TO has passed. A predecessor in
@@ -62,7 +66,11 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
 
   METHOD derive_state.
     DATA ls_match TYPE zif_cd_hck_types=>ty_job_run.
+    DATA ls_finished TYPE zif_cd_hck_types=>ty_job_run.
+    DATA ls_running TYPE zif_cd_hck_types=>ty_job_run.
+    DATA ls_aborted TYPE zif_cd_hck_types=>ty_job_run.
     DATA lv_found TYPE abap_bool.
+    DATA lv_attempts TYPE i.
 
     DATA(lv_step_date) = CONV d( iv_cycle_date + is_step-day_offset ).
     rs_status-cycle_id   = is_step-cycle_id.
@@ -79,12 +87,36 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
       IF ls_run-strtdate <> lv_step_date OR ls_run-strttime < is_step-window_from.
         CONTINUE.
       ENDIF.
-      IF lv_found = abap_false OR ls_run-strttime < ls_match-strttime.
-        ls_match = ls_run.
-        lv_found = abap_true.
+      " the job name alone is not the step: program and variant must match when maintained
+      IF ( is_step-program IS NOT INITIAL AND ls_run-progname <> is_step-program )
+         OR ( is_step-variant IS NOT INITIAL AND ls_run-variant <> is_step-variant ).
+        CONTINUE.
       ENDIF.
+      lv_attempts = lv_attempts + 1.
+      CASE ls_run-status.
+        WHEN zif_cd_hck_types=>gc_job_status-finished.
+          IF ls_finished IS INITIAL OR ls_run-strttime < ls_finished-strttime.
+            ls_finished = ls_run.
+          ENDIF.
+        WHEN zif_cd_hck_types=>gc_job_status-running.
+          IF ls_running IS INITIAL OR ls_run-strttime > ls_running-strttime.
+            ls_running = ls_run.
+          ENDIF.
+        WHEN OTHERS.
+          IF ls_aborted IS INITIAL OR ls_run-strttime > ls_aborted-strttime.
+            ls_aborted = ls_run.
+          ENDIF.
+      ENDCASE.
     ENDLOOP.
-
+    ls_match = COND #( WHEN ls_finished IS NOT INITIAL THEN ls_finished
+                       WHEN ls_running IS NOT INITIAL THEN ls_running
+                       ELSE ls_aborted ).
+    lv_found = xsdbool( ls_match IS NOT INITIAL ).
+    rs_status-attempts = lv_attempts.
+    IF lv_found = abap_true.
+      rs_status-retried    = xsdbool( ls_finished IS NOT INITIAL AND ls_aborted IS NOT INITIAL ).
+      rs_status-late_start = xsdbool( is_step-window_to IS NOT INITIAL AND ls_match-strttime > is_step-window_to ).
+    ENDIF.
     IF lv_found = abap_false.
       DATA(lv_window_closed) = xsdbool( is_step-window_to IS NOT INITIAL
                                         AND ( iv_now_date > lv_step_date
@@ -154,12 +186,32 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
                                                        iv_v1    = is_status-runtime_min
                                                        iv_v2    = is_step-max_runtime_min ).
       WHEN zif_cd_hck_types=>gc_step_state-completed.
+        " A42: a completed step can still be late or retried - one finding each
+        DATA(ls_base) = ls_finding.
+        IF is_status-late_start = abap_true.
+          ls_finding-check_code = zif_cd_hck_types=>gc_code-step_late.
+          ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
+          ls_finding-message    = ls_base-message && ` `
+                               && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_started_late
+                                                         iv_v1    = |{ is_status-started_at TIME = ISO }|
+                                                         iv_v2    = |{ is_step-window_to TIME = ISO }| ).
+          INSERT ls_finding INTO TABLE rt_findings.
+        ENDIF.
+        IF is_status-retried = abap_true.
+          ls_finding-check_code = zif_cd_hck_types=>gc_code-step_retried.
+          ls_finding-severity   = zif_cd_ops_types=>gc_severity-info.
+          ls_finding-message    = ls_base-message && ` `
+                               && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_retried
+                                                         iv_v1    = is_status-attempts
+                                                         iv_v2    = |{ is_status-started_at TIME = ISO }| ).
+          INSERT ls_finding INTO TABLE rt_findings.
+        ENDIF.
         IF is_status-overrun = abap_false.
           RETURN.
         ENDIF.
         ls_finding-check_code = zif_cd_hck_types=>gc_code-step_overrun.
         ls_finding-severity   = zif_cd_ops_types=>gc_severity-warning.
-        ls_finding-message    = ls_finding-message && ` `
+        ls_finding-message    = ls_base-message && ` `
                              && zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-in_min_max
                                                        iv_v1    = is_status-runtime_min
                                                        iv_v2    = is_step-max_runtime_min ).

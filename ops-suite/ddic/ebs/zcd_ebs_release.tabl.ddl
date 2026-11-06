@@ -22,4 +22,5 @@ define table zcd_ebs_release {
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
   last_changed_at       : abp_lastchange_tstmpl;
 }
-// Secondary index ZCD_EBS_RELEASE~OBJ : MANDT, OBJECT_KEY, CHECK_CODE, STATUS (posting gate lookup)
+// Secondary index OBJ: posting gate lookup
+// @index OBJ: MANDT, OBJECT_KEY, CHECK_CODE, STATUS

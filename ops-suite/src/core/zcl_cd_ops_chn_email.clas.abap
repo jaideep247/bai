@@ -6,6 +6,7 @@
 *& covered by the QA1 integration test, not by ABAP Unit.
 *& Modification log:
 *& 2026-11-05 | Initial version (replaces ZCL_CD_OPS_ALERT_MAIL).
+*& 2026-11-06 | BCS send result checked (audit A45).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel e-mail (BCS)</p>
 CLASS zcl_cd_ops_chn_email DEFINITION
@@ -40,7 +41,11 @@ CLASS zcl_cd_ops_chn_email IMPLEMENTATION.
             cl_cam_address_bcs=>create_internet_address( CONV ad_smtpadr( lv_address ) ) ).
         ENDLOOP.
         lo_request->set_send_immediately( abap_true ).
-        lo_request->send( ).
+        " A45: the BCS send result decides - a refused request is not logged as sent
+        IF lo_request->send( ) = abap_false.
+          RAISE EXCEPTION TYPE zcx_cd_ops_error
+            MESSAGE e026(zcd_ops) WITH is_message-rule_id.
+        ENDIF.
         " BCS sends on commit; the alert is delivered independently of the run's LUW
         COMMIT WORK.
       CATCH cx_bcs INTO DATA(lx_bcs).

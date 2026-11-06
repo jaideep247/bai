@@ -8,6 +8,8 @@
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
 *& 2026-11-06 | Exception carry-forward: executed checks reconciled; failed check excluded.
 *& 2026-11-06 | suppressed_red_is_not_red (design 6.3).
+*& 2026-11-06 | hung_run_fails_self, own_run_is_not_hung, empty_selection_is_red, self_check_alone_not_green (A06, A60).
+*& 2026-11-06 | check_receives_time_budget (audit A18).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -20,6 +22,8 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_commit_calls TYPE i.
     DATA mv_start_calls TYPE i.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_group.
+    "! Runs still in status R (get_stale_runs)
+    DATA mt_running TYPE zif_cd_ops_types=>tt_run.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -64,6 +68,14 @@ CLASS ltd_store IMPLEMENTATION.
 
   METHOD zif_cd_ops_store~get_runs_since.
     CLEAR rt_runs.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_store~get_stale_runs.
+    LOOP AT mt_running INTO DATA(ls_run) WHERE pe_area = iv_pe_area AND run_id <> iv_exclude_run.
+      IF ls_run-started_at < iv_started_before.
+        INSERT ls_run INTO TABLE rt_runs.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~get_findings.
@@ -190,6 +202,7 @@ CLASS ltd_check DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_hck_check.
     DATA ms_result TYPE zif_cd_hck_types=>ty_check_result.
     DATA mv_raise TYPE abap_bool.
+    DATA ms_seen_context TYPE zif_cd_hck_types=>ty_context.
 ENDCLASS.
 
 CLASS ltd_check IMPLEMENTATION.
@@ -198,6 +211,7 @@ CLASS ltd_check IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e301(zcd_ops) WITH is_def-check_id 'simulated failure'.
     ENDIF.
+    ms_seen_context = is_context.
     rs_result = ms_result.
   ENDMETHOD.
 ENDCLASS.
@@ -228,6 +242,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         send_mail       TYPE abap_bool,
         include_pe_areas TYPE abap_bool,
         ebs_never_ran   TYPE abap_bool,
+        fmon_hung       TYPE abap_bool,
+        own_run_running TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_store TYPE REF TO ltd_store.
@@ -254,6 +270,11 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS held_lock_skips_run FOR TESTING.
     METHODS lock_released_after_run FOR TESTING.
     METHODS executed_checks_reconciled FOR TESTING.
+    METHODS hung_run_fails_self FOR TESTING.
+    METHODS own_run_is_not_hung FOR TESTING.
+    METHODS empty_selection_is_red FOR TESTING.
+    METHODS self_check_alone_not_green FOR TESTING.
+    METHODS check_receives_time_budget FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -361,6 +382,30 @@ CLASS ltc_engine IMPLEMENTATION.
         ls_last_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
         INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
       ENDIF.
+    ENDIF.
+
+    " a run of 01:00 still in status R at 07:00 (limit default 120 min)
+    IF is_flags-fmon_hung = abap_true.
+      CLEAR ls_last_run.
+      ls_last_run-run_id     = 'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.
+      ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor.
+      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-running.
+      ls_last_run-started_at = '20261105010000.0000000'.
+      INSERT ls_last_run INTO TABLE mo_store->mt_running.
+    ENDIF.
+    " the current HCK run (run ID of ltd_store=>start_run) seen as running
+    IF is_flags-own_run_running = abap_true.
+      INSERT VALUE #( name = 'HCK_WATCH_MODULES' value = 'HCK' ) INTO TABLE mo_store->mt_params.
+      CLEAR ls_last_run.
+      ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
+      ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-running.
+      ls_last_run-started_at = '20261105010000.0000000'.
+      INSERT ls_last_run INTO TABLE mo_store->mt_running.
+      ls_last_run-run_id     = 'DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD'.
+      ls_last_run-status     = zif_cd_ops_types=>gc_run_status-success.
+      ls_last_run-started_at = ltd_clock=>gc_base.
+      INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
     ENDIF.
   ENDMETHOD.
 
@@ -625,6 +670,94 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'A check whose only finding is suppressed must be green' ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-info
                                             msg = 'The suppressed finding must stay listed as information' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A06: a run that has been in status R longer than the area's runtime limit is
+  " reported even though a completed run is recent
+  METHOD hung_run_fails_self.
+    TRY.
+        configure_scenario( VALUE #( green_checks = 1 include_pe_areas = abap_true fmon_hung = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_self) = ls_report-results[ check_id = zif_cd_hck_types=>gc_self_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_self-rag exp = gc_red msg = 'A hung run must turn the self check red' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_self-findings[ check_code = zif_cd_hck_types=>gc_code-run_hung
+                                                        object_key = zif_cd_ops_types=>gc_pe_area-file_monitor ] ) )
+          msg = 'RUN_HUNG must name FMON' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]-hung_runs
+                                            exp = 1
+                                            msg = 'One hung FMON run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A06: the health check's own run (status R while it runs) is not its own finding
+  METHOD own_run_is_not_hung.
+    TRY.
+        configure_scenario( VALUE #( green_checks = 1 include_pe_areas = abap_true own_run_running = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_self) = ls_report-results[ check_id = zif_cd_hck_types=>gc_self_check ].
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_self-findings[ check_code = zif_cd_hck_types=>gc_code-run_hung ] ) )
+          msg = 'The current run must be excluded from its own watchdog' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A60: no business check selected or active is a red configuration result, never SUCCESS
+  METHOD empty_selection_is_red.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_config) = VALUE #( ls_report-results[ check_id = zif_cd_hck_types=>gc_config_check ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_config-rag exp = gc_red msg = 'Empty selection must be RED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_config-findings[ 1 ]-check_code
+                                            exp = zif_cd_hck_types=>gc_code-no_checks
+                                            msg = 'Finding CHECKS_NOT_CONFIGURED expected' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-overall_rag exp = gc_red msg = 'Overall must be RED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-run-status exp = zif_cd_ops_types=>gc_run_status-error
+                                            msg = 'The run must not close as SUCCESS' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-configured_checks exp = 0 msg = 'No check configured' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A60: a healthy self check alone does not make the morning report green
+  METHOD self_check_alone_not_green.
+    TRY.
+        configure_scenario( VALUE #( include_pe_areas = abap_true ) ).
+        DATA(ls_report) = act( ).
+        cl_abap_unit_assert=>assert_differs( act = ls_report-overall_rag exp = gc_green
+                                             msg = 'Self check alone must not give GREEN' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-executed_checks exp = 0 msg = 'No business check executed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A18: every check receives its budget (start + TIMEOUT_SEC) as a deadline
+  METHOD check_receives_time_budget.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        ms_flags-slow_clock = abap_true.
+        DATA(lo_check) = add_check( iv_check_id = 'BUDGET' iv_category = 'A' iv_priority = 'M' ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = lo_check->ms_seen_context-budget_sec exp = 10
+                                            msg = 'The check must know its budget of 10 s' ).
+        cl_abap_unit_assert=>assert_equals( act = lo_check->ms_seen_context-deadline
+                                            exp = cl_abap_tstmp=>add( tstmp = ltd_clock=>gc_base secs = 10 )
+                                            msg = 'Deadline = check start + TIMEOUT_SEC' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

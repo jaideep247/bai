@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (TDD gap closure).
 *& 2026-11-06 | Authorisation seam: injected double is returned.
+*& 2026-11-06 | Interface check before instantiation (audit A62).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -57,6 +58,10 @@ CLASS ltc_factory DEFINITION FINAL FOR TESTING
     METHODS class_name_case_insensitive  FOR TESTING.
     METHODS injected_clock_is_returned   FOR TESTING.
     METHODS injected_auth_is_returned    FOR TESTING.
+    METHODS unrelated_class_not_created  FOR TESTING.
+    METHODS matching_interface_creates   FOR TESTING.
+    METHODS unknown_interface_refused    FOR TESTING.
+    METHODS double_must_match_interface  FOR TESTING.
 ENDCLASS.
 
 
@@ -143,6 +148,66 @@ CLASS ltc_factory IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_auth( lo_double ).
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_auth( ) exp = lo_double
                                         msg = 'Injected authorisation double must be returned' ).
+  ENDMETHOD.
+
+
+  " Audit A62: a configured class that does not implement the required interface is
+  " refused BEFORE CREATE OBJECT - its constructor (side effects) must not run
+  METHOD unrelated_class_not_created.
+    zcl_cd_ops_plugin_probe=>reset( ).
+    TRY.
+        zcl_cd_ops_factory=>get_plugin( iv_class_name = 'ZCL_CD_OPS_PLUGIN_PROBE'
+                                        iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ).
+        cl_abap_unit_assert=>fail( msg = 'An unrelated class must raise ZCX_CD_OPS_ERROR' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '032'
+                                            msg = 'Missing interface must raise message 032' ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_plugin_probe=>gv_instances exp = 0
+                                        msg = 'The constructor of the unrelated class must not run' ).
+  ENDMETHOD.
+
+
+  " Audit A62: a class implementing the required interface is created as before
+  METHOD matching_interface_creates.
+    TRY.
+        DATA(lo_object) = zcl_cd_ops_factory=>get_plugin( iv_class_name = 'ZCL_CD_OPS_CLOCK'
+                                                          iv_interface  = 'ZIF_CD_OPS_CLOCK' ).
+        cl_abap_unit_assert=>assert_bound( act = CAST zif_cd_ops_clock( lo_object )
+                                           msg = 'A matching plug-in must be created' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A62: a mistyped interface name is a configuration error, not a pass
+  METHOD unknown_interface_refused.
+    zcl_cd_ops_plugin_probe=>reset( ).
+    TRY.
+        zcl_cd_ops_factory=>get_plugin( iv_class_name = 'ZCL_CD_OPS_PLUGIN_PROBE'
+                                        iv_interface  = 'ZIF_CD_DOES_NOT_EXIST' ).
+        cl_abap_unit_assert=>fail( msg = 'An unknown interface must raise ZCX_CD_OPS_ERROR' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '033'
+                                            msg = 'Unknown interface must raise message 033' ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_plugin_probe=>gv_instances exp = 0
+                                        msg = 'Nothing is created for an unknown interface' ).
+  ENDMETHOD.
+
+
+  " Audit A62: an injected double is held to the same interface
+  METHOD double_must_match_interface.
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = 'ZCL_CD_OPS_CLOCK' io_instance = NEW ltd_auth( ) ).
+    TRY.
+        zcl_cd_ops_factory=>get_plugin( iv_class_name = 'ZCL_CD_OPS_CLOCK'
+                                        iv_interface  = 'ZIF_CD_OPS_CLOCK' ).
+        cl_abap_unit_assert=>fail( msg = 'A double without the interface must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '032'
+                                            msg = 'A double without the interface must raise 032' ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

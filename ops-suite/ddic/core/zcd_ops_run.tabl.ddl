@@ -23,4 +23,5 @@ define table zcd_ops_run {
   message       : abap.char(255);
   created_by    : syuname;
 }
-// Secondary index ZCD_OPS_RUN~MOD: MANDT, PE_AREA, STARTED_AT (morning report / last-run lookups)
+// Secondary index MOD: morning report / last-run lookups
+// @index MOD: MANDT, PE_AREA, STARTED_AT

@@ -6,6 +6,7 @@
 *& lookups; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A04/A05/A49/A50/A51: version check, per-instance events, window bounds, approved tables.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -27,6 +28,20 @@ CLASS ltd_clock IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_ddic DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_fmon_ddic PARTIALLY IMPLEMENTED.
+    DATA mv_may_read TYPE abap_bool VALUE abap_true.
+ENDCLASS.
+
+
+CLASS ltd_ddic IMPLEMENTATION.
+  METHOD zif_cd_fmon_ddic~may_read.
+    rv_allowed = mv_may_read.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_dao DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -37,6 +52,24 @@ CLASS ltc_dao DEFINITION FINAL
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_fmon_dao.
+    DATA mo_ddic TYPE REF TO ltd_ddic.
+
+    "! The row as a read returns it: exists in the DB, version = CHANGED_AT as read
+    METHODS as_loaded
+      IMPORTING
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
+
+    METHODS legacy_query
+      RETURNING
+        VALUE(rs_query) TYPE zif_cd_fmon_types=>ty_query.
+
+    METHODS msgno_of_read
+      RETURNING
+        VALUE(rv_msgno) TYPE symsgno.
+
+    METHODS approve_file_table.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -63,6 +96,15 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS saved_file_found_by_ref FOR TESTING.
     METHODS open_old_file_is_evaluated FOR TESTING.
     METHODS history_found_by_checksum FOR TESTING.
+    METHODS later_open_file_not_evaluated FOR TESTING.
+    METHODS newer_registry_not_overwritten FOR TESTING.
+    METHODS unchanged_registry_is_saved FOR TESTING.
+    METHODS event_belongs_to_its_instance FOR TESTING.
+    METHODS cross_interface_ref_own_event FOR TESTING.
+    METHODS older_instances_not_prefetched FOR TESTING.
+    METHODS unapproved_table_is_refused FOR TESTING.
+    METHODS read_without_auth_is_refused FOR TESTING.
+    METHODS approved_table_is_read FOR TESTING.
 
 ENDCLASS.
 
@@ -73,6 +115,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lt_deps TYPE if_osql_test_environment=>ty_t_sobjnames.
     INSERT CONV #( 'ZCD_FMON_FILE' ) INTO TABLE lt_deps.
     INSERT CONV #( 'ZCD_FMON_EVENT' ) INTO TABLE lt_deps.
+    INSERT CONV #( 'ZCD_FMON_TABWL' ) INTO TABLE lt_deps.
     go_env = cl_osql_test_environment=>create( i_dependency_list = lt_deps ).
   ENDMETHOD.
 
@@ -85,6 +128,8 @@ CLASS ltc_dao IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_ddic = NEW #( ).
+    zcl_cd_fmon_injector=>inject_ddic( mo_ddic ).
     mo_cut = NEW zcl_cd_fmon_dao( ).
   ENDMETHOD.
 
@@ -126,6 +171,8 @@ CLASS ltc_dao IMPLEMENTATION.
         DATA(lt_events) = mo_cut->get_events( VALUE #( ( CONV #( 1 ) ) ) ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_events ) exp = 1
                                             msg = 'Re-run must not duplicate the event' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -139,6 +186,8 @@ CLASS ltc_dao IMPLEMENTATION.
         DATA(lv_inserted) = mo_cut->insert_event( new_event( zif_cd_fmon_types=>gc_stage-ack ) ).
         cl_abap_unit_assert=>assert_false( act = lv_inserted
                                            msg = 'Second insert must report not inserted' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -164,6 +213,8 @@ CLASS ltc_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->get_events( VALUE #( ( ls_first-file_id ) ) )
                                             exp = lt_exp
                                             msg = 'Events must be numbered 1 and 2' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -181,8 +232,10 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_key-file_ref = ls_file-file_ref.
         INSERT ls_key INTO TABLE lt_keys.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->find_files_by_ref( lt_keys )
-                                            exp = VALUE zif_cd_fmon_types=>tt_file( ( ls_file ) )
+                                            exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_file ) ) )
                                             msg = 'Saved file must be found by reference' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -202,8 +255,11 @@ CLASS ltc_dao IMPLEMENTATION.
                                                  iv_open_since = '20261003' ).
         SORT lt_files BY file_id.
         cl_abap_unit_assert=>assert_equals( act = lt_files
-                                            exp = VALUE zif_cd_fmon_types=>tt_file( ( ls_today ) ( ls_old_open ) )
+                                            exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_today ) )
+                                                                                    ( as_loaded( ls_old_open ) ) )
                                             msg = 'Window file and old open file expected' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
@@ -219,11 +275,218 @@ CLASS ltc_dao IMPLEMENTATION.
           act = mo_cut->get_history( it_names     = VALUE #( )
                                      it_checksums = VALUE #( ( ls_earlier-checksum ) )
                                      iv_since     = '20261026' )
-          exp = VALUE zif_cd_fmon_types=>tt_file( ( ls_earlier ) )
+          exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_earlier ) ) )
           msg = 'Earlier file with the same checksum expected' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
+
+  METHOD as_loaded.
+    rs_file = is_file.
+    rs_file-db_exists  = abap_true.
+    rs_file-db_version = is_file-changed_at.
+  ENDMETHOD.
+
+
+  METHOD legacy_query.
+    rs_query-table_name = 'ZCD_FMON_FILE'.
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-file_name
+                                            iv_field = 'FILE_NAME'
+                                  CHANGING  cs_query = rs_query ).
+    rs_query-date_field = 'BUSINESS_DATE'.
+    rs_query-date_kind  = zif_cd_fmon_types=>gc_date_kind-date.
+    rs_query-date_from  = gc_date.
+    rs_query-date_to    = gc_date.
+    rs_query-max_rows   = 10.
+  ENDMETHOD.
+
+
+  METHOD msgno_of_read.
+    TRY.
+        mo_cut->read_legacy( legacy_query( ) ).
+      CATCH zcx_cd_ops_error INTO DATA(lx).
+        rv_msgno = lx->if_t100_message~t100key-msgno.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD approve_file_table.
+    DATA lt_allow TYPE STANDARD TABLE OF zcd_fmon_tabwl WITH EMPTY KEY.
+    DATA ls_allow TYPE zcd_fmon_tabwl.
+    ls_allow-table_name = 'ZCD_FMON_FILE'.
+    ls_allow-field_name = zif_cd_fmon_types=>gc_wildcard.
+    ls_allow-active     = abap_true.
+    INSERT ls_allow INTO TABLE lt_allow.
+    go_env->insert_test_data( lt_allow ).
+  ENDMETHOD.
+
+
+  " Audit A50: a back-dated evaluation never pulls in open files of later business dates
+  METHOD later_open_file_not_evaluated.
+    TRY.
+        DATA(ls_later) = new_file( iv_id = 4 iv_date = '20261103' ).
+        mo_cut->save_files( VALUE #( ( ls_later ) ) ).
+        DATA(lt_files) = mo_cut->get_eval_files( iv_date_from  = '20261101'
+                                                 iv_date_to    = gc_date
+                                                 iv_open_since = '20261003' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_files
+                                             msg = 'An open file of a later date must not be evaluated' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A04: a row changed by another writer since it was read is not overwritten -
+  " the save reports the conflict and the newer state stays
+  METHOD newer_registry_not_overwritten.
+    DATA lt_db TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
+    TRY.
+        DATA(ls_file) = new_file( iv_id = 5 iv_date = gc_date ).
+        DATA(ls_db) = CORRESPONDING zcd_fmon_file( ls_file ).
+        ls_db-stage      = zif_cd_fmon_types=>gc_stage-sent.
+        ls_db-changed_at = '20261102075900'.
+        INSERT ls_db INTO TABLE lt_db.
+        go_env->insert_test_data( lt_db ).
+        " this run read the row before the other writer changed it
+        ls_file-db_exists  = abap_true.
+        ls_file-db_version = '20261102070000'.
+        ls_file-changed_at = ltd_clock=>gc_now.
+        DATA(lt_conflicts) = mo_cut->save_files( VALUE #( ( ls_file ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lt_conflicts
+                                            exp = VALUE zif_cd_fmon_types=>tt_file_id( ( ls_file-file_id ) )
+                                            msg = 'The changed row must be reported as a conflict' ).
+        DATA(lt_now) = mo_cut->find_files_by_ref( VALUE #( ( iface_id = gc_iface file_ref = ls_file-file_ref ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_now[ 1 ]-stage OPTIONAL )
+                                            exp = zif_cd_fmon_types=>gc_stage-sent
+                                            msg = 'The newer stage must not be overwritten' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A04: an unchanged row is saved normally
+  METHOD unchanged_registry_is_saved.
+    DATA lt_db TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
+    TRY.
+        DATA(ls_file) = new_file( iv_id = 6 iv_date = gc_date ).
+        DATA(ls_db) = CORRESPONDING zcd_fmon_file( ls_file ).
+        ls_db-changed_at = '20261102070000'.
+        INSERT ls_db INTO TABLE lt_db.
+        go_env->insert_test_data( lt_db ).
+        ls_file-db_exists  = abap_true.
+        ls_file-db_version = '20261102070000'.
+        ls_file-stage      = zif_cd_fmon_types=>gc_stage-sent.
+        ls_file-changed_at = ltd_clock=>gc_now.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->save_files( VALUE #( ( ls_file ) ) )
+                                             msg = 'An unchanged row must save without conflict' ).
+        DATA(lt_now) = mo_cut->find_files_by_ref( VALUE #( ( iface_id = gc_iface file_ref = ls_file-file_ref ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_now[ 1 ]-stage OPTIONAL )
+                                            exp = zif_cd_fmon_types=>gc_stage-sent
+                                            msg = 'The new stage must be stored' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A05/A49: event idempotency is per file instance - the same reference, source and
+  " stage of another business date's file is a new event, not a duplicate
+  METHOD event_belongs_to_its_instance.
+    TRY.
+        DATA(ls_day1) = new_event( zif_cd_fmon_types=>gc_stage-ack ).
+        DATA(ls_day2) = ls_day1.
+        ls_day2-file_id = CONV zif_cd_fmon_types=>ty_file_id( 2 ).
+        mo_cut->insert_event( ls_day1 ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->insert_event( ls_day2 )
+                                          msg = 'The second instance must get its own event' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lines( mo_cut->get_events( VALUE #( ( ls_day1-file_id ) ( ls_day2-file_id ) ) ) )
+          exp = 2
+          msg = 'One event per file instance expected' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  " Audit A90: two interfaces reuse the same file reference on the same source and stage.
+  " Each interface has its own file instance (FILE_ID), so each file keeps its own event.
+  METHOD cross_interface_ref_own_event.
+    TRY.
+        DATA(ls_iface_a) = new_event( zif_cd_fmon_types=>gc_stage-ack ).
+        DATA(ls_iface_b) = ls_iface_a.
+        ls_iface_b-file_id = CONV zif_cd_fmon_types=>ty_file_id( 3 ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->insert_event( ls_iface_a )
+                                          msg = 'The first interface file must get its event' ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->insert_event( ls_iface_b )
+                                          msg = 'The second interface file must get its own event' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->insert_event( ls_iface_b )
+                                           msg = 'A replay for the same file must stay idempotent' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Audit A49: instances of the same reference older than the watch window are not read
+  METHOD older_instances_not_prefetched.
+    TRY.
+        DATA(ls_old) = new_file( iv_id = 8 iv_date = '20260901' ).
+        DATA(ls_new) = new_file( iv_id = 9 iv_date = gc_date ).
+        ls_new-file_ref = ls_old-file_ref.
+        mo_cut->save_files( VALUE #( ( ls_old ) ( ls_new ) ) ).
+        DATA(lt_found) = mo_cut->find_files_by_ref(
+                           it_keys  = VALUE #( ( iface_id = gc_iface file_ref = ls_old-file_ref ) )
+                           iv_since = '20261003' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_found
+                                            exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_new ) ) )
+                                            msg = 'Only the instance inside the window expected' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A51: a valid table name that nobody approved in ZCD_FMON_TABWL is never read (244)
+  METHOD unapproved_table_is_refused.
+    cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '244'
+                                        msg = 'An unapproved table must raise 244' ).
+  ENDMETHOD.
+
+
+  " Audit A51: an approved table without display authorisation is not read (245)
+  METHOD read_without_auth_is_refused.
+    approve_file_table( ).
+    mo_ddic->mv_may_read = abap_false.
+    cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '245'
+                                        msg = 'Missing S_TABU_NAM display authority must raise 245' ).
+  ENDMETHOD.
+
+
+  " Audit A51: an approved, authorised table is read
+  METHOD approved_table_is_read.
+    approve_file_table( ).
+    cl_abap_unit_assert=>assert_initial( act = msgno_of_read( )
+                                         msg = 'An approved and authorised table must be read' ).
+  ENDMETHOD.
+
 ENDCLASS.
+

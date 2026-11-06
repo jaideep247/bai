@@ -25,5 +25,7 @@ jobs:
         run: abaplint abaplint.json
       - name: Show versions
         run: abaplint --version && python3 --version
+      - name: Generator tests (serializer stages output, never writes partial XML)
+        run: python3 -m unittest discover -s tools/tests -v
       - name: ATC-equivalent checks (abaplint.atc.json)
         run: python3 tools/portable_checks.py "$(command -v abaplint)"

@@ -5,6 +5,7 @@
 *& time stamp arithmetic and file reference normalisation. No database.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A52: IS_NUMBER for numeric source fields.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -78,17 +79,34 @@ CLASS zcl_cd_fmon_util DEFINITION
       RETURNING
         VALUE(rv_ref) TYPE zif_cd_fmon_types=>ty_file_ref.
 
+    "! Unformatted number as written by the dynamic reader: optional sign (leading or
+    "! trailing), digits, optional decimals (audit A52 - no silent zero for garbage)
+    CLASS-METHODS is_number
+      IMPORTING
+        iv_text       TYPE clike
+      RETURNING
+        VALUE(rv_ok)  TYPE abap_bool.
+
     CLASS-METHODS file_hex
       IMPORTING
         iv_file_id    TYPE zif_cd_fmon_types=>ty_file_id
       RETURNING
         VALUE(rv_hex) TYPE zif_cd_ops_types=>ty_reference.
 
+  PRIVATE SECTION.
+    CONSTANTS gc_number_pattern TYPE string VALUE `^[+-]?[0-9]+([.][0-9]+)?[+-]?$`.
+
 ENDCLASS.
 
 
 
 CLASS zcl_cd_fmon_util IMPLEMENTATION.
+
+  METHOD is_number.
+    rv_ok = xsdbool( matches( val = condense( CONV string( iv_text ) ) regex = gc_number_pattern ) ).
+  ENDMETHOD.
+
+
 
   METHOD new_finding.
     rs_finding = new_key_finding(

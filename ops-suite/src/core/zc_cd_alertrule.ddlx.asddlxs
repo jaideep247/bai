@@ -71,6 +71,9 @@ annotate entity ZC_CD_AlertRule with
   EscalationDest;
 
   @UI.identification: [{ position: 190 }]
+  EscOverride;
+
+  @UI.identification: [{ position: 200 }]
   Active;
 
   @UI.hidden: true

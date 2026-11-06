@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A39/A52: payment key, malformed rows flagged (not counted), half-open range.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - generic legacy source adapter</p>
 "! No field name of any legacy table is coded here: the structures of the
@@ -50,6 +51,13 @@ CLASS zcl_cd_fmon_adapter_generic DEFINITION
         date   TYPE string VALUE `DATE_FIELD/TS_FIELD`,
         status TYPE string VALUE `STATUS_FIELD/DEFAULT_STAGE`,
       END OF gc_cfg_fields.
+
+    "! First malformed field wins; the record keeps its reference for the finding
+    CLASS-METHODS mark_malformed
+      IMPORTING
+        iv_role   TYPE zif_cd_fmon_types=>ty_role
+      CHANGING
+        cs_record TYPE zif_cd_fmon_types=>ty_src_record.
 
     CLASS-METHODS map_stage
       IMPORTING
@@ -112,7 +120,8 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
       ( role = zif_cd_fmon_types=>gc_role-size      field = ls_src-size_field )
       ( role = zif_cd_fmon_types=>gc_role-checksum  field = ls_src-checksum_field )
       ( role = zif_cd_fmon_types=>gc_role-source    field = ls_src-source_field )
-      ( role = zif_cd_fmon_types=>gc_role-lob       field = ls_src-lob_field ) ).
+      ( role = zif_cd_fmon_types=>gc_role-lob       field = ls_src-lob_field )
+      ( role = zif_cd_fmon_types=>gc_role-item_key  field = ls_src-item_key_field ) ).
     LOOP AT lt_roles INTO DATA(ls_role).
       zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = ls_role-role
                                               iv_field = ls_role-field
@@ -124,7 +133,9 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
       rs_query-date_kind  = zif_cd_fmon_types=>gc_date_kind-timestamp.
       CONVERT DATE is_request-date_from TIME zif_cd_ops_types=>gc_time-day_start
         INTO TIME STAMP rs_query-ts_from TIME ZONE is_request-time_zone.
-      CONVERT DATE is_request-date_to TIME zif_cd_ops_types=>gc_time-day_end
+      " Audit A52: half-open range - up to (excluding) the next local midnight, so rows with
+      " fractional seconds after 23:59:59 are read; the DAO compares with >= and <
+      CONVERT DATE is_request-date_to + 1 TIME zif_cd_ops_types=>gc_time-day_start
         INTO TIME STAMP rs_query-ts_to TIME ZONE is_request-time_zone.
     ELSE.
       rs_query-date_field = to_upper( condense( ls_src-date_field ) ).
@@ -150,34 +161,66 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
                               ELSE map_stage( is_request = is_request
                                               iv_status  = rs_record-raw_status ) ).
 
+    " Audit A52: a required event time or a numeric field that does not convert makes the
+    " row malformed - it is quarantined by the engine, never counted as a known zero
     TRY.
         IF is_raw-ev_ts IS NOT INITIAL.
           rs_record-event_at = is_raw-ev_ts.
           CONVERT TIME STAMP rs_record-event_at TIME ZONE is_request-time_zone
             INTO DATE rs_record-business_date TIME lv_time.
-        ELSE.
+          IF sy-subrc > 4.
+            mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-ev_ts CHANGING cs_record = rs_record ).
+          ENDIF.
+        ELSEIF is_raw-ev_date IS NOT INITIAL.
           lv_date = is_raw-ev_date.
           lv_time = COND #( WHEN is_raw-ev_time IS NOT INITIAL THEN is_raw-ev_time ELSE zif_cd_ops_types=>gc_time-day_start ).
           rs_record-business_date = lv_date.
           CONVERT DATE lv_date TIME lv_time
             INTO TIME STAMP rs_record-event_at TIME ZONE is_request-time_zone.
+          IF sy-subrc > 4.
+            mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-ev_date CHANGING cs_record = rs_record ).
+          ENDIF.
+        ELSE.
+          mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-ev_date CHANGING cs_record = rs_record ).
         ENDIF.
       CATCH cx_sy_conversion_error.
-        CLEAR: rs_record-event_at, rs_record-business_date.
+        mark_malformed( EXPORTING iv_role = COND #( WHEN is_raw-ev_ts IS NOT INITIAL THEN zif_cd_fmon_types=>gc_role-ev_ts
+                                                    ELSE zif_cd_fmon_types=>gc_role-ev_date )
+                        CHANGING  cs_record = rs_record ).
     ENDTRY.
-
     IF is_request-src-count_field IS NOT INITIAL AND is_raw-rec_count IS NOT INITIAL.
-      rs_record-rec_count   = zcl_cd_ops_util=>to_decimal( is_raw-rec_count ).
-      rs_record-count_known = abap_true.
+      IF zcl_cd_fmon_util=>is_number( is_raw-rec_count ) = abap_true.
+        rs_record-rec_count   = zcl_cd_ops_util=>to_decimal( is_raw-rec_count ).
+        rs_record-count_known = abap_true.
+      ELSE.
+        mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-rec_count CHANGING cs_record = rs_record ).
+      ENDIF.
     ENDIF.
-    rs_record-amount = zcl_cd_ops_util=>to_decimal( is_raw-amount ).
+    IF is_raw-amount IS NOT INITIAL AND zcl_cd_fmon_util=>is_number( is_raw-amount ) = abap_false.
+      mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-amount CHANGING cs_record = rs_record ).
+    ELSE.
+      rs_record-amount = zcl_cd_ops_util=>to_decimal( is_raw-amount ).
+    ENDIF.
     IF is_request-src-size_field IS NOT INITIAL AND is_raw-size IS NOT INITIAL.
-      rs_record-size_bytes = zcl_cd_ops_util=>to_decimal( is_raw-size ).
-      rs_record-size_known = abap_true.
+      IF zcl_cd_fmon_util=>is_number( is_raw-size ) = abap_true.
+        rs_record-size_bytes = zcl_cd_ops_util=>to_decimal( is_raw-size ).
+        rs_record-size_known = abap_true.
+      ELSE.
+        mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-size CHANGING cs_record = rs_record ).
+      ENDIF.
     ENDIF.
+    rs_record-item_key   = is_raw-item_key.
     rs_record-checksum   = is_raw-checksum.
     rs_record-source_sys = to_upper( is_raw-source ).
     rs_record-lob        = to_upper( is_raw-lob ).
+  ENDMETHOD.
+
+
+  METHOD mark_malformed.
+    IF cs_record-malformed = abap_false.
+      cs_record-malformed      = abap_true.
+      cs_record-malformed_role = iv_role.
+    ENDIF.
   ENDMETHOD.
 
 

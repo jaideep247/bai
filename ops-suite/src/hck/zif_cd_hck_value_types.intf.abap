@@ -6,6 +6,7 @@
 *& CANCELLED): parameter specs, validated queries, rows and status events.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Value query carries its specification for re-validation at the DAO (audit A56).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - value query types (known tables)</p>
 INTERFACE zif_cd_hck_value_types
@@ -34,6 +35,11 @@ INTERFACE zif_cd_hck_value_types
       field_list   TYPE string,
       where_clause TYPE string,
       order_by     TYPE string,
+      "! Source of the query: the DAO rebuilds the SQL from it (audit A56)
+      returns      TYPE string_table,
+      conditions   TYPE tt_condition,
+      date_field   TYPE zif_cd_hck_types=>ty_fieldname,
+      date_from    TYPE d,
     END OF ty_value_query.
 
   "! Up to three character-like values of one row (aliases V1, V2, V3)

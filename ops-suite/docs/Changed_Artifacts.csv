@@ -61,6 +61,7 @@ ddic/fmon/zcd_d_fmoncfg.tabl.ddl,DDIC,
 ddic/fmon/zcd_d_fmsla.tabl.ddl,DDIC,
 ddic/fmon/zcd_d_fmsrc.tabl.ddl,DDIC,
 ddic/fmon/zcd_d_fmsrcmap.tabl.ddl,DDIC,
+ddic/fmon/zcd_d_fmtabwl.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_cal.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_chk.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_event.tabl.ddl,DDIC,
@@ -71,6 +72,7 @@ ddic/fmon/zcd_fmon_prq_wa.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_sla.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_src.tabl.ddl,DDIC,
 ddic/fmon/zcd_fmon_srcmap.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_tabwl.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckagg.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckcfg.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckdef.tabl.ddl,DDIC,
@@ -91,6 +93,8 @@ ddic/hck/zcd_job_cycle.tabl.ddl,DDIC,
 ddic/hck/zcd_job_step.tabl.ddl,DDIC,
 docs/ALERTING.md,Doc,
 docs/ATC_Validation.md,Doc,
+docs/Audit_Response_FMON.md,Doc,
+docs/Audit_Response_HCK_CORE.md,Doc,
 docs/Changed_Artifacts.csv,Doc,
 docs/Class_Purpose_and_Modification_Log.md,Doc,
 docs/Coverage_Run_Register.csv,Doc,
@@ -175,6 +179,7 @@ src/core/zcd_ops_purge.prog.abap,ABAP,Retention purge of the operations suite's 
 src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
+src/core/zcl_cd_ops_alert_dao.clas.testclasses.abap,ABAP,SQL tests of the alert DAO claim / repeat-key logic on cl_osql_test_environment
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_policy.clas.abap,ABAP,"Decides which alert rules fire for a run, whether quiet hours, throttling or"
 src/core/zcl_cd_ops_alert_policy.clas.testclasses.abap,ABAP,"Domain tests of the alert rules: severity floor, patterns, run-level RAG,"
@@ -225,6 +230,8 @@ src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so 
 src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_lock.clas.abap,ABAP,Run lock over the standard generic lock object E_TABLE with table
 src/core/zcl_cd_ops_lock.clas.xml,abapGit,
+src/core/zcl_cd_ops_plugin_probe.clas.abap,ABAP,Test support for ZCL_CD_OPS_FACTORY=>GET_PLUGIN (audit A62): a class that
+src/core/zcl_cd_ops_plugin_probe.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge.clas.abap,ABAP,"Retention purge of the suite's own history: runs with their findings, alert"
 src/core/zcl_cd_ops_purge.clas.testclasses.abap,ABAP,Tests of the retention purge rules and orchestration with a DAO double:
 src/core/zcl_cd_ops_purge.clas.xml,abapGit,
@@ -560,6 +567,10 @@ src/fmon/zc_cd_fmonsourcemap.ddls.asddls,CDS,
 src/fmon/zc_cd_fmonsourcemap.ddls.xml,abapGit,
 src/fmon/zc_cd_fmonsourcemap.ddlx.asddlxs,CDS,
 src/fmon/zc_cd_fmonsourcemap.ddlx.xml,abapGit,
+src/fmon/zc_cd_fmontableallow.ddls.asddls,CDS,
+src/fmon/zc_cd_fmontableallow.ddls.xml,abapGit,
+src/fmon/zc_cd_fmontableallow.ddlx.asddlxs,CDS,
+src/fmon/zc_cd_fmontableallow.ddlx.xml,abapGit,
 src/fmon/zcd_d_fmcal.tabl.xml,abapGit,
 src/fmon/zcd_d_fmchk.tabl.xml,abapGit,
 src/fmon/zcd_d_fmiface.tabl.xml,abapGit,
@@ -568,6 +579,7 @@ src/fmon/zcd_d_fmoncfg.tabl.xml,abapGit,
 src/fmon/zcd_d_fmsla.tabl.xml,abapGit,
 src/fmon/zcd_d_fmsrc.tabl.xml,abapGit,
 src/fmon/zcd_d_fmsrcmap.tabl.xml,abapGit,
+src/fmon/zcd_d_fmtabwl.tabl.xml,abapGit,
 src/fmon/zcd_fmon_cal.tabl.xml,abapGit,
 src/fmon/zcd_fmon_chk.tabl.xml,abapGit,
 src/fmon/zcd_fmon_event.tabl.xml,abapGit,
@@ -580,6 +592,7 @@ src/fmon/zcd_fmon_prq_wa.tabl.xml,abapGit,
 src/fmon/zcd_fmon_sla.tabl.xml,abapGit,
 src/fmon/zcd_fmon_src.tabl.xml,abapGit,
 src/fmon/zcd_fmon_srcmap.tabl.xml,abapGit,
+src/fmon/zcd_fmon_tabwl.tabl.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_generic.clas.abap,ABAP,Generic legacy source adapter: maps an existing custom table (e.g.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.testclasses.abap,ABAP,ltc_mapping: pure tests (no doubles) of legacy row -> status record.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.xml,abapGit,
@@ -674,6 +687,8 @@ src/fmon/zr_cd_fmonsource.ddls.asddls,CDS,
 src/fmon/zr_cd_fmonsource.ddls.xml,abapGit,
 src/fmon/zr_cd_fmonsourcemap.ddls.asddls,CDS,
 src/fmon/zr_cd_fmonsourcemap.ddls.xml,abapGit,
+src/fmon/zr_cd_fmontableallow.ddls.asddls,CDS,
+src/fmon/zr_cd_fmontableallow.ddls.xml,abapGit,
 src/fmon/zui_cd_fmon_cfg.srvd.srvdsrv,RAP,
 src/fmon/zui_cd_fmon_cfg.srvd.xml,abapGit,
 src/fmon/zui_cd_fmon_man.srvd.srvdsrv,RAP,
@@ -750,6 +765,9 @@ src/hck/zcd_morning_report.prog.xml,abapGit,
 src/hck/zcl_cd_hck_agg_query.clas.abap,ABAP,Pure validation of a ZCD_HCK_AGG row against the whitelist and the DDIC
 src/hck/zcl_cd_hck_agg_query.clas.testclasses.abap,ABAP,"Unit tests of generic aggregate validation (whitelist, DDIC fields,"
 src/hck/zcl_cd_hck_agg_query.clas.xml,abapGit,
+src/hck/zcl_cd_hck_budget.clas.abap,ABAP,Time budget of a running check (audit A18): a synchronous ABAP check cannot be
+src/hck/zcl_cd_hck_budget.clas.testclasses.abap,ABAP,Unit tests of the check time budget with an LTD clock;
+src/hck/zcl_cd_hck_budget.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_alert_health.clas.abap,ABAP,Technical health: alert delivery of the suite - failed and throttled
 src/hck/zcl_cd_hck_c_alert_health.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_applog.clas.abap,ABAP,Mass-run health: application-log (SLG1) error rate per object/subobject
@@ -778,15 +796,23 @@ src/hck/zcl_cd_hck_c_tech_sys.clas.abap,ABAP,"Technical health: short dumps of t
 src/hck/zcl_cd_hck_c_tech_sys.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_volume.clas.abap,ABAP,Payment engine volume KPIs: counts per day and source/LOB from ZCD_HCK_AGG
 src/hck/zcl_cd_hck_c_volume.clas.xml,abapGit,
+src/hck/zcl_cd_hck_canonical.clas.abap,ABAP,Pure canonical serialization of a table row for the configuration-drift
+src/hck/zcl_cd_hck_canonical.clas.testclasses.abap,ABAP,Unit tests of the canonical row serialization used by the drift hash;
+src/hck/zcl_cd_hck_canonical.clas.xml,abapGit,
 src/hck/zcl_cd_hck_cycle_eval.clas.abap,ABAP,Pure job-cycle rules: derive the state of a cycle step from TBTCO job
 src/hck/zcl_cd_hck_cycle_eval.clas.testclasses.abap,ABAP,"Unit tests of job-cycle step state derivation (NOT_STARTED, RUNNING,"
 src/hck/zcl_cd_hck_cycle_eval.clas.xml,abapGit,
 src/hck/zcl_cd_hck_dao.clas.abap,ABAP,"All SQL of the health check payment engine area: customizing, metric history, drift"
 src/hck/zcl_cd_hck_dao.clas.testclasses.abap,ABAP,SQL tests of the HCK DAO on cl_osql_test_environment doubles: metric
 src/hck/zcl_cd_hck_dao.clas.xml,abapGit,
+src/hck/zcl_cd_hck_dataset.clas.abap,ABAP,ZIF_CD_HCK_FILE over OPEN / TRANSFER / CLOSE / DELETE DATASET (application
+src/hck/zcl_cd_hck_dataset.clas.xml,abapGit,
 src/hck/zcl_cd_hck_engine.clas.abap,ABAP,"Health check engine: runs the configured checks, guards each one,"
 src/hck/zcl_cd_hck_engine.clas.testclasses.abap,ABAP,Unit tests of the health check engine through run( ) with LTD doubles for
 src/hck/zcl_cd_hck_engine.clas.xml,abapGit,
+src/hck/zcl_cd_hck_export.clas.abap,ABAP,Writes a complete report file or none (audit A61): the content goes to a
+src/hck/zcl_cd_hck_export.clas.testclasses.abap,ABAP,Unit tests of the complete-or-nothing export with an LTD file double;
+src/hck/zcl_cd_hck_export.clas.xml,abapGit,
 src/hck/zcl_cd_hck_factory.clas.abap,ABAP,Single resolution point of the HCK data access object and engine;
 src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
@@ -821,6 +847,8 @@ src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One 
 src/hck/zif_cd_hck_check.intf.xml,abapGit,
 src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check payment engine area: customizing, metric history,"
 src/hck/zif_cd_hck_dao.intf.xml,abapGit,
+src/hck/zif_cd_hck_file.intf.abap,ABAP,"Application-server file access used by the morning-report export, behind an"
+src/hck/zif_cd_hck_file.intf.xml,abapGit,
 src/hck/zif_cd_hck_suppress_types.intf.abap,ABAP,Types and constants of the health-check suppression (design 6.3):
 src/hck/zif_cd_hck_suppress_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_types.intf.abap,ABAP,"Types and constants of the health check (HCK) payment engine area: customizing rows,"
@@ -859,3 +887,4 @@ tools/literal_scan.py,Other,
 tools/portable_checks.py,Other,
 tools/rap_generate.py,Other,
 tools/__pycache__/literal_scan.cpython-313.pyc,Other,
+tools/tests/test_abapgit_serialize.py,Other,

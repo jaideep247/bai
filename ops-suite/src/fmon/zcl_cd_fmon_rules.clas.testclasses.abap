@@ -6,6 +6,7 @@
 *& lot outcome and NOC aging; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A38-A41: ACK known counts, SLA evidence, truncated lots, age basis.
 *&---------------------------------------------------------------------*
 CLASS ltc_rules DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -91,6 +92,15 @@ CLASS ltc_rules DEFINITION FINAL
     METHODS blank_token_matches_initial FOR TESTING.
     METHODS lot_source_cannot_finish_file FOR TESTING.
     METHODS lot_cfg_falls_back_to_default FOR TESTING.
+    METHODS known_zero_ack_is_mismatch FOR TESTING.
+    METHODS unreported_ack_count_unchecked FOR TESTING.
+    METHODS partial_never_meets_processing FOR TESTING.
+    METHODS later_stage_only_is_inferred FOR TESTING.
+    METHODS nack_meets_ack_sla FOR TESTING.
+    METHODS inferred_code_names_the_stage FOR TESTING.
+    METHODS truncated_lot_derives_nothing FOR TESTING.
+    METHODS unknown_age_does_not_age FOR TESTING.
+    METHODS age_counts_after_receipt FOR TESTING.
 
 ENDCLASS.
 
@@ -470,6 +480,7 @@ CLASS ltc_rules IMPLEMENTATION.
         DATA(ls_file) = new_file( ).
         ls_file-record_count = 10.
         ls_file-ack_count    = 9.
+        ls_file-ack_known    = abap_true.
         cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                           msg = '9 of 10 acknowledged must be a mismatch' ).
       CATCH cx_root INTO DATA(lx).
@@ -485,6 +496,7 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_file-record_count = 10.
         ls_file-ack_count    = 9.
         ls_file-nack_count   = 1.
+        ls_file-ack_known    = abap_true.
         cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
                                            msg = '9 ACK + 1 NACK of 10 is no count mismatch' ).
       CATCH cx_root INTO DATA(lx).
@@ -709,6 +721,161 @@ CLASS ltc_rules IMPLEMENTATION.
                                                         iv_lot_type = zif_cd_fmon_types=>gc_lot_type-noc ).
         cl_abap_unit_assert=>assert_equals( act = ls_found exp = ls_cfg
                                             msg = 'Default lot row must be used' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A39: a count the bank reported as zero is a fact, compared like any other count
+  METHOD known_zero_ack_is_mismatch.
+    TRY.
+        DATA(ls_file) = new_file( ).
+        ls_file-record_count = 10.
+        ls_file-ack_known    = abap_true.
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
+                                          msg = 'A reported ACK count of 0 for 10 records is a mismatch' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A39: an ACK without a reported count is unknown, not zero - no count verdict
+  METHOD unreported_ack_count_unchecked.
+    TRY.
+        DATA(ls_file) = new_file( ).
+        ls_file-record_count = 10.
+        ls_file-stage        = zif_cd_fmon_types=>gc_stage-ack.
+        cl_abap_unit_assert=>assert_false( act = zcl_cd_fmon_rules=>ack_count_mismatch( ls_file )
+                                           msg = 'An unreported ACK count must not be compared as 0' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A40: PARTIALLY_PROCESSED / FAILED never satisfy a processing SLA
+  METHOD partial_never_meets_processing.
+    TRY.
+        DATA(ls_file) = new_file( iv_inbound = abap_true ).
+        DATA(ls_sla) = prism_sla( ).
+        ls_sla-stage = zif_cd_fmon_types=>gc_stage-fully.
+        DATA(lt_events) = VALUE zif_cd_fmon_types=>tt_event(
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-loaded iv_at = gc_t0430 ) )
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-partially iv_at = gc_t0440 ) ) ).
+        ls_file-stage   = zif_cd_fmon_types=>gc_stage-partially.
+        ls_file-outcome = zif_cd_fmon_types=>gc_stage-partially.
+        DATA(ls_verdict) = zcl_cd_fmon_rules=>sla_verdict( is_file   = ls_file
+                                                          is_sla    = ls_sla
+                                                          it_events = lt_events
+                                                          iv_now    = gc_t0800 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-missing
+                                            msg = 'A partial outcome must not meet the processing SLA' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A40: a later stage is no evidence of the handoff itself - inferred, not met
+  METHOD later_stage_only_is_inferred.
+    TRY.
+        DATA(ls_file) = new_file( ).
+        DATA(lt_events) = VALUE zif_cd_fmon_types=>tt_event(
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-generated iv_at = gc_t0430 ) )
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-forwarded iv_at = gc_t0440 ) ) ).
+        ls_file-stage = zif_cd_fmon_types=>gc_stage-forwarded.
+        DATA(ls_verdict) = zcl_cd_fmon_rules=>sla_verdict( is_file   = ls_file
+                                                          is_sla    = prism_sla( )
+                                                          it_events = lt_events
+                                                          iv_now    = gc_t0800 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-inferred
+                                            msg = 'Forwarded without a PRISM handoff event must be inferred' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A40: a bank rejection is the bank's response - it meets the ACK SLA
+  METHOD nack_meets_ack_sla.
+    TRY.
+        DATA(ls_file) = new_file( ).
+        DATA(ls_sla) = prism_sla( ).
+        ls_sla-stage       = zif_cd_fmon_types=>gc_stage-ack.
+        ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-generation.
+        ls_sla-max_minutes = 120.
+        DATA(lt_events) = VALUE zif_cd_fmon_types=>tt_event(
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-generated iv_at = gc_t0430 ) )
+          ( new_event( is_file = ls_file iv_stage = zif_cd_fmon_types=>gc_stage-nack iv_at = gc_t0530 ) ) ).
+        DATA(ls_verdict) = zcl_cd_fmon_rules=>sla_verdict( is_file   = ls_file
+                                                          is_sla    = ls_sla
+                                                          it_events = lt_events
+                                                          iv_now    = gc_t0800 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-state exp = zif_cd_fmon_types=>gc_sla_state-ok
+                                            msg = 'A NACK within 120 min meets the ACK SLA' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A40: the inferred verdict has its own check code
+  METHOD inferred_code_names_the_stage.
+    TRY.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>sla_code( iv_stage = zif_cd_fmon_types=>gc_stage-sent
+                                             iv_state = zif_cd_fmon_types=>gc_sla_state-inferred )
+          exp = 'PRISM_HANDOFF_INFERRED'
+          msg = 'Inferred handoff must be PRISM_HANDOFF_INFERRED' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A38: a scan stopped at the row cap proves nothing - no outcome derived
+  METHOD truncated_lot_derives_nothing.
+    TRY.
+        DATA(ls_lot) = noc_lot( iv_age = 1 iv_open = 0 ).
+        ls_lot-truncated = abap_true.
+        cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_rules=>lot_outcome( ls_lot )
+                                             msg = 'A truncated scan must not derive FULLY_PROCESSED' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A41: an age the calendar could not determine gives no aging verdict
+  METHOD unknown_age_does_not_age.
+    TRY.
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>noc_aging_code( noc_lot( iv_age = zif_cd_fmon_types=>gc_age_unknown iv_open = 1 ) )
+          msg = 'Unknown age must not be NOC_AGING or NOC_DUE_TODAY' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A41: by default banking days count strictly after receipt, so a receipt on a
+  " non-working day is corrected to the previous working day ('-'); basis N keeps '+'
+  METHOD age_counts_after_receipt.
+    TRY.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>receipt_correction( zif_cd_fmon_types=>gc_age_basis-after_receipt )
+          exp = zif_cd_fmon_types=>gc_fcal_correct-previous
+          msg = 'Basis A must correct a weekend receipt backwards' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>receipt_correction( zif_cd_fmon_types=>gc_age_basis-next_working )
+          exp = zif_cd_fmon_types=>gc_fcal_correct-next
+          msg = 'Basis N must start on the next working day' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>receipt_correction( space )
+          exp = zif_cd_fmon_types=>gc_fcal_correct-previous
+          msg = 'Blank basis must default to A' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.

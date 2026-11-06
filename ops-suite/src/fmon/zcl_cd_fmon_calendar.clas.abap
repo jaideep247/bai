@@ -6,6 +6,7 @@
 *& FMON class that calls them; deliberately not unit tested (see doc).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A41: receipt-date correction from the age basis.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - factory calendar (FM wrapper)</p>
 CLASS zcl_cd_fmon_calendar DEFINITION
@@ -82,7 +83,7 @@ CLASS zcl_cd_fmon_calendar IMPLEMENTATION.
     ENDIF.
     to_factory_date( EXPORTING iv_date         = iv_from
                                iv_calendar_id  = iv_calendar_id
-                               iv_correct      = '+'
+                               iv_correct      = zcl_cd_fmon_rules=>receipt_correction( iv_basis )
                      IMPORTING ev_factory_date = lv_from ).
     to_factory_date( EXPORTING iv_date         = iv_to
                                iv_calendar_id  = iv_calendar_id

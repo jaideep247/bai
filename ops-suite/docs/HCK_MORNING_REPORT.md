@@ -429,6 +429,21 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_MODULE = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
 | HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `PE_AREA_STALE` for EBS |
 
+### Phase 6 audit changes (operations notes)
+
+- **Baseline retake:** configuration-drift hashes are canonical (length-prefixed fields, version `2`, A57).
+  Baselines taken before are reported as CONFIG_BASELINE_OUTDATED until `take_baseline` is run once.
+- **Time budget:** item-wise checks stop between items at TIMEOUT_SEC (BUDGET_EXHAUSTED, A18). A synchronous
+  check still cannot be interrupted inside one SQL; long checks belong in a separate job step / variant.
+- **Self-checks:** a hung run (status R beyond HCK_MAX_RUN_MIN) and an empty selection are red (A06); green
+  needs at least one executed business check.
+- **History:** one point per finished, non-test run, as of the report date (A59); flat history uses
+  HCK_FLAT_TOL_PCT (A58).
+- **Metric kinds (A88):** checks classify metrics as volume, level or rate (ZCD_HCK_METRIC-KIND / WEIGHT);
+  the dashboard cube adds volumes, takes MAX / average of levels and weights rates. Rows written before the
+  change count as volumes.
+- **CSV export** is written to a temp file and published only when complete (A61).
+
 ## 15. VERIFY-DDIC register and what is not verified
 
 > **First principle:** say what you checked; everything else is a hypothesis.
@@ -444,6 +459,8 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 5. `SNAP_BEG`-DATUM (else SNAP with SEQNO = '000') (`count_short_dumps`)
 6. `VBHDR`-VBRC <> 0 = update request in error (`count_update_errors`)
 7. `SEQG3`-GTDATE / GTTIME (`read_lock_stats`)
+8. `TBTCP`-PROGNAME / VARIANT, step 1 (`get_job_runs`, A42)
+9. `BKPF`-AWTYP `FKKSU`, BUKRS, STBLG (`get_fikeys_without_gl`, A43)
 
 Seed-only (customizing, validated at runtime against the DDIC): DFKKOP-FAEDN/AUGST/HVORG/BUKRS/BETRH, FEBKO-AZDAT and format field, ZCD_PAYM_REQ_LOG date/source fields, /SAPPO/ORDER_HDR fields, return-debit main transactions, log objects, factory calendars, real SAP job names behind the wiki placeholders.
 
