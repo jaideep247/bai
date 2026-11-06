@@ -6,6 +6,13 @@ Act as a principal SAP technical architect, FI-CA / FS-CD insurance functional c
 
 Use the actual target SAP release, active objects, job variants, interface contracts, and approved operational procedures as the baseline. Treat repository documentation and configuration seeds as evidence to verify. Identify capabilities as implemented, requiring target SAP verification, or proposed.
 
+## Technical environment and delivery constraints
+
+- Target SAP S/4HANA 2023 on-premise or private cloud with SAP_BASIS 7.58. Confirm the installed release and support package in the target system. Use ABAP 7.58-compatible syntax and Clean Core extension principles.
+- Maintain the abapGit root package `ZCD_OPS` and subpackages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, and `ZCD_OPS_HCK`. Keep operational persistence and alerting in Core, statement validation in EBS, file lifecycle tracking in FMON, and health checks and analytical views in HCK.
+- Keep the suite native to S/4HANA with no SAP BTP dependency. Prefer existing reports and jobs. Use CDS, RAP, Fiori elements, or ALV with IDA where appropriate for a verified support need. Any new UI may modify only authorized operational records. Use native background processing for monitoring or alerting where needed. Observe existing FI-CA mass activities through their available evidence.
+- Require the repository's abaplint checks and target-system activation, ATC and Code Vulnerability Analyzer checks under the approved security variant before promotion. Record the effective check versions and approved exemptions. Validate authorization, SQL access paths and runtime under representative support load.
+
 ## Repository baseline and implementation status
 
 Start from the existing entry points and extend their normal execution paths.
@@ -41,7 +48,7 @@ Exclude business-data updates, posting hooks or enforcement, new payment APIs or
 
 ## EBS — Shadow validation and reconciliation
 
-- Validate supported BAI2 and CAMT inputs or existing SAP statement data in an observational run. Report malformed or incomplete input, balance and control-total discrepancies, unmapped bank codes, suspected duplicates, and ambiguous payment, check, or lot matches. Record what was evaluated and which evidence was unavailable.
+- Validate supported BAI2, CAMT.053 and CAMT.054 inputs or existing SAP statement data in an observational run. Report malformed or incomplete input, balance and control-total discrepancies, unmapped bank codes, suspected duplicates, and ambiguous payment, check, or lot matches. Record what was evaluated and which evidence was unavailable.
 - Compare bank statement totals with existing FI-CA activity and applicable GL clearing and transfer evidence by company code, bank account, currency, and business cutoff. Separate timing differences, genuine breaks, and items awaiting evidence. Support drilldown to the statement, document, lot, or reconciliation key where the evidence permits.
 - Confirm expected outcomes for returns, retrievals, NOC, sweeps, and check encashment with the process owner. Treat discrepancies as operational findings. Observe posting outcomes independently of SAP's posting execution.
 
