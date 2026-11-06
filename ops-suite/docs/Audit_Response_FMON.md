@@ -50,6 +50,12 @@ None in ABAP source. Open ADT verifications are listed in the residual column (F
 |---|---|---|---|
 | A90 Event dedupe key omits interface / file ID; two interfaces reusing a reference on one source and stage could leave the second file without its event | **Fixed by the A49 change**: FILE_ID (one per interface + reference + business date) is in the event lookup (`EVENT_EXISTS`) and in the unique index `ZCD_FMON_EVENT~SRC` (MANDT, FILE_ID, SRC_ID, SRC_KEY, STAGE) | None needed beyond A49 | `event_belongs_to_its_instance`, new `cross_interface_ref_own_event` (two interface files, then a replay stays idempotent), `same_event_is_stored_once` |
 
+## A100 (later checkpoint) — long file names keep their identity
+
+| Finding | Verdict | Fix | Tests |
+|---|---|---|---|
+| A100 The correlation key FILE_REF is CHAR 70 while FILE_NAME is 255; `normalize_ref` truncated, so two long names sharing their first 70 characters became one file, and a record without any key fell back to its name | **Confirmed** | `normalize_ref`: a canonical value up to 70 characters is kept; a longer one becomes the first 29 characters + `#` + SHA-1 (40 hex) = 70 (`gc_ref_digest`); digest failure → blank key. `resolve_file` verifies a digest key against the full FILE_NAME of the registry file (canonical comparison) and reports `FILE_REF_AMBIGUOUS` on a mismatch. The generic adapter quarantines a record with no usable key (malformed, role FILE_KEY) instead of inventing one (75d061e) | `short_ref_is_canonical`, `long_names_stay_distinct`, `same_long_name_same_ref`, `digest_ref_fits_the_key`, `long_name_ref_is_digest`, `long_name_digest_verified`. Residual: `VERIFY-ADT` `cl_abap_message_digest=>calculate_hash_for_char` on SAP_BASIS 7.58 (same call as the alert intent key) |
+
 ## Merge notes
 
 Shared files this stream did not edit; please apply at merge:

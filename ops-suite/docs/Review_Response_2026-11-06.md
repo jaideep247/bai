@@ -68,14 +68,14 @@ Second review, this time of `ops-suite` itself (engines and FMON DAO). Each find
 
 ---
 
-# Part D — static repository audit A01–A99 (consolidated index)
+# Part D — static repository audit A01–A105 (consolidated index)
 
 The audit reviewed `main` at `8cdfdce`; all fixes below are on branch `claude/loving-albattani-qexsjc` (phase 6 merged 2026-11-06) and were taken to `main` afterwards. Per-finding verdict, fix, tests and residual risk: `Audit_Response_EBS.md`, `Audit_Response_FMON.md`, `Audit_Response_HCK_CORE.md`. Business decisions: `RAP_Apps_Design.md` (D-1…D-6) and `Release_Readiness.md` §3. Nothing here has been executed in SAP — gates in `Release_Readiness.md`.
 
 | Finding | Status |
 |---|---|
 | A01 | Fixed: CI pinned to abaplint 2.120.92, report parameter typed (e9cc7ac); the divisor finding was a false positive of abaplint 2.120.19 |
-| A02 | Open — needs the SE18 signature of FIEB_CHANGE_BS_DATA; contract (dispositions, kill-switch diagnostic, caller owns the LUW) documented in Release_Readiness.md |
+| A02 | Deferred — the pre-posting path (BAdI FIEB_CHANGE_BS_DATA, enforce mode, blocked-line release) is switched off and not part of this release (EBS is a post-posting detective control); needs the SE18 signature in the future enforcement phase; contract documented in Release_Readiness.md |
 | A03 | Fixed — see Audit_Response_EBS.md |
 | A04 | Fixed — see Audit_Response_FMON.md |
 | A05 | Fixed — see Audit_Response_FMON.md |
@@ -173,5 +173,11 @@ The audit reviewed `main` at `8cdfdce`; all fixes below are on branch `claude/lo
 | A97 | Fixed — see Audit_Response_EBS.md |
 | A98 | Fixed — see Audit_Response_EBS.md |
 | A99 | Fixed: BCS result checked (A45); status S documented as submitted, SOST for delivery (3c7049b) |
+| A100 | Fixed (later checkpoint) — FMON long file names: digest key verified against the full name (75d061e); see Audit_Response_FMON.md |
+| A101 | Fixed in part before (A58), completed — HCK history per series incl. DIM2 (3e2dc31); see Audit_Response_HCK_CORE.md |
+| A102 | Fixed — baseline warm-up explicit, never GREEN (8697734); see Audit_Response_HCK_CORE.md |
+| A103 | Fixed — expected group set ZCD_HCK_AGGGRP, silent group measures 0 (9358d1e); see Audit_Response_HCK_CORE.md |
+| A104 | Fixed (documentation) — QA case EBS-13 on the FEB source, EBS-13a file source; see Audit_Response_EBS.md |
+| A105 | Fixed (documentation) — 195 parity corrected (run-level vs payment-level), legacy references pinned, PAR-195; see Audit_Response_EBS.md |
 
 **Verification (offline):** abaplint 2.120.92 (`v758` = S/4HANA 2023) 0 issues; ATC-equivalent rule set: 3 documented exemptions (`ATC_Validation.md` §4); portable checks 15/15; generator fixture tests OK; 648 ABAP Unit test methods declared (not executed); CI green on every push.
