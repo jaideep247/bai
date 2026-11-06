@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A34: an unknown debit/credit indicator stays unknown.
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
+*& 2026-11-06 | Audit A68: inverted date range raises.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -126,6 +127,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
     METHODS packages_follow_size         FOR TESTING.
     METHODS unknown_epvoz_has_no_sign    FOR TESTING.
     METHODS reason_from_configured_field FOR TESTING.
+    METHODS inverted_date_range_raises   FOR TESTING.
 ENDCLASS.
 
 
@@ -332,6 +334,19 @@ CLASS ltc_src_feb IMPLEMENTATION.
                                             msg = 'The configured field must be read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A68: a date range whose start lies after its end is an error (message 527), not an empty feed
+  METHOD inverted_date_range_raises.
+    TRY.
+        zcl_cd_ebs_src_feb=>check_selection( VALUE #( date_from = '20261106' date_to = '20261105' ) ).
+        cl_abap_unit_assert=>fail( msg = 'An inverted date range must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = zif_cd_ebs_types=>gc_msg-date_range
+                                            msg = 'Message 527 expected for an inverted date range' ).
     ENDTRY.
   ENDMETHOD.
 

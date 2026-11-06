@@ -12,6 +12,7 @@
 *& 2026-11-06 | Release tests approved_release_unblocks, other_block_still_blocks, rule_failure_not_releasable.
 *& 2026-11-06 | Audit A27 / A03: blocking flag, empty and unusable rule groups.
 *& 2026-11-06 | Audit A27/A86: parser (package) findings honour the blocks-posting flag.
+*& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker, alert after cap, exact line cap, NO_DATA run.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -110,6 +111,8 @@ CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_alert.
     DATA mv_dispatched TYPE i.
+    "! A67: findings handed to the alert router
+    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
 ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
@@ -118,6 +121,7 @@ CLASS ltd_alert IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatched += 1.
+    mt_findings = it_findings.
   ENDMETHOD.
 ENDCLASS.
 
@@ -278,6 +282,12 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS failed_rule_skips_reconcile  FOR TESTING.
     METHODS blocking_rule_blocks_posting FOR TESTING.
     METHODS parser_count_flag_blocks FOR TESTING.
+    METHODS plugin_error_unevaluated     FOR TESTING.
+    METHODS plugin_error_trips_breaker   FOR TESTING.
+    METHODS blocker_after_cap_alerts     FOR TESTING.
+    METHODS kept_lines_capped_exactly    FOR TESTING.
+    METHODS empty_source_is_no_data      FOR TESTING.
+    METHODS empty_feed_opt_in_green      FOR TESTING.
     METHODS parser_count_advisory FOR TESTING.
     METHODS advisory_rule_never_blocks   FOR TESTING.
     METHODS empty_rule_group_blocks      FOR TESTING.
@@ -922,6 +932,129 @@ CLASS ltc_engine IMPLEMENTATION.
                                            msg = 'An advisory parser finding must not block posting' ).
         cl_abap_unit_assert=>assert_initial( act = VALUE #( ls_decision-findings[ rule_id = 'S12' ]-action OPTIONAL )
                                              msg = 'The advisory parser finding keeps a blank action' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A66: lines whose rule group had a PLUGIN_ERROR are unevaluated - counted as failed, never passed
+  METHOD plugin_error_unevaluated.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-assign_fail_rule  = abap_true.
+        ls_flags-lines_per_package = 2.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-unevaluated exp = 2
+                                            msg = 'Both lines of the failed group must be unevaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-passed_items exp = 0
+                                            msg = 'Unevaluated lines must never count as passed' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-failed_items exp = 2
+                                            msg = 'Unevaluated lines count as failed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A66: a technical package failure feeds the breaker even below EBS_CB_MIN_LINES
+  METHOD plugin_error_trips_breaker.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-assign_fail_rule = abap_true.
+        ls_flags-packages         = 5.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            msg = 'Three packages with a rule that could not run must abort the run' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 3
+                                            msg = 'Only the first three packages may be processed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A67: a blocker after the display cap (EBS_RESULT_MAX) still reaches the alert router
+  METHOD blocker_after_cap_alerts.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        add_rule( iv_group = gc_test-group_new iv_id = 'R01' iv_class = gc_test-sign_class
+                  iv_level = zif_cd_ebs_types=>gc_level-line ).
+        ASSIGN mo_source->mt_packages[ 1 ] TO FIELD-SYMBOL(<ls_package>).
+        INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S05' check_code = 'TEST_WARNING'
+                        severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE <ls_package>-findings.
+        INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S02' check_code = 'TEST_BLOCKER'
+                        severity = zif_cd_ops_types=>gc_severity-block ) INTO TABLE <ls_package>-findings.
+        INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '1' ) INTO TABLE mo_store->mt_params.
+        run_engine( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ms_result-findings[ check_code = 'TEST_BLOCKER' ] ) )
+          msg = 'The blocker must lie after the display cap in this scenario' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_alert->mt_findings[ check_code = 'TEST_BLOCKER'
+                                                              severity   = zif_cd_ops_types=>gc_severity-block ] ) )
+          msg = 'A blocker after the cap must still be handed to the alert router' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A67: retained lines never exceed EBS_RESULT_MAX - not even by the rest of a package
+  METHOD kept_lines_capped_exactly.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-lines_per_package = 3.
+        configure_scenario( ls_flags ).
+        INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '2' ) INTO TABLE mo_store->mt_params.
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ms_result-lines ) exp = 2
+                                            msg = 'Exactly EBS_RESULT_MAX lines may be retained' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-total_items exp = 3
+                                            msg = 'Counts must still cover every line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A68: a run that selected no statement is NO_DATA with RAG grey and a NO_DATA finding - not green
+  METHOD empty_source_is_no_data.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-packages = 0.
+        configure_scenario( ls_flags ).
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zcl_cd_ebs_engine=>gc_status_no_data
+                                            msg = 'An empty run must end NO_DATA' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-grey
+                                            msg = 'An empty run must be grey, not green' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_cd_ebs_types=>gc_check_code-no_data ] ) )
+          msg = 'The empty run must leave a saved NO_DATA finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A68: with EBS_EMPTY_FEED_OK = X an empty feed is intentional and closes green
+  METHOD empty_feed_opt_in_green.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-packages = 0.
+        configure_scenario( ls_flags ).
+        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-empty_feed_ok value = abap_true ) INTO TABLE mo_store->mt_params.
+        run_engine( ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-success
+                                            msg = 'An intentionally empty feed closes successfully' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_result-run-rag exp = zif_cd_ops_types=>gc_rag-green
+                                            msg = 'An intentionally empty feed is green' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zif_cd_ebs_types=>gc_check_code-no_data ] ) )
+          msg = 'No NO_DATA finding with the opt-in' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

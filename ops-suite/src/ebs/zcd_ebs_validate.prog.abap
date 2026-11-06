@@ -13,6 +13,7 @@
 *& 2026-11-06 | Refused run (run lock held) reported; job ends in error in background.
 *& 2026-11-06 | Variant parameter typed with ZIF_CD_OPS_TYPES=>TY_VARIANT (audit A01).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A68: FEB date range validated (selection screen and source).
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -127,6 +128,7 @@ CLASS lcl_report IMPLEMENTATION.
       ls_selection-kukey     = s_kukey[].
       ls_selection-date_from = p_from.
       ls_selection-date_to   = p_to.
+      zcl_cd_ebs_src_feb=>check_selection( ls_selection ).
       ro_source = NEW zcl_cd_ebs_src_feb( is_selection = ls_selection iv_package_size = p_pack ).
     ELSE.
       ro_source = NEW zcl_cd_ebs_src_file( iv_content   = read_file( )
@@ -223,6 +225,10 @@ ENDCLASS.
 AT SELECTION-SCREEN.
   IF sscrfields-ucomm = gc_ucomm_execute AND p_file = abap_true AND p_path IS INITIAL.
     MESSAGE e510(zcd_ops).
+  ENDIF.
+  " A68: an inverted date range is rejected on the selection screen
+  IF sscrfields-ucomm = gc_ucomm_execute AND p_feb = abap_true AND p_from > p_to.
+    MESSAGE e527(zcd_ops) WITH p_from p_to.
   ENDIF.
 
 START-OF-SELECTION.

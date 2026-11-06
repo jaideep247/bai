@@ -1664,6 +1664,24 @@
      <MSGNR>526</MSGNR>
      <TEXT>Key length &amp;1 exceeds the key width &amp;2 (configuration)</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>527</MSGNR>
+     <TEXT>Date range invalid: from &amp;1 is after to &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>528</MSGNR>
+     <TEXT>No statement selected - nothing evaluated (variant &amp;1)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>529</MSGNR>
+     <TEXT>&amp;1 entries not evaluated (a rule could not run)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

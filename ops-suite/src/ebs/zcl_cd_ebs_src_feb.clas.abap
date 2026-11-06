@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A34: unknown debit/credit indicator stays unknown.
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field (EBS_FEB_REASON_FIELD).
+*& 2026-11-06 | Audit A68: date range validated (check_selection) - an inverted range is an error, not an empty feed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -24,6 +25,14 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
       IMPORTING
         is_selection    TYPE zif_cd_ebs_feb_dao=>ty_selection
         iv_package_size TYPE i DEFAULT 50.
+
+    "! A68: the selection must be usable - a date range whose start lies after its end
+    "! would select nothing and close the run as if the feed were empty
+    CLASS-METHODS check_selection
+      IMPORTING
+        is_selection TYPE zif_cd_ebs_feb_dao=>ty_selection
+      RAISING
+        zcx_cd_ops_error.
 
   PRIVATE SECTION.
     DATA ms_selection    TYPE zif_cd_ebs_feb_dao=>ty_selection.
@@ -66,10 +75,20 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD check_selection.
+    IF is_selection-date_from IS NOT INITIAL AND is_selection-date_to IS NOT INITIAL
+       AND is_selection-date_from > is_selection-date_to.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e527(zcd_ops) WITH is_selection-date_from is_selection-date_to.
+    ENDIF.
+  ENDMETHOD.
+
+
   METHOD zif_cd_ebs_source~next_package.
     DATA lt_kukey TYPE zif_cd_ebs_feb_dao=>tt_kukey.
 
     IF mv_loaded = abap_false.
+      check_selection( ms_selection ).
       DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
       mv_debit_ind  = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_debit_ind
                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_debit_ind ).

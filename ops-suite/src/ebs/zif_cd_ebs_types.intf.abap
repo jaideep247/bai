@@ -17,6 +17,7 @@
 *& 2026-11-06 | Audit A28: reason mapping completeness and kind, FEBEP reason field.
 *& 2026-11-06 | Audit A86: message TRAILER_FIELD_MISSING.
 *& 2026-11-06 | Audit A65: key width check codes, messages and EBS_KEYLEN_DOCNO constant.
+*& 2026-11-06 | Audit A66/A68: NO_DATA check code, EBS_EMPTY_FEED_OK, messages 527-529.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -380,6 +381,8 @@ INTERFACE zif_cd_ebs_types
       dup_lookback_days  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DUP_LOOKBACK_DAYS',
       "! A28: FEBEP field holding the NACHA return / NOC reason (blank = not stored; VERIFY-DDIC)
       feb_reason_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_REASON_FIELD',
+      "! A68: X = a run without statements is an intentionally empty feed (closes green)
+      empty_feed_ok      TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_EMPTY_FEED_OK',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
@@ -441,6 +444,8 @@ INTERFACE zif_cd_ebs_types
       check_not_found                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_NOT_FOUND',
       check_status                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_STATUS',
       circuit_breaker                TYPE zif_cd_ops_types=>ty_check_code VALUE 'CIRCUIT_BREAKER',
+      "! A68: the run selected no statement - nothing was evaluated
+      no_data                        TYPE zif_cd_ops_types=>ty_check_code VALUE 'NO_DATA',
       code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
       code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
       currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
@@ -618,6 +623,9 @@ INTERFACE zif_cd_ebs_types
       trailer_field_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '524',
       ref_too_long                TYPE zif_cd_ops_types=>ty_msgno VALUE '525',
       key_length_config           TYPE zif_cd_ops_types=>ty_msgno VALUE '526',
+      date_range                  TYPE zif_cd_ops_types=>ty_msgno VALUE '527',
+      no_data                     TYPE zif_cd_ops_types=>ty_msgno VALUE '528',
+      unevaluated                 TYPE zif_cd_ops_types=>ty_msgno VALUE '529',
     END OF gc_msg.
 
 ENDINTERFACE.

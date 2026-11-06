@@ -282,3 +282,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 524 | &1: not declared on the trailer (computed value not accepted) |
 | 525 | Reference &1 has &2 characters; the key holds &3 |
 | 526 | Key length &1 exceeds the key width &2 (configuration) |
+| 527 | Date range invalid: from &1 is after to &2 |
+| 528 | No statement selected - nothing evaluated (variant &1) |
+| 529 | &1 entries not evaluated (a rule could not run) |
