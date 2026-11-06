@@ -1,0 +1,13 @@
+@EndUserText.label: 'Transactions dashboard (read-only, live)'
+@ObjectModel.leadingEntity.name: 'ZC_CD_TRXFLOW'
+// Binding to create in ADT: ZUI_CD_TRX_DASH_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// The request side (requested / errored, ACK, cheque status) needs unconfirmed fields of custom
+// tables: cds/ service ZUI_CD_TRX_REQ, activated in ADT after SE11 - never exposed from here.
+define service ZUI_CD_TRX_DASH {
+  expose ZC_CD_TrxFlow    as Transaction;
+  expose ZC_CD_TrxPayRun  as PaymentRun;
+  expose ZC_CD_TrxRetNoc  as ReturnNoc;
+  // Tiles and the production-support overview page (KPI / list cards)
+  expose ZC_CD_TrxKpi     as TransactionKpi;
+  expose ZC_CD_TrxProblem as TransactionProblem;
+}

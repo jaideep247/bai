@@ -1,0 +1,13 @@
+// Artifact: zc_cd_trxreq.dcls.asdcls
+// Purpose: Read access to the request funnel of the transactions dashboard (cds/, service
+//          ZUI_CD_TRX_REQ): ZCD_OPS with ZCD_PE_AREA = CORE, BUKRS of the posted item and ACTVT 03,
+//          as ZC_CD_TRXDASH. A request not posted yet has a blank company code: only users with
+//          BUKRS * see it. ADT only, after SE11 confirmation.
+// Modification log: 2026-11-06 | Initial version (transactions dashboard, request side).
+// VERIFY-ADT: aspect pfcg_auth with two mapped fields on a projection (7.58).
+@EndUserText.label: 'Transactions request funnel - read access'
+@MappingRole: true
+define role ZC_CD_TrxReq {
+  grant select on ZC_CD_TrxReqFlow
+    where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, ACTVT = '03' );
+}

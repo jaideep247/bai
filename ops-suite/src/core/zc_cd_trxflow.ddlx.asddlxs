@@ -1,0 +1,190 @@
+// UI annotations: Transactions dashboard (analytical list page)
+// Charts: transactions by flow bucket and payment method (default), funnel per posting
+// date, by direction and company code. Navigation: payment trace (proposed intent
+// ZCDPaymentTrace-display, Dashboard_Transactions.md section 6). VERIFY-ADT: rendering.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Transactions',
+                  title: { type: #STANDARD, value: 'FinId' },
+                  description: { type: #STANDARD, value: 'DocumentNo' } }
+@UI.chart: [ { qualifier: 'ByBucket',
+               title: 'Transactions by flow bucket and payment method',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'FlowBucket', 'PaymentMethod' ],
+               measures: [ 'ItemCount' ],
+               dimensionAttributes: [ { dimension: 'FlowBucket', role: #CATEGORY },
+                                      { dimension: 'PaymentMethod', role: #SERIES } ],
+               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 } ] },
+             { qualifier: 'Funnel',
+               title: 'Posted, paid, settled, returned per posting date',
+               chartType: #LINE,
+               dimensions: [ 'PostingDate' ],
+               measures: [ 'ItemCount', 'PaidReachedCount', 'SettledReachedCount', 'ReturnedCount' ],
+               dimensionAttributes: [ { dimension: 'PostingDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 },
+                                    { measure: 'PaidReachedCount', role: #AXIS_1 },
+                                    { measure: 'SettledReachedCount', role: #AXIS_1 },
+                                    { measure: 'ReturnedCount', role: #AXIS_1 } ] },
+             { qualifier: 'ByCompany',
+               title: 'Transactions by company code and direction',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'CompanyCode', 'Direction' ],
+               measures: [ 'ItemCount' ],
+               dimensionAttributes: [ { dimension: 'CompanyCode', role: #CATEGORY },
+                                      { dimension: 'Direction', role: #SERIES } ],
+               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByBucket' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'Funnel',
+                             sortOrder: [ { by: 'PostingDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Funnel' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'ByCompany',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByCompany' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_TrxFlow with
+{
+  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'Transaction', position: 10 },
+               { id: 'Item', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Open item', position: 10 },
+               { id: 'Evidence', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Evidence',
+                 label: 'Payment, settlement, return', position: 20 },
+               { id: 'Runs', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_PaymentRuns',
+                 label: 'Payment runs (DPAYH)', position: 20 },
+               { id: 'ReturnsNoc', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_ReturnsNoc',
+                 label: 'Returns / NOC lot items', position: 30 },
+               { id: 'HeaderBucket', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'FlowBucket',
+                 position: 10 } ]
+  @EndUserText.label: 'Document (OPBEL)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  DocumentNo;
+  @EndUserText.label: 'Repetition item'
+  @UI.identification: [ { position: 30 } ]
+  RepetitionItem;
+  @EndUserText.label: 'Item'
+  @UI.identification: [ { position: 40 } ]
+  ItemNo;
+  @EndUserText.label: 'Sub-item'
+  @UI.identification: [ { position: 50 } ]
+  SubItem;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'FIN number'
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'display',
+                    label: 'Payment trace' } ]
+  FinId;
+  @EndUserText.label: 'Bill plan'
+  @UI.identification: [ { position: 60 } ]
+  BillPlanId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'Posting date'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  PostingDate;
+  @EndUserText.label: 'Posted today'
+  @UI.selectionField: [ { position: 40 } ]
+  IsToday;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 90 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Direction (collection / disbursement)'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  Direction;
+  @EndUserText.label: 'Local currency'
+  @UI.identification: [ { position: 110 } ]
+  LocalCurrency;
+  @EndUserText.label: 'Amount (local currency, signed)'
+  @UI.identification: [ { position: 120 } ]
+  AmountInLocalCurrency;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 130 } ]
+  Currency;
+  @EndUserText.label: 'Amount (signed)'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.identification: [ { position: 140 } ]
+  Amount;
+  @EndUserText.label: 'Clearing status'
+  @UI.identification: [ { position: 150 } ]
+  ClearingStatus;
+  @EndUserText.label: 'Clearing / payment document'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.identification: [ { position: 160 } ]
+  ClearingDoc;
+  @EndUserText.label: 'Clearing date'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 170 } ]
+  ClearingDate;
+  @EndUserText.label: 'Clearing reason'
+  @UI.identification: [ { position: 180 } ]
+  ClearingReason;
+  @EndUserText.label: 'Last payment run date'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 10 } ]
+  LastRunDate;
+  @EndUserText.label: 'Last payment run ID'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 20 } ]
+  LastRunId;
+  @EndUserText.label: 'Payment status (DPAYH)'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 30 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  PaymentStatus;
+  @EndUserText.label: 'Cheque number'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 40 } ]
+  ChequeNo;
+  @EndUserText.label: 'Cheque house bank'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 50 } ]
+  ChequeHouseBank;
+  @EndUserText.label: 'Bank settlement date'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 60 } ]
+  SettlementDate;
+  @EndUserText.label: 'Cheque encashment date'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 70 } ]
+  EncashDate;
+  @EndUserText.label: 'Return reason (DFKKRP-RLGRD)'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 80 } ]
+  @UI.selectionField: [ { position: 80 } ]
+  ReturnReason;
+  @EndUserText.label: 'NOC reason (DFKKNRP-FLGRD)'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 90 } ]
+  NocReason;
+  @EndUserText.label: 'Flow bucket'
+  @UI.lineItem: [ { position: 120, importance: #HIGH, criticality: 'FlowCriticality' } ]
+  @UI.identification: [ { position: 190, criticality: 'FlowCriticality' } ]
+  @UI.selectionField: [ { position: 90 } ]
+  @UI.dataPoint: { qualifier: 'FlowBucket', title: 'Flow bucket', criticality: 'FlowCriticality' }
+  FlowBucket;
+  @UI.hidden: true
+  FlowCriticality;
+  @EndUserText.label: 'Transactions'
+  ItemCount;
+  @EndUserText.label: 'Paid (reached)'
+  PaidReachedCount;
+  @EndUserText.label: 'Settled / encashed (reached)'
+  SettledReachedCount;
+  @EndUserText.label: 'Returned'
+  ReturnedCount;
+  @EndUserText.label: 'Reversed'
+  ReversedCount;
+  @EndUserText.label: 'Open (not cleared)'
+  OpenCount;
+  @EndUserText.label: 'With NOC'
+  NocItemCount;
+  @EndUserText.label: 'Paid by cheque'
+  ChequeItemCount;
+  @EndUserText.label: 'Payment run rows'
+  PaymentRunCount;
+}

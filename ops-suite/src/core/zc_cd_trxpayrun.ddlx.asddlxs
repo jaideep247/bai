@@ -1,0 +1,47 @@
+// UI annotations: Transactions dashboard - payment runs (DPAYH live status)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment', typeNamePlural: 'Payment run rows',
+                  title: { type: #STANDARD, value: 'PaymentDocument' },
+                  description: { type: #STANDARD, value: 'RunId' } }
+@UI.chart: [ { qualifier: 'ByStatus',
+               title: 'Payments by run date and payment status',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'RunDate', 'PaymentStatus' ],
+               measures: [ 'PaymentCount' ],
+               dimensionAttributes: [ { dimension: 'RunDate', role: #CATEGORY },
+                                      { dimension: 'PaymentStatus', role: #SERIES } ],
+               measureAttributes: [ { measure: 'PaymentCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'RunDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByStatus' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_TrxPayRun with
+{
+  @UI.facet: [ { id: 'Run', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Payment run row', position: 10 } ]
+  @EndUserText.label: 'Run date (LAUFD)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RunDate;
+  @EndUserText.label: 'Run ID (LAUFI)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  RunId;
+  @EndUserText.label: 'Payment document (DOC1R)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  PaymentDocument;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Payment status (ZZ_PAYMENT_STATUS)'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  PaymentStatus;
+  @EndUserText.label: 'Run today'
+  @UI.selectionField: [ { position: 40 } ]
+  IsToday;
+  @EndUserText.label: 'Payments'
+  PaymentCount;
+}

@@ -1,0 +1,69 @@
+// UI annotations: Transactions dashboard - errored / stuck transactions
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Errored / stuck transactions',
+                  title: { type: #STANDARD, value: 'FinId' },
+                  description: { type: #STANDARD, value: 'ProblemType' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_TrxProblem with
+{
+  @EndUserText.label: 'Document (OPBEL)'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  DocumentNo;
+  @EndUserText.label: 'Repetition item'
+  @UI.hidden: true
+  RepetitionItem;
+  @EndUserText.label: 'Item'
+  @UI.hidden: true
+  ItemNo;
+  @EndUserText.label: 'Sub-item'
+  @UI.hidden: true
+  SubItem;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'FIN number'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  FinId;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 20 } ]
+  CompanyCode;
+  @EndUserText.label: 'Posting date'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 30 } ]
+  PostingDate;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Direction'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  Direction;
+  @EndUserText.label: 'Clearing / payment document'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  ClearingDoc;
+  @EndUserText.label: 'Clearing date'
+  ClearingDate;
+  @EndUserText.label: 'Payment status (DPAYH)'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  PaymentStatus;
+  @EndUserText.label: 'Return reason (DFKKRP-RLGRD)'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  ReturnReason;
+  @EndUserText.label: 'Flow bucket'
+  FlowBucket;
+  @EndUserText.label: 'Problem'
+  @UI.lineItem: [ { position: 5, importance: #HIGH, criticality: 'ProblemCriticality' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  ProblemType;
+  @UI.hidden: true
+  ProblemCriticality;
+  @EndUserText.label: 'Currency'
+  Currency;
+  @EndUserText.label: 'Amount (signed)'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  Amount;
+}

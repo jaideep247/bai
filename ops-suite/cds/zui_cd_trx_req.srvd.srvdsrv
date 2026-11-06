@@ -1,0 +1,8 @@
+@EndUserText.label: 'Transactions request funnel (read-only)'
+@ObjectModel.leadingEntity.name: 'ZC_CD_TRXREQFLOW'
+// ADT only (cds/), after SE11 confirmation of the placeholders. Binding: ZUI_CD_TRX_REQ_O4
+// (OData V4 - UI). A second data source of the production-support overview page (card
+// "Requests"). Read-only: no behaviour definition.
+define service ZUI_CD_TRX_REQ {
+  expose ZC_CD_TrxReqFlow as PaymentRequest;
+}

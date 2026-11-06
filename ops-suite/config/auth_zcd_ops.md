@@ -44,3 +44,17 @@ Permitted activities (SU21 → Activities):
 | `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 | * |
 
 Segregation of duties: the same user must not hold 43 and 85 for the same payment engine area and company code; the apps additionally refuse an approval by the requester (four-eyes).
+
+## 3a. Dashboards (read-only, decision 2026-11-06)
+
+| Dashboard (service) | ZCD_PE_AREA | BUKRS | ACTVT | DCL |
+|---|---|---|---|---|
+| File monitoring (`ZUI_CD_FMON_FLOW`) | FMON | — | 03 | `ZC_CD_FMONFLOW` |
+| EBS validation (`ZUI_CD_EBS_DASH`) | EBS | — (area-wide, as the EBS run) | 03 | `ZC_CD_EBSDASH` |
+| Health checks (`ZUI_CD_HCK_DASH`) | HCK | — | 03 | `ZC_CD_HCKDASH` |
+| Transactions (`ZUI_CD_TRX_DASH`, `cds/ZUI_CD_TRX_REQ`) | **CORE** | **company code of the open item** (payment run rows: area only) | 03 | `ZC_CD_TRXDASH`, `ZC_CD_TRXREQ` |
+| Production-support overview (`ZUI_CD_OPS_OVERVIEW`) | the area of each card / row | as the area dashboard | 03 | the area DCLs + `ZC_CD_OPSOVERVIEW` |
+
+**Why CORE for transactions (no new value):** the transactions dashboard shows the same evidence as the 360° payment trace (request, open item, payment run, bank line, return), which is guarded by CORE 03 plus the company code of each item (`Payment_Trace.md` §6). One area keeps one rule for "may see payment evidence"; a new value (e.g. TRX) would need a domain change and a second grant for the same data. CORE 03 already covers the read-only alert / parameter apps — a user who should see neither gets no CORE. Company code is mapped in the DCL, so `Z_CD_OPS_OPERATOR` (own company codes) sees only its own transactions.
+
+Roles: `Z_CD_OPS_DISPLAY` (ZCD_PE_AREA *, 03, BUKRS *) covers all dashboards. Business roles per launchpad page (`Dashboard_Production_Support.md` §5) add the catalogs and `S_SERVICE` for the bindings; they grant no activity other than 03.
