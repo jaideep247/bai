@@ -1127,8 +1127,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-ack_count ] ) )
           msg = 'One of two acknowledgements must produce a count finding' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -1149,8 +1149,8 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = lv_missing_ack ] ) )
           msg = 'A handoff without a bank ACK is overdue at the fixture clock time' ).
-      CATCH cx_root INTO DATA(lx).
-        cl_abap_unit_assert=>fail( msg = lx->get_text( ) ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 

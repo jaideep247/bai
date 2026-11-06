@@ -726,7 +726,7 @@ CLASS ltc_engine IMPLEMENTATION.
         configure_scenario( VALUE #( green_checks = 1 include_pe_areas = abap_true fmon_hung = abap_true ) ).
         ASSIGN mo_store->mt_last_runs[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]
           TO FIELD-SYMBOL(<ls_prior_run>).
-        IF sy-subrc <> 0.
+        IF <ls_prior_run> IS NOT ASSIGNED.
           cl_abap_unit_assert=>fail( msg = 'Fixture must include the previous FMON run' ).
           RETURN.
         ENDIF.
