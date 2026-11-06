@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Module CORE and exception dispositions.
+*& 2026-11-06 | Object-key and group sets (reconciliation scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -109,6 +110,10 @@ INTERFACE zif_cd_ops_types
       details     TYPE string,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
+
+  "! Scope of a run for exception reconciliation: object keys or groups (GROUP2) evaluated
+  TYPES tt_object_key TYPE SORTED TABLE OF ty_object_key WITH UNIQUE KEY table_line.
+  TYPES tt_group      TYPE SORTED TABLE OF ty_group WITH UNIQUE KEY table_line.
 
   TYPES:
     BEGIN OF ty_run,

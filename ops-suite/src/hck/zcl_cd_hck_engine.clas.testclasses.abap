@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
+*& 2026-11-06 | Exception carry-forward: executed checks reconciled; failed check excluded.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -17,6 +18,7 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_finish_calls TYPE i.
     DATA mv_commit_calls TYPE i.
     DATA mv_start_calls TYPE i.
+    DATA mt_reconciled TYPE zif_cd_ops_types=>tt_group.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -41,6 +43,10 @@ CLASS ltd_store IMPLEMENTATION.
 
   METHOD zif_cd_ops_store~commit.
     mv_commit_calls = mv_commit_calls + 1.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_store~reconcile.
+    INSERT LINES OF it_groups INTO TABLE mt_reconciled.
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~get_param.
@@ -240,6 +246,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS held_lock_skips_run FOR TESTING.
     METHODS lock_released_after_run FOR TESTING.
+    METHODS executed_checks_reconciled FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -570,6 +577,23 @@ CLASS ltc_engine IMPLEMENTATION.
         act( ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 1 msg = 'The lock must be taken once' ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1 msg = 'The lock must be released once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every check that ran is reconciled by its check ID (GROUP2), so exceptions
+  " of earlier reports that passed today are resolved; a check that failed is not
+  METHOD executed_checks_reconciled.
+    TRY.
+        configure_scenario( VALUE #( failing_plugin = abap_true green_checks = 1 ) ).
+        act( ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = 'GREEN1' ] ) )
+                                          msg = 'A check that ran must be reconciled' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_group( gc_fail_check ) ] ) )
+          msg = 'A check that failed must not resolve its exceptions' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

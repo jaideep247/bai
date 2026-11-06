@@ -13,6 +13,7 @@
 *& 2026-11-06 | Findings kept in memory capped at EBS_RESULT_MAX; RAG accumulated per package (review 3.5).
 *& 2026-11-06 | Fail closed: PLUGIN_ERROR and VALIDATION_ERROR have action BLOCK; validate_for_posting never raises.
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
+*& 2026-11-06 | Exception carry-forward: each package's lines and statements reconciled.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -29,6 +30,12 @@ CLASS zcl_cd_ebs_engine DEFINITION
         monitor TYPE ty_mode VALUE 'M',
         off     TYPE ty_mode VALUE 'O',
       END OF gc_mode.
+
+    CONSTANTS:
+      BEGIN OF gc_check_code,
+        plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
+        validation_error TYPE zif_cd_ops_types=>ty_check_code VALUE 'VALIDATION_ERROR',
+      END OF gc_check_code.
 
     "! TVARVC kill switch (type P, NUMB 0000)
     CONSTANTS gc_switch_name TYPE c LENGTH 30 VALUE 'ZCD_EBS_VALIDATION_MODE'.
@@ -108,6 +115,16 @@ CLASS zcl_cd_ebs_engine DEFINITION
         iv_variant   TYPE zif_cd_ops_types=>ty_variant
         iv_test_mode TYPE abap_bool.
 
+    "! Resolve open exceptions of earlier runs for the package's lines and
+    "! statements that passed now. Skipped when a rule could not run.
+    METHODS reconcile_package
+      IMPORTING
+        is_run      TYPE zif_cd_ops_types=>ty_run
+        is_package  TYPE zif_cd_ebs_types=>ty_package
+        it_findings TYPE zif_cd_ops_types=>tt_finding
+      RAISING
+        zcx_cd_ops_error.
+
     TYPES:
       BEGIN OF ty_plugin,
         class_name TYPE zif_cd_ops_types=>ty_class_name,
@@ -186,6 +203,23 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD reconcile_package.
+    DATA lt_scope TYPE zif_cd_ops_types=>tt_object_key.
+
+    IF line_exists( it_findings[ check_code = gc_check_code-plugin_error ] ).
+      RETURN.
+    ENDIF.
+    LOOP AT is_package-statements INTO DATA(ls_statement).
+      INSERT CONV zif_cd_ops_types=>ty_object_key( ls_statement-stmt_key ) INTO TABLE lt_scope.
+    ENDLOOP.
+    LOOP AT is_package-lines INTO DATA(ls_line).
+      INSERT zcl_cd_ebs_finding=>line_key( ls_line ) INTO TABLE lt_scope.
+    ENDLOOP.
+    zcl_cd_ops_factory=>get_store( )->reconcile( is_run         = is_run
+                                                 it_object_keys = lt_scope ).
+  ENDMETHOD.
+
+
   METHOD release_lock.
     IF iv_test_mode = abap_false.
       zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-ebs
@@ -228,6 +262,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
       lo_store->save_findings( EXPORTING it_findings = lt_findings CHANGING cs_run = rs_result-run ).
       IF iv_test_mode = abap_false.
+        reconcile_package( is_run      = rs_result-run
+                           is_package  = ls_package
+                           it_findings = lt_findings ).
         lo_store->commit( ).
       ENDIF.
       lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
@@ -330,7 +367,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
         INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
                         object_key  = 'VALIDATE_FOR_POSTING'
                         rule_id     = 'ENG'
-                        check_code  = 'VALIDATION_ERROR'
+                        check_code  = gc_check_code-validation_error
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
                         message     = |Validation could not run: { lx_error->get_text( ) }| )
@@ -403,7 +440,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         object_key  = is_rule-class_name
                         group2      = is_rule-rule_group
                         rule_id     = is_rule-rule_id
-                        check_code  = 'PLUGIN_ERROR'
+                        check_code  = gc_check_code-plugin_error
                         severity    = zif_cd_ops_types=>gc_severity-error
                         action      = zif_cd_ops_types=>gc_action-block
                         message     = |Rule { is_rule-rule_id } ({ is_rule-class_name }) failed: { lx_error->get_text( ) }| )

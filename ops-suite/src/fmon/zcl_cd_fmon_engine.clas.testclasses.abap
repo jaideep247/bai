@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
+*& 2026-11-06 | Exception carry-forward: evaluated files reconciled; skipped after a check failure.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -154,6 +155,8 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_commit_calls TYPE i.
     DATA mv_rollback_calls TYPE i.
     DATA mv_start_calls TYPE i.
+    DATA mv_reconcile_calls TYPE i.
+    DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
 ENDCLASS.
 
 
@@ -173,6 +176,10 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commit_calls += 1.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~reconcile.
+    mv_reconcile_calls += 1.
+    INSERT LINES OF it_object_keys INTO TABLE mt_reconciled.
   ENDMETHOD.
   METHOD zif_cd_ops_store~rollback.
     mv_rollback_calls += 1.
@@ -372,6 +379,8 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS persist_error_rolls_back FOR TESTING.
     METHODS held_lock_skips_run FOR TESTING.
     METHODS lock_released_after_run FOR TESTING.
+    METHODS evaluated_files_reconciled FOR TESTING.
+    METHODS check_failure_no_reconcile FOR TESTING.
 
 ENDCLASS.
 
@@ -830,6 +839,36 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'The lock must be taken once' ).
         cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1
                                             msg = 'The lock must be released once' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every file the run evaluated is reconciled, so exceptions of earlier runs
+  " for a file that is fine now are resolved
+  METHOD evaluated_files_reconciled.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconcile_calls exp = 1
+                                            msg = 'The run must be reconciled once' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key( gc_ret_file ) ] ) )
+          msg = 'The evaluated file must be in the reconciliation scope' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a run where a check or source could not run proves nothing - exceptions stay open
+  METHOD check_failure_no_reconcile.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 failing_check = abap_true ) ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconcile_calls exp = 0
+                                            msg = 'No reconciliation after a check failure' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.

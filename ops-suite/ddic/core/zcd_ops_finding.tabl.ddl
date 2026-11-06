@@ -21,13 +21,20 @@ define table zcd_ops_finding {
   reference     : abap.char(35);
   message       : abap.char(255);
   details       : abap.string(0);
-  // Exception lifecycle: O = open, I = information, A = assigned, R = resolved, W = waived
+  // Exception lifecycle: O = open, I = information, A = assigned, R = resolved, W = waived, S = superseded
   disposition   : abap.char(1);
   owner         : syuname;
   due_date      : abap.dats;
   resolved_by   : syuname;
   resolved_at   : timestampl;
   resolution    : abap.char(255);
+  // Carry-forward: first run that raised this exception, how often it was raised,
+  // and the later run whose row replaced this one (disposition S)
+  first_seen_at : timestampl;
+  occurrences   : abap.int4;
+  superseded_by : sysuuid_x16;
+  // Waiver valid until (disposition W); a re-run keeps the waiver while valid
+  waiver_until  : abap.dats;
   created_by    : syuname;
   created_at    : timestampl;
 }

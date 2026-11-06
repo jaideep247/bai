@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Run lock: held lock skips the run; lock released after the run.
+*& 2026-11-06 | Exception carry-forward: package scope reconciled; skipped after a rule failure.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -60,6 +61,8 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     DATA mv_commits  TYPE i.
     DATA mv_starts   TYPE i.
+    DATA mv_reconciles TYPE i.
+    DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
@@ -78,6 +81,10 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~finish_run.
     ms_finished = is_run.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~reconcile.
+    mv_reconciles += 1.
+    INSERT LINES OF it_object_keys INTO TABLE mt_reconciled.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
@@ -237,6 +244,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS broken_config_blocks_posting FOR TESTING.
     METHODS held_lock_skips_run          FOR TESTING.
     METHODS lock_released_after_run      FOR TESTING.
+    METHODS validated_lines_reconciled   FOR TESTING.
+    METHODS failed_rule_skips_reconcile  FOR TESTING.
 ENDCLASS.
 
 
@@ -626,6 +635,41 @@ CLASS ltc_engine IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_acquires exp = 1 msg = 'The lock must be taken once' ).
     cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1 msg = 'The lock must be released once' ).
+  ENDMETHOD.
+
+
+  " Rule: every line and statement a package validated is reconciled, so open
+  " exceptions of earlier runs that passed this time are resolved
+  METHOD validated_lines_reconciled.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-assign_sign_rule = abap_true.
+    configure_scenario( ls_flags ).
+    DATA(ls_package) = mo_source->mt_packages[ 1 ].
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconciles exp = 1
+                                        msg = 'Each package must be reconciled once' ).
+    cl_abap_unit_assert=>assert_true(
+      act = xsdbool( line_exists( mo_store->mt_reconciled[
+                       table_line = zcl_cd_ebs_finding=>line_key( ls_package-lines[ 1 ] ) ] ) )
+      msg = 'The validated line must be in the reconciliation scope' ).
+    cl_abap_unit_assert=>assert_true(
+      act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = ls_package-statements[ 1 ]-stmt_key ] ) )
+      msg = 'The validated statement must be in the reconciliation scope' ).
+  ENDMETHOD.
+
+
+  " Rule: a package where a rule could not run proves nothing - its exceptions stay open
+  METHOD failed_rule_skips_reconcile.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-assign_fail_rule = abap_true.
+    configure_scenario( ls_flags ).
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_equals( act = mo_store->mv_reconciles exp = 0
+                                        msg = 'No reconciliation after a rule failure' ).
   ENDMETHOD.
 
 ENDCLASS.

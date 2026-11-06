@@ -8,6 +8,7 @@
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Run header committed at start; results committed before alerts and report mail.
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
+*& 2026-11-06 | Exception carry-forward: executed checks reconciled by check ID.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -77,6 +78,15 @@ CLASS zcl_cd_hck_engine DEFINITION
     METHODS release_lock
       IMPORTING
         is_selection TYPE zif_cd_hck_types=>ty_selection.
+
+    "! Resolve open exceptions of earlier reports for checks that ran without
+    "! raising them again (scope = check ID in GROUP2); failed checks are excluded
+    METHODS reconcile_checks
+      IMPORTING
+        is_run     TYPE zif_cd_ops_types=>ty_run
+        it_results TYPE zif_cd_hck_types=>tt_check_result
+      RAISING
+        zcx_cd_ops_error.
 
     DATA mo_store TYPE REF TO zif_cd_ops_store.
     DATA mo_dao TYPE REF TO zif_cd_hck_dao.
@@ -212,6 +222,17 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD reconcile_checks.
+    DATA lt_scope TYPE zif_cd_ops_types=>tt_group.
+    LOOP AT it_results INTO DATA(ls_result) WHERE plugin_error = abap_false.
+      INSERT CONV zif_cd_ops_types=>ty_group( ls_result-check_id ) INTO TABLE lt_scope.
+    ENDLOOP.
+    CHECK lt_scope IS NOT INITIAL.
+    mo_store->reconcile( is_run    = is_run
+                         it_groups = lt_scope ).
+  ENDMETHOD.
+
+
   METHOD release_lock.
     IF is_selection-test_mode = abap_false.
       zcl_cd_ops_factory=>get_lock( )->release( iv_module  = zif_cd_ops_types=>gc_module-health_check
@@ -275,6 +296,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_report-critical_count = ls_summary-critical_count.
     rs_report-high_count     = ls_summary-high_count.
     rs_report-categories     = ls_summary-categories.
+    IF is_selection-test_mode = abap_false.
+      " before the exception list is read, so it shows only what is still open
+      reconcile_checks( is_run     = rs_report-run
+                        it_results = rs_report-results ).
+    ENDIF.
     rs_report-exceptions     = open_exceptions( lv_today ).
 
     close_run( CHANGING cs_report = rs_report ).

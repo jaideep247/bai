@@ -10,6 +10,7 @@
 *& 2026-11-06 | Run header committed at start; results committed before alerts;
 *&              failed registry save rolled back; READ TABLE replaces OPTIONAL + sy-subrc.
 *& 2026-11-06 | Run lock for the whole module (shared registry); body moved to execute( ).
+*& 2026-11-06 | Exception carry-forward: evaluated files reconciled before the commit.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -54,6 +55,14 @@ CLASS zcl_cd_fmon_engine DEFINITION
     METHODS release_lock
       IMPORTING
         iv_test_mode TYPE abap_bool.
+
+    "! Resolve open exceptions of earlier runs for files evaluated without a finding
+    "! now. Skipped when a check, source or the registry save failed.
+    METHODS reconcile_files
+      IMPORTING
+        is_run TYPE zif_cd_ops_types=>ty_run
+      RAISING
+        zcx_cd_ops_error.
 
     TYPES tt_file_map TYPE HASHED TABLE OF zif_cd_fmon_types=>ty_file
       WITH UNIQUE KEY file_id
@@ -254,6 +263,24 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         release_lock( iv_test_mode ).
     ENDTRY.
     release_lock( iv_test_mode ).
+  ENDMETHOD.
+
+
+  METHOD reconcile_files.
+    DATA lt_scope TYPE zif_cd_ops_types=>tt_object_key.
+
+    IF line_exists( mt_findings[ check_code = zif_cd_fmon_types=>gc_check_code-plugin_error ] )
+       OR line_exists( mt_findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ).
+      RETURN.
+    ENDIF.
+    " Same object key as ZCL_CD_FMON_UTIL=>NEW_FINDING: file name, else file reference
+    LOOP AT mt_files INTO DATA(ls_file).
+      INSERT CONV zif_cd_ops_types=>ty_object_key( COND string( WHEN ls_file-file_name IS NOT INITIAL
+                                                                THEN ls_file-file_name
+                                                                ELSE ls_file-file_ref ) ) INTO TABLE lt_scope.
+    ENDLOOP.
+    mo_store->reconcile( is_run         = is_run
+                         it_object_keys = lt_scope ).
   ENDMETHOD.
 
 
@@ -963,6 +990,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mo_store->finish_run( cs_run ).
 
     IF mv_test_mode = abap_false.
+      reconcile_files( cs_run ).
       " Results are durable before anyone is told (a channel may COMMIT WORK itself)
       mo_store->commit( ).
       " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALERT_RULE

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | rollback( ) added.
+*& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -28,12 +29,36 @@ CLASS zcl_cd_ops_store DEFINITION
       END OF gc_disposition.
 
   PRIVATE SECTION.
+    TYPES tt_db_finding TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    "! Partial update: only the columns flagged in COL_IND are written (DETAILS, a
+    "! STRING, is neither read with FOR ALL ENTRIES nor overwritten)
+    TYPES ty_db_update TYPE zcd_ops_finding WITH INDICATORS col_ind TYPE abap_bool.
+    TYPES tt_db_update TYPE STANDARD TABLE OF ty_db_update WITH EMPTY KEY.
     TYPES ty_param_cache TYPE SORTED TABLE OF zif_cd_ops_types=>ty_kv WITH UNIQUE KEY name.
 
     DATA mt_param_cache TYPE ty_param_cache.
     DATA mv_params_loaded TYPE abap_bool.
 
     METHODS load_params.
+
+    "! New exceptions inherit from the open / assigned / waived exception of an
+    "! earlier run (same module, object type, object key, check code), which is
+    "! superseded. Only rows with disposition O are candidates.
+    METHODS carry_forward
+      IMPORTING
+        is_run   TYPE zif_cd_ops_types=>ty_run
+        iv_today TYPE d
+      CHANGING
+        ct_new   TYPE tt_db_finding
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS inherit
+      IMPORTING
+        is_prev  TYPE zcd_ops_finding
+        iv_today TYPE d
+      CHANGING
+        cs_new   TYPE zcd_ops_finding.
 
     METHODS sla_days
       IMPORTING
@@ -125,6 +150,8 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       ls_db-details     = ls_finding-details.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
+      ls_db-first_seen_at = lv_now.
+      ls_db-occurrences   = 1.
       IF zcl_cd_ops_util=>severity_rank( ls_finding-severity ) >= 2.
         ls_db-disposition = gc_disposition-open.
         ls_db-due_date    = lv_today + sla_days( iv_module   = cs_run-module
@@ -140,6 +167,10 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     IF cs_run-test_mode = abap_true.
       RETURN.
     ENDIF.
+
+    carry_forward( EXPORTING is_run   = cs_run
+                             iv_today = lv_today
+                   CHANGING  ct_new   = lt_db ).
 
     INSERT zcd_ops_finding FROM TABLE @lt_db.
     IF sy-subrc <> 0.
@@ -158,6 +189,149 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_RUN'.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD carry_forward.
+    DATA lt_keys TYPE zif_cd_ops_types=>tt_object_key.
+    DATA lt_prev TYPE tt_db_finding.
+    DATA lt_superseded TYPE tt_db_update.
+    DATA ls_superseded TYPE ty_db_update.
+
+    LOOP AT ct_new INTO DATA(ls_candidate) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
+      INSERT ls_candidate-object_key INTO TABLE lt_keys.
+    ENDLOOP.
+    CHECK lt_keys IS NOT INITIAL.
+
+    " index ZCD_OPS_FINDING~OBJ: MANDT, MODULE, OBJECT_TYPE, OBJECT_KEY
+    SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
+           due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+      FROM zcd_ops_finding
+      FOR ALL ENTRIES IN @lt_keys
+      WHERE module      = @is_run-module
+        AND object_key  = @lt_keys-table_line
+        AND run_id     <> @is_run-run_id
+        AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
+                             @zif_cd_ops_types=>gc_disposition-assigned,
+                             @zif_cd_ops_types=>gc_disposition-waived )
+      INTO CORRESPONDING FIELDS OF TABLE @lt_prev.
+    CHECK lt_prev IS NOT INITIAL.
+    " newest first: the latest earlier row is the one inherited
+    SORT lt_prev BY object_type object_key check_code created_at DESCENDING.
+
+    LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_new>) WHERE disposition = zif_cd_ops_types=>gc_disposition-open.
+      DATA(lv_inherited) = abap_false.
+      LOOP AT lt_prev ASSIGNING FIELD-SYMBOL(<ls_prev>)
+           WHERE object_type   = <ls_new>-object_type
+             AND object_key    = <ls_new>-object_key
+             AND check_code    = <ls_new>-check_code
+             AND superseded_by IS INITIAL.
+        IF lv_inherited = abap_false.
+          inherit( EXPORTING is_prev  = <ls_prev>
+                             iv_today = iv_today
+                   CHANGING  cs_new   = <ls_new> ).
+          lv_inherited = abap_true.
+        ENDIF.
+        <ls_prev>-superseded_by = is_run-run_id.
+        CLEAR ls_superseded.
+        ls_superseded-run_id                = <ls_prev>-run_id.
+        ls_superseded-finding_no            = <ls_prev>-finding_no.
+        ls_superseded-disposition           = zif_cd_ops_types=>gc_disposition-superseded.
+        ls_superseded-superseded_by         = is_run-run_id.
+        ls_superseded-col_ind-disposition   = abap_true.
+        ls_superseded-col_ind-superseded_by = abap_true.
+        INSERT ls_superseded INTO TABLE lt_superseded.
+      ENDLOOP.
+    ENDLOOP.
+
+    CHECK lt_superseded IS NOT INITIAL.
+    UPDATE zcd_ops_finding FROM TABLE @lt_superseded INDICATORS SET STRUCTURE col_ind.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD inherit.
+    cs_new-first_seen_at = COND #( WHEN is_prev-first_seen_at IS INITIAL THEN is_prev-created_at
+                                   ELSE is_prev-first_seen_at ).
+    cs_new-occurrences   = nmax( val1 = is_prev-occurrences val2 = 1 ) + 1.
+    cs_new-owner         = is_prev-owner.
+    CASE is_prev-disposition.
+      WHEN zif_cd_ops_types=>gc_disposition-waived.
+        IF is_prev-waiver_until IS INITIAL OR is_prev-waiver_until >= iv_today.
+          " a valid waiver is not reopened by a re-run
+          cs_new-disposition  = zif_cd_ops_types=>gc_disposition-waived.
+          cs_new-waiver_until = is_prev-waiver_until.
+          cs_new-resolution   = is_prev-resolution.
+          cs_new-due_date     = is_prev-due_date.
+        ENDIF.
+        " expired waiver: the new row stays open with a fresh due date
+      WHEN OTHERS.
+        cs_new-disposition = is_prev-disposition.
+        cs_new-due_date    = is_prev-due_date.
+    ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_store~reconcile.
+    DATA lt_open TYPE tt_db_finding.
+
+    IF is_run-test_mode = abap_true.
+      RETURN.
+    ENDIF.
+
+    IF it_object_keys IS NOT INITIAL.
+      SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
+             due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+        FROM zcd_ops_finding
+        FOR ALL ENTRIES IN @it_object_keys
+        WHERE module      = @is_run-module
+          AND object_key  = @it_object_keys-table_line
+          AND run_id     <> @is_run-run_id
+          AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
+                               @zif_cd_ops_types=>gc_disposition-assigned )
+        INTO CORRESPONDING FIELDS OF TABLE @lt_open.
+    ENDIF.
+    IF it_groups IS NOT INITIAL.
+      SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
+             due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until
+        FROM zcd_ops_finding
+        FOR ALL ENTRIES IN @it_groups
+        WHERE module      = @is_run-module
+          AND group2      = @it_groups-table_line
+          AND run_id     <> @is_run-run_id
+          AND disposition IN ( @zif_cd_ops_types=>gc_disposition-open,
+                               @zif_cd_ops_types=>gc_disposition-assigned )
+        APPENDING CORRESPONDING FIELDS OF TABLE @lt_open.
+    ENDIF.
+    CHECK lt_open IS NOT INITIAL.
+    SORT lt_open BY run_id finding_no.
+    DELETE ADJACENT DUPLICATES FROM lt_open COMPARING run_id finding_no.
+
+    DATA lt_resolved TYPE tt_db_update.
+    DATA ls_resolved TYPE ty_db_update.
+    DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).
+    LOOP AT lt_open INTO DATA(ls_open).
+      CLEAR ls_resolved.
+      ls_resolved-run_id              = ls_open-run_id.
+      ls_resolved-finding_no          = ls_open-finding_no.
+      ls_resolved-disposition         = zif_cd_ops_types=>gc_disposition-resolved.
+      ls_resolved-resolved_by         = sy-uname.
+      ls_resolved-resolved_at         = lv_now.
+      ls_resolved-resolution          = |Passed on re-run { is_run-run_id }|.
+      ls_resolved-col_ind-disposition = abap_true.
+      ls_resolved-col_ind-resolved_by = abap_true.
+      ls_resolved-col_ind-resolved_at = abap_true.
+      ls_resolved-col_ind-resolution  = abap_true.
+      INSERT ls_resolved INTO TABLE lt_resolved.
+    ENDLOOP.
+    UPDATE zcd_ops_finding FROM TABLE @lt_resolved INDICATORS SET STRUCTURE col_ind.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e011(zcd_ops) WITH 'ZCD_OPS_FINDING'.
     ENDIF.
   ENDMETHOD.
 
