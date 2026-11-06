@@ -105,7 +105,7 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | HCK | ZCL_CD_HCK_THRESHOLD | 16 | Domain |
 | HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
 
-### Master prompt acceptance tests mapped to proof
+### Requirements baseline acceptance tests mapped to proof
 
 | # | Acceptance test | Proof |
 |---|---|---|

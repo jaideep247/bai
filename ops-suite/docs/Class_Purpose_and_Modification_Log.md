@@ -193,7 +193,7 @@ Generated from the `*& Artifact / Purpose / Modification log` headers. Test incl
 
 | Date | Change |
 |---|---|
-| 2026-11-05 | Initial version of the suite: consolidation of BAI validators v4, BAI validation framework COMPLETE 1–4, morning report v1 and the master prompt into ZCL_CD_OPS / _EBS / _FMON / _HCK. |
+| 2026-11-05 | Initial version of the suite: consolidation of BAI validators v4, BAI validation framework COMPLETE 1–4, morning report v1 and the requirements baseline into ZCL_CD_OPS / _EBS / _FMON / _HCK. |
 | 2026-11-05 | Alert router made configurable for every payment engine area (ZCD_OPS_ALERT_RULE / _CHN / _LOG). |
 | 2026-11-05 | TDD conventions and artefact headers applied to every object. |
 | 2026-11-06 | Core controls: authorisation object ZCD_OPS (ZCL_CD_OPS_AUTH), run lock per payment engine area and variant (ZCL_CD_OPS_LOCK, ZCL_CD_OPS_RUN_GUARD), exception carry-forward and auto-resolution (ZCL_CD_OPS_STORE), retention purge (ZCL_CD_OPS_PURGE, ZCD_OPS_PURGE). |

@@ -3,7 +3,7 @@
 > **First principle:** a transmission is monitored only when it has an interface row, an SAP evidence source for each stage, and an owner; anything else is invisible, and invisible is not the same as healthy.
 > **Analogy:** a post room logbook — a parcel that never got a line in the book can go missing without anyone noticing it is gone.
 
-Status 2026-11-06. Sources: `config/fmon_seed.md` (example rows), the payment engine reference (landscape facts) and `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (FMON section). **No row below has been confirmed against PS4.** The master prompt puts this inventory first in the delivery order.
+Status 2026-11-06. Sources: `config/fmon_seed.md` (example rows), the payment engine reference (landscape facts) and `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (FMON section). **No row below has been confirmed against PS4.** The requirements baseline puts this inventory first in the delivery order.
 
 ## 1. Coverage
 
@@ -45,13 +45,13 @@ Legend: **Seeded** = example row in `fmon_seed.md` (pattern, owner and SE11 fiel
 
 ## 1a. PRISM evidence
 
-**Every flow to and from SAP is routed through PRISM** (confirmed 2026-11-06), so every row above gets PRISM evidence once the API is live. Today no PRISM milestone reaches SAP: "sent to PRISM" is SAP's own record (`ZCDT_REGUT`) and "forwarded to bank" has no source. **Planned (decision 2026-11-06): a PRISM status API** that PRISM calls when it has received and when it has processed a file, for every PRISM-routed flow above; FMON records each call as its own stage (`PRISM_RECEIVED`, `PRISM_DELIVERED`, `PRISM_FAILED`) with PRISM's own timestamp and reference. The API writes only to the suite's FMON store — no business data, no change to the payment files. Its contract (payload, authentication, retries) is agreed with the PRISM team and approved as a new integration (the master prompt lists new callbacks as outside the read-only rollout, so it ships as its own change). Until it is live, the manual-status app records a milestone an operator verified in the PRISM console or B2B portal (operator, time, evidence reference).
+**Every flow to and from SAP is routed through PRISM** (confirmed 2026-11-06), so every row above gets PRISM evidence once the API is live. Today no PRISM milestone reaches SAP: "sent to PRISM" is SAP's own record (`ZCDT_REGUT`) and "forwarded to bank" has no source. **Planned (decision 2026-11-06): a PRISM status API** that PRISM calls when it has received and when it has processed a file, for every PRISM-routed flow above; FMON records each call as its own stage (`PRISM_RECEIVED`, `PRISM_DELIVERED`, `PRISM_FAILED`) with PRISM's own timestamp and reference. The API writes only to the suite's FMON store — no business data, no change to the payment files. Its contract (payload, authentication, retries) is agreed with the PRISM team and approved as a new integration (the requirements baseline lists new callbacks as outside the read-only rollout, so it ships as its own change). Until it is live, the manual-status app records a milestone an operator verified in the PRISM console or B2B portal (operator, time, evidence reference).
 
 ## 2. Structural limits (true even for seeded rows)
 
 1. **FMON reads SAP evidence tables, not the transport.** A file that lands in an inbound directory but is never loaded leaves no table row, so FMON cannot see it. `UNMAPPED_FILE` only catches rows in configured source tables that match no interface.
 2. **Operating-system steps are not observed.** Encrypt, decrypt, archive and transfer run through `ZICD_CALL_SM69_COMMAND_NEW`. HCK can see that the job ran; nothing confirms that the file moved.
-3. **Generation is not delivery.** `ZCDT_REGUT` proves that SAP generated the file. Only PRISM or bank evidence proves the next milestone (master prompt FMON §2).
+3. **Generation is not delivery.** `ZCDT_REGUT` proves that SAP generated the file. Only PRISM or bank evidence proves the next milestone (requirements baseline FMON §2).
 4. **The calendar defines "missing".** A flow without a `ZCD_FMON_CAL` row can be late or failed, but never *missing*.
 
 ## 3. How to close the inventory (read-only, no change to any interface)

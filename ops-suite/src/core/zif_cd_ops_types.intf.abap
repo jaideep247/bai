@@ -124,7 +124,7 @@ INTERFACE zif_cd_ops_types
       no_data TYPE ty_run_status VALUE 'N',
     END OF gc_run_status.
 
-  "! Action taken for a finding (master prompt: ZCD_BTC_RULE-ACTION)
+  "! Action taken for a finding (requirements baseline: ZCD_BTC_RULE-ACTION)
   CONSTANTS:
     BEGIN OF gc_action,
       auto_post  TYPE ty_action VALUE 'AUTO_POST',

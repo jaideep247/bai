@@ -40,20 +40,20 @@ system (no ABAP Unit run, no activation). Release-specific syntax carries `VERIF
 | A102 | Confirmed: with fewer than 3 history runs a baseline-only metric returned the static result, which is GREEN when no static limit is set | Explicit check code `BASELINE_WARMUP`: a static RED / AMBER stands, a static GREEN stays GREEN, a baseline-only metric makes the check grey with flag WARMUP (info finding, message 370); warm-up checks are counted per category and in the scorecard (message 340), not scored, neither passed nor failed; grey WARM-UP chip and legend in the morning report (8697734) | `short_history_no_baseline` (now asserts the warm-up state instead of GREEN), `warmup_keeps_static_red`, `warmup_with_static_green`, `warmup_check_is_not_green`, `warmup_check_shown_apart` | A report where every check is in warm-up has no score and closes grey (A60 rule) — expected only right after go-live |
 | A103 | Confirmed: a grouped aggregate returns only groups with rows, so a silent company code or source vanished and its lower-is-worse threshold could not fire | New customizing table `ZCD_HCK_AGGGRP` (CHECK_ID, AGG_ID, GROUP_VALUE; delivery class C → table logging, admin fields) in the HCK configuration app (spec in `tools/rap_generate.py`, regenerated); DAO `get_agg_groups`; every expected group without a row measures 0; not filled when the result reached the 5 000-group cap; a failed query stays an `AGG_CONFIG_INVALID` error with no metric — never zero (9358d1e) | `missing_expected_group_zero`, `no_rows_zero_per_expected`, `silent_company_measures_zero`, `failed_query_is_not_zero` | Expected group values per check to be maintained with Treasury / operations (`config/hck_seed.md` §4a, VERIFY) |
 
-Totals after Phase 6 (this stream): 233 ABAP files, 511 unit test methods, portable checks 15/15,
+Totals after Phase 6 (this work package): 233 ABAP files, 511 unit test methods, portable checks 15/15,
 abaplint 0 issues, ATC-equivalent only the two documented exemptions.
 
 ## Merge notes
 
-For owners of shared files and other streams — not edited here:
+For owners of shared files and other work packages — not edited here:
 
-1. **EBS stream:** pass `iv_interface = 'ZIF_CD_EBS_RULE'` in `ZCL_CD_EBS_ENGINE` (and the rule-base tests) to
+1. **EBS work package:** pass `iv_interface = 'ZIF_CD_EBS_RULE'` in `ZCL_CD_EBS_ENGINE` (and the rule-base tests) to
    `ZCL_CD_OPS_FACTORY=>GET_PLUGIN` (A62); call `zcl_cd_ops_factory=>get_store( )->refresh_params( )` at the
    start of `validate_for_posting`, which runs without `start_run` (A64).
-2. **FMON stream:** pass the adapter interface to `GET_PLUGIN` (A62).
+2. **FMON work package:** pass the adapter interface to `GET_PLUGIN` (A62).
 3. **Messages:** core 025, 026, 033 and HCK 360–369 appended to `config/zcd_ops_messages.md`; regenerate the
-   message class with `tools/abapgit_serialize.py` after merging other streams.
-4. **DDIC:** unique index `ZCD_OPS_ALERT_LOG~INT` (MANDT, INTENT_KEY, ATTEMPT) — generated into the abapGit TABL XML since the FMON stream's index support (merge 2026-11-06); verify after the first pull; new fields
+   message class with `tools/abapgit_serialize.py` after merging other work packages.
+4. **DDIC:** unique index `ZCD_OPS_ALERT_LOG~INT` (MANDT, INTENT_KEY, ATTEMPT) — generated into the abapGit TABL XML since the FMON work package's index support (merge 2026-11-06); verify after the first pull; new fields
    ZCD_OPS_ALERT_LOG-INTENT_KEY/ATTEMPT, ZCD_OPS_ALERT_RULE-ESC_OVERRIDE, ZCD_HCK_BASELINE-HASH_VERSION,
    ZCD_HCK_METRIC-KIND/WEIGHT.
 5. **Shared docs** (`docs/ATC_Validation.md`, `docs/Class_Purpose_and_Modification_Log.md`, README): add

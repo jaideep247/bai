@@ -3,7 +3,7 @@
 > **First principle:** a positive result — *post this line*, *file fully processed*, *health green*, *alert sent* — is issued only when the evidence for it exists; missing or unknown evidence is its own visible status.
 > **Analogy:** a pilot's go/no-go — every gauge must be read, not assumed; a dark gauge is a no-go, not a green one.
 
-Source: principal architecture review and the static repository audit (findings A01–A99, snapshot `8cdfdce` on `main`; A100–A105 from the later checkpoint). Code status refers to branch `claude/loving-albattani-qexsjc`; per-finding detail is in `Review_Response_2026-11-06.md` and `Audit_Response_EBS.md` / `_FMON.md` / `_HCK_CORE.md`.
+Source: principal architecture review and the static repository audit (findings A01–A99, snapshot `8cdfdce` on `main`; A100–A105 from the later checkpoint). Code status refers to `main`; per-finding detail is in `Review_Response_2026-11-06.md` and `Audit_Response_EBS.md` / `_FMON.md` / `_HCK_CORE.md`.
 
 ## 1. "No positive result without evidence" — where the code now enforces it
 
@@ -14,7 +14,7 @@ Source: principal architecture review and the static repository audit (findings 
 | **Health green** | Empty selection green; hung run hidden; flat baselines passed changes; partial G/L transfer evidence accepted | Empty or self-check-only selection is a configuration finding (A60); stale running runs detected independently (A06); flat-baseline tolerance (A59); G/L gaps per company with full population (A43); NO_DATA distinct from success (A68); baselines per series incl. DIM2 (A101); baseline warm-up is grey WARM-UP, never GREEN (A102); a silent expected company / source measures 0, a failed query is never zero (A103) | Gate 3 |
 | **Alert sent** | BCS result ignored; claim after send; blocker lost behind a cap | BCS result checked (A45); durable claim before send with unique intent index (A17); severity-ordered caps (A63); status **S = submitted**, mailbox delivery is in SOST (A99) | Gate 3 — SOST reconciliation for payment-critical routes |
 
-**Scope of EBS in this release.** EBS validation runs **after** statement import, posting (FEBP) and payment clearing: a post-posting detective control (batch run `ZCD_EBS_VALIDATE`, FEB source). The pre-posting path — `VALIDATE_FOR_POSTING` / BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, release of blocked lines — stays in the code, switched off, and is not part of this release; posting enforcement and release of blocked lines are outside this initiative (master prompt).
+**Scope of EBS in this release.** EBS validation runs **after** statement import, posting (FEBP) and payment clearing: a post-posting detective control (batch run `ZCD_EBS_VALIDATE`, FEB source). The pre-posting path — `VALIDATE_FOR_POSTING` / BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, release of blocked lines — stays in the code, switched off, and is not part of this release; posting enforcement and release of blocked lines are outside this initiative (requirements baseline).
 
 **LUW ownership (pre-posting path, future phase).** `ZCL_CD_EBS_ENGINE=>VALIDATE_FOR_POSTING` returns a decision only: it does not commit, save findings, start a run or send alerts (verified 2026-11-06: no `COMMIT WORK` in any EBS class). The SAP posting caller owns the LUW; findings for posted statements are recorded by the batch run `ZCD_EBS_VALIDATE`.
 
