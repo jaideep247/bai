@@ -43,6 +43,6 @@ define table zcd_ops_finding {
   created_by    : syuname;
   created_at    : timestampl;
 }
-// Secondary indexes:
-//   ZCD_OPS_FINDING~OPN : MANDT, PE_AREA, DISPOSITION, DUE_DATE   (exception queue / aging)
-//   ZCD_OPS_FINDING~OBJ : MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY (drill-down, idempotent re-validation)
+// Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation
+// @index OPN: MANDT, PE_AREA, DISPOSITION, DUE_DATE
+// @index OBJ: MANDT, PE_AREA, OBJECT_TYPE, OBJECT_KEY

@@ -12,7 +12,10 @@ Creates / refreshes:
   src/core/zcd_ops.msag.xml                message class, from config/zcd_ops_messages.md
 
 Re-run after adding objects, tables or messages:  python3 tools/abapgit_serialize.py
-Secondary indexes are NOT generated (create them per the comments in the DDL).
+Secondary indexes: DDL comment lines '// @index <ID> [UNIQUE]: F1, F2' -> DD12V/DD17V.
+Audit A89: every output is staged in memory and validated first; files are replaced only
+when all tables serialized cleanly (exit 1 and nothing written otherwise). Unchanged
+files are never rewritten.
 """
 import os, re, sys
 from xml.sax.saxutils import escape
@@ -34,11 +37,21 @@ def wrap(serializer, body):
 def tag(name, value, indent=4):
     return ' ' * indent + f'<{name}>{escape(str(value))}</{name}>\n'
 
+PENDING = {}  # path -> text, flushed only after every input validated (audit A89)
+
+
 def write(path, text):
+    """Stage one output; returns 1 if it differs from the file on disk."""
+    PENDING[path] = text
     if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
-        open(path, 'w', encoding='utf-8', newline='\n').write(text)
         return 1
     return 0
+
+
+def flush():
+    for path, text in PENDING.items():
+        if not os.path.exists(path) or open(path, encoding='utf-8').read() != text:
+            open(path, 'w', encoding='utf-8', newline='\n').write(text)
 
 def description(text, default):
     m = re.search(r'shorttext synchronized">([^<]*)<', text)
@@ -175,6 +188,35 @@ BUILTIN = {  # type -> (INTTYPE, intlen(fn of len), DATATYPE, leng(fn of len))
     'string': ('g', lambda n: 8, 'STRG', lambda n: 0),
 }
 FIELD = re.compile(r'^\s*(key\s+)?([a-z_0-9]+)\s*:\s*([a-z_0-9.]+)(?:\((\d+)(?:,(\d+))?\))?\s*(not null)?\s*;', re.I)
+# Secondary indexes (audit A05): only DDL lines '// @index <ID> [UNIQUE]: F1, F2' are serialized,
+# so tables without the marker keep byte-identical XML. abapGit TABL layout (zcl_abapgit_object_tabl,
+# lcl_tabl_xml=>add): DD12V then DD17V after DD03P_TABLE, one row element per line type.
+# VERIFY-ADT: the first abapGit pull in DV1 confirms the index is created (SE11 -> Indexes).
+INDEX = re.compile(r'^\s*//\s*@index\s+(\w{1,3})\s*(UNIQUE)?\s*:\s*(.+?)\s*$', re.I | re.M)
+
+
+def index_xml(tab, text, names, problems, f):
+    head, items = '', ''
+    seen = set()
+    for idx, unique, cols in INDEX.findall(text):
+        cols_list = [c.strip().upper() for c in cols.split(',') if c.strip()]
+        bad = [c for c in cols_list if c not in names]
+        if idx.upper() in seen or not cols_list or bad:
+            problems.append(f'{f}: index {idx} duplicate, empty or unknown field(s) {bad}')
+            continue
+        seen.add(idx.upper())
+        head += ('    <DD12V>\n' + tag('SQLTAB', tab, 5) + tag('INDEXNAME', idx.upper(), 5) +
+                 tag('AS4LOCAL', 'A', 5) + tag('DDLANGUAGE', 'E', 5) +
+                 (tag('UNIQUEFLAG', 'X', 5) if unique else '') +
+                 tag('DDTEXT', f'{tab}~{idx.upper()}', 5) + '    </DD12V>\n')
+        for pos, col in enumerate(cols_list, start=1):
+            items += ('    <DD17V>\n' + tag('SQLTAB', tab, 5) + tag('INDEXNAME', idx.upper(), 5) +
+                      tag('POSITION', f'{pos:04d}', 5) + tag('AS4LOCAL', 'A', 5) +
+                      tag('FIELDNAME', col.upper(), 5) + '    </DD17V>\n')
+    if not head:
+        return ''
+    return '   <DD12V>\n' + head + '   </DD12V>\n   <DD17V>\n' + items + '   </DD17V>\n'
+
 unknown = []
 for pe_area in ('core', 'ebs', 'fmon', 'hck'):
     ddic = os.path.join(ROOT, 'ddic', pe_area)
@@ -184,11 +226,18 @@ for pe_area in ('core', 'ebs', 'fmon', 'hck'):
         if not f.endswith('.tabl.ddl'):
             continue
         text = open(os.path.join(ddic, f), encoding='utf-8').read()
-        tab = re.search(r'define table (\w+)', text).group(1).upper()
-        label = re.search(r"@EndUserText.label\s*:\s*'([^']*)'", text).group(1)[:60]
-        dclass = re.search(r'deliveryClass\s*:\s*#(\w)', text).group(1)
-        maint = re.search(r'dataMaintenance\s*:\s*#(\w+)', text).group(1)
-        fields = []
+        heads = (re.search(r'define table (\w+)', text),
+                 re.search(r"@EndUserText.label\s*:\s*'([^']*)'", text),
+                 re.search(r'deliveryClass\s*:\s*#(\w)', text),
+                 re.search(r'dataMaintenance\s*:\s*#(\w+)', text))
+        if not all(heads) or '{' not in text or '}' not in text:
+            unknown.append(f'{f}: table name, label, delivery class, maintenance or field block missing')
+            continue
+        tab = heads[0].group(1).upper()
+        label = heads[1].group(1)[:60]
+        dclass = heads[2].group(1)
+        maint = heads[3].group(1)
+        fields, names = [], set()
         for line in text.split('{', 1)[1].split('}', 1)[0].splitlines():
             line = line.split('//')[0]
             inc = INCLUDE.match(line)
@@ -205,6 +254,7 @@ for pe_area in ('core', 'ebs', 'fmon', 'hck'):
                     unknown.append(f'{f}: {line.strip()}')
                 continue
             key, fname, ftype, length, decimals, notnull = m.groups()
+            names.add(fname.upper())
             fx = '    <DD03P>\n' + tag('FIELDNAME', fname.upper(), 5)
             if key:
                 fx += tag('KEYFLAG', 'X', 5)
@@ -247,7 +297,7 @@ for pe_area in ('core', 'ebs', 'fmon', 'hck'):
                 # needs profile parameter rec/client set by Basis
                 (tag('PROTOKOLL', 'X') if customizing else '') +
                 tag('BUFALLOW', 'X' if customizing else 'N') + '   </DD09L>\n'
-                '   <DD03P_TABLE>\n' + ''.join(fields) + '   </DD03P_TABLE>\n')
+                '   <DD03P_TABLE>\n' + ''.join(fields) + '   </DD03P_TABLE>\n' + index_xml(tab, text, names, unknown, f))
         target = os.path.join(SRC, pe_area, f.replace('.tabl.ddl', '.tabl.xml'))
         changed += write(target, wrap('LCL_OBJECT_TABL', body))
 
@@ -262,7 +312,8 @@ for nr, text in rows:
 body += '   </T100>\n'
 changed += write(os.path.join(SRC, 'core', 'zcd_ops.msag.xml'), wrap('LCL_OBJECT_MSAG', body))
 
-print(f'{changed} file(s) written/updated; {len(rows)} messages')
 if unknown:
-    print('NOT SERIALIZED (check):', *unknown, sep='\n  ')
+    print('NOT SERIALIZED - no file written (check):', *unknown, sep='\n  ')
     sys.exit(1)
+flush()
+print(f'{changed} file(s) written/updated; {len(rows)} messages')
