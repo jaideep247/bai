@@ -17,6 +17,7 @@
 *& 2026-11-06 | Each check receives a deadline (start + TIMEOUT_SEC) in its context (audit A18).
 *& 2026-11-06 | Check interface verified by the factory before instantiation (audit A62).
 *& 2026-11-06 | Baseline refreshes the parameter snapshot; runs get it from start_run (audit A64).
+*& 2026-11-06 | Metric kind and weight passed to the history (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -594,6 +595,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_history-dim2        = ls_metric-dim2.
       ls_history-value       = ls_metric-value.
       ls_history-measured_at = lv_now.
+      ls_history-kind        = ls_metric-kind.
+      ls_history-weight      = ls_metric-weight.
       INSERT ls_history INTO TABLE lt_history.
     ENDLOOP.
     IF lt_history IS NOT INITIAL.

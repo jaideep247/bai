@@ -15,6 +15,7 @@
 *& 2026-11-06 | G/L transfer gaps by AWTYP, company code, unreversed document; uncapped count (audit A43).
 *& 2026-11-06 | Aggregate and value queries rebuilt and re-validated at the SQL boundary (audit A56).
 *& 2026-11-06 | Drift hash over canonical typed fields, version 2; cursor closed on all paths (audit A57).
+*& 2026-11-06 | Metric kind (blank = volume) and weight persisted (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -244,6 +245,10 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       ls_db-dim2        = ls_metric-dim2.
       ls_db-value       = ls_metric-value.
       ls_db-measured_at = ls_metric-measured_at.
+      " A88: the analytics aggregate by kind - an unclassified metric is a volume
+      ls_db-kind        = COND #( WHEN ls_metric-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
+                                  ELSE ls_metric-kind ).
+      ls_db-weight      = ls_metric-weight.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " a duplicate key inside one run is a repeated measurement: keep the first

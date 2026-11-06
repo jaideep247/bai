@@ -5,6 +5,7 @@
 *& that are still open or assigned after their SLA due date.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Oldest overdue age is a level metric (MAX / AVG, audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - overdue exceptions per payment engine area</p>
 "! Metrics per payment engine area (DIM1): OVERDUE (items past due date, disposition O
@@ -41,7 +42,8 @@ CLASS zcl_cd_hck_c_overdue_exc IMPLEMENTATION.
         INTO TABLE rs_result-metrics.
       INSERT VALUE #( metric = gc_metric-oldest_days
                       dim1   = ls_overdue-pe_area
-                      value  = is_context-now_date - ls_overdue-oldest_due ) INTO TABLE rs_result-metrics.
+                      value  = is_context-now_date - ls_overdue-oldest_due
+                      kind   = zif_cd_hck_types=>gc_metric_kind-level ) INTO TABLE rs_result-metrics.
     ENDLOOP.
   ENDMETHOD.
 

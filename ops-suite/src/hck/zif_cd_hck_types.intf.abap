@@ -13,6 +13,7 @@
 *& 2026-11-06 | Aggregate query carries its definition for re-validation at the DAO (audit A56).
 *& 2026-11-06 | Baseline hash version; CONFIG_BASELINE_OUTDATED (audit A57).
 *& 2026-11-06 | Check time budget in the context; CHECK_BUDGET_EXHAUSTED (audit A18).
+*& 2026-11-06 | Metric kind and weight: aggregation by metric semantics (audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -28,6 +29,17 @@ INTERFACE zif_cd_hck_types
   "! H high, M medium, L low
   TYPES ty_priority      TYPE c LENGTH 1.
   TYPES ty_metric_name   TYPE c LENGTH 30.
+  TYPES ty_metric_kind   TYPE c LENGTH 1.
+
+  "! How a metric aggregates across runs, days and dimensions (analytics, audit A88):
+  "! volumes add up, levels (durations, ages, sizes) take MAX / AVG, rates are weighted
+  "! by their denominator (WEIGHT). Blank is stored as volume.
+  CONSTANTS:
+    BEGIN OF gc_metric_kind,
+      volume TYPE ty_metric_kind VALUE 'V',
+      level  TYPE ty_metric_kind VALUE 'L',
+      rate   TYPE ty_metric_kind VALUE 'R',
+    END OF gc_metric_kind.
   TYPES ty_dim           TYPE c LENGTH 35.
   "! Threshold key: company code or another 4-character dimension value; '*' = default
   TYPES ty_thresh_key    TYPE c LENGTH 4.
@@ -312,6 +324,10 @@ INTERFACE zif_cd_hck_types
       dim1   TYPE ty_dim,
       dim2   TYPE ty_dim,
       value  TYPE ty_value,
+      "! aggregation semantics (gc_metric_kind; blank = volume)
+      kind   TYPE ty_metric_kind,
+      "! rates: the denominator the rate was computed over (e.g. messages read)
+      weight TYPE ty_value,
     END OF ty_metric.
   TYPES tt_metric TYPE STANDARD TABLE OF ty_metric WITH EMPTY KEY.
 
@@ -325,6 +341,8 @@ INTERFACE zif_cd_hck_types
       dim2        TYPE ty_dim,
       value       TYPE ty_value,
       measured_at TYPE timestampl,
+      kind        TYPE ty_metric_kind,
+      weight      TYPE ty_value,
     END OF ty_metric_hist.
   TYPES tt_metric_hist TYPE STANDARD TABLE OF ty_metric_hist WITH EMPTY KEY.
 

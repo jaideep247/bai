@@ -10,6 +10,7 @@
 *& 2026-11-06 | job_run_carries_variant, unresolved_jobs_any_date (audit A42, A44).
 *& 2026-11-06 | gl_gap_per_company_and_type (audit A43).
 *& 2026-11-06 | raw_aggregate_is_rejected, raw_value_query_is_rejected (audit A56).
+*& 2026-11-06 | Metric kind and weight round trip (audit A88).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -36,6 +37,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_newest_first_capped FOR TESTING.
     METHODS history_only_same_dimension FOR TESTING.
     METHODS saved_metric_is_read_back FOR TESTING.
+    METHODS metric_kind_and_weight_saved FOR TESTING.
     METHODS overdue_open_and_assigned FOR TESTING.
     METHODS only_active_suppressions FOR TESTING.
     METHODS history_one_point_per_run FOR TESTING.
@@ -183,6 +185,32 @@ CLASS ltc_dao IMPLEMENTATION.
 
 
   " Rule: saved metrics become history (round trip through ZCD_HCK_METRIC)
+  " Audit A88: kind and weight are stored; an unclassified metric is stored as a volume
+  METHOD metric_kind_and_weight_saved.
+    DATA lt_metrics TYPE zif_cd_hck_types=>tt_metric_hist.
+    TRY.
+        lt_metrics = VALUE #( run_id = '0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C' check_id = gc_check
+                              measured_at = '20261105070000.0000000'
+                              ( metric = 'COUNTED' dim1 = gc_job value = 3 )
+                              ( metric = 'ERR_RATE_PCT' dim1 = gc_job value = '12.5' weight = 80
+                                kind = zif_cd_hck_types=>gc_metric_kind-rate ) ).
+        mo_cut->save_metrics( lt_metrics ).
+        SELECT metric, kind, weight FROM zcd_hck_metric ORDER BY PRIMARY KEY INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Both metrics must be stored' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ metric = 'COUNTED' ]-kind
+                                            exp = zif_cd_hck_types=>gc_metric_kind-volume
+                                            msg = 'A metric without kind is stored as a volume' ).
+        DATA(ls_rate) = lt_rows[ metric = 'ERR_RATE_PCT' ].
+        cl_abap_unit_assert=>assert_equals( act = ls_rate-kind exp = zif_cd_hck_types=>gc_metric_kind-rate
+                                            msg = 'The rate keeps its kind' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_rate-weight exp = 80
+                                            msg = 'The rate keeps its denominator as weight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD saved_metric_is_read_back.
     DATA lt_metrics TYPE zif_cd_hck_types=>tt_metric_hist.
     DATA ls_metric TYPE zif_cd_hck_types=>ty_metric_hist.

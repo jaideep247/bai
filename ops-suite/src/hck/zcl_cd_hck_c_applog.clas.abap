@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Error rate is a weighted rate metric (weight = messages read, audit A88).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - application log error rate (SLG1)</p>
 "! PARAM1 = log objects (patterns allowed), PARAM2 = subobjects (blank = all),
@@ -50,7 +51,10 @@ CLASS zcl_cd_hck_c_applog IMPLEMENTATION.
       DATA(lv_dim) = CONV zif_cd_hck_types=>ty_dim( |{ ls_stat-object }/{ ls_stat-subobject }| ).
       DATA(lv_errors) = ls_stat-msg_error + ls_stat-msg_abort.
       lv_rate = COND #( WHEN ls_stat-msg_total > 0 THEN lv_errors * 100 / ls_stat-msg_total ELSE 0 ).
-      INSERT VALUE #( metric = gc_metric-error_rate dim1 = lv_dim dim2 = lv_day value = lv_rate )
+      " A88: a rate is averaged over days / objects weighted by the messages it was read from
+      INSERT VALUE #( metric = gc_metric-error_rate dim1 = lv_dim dim2 = lv_day value = lv_rate
+                      kind   = zif_cd_hck_types=>gc_metric_kind-rate
+                      weight = ls_stat-msg_total )
         INTO TABLE rs_result-metrics.
       INSERT VALUE #( metric = gc_metric-error_messages dim1 = lv_dim dim2 = lv_day value = lv_errors )
         INTO TABLE rs_result-metrics.
