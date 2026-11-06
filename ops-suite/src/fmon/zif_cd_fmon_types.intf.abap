@@ -179,6 +179,7 @@ INTERFACE zif_cd_fmon_types
       noc_due_today    TYPE zif_cd_ops_types=>ty_check_code VALUE 'NOC_DUE_TODAY',
       unmapped_file    TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_FILE',
       unmapped_status  TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_STATUS',
+      ref_reused       TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REF_REUSED',
       plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
       persist_error    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PERSIST_ERROR',
       alert_failed     TYPE zif_cd_ops_types=>ty_check_code VALUE 'ALERT_FAILED',

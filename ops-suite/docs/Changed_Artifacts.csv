@@ -1,6 +1,9 @@
 Artifact,Type,Purpose
+README.md,Doc,
 abaplint.json,Doc,
 config/alert_seed.md,Config,
+config/fmon_seed.md,Config,
+config/hck_seed.md,Config,
 config/zcd_btc_map.csv,Config,
 config/zcd_btc_rule.csv,Config,
 config/zcd_ebs_rsn_map.csv,Config,
@@ -21,11 +24,32 @@ ddic/ebs/zcd_ebs_acct.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_flow_pat.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_rsn_map.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_rule_def.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_cal.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_chk.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_event.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_file.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_iface.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_lotcfg.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_sla.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_src.tabl.ddl,DDIC,
+ddic/fmon/zcd_fmon_srcmap.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_agg.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_baseline.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_def.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_drift.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_metric.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_tabwl.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_thresh.tabl.ddl,DDIC,
+ddic/hck/zcd_job_cycle.tabl.ddl,DDIC,
+ddic/hck/zcd_job_step.tabl.ddl,DDIC,
+docs/ALERTING.md,Doc,
 docs/Changed_Artifacts.csv,Doc,
 docs/Coverage_Run_Register.csv,Doc,
 docs/DEVELOPMENT_STANDARDS.md,Doc,
 docs/EBS_PARSERS.md,Doc,
 docs/EBS_VALIDATION.md,Doc,
+docs/FMON_FILE_MONITORING.md,Doc,
+docs/HCK_MORNING_REPORT.md,Doc,
 docs/Legacy_Parity_Comparison.md,Doc,
 docs/portable_checks.json,Doc,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (module or '*'), channels and the delivery"
@@ -40,7 +64,9 @@ src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
 src/core/zcl_cd_ops_factory.clas.abap,ABAP,"Resolves shared services (store, alert router, alert DAO, clock) and creates"
 src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
 src/core/zcl_cd_ops_store.clas.abap,ABAP,Repository for the shared result/exception store. The only class that
+src/core/zcl_cd_ops_store.clas.testclasses.abap,ABAP,"OSQL tests of the shared store: test-mode runs write nothing, findings of"
 src/core/zcl_cd_ops_util.clas.abap,ABAP,Stateless helpers. No database access.
+src/core/zcl_cd_ops_util.clas.testclasses.abap,ABAP,"Domain tests of the shared helpers: severity ranking, RAG derivation, key"
 src/core/zcx_cd_ops_error.clas.abap,ABAP,"Raise with message class ZCD_OPS, e.g."
 src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every module. dispatch( ) applies the alert
 src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, application log, HTTP webhook). Channels are"
@@ -105,6 +131,7 @@ src/ebs/zif_cd_ebs_rule.intf.abap,ABAP,"One class per rule, configured in ZCD_EB
 src/ebs/zif_cd_ebs_sap_dao.intf.abap,ABAP,"All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are"
 src/ebs/zif_cd_ebs_source.intf.abap,ABAP,"ZCL_CD_EBS_SRC_FEB: imported statements (FEBKO/FEBEP), packaged by statement."
 src/ebs/zif_cd_ebs_types.intf.abap,ABAP,"One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the"
+src/fmon/zcd_fmon_monitor.prog.abap,ABAP,File monitoring run and file status board: runs ZCL_CD_FMON_ENGINE for
 src/fmon/zcl_cd_fmon_adapter_generic.clas.abap,ABAP,Generic legacy source adapter: maps an existing custom table (e.g.
 src/fmon/zcl_cd_fmon_adapter_generic.clas.testclasses.abap,ABAP,ltc_mapping: pure tests (no doubles) of legacy row -> status record.
 src/fmon/zcl_cd_fmon_calendar.clas.abap,ABAP,Thin wrapper over the standard factory calendar function modules
@@ -118,8 +145,10 @@ src/fmon/zcl_cd_fmon_chk_reject.clas.abap,ABAP,Plug-in check NACK (bank rejected
 src/fmon/zcl_cd_fmon_chk_size.clas.abap,ABAP,Plug-in check ZERO_BYTE / SIZE_OUT_OF_BOUNDS against MIN_BYTES and
 src/fmon/zcl_cd_fmon_chk_sla.clas.abap,ABAP,"Plug-in check for every ZCD_FMON_SLA row: NO_PRISM_HANDOFF, NO_BANK_ACK,"
 src/fmon/zcl_cd_fmon_dao.clas.abap,ABAP,"FMON repository - the only FMON class with SQL: customizing reads,"
+src/fmon/zcl_cd_fmon_dao.clas.testclasses.abap,ABAP,SQL tests of the FMON repository on cl_osql_test_environment doubles of
 src/fmon/zcl_cd_fmon_ddic.clas.abap,ABAP,RTTI-based DDIC describer: returns the field list of a configured
 src/fmon/zcl_cd_fmon_engine.clas.abap,ABAP,FMON application service for one business date: sync the registry from
+src/fmon/zcl_cd_fmon_engine.clas.testclasses.abap,ABAP,"Application tests of the FMON engine with LTD_* doubles (DAO, adapter,"
 src/fmon/zcl_cd_fmon_factory.clas.abap,ABAP,"FMON factory: single resolution point for the DAO, DDIC describer,"
 src/fmon/zcl_cd_fmon_injector.clas.abap,ABAP,Test injector for ZCL_CD_FMON_FACTORY (unit tests only; not FOR TESTING
 src/fmon/zcl_cd_fmon_lot_reader.clas.abap,ABAP,Generic returns / NOC lot completeness reader. Table and field names
@@ -138,6 +167,7 @@ src/fmon/zif_cd_fmon_dao.intf.abap,ABAP,"Repository seam for FMON: customizing (
 src/fmon/zif_cd_fmon_ddic.intf.abap,ABAP,DDIC describer seam: returns the field list of a transparent table so
 src/fmon/zif_cd_fmon_lot_reader.intf.abap,ABAP,Returns / NOC lot completeness reader: counts processed and open items
 src/fmon/zif_cd_fmon_types.intf.abap,ABAP,"File monitoring (FMON) types, status model, constants and the"
+src/hck/zcd_morning_report.prog.abap,ABAP,"Payment engine morning report: runs the configured health checks, shows"
 src/hck/zcl_cd_hck_agg_query.clas.abap,ABAP,Pure validation of a ZCD_HCK_AGG row against the whitelist and the DDIC
 src/hck/zcl_cd_hck_agg_query.clas.testclasses.abap,ABAP,"Unit tests of generic aggregate validation (whitelist, DDIC fields,"
 src/hck/zcl_cd_hck_c_alert_health.clas.abap,ABAP,Technical health: alert delivery of the suite - failed and throttled
@@ -172,4 +202,15 @@ src/hck/zcl_cd_hck_threshold.clas.testclasses.abap,ABAP,"Unit tests of threshold
 src/hck/zif_cd_hck_check.intf.abap,ABAP,Contract of a health check plug-in. One class per check type; the
 src/hck/zif_cd_hck_dao.intf.abap,ABAP,"Data access of the health check module: customizing, metric history,"
 src/hck/zif_cd_hck_types.intf.abap,ABAP,"Types and constants of the health check (HCK) module: customizing rows,"
+src/hck/cds/zc_cd_hckmetricqry.ddls.asddls,CDS,
+src/hck/cds/zc_cd_opsfindingqry.ddls.asddls,CDS,
+src/hck/cds/zc_cd_opsrunqry.ddls.asddls,CDS,
+src/hck/cds/zi_cd_hckcheck.ddls.asddls,CDS,
+src/hck/cds/zi_cd_hckmetric.ddls.asddls,CDS,
+src/hck/cds/zi_cd_hckmetriccube.ddls.asddls,CDS,
+src/hck/cds/zi_cd_opsanalytics.dcls.asdcls,Other,
+src/hck/cds/zi_cd_opsfinding.ddls.asddls,CDS,
+src/hck/cds/zi_cd_opsfindingcube.ddls.asddls,CDS,
+src/hck/cds/zi_cd_opsrun.ddls.asddls,CDS,
+src/hck/cds/zi_cd_opsruncube.ddls.asddls,CDS,
 tools/portable_checks.py,Other,

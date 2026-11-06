@@ -147,6 +147,13 @@ CLASS zcl_cd_hck_engine DEFINITION
       RETURNING
         VALUE(rv_hours) TYPE i.
 
+    "! DIM1 as threshold key when it fits 4 characters (company code, source), else '*'
+    METHODS threshold_key
+      IMPORTING
+        iv_dim1       TYPE zif_cd_hck_types=>ty_dim
+      RETURNING
+        VALUE(rv_key) TYPE zif_cd_hck_types=>ty_thresh_key.
+
     METHODS value_text
       IMPORTING
         iv_value       TYPE zif_cd_hck_types=>ty_value
@@ -330,7 +337,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     LOOP AT cs_result-metrics INTO DATA(ls_metric).
       DATA(ls_threshold) = zcl_cd_hck_threshold=>resolve( it_thresholds = it_thresholds
                                                           iv_metric     = ls_metric-metric
-                                                          iv_key        = CONV #( ls_metric-dim1 ) ).
+                                                          iv_key        = threshold_key( ls_metric-dim1 ) ).
       IF ls_threshold IS INITIAL.
         CONTINUE.
       ENDIF.
@@ -402,8 +409,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA lt_history TYPE zif_cd_hck_types=>tt_metric_hist.
     DATA ls_history TYPE zif_cd_hck_types=>ty_metric_hist.
 
-    mo_store->save_findings( EXPORTING it_findings = is_result-findings
-                             CHANGING  cs_run      = cs_run ).
+    IF is_result-findings IS NOT INITIAL.
+      mo_store->save_findings( EXPORTING it_findings = is_result-findings
+                               CHANGING  cs_run      = cs_run ).
+    ENDIF.
 
     DATA(lv_now) = mo_clock->now( ).
     LOOP AT is_result-metrics INTO DATA(ls_metric).
@@ -599,6 +608,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
         rv_hours = 0.
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD threshold_key.
+    rv_key = COND #( WHEN strlen( condense( iv_dim1 ) ) <= 4 AND iv_dim1 IS NOT INITIAL THEN iv_dim1
+                     ELSE zif_cd_hck_types=>gc_default_key ).
   ENDMETHOD.
 
 

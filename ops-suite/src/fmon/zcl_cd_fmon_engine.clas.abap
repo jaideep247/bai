@@ -264,6 +264,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD sync_sources.
     DATA ls_request TYPE zif_cd_fmon_types=>ty_read_request.
     DATA lt_records TYPE zif_cd_fmon_types=>tt_src_record.
+    DATA lt_groups TYPE tt_group.
 
     ls_request-date_from = mv_date - int_param( iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
                                                 iv_default = 1 ).
@@ -292,21 +293,37 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           CONTINUE.
       ENDTRY.
 
-      DATA(lt_groups) = aggregate( is_src     = ls_src
-                                   it_records = lt_records ).
-      prefetch( lt_groups ).
-      SORT lt_groups BY event_at.
-      LOOP AT lt_groups INTO DATA(ls_group).
-        READ TABLE mt_ifaces INTO DATA(ls_iface) WITH TABLE KEY iface_id = ls_group-iface_id.
-        DATA(lv_file_id) = get_or_create( is_group = ls_group
-                                          is_iface = ls_iface ).
-        READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
-        apply_group( EXPORTING is_group = ls_group
-                               is_iface = ls_iface
-                     CHANGING  cs_file  = ls_file ).
-        MODIFY TABLE mt_files FROM ls_file.
-        mark_changed( lv_file_id ).
-      ENDLOOP.
+      DATA(lt_src_groups) = aggregate( is_src     = ls_src
+                                       it_records = lt_records ).
+      APPEND LINES OF lt_src_groups TO lt_groups.
+    ENDLOOP.
+
+    " Apply all sources in event-time order: terminal outcomes are final, so a
+    " later status must never be applied before an earlier one of another source
+    prefetch( lt_groups ).
+    SORT lt_groups BY event_at src_id.
+    LOOP AT lt_groups INTO DATA(ls_group).
+      READ TABLE mt_ifaces INTO DATA(ls_iface) WITH TABLE KEY iface_id = ls_group-iface_id.
+      DATA(lv_file_id) = get_or_create( is_group = ls_group
+                                        is_iface = ls_iface ).
+      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
+      IF zcl_cd_fmon_status=>rank( ls_group-stage ) = 1
+         AND ls_group-business_date > ls_file-business_date.
+        " A new generation/receipt under a reference already used on an earlier day:
+        " the file key is not unique - make it visible instead of merging silently
+        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-ref_reused
+                        iv_key      = |{ ls_group-src_id }:{ ls_group-file_ref }|
+                        iv_iface_id = ls_group-iface_id
+                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_message  = |Reference { ls_group-file_ref } of { ls_file-business_date DATE = ISO } | &&
+                                      |reused on { ls_group-business_date DATE = ISO }: configure a unique FILE_KEY_FIELD| ).
+        CONTINUE.
+      ENDIF.
+      apply_group( EXPORTING is_group = ls_group
+                             is_iface = ls_iface
+                   CHANGING  cs_file  = ls_file ).
+      MODIFY TABLE mt_files FROM ls_file.
+      mark_changed( lv_file_id ).
     ENDLOOP.
   ENDMETHOD.
 

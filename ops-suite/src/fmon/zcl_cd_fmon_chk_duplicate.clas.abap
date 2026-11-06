@@ -8,7 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - duplicate file</p>
-"! Rules: ZCL_CD_FMON_RULES=>IS_DUPLICATE_OF
+"! Rules: ZCL_CD_FMON_RULES=>IS_DUPLICATE_OF. Params: ORIGIN_ROWS=Y|N
 CLASS zcl_cd_fmon_chk_duplicate DEFINITION
   PUBLIC
   FINAL
@@ -24,11 +24,15 @@ ENDCLASS.
 CLASS zcl_cd_fmon_chk_duplicate IMPLEMENTATION.
 
   METHOD zif_cd_fmon_check~execute.
+    " ORIGIN_ROWS=N for generation sources that hold one row per payment, not per file
+    DATA(lv_rows_check) = xsdbool( zcl_cd_fmon_util=>param( iv_params  = is_check-params
+                                                            iv_name    = 'ORIGIN_ROWS'
+                                                            iv_default = `Y` ) <> `N` ).
     DATA(lt_pool) = is_ctx-files.
     APPEND LINES OF is_ctx-history TO lt_pool.
 
     LOOP AT is_ctx-files INTO DATA(ls_file).
-      IF ls_file-origin_rows > 1.
+      IF ls_file-origin_rows > 1 AND lv_rows_check = abap_true.
         INSERT zcl_cd_fmon_util=>new_finding(
                  is_file    = ls_file
                  is_check   = is_check

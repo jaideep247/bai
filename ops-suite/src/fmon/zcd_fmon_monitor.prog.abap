@@ -1,0 +1,88 @@
+*&---------------------------------------------------------------------*
+*& Artifact: zcd_fmon_monitor.prog.abap
+*& Purpose:
+*& File monitoring run and file status board: runs ZCL_CD_FMON_ENGINE for
+*& a business date (optionally one interface, test mode) and shows the
+*& board or the findings as ALV (CL_SALV_TABLE). No WRITE lists.
+*& Modification log:
+*& 2026-11-05 | Initial version (ops suite consolidation).
+*&---------------------------------------------------------------------*
+REPORT zcd_fmon_monitor.
+
+PARAMETERS p_date TYPE d DEFAULT sy-datum OBLIGATORY.
+PARAMETERS p_iface TYPE c LENGTH 20.
+PARAMETERS p_test AS CHECKBOX DEFAULT 'X'.
+PARAMETERS p_find AS CHECKBOX DEFAULT ' '.
+
+
+CLASS lcl_app DEFINITION FINAL.
+  PUBLIC SECTION.
+    METHODS main.
+
+  PRIVATE SECTION.
+    DATA mt_board TYPE zif_cd_fmon_types=>tt_board.
+    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+
+    METHODS show_board.
+    METHODS show_findings.
+ENDCLASS.
+
+
+CLASS lcl_app IMPLEMENTATION.
+
+  METHOD main.
+    TRY.
+        DATA(ls_result) = zcl_cd_fmon_factory=>get_engine( )->run(
+          iv_business_date = p_date
+          iv_iface_id      = CONV #( to_upper( p_iface ) )
+          iv_test_mode     = xsdbool( p_test = abap_true ) ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
+        RETURN.
+    ENDTRY.
+
+    mt_board    = ls_result-board.
+    mt_findings = ls_result-findings.
+    DATA(lv_findings) = lines( mt_findings ).
+    MESSAGE s220(zcd_ops) WITH p_date ls_result-run-total_items lv_findings ls_result-run-rag.
+
+    IF p_find = abap_true.
+      show_findings( ).
+    ELSE.
+      show_board( ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD show_board.
+    TRY.
+        cl_salv_table=>factory( IMPORTING r_salv_table = DATA(lo_alv)
+                                CHANGING  t_table      = mt_board ).
+        lo_alv->get_functions( )->set_all( abap_true ).
+        DATA(lo_columns) = lo_alv->get_columns( ).
+        lo_columns->set_optimize( abap_true ).
+        lo_columns->set_exception_column( 'SLA_LIGHT' ).
+        lo_alv->display( ).
+      CATCH cx_salv_msg cx_salv_data_error INTO DATA(lx_salv).
+        MESSAGE lx_salv TYPE 'S' DISPLAY LIKE 'E'.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD show_findings.
+    TRY.
+        cl_salv_table=>factory( IMPORTING r_salv_table = DATA(lo_alv)
+                                CHANGING  t_table      = mt_findings ).
+        lo_alv->get_functions( )->set_all( abap_true ).
+        lo_alv->get_columns( )->set_optimize( abap_true ).
+        lo_alv->display( ).
+      CATCH cx_salv_msg INTO DATA(lx_salv).
+        MESSAGE lx_salv TYPE 'S' DISPLAY LIKE 'E'.
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  NEW lcl_app( )->main( ).

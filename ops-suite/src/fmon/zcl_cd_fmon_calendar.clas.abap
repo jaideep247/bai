@@ -17,7 +17,7 @@ CLASS zcl_cd_fmon_calendar DEFINITION
     INTERFACES zif_cd_fmon_calendar.
 
   PRIVATE SECTION.
-    "! VERIFY-DDIC: SCAL-FACDATE is the factory-date type of the FM parameters
+    "VERIFY-DDIC: SCAL-FACDATE is the factory-date type of the FM parameters (SE11)
     TYPES ty_factory_date TYPE scal-facdate.
 
     "! iv_correct '+' = next working day, '-' = previous working day

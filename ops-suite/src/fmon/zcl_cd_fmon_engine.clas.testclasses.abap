@@ -3,7 +3,7 @@
 *& Purpose:
 *& Application tests of the FMON engine with LTD_* doubles (DAO, adapter,
 *& lot reader, calendar, store, alert, clock) through both injectors;
-*& includes acceptance test 8. Does not prove live SAP runtime behavior.
+*& includes acceptance test 8; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*

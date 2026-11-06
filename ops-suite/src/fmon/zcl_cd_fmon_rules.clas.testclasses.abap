@@ -3,7 +3,7 @@
 *& Purpose:
 *& Pure unit tests (no doubles) for every FMON domain rule: interface
 *& defaults, day types, expectations, SLA, ack match, duplicates, size,
-*& lot outcome and NOC aging. Does not prove live SAP runtime behavior.
+*& lot outcome and NOC aging; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*
