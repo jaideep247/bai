@@ -7,6 +7,7 @@
 *& a test double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-06 | PARAM1 job names as PCRE; an invalid pattern raises message 373 (bad_pattern_raises).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -33,7 +34,8 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_check     TYPE zif_cd_hck_types=>ty_check_id VALUE 'E_TECH_JOBS',
-      gc_patterns  TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_*',
+      gc_patterns  TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_.*',
+      gc_bad       TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_.*, ZCD_(FPY1',
       gc_job       TYPE zif_cd_hck_types=>ty_jobname VALUE 'ZCD_FPY1_PAYRUN',
       gc_count_1   TYPE zif_cd_hck_types=>ty_jobcount VALUE '00000001',
       gc_count_2   TYPE zif_cd_hck_types=>ty_jobcount VALUE '00000002',
@@ -48,6 +50,7 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
     TYPES:
       BEGIN OF ty_flags,
         no_patterns TYPE abap_bool,
+        bad_pattern TYPE abap_bool,
         cancelled   TYPE abap_bool,
         long_run    TYPE abap_bool,
         short_run   TYPE abap_bool,
@@ -70,6 +73,7 @@ CLASS ltc_tech_jobs DEFINITION FINAL FOR TESTING
     METHODS duplicate_counted_once FOR TESTING.
     METHODS capped_read_is_reported FOR TESTING.
     METHODS missing_patterns_raises FOR TESTING.
+    METHODS bad_pattern_raises FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -126,6 +130,9 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
   METHOD configure_scenario.
     IF is_flags-no_patterns = abap_false.
       ms_def-param1 = gc_patterns.
+    ENDIF.
+    IF is_flags-bad_pattern = abap_true.
+      ms_def-param1 = gc_bad.
     ENDIF.
     IF is_flags-cancelled = abap_true.
       INSERT run( iv_count = gc_count_1 iv_status = zif_cd_hck_types=>gc_job_status-aborted
@@ -301,6 +308,20 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'Missing PARAM1 must raise' ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Configuration error raised' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A job-name pattern that is not valid PCRE is a configuration error of the check (373),
+  " never an empty job selection
+  METHOD bad_pattern_raises.
+    configure_scenario( VALUE #( bad_pattern = abap_true ) ).
+    TRY.
+        act( ).
+        cl_abap_unit_assert=>fail( msg = 'An invalid PARAM1 pattern must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '373'
+                                            msg = 'Message 373 names the invalid pattern' ).
     ENDTRY.
   ENDMETHOD.
 

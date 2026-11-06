@@ -18,6 +18,9 @@
 *& 2026-11-06 | Expected group set of an aggregate, ZCD_HCK_AGGGRP (audit A103).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | PCRE patterns: object / subobject / cycle / pattern ranges removed (patterns are lists of PCRE,
+*&              zif_cd_ops_types=>tt_pcre); PATTERN_INVALID, SUPPRESSION_PATTERN_INVALID, messages 371-373,
+*&              gc_max_job_names.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -86,12 +89,6 @@ INTERFACE zif_cd_hck_types
   TYPES tt_category_range TYPE RANGE OF ty_category.
   TYPES tt_priority_range TYPE RANGE OF ty_priority.
   TYPES tt_check_range    TYPE RANGE OF ty_check_id.
-  TYPES tt_jobname_range  TYPE RANGE OF ty_jobname.
-  TYPES tt_object_range   TYPE RANGE OF ty_bal_object.
-  TYPES tt_subobj_range   TYPE RANGE OF ty_bal_subobject.
-  TYPES tt_cycle_range    TYPE RANGE OF ty_cycle_id.
-  TYPES ty_pattern        TYPE c LENGTH 40.
-  TYPES tt_pattern_range  TYPE RANGE OF ty_pattern.
 
   CONSTANTS:
     BEGIN OF gc_category,
@@ -194,6 +191,10 @@ INTERFACE zif_cd_hck_types
       budget_exhausted TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHECK_BUDGET_EXHAUSTED',
       "! Baseline has fewer than the minimum history runs: no baseline verdict yet (A102)
       baseline_warmup  TYPE zif_cd_ops_types=>ty_check_code VALUE 'BASELINE_WARMUP',
+      "! A job-step job name (ZCD_JOB_STEP-JOBNAME) is not valid PCRE - step not evaluated
+      pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
+      "! A suppression key pattern is not valid PCRE - suppression not applied
+      suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
     END OF gc_code.
 
   CONSTANTS:
@@ -231,6 +232,9 @@ INTERFACE zif_cd_hck_types
   CONSTANTS gc_check_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
   "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
   CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
+  "! Cap of the distinct job names read for the PCRE filter (TBTCO, date window or open
+  "! status); reaching it raises message 747 - the check fails loudly, never partly
+  CONSTANTS gc_max_job_names TYPE i VALUE 20000.
 
   "! ZCD_HCK_DEF
   TYPES:
@@ -687,6 +691,10 @@ INTERFACE zif_cd_hck_types
       baseline_outdated           TYPE zif_cd_ops_types=>ty_msgno VALUE '367',
       budget_exhausted            TYPE zif_cd_ops_types=>ty_msgno VALUE '369',
       baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
+      step_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '371',
+      suppression_invalid         TYPE zif_cd_ops_types=>ty_msgno VALUE '372',
+      param_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '373',
+      pattern_values_capped       TYPE zif_cd_ops_types=>ty_msgno VALUE '747',
     END OF gc_msg.
 
 ENDINTERFACE.

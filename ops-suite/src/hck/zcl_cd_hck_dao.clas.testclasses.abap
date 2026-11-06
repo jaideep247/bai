@@ -13,6 +13,8 @@
 *& 2026-11-06 | Metric kind and weight round trip (audit A88).
 *& 2026-11-06 | Performance fix 7: ROW_NUMBER( ) per run - runs ordered by their latest point, cap and warm-up count.
 *& 2026-11-06 | ltc_dao_reads: definitions, thresholds, aggregates, whitelist, drift, baselines, cycles, logs (gap closure).
+*& 2026-11-06 | Job names, application-log objects: PCRE pattern lists (complete value, case ignored);
+*&              job_pattern_is_whole_name, applog_pattern_is_whole_value.
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -49,6 +51,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_as_of_excludes_later FOR TESTING.
     METHODS job_run_carries_variant FOR TESTING.
     METHODS unresolved_jobs_any_date FOR TESTING.
+    METHODS job_pattern_is_whole_name FOR TESTING.
     METHODS gl_gap_per_company_and_type FOR TESTING.
     METHODS raw_aggregate_is_rejected FOR TESTING.
     METHODS raw_value_query_is_rejected FOR TESTING.
@@ -446,7 +449,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA ls_job TYPE tbtco.
     DATA lt_steps TYPE STANDARD TABLE OF tbtcp WITH EMPTY KEY.
     DATA ls_step TYPE tbtcp.
-    DATA lt_names TYPE zif_cd_hck_types=>tt_jobname_range.
+    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
     TRY.
         ls_job-jobname  = gc_job.
         ls_job-jobcount = '13300001'.
@@ -461,7 +464,7 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_step-variant   = 'ZDISB_WIRE'.
         INSERT ls_step INTO TABLE lt_steps.
         go_env->insert_test_data( lt_steps ).
-        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_job ) INTO TABLE lt_names.
+        INSERT CONV string( gc_job ) INTO TABLE lt_names.
         DATA(lt_runs) = mo_cut->get_job_runs( it_jobnames = lt_names iv_from = gc_today iv_to = gc_today ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1 msg = 'One job run' ).
         cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-variant exp = 'ZDISB_WIRE'
@@ -474,11 +477,43 @@ CLASS ltc_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " PCRE job-name patterns cover the complete name, case ignored: ZCD_PAYM_WIRE_CORP does
+  " not select ZCD_PAYM_WIRE_CORP_X; ZCD_PAYM_WIRE_CORP_.* does
+  METHOD job_pattern_is_whole_name.
+    DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
+    DATA ls_job TYPE tbtco.
+    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
+    TRY.
+        ls_job-jobname  = gc_job.
+        ls_job-jobcount = '00000001'.
+        ls_job-status   = zif_cd_hck_types=>gc_job_status-finished.
+        ls_job-strtdate = gc_today.
+        INSERT ls_job INTO TABLE lt_jobs.
+        ls_job-jobname  = |{ gc_job }_X|.
+        INSERT ls_job INTO TABLE lt_jobs.
+        go_env->insert_test_data( lt_jobs ).
+        INSERT to_lower( gc_job ) INTO TABLE lt_names.
+        DATA(lt_runs) = mo_cut->get_job_runs( it_jobnames = lt_names iv_from = gc_today iv_to = gc_today ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1
+                                            msg = 'Only the job whose complete name matches' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-jobname exp = gc_job
+                                            msg = 'Case is ignored, the longer name is not selected' ).
+        CLEAR lt_names.
+        INSERT |{ gc_job }_.*| INTO TABLE lt_names.
+        lt_runs = mo_cut->get_job_runs( it_jobnames = lt_names iv_from = gc_today iv_to = gc_today ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1
+                                            msg = 'The suffix pattern selects the longer name only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " Audit A44: unresolved jobs are read whatever their date - an old stuck job stays visible
   METHOD unresolved_jobs_any_date.
     DATA lt_jobs TYPE STANDARD TABLE OF tbtco WITH EMPTY KEY.
     DATA ls_job TYPE tbtco.
-    DATA lt_names TYPE zif_cd_hck_types=>tt_jobname_range.
+    DATA lt_names TYPE zif_cd_ops_types=>tt_pcre.
     TRY.
         ls_job-jobname  = gc_job.
         ls_job-jobcount = '00000001'.
@@ -489,7 +524,7 @@ CLASS ltc_dao IMPLEMENTATION.
         ls_job-status   = zif_cd_hck_types=>gc_job_status-finished.
         INSERT ls_job INTO TABLE lt_jobs.
         go_env->insert_test_data( lt_jobs ).
-        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_job ) INTO TABLE lt_names.
+        INSERT CONV string( gc_job ) INTO TABLE lt_names.
         DATA(lt_runs) = mo_cut->get_unresolved_jobs( lt_names ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_runs ) exp = 1 msg = 'Only the unfinished job' ).
         cl_abap_unit_assert=>assert_equals( act = lt_runs[ 1 ]-jobcount exp = '00000001'
@@ -882,7 +917,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   METHOD applog_stats_per_object.
     DATA lt_rows TYPE STANDARD TABLE OF balhdr WITH EMPTY KEY.
     DATA ls_row TYPE balhdr.
-    DATA lt_objects TYPE zif_cd_hck_types=>tt_object_range.
+    DATA lt_objects TYPE zif_cd_ops_types=>tt_pcre.
     TRY.
         ls_row-lognumber  = gc_test-log_1.
         ls_row-object     = gc_test-log_object.
@@ -896,8 +931,12 @@ CLASS ltc_dao_reads IMPLEMENTATION.
         ls_row-msg_cnt_e  = 1.
         ls_row-msg_cnt_a  = 1.
         INSERT ls_row INTO TABLE lt_rows.
+        " PCRE matches the complete object: ZCD_OPS does not cover ZCD_OPS_X
+        ls_row-lognumber  = '00000000000000000003'.
+        ls_row-object     = |{ gc_test-log_object }_X|.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
-        INSERT VALUE #( sign = 'I' option = 'EQ' low = gc_test-log_object ) INTO TABLE lt_objects.
+        INSERT CONV string( gc_test-log_object ) INTO TABLE lt_objects.
         DATA(lt_stat) = mo_cut->get_applog_stats( it_objects = lt_objects iv_date = gc_test-day ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_stat ) exp = 1 msg = 'One object / subobject' ).
         cl_abap_unit_assert=>assert_equals( act = lt_stat[ 1 ]-log_count exp = 2 msg = 'Two logs' ).

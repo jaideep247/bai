@@ -10,6 +10,8 @@
 *& 2026-11-06 | Cap keeps the most severe findings (B > E > W > I, stable order); digest severity from the full
 *& 2026-11-06 |               selection; held-back count in text and HTML (audit A63).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Rule patterns are PCRE matched to the complete value (case ignored; blank = any);
+*&              invalid_pattern( ) names a pattern that does not compile (the router logs and skips the rule).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
 CLASS zcl_cd_ops_alert_policy DEFINITION
@@ -45,12 +47,20 @@ CLASS zcl_cd_ops_alert_policy DEFINITION
       END OF ty_selection.
     TYPES tt_selection TYPE STANDARD TABLE OF ty_selection WITH EMPTY KEY.
 
+    "! Severity floor and the four patterns (PCRE, complete value, case ignored; blank = any)
     METHODS matches
       IMPORTING
         is_rule        TYPE zif_cd_ops_types=>ty_alert_rule
         is_finding     TYPE zif_cd_ops_types=>ty_finding
       RETURNING
         VALUE(rv_hit) TYPE abap_bool.
+
+    "! First pattern of the rule that is not valid PCRE (blank = all valid)
+    METHODS invalid_pattern
+      IMPORTING
+        is_rule           TYPE zif_cd_ops_types=>ty_alert_rule
+      RETURNING
+        VALUE(rv_pattern) TYPE zif_cd_ops_types=>ty_pattern.
 
     METHODS select
       IMPORTING
@@ -159,6 +169,20 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD invalid_pattern.
+    DATA(lt_patterns) = VALUE string_table( ( CONV #( is_rule-rule_pattern ) )
+                                            ( CONV #( is_rule-check_pattern ) )
+                                            ( CONV #( is_rule-group1_pattern ) )
+                                            ( CONV #( is_rule-group2_pattern ) ) ).
+    LOOP AT lt_patterns ASSIGNING FIELD-SYMBOL(<lv_pattern>).
+      IF zcl_cd_ops_util=>pcre_valid( <lv_pattern> ) = abap_false.
+        rv_pattern = <lv_pattern>.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
   METHOD select.
     DATA ls_selection TYPE ty_selection.
     LOOP AT it_rules ASSIGNING FIELD-SYMBOL(<ls_rule>) WHERE active = abap_true.
@@ -248,7 +272,8 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
 
 
   METHOD pattern_hit.
-    rv_hit = xsdbool( iv_pattern IS INITIAL OR iv_value CP iv_pattern ).
+    rv_hit = xsdbool( iv_pattern IS INITIAL
+                      OR zcl_cd_ops_util=>pcre_match( iv_value = iv_value iv_pattern = iv_pattern ) = abap_true ).
   ENDMETHOD.
 
 

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Claim, repeat, consecutive escalation, escalation override, send failures (audit A17, A45, A46).
 *& 2026-11-06 | Delivered message carries the intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
+*& 2026-11-06 | Test invalid_rule_pattern_logged: a rule pattern that is not valid PCRE is logged F, nothing sent.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -156,6 +157,7 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
         esc_override     TYPE abap_bool,
         healthy_between  TYPE abap_bool,
         channel_inactive TYPE abap_bool,
+        bad_pattern      TYPE abap_bool,
         escalate_after   TYPE i,
         prior_runs_sent  TYPE i,
       END OF ty_flags.
@@ -192,6 +194,7 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
     METHODS healthy_run_breaks_series    FOR TESTING.
     METHODS escalation_beats_throttle    FOR TESTING.
     METHODS send_inactive_channel_fails  FOR TESTING.
+    METHODS invalid_rule_pattern_logged  FOR TESTING.
 ENDCLASS.
 
 
@@ -246,6 +249,9 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ls_rule-escalation_dest = gc_test-escalation.
     ls_rule-esc_override    = is_flags-esc_override.
     ls_rule-active          = is_flags-rule_active.
+    IF is_flags-bad_pattern = abap_true.
+      ls_rule-check_pattern = '(EBS'.
+    ENDIF.
     IF is_flags-quiet_at_night = abap_true.
       ls_rule-quiet_from = '220000'.
       ls_rule-quiet_to   = '060000'.
@@ -395,6 +401,31 @@ CLASS ltc_alert_router IMPLEMENTATION.
                                             msg = 'Failed delivery must be logged as F' ).
         cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_inserted[ 1 ]-error
                                                  msg = 'Failed delivery must log the error text' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A rule pattern that is not valid PCRE: the rule is logged as failed with the reason and
+  " not applied - visible in the alert log, never a silent 'no match'
+  METHOD invalid_rule_pattern_logged.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-bad_pattern = abap_true.
+        configure_scenario( ls_flags ).
+
+        run_dispatch( ).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_inserted ) exp = 1
+                                            msg = 'One log row for the invalid rule' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-status
+                                            exp = zif_cd_ops_types=>gc_alert_status-failed
+                                            msg = 'The rule must be logged as failed' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_inserted[ 1 ]-error
+                                                 msg = 'The log names the invalid pattern' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
+                                             msg = 'Nothing is delivered for the invalid rule' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -10,6 +10,8 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Configured patterns are PCRE (user decision 2026-11-06): pcre_valid, pcre_match
+*&              (whole value, case-insensitive), pcre_literals (specificity).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -108,6 +110,49 @@ CLASS zcl_cd_ops_util DEFINITION
       RETURNING
         VALUE(rv_ms) TYPE i.
 
+    "! Configured pattern compiles as PCRE (case-insensitive, as it is matched).
+    "! Blank is valid. The one check behind every pattern validation (configuration
+    "! apps, runtime configuration load, pattern check and migration reports).
+    CLASS-METHODS pcre_valid
+      IMPORTING
+        iv_pattern      TYPE clike
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
+    "! The complete value matches the PCRE pattern, case ignored - never a partial
+    "! match. Trailing blanks of a character field are not part of value or pattern.
+    "! An invalid pattern never matches: callers validate with pcre_valid first and
+    "! report an invalid pattern as a configuration finding.
+    CLASS-METHODS pcre_match
+      IMPORTING
+        iv_value        TYPE clike
+        iv_pattern      TYPE clike
+      RETURNING
+        VALUE(rv_match) TYPE abap_bool.
+
+    "! The complete value matches at least one of the patterns (see pcre_match)
+    CLASS-METHODS pcre_match_any
+      IMPORTING
+        iv_value        TYPE clike
+        it_patterns     TYPE zif_cd_ops_types=>tt_pcre
+      RETURNING
+        VALUE(rv_match) TYPE abap_bool.
+
+    "! First pattern of the list that is not valid PCRE (blank = all valid)
+    CLASS-METHODS pcre_first_invalid
+      IMPORTING
+        it_patterns       TYPE zif_cd_ops_types=>tt_pcre
+      RETURNING
+        VALUE(rv_pattern) TYPE string.
+
+    "! Literal characters of a PCRE pattern (escaped characters count, character
+    "! classes, quantifiers and metacharacters do not): the more, the more specific
+    CLASS-METHODS pcre_literals
+      IMPORTING
+        iv_pattern      TYPE clike
+      RETURNING
+        VALUE(rv_count) TYPE i.
+
     "! Safe string to decimal; returns iv_default on conversion error
     CLASS-METHODS to_decimal
       IMPORTING
@@ -115,6 +160,20 @@ CLASS zcl_cd_ops_util DEFINITION
         iv_default      TYPE decfloat34 DEFAULT 0
       RETURNING
         VALUE(rv_value) TYPE decfloat34.
+
+  PRIVATE SECTION.
+    "! PCRE syntax characters (not text): escape, class and quantifier brackets,
+    "! metacharacters without a literal meaning, characters of an escape sequence
+    CONSTANTS:
+      BEGIN OF gc_pcre,
+        escape      TYPE string VALUE `\`,
+        class_open  TYPE string VALUE `[`,
+        class_close TYPE string VALUE `]`,
+        count_open  TYPE string VALUE `{`,
+        count_close TYPE string VALUE `}`,
+        meta        TYPE string VALUE `.*+?()|^$`,
+        word        TYPE string VALUE `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`,
+      END OF gc_pcre.
 
 ENDCLASS.
 
@@ -240,6 +299,78 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
       CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
         rv_ms = 0.
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD pcre_valid.
+    TRY.
+        cl_abap_regex=>create_pcre( pattern     = CONV string( iv_pattern )
+                                    ignore_case = abap_true ).
+        rv_valid = abap_true.
+      CATCH cx_sy_invalid_regex cx_sy_regex_too_complex.
+        rv_valid = abap_false.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD pcre_match.
+    TRY.
+        " matches( ) is anchored to the whole value; case = abap_false ignores case
+        rv_match = xsdbool( matches( val  = CONV string( iv_value )
+                                     pcre = CONV string( iv_pattern )
+                                     case = abap_false ) ).
+      CATCH cx_sy_invalid_regex cx_sy_regex_too_complex.
+        rv_match = abap_false.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD pcre_match_any.
+    LOOP AT it_patterns ASSIGNING FIELD-SYMBOL(<lv_pattern>).
+      IF pcre_match( iv_value = iv_value iv_pattern = <lv_pattern> ) = abap_true.
+        rv_match = abap_true.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD pcre_first_invalid.
+    LOOP AT it_patterns ASSIGNING FIELD-SYMBOL(<lv_pattern>).
+      IF pcre_valid( <lv_pattern> ) = abap_false.
+        rv_pattern = <lv_pattern>.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD pcre_literals.
+    DATA lv_close TYPE string.
+    DATA lv_escaped TYPE abap_bool.
+    DATA(lv_pattern) = CONV string( iv_pattern ).
+    DO strlen( lv_pattern ) TIMES.
+      DATA(lv_char) = substring( val = lv_pattern off = sy-index - 1 len = 1 ).
+      IF lv_escaped = abap_true.
+        " \. or \* is a literal; \d, \w, \s ... are classes
+        lv_escaped = abap_false.
+        IF lv_close IS INITIAL AND lv_char NA gc_pcre-word.
+          rv_count += 1.
+        ENDIF.
+      ELSEIF lv_char = gc_pcre-escape.
+        lv_escaped = abap_true.
+      ELSEIF lv_close IS NOT INITIAL.
+        IF lv_char = lv_close.
+          CLEAR lv_close.
+        ENDIF.
+      ELSEIF lv_char = gc_pcre-class_open.
+        lv_close = gc_pcre-class_close.
+      ELSEIF lv_char = gc_pcre-count_open.
+        lv_close = gc_pcre-count_close.
+      ELSEIF lv_char NA gc_pcre-meta.
+        rv_count += 1.
+      ENDIF.
+    ENDDO.
   ENDMETHOD.
 
 

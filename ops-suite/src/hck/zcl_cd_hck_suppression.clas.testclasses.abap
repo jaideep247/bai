@@ -7,6 +7,8 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | Key pattern as PCRE: whole key, any case, invalid pattern reported and not applied,
+*&              request with an invalid pattern refused (418).
 *&---------------------------------------------------------------------*
 CLASS ltc_suppression DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -49,6 +51,9 @@ CLASS ltc_suppression DEFINITION FINAL
     METHODS pending_is_not_applied        FOR TESTING.
     METHODS long_period_needs_approval    FOR TESTING.
     METHODS creator_cannot_approve        FOR TESTING.
+    METHODS pattern_covers_whole_key      FOR TESTING.
+    METHODS invalid_pattern_is_reported   FOR TESTING.
+    METHODS request_with_bad_pattern      FOR TESTING.
 ENDCLASS.
 
 
@@ -103,7 +108,7 @@ CLASS ltc_suppression IMPLEMENTATION.
   " Rule: the key pattern limits the suppression to matching objects
   METHOD pattern_limits_the_match.
     TRY.
-        DATA(ls_result) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/*/DE01' ) is_finding = finding( ) ).
+        DATA(ls_result) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/.*/DE01' ) is_finding = finding( ) ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-severity exp = zif_cd_ops_types=>gc_severity-error
                                             msg = 'A finding outside the pattern must stay an error' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -174,6 +179,58 @@ CLASS ltc_suppression IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = zcl_cd_hck_suppression=>needs_approval( iv_from = '20261106' iv_to = '20261114' iv_max_days = 7 )
           msg = '8 days must need approval' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " PCRE on the complete object key, case ignored: HCK_C04/.*/us01 covers HCK_C04/AGE_DAYS/US01,
+  " HCK_C04/AGE_DAYS alone (part of the key) does not
+  METHOD pattern_covers_whole_key.
+    TRY.
+        DATA(ls_whole) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/.*/us01' ) is_finding = finding( ) ).
+        DATA(ls_part) = act( it_suppressions = suppression( iv_pattern = 'HCK_C04/AGE_DAYS' ) is_finding = finding( ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_whole-severity exp = zif_cd_ops_types=>gc_severity-info
+                                            msg = 'A pattern for the complete key suppresses' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_part-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'A pattern for part of the key does not suppress' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " An invalid key pattern is not applied and is reported (warning), never a silent 'no match'
+  METHOD invalid_pattern_is_reported.
+    TRY.
+        DATA(lt_findings) = zcl_cd_hck_suppression=>apply( it_findings     = VALUE #( ( finding( ) ) )
+                                                           it_suppressions = suppression( iv_pattern = 'HCK_C04/(' )
+                                                           iv_today        = gc_test-today ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_findings ) exp = 2
+                                            msg = 'The finding and the configuration warning' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'The finding is not suppressed' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_findings[ 2 ]-check_code
+                                            exp = zif_cd_hck_types=>gc_code-suppression_invalid
+                                            msg = 'The invalid suppression pattern is reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The suppression app refuses a key pattern that is not valid PCRE (message 418)
+  METHOD request_with_bad_pattern.
+    TRY.
+        DATA(ls_decision) = zcl_cd_hck_suppression=>check_request( iv_check_id    = gc_test-check
+                                                                   iv_reason      = 'Known issue'
+                                                                   iv_from        = '20261106'
+                                                                   iv_to          = '20261107'
+                                                                   iv_key_pattern = 'HCK_C04/[' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_decision-msgno
+                                            exp = zif_cd_hck_suppress_types=>gc_msg-pattern_invalid
+                                            msg = 'An invalid key pattern must be refused with 418' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -10,10 +10,12 @@
 *& 2026-11-06 | Program/variant match, retries supersede aborts, late start (audit A42).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: string templates.
+*& 2026-11-06 | Step job name is PCRE matched to the complete job name (case ignored); the caller reports an
+*&              invalid pattern (PATTERN_INVALID) and does not evaluate the step.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle step state rules (pure)</p>
 "! Step date = cycle date + DAY_OFFSET. Candidates: jobs matching the JOBNAME
-"! pattern (CP) and - when maintained - PROGRAM and VARIANT of the first step,
+"! pattern (PCRE, complete job name, case ignored) and - when maintained - PROGRAM and VARIANT of the first step,
 "! started on the step date at or after WINDOW_FROM. Deciding attempt (A42): the
 "! earliest finished one; else the latest running; else the latest aborted. A
 "! success after an abort is a retry (information); a deciding attempt that
@@ -80,7 +82,10 @@ CLASS zcl_cd_hck_cycle_eval IMPLEMENTATION.
     rs_status-jobname    = is_step-jobname.
     rs_status-cycle_date = iv_cycle_date.
 
-    LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>) WHERE jobname CP is_step-jobname.
+    LOOP AT it_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      IF zcl_cd_ops_util=>pcre_match( iv_value = <ls_run>-jobname iv_pattern = is_step-jobname ) = abap_false.
+        CONTINUE.
+      ENDIF.
       IF <ls_run>-status <> zif_cd_hck_types=>gc_job_status-running
          AND <ls_run>-status <> zif_cd_hck_types=>gc_job_status-finished
          AND <ls_run>-status <> zif_cd_hck_types=>gc_job_status-aborted.

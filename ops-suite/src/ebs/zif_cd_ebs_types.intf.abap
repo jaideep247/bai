@@ -370,7 +370,8 @@ INTERFACE zif_cd_ebs_types
     END OF ty_account_cfg.
   TYPES tt_account_cfg TYPE STANDARD TABLE OF ty_account_cfg WITH EMPTY KEY.
 
-  "! ZCD_EBS_FLOW_PAT - flow derivation by XBLNR pattern (ported from ZB_BAI_GL_CONFIG)
+  "! ZCD_EBS_FLOW_PAT - flow derivation by XBLNR pattern (ported from ZB_BAI_GL_CONFIG);
+  "! PATTERN is PCRE matched to the complete XBLNR, case ignored (ZCL_CD_OPS_UTIL=>PCRE_MATCH)
   TYPES:
     BEGIN OF ty_flow_pattern,
       priority  TYPE i,
@@ -521,6 +522,8 @@ INTERFACE zif_cd_ebs_types
       kill_switch_fallback           TYPE zif_cd_ops_types=>ty_check_code VALUE 'KILL_SWITCH_FALLBACK',
       "! A98: ZCD_BTC_MAP rows that normalise to one key (blank flow = '*') but differ
       map_conflict                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_CONFLICT',
+      "! PCRE patterns: a ZCD_EBS_FLOW_PAT pattern that does not compile (line blocked)
+      flow_pattern_invalid           TYPE zif_cd_ops_types=>ty_check_code VALUE 'FLOW_PATTERN_INVALID',
       code_count_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_COUNT_MISMATCH',
       code_total_mismatch            TYPE zif_cd_ops_types=>ty_check_code VALUE 'CODE_TOTAL_MISMATCH',
       currency_mismatch              TYPE zif_cd_ops_types=>ty_check_code VALUE 'CURRENCY_MISMATCH',
@@ -720,6 +723,7 @@ INTERFACE zif_cd_ebs_types
       lot_reason_unmapped         TYPE zif_cd_ops_types=>ty_msgno VALUE '544',
       lot_reason_ambiguous        TYPE zif_cd_ops_types=>ty_msgno VALUE '545',
       out_of_scope                TYPE zif_cd_ops_types=>ty_msgno VALUE '546',
+      flow_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '547',
     END OF gc_msg.
 
 ENDINTERFACE.

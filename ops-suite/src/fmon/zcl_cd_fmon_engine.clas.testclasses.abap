@@ -15,6 +15,8 @@
 *& 2026-11-06 | PRISM status API (5-minute run): PRISM events become stages between SAP's
 *&              own; an outbound file only PRISM reported surfaces as PRISM_UNKNOWN_FILE.
 *& 2026-11-06 | Modern-syntax sweep: RAISE EXCEPTION NEW, caught exception lx_error.
+*& 2026-11-06 | Interface name pattern seeds are PCRE.
+*& 2026-11-06 | Test invalid_name_pattern_reported (PCRE interface name pattern that does not compile).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -427,6 +429,7 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS failing_source_does_not_abort FOR TESTING.
     METHODS test_mode_writes_nothing FOR TESTING.
     METHODS unmapped_status_is_reported FOR TESTING.
+    METHODS invalid_name_pattern_reported FOR TESTING.
     METHODS noc_age_is_in_banking_days FOR TESTING.
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS persist_error_rolls_back FOR TESTING.
@@ -543,11 +546,11 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_calendar->mv_age = COND #( WHEN is_flags-noc_age > 0 THEN is_flags-noc_age ELSE 1 ).
 
     add_iface( iv_iface_id = gc_out iv_direction = zif_cd_fmon_types=>gc_direction-outbound
-               iv_file_type = zif_cd_fmon_types=>gc_file_type-payment iv_pattern = 'ACH_PNC_*' ).
+               iv_file_type = zif_cd_fmon_types=>gc_file_type-payment iv_pattern = 'ACH_PNC_.*' ).
     add_iface( iv_iface_id = gc_ret iv_direction = zif_cd_fmon_types=>gc_direction-inbound
-               iv_file_type = zif_cd_fmon_types=>gc_file_type-returns iv_pattern = 'ACH_RET_*' ).
+               iv_file_type = zif_cd_fmon_types=>gc_file_type-returns iv_pattern = 'ACH_RET_.*' ).
     add_iface( iv_iface_id = gc_noc iv_direction = zif_cd_fmon_types=>gc_direction-inbound
-               iv_file_type = zif_cd_fmon_types=>gc_file_type-noc iv_pattern = 'NOC_*' ).
+               iv_file_type = zif_cd_fmon_types=>gc_file_type-noc iv_pattern = 'NOC_.*' ).
 
     ls_sla-iface_id    = gc_out.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-sent.
@@ -833,6 +836,26 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = codes( ls_result-findings )
                                             exp = VALUE string_table( ( `UNMAPPED_STATUS` ) )
                                             msg = 'Unmapped status must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " An interface name pattern that is not valid PCRE is a configuration finding of the run,
+  " never a silent 'no file matches'
+  METHOD invalid_name_pattern_reported.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_iface( iv_iface_id = 'BAD_PATTERN' iv_direction = zif_cd_fmon_types=>gc_direction-inbound
+                   iv_file_type = zif_cd_fmon_types=>gc_file_type-returns iv_pattern = 'ACH_(RET.*' ).
+        DATA(ls_result) = act( ).
+        READ TABLE ls_result-findings INTO DATA(ls_finding)
+          WITH KEY check_code = zif_cd_fmon_types=>gc_check_code-pattern_invalid.
+        cl_abap_unit_assert=>assert_subrc( act = sy-subrc exp = 0
+                                           msg = 'PATTERN_INVALID finding expected' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-object_key exp = 'IFC:BAD_PATTERN'
+                                            msg = 'The finding names the interface' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

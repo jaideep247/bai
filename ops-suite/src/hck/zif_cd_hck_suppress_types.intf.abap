@@ -5,6 +5,7 @@
 *& suppression rows (ZCD_HCK_SUPPRESS), statuses and messages.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-06 | KEY_PATTERN is PCRE (complete object key, case ignored); message 418 for an invalid one.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression types</p>
 INTERFACE zif_cd_hck_suppress_types
@@ -25,6 +26,7 @@ INTERFACE zif_cd_hck_suppress_types
     BEGIN OF ty_suppression,
       suppress_uuid TYPE sysuuid_x16,
       check_id      TYPE zif_cd_hck_types=>ty_check_id,
+      "! PCRE, matched to the complete object key, case ignored; blank = every finding
       key_pattern   TYPE zif_cd_ops_types=>ty_object_key,
       bukrs         TYPE c LENGTH 4,
       valid_from    TYPE d,
@@ -39,6 +41,8 @@ INTERFACE zif_cd_hck_suppress_types
       period_invalid TYPE symsgno VALUE '320',
       not_requested  TYPE symsgno VALUE '321',
       check_missing  TYPE symsgno VALUE '322',
+      "! configuration apps: not a valid PCRE pattern
+      pattern_invalid TYPE symsgno VALUE '418',
       "! core messages
       same_user      TYPE symsgno VALUE '063',
       no_reason      TYPE symsgno VALUE '062',

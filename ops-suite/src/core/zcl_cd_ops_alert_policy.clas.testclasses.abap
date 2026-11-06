@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Severity-ordered cap, full-selection severity, held-back count (audit A63).
+*& 2026-11-06 | PCRE rule patterns: whole value, case ignored, invalid pattern named.
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -42,6 +43,9 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS error_meets_error_floor      FOR TESTING.
     METHODS warning_below_error_floor    FOR TESTING.
     METHODS rule_pattern_filters_finding FOR TESTING.
+    METHODS rule_pattern_is_whole_value  FOR TESTING.
+    METHODS rule_pattern_ignores_case    FOR TESTING.
+    METHODS invalid_pattern_is_named     FOR TESTING.
     METHODS inactive_rule_never_selected FOR TESTING.
     METHODS red_run_triggers_rag_rule    FOR TESTING.
     METHODS aborted_run_triggers_abort   FOR TESTING.
@@ -114,10 +118,56 @@ CLASS ltc_alert_policy IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule pattern: only findings whose rule id matches the CP pattern are routed
+  " Rule pattern: only findings whose rule id matches the PCRE pattern are routed
+  " The pattern describes the complete value: S0 does not cover S02
+  METHOD rule_pattern_is_whole_value.
+    TRY.
+        ms_rule-rule_pattern = 'S0'.
+        cl_abap_unit_assert=>assert_false(
+          act = mo_cut->matches( is_rule    = ms_rule
+                                 is_finding = finding( iv_severity = zif_cd_ops_types=>gc_severity-error
+                                                       iv_rule_id  = 'S02' ) )
+          msg = 'A pattern for part of the rule id must not match' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Case is ignored, as with the CP wildcards before
+  METHOD rule_pattern_ignores_case.
+    TRY.
+        ms_rule-check_pattern = 'unmapped_.*'.
+        DATA(ls_finding) = finding( iv_severity = zif_cd_ops_types=>gc_severity-error iv_rule_id = 'R14' ).
+        ls_finding-check_code = 'UNMAPPED_BTC'.
+        cl_abap_unit_assert=>assert_true(
+          act = mo_cut->matches( is_rule = ms_rule is_finding = ls_finding )
+          msg = 'Lower-case pattern must match the upper-case check code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A pattern that does not compile is named (the router logs the rule as failed)
+  METHOD invalid_pattern_is_named.
+    TRY.
+        ms_rule-group1_pattern = 'IFACE_(1'.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->invalid_pattern( ms_rule )
+                                            exp = CONV zif_cd_ops_types=>ty_pattern( 'IFACE_(1' )
+                                            msg = 'The invalid group pattern must be named' ).
+        ms_rule-group1_pattern = 'IFACE_.*'.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->invalid_pattern( ms_rule )
+                                             msg = 'Valid patterns name nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD rule_pattern_filters_finding.
     TRY.
-        ms_rule-rule_pattern = 'S*'.
+        ms_rule-rule_pattern = 'S.*'.
         DATA(lt_findings) = VALUE zif_cd_ops_types=>tt_finding(
           ( finding( iv_severity = zif_cd_ops_types=>gc_severity-error iv_rule_id = 'S02' ) )
           ( finding( iv_severity = zif_cd_ops_types=>gc_severity-error iv_rule_id = 'R14' ) ) ).
@@ -129,7 +179,7 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_selection ) exp = 1
                                             msg = 'One rule must be selected' ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_selection[ 1 ]-findings ) exp = 1
-                                            msg = 'Only the S* finding must be routed' ).
+                                            msg = 'Only the S.* finding must be routed' ).
         cl_abap_unit_assert=>assert_equals( act = lt_selection[ 1 ]-findings[ 1 ]-rule_id
                                             exp = CONV zif_cd_ops_types=>ty_rule_id( 'S02' )
                                             msg = 'The routed finding must be S02' ).

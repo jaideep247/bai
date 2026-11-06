@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PARAM1 job names are PCRE (complete name, case ignored); an invalid pattern raises E373.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job duration vs rolling baseline</p>
 "! PARAM1 = job name patterns (e.g. ZCD_*), PARAM2 = day offset (default 1 =
@@ -30,11 +31,12 @@ ENDCLASS.
 CLASS zcl_cd_hck_c_job_runtime IMPLEMENTATION.
 
   METHOD zif_cd_hck_check~execute.
-    DATA(lt_patterns) = CORRESPONDING zif_cd_hck_types=>tt_jobname_range( zcl_cd_hck_param=>pattern_range( is_def-param1 ) ).
+    DATA(lt_patterns) = zcl_cd_hck_param=>patterns( is_def-param1 ).
     IF lt_patterns IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e345(zcd_ops) WITH is_def-check_id.
     ENDIF.
+    zcl_cd_hck_param=>check_patterns( it_patterns = lt_patterns iv_check_id = is_def-check_id ).
     DATA(lv_day) = CONV d( is_context-report_date - zcl_cd_hck_param=>int( iv_value = is_def-param2 iv_default = 1 ) ).
 
     DATA(lt_runs) = zcl_cd_hck_factory=>get_dao( )->get_job_runs( it_jobnames = lt_patterns

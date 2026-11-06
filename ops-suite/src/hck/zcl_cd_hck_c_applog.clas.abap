@@ -8,6 +8,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Error rate is a weighted rate metric (weight = messages read, audit A88).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PARAM1 objects / PARAM2 subobjects are PCRE (complete value, case ignored); invalid raises E373.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - application log error rate (SLG1)</p>
 "! PARAM1 = log objects (patterns allowed), PARAM2 = subobjects (blank = all),
@@ -37,12 +38,14 @@ CLASS zcl_cd_hck_c_applog IMPLEMENTATION.
   METHOD zif_cd_hck_check~execute.
     DATA lv_rate TYPE zif_cd_hck_types=>ty_value.
 
-    DATA(lt_objects) = CORRESPONDING zif_cd_hck_types=>tt_object_range( zcl_cd_hck_param=>pattern_range( is_def-param1 ) ).
+    DATA(lt_objects) = zcl_cd_hck_param=>patterns( is_def-param1 ).
     IF lt_objects IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e344(zcd_ops) WITH is_def-check_id.
     ENDIF.
-    DATA(lt_subobjects) = CORRESPONDING zif_cd_hck_types=>tt_subobj_range( zcl_cd_hck_param=>pattern_range( is_def-param2 ) ).
+    DATA(lt_subobjects) = zcl_cd_hck_param=>patterns( is_def-param2 ).
+    zcl_cd_hck_param=>check_patterns( it_patterns = lt_objects iv_check_id = is_def-check_id ).
+    zcl_cd_hck_param=>check_patterns( it_patterns = lt_subobjects iv_check_id = is_def-check_id ).
     DATA(lv_day) = CONV d( is_context-report_date - zcl_cd_hck_param=>int( iv_value = is_def-param3 iv_default = 1 ) ).
 
     DATA(lt_stats) = zcl_cd_hck_factory=>get_dao( )->get_applog_stats( it_objects    = lt_objects

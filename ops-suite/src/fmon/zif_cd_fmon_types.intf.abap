@@ -20,6 +20,7 @@
 *&              (both directions), check codes and messages of the PRISM checks.
 *& 2026-11-06 | PRISM throttle (user 2026-11-06: ACH and wire files 2 min per file): queue
 *&              scope, throttle settings, queue entries in the check context, PRISM_QUEUE_LONG.
+*& 2026-11-06 | PCRE interface name patterns: check code PATTERN_INVALID, engine key IFC:, message 271.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -247,6 +248,8 @@ INTERFACE zif_cd_fmon_types
       prism_not_loaded TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_NOT_LOADED',
       "! Outbound: more throttled files queued in PRISM ahead of the file than FMON_PRISM_QUEUE_MAX
       prism_queue_long TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
+      "! ZCD_FMON_IFACE-NAME_PATTERN does not compile as PCRE (configuration; never 'no match')
+      pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCD_OPS_PARAM (defaults in brackets)
@@ -775,6 +778,8 @@ INTERFACE zif_cd_fmon_types
       lot      TYPE c LENGTH 4 VALUE 'LOT:',
       calendar TYPE c LENGTH 4 VALUE 'CAL:',
       check    TYPE c LENGTH 4 VALUE 'CHK:',
+      "! Interface configuration (ZCD_FMON_IFACE)
+      iface    TYPE c LENGTH 4 VALUE 'IFC:',
       "! Object key of registry persistence findings
       registry TYPE c LENGTH 13 VALUE 'ZCD_FMON_FILE',
     END OF gc_engine_key.
@@ -829,6 +834,7 @@ INTERFACE zif_cd_fmon_types
       prism_not_loaded            TYPE zif_cd_ops_types=>ty_msgno VALUE '267',
       prism_queue_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '269',
       after_min_sla_queue_min     TYPE zif_cd_ops_types=>ty_msgno VALUE '270',
+      pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '271',
     END OF gc_msg.
 
 ENDINTERFACE.

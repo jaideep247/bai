@@ -10,6 +10,8 @@
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *& 2026-11-06 | ltc_throttle: PRISM throttle of ACH / wire files (queue position, scope, cap,
 *&              allowance on the delivery stage and on later stages measured from generation).
+*& 2026-11-06 | PCRE interface name patterns: complete file name, any case, more literal characters win,
+*&              invalid pattern never resolves.
 *&---------------------------------------------------------------------*
 CLASS ltc_rules DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -64,6 +66,10 @@ CLASS ltc_rules DEFINITION FINAL
     METHODS new_source_uses_default_iface FOR TESTING.
     METHODS unmatched_file_has_no_iface FOR TESTING.
     METHODS configured_iface_wins FOR TESTING.
+    METHODS name_pattern_is_whole_name FOR TESTING.
+    METHODS name_pattern_ignores_case FOR TESTING.
+    METHODS longer_literal_pattern_wins FOR TESTING.
+    METHODS invalid_name_pattern_no_iface FOR TESTING.
     METHODS non_working_day_is_holiday FOR TESTING.
     METHODS last_workday_is_month_end FOR TESTING.
     METHODS returns_weekday_is_returns_day FOR TESTING.
@@ -137,7 +143,7 @@ CLASS ltc_rules IMPLEMENTATION.
     ls_iface-direction    = zif_cd_fmon_types=>gc_direction-outbound.
     ls_iface-source_sys   = zif_cd_fmon_types=>gc_wildcard.
     ls_iface-lob          = zif_cd_fmon_types=>gc_wildcard.
-    ls_iface-name_pattern = 'ACH_*'.
+    ls_iface-name_pattern = 'ACH_.*'.
     ls_iface-active       = abap_true.
     INSERT ls_iface INTO TABLE rt_ifaces.
     ls_iface-iface_id     = gc_iface_pclm.
@@ -209,6 +215,79 @@ CLASS ltc_rules IMPLEMENTATION.
                                                           iv_file_name = 'WIRE_JPMC_1' ).
         cl_abap_unit_assert=>assert_initial( act = ls_iface
                                              msg = 'No interface may be resolved' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " PCRE is matched to the complete file name: ACH_ alone does not cover ACH_PNC_...
+  METHOD name_pattern_is_whole_name.
+    DATA lt_ifaces TYPE zif_cd_fmon_types=>tt_iface.
+    DATA ls_iface TYPE zif_cd_fmon_types=>ty_iface.
+    TRY.
+        ls_iface-iface_id     = gc_iface_default.
+        ls_iface-name_pattern = 'ACH_'.
+        ls_iface-active       = abap_true.
+        INSERT ls_iface INTO TABLE lt_ifaces.
+        DATA(ls_result) = zcl_cd_fmon_rules=>resolve_iface( it_ifaces    = lt_ifaces
+                                                           iv_file_name = gc_file_name ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result
+                                             msg = 'A pattern for the start of the name is no match' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Case is ignored (file names arrive in either case)
+  METHOD name_pattern_ignores_case.
+    TRY.
+        DATA(ls_iface) = zcl_cd_fmon_rules=>resolve_iface( it_ifaces    = ifaces( )
+                                                          iv_file_name = 'ach_pnc_20261102_01' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_iface-iface_id exp = gc_iface_default
+                                            msg = 'Lower-case name must resolve like upper case' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The most specific pattern (more literal characters) wins over a broader one
+  METHOD longer_literal_pattern_wins.
+    DATA lt_ifaces TYPE zif_cd_fmon_types=>tt_iface.
+    DATA ls_iface TYPE zif_cd_fmon_types=>ty_iface.
+    TRY.
+        ls_iface-iface_id     = gc_iface_default.
+        ls_iface-name_pattern = 'ACH_.*'.
+        ls_iface-active       = abap_true.
+        INSERT ls_iface INTO TABLE lt_ifaces.
+        ls_iface-iface_id     = gc_iface_pclm.
+        ls_iface-name_pattern = 'ACH_PNC_[0-9]{8}_.*'.
+        INSERT ls_iface INTO TABLE lt_ifaces.
+        DATA(ls_result) = zcl_cd_fmon_rules=>resolve_iface( it_ifaces    = lt_ifaces
+                                                           iv_file_name = gc_file_name ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-iface_id exp = gc_iface_pclm
+                                            msg = 'ACH_PNC_ ... _ has more literal characters than ACH_' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " An invalid pattern resolves nothing here (the engine reports it as PATTERN_INVALID)
+  METHOD invalid_name_pattern_no_iface.
+    DATA lt_ifaces TYPE zif_cd_fmon_types=>tt_iface.
+    DATA ls_iface TYPE zif_cd_fmon_types=>ty_iface.
+    TRY.
+        ls_iface-iface_id     = gc_iface_default.
+        ls_iface-name_pattern = 'ACH_[.*'.
+        ls_iface-active       = abap_true.
+        INSERT ls_iface INTO TABLE lt_ifaces.
+        DATA(ls_result) = zcl_cd_fmon_rules=>resolve_iface( it_ifaces    = lt_ifaces
+                                                           iv_file_name = gc_file_name ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result
+                                             msg = 'An invalid pattern must not resolve an interface' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

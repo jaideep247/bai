@@ -16,6 +16,7 @@
 *& 2026-11-06 | Run status NO_DATA (N) for runs without input (audit A68).
 *& 2026-11-06 | Alert message carries intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | Messages 742-747 (PCRE patterns: alert rule pattern invalid, pattern check and migration).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -188,7 +189,10 @@ INTERFACE zif_cd_ops_types
 
   "! ---- Alert router (ZCD_OPS_ALRULE / _CHN / _LOG) ----
   TYPES ty_channel     TYPE c LENGTH 10.
+  "! Alert rule pattern: PCRE, matched to the complete value, case ignored; blank = any
   TYPES ty_pattern     TYPE c LENGTH 35.
+  "! List of PCRE patterns (each matched to the complete value, case ignored)
+  TYPES tt_pcre        TYPE STANDARD TABLE OF string WITH EMPTY KEY.
   TYPES ty_alert_dest  TYPE c LENGTH 255.
 
   CONSTANTS:
@@ -320,6 +324,12 @@ INTERFACE zif_cd_ops_types
       applog_partial              TYPE zif_cd_ops_types=>ty_msgno VALUE '025',
       bcs_not_sent                TYPE zif_cd_ops_types=>ty_msgno VALUE '026',
       interface_not_found         TYPE zif_cd_ops_types=>ty_msgno VALUE '033',
+      alert_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '742',
+      pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
+      pattern_too_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '744',
+      pattern_migration           TYPE zif_cd_ops_types=>ty_msgno VALUE '745',
+      pattern_check_summary       TYPE zif_cd_ops_types=>ty_msgno VALUE '746',
+      pattern_values_capped       TYPE zif_cd_ops_types=>ty_msgno VALUE '747',
     END OF gc_msg.
 
 ENDINTERFACE.

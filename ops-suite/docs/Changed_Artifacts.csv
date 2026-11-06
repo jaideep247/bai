@@ -1194,7 +1194,7 @@ src/hck/zcl_cd_hck_factory.clas.xml,abapGit,
 src/hck/zcl_cd_hck_injector.clas.abap,ABAP,Test seam of the HCK factory: injects a DAO double; reset( ) clears it.
 src/hck/zcl_cd_hck_injector.clas.xml,abapGit,
 src/hck/zcl_cd_hck_param.clas.abap,ABAP,Pure parsing of check parameters (PARAM1-4 of ZCD_HCK_DEF): comma or
-src/hck/zcl_cd_hck_param.clas.testclasses.abap,ABAP,"Unit tests of check parameter parsing (pattern lists to ranges, safe"
+src/hck/zcl_cd_hck_param.clas.testclasses.abap,ABAP,"Unit tests of check parameter parsing (PCRE pattern lists, validation,"
 src/hck/zcl_cd_hck_param.clas.xml,abapGit,
 src/hck/zcl_cd_hck_payreq_rules.clas.abap,ABAP,"Known-table rules of the payment engine (USAA reference), pure:"
 src/hck/zcl_cd_hck_payreq_rules.clas.testclasses.abap,ABAP,Pure tests of the known-table rules (USAA payment engine reference):

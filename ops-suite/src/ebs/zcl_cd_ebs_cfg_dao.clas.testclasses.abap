@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A03 / A27: unusable assignments and blocks-posting resolution.
 *& 2026-11-06 | Operating model: NEEDS_POSTING carried from the rule registry.
 *& 2026-11-06 | ltc_cfg_reads: BTC map, accounts, flow patterns, reason map, lookups (coverage gap closure).
+*& 2026-11-06 | Flow pattern seeds are PCRE.
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -262,8 +263,8 @@ CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
         hbkid      TYPE c LENGTH 5 VALUE 'JPMC',
         hktid_1    TYPE c LENGTH 5 VALUE 'ACH01',
         hktid_2    TYPE c LENGTH 5 VALUE 'CHK01',
-        pattern_1  TYPE c LENGTH 30 VALUE 'ACH*',
-        pattern_2  TYPE c LENGTH 30 VALUE '*CHECK*',
+        pattern_1  TYPE c LENGTH 30 VALUE 'ACH.*',
+        pattern_2  TYPE c LENGTH 30 VALUE '.*CHECK.*',
         flow_coll  TYPE c LENGTH 1 VALUE 'C',
         reason_noc TYPE c LENGTH 4 VALUE 'C01',
         reason_ret TYPE c LENGTH 4 VALUE 'R01',

@@ -4,7 +4,8 @@
 *& Health-check suppression rules (design 6.3), pure: an active suppression
 *& (status A, today within valid from / to) of a check turns the matching
 *& findings into information - still listed, not alerted, not scored.
-*& Matching: check ID, object-key pattern (blank = all), company code
+*& Matching: check ID, object-key pattern (PCRE, complete key, case ignored;
+*& blank = all; an invalid pattern is reported, never applied), company code
 *& (blank = all) found in the object key. Long suppressions need a second
 *& user; the creator cannot approve.
 *& Modification log:
@@ -12,6 +13,9 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Key pattern is PCRE matched to the complete object key (case ignored; blank = all). A
+*&              suppression whose pattern is not valid PCRE is not applied and is reported
+*&              (SUPPRESSION_PATTERN_INVALID, W); check_request refuses such a pattern (message 418).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression of known findings</p>
 CLASS zcl_cd_hck_suppression DEFINITION
@@ -46,13 +50,15 @@ CLASS zcl_cd_hck_suppression DEFINITION
       RETURNING
         VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
 
-    "! A request names the check, a reason and a period that does not end before it starts
+    "! A request names the check, a reason and a period that does not end before it starts;
+    "! a key pattern must be valid PCRE
     CLASS-METHODS check_request
       IMPORTING
         iv_check_id        TYPE zif_cd_hck_types=>ty_check_id
         iv_reason          TYPE zif_cd_ops_exc_types=>ty_reason
         iv_from            TYPE d
         iv_to              TYPE d
+        iv_key_pattern     TYPE clike OPTIONAL
       RETURNING
         VALUE(rs_decision) TYPE zif_cd_ops_exc_types=>ty_decision.
 
@@ -73,6 +79,25 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
   METHOD apply.
     rt_findings = it_findings.
     CHECK it_suppressions IS NOT INITIAL.
+    " An active suppression of this check whose key pattern does not compile is reported
+    " once and not applied (the findings stay as they are)
+    LOOP AT it_suppressions ASSIGNING FIELD-SYMBOL(<ls_invalid>)
+         WHERE status = zif_cd_hck_suppress_types=>gc_status-active
+           AND valid_from <= iv_today AND valid_to >= iv_today
+           AND key_pattern IS NOT INITIAL.
+      IF line_exists( it_findings[ group2 = <ls_invalid>-check_id ] )
+         AND zcl_cd_ops_util=>pcre_valid( <ls_invalid>-key_pattern ) = abap_false.
+        INSERT VALUE #( object_key = <ls_invalid>-check_id
+                        group2     = <ls_invalid>-check_id
+                        check_code = zif_cd_hck_types=>gc_code-suppression_invalid
+                        severity   = zif_cd_ops_types=>gc_severity-warning
+                        action     = zif_cd_ops_types=>gc_action-notify
+                        message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-suppression_invalid
+                                                            iv_v1    = <ls_invalid>-check_id
+                                                            iv_v2    = <ls_invalid>-key_pattern ) )
+          INTO TABLE rt_findings.
+      ENDIF.
+    ENDLOOP.
     LOOP AT rt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
          WHERE severity <> zif_cd_ops_types=>gc_severity-info.
       LOOP AT it_suppressions ASSIGNING FIELD-SYMBOL(<ls_suppression>).
@@ -116,6 +141,9 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
       rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-no_reason.
     ELSEIF iv_from IS INITIAL OR iv_to IS INITIAL OR iv_to < iv_from.
       rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-period_invalid.
+    ELSEIF zcl_cd_ops_util=>pcre_valid( iv_key_pattern ) = abap_false.
+      rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-pattern_invalid.
+      rs_decision-v1    = iv_key_pattern.
     ELSE.
       rs_decision-allowed = abap_true.
     ENDIF.
@@ -128,7 +156,9 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
      AND is_suppression-check_id = is_finding-group2
      AND iv_today >= is_suppression-valid_from
      AND iv_today <= is_suppression-valid_to
-     AND ( is_suppression-key_pattern IS INITIAL OR is_finding-object_key CP is_suppression-key_pattern )
+     AND ( is_suppression-key_pattern IS INITIAL
+           OR zcl_cd_ops_util=>pcre_match( iv_value   = is_finding-object_key
+                                           iv_pattern = is_suppression-key_pattern ) = abap_true )
      AND ( is_suppression-bukrs IS INITIAL OR is_finding-object_key CS is_suppression-bukrs ) ).
   ENDMETHOD.
 

@@ -7,6 +7,8 @@
 *& double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-06 | Step job name that is not valid PCRE: PATTERN_INVALID finding, step not evaluated
+*&              (bad_step_pattern_reported).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -59,6 +61,7 @@ CLASS ltc_job_cycle DEFINITION FINAL FOR TESTING
         holiday     TYPE abap_bool,
         step1_done  TYPE abap_bool,
         capped_read TYPE abap_bool,
+        bad_step2   TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_dao TYPE REF TO ltd_dao.
@@ -70,6 +73,7 @@ CLASS ltc_job_cycle DEFINITION FINAL FOR TESTING
     METHODS holiday_is_skipped FOR TESTING.
     METHODS no_cycle_gives_summary FOR TESTING.
     METHODS capped_read_is_reported FOR TESTING.
+    METHODS bad_step_pattern_reported FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -116,7 +120,7 @@ CLASS ltc_job_cycle IMPLEMENTATION.
     ls_step-critical    = abap_true.
     INSERT ls_step INTO TABLE mo_dao->mt_steps.
     ls_step-step_no   = gc_step_2.
-    ls_step-jobname   = gc_job_2.
+    ls_step-jobname   = COND #( WHEN is_flags-bad_step2 = abap_true THEN |{ gc_job_2 }(| ELSE gc_job_2 ).
     ls_step-pred_step = gc_step_1.
     INSERT ls_step INTO TABLE mo_dao->mt_steps.
     mo_dao->mv_working = xsdbool( is_flags-holiday = abap_false ).
@@ -152,6 +156,29 @@ CLASS ltc_job_cycle IMPLEMENTATION.
 
   METHOD metric_value.
     rv_value = VALUE #( is_result-metrics[ metric = iv_metric ]-value OPTIONAL ).
+  ENDMETHOD.
+
+
+  " A step job name that is not valid PCRE is a configuration finding of the step (not MISSED):
+  " the step is not evaluated and counts as not OK
+  METHOD bad_step_pattern_reported.
+    TRY.
+        configure_scenario( VALUE #( step1_done = abap_true bad_step2 = abap_true ) ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-step_status ) exp = 1
+                                            msg = 'Only the valid step is evaluated' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-findings ) exp = 1
+                                            msg = 'One finding for the invalid step' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-findings[ 1 ]-check_code
+                                            exp = zif_cd_hck_types=>gc_code-pattern_invalid
+                                            msg = 'The finding names the invalid pattern, not a missed step' ).
+        cl_abap_unit_assert=>assert_equals( act = metric_value( is_result = ls_result
+                                                                iv_metric = zcl_cd_hck_c_job_cycle=>gc_metric-not_ok )
+                                            exp = 1
+                                            msg = 'The invalid step counts as not OK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

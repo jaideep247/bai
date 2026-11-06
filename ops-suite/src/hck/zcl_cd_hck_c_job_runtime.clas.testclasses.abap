@@ -6,6 +6,7 @@
 *& patterns raise. The DAO is a test double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-06 | PARAM1 job names as PCRE.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -29,7 +30,7 @@ CLASS ltc_job_runtime DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_check     TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_JOB_RUNTIME',
-      gc_patterns  TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_*',
+      gc_patterns  TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_.*',
       gc_job       TYPE zif_cd_hck_types=>ty_jobname VALUE 'ZCD_FPY1_PAYRUN',
       gc_count_1   TYPE zif_cd_hck_types=>ty_jobcount VALUE '00000001',
       gc_count_2   TYPE zif_cd_hck_types=>ty_jobcount VALUE '00000002',

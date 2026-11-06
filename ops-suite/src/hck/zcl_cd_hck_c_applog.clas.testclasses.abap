@@ -6,13 +6,14 @@
 *& parameter. The DAO is a test double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-06 | PARAM1 objects as PCRE; the double keeps the pattern list.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
     DATA mt_stats TYPE zif_cd_hck_types=>tt_applog_stat.
     DATA mv_date TYPE d.
-    DATA mt_objects TYPE zif_cd_hck_types=>tt_object_range.
+    DATA mt_objects TYPE zif_cd_ops_types=>tt_pcre.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -31,7 +32,7 @@ CLASS ltc_applog DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_check     TYPE zif_cd_hck_types=>ty_check_id VALUE 'E_APPLOG',
-      gc_objects   TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_OPS,FKK*',
+      gc_objects   TYPE zif_cd_hck_types=>ty_param VALUE 'ZCD_OPS,FKK.*',
       gc_object    TYPE zif_cd_hck_types=>ty_bal_object VALUE 'ZCD_OPS',
       gc_subobject TYPE zif_cd_hck_types=>ty_bal_subobject VALUE 'EBS',
       gc_today     TYPE d VALUE '20261106',

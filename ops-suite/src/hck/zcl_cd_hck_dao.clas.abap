@@ -23,6 +23,10 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: string templates, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | PCRE patterns: ABAP SQL LIKE_REGEXPR is not used (not parsed by the offline lint; HANA regex
+*&              cannot use an index). Job names: distinct names of the window / open statuses, PCRE filter
+*&              in ABAP, then the runs of the matched names (FOR ALL ENTRIES). BALHDR counters grouped per day, filtered
+*&              in ABAP. Cycle ids filtered in ABAP (customizing rows). Performance_Review.md.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -46,6 +50,21 @@ CLASS zcl_cd_hck_dao DEFINITION
     CONSTANTS gc_hash_package TYPE i VALUE 1000.
     "! Metric points scanned to find the last N distinct runs (A58)
     CONSTANTS gc_max_timestamp TYPE timestampl VALUE '99991231235959.9999999'.
+
+    "! Table read by the PCRE job-name filter (message 747)
+    CONSTANTS gc_table_tbtco TYPE string VALUE `TBTCO`.
+    TYPES tt_jobname TYPE STANDARD TABLE OF zif_cd_hck_types=>ty_jobname WITH EMPTY KEY.
+
+    "! Names that match one of the PCRE patterns; raises message 747 when the name read
+    "! reached GC_MAX_JOB_NAMES (the selection could be incomplete)
+    METHODS matched_jobnames
+      IMPORTING
+        it_names        TYPE tt_jobname
+        it_patterns     TYPE zif_cd_ops_types=>tt_pcre
+      RETURNING
+        VALUE(rt_names) TYPE tt_jobname
+      RAISING
+        zcx_cd_ops_error.
 
     "! Program and variant of the first job step (TBTCP) into the job runs (A42)
     METHODS add_step_program
@@ -386,9 +405,19 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       INNER JOIN zcd_job_step AS s
         ON s~cycle_id = c~cycle_id
       WHERE c~active   = @abap_true
-        AND c~cycle_id IN @it_cycle_ids
       ORDER BY c~cycle_id, s~step_no
       INTO CORRESPONDING FIELDS OF TABLE @rt_steps.
+    " PCRE on the cycle id: applied to the (few) customizing rows in ABAP
+    IF it_cycle_ids IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lt_all) = rt_steps.
+    CLEAR rt_steps.
+    LOOP AT lt_all ASSIGNING FIELD-SYMBOL(<ls_step>).
+      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <ls_step>-cycle_id it_patterns = it_cycle_ids ) = abap_true.
+        INSERT <ls_step> INTO TABLE rt_steps.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -417,38 +446,84 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_job_runs.
+    DATA lt_names TYPE tt_jobname.
     IF it_jobnames IS INITIAL.
       RETURN.
     ENDIF.
+    " PCRE on the job name: distinct names of the window first, matched in ABAP
+    SELECT DISTINCT jobname
+      FROM tbtco
+      WHERE sdlstrtdt BETWEEN @iv_from AND @iv_to
+         OR strtdate  BETWEEN @iv_from AND @iv_to
+      ORDER BY jobname
+      INTO TABLE @lt_names
+      UP TO @zif_cd_hck_types=>gc_max_job_names ROWS.
+    DATA(lt_matched) = matched_jobnames( it_names = lt_names it_patterns = it_jobnames ).
+    IF lt_matched IS INITIAL.
+      RETURN.
+    ENDIF.
+    " FOR ALL ENTRIES: the database interface packages a long name list (no oversized IN list);
+    " order and row cap applied below, as before
     "VERIFY-DDIC: TBTCO-JOBNAME, JOBCOUNT, STATUS, SDLSTRTDT, SDLSTRTTM, STRTDATE, STRTTIME, ENDDATE, ENDTIME
     SELECT jobname, jobcount, status, sdlstrtdt, sdlstrttm, strtdate, strttime, enddate, endtime
       FROM tbtco
-      WHERE jobname IN @it_jobnames
+      FOR ALL ENTRIES IN @lt_matched
+      WHERE jobname = @lt_matched-table_line
         AND ( sdlstrtdt BETWEEN @iv_from AND @iv_to
            OR strtdate  BETWEEN @iv_from AND @iv_to )
-      ORDER BY jobname, jobcount
-      INTO CORRESPONDING FIELDS OF TABLE @rt_runs
-      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+      INTO CORRESPONDING FIELDS OF TABLE @rt_runs.
+    SORT rt_runs BY jobname jobcount.
+    DELETE rt_runs FROM zif_cd_hck_types=>gc_max_job_rows + 1.
     add_step_program( CHANGING ct_runs = rt_runs ).
   ENDMETHOD.
 
 
   METHOD zif_cd_hck_dao~get_unresolved_jobs.
+    DATA lt_names TYPE tt_jobname.
     IF it_jobnames IS INITIAL.
+      RETURN.
+    ENDIF.
+    " PCRE on the job name: distinct names of the open statuses first, matched in ABAP
+    SELECT DISTINCT jobname
+      FROM tbtco
+      WHERE status IN ( @zif_cd_hck_types=>gc_job_status-running,
+                        @zif_cd_hck_types=>gc_job_status-ready,
+                        @zif_cd_hck_types=>gc_job_status-put_activ,
+                        @zif_cd_hck_types=>gc_job_status-released )
+      ORDER BY jobname
+      INTO TABLE @lt_names
+      UP TO @zif_cd_hck_types=>gc_max_job_names ROWS.
+    DATA(lt_matched) = matched_jobnames( it_names = lt_names it_patterns = it_jobnames ).
+    IF lt_matched IS INITIAL.
       RETURN.
     ENDIF.
     "VERIFY-DDIC: TBTCO-STATUS values R running, Y ready, Z active, S released
     SELECT jobname, jobcount, status, sdlstrtdt, sdlstrttm, strtdate, strttime, enddate, endtime
       FROM tbtco
-      WHERE jobname IN @it_jobnames
+      FOR ALL ENTRIES IN @lt_matched
+      WHERE jobname = @lt_matched-table_line
         AND status IN ( @zif_cd_hck_types=>gc_job_status-running,
                         @zif_cd_hck_types=>gc_job_status-ready,
                         @zif_cd_hck_types=>gc_job_status-put_activ,
                         @zif_cd_hck_types=>gc_job_status-released )
-      ORDER BY sdlstrtdt, sdlstrttm, jobname, jobcount
-      INTO CORRESPONDING FIELDS OF TABLE @rt_runs
-      UP TO @zif_cd_hck_types=>gc_max_job_rows ROWS.
+      INTO CORRESPONDING FIELDS OF TABLE @rt_runs.
+    " oldest planned start first, capped (A44)
+    SORT rt_runs BY sdlstrtdt sdlstrttm jobname jobcount.
+    DELETE rt_runs FROM zif_cd_hck_types=>gc_max_job_rows + 1.
     add_step_program( CHANGING ct_runs = rt_runs ).
+  ENDMETHOD.
+
+
+  METHOD matched_jobnames.
+    IF lines( it_names ) >= zif_cd_hck_types=>gc_max_job_names.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e747(zcd_ops) WITH zif_cd_hck_types=>gc_max_job_names gc_table_tbtco.
+    ENDIF.
+    LOOP AT it_names ASSIGNING FIELD-SYMBOL(<lv_name>).
+      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <lv_name> it_patterns = it_patterns ) = abap_true.
+        INSERT <lv_name> INTO TABLE rt_names.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -488,15 +563,25 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       RETURN.
     ENDIF.
     "VERIFY-DDIC: BALHDR-OBJECT, SUBOBJECT, ALDATE, MSG_CNT_AL (all), MSG_CNT_E (error), MSG_CNT_A (abort)
+    " PCRE on object / subobject: counters of the day grouped in SQL (one row per pair),
+    " matched in ABAP
     SELECT object, subobject, COUNT(*) AS log_count,
            SUM( msg_cnt_al ) AS msg_total, SUM( msg_cnt_e ) AS msg_error, SUM( msg_cnt_a ) AS msg_abort
       FROM balhdr
       WHERE aldate    = @iv_date
-        AND object    IN @it_objects
-        AND subobject IN @it_subobjects
       GROUP BY object, subobject
       ORDER BY object, subobject
       INTO CORRESPONDING FIELDS OF TABLE @rt_stat.
+    DATA(lt_all) = rt_stat.
+    CLEAR rt_stat.
+    LOOP AT lt_all ASSIGNING FIELD-SYMBOL(<ls_stat>).
+      IF zcl_cd_ops_util=>pcre_match_any( iv_value = <ls_stat>-object it_patterns = it_objects ) = abap_true
+         AND ( it_subobjects IS INITIAL
+               OR zcl_cd_ops_util=>pcre_match_any( iv_value    = <ls_stat>-subobject
+                                                   it_patterns = it_subobjects ) = abap_true ).
+        INSERT <ls_stat> INTO TABLE rt_stat.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

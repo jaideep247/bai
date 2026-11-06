@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
+*& 2026-11-06 | validateRequest: the key pattern must be valid PCRE (message 418, field KeyPattern).
 *&---------------------------------------------------------------------*
 CLASS lhc_suppression DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -105,19 +106,22 @@ CLASS lhc_suppression IMPLEMENTATION.
 
   METHOD validaterequest.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
-      ENTITY Suppression FIELDS ( CheckId Reason ValidFrom ValidTo ) WITH CORRESPONDING #( keys )
+      ENTITY Suppression FIELDS ( CheckId Reason ValidFrom ValidTo KeyPattern ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
     LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       DATA(ls_decision) = zcl_cd_hck_suppression=>check_request( iv_check_id = <ls_row>-CheckId
                                                                  iv_reason   = <ls_row>-Reason
                                                                  iv_from     = <ls_row>-ValidFrom
-                                                                 iv_to       = <ls_row>-ValidTo ).
+                                                                 iv_to       = <ls_row>-ValidTo
+                                                                 iv_key_pattern = <ls_row>-KeyPattern ).
       IF ls_decision-allowed = abap_false.
         INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-suppression.
         INSERT VALUE #( %tky = <ls_row>-%tky
                         %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
                                             severity = if_abap_behv_message=>severity-error
-                                            v1 = |{ <ls_row>-ValidFrom DATE = ISO }| v2 = |{ <ls_row>-ValidTo DATE = ISO }| ) )
+                                            v1 = COND #( WHEN ls_decision-v1 IS NOT INITIAL THEN ls_decision-v1
+                                                         ELSE |{ <ls_row>-ValidFrom DATE = ISO }| )
+                                            v2 = |{ <ls_row>-ValidTo DATE = ISO }| ) )
           INTO TABLE reported-suppression.
       ENDIF.
     ENDLOOP.

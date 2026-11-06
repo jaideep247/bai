@@ -26,6 +26,7 @@
 *& 2026-11-06 | Payment engine account scope: LTD_CFG returns accounts; LTC_POSTING_STATE lines carry
 *&            | a payment engine XBLNR; LTC_PE_SCOPE - mixed statement skipped and counted, no findings,
 *&            | no reconciliation; all-PE statement validated.
+*& 2026-11-06 | findings_of: prefix test with find( ) instead of a CP wildcard (no CP / NP in the suite).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -2240,7 +2241,8 @@ CLASS ltc_pe_scope IMPLEMENTATION.
 
   METHOD findings_of.
     LOOP AT mo_store->mt_saved ASSIGNING FIELD-SYMBOL(<ls_finding>).
-      IF <ls_finding>-object_key = iv_stmt_key OR <ls_finding>-object_key CP |{ iv_stmt_key }/*|.
+      " statement key itself, or a line key below it (prefix test, no wildcard pattern)
+      IF <ls_finding>-object_key = iv_stmt_key OR find( val = <ls_finding>-object_key sub = |{ iv_stmt_key }/| ) = 0.
         rv_count += 1.
       ENDIF.
     ENDLOOP.

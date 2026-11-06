@@ -9,6 +9,7 @@
 *& 2026-11-06 | Test text_fills_message_vars (texts as ZCD_OPS messages).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | PCRE patterns: whole-value match, case ignored, invalid pattern, literal count.
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -29,6 +30,13 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS bad_decimal_gives_default    FOR TESTING.
     METHODS text_fills_message_vars      FOR TESTING.
     METHODS text_tail_is_not_truncated   FOR TESTING.
+    METHODS pcre_matches_whole_value     FOR TESTING.
+    METHODS pcre_part_of_value_no_match  FOR TESTING.
+    METHODS pcre_ignores_case            FOR TESTING.
+    METHODS pcre_ignores_trailing_blanks FOR TESTING.
+    METHODS pcre_invalid_never_matches   FOR TESTING.
+    METHODS pcre_blank_is_valid          FOR TESTING.
+    METHODS pcre_literals_skip_meta      FOR TESTING.
 ENDCLASS.
 
 
@@ -174,6 +182,84 @@ CLASS ltc_util IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " A pattern describes the complete value: ZCD_PAYM_.* covers every ZCD_PAYM_ job
+  METHOD pcre_matches_whole_value.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = 'ZCD_PAYM_WIRE_01'
+                                                                          iv_pattern = 'ZCD_PAYM_.*' )
+                                        exp = abap_true
+                                        msg = 'The pattern covers the complete job name' ).
+  ENDMETHOD.
+
+
+  " Never a partial find: a pattern that matches only part of the value does not match
+  METHOD pcre_part_of_value_no_match.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = 'XZCD_PAYM_WIRE'
+                                                                          iv_pattern = 'ZCD_PAYM' )
+                                        exp = abap_false
+                                        msg = 'A pattern found inside the value is not a match' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = 'ZCD_PAYM_WIRE'
+                                                                          iv_pattern = 'ZCD_PAYM' )
+                                        exp = abap_false
+                                        msg = 'A pattern matching only the start is not a match' ).
+  ENDMETHOD.
+
+
+  " Case is ignored, as the CP wildcards did before
+  METHOD pcre_ignores_case.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = 'ach_pnc_20261106.txt'
+                                                                          iv_pattern = 'ACH_PNC_[0-9]{8}\.TXT' )
+                                        exp = abap_true
+                                        msg = 'Upper and lower case must match each other' ).
+  ENDMETHOD.
+
+
+  " Trailing blanks of character fields are not part of value or pattern
+  METHOD pcre_ignores_trailing_blanks.
+    DATA lv_value TYPE c LENGTH 32.
+    DATA lv_pattern TYPE c LENGTH 40.
+    lv_value   = 'ZCD_POST_GL'.
+    lv_pattern = 'ZCD_POST_GL'.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = lv_value
+                                                                          iv_pattern = lv_pattern )
+                                        exp = abap_true
+                                        msg = 'Field padding must not prevent the match' ).
+  ENDMETHOD.
+
+
+  " An invalid pattern is reported by pcre_valid and never matches
+  METHOD pcre_invalid_never_matches.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_valid( 'ZCD_(PAYM' )
+                                        exp = abap_false
+                                        msg = 'An unbalanced bracket is not valid PCRE' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value   = 'ZCD_(PAYM'
+                                                                          iv_pattern = 'ZCD_(PAYM' )
+                                        exp = abap_false
+                                        msg = 'An invalid pattern never matches' ).
+  ENDMETHOD.
+
+
+  " Blank keeps its meaning at each call site: valid, and matches only a blank value
+  METHOD pcre_blank_is_valid.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_valid( space )
+                                        exp = abap_true
+                                        msg = 'A blank pattern is valid' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_match( iv_value = 'X' iv_pattern = space )
+                                        exp = abap_false
+                                        msg = 'A blank pattern matches only a blank value' ).
+  ENDMETHOD.
+
+
+  " Specificity: literal characters count, escaped ones too; classes and quantifiers do not
+  METHOD pcre_literals_skip_meta.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_literals( 'ACH_PNC_.*\.TXT' )
+                                        exp = 12
+                                        msg = 'ACH_PNC_ (8) + . (escaped) + TXT (3)' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>pcre_literals( 'A[0-9]{8}\d' )
+                                        exp = 1
+                                        msg = 'Only A is literal' ).
   ENDMETHOD.
 
 ENDCLASS.

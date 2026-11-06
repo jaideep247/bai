@@ -15,6 +15,8 @@
 *& 2026-11-06 | Modern-syntax sweep: NP.
 *& 2026-11-06 | PRISM throttle (user 2026-11-06): throttled files, PRISM queue and position,
 *&              queue allowance in the SLA verdict of the delivery stage and later stages.
+*& 2026-11-06 | Interface name patterns are PCRE matched to the complete file name (case ignored);
+*&              specificity = literal characters of the pattern (ZCL_CD_OPS_UTIL=>PCRE_LITERALS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -25,9 +27,11 @@ CLASS zcl_cd_fmon_rules DEFINITION
   PUBLIC SECTION.
 
     "! Interface of a file. A configured interface (source adapter row) wins.
-    "! Otherwise the active row whose CP name pattern matches and whose
+    "! Otherwise the active row whose name pattern (PCRE, complete file name,
+    "! case ignored; blank = not resolved by name) matches and whose
     "! source / LOB are blank, '*' or equal to the record's values; the most
-    "! specific row wins (pattern characters, then exact source, then LOB).
+    "! specific row wins (literal pattern characters, then exact source, then LOB).
+    "! An invalid pattern never matches; the engine reports it (PATTERN_INVALID).
     "! Blank/'*' rows are therefore defaults: a new source or LOB needs no code.
     CLASS-METHODS resolve_iface
       IMPORTING
@@ -289,22 +293,22 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lv_name) = to_upper( condense( CONV string( iv_file_name ) ) ).
+    DATA(lv_name) = condense( CONV string( iv_file_name ) ).
     IF lv_name IS INITIAL.
       RETURN.
     ENDIF.
 
     LOOP AT it_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true.
-      DATA(lv_pattern) = to_upper( condense( CONV string( <ls_iface>-name_pattern ) ) ).
-      IF lv_pattern IS INITIAL OR lv_name NP lv_pattern.
+      DATA(lv_pattern) = condense( CONV string( <ls_iface>-name_pattern ) ).
+      IF lv_pattern IS INITIAL
+         OR zcl_cd_ops_util=>pcre_match( iv_value = lv_name iv_pattern = lv_pattern ) = abap_false.
         CONTINUE.
       ENDIF.
       IF dimension_matches( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_false
          OR dimension_matches( iv_configured = <ls_iface>-lob iv_actual = iv_lob ) = abap_false.
         CONTINUE.
       ENDIF.
-      DATA(lv_score) = ( strlen( lv_pattern ) - count( val = lv_pattern sub = `*` )
-                                              - count( val = lv_pattern sub = `+` ) ) * 4.
+      DATA(lv_score) = zcl_cd_ops_util=>pcre_literals( lv_pattern ) * 4.
       IF is_specific( iv_configured = <ls_iface>-source_sys iv_actual = iv_source ) = abap_true.
         lv_score += 2.
       ENDIF.

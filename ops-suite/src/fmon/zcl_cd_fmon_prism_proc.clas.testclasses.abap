@@ -11,6 +11,7 @@
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-06 | PRISM throttle: the unit applies the same queue allowance as the batch run
 *&              (ACH queue, positive pay not counted, throttle 0, PRISM_QUEUE_LONG).
+*& 2026-11-06 | Interface name pattern seeds are PCRE.
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -359,7 +360,7 @@ CLASS ltc_proc IMPLEMENTATION.
     ls_iface-file_type    = zif_cd_fmon_types=>gc_file_type-payment.
     ls_iface-source_sys   = zif_cd_fmon_types=>gc_wildcard.
     ls_iface-lob          = zif_cd_fmon_types=>gc_wildcard.
-    ls_iface-name_pattern = 'ACH_PNC_*'.
+    ls_iface-name_pattern = 'ACH_PNC_.*'.
     ls_iface-ack_expected = abap_true.
     ls_iface-active       = abap_true.
     INSERT ls_iface INTO TABLE mo_dao->mt_ifaces.
@@ -454,7 +455,7 @@ CLASS ltc_proc IMPLEMENTATION.
     ls_iface-iface_id     = gc_queue-pospay_iface.
     ls_iface-file_type    = zif_cd_fmon_types=>gc_file_type-pospay.
     ls_iface-pay_method   = gc_queue-check.
-    ls_iface-name_pattern = 'POSPAY_*'.
+    ls_iface-name_pattern = 'POSPAY_.*'.
     INSERT ls_iface INTO TABLE mo_dao->mt_ifaces.
 
     ls_sla-iface_id    = gc_test-iface.

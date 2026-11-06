@@ -8,10 +8,13 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Capped job read reported (audit A44).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PCRE patterns: PARAM2 cycle ids and step job names are PCRE (complete value, case ignored);
+*&              a step job name that is not valid PCRE is a PATTERN_INVALID finding (step not evaluated, counted
+*&              not OK); an invalid PARAM2 pattern raises E373.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - job cycle monitor (ZCD_JOB_CYCLE/STEP)</p>
 "! PARAM1 = cycle date offset in days (default 0 = report date),
-"! PARAM2 = cycle ids (blank = all active cycles). Non-working days of the
+"! PARAM2 = cycle id PCRE patterns (blank = all active cycles). Non-working days of the
 "! cycle's factory calendar are skipped. Step rules: ZCL_CD_HCK_CYCLE_EVAL.
 "! Metrics per cycle (DIM1): STEPS_NOT_OK (failed, missed, stuck),
 "! STEPS_COMPLETED. Restart / retrigger is a later phase.
@@ -36,7 +39,8 @@ ENDCLASS.
 CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
 
   METHOD zif_cd_hck_check~execute.
-    DATA lt_patterns TYPE zif_cd_hck_types=>tt_jobname_range.
+    DATA lt_patterns TYPE zif_cd_ops_types=>tt_pcre.
+    DATA lt_invalid TYPE SORTED TABLE OF zif_cd_hck_types=>ty_jobname WITH UNIQUE KEY table_line.
     DATA lv_max_offset TYPE i.
     DATA lv_not_ok TYPE i.
     DATA lv_completed TYPE i.
@@ -44,19 +48,25 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
 
     DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
     DATA(lv_cycle_date) = CONV d( is_context-report_date - zcl_cd_hck_param=>int( iv_value = is_def-param1 iv_default = 0 ) ).
-    DATA(lt_steps) = lo_dao->get_cycle_steps(
-      CORRESPONDING zif_cd_hck_types=>tt_cycle_range( zcl_cd_hck_param=>pattern_range( is_def-param2 ) ) ).
+    DATA(lt_cycles) = zcl_cd_hck_param=>patterns( is_def-param2 ).
+    zcl_cd_hck_param=>check_patterns( it_patterns = lt_cycles iv_check_id = is_def-check_id ).
+    DATA(lt_steps) = lo_dao->get_cycle_steps( lt_cycles ).
     IF lt_steps IS INITIAL.
       rs_result-summary = zcl_cd_ops_util=>text( zif_cd_hck_types=>gc_msg-no_job_cycle ).
       RETURN.
     ENDIF.
 
     LOOP AT lt_steps INTO DATA(ls_step).
-      INSERT VALUE #( sign = 'I' option = 'CP' low = ls_step-jobname ) INTO TABLE lt_patterns.
+      " An invalid job-name pattern is reported per step below, never read as 'no job'
+      IF zcl_cd_ops_util=>pcre_valid( ls_step-jobname ) = abap_false.
+        INSERT ls_step-jobname INTO TABLE lt_invalid.
+        CONTINUE.
+      ENDIF.
+      INSERT CONV string( ls_step-jobname ) INTO TABLE lt_patterns.
       lv_max_offset = nmax( val1 = lv_max_offset val2 = ls_step-day_offset ).
     ENDLOOP.
-    SORT lt_patterns BY low.
-    DELETE ADJACENT DUPLICATES FROM lt_patterns COMPARING low.
+    SORT lt_patterns BY table_line.
+    DELETE ADJACENT DUPLICATES FROM lt_patterns COMPARING table_line.
     DATA(lt_runs) = lo_dao->get_job_runs( it_jobnames = lt_patterns
                                           iv_from     = lv_cycle_date
                                           iv_to       = CONV d( lv_cycle_date + lv_max_offset ) ).
@@ -80,6 +90,19 @@ CLASS zcl_cd_hck_c_job_cycle IMPLEMENTATION.
       ENDIF.
       CLEAR: lv_not_ok, lv_completed.
       LOOP AT GROUP lt_cycle_group ASSIGNING FIELD-SYMBOL(<ls_cycle_step>).
+        IF line_exists( lt_invalid[ table_line = <ls_cycle_step>-jobname ] ).
+          INSERT VALUE #( object_key = |{ <ls_cycle_step>-cycle_id }/{ <ls_cycle_step>-step_no }|
+                          check_code = zif_cd_hck_types=>gc_code-pattern_invalid
+                          severity   = zif_cd_ops_types=>gc_severity-error
+                          action     = zif_cd_ops_types=>gc_action-exception
+                          message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-step_pattern_invalid
+                                                              iv_v1    = <ls_cycle_step>-cycle_id
+                                                              iv_v2    = <ls_cycle_step>-step_no
+                                                              iv_v3    = <ls_cycle_step>-jobname ) )
+            INTO TABLE rs_result-findings.
+          lv_not_ok = lv_not_ok + 1.
+          CONTINUE.
+        ENDIF.
         CLEAR lv_pred_state.
         IF <ls_cycle_step>-pred_step IS NOT INITIAL.
           READ TABLE rs_result-step_status INTO DATA(ls_pred)

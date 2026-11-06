@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | retry_success_supersedes, other_variant_not_matched, late_success_is_flagged (audit A42).
+*& 2026-11-06 | Step job name as PCRE.
 *&---------------------------------------------------------------------*
 CLASS ltc_cycle_eval DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -15,7 +16,7 @@ CLASS ltc_cycle_eval DEFINITION FINAL FOR TESTING
     CONSTANTS:
       gc_cycle      TYPE zif_cd_hck_types=>ty_cycle_id VALUE 'DISB_DAY',
       gc_step       TYPE zif_cd_hck_types=>ty_step_no VALUE '020',
-      gc_pattern    TYPE zif_cd_hck_types=>ty_jobname VALUE 'ZCD_PAYM_WIRE*',
+      gc_pattern    TYPE zif_cd_hck_types=>ty_jobname VALUE 'ZCD_PAYM_WIRE.*',
       gc_job        TYPE zif_cd_hck_types=>ty_jobname VALUE 'ZCD_PAYM_WIRE_CORP',
       gc_jobcount   TYPE zif_cd_hck_types=>ty_jobcount VALUE '13300001',
       gc_cycle_date TYPE d VALUE '20261105',

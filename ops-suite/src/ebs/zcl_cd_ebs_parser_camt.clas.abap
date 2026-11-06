@@ -11,6 +11,7 @@
 *& 2026-11-06 | Audit A92-A94: CAMT document gate, booked entries only, details reconciled to their entry; invalid amount / count block.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, CASE.
+*& 2026-11-06 | Receiver path pattern is PCRE matched to the complete path (case ignored).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - camt.053/054 bank statement parser</p>
 "! Namespace-agnostic (local names only, any camt.053.001.0x / 054.001.0x).
@@ -143,7 +144,8 @@ CLASS zcl_cd_ebs_parser_camt DEFINITION
         cre_dt_tm       TYPE string VALUE `CreDtTm`,
         ctrl_sum        TYPE string VALUE `CtrlSum`,
         rcpt_name       TYPE string VALUE `MsgRcpt/Nm`,
-        rcpt_id_pattern TYPE string VALUE `MsgRcpt/Id/*`,
+        "! PCRE, complete path, case ignored: any element below MsgRcpt/Id
+        rcpt_id_pattern TYPE string VALUE `MsgRcpt/Id/.*`,
         id              TYPE string VALUE `Id`,
         elctrnc_seq_nb  TYPE string VALUE `ElctrncSeqNb`,
         lgl_seq_nb      TYPE string VALUE `LglSeqNb`,
@@ -795,7 +797,8 @@ CLASS zcl_cd_ebs_parser_camt IMPLEMENTATION.
         ENDIF.
       WHEN OTHERS.
         " MsgRcpt/Id/...: the first identifier wins over the name
-        IF iv_path CP gc_path-rcpt_id_pattern AND mv_receiver_by_id = abap_false.
+        IF zcl_cd_ops_util=>pcre_match( iv_value = iv_path iv_pattern = gc_path-rcpt_id_pattern ) = abap_true
+           AND mv_receiver_by_id = abap_false.
           ms_file-receiver_id = iv_value.
           mv_receiver_by_id = abap_true.
         ENDIF.

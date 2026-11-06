@@ -11,6 +11,8 @@
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
 *& 2026-11-06 | Audit A25: imported statement gets its account number from ZCD_EBS_ACCT.
 *& 2026-11-06 | Audit A98: blank and * map rows - conflict blocks, identical rows are one.
+*& 2026-11-06 | PCRE flow patterns: whole-value match, partial pattern is no match, invalid pattern blocks,
+*&              BAI issuer in any case.
 *&---------------------------------------------------------------------*
 CLASS ltc_resolver DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -77,6 +79,9 @@ CLASS ltc_resolver DEFINITION FINAL FOR TESTING
     METHODS camt_bai_prtry_reuses_bai    FOR TESTING.
     METHODS bai_fallback_can_be_disabled FOR TESTING.
     METHODS xblnr_pattern_beats_account  FOR TESTING.
+    METHODS xblnr_part_is_no_flow_match  FOR TESTING.
+    METHODS invalid_flow_pattern_blocks  FOR TESTING.
+    METHODS bai_issuer_in_any_case       FOR TESTING.
     METHODS account_flow_is_default      FOR TESTING.
     METHODS block_action_blocks_noc_line FOR TESTING.
     METHODS group_defaults_to_category   FOR TESTING.
@@ -333,7 +338,7 @@ CLASS ltc_resolver IMPLEMENTATION.
     DATA ls_pattern TYPE zif_cd_ebs_types=>ty_flow_pattern.
     TRY.
         ls_pattern-priority  = 10.
-        ls_pattern-pattern   = '*COLL*'.
+        ls_pattern-pattern   = '.*COLL.*'.
         ls_pattern-flow_type = zif_cd_ebs_types=>gc_flow-collection.
         INSERT ls_pattern INTO TABLE mt_patterns.
         add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
@@ -345,6 +350,78 @@ CLASS ltc_resolver IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = first_line( )-flow_type
                                             exp = zif_cd_ebs_types=>gc_flow-collection
                                             msg = 'XBLNR pattern must decide the flow before the account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " PCRE is matched to the complete XBLNR: a pattern for part of it is no match
+  METHOD xblnr_part_is_no_flow_match.
+    DATA ls_pattern TYPE zif_cd_ebs_types=>ty_flow_pattern.
+    TRY.
+        ls_pattern-priority  = 10.
+        ls_pattern-pattern   = 'COLL'.
+        ls_pattern-flow_type = zif_cd_ebs_types=>gc_flow-collection.
+        INSERT ls_pattern INTO TABLE mt_patterns.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        add_line( iv_code = gc_test-code_168 iv_xblnr = 'JPMC-COLL-0001' ).
+
+        run_resolver( ).
+
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-flow_type
+                                            exp = zif_cd_ebs_types=>gc_flow-disbursement
+                                            msg = 'A pattern found inside XBLNR must not decide the flow' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " An invalid pattern reached before a match leaves the flow unknown: the line is blocked
+  " with a configuration finding, never treated as 'no match'
+  METHOD invalid_flow_pattern_blocks.
+    DATA ls_pattern TYPE zif_cd_ebs_types=>ty_flow_pattern.
+    TRY.
+        ls_pattern-priority  = 10.
+        ls_pattern-pattern   = '.*(COLL.*'.
+        ls_pattern-flow_type = zif_cd_ebs_types=>gc_flow-collection.
+        INSERT ls_pattern INTO TABLE mt_patterns.
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = gc_test-code_168
+                     iv_category = gc_test-cat_d02 ).
+        add_line( iv_code = gc_test-code_168 iv_xblnr = 'JPMC-COLL-0001' ).
+
+        run_resolver( ).
+
+        cl_abap_unit_assert=>assert_true( act = first_line( )-blocked
+                                          msg = 'The line must be blocked' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mt_findings ) exp = 1
+                                            msg = 'One configuration finding expected' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-check_code
+                                            exp = zif_cd_ebs_types=>gc_check_code-flow_pattern_invalid
+                                            msg = 'The finding names the invalid flow pattern' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-action
+                                            exp = zif_cd_ops_types=>gc_action-block
+                                            msg = 'Fail closed: the line is not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The BAI issuer is recognised in any case (case ignored as with the CP wildcard before)
+  METHOD bai_issuer_in_any_case.
+    TRY.
+        add_line( iv_scheme = zif_cd_ebs_types=>gc_scheme-iso iv_code = 'PMNT-XXXX-YYYY'
+                  iv_prtry = 'X168' iv_issuer = 'us bai2' ).
+        add_map_row( iv_scheme = zif_cd_ebs_types=>gc_scheme-bai2 iv_code = 'X168'
+                     iv_category = gc_test-cat_d02 ).
+
+        run_resolver( ).
+
+        cl_abap_unit_assert=>assert_equals( act = first_line( )-category exp = gc_test-cat_d02
+                                            msg = 'Issuer naming BAI in lower case must use the BAI2 rows' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

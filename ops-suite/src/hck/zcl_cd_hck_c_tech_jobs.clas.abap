@@ -10,6 +10,7 @@
 *& 2026-11-06 | Unresolved jobs read regardless of the window; capped read reported (audit A44).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PARAM1 job names are PCRE (complete name, case ignored); an invalid pattern raises E373.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -41,11 +42,12 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
     DATA lv_long TYPE i.
     DATA lv_late TYPE i.
 
-    DATA(lt_patterns) = CORRESPONDING zif_cd_hck_types=>tt_jobname_range( zcl_cd_hck_param=>pattern_range( is_def-param1 ) ).
+    DATA(lt_patterns) = zcl_cd_hck_param=>patterns( is_def-param1 ).
     IF lt_patterns IS INITIAL.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e345(zcd_ops) WITH is_def-check_id.
     ENDIF.
+    zcl_cd_hck_param=>check_patterns( it_patterns = lt_patterns iv_check_id = is_def-check_id ).
     DATA(lv_long_min)  = zcl_cd_hck_param=>int( iv_value = is_def-param2 iv_default = 120 ).
     DATA(lv_grace_min) = zcl_cd_hck_param=>int( iv_value = is_def-param3 iv_default = 30 ).
 

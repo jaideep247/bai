@@ -15,6 +15,8 @@
 *& 2026-11-06 | Message handed to the channel carries intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-06 | A rule with a pattern that is not valid PCRE is logged FAILED (message 742) and not applied -
+*&              visible in the alert log and the HCK alert health check, never a silent no-match.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -98,6 +100,19 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     IF lt_rules IS INITIAL.
       RETURN.
     ENDIF.
+    " PCRE patterns: a rule whose pattern does not compile is a configuration error -
+    " logged as a failed alert of the rule and not applied
+    LOOP AT lt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>).
+      DATA(lv_invalid) = mo_policy->invalid_pattern( <ls_rule> ).
+      IF lv_invalid IS NOT INITIAL.
+        add_log( iv_rule_id = <ls_rule>-rule_id iv_channel = <ls_rule>-channel is_run = is_run
+                 iv_status  = zif_cd_ops_types=>gc_alert_status-failed
+                 iv_error   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_pattern_invalid
+                                                     iv_v1    = <ls_rule>-rule_id
+                                                     iv_v2    = lv_invalid ) ).
+        DELETE lt_rules.
+      ENDIF.
+    ENDLOOP.
     DATA(lt_channels) = lo_dao->get_channels( ).
     mt_repeat = lo_dao->get_repeat_keys( is_run-run_id ).
     DATA(lt_selection) = mo_policy->select( it_rules    = lt_rules

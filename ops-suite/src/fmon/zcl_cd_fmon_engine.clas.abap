@@ -27,6 +27,8 @@
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PRISM throttle (user 2026-11-06): throttle settings and PRISM queue in the check
 *&              context for the batch run and run_event alike (same rule, no copy).
+*& 2026-11-06 | Configuration load: an interface name pattern that is not valid PCRE is a PATTERN_INVALID
+*&              finding (never a silent no-match).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -493,6 +495,17 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD load_config.
     mt_ifaces  = mo_dao->get_ifaces( ).
+    " PCRE name patterns: an invalid one would silently resolve no file - reported instead
+    LOOP AT mt_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WHERE active = abap_true AND name_pattern IS NOT INITIAL.
+      IF zcl_cd_ops_util=>pcre_valid( <ls_iface>-name_pattern ) = abap_false.
+        engine_finding( iv_code     = zif_cd_fmon_types=>gc_check_code-pattern_invalid
+                        iv_key      = zif_cd_fmon_types=>gc_engine_key-iface && <ls_iface>-iface_id
+                        iv_iface_id = <ls_iface>-iface_id
+                        iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-pattern_invalid
+                                                             iv_v1    = <ls_iface>-iface_id
+                                                             iv_v2    = <ls_iface>-name_pattern ) ).
+      ENDIF.
+    ENDLOOP.
     mt_slas    = mo_dao->get_slas( ).
     mt_cals    = mo_dao->get_calendars( ).
     mt_srcs    = mo_dao->get_sources( ).

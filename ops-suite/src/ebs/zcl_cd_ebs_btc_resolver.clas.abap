@@ -14,6 +14,8 @@
 *& 2026-11-06 | Audit A85: map action carried onto the line for the posting disposition.
 *& 2026-11-06 | Audit A98: blank and * map rows that contradict each other are MAP_CONFLICT (BLOCK), not first-row-wins.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | Flow patterns and the BAI issuer are PCRE matched to the complete value (case ignored);
+*&              an invalid flow pattern reached before a match blocks the line (FLOW_PATTERN_INVALID).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -23,7 +25,8 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
 
   PUBLIC SECTION.
     CONSTANTS gc_rule_unmapped TYPE zif_cd_ops_types=>ty_rule_id VALUE 'R14'.
-    CONSTANTS gc_issuer_bai TYPE zif_cd_ebs_types=>ty_text35 VALUE '*BAI*'.
+    "! PCRE, complete issuer, case ignored: the issuer names BAI anywhere
+    CONSTANTS gc_issuer_bai TYPE zif_cd_ebs_types=>ty_text35 VALUE '.*BAI.*'.
 
     "! @parameter iv_bai_fallback | CAMT proprietary BAI type codes reuse BAI2 map rows
     METHODS constructor
@@ -62,11 +65,23 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
         flow_type TYPE zif_cd_ebs_types=>ty_flow,
       END OF ty_map_key.
     TYPES tt_map_key TYPE HASHED TABLE OF ty_map_key WITH UNIQUE KEY table_line.
+    TYPES ty_pattern TYPE zif_cd_ebs_types=>ty_flow_pattern-pattern.
+    TYPES tt_pattern TYPE HASHED TABLE OF ty_pattern WITH UNIQUE KEY table_line.
+
+    "! Derived flow, or the first invalid pattern reached before a match
+    TYPES:
+      BEGIN OF ty_derived,
+        flow     TYPE zif_cd_ebs_types=>ty_flow,
+        invalid  TYPE ty_pattern,
+        priority TYPE i,
+      END OF ty_derived.
 
     DATA mt_map          TYPE tt_map_hash.
     "! A98: normalised keys whose rows contradict each other - invalid customizing
     DATA mt_conflicts    TYPE tt_map_key.
     DATA mt_patterns     TYPE zif_cd_ebs_types=>tt_flow_pattern.
+    "! Flow patterns that do not compile as PCRE (configuration error, never 'no match')
+    DATA mt_invalid      TYPE tt_pattern.
     DATA mt_accounts     TYPE zif_cd_ebs_types=>tt_account_cfg.
     DATA mv_bai_fallback TYPE abap_bool.
 
@@ -78,10 +93,10 @@ CLASS zcl_cd_ebs_btc_resolver DEFINITION
 
     METHODS derive_flow
       IMPORTING
-        is_line        TYPE zif_cd_ebs_types=>ty_line
-        is_statement   TYPE zif_cd_ebs_types=>ty_statement
+        is_line           TYPE zif_cd_ebs_types=>ty_line
+        is_statement      TYPE zif_cd_ebs_types=>ty_statement
       RETURNING
-        VALUE(rv_flow) TYPE zif_cd_ebs_types=>ty_flow.
+        VALUE(rs_derived) TYPE ty_derived.
 
     "! Bank row before blank-bank row; flow row before '*' row
     METHODS lookup
@@ -135,6 +150,11 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
     ENDLOOP.
     mt_patterns = it_patterns.
     SORT mt_patterns BY priority pattern.
+    LOOP AT mt_patterns ASSIGNING FIELD-SYMBOL(<ls_pattern>).
+      IF zcl_cd_ops_util=>pcre_valid( <ls_pattern>-pattern ) = abap_false.
+        INSERT <ls_pattern>-pattern INTO TABLE mt_invalid.
+      ENDIF.
+    ENDLOOP.
     mt_accounts     = it_accounts.
     mv_bai_fallback = iv_bai_fallback.
   ENDMETHOD.
@@ -170,7 +190,23 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
     LOOP AT ct_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
       DATA(ls_statement) = VALUE #( lt_statements[ stmt_key = <ls_line>-stmt_key ] OPTIONAL ).
       IF <ls_line>-flow_type IS INITIAL.
-        <ls_line>-flow_type = derive_flow( is_line = <ls_line> is_statement = ls_statement ).
+        DATA(ls_derived) = derive_flow( is_line = <ls_line> is_statement = ls_statement ).
+        " An invalid pattern before a match leaves the flow unknown: blocked, never guessed
+        IF ls_derived-invalid IS NOT INITIAL.
+          <ls_line>-blocked = abap_true.
+          INSERT zcl_cd_ebs_finding=>for_line(
+                   is_line       = <ls_line>
+                   iv_rule_id    = gc_rule_unmapped
+                   iv_check_code = zif_cd_ebs_types=>gc_check_code-flow_pattern_invalid
+                   iv_severity   = zif_cd_ops_types=>gc_severity-block
+                   iv_action     = zif_cd_ops_types=>gc_action-block
+                   iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-flow_pattern_invalid
+                                                          iv_v1    = ls_derived-invalid
+                                                          iv_v2    = ls_derived-priority ) )
+            INTO TABLE rt_findings.
+          CONTINUE.
+        ENDIF.
+        <ls_line>-flow_type = ls_derived-flow.
       ENDIF.
 
       DATA(ls_map) = find_mapping( is_line = <ls_line> iv_bank_key = ls_statement-bank_key ).
@@ -254,13 +290,18 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
   METHOD derive_flow.
     IF is_line-xblnr IS NOT INITIAL.
       LOOP AT mt_patterns ASSIGNING FIELD-SYMBOL(<ls_pattern>).
-        IF is_line-xblnr CP <ls_pattern>-pattern.
-          rv_flow = <ls_pattern>-flow_type.
+        IF line_exists( mt_invalid[ table_line = <ls_pattern>-pattern ] ).
+          rs_derived-invalid  = <ls_pattern>-pattern.
+          rs_derived-priority = <ls_pattern>-priority.
+          RETURN.
+        ENDIF.
+        IF zcl_cd_ops_util=>pcre_match( iv_value = is_line-xblnr iv_pattern = <ls_pattern>-pattern ) = abap_true.
+          rs_derived-flow = <ls_pattern>-flow_type.
           RETURN.
         ENDIF.
       ENDLOOP.
     ENDIF.
-    rv_flow = is_statement-flow_default.
+    rs_derived-flow = is_statement-flow_default.
   ENDMETHOD.
 
 
@@ -317,7 +358,7 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
 
   METHOD is_bai_code.
     " US banks deliver BAI type codes in CAMT BkTxCd/Prtry with issuer BAI
-    rv_bai = xsdbool( is_line-prtry_issuer CP gc_issuer_bai
+    rv_bai = xsdbool( zcl_cd_ops_util=>pcre_match( iv_value = is_line-prtry_issuer iv_pattern = gc_issuer_bai ) = abap_true
                       OR ( strlen( condense( is_line-prtry_code ) ) = 3
                            AND is_line-prtry_code CO gc_digits_or_blank ) ).
   ENDMETHOD.

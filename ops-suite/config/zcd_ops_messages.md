@@ -213,6 +213,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 268 | Event &1: instant processing could not be queued (bgPF) |
 | 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
 | 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
+| 271 | Interface &1: file name pattern &2 is not valid PCRE - not used |
 | 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
 | 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
@@ -284,6 +285,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 368 | Export file &1 could not be written completely - no partial file kept |
 | 369 | Check &1 stopped after &2 of &3 item(s): time budget of &4 s used |
 | 370 | &1 &2: baseline warm-up, &3 of &4 history run(s) - no verdict yet |
+| 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
+| 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
+| 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
 | 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
@@ -300,6 +304,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 415 | Amber &1 and red &2 are in the wrong order for &3 |
 | 416 | Rule group &1 has no active rule in ZCD_BTC_RULE |
 | 417 | &1 must be greater than zero |
+| 418 | &1 is not a valid PCRE pattern (matched to the whole value, any case) |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
@@ -347,6 +352,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 544 | &1 reason &2 of payment &3 is not a configured payment engine reason |
 | 545 | Payment &1: &2 lot items with different reasons (&3) |
 | 546 | &1 statements out of scope (lines not all payment engine accounts) |
+| 547 | Flow pattern &1 (priority &2) is not valid PCRE - line blocked |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
@@ -386,3 +392,9 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 739 | Clearing &1: returns lot items with different return reasons (&2) |
 | 740 | NOC lot &1 item &2: NOC reason &3 (INFOF &4) |
 | 741 | No NOC lot item for clearing &1 or payment reference &2 |
+| 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
+| 743 | Pattern &1 is not valid PCRE |
+| 744 | Converted pattern &1 is longer than &2 (&3 characters) - not written |
+| 745 | Pattern migration: &1 converted, &2 refused, &3 unchanged; test mode &4 |
+| 746 | &1 value(s) read, &2 matched by no pattern, &3 pattern(s) match nothing |
+| 747 | Row cap &1 reached reading the values of &2 - list may be incomplete |

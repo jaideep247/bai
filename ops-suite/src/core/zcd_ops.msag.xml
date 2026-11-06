@@ -1253,6 +1253,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>271</MSGNR>
+     <TEXT>Interface &amp;1: file name pattern &amp;2 is not valid PCRE - not used</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
     </T100>
@@ -1679,6 +1685,24 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>371</MSGNR>
+     <TEXT>Job step &amp;1/&amp;2: job name pattern &amp;3 is not valid PCRE - not evaluated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>372</MSGNR>
+     <TEXT>Suppression for &amp;1: key pattern &amp;2 is not valid PCRE - not applied</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>373</MSGNR>
+     <TEXT>Check &amp;1: pattern &amp;2 in the parameters is not valid PCRE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>401</MSGNR>
      <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
     </T100>
@@ -1771,6 +1795,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>417</MSGNR>
      <TEXT>&amp;1 must be greater than zero</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>418</MSGNR>
+     <TEXT>&amp;1 is not a valid PCRE pattern (matched to the whole value, any case)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2057,6 +2087,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>547</MSGNR>
+     <TEXT>Flow pattern &amp;1 (priority &amp;2) is not valid PCRE - line blocked</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>
@@ -2287,6 +2323,42 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>741</MSGNR>
      <TEXT>No NOC lot item for clearing &amp;1 or payment reference &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>742</MSGNR>
+     <TEXT>Alert rule &amp;1: pattern &amp;2 is not valid PCRE - rule not applied</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>743</MSGNR>
+     <TEXT>Pattern &amp;1 is not valid PCRE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>744</MSGNR>
+     <TEXT>Converted pattern &amp;1 is longer than &amp;2 (&amp;3 characters) - not written</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>745</MSGNR>
+     <TEXT>Pattern migration: &amp;1 converted, &amp;2 refused, &amp;3 unchanged; test mode &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>746</MSGNR>
+     <TEXT>&amp;1 value(s) read, &amp;2 matched by no pattern, &amp;3 pattern(s) match nothing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>747</MSGNR>
+     <TEXT>Row cap &amp;1 reached reading the values of &amp;2 - list may be incomplete</TEXT>
     </T100>
    </T100>
   </asx:values>
