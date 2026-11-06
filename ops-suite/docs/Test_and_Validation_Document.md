@@ -41,7 +41,7 @@ Two real inputs instead of the population: one configured case (positive) and an
 
 | Item | Value |
 |---|---|
-| House bank accounts | One disbursement (JPMC), one collection (BOA) in `ZCD_EBS_ACCT` |
+| House bank accounts | One disbursement (JPMC), one collection (BOA) in `ZCD_EBS_ACCT`, each with ACCOUNT_NO = its 10-character payment engine account from FEBEP-XBLNR, plus one inactive row |
 | Statements | One BAI2 file per bank (`config/samples/bai2_sample.txt` as layout reference), one CAMT.053 and one CAMT.054 returns file |
 | Customizing | `config/*.csv`, `config/*_seed.md` loaded per `Implementation_Order.md` step 3 |
 | Kill switch | TVARVC `ZCD_EBS_VALIDATION_MODE` = M unless a case says otherwise |
@@ -51,11 +51,11 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-878 methods in the package test includes (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+902 methods in the package test includes (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 878 / 878 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 902 / 902 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -80,6 +80,8 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-13 | Circuit breaker (A104): **FEB source** (`P_FEB`) over ≥ 3 imported statements, each a controlled package, every package > 50 % of its lines unmapped (the statements were imported, posted and cleared before the run — post-posting detective control) | `P_PACK` = 1 (one statement per package); `EBS_CB_MIN_LINES` = 1, `EBS_CB_FAIL_PCT` = 50, `EBS_CB_PACKAGES` = 3; ≥ 3 test statements selected by `S_KUKEY` / date range | Package 3 trips the breaker: run status A (aborted), one CIRCUIT_BREAKER finding (rule CB, E), no further package read, alert per the ON_ABORT rule; with only 2 bad packages followed by a good one: no breaker (counter resets) | pending |
 | EBS-13a | Oversized or invalid single file through the **file source** (`P_FILE`) — one file is always one package, so the breaker cannot trip | (a) file not UTF-8; (b) BAI2 file cut off before the 98/99 trailers; (c) production-size file (largest observed day, `<line count, VERIFY with operations>`) | (a) read rejected, message 012, no run results (A69); (b) structural findings S00 / S06 TRAILER missing (B), lines not reported as validated (A86/A95); (c) one package, run completes or fails visibly; record runtime and memory — no size limit exists in code (`VERIFY` in QA1 whether one is needed) | pending |
 | EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN / ZCD_OPS_FINDING / ZCD_OPS_ALLOG unchanged | pending |
+| EBS-16 | Payment engine account scope (user decision 2026-11-06), FEB source: statement A whose lines all carry XBLNRs of the active account (e.g. `JPMC8XX1174412334`, `…335`); statement B with one line of another account; statement C with a line whose XBLNR is blank; statement D of an inactive account; earlier open exception on statement B | ZCD_EBS_ACCT: account active, second account inactive | A validated as before; B, C, D: no rule, no finding (no S04, no R14), not counted as entries, not on the dashboard; run message "3 statements out of scope (lines not all payment engine accounts)"; B's earlier exception stays open; activate D's account and re-run → D validated and shown | pending |
+| EBS-17 | XBLNR derivation on production samples (SE16 FEBEP, one statement per bank JPMC / BOA / PNC) | — | Letters removed + first 10 characters = the account Treasury lists for that house bank account (`ZCL_CD_EBS_PE_SCOPE=>PE_ACCOUNT_FROM_XBLNR` and dashboard `PeAccount` agree) | pending |
 | EBS-15 | POSTING_INCOMPLETE (operating model 2026-11-06): import a statement with a 466 (BAI466D, R19) and a 275 sweep line; run `ZCD_EBS_VALIDATE` (FEB source) **before** FEBP; then run FEBP and the clearing job and re-run the same variant | SE11 check of FEBEP-VB1OK / VB2OK done; `EBS_FEB_POSTED_FIELDS` default; seed S13 / NEEDS_POSTING | Run 1: one POSTING_INCOMPLETE (S13, W) on the statement counting the 466 line only (the 275 NOT_POSTED line is not counted); no R19 / R18 / S10 finding; run message "1 entries not evaluated (posting not complete)"; RAG amber, not green. Run 2: no POSTING_INCOMPLETE, R19 / R18 / S10 evaluated, the POSTING_INCOMPLETE exception resolved "Passed on re-run"; nothing posted, cleared or changed by either run (ST05 / table compare) | pending |
 
 ### 6.2 File monitoring
@@ -177,7 +179,7 @@ Own approved change (switch S-PRISM); QA1 with the SICF node active for the test
 
 ### 6.9 EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`, `Dashboard_EBS_Validation.md`)
 
-ABAP Unit: `ZCL_CD_EBS_DASH_CDS_TEST` (16 CDS tests: validation status from open findings, closed findings ignored, lines per statement, line status, as of on every row, account masked, bank-file messages hidden, line key, unevaluated lines, S13 / duplicates per run, KPI = last completed run of the day, as of / stale 26 h, returns by DFKKRP-RLGRD, NOCs by DFKKNRP-FLGRD via INFOF). QA1: cases **EBD-01 … EBD-12** of the dashboard doc §11 (stale, test / aborted runs, BLOCKED / POSTING_INCOMPLETE / NO_FINDINGS, duplicates, bank-file findings, returns / NOC, two runs a day, DCL, ST05).
+ABAP Unit: `ZCL_CD_EBS_DASH_CDS_TEST` (21 CDS tests: validation status from open findings, closed findings ignored, lines per statement, line status, as of on every row, payment engine scope from XBLNR (all-PE statement shown with PE and G/L account; mixed, blank XBLNR, no line and inactive account hidden), totals by BAI code + XBLNR and per PE account, account masked, bank-file messages hidden, line key, unevaluated lines, S13 / duplicates per run, KPI = last completed run of the day, as of / stale 26 h, returns by DFKKRP-RLGRD, NOCs by DFKKNRP-FLGRD via INFOF). QA1: cases **EBD-01 … EBD-12** (incl. EBD-04b / EBD-04c: XBLNR scope, totals by BAI code + XBLNR) of the dashboard doc §11 (stale, test / aborted runs, BLOCKED / POSTING_INCOMPLETE / NO_FINDINGS, duplicates, bank-file findings, returns / NOC, two runs a day, DCL, ST05).
 
 ### 6.10 Health check dashboard (`ZUI_CD_HCK_DASH_O4`, `Dashboard_Health_Check.md`)
 

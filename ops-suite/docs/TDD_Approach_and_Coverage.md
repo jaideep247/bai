@@ -17,7 +17,7 @@
 
 | Order | Objects | Evidence |
 |---|---|---|
-| **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 28 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB` | Red state observed by the lead developer in the lint output |
+| **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 28 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB`, `ZCL_CD_EBS_PE_SCOPE` and the payment engine scope tests of the engine and the dashboard (2026-11-06) | Red state observed by the lead developer in the lint output |
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
 | **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
@@ -42,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 878 ABAP Unit methods in 67 test includes
+## 4. Coverage today — 906 ABAP Unit methods in 68 test includes
 
 Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
 
@@ -67,11 +67,12 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | Core | ZCL_CD_OPS_UTIL | 14 | Domain |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | 20 | Domain |
 | EBS | ZCL_CD_EBS_CFG_DAO | 9 | OSQL |
-| EBS | ZCL_CD_EBS_ENGINE | 62 | Application |
+| EBS | ZCL_CD_EBS_ENGINE | 68 | Application |
 | EBS | ZCL_CD_EBS_FEB_DAO | 7 | OSQL |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 27 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 24 | Domain |
+| EBS | ZCL_CD_EBS_PE_SCOPE (payment engine account from XBLNR, statement scope) | 17 | Domain |
 | EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
 | EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 7 | Domain |
 | EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_R05_LOT_REASON, LTC_STMT_RULES — all 28 rule classes) | 106 | Domain / Application |

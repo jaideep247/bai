@@ -113,4 +113,6 @@ Kept as `INTO` (71 evaluated loops): the work area is changed as a local copy or
 | DFKKNRP | INFOF — **not a key field**; the read is an IN list of the exact forms of the payment document / reference (bounded by the lines of a package) | R05 NOC reason (FLGRD), payment trace NOC evidence |
 | ZCD_OPS_FINDING | OBJ = (MANDT, PE_AREA, OBJECT_KEY) — **changed by fix 5** | carry-forward, reconcile, exception repository |
 
+**FEBEP-XBLNR has no index (and needs none).** The payment engine account scope (user decision 2026-11-06) is derived from XBLNR, but never searched by it: the engine applies it in ABAP to the lines of a package already read by KUKEY (one hashed lookup per line in the set of active accounts); the dashboard (`ZI_CD_EbsLineAcct` → `ZI_CD_EbsStmtScope`) computes the account per line of the bounded FEBKO / FEBEP set (statement date in the last 31 days, FEBEP by KUKEY) and joins it to the few active `ZCD_EBS_ACCT` rows — the join is driven by that bounded set, not by an XBLNR access path. The scope view aggregates every line of the window once per request (record the runtime in EBD-12; a materialised scope is the fallback if it is slow).
+
 BSEG is a physical table on S/4HANA (read by key BUKRS / BELNR / GJAHR only); BSIS / BSAS are compatibility views — never read them for performance-critical paths.

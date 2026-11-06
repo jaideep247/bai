@@ -12,17 +12,17 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_EBS_DASH`, ma
 | Area | Content |
 |---|---|
 | Header / KPI | **Validation as of** (end of the last completed EBS run), age in minutes, stale flag (red when older than 26 hours or no completed run) |
-| Filter bar | Company code, house bank, house bank account ID, statement date, validation status, worst open severity |
+| Filter bar | Company code, house bank, house bank account ID, **payment engine account**, G/L account, statement date, validation status, worst open severity |
 | Chart (default) | Statements by **house bank**, stacked by **validation status**. Alternatives: lines and lines with findings per statement date; open findings (B / E / W) by house bank and account ID |
 | Table | One row per imported statement (FEBKO, statement date in the last 31 days): date, company code, house bank, account ID, statement number, status (coloured), worst severity, lines, posted lines, open findings, duplicates, as of |
 | Object page | Statement attributes, line and finding counts, validation as of; **Lines** (FEBEP) → line object page with its **open findings** and **returns / NOC lot items**; **Open findings** of the statement and its lines |
-| Lines (`EbsLine`) | Every FEBEP line as its own record (BAI code, posting rule, debit / credit, amount, currency, dates, bank reference, posting document, status). **Amount totals by G/L account and BAI code**: presentation variant `AmountByCode` sums `Amount` (and the line count) per G/L account, BAI code, debit / credit and currency, with totals per G/L account and per BAI code; chart *Line amounts by G/L account and BAI code* (stacked by debit / credit). Amounts are never added across currencies — the currency is part of every group; filter one currency for a single total. Removing the grouping returns to the individual lines |
+| Lines (`EbsLine`) | Every FEBEP line as its own record (BAI code, **XBLNR**, **payment engine account**, G/L account, posting rule, debit / credit, amount, currency, dates, bank reference, posting document, status). **Amount totals by BAI code + XBLNR** (user decision 2026-11-06): presentation variant `AmountByCode` sums `Amount` (and the line count) per G/L account, payment engine account, BAI code, XBLNR, debit / credit and currency, with totals per G/L account, per payment engine account, per BAI code and per BAI code + XBLNR; chart *Line amounts by BAI code and XBLNR* (stacked by debit / credit). The payment engine account is its own column and filter, so the counters of one account (different XBLNRs) can be totalled together by grouping on it instead of XBLNR. Amounts are never added across currencies — the currency is part of every group; filter one currency for a single total. Removing the grouping returns to the individual lines |
 | App "EBS findings" (`EbsFinding`) | Findings by **rule and severity** (default chart), by BAI code and category; selection variant *Open*; one row per finding with rule text, check code, owner, due date |
 | App "EBS runs" (`EbsRun`) | Run history: **lines by outcome per run date** (passed, warning, failed, blocked, not evaluated); findings of each run |
 
 ## 2. Freshness — the "as of" rule
 
-- **Only payment engine accounts.** A statement (and its lines) is shown only when its house bank account (company code, house bank, account ID) is an **active row of `ZCD_EBS_ACCT`** — the account list maintained in the EBS configuration app (new accounts by transport, existing ones editable in production). Deactivating a row there removes the account from the dashboard; no code change. The same row gives the account's **G/L account** (`GL_ACCOUNT`, the bank G/L account rule R18 uses), shown on statements and lines and used in the amount totals.
+- **Only payment engine accounts — from XBLNR (user decision 2026-11-06).** FEBEP-XBLNR carries the payment engine bank account: bank text (letters such as JPMC, BOA, PNC) + **10-character account** + counter, e.g. `JPMC8XX1174412334` → `8XX1174412`. `ZI_CD_EbsLineAcct` derives `PeAccount` per line: leading letters removed (`replace_regexpr( pcre => '^[A-Za-z]+' … )`), leading blanks removed, first 10 characters, upper case — the same rule as the validation run (`ZCL_CD_EBS_PE_SCOPE=>PE_ACCOUNT_FROM_XBLNR`; pattern and length are literals in the view and constants `ZIF_CD_EBS_TYPES=>GC_PE_ACCOUNT`: **change both together**). A statement (and its lines) is shown only when it has at least one line and **every** line's account is an **active `ACCOUNT_NO` of `ZCD_EBS_ACCT`** (compared without leading blanks, upper case; `ZI_CD_EbsStmtScope`); a mixed statement (one line of another account, a blank or unparseable XBLNR) and a statement without lines are not shown at all — exactly the statements the run skips as out of scope (`EBS_VALIDATION.md` §A0a). The account list is maintained in the EBS configuration app (new accounts by transport, existing ones editable in production); deactivating a row removes its statements; no code change. The matched row gives the account's **G/L account** (`GL_ACCOUNT`, the bank G/L account rule R18 uses), shown on statements and lines and used in the amount totals. A statement normally carries one payment engine account; the statement row shows it (`PeAccount`, the highest if several).
 - The statements and lines are read **live** from FEBKO / FEBEP; the **verdict** (findings) is what the last EBS run (`ZCD_EBS_VALIDATE`, `ZCL_CD_EBS_ENGINE`) stored in `ZCD_OPS_FINDING`.
 - **As of** = `ENDED_AT` of the last **completed** EBS run in `ZCD_OPS_RUN`: area EBS, not test mode, status S, W, E or N (N = no data — the run looked and found nothing; still a complete look). Running (R) and aborted (A) runs never move it. Any variant counts.
 - **Stale** after **26 hours** (daily run + 2 h slack = `HCK_MAX_AGE_HOURS` default) or when there is no completed run. Literal in `ZR_CD_EbsAsOf` (CDS cannot read `ZCD_OPS_PARAM`); `AgeMinutes` and `StaleAfterMinutes` are exposed so a tile can be stricter.
@@ -76,7 +76,8 @@ Service binding `ZUI_CD_EBS_DASH_O4` (`/sap/opu/odata4/sap/zui_cd_ebs_dash_o4/sr
 ## 7. Limits and sensitive data
 
 - **Window: 31 days** — statements by statement date (FEBKO-AZDAT), runs by start date, findings: open ones always, closed ones created in the last 31 days. Older evidence: `ZCD_EBS_VALIDATE` / SE16 / the exceptions app.
-- No balances and no **bank account number**: statement findings carry the account number in GROUP1 — shown only masked (`****` + last 4); the message of statement / file findings of the **file source** (may contain the account number, parser texts) is not exposed. House bank account **ID** (HKTID) is a short key, not the number.
+- No balances and no **bank account number** from the bank file: statement findings carry the account number in GROUP1 — shown only masked (`****` + last 4); the message of statement / file findings of the **file source** (may contain the account number, parser texts) is not exposed. House bank account **ID** (HKTID) is a short key, not the number.
+- **XBLNR and the payment engine account are shown as they are** (user decision 2026-11-06): XBLNR holds the company's own house bank account plus a counter, not customer data, and the user needs the BAI code + XBLNR combination. Access is protected by the dashboard role `ZC_CD_EBSDASH` (ZCD_OPS, ZCD_PE_AREA = EBS, ACTVT 03).
 - Amounts: line amounts in the line currency (else statement currency); finding amounts DEC without currency semantics — slice by currency before reading totals.
 - Company code (BUKRS) is not part of the DCL (area-wide like the EBS run); add it to the statement / line grants if required.
 
@@ -87,7 +88,10 @@ Service binding `ZUI_CD_EBS_DASH_O4` (`/sap/opu/odata4/sap/zui_cd_ebs_dash_o4/sr
 | `ZI_CD_EbsRunLast` | view (aggregate, one row) | End of the last completed EBS run |
 | `ZI_CD_EbsRunBase`, `ZI_CD_EbsRunFind`, `ZI_CD_EbsRunDay` | views | Runs of 31 days with counters / unevaluated; findings per run; last completed run per day |
 | `ZI_CD_EbsFinding`, `ZI_CD_EbsStmtExc`, `ZI_CD_EbsLineExc` | views | Findings (bounded, keys derived, account masked); open findings per statement / line |
-| `ZI_CD_EbsStmtBase`, `ZI_CD_EbsLineBase`, `ZI_CD_EbsStmtLines` | views | FEBKO / FEBEP of 31 days with finding keys; lines per statement |
+| `ZI_CD_EbsLineAcct` | view | FEBEP × FEBKO of 31 days with `PeAccount` derived from XBLNR |
+| `ZI_CD_EbsAcctNorm`, `ZI_CD_EbsPeAcct` | views | Active `ZCD_EBS_ACCT` accounts (ACCOUNT_NO without leading blanks, upper case); one row per payment engine account with its G/L account |
+| `ZI_CD_EbsStmtScope` | view (aggregate per KUKEY) | Lines and lines outside the payment engine scope per statement, account, G/L account |
+| `ZI_CD_EbsStmtBase`, `ZI_CD_EbsLineBase`, `ZI_CD_EbsStmtLines` | views | In-scope FEBKO / FEBEP of 31 days with finding keys, payment engine account, G/L account; lines per statement |
 | `ZI_CD_EbsRetNocU` | view (UNION) | Lines × returns lot items / NOC lot items |
 | `src/core/ZI_CD_ReturnItem`, `src/core/ZI_CD_NocItem` | views | DFKKRP (+ DFKKRK) with RLGRD; DFKKNRP with FLGRD and normalised INFOF — shared with the transaction dashboard |
 | `ZR_CD_EbsAsOf` / `ZC_CD_EbsAsOf` | root / projection | As of, age, stale |
@@ -107,6 +111,8 @@ Existing classes are unchanged.
 | Item | Where | Fallback if refused |
 |---|---|---|
 | `CONCAT` / `LTRIM` with NUMC operands (KUKEY, ESNUM) | `ZI_CD_EbsStmtBase`, `ZI_CD_EbsLineBase` | `cast( kukey as abap.char( 8 ) )` / `cast( esnum as abap.char( 5 ) )` first |
+| **`REPLACE_REGEXPR( pcre => '^[A-Za-z]+', value => xblnr, with => '', result_length => 16 )`** nested in `LTRIM` / `LEFT` / `UPPER` (parsed by abaplint; activation on 7.58 not proven) | `ZI_CD_EbsLineAcct` | A `CASE` over the configured bank texts: `case when left( xblnr, 4 ) = 'JPMC' then substring( xblnr, 5, 10 ) when left( xblnr, 3 ) = 'BOA' then substring( xblnr, 4, 10 ) when left( xblnr, 3 ) = 'PNC' then substring( xblnr, 4, 10 ) else left( xblnr, 10 ) end` — a new bank text is then a view change (document it with the bank in the account configuration) |
+| Join of `PeAccount` (CHAR 10) with the normalised `ACCOUNT_NO` (CHAR 35); `UPPER( LTRIM( ) )` on a customizing field; `COUNT( DISTINCT )` and `MAX` with `SUM( CASE … IS NULL … )` per KUKEY | `ZI_CD_EbsStmtScope`, `ZI_CD_EbsAcctNorm`, `ZI_CD_EbsLineBase` | Cast `PeAccount` to CHAR 35; drop `PeAccountCount` |
 | `COUNT( DISTINCT )` and `MAX` in one element | `ZI_CD_EbsRunFind` | Drop StatementsWithFindings / LinesWithFindings |
 | `UNION ALL` with CAST-aligned keys | `ZI_CD_EbsRetNocU` | Two entities (returns, NOCs) |
 | `RIGHT( RTRIM( ) )` for the account mask | `ZI_CD_EbsFinding` | `substring( group1, length( group1 ) - 3, 4 )` or omit the column |
@@ -119,11 +125,11 @@ Existing classes are unchanged.
 
 ## 10. Tests
 
-ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_OPS_FINDING, ZCD_OPS_RUN, ZCD_EBS_RULE_DEF, DFKKRP, DFKKRK, DFKKNRP; not executed offline):
+ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_EBS_ACCT, ZCD_OPS_FINDING, ZCD_OPS_RUN, ZCD_EBS_RULE_DEF, DFKKRP, DFKKRK, DFKKNRP; not executed offline; every test line carries the XBLNR `JPMC8XX1174412334` of the configured account `8XX1174412` unless the test says otherwise):
 
 | Class | Tests |
 |---|---|
-| `ltc_statement` (`ZR_CD_EBSSTMT`, `ZR_CD_EBSLINE`) | `status_follows_worst_finding`, `closed_findings_are_ignored`, `lines_counted_per_statement`, `line_status_from_line_finding`, `rows_carry_validation_as_of`, `amounts_total_per_bai_code`, `only_payment_engine_accounts` |
+| `ltc_statement` (`ZR_CD_EBSSTMT`, `ZR_CD_EBSLINE`) | `status_follows_worst_finding`, `closed_findings_are_ignored`, `lines_counted_per_statement`, `line_status_from_line_finding`, `rows_carry_validation_as_of`, `amounts_total_per_bai_code`, `all_pe_statement_shown`, `mixed_statement_hidden` (one line of another account, a blank XBLNR, no line), `inactive_account_hidden`, `totals_per_code_and_xblnr` |
 | `ltc_finding` (`ZR_CD_EBSFIND`) | `account_is_masked`, `file_stmt_message_hidden`, `line_key_gives_line_number` |
 | `ltc_run` (`ZR_CD_EBSRUN`, `ZR_CD_EBSKPI`, `ZR_CD_EBSASOF`) | `unevaluated_is_the_remainder`, `run_counts_s13_and_duplicates`, `kpi_shows_last_run_of_day`, `as_of_skips_running_and_test`, `stale_when_no_completed_run`, `stale_after_26_hours` |
 | `ltc_returns` (`ZR_CD_EBSRETNOC`) | `return_reason_from_dfkkrp`, `noc_reason_via_infof` |
@@ -137,7 +143,8 @@ ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_OPS_FINDIN
 | EBD-03 | Test-mode run, then an aborted run | As of does not move |
 | EBD-04 | Statement with an unmapped BAI code (R14 B) | Status BLOCKED; line BLOCKED; finding listed with BAI code and rule text |
 | EBD-04a | Statement with two 165 credit lines (100.00, 50.25 USD) and one 475 debit line (30.00 USD); Lines app, variant *Amounts by BAI code* | 165 / credit: 150.25 USD, 2 lines; 475 / debit: 30.00 USD, 1 line; a second currency appears as its own total, never added |
-| EBD-04b | Statements of three accounts: one active in `ZCD_EBS_ACCT`, one inactive, one not configured | Only the active payment engine account's statement and lines appear, with its G/L account; activating the second row in the EBS configuration app makes it appear at the next refresh |
+| EBD-04b | Statements whose lines carry XBLNRs of three accounts: one active `ACCOUNT_NO` in `ZCD_EBS_ACCT`, one inactive, one not configured | Only the statement of the active payment engine account and its lines appear, with payment engine account and G/L account; activating the second row in the EBS configuration app makes it appear at the next refresh |
+| EBD-04c | One statement whose lines carry two XBLNRs of the same account (counters 334, 335) and a second statement with one line of another account (mixed) | First statement: lines grouped by BAI code + XBLNR give one total per counter; grouped by payment engine account one total; mixed statement not shown at all (run: counted out of scope) |
 | EBD-05 | Statement imported before FEBP finished (S13) | Status POSTING_INCOMPLETE; latest run *not evaluated* > 0 = total − passed − warning − failed − blocked of `ZCD_OPS_RUN` |
 | EBD-06 | Resolve the finding in the exceptions app and re-run | Status NO_FINDINGS; finding no longer open |
 | EBD-07 | Duplicate entry (R09 / R22) | Duplicate count 1 on statement and run |

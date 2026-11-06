@@ -12,7 +12,7 @@ define view entity ZR_CD_HouseBankAcct
       @EndUserText.label: 'Account ID'
   key hktid as Hktid,
       1 as SingletonID,
-      @EndUserText.label: 'Account number'
+      @EndUserText.label: 'Payment engine account (XBLNR, 10 characters)'
       account_no as AccountNo,
       @EndUserText.label: 'Bank key (blank = all banks)'
       bank_key as BankKey,

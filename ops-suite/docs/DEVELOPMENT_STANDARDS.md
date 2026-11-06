@@ -34,7 +34,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
   - Cheque status domain ZECT_STATUS: 3 failed, 4 rejected, 9 returned are terminal; mailed 10 → returned 9 allowed; otherwise higher may overwrite lower, never the reverse.
   - PCLM cancellation: CANCELLED = money will not leave; a paid request must never be left CANCELLED.
   - DPAYH-ZZ_PAYMENT_STATUS is the live payment status; DFKKOP-ZZ_BILLPLANID sits on DFKKOP (no DFKKNRK join).
-  - FEBEP-BUDAT is always filled; FEBEP-XBLNR is never blank for BAI 452. BAI 143 / 452 are known unmapped codes (R14 blocks them until Treasury confirms a mapping).
+  - FEBEP-BUDAT is always filled; FEBEP-XBLNR is never blank for BAI 452 and holds bank text + 10-character payment engine bank account + counter (user, 2026-11-06 — the EBS scope, `EBS_VALIDATION.md` §A0a). BAI 143 / 452 are known unmapped codes (R14 blocks them until Treasury confirms a mapping).
   - TFK033D wildcard `*` does not work (enumerate); TVARVC refuses two type-P rows with the same name.
   - FPY1 locks EFKKCLEGPI per partner interval (GPART_V..GPART_B, one RUNKEY + BUKRS, _SCOPE 3) — design concurrency around partner ranges.
 - FPY1 locks per partner interval; F.13 is not run for disbursement clearing accounts.

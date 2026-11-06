@@ -143,7 +143,10 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'local_last_changed_at': 'Changed at (instance)', 'changed_by': 'Changed by (SM30)',
           'changed_at': 'Changed at (SM30)', 'flow_type': 'Flow (D/C/*)', 'exp_cdi': 'Expected direction',
           'bank_key': 'Bank key (blank = all banks)', 'action': 'Action', 'z_limit': 'Z-score limit',
-          'higher_is_worse': 'Higher is worse', 'is_noc': 'NOC reason', 'ack_level': 'ACK level'}
+          'higher_is_worse': 'Higher is worse', 'is_noc': 'NOC reason', 'ack_level': 'ACK level',
+          # User decision 2026-11-06: ZCD_EBS_ACCT-ACCOUNT_NO is the payment engine bank account as
+          # derived from FEBEP-XBLNR (bank text removed, first 10 characters) - EBS scope
+          'account_no': 'Payment engine account (XBLNR, 10 characters)'}
 ADMIN = ('last_changed_by', 'last_changed_at', 'local_last_changed_at')
 LEGACY_ADMIN = ('changed_by', 'changed_at')
 

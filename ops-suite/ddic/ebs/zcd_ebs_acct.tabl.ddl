@@ -8,7 +8,10 @@ define table zcd_ebs_acct {
   key bukrs    : abap.char(4) not null;
   key hbkid    : abap.char(5) not null;
   key hktid    : abap.char(5) not null;
-  // Account number as the bank sends it (BAI2 03 / CAMT Acct/Id)
+  // Payment engine bank account, 10 characters, as derived from FEBEP-XBLNR (bank text removed,
+  // e.g. JPMC8XX1174412334 -> 8XX1174412; user decision 2026-11-06). Upper case, no leading blank.
+  // Only statements whose every line carries an active account are validated and on the dashboard.
+  // Bank file source: also matched against the account of the file (BAI2 03 / CAMT Acct/Id)
   account_no   : abap.char(35);
   // JPMC, BOA, PNC ... selects bank-specific ZCD_BTC_MAP rows
   bank_key     : abap.char(15);
@@ -25,5 +28,5 @@ define table zcd_ebs_acct {
   last_changed_at       : abp_lastchange_tstmpl;
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
-// Secondary index ACC: file statements
+// Secondary index ACC: file statements and the payment engine account scope
 // @index ACC: MANDT, ACCOUNT_NO

@@ -54,6 +54,33 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 
 **Bank file source (BAI2 / CAMT before import).** The posting state is unknown by definition and is never invented: no line is POSTING_OPEN, S13 never reports, and the posting-dependent rules run exactly as before — R19 reports NOT_POSTED for a line without document unless PARAM3 = OPTIONAL, R18 compares the G/L balance as it is before the statement is posted, S10 skips file statements, R07* / R21 read the payment engine records as they are. Use the file source for structural checks before import; the posting-dependent results of the batch run come from the FEB source.
 
+### A0a. Scope — payment engine accounts only (user decision 2026-11-06)
+
+> **First principle:** the suite validates the bank lines of the payment engine — a statement that also carries other accounts' lines is not the payment engine's to judge.
+> **Analogy:** a sorting office checks only the bags addressed to its own district; a bag with mixed addresses is set aside unopened, counted, and never reported as damaged.
+
+**Which account a line belongs to.** FEBEP-XBLNR carries the payment engine bank account: **bank text** (letters such as JPMC, BOA, PNC) + **10-character account** + **counter**, e.g. `JPMC8XX1174412334` → account `8XX1174412`, counter `334` (confirmed by the user 2026-11-06, `USAA_Known_Tables.md` §1). Rule, in one place: `ZCL_CD_EBS_PE_SCOPE=>PE_ACCOUNT_FROM_XBLNR` — remove the leading letters (PCRE `^[A-Za-z]+`), condense, upper case, first 10 characters. Pattern and length are the constants `ZIF_CD_EBS_TYPES=>GC_PE_ACCOUNT`; the dashboard view `ZI_CD_EbsLineAcct` uses the same values as literals (CDS cannot read an ABAP constant) — **a change to one is a change to both** (and to the CDS test data). A shorter rest is taken as it is (it matches no 10-character account); a blank XBLNR or one with letters only gives no account.
+
+**Which accounts are payment engine accounts.** The active rows of `ZCD_EBS_ACCT`, column **ACCOUNT_NO** = the 10-character account as derived from XBLNR (EBS configuration app, field *Payment engine account (XBLNR, 10 characters)*). Compared condensed and in upper case (the dashboard: leading blanks removed, upper case). Two active rows with the same account number are one account.
+
+**What is in scope.** An imported statement (FEB source) is validated **only when it has at least one line and every line's account is a payment engine account**. Otherwise it is **out of scope** and skipped entirely before validation (`ZCL_CD_EBS_ENGINE`, per package):
+
+| Out-of-scope statement | Behaviour |
+|---|---|
+| Mixed: any line of another account | No statement rule, no line rule (also not S04 or R14), no posting-state check, **no finding**, not counted in the entries |
+| A line with a blank or unparseable XBLNR | Same — the statement is not a payment engine statement |
+| No lines at all | Same (decision: nothing proves it is a payment engine statement) |
+| Exceptions of earlier runs for it or its lines | **Stay open** — not reconciled (as POSTING_OPEN entries: a statement that was not evaluated never resolves anything) |
+| Counting | `ZCL_CD_EBS_ENGINE=>TY_RESULT-OUT_OF_SCOPE` and the run message (ZCD_OPS 546 *n statements out of scope (lines not all payment engine accounts)*). `ZCD_OPS_RUN` has no field for it; the message carries it |
+| NO_DATA | A selection that found statements is never NO_DATA, even when all of them are out of scope (the run closes on its other results, typically green with 0 entries and the out-of-scope count in the message) |
+| Dashboard | Not shown (`Dashboard_EBS_Validation.md` §2: same rule in CDS) |
+
+**S04 (account configured)** stays: it checks the in-scope statement's house bank account (company code, house bank, account ID) and currency against `ZCD_EBS_ACCT`; it never sees an out-of-scope statement, so it reports only a payment engine statement whose house bank account row is missing or has another currency.
+
+**Bank file source (BAI2 / CAMT before import).** XBLNR is not a field of the bank file — SAP fills FEBEP-XBLNR during the import (bank-specific interpretation), and neither the BAI2 16 record (bank / customer reference) nor CAMT (`EndToEndId`, `AcctSvcrRef`, …) carries a confirmed equivalent. File-source runs are therefore **scoped by the account configuration as before** (S04 on the file's account, matched by house bank or by ACCOUNT_NO = the account of the 03 record / `Acct/Id`); the XBLNR rule applies to the FEB source and the dashboard. VERIFY with a sample file of each bank whether the 03 / `Acct/Id` account equals the 10-character payment engine account; if not, file-source S04 needs its own account column.
+
+**Pre-posting path (dormant, §B7).** `validate_for_posting` is not scoped; a future BAdI phase decides whether it applies the same rule before posting.
+
 ### A1. What it does
 1. **Receives** a bank statement either as a file before import (BAI2 from JPMC/BOA, CAMT.053 statements, CAMT.054 notifications) or after FF_5/FEBP import (FEBKO/FEBEP).
 2. **Checks the statement** as a whole (S-checks): balances chain from the previous statement, the statement adds up, numbers have no gaps, the account is known, nothing is a re-delivery, bank control totals agree.
@@ -129,7 +156,8 @@ flowchart LR
   end
   F -->|ZCL_CD_EBS_SRC_FILE + parser| P[Package: statements, lines, parser findings S00/S06/S11/S12]
   I -->|ZCL_CD_EBS_SRC_FEB, N statements per package| P
-  P --> E1[1. Resolver: account config, flow, ZCD_BTC_MAP → category / rule group; unmapped → R14 BLOCK]
+  P --> E0[0. Scope: FEB statements whose lines are not all payment engine accounts XBLNR → removed, counted out of scope]
+  E0 --> E1[1. Resolver: account config, flow, ZCD_BTC_MAP → category / rule group; unmapped → R14 BLOCK]
   E1 --> E2[2. Statement rules S01–S12, R18]
   E2 --> E3[3. Line rules per rule group + '*' — blocked lines skipped]
   E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
@@ -148,7 +176,7 @@ Points of no return: the commit after each package (findings durable) and the al
 |---|---|---|
 | Types | `ZIF_CD_EBS_TYPES` | Format-neutral statement/line model and configuration types |
 | Ports | `ZIF_CD_EBS_PARSER`, `ZIF_CD_EBS_SOURCE`, `ZIF_CD_EBS_RULE`, `ZIF_CD_EBS_CFG_DAO`, `ZIF_CD_EBS_FEB_DAO`, `ZIF_CD_EBS_SAP_DAO` | Strategy and repository interfaces |
-| Domain | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_R_*` (28 rules), `ZCL_CD_EBS_PARSER_BAI2/_CAMT` | No SQL |
+| Domain | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_EBS_FINDING`, `ZCL_CD_EBS_PE_SCOPE` (payment engine account from XBLNR, statement scope), `ZCL_CD_EBS_R_*` (28 rules), `ZCL_CD_EBS_PARSER_BAI2/_CAMT` | No SQL |
 | Repositories | `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` | All SQL |
 | Application | `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB`, `ZCL_CD_EBS_SRC_FILE`, `ZCL_CD_EBS_FACTORY`, `ZCL_CD_EBS_INJECTOR` | Orchestration |
 | Presentation | `ZCD_EBS_VALIDATE` | Selection, ALV, background |
@@ -160,7 +188,7 @@ Points of no return: the commit after each package (findings durable) and the al
 | ZCD_BTC_MAP | SCHEME, BTC_CODE, BANK_KEY, FLOW_TYPE | Category, rule group, expected direction, payment method, posting rule, action, **disposition** (blank = posted as usual, NOT_POSTED = never posted, A26) |
 | ZCD_EBS_RULE_DEF | RULE_ID | Rule registry: level S/L, class, default severity/action, **BLOCKS_POSTING** default (A27), **NEEDS_POSTING** (rule reads posting evidence — not evaluated for a line expected to post but not posted, §A0) |
 | ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window, **BLOCKS_POSTING** override (blank = registry default, Y, N). RULE_ID **NONE** marks a group that intentionally has no code-specific rule (A03) |
-| ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | Account number as the bank sends it, bank key, format, default flow, currency, bank G/L |
+| ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | **ACCOUNT_NO = 10-character payment engine account as derived from FEBEP-XBLNR** (§A0a; upper case, no leading blank — the active rows are the scope of validation and dashboard), bank key, format, default flow, currency, bank G/L, ACTIVE |
 | ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG) |
 | ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → payment engine return reason |
 | ZCD_EBS_LOOKUP | LOOKUP_ID | Generic lookups of rule R21: table, key field, key kind (DOCNO / ZTNUM / REFERENCE), key length, status field, allowed values, check codes |
@@ -244,7 +272,9 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | New bank | ZCD_EBS_ACCT rows with BANK_KEY; bank-specific ZCD_BTC_MAP rows only where the bank deviates | No |
 | New validation rule parameterisation (acceptance test 4: closing deviates > 0.01) | ZCD_BTC_RULE row `*` / S01 with TOLERANCE 0.01, SEVERITY B, ACTION BLOCK | No |
 | New return reason | ZCD_EBS_RSN_MAP row | No |
-| New collection/disbursement account | ZCD_EBS_ACCT row; ZCD_EBS_FLOW_PAT if XBLNR identifies the flow | No |
+| New collection/disbursement account | ZCD_EBS_ACCT row (ACTIVE, ACCOUNT_NO = payment engine account from XBLNR, §A0a); ZCD_EBS_FLOW_PAT if XBLNR identifies the flow | No |
+| New bank text in XBLNR (letters before the account) | Nothing — any leading letters are removed | No |
+| Account part of XBLNR not 10 characters / bank text with digits | `GC_PE_ACCOUNT` in `ZIF_CD_EBS_TYPES` **and** the literals in `ZI_CD_EbsLineAcct` (+ tests) | Yes — both together |
 | A check against a further table (exists / status) | ZCD_EBS_LOOKUP row + ZCD_BTC_RULE row with rule R21, PARAM1 = lookup ID | No |
 | A genuinely new kind of check (logic no lookup can express) | New class implementing ZIF_CD_EBS_RULE (inherit ZCL_CD_EBS_RULE_BASE) + ZCD_EBS_RULE_DEF row + test class | Yes — one class |
 
@@ -282,7 +312,7 @@ Design (future): the engine exposes `validate_for_posting( iv_mode = zcl_cd_ebs_
 
 NOTIFY findings and warnings do not change the disposition. In mode M a BLOCK is returned as EXCEPTION (monitor never blocks); in mode O no disposition is returned.
 
-**Run status (A66, A68).** A run that selected no statement ends with status **N** (NO_DATA) and RAG grey plus a NO_DATA finding, unless `EBS_EMPTY_FEED_OK` = X. Lines of a rule group whose rule raised (PLUGIN_ERROR) are unevaluated: counted as failed, reported in the run message and in the result; such a package counts for the circuit breaker. An inverted FEB date range is rejected. A server file that is not valid UTF-8, or that cannot be read to its end, is rejected (A69). **The BAdI method signature must be copied from SE18 before the implementation is written** (house rule: never guess a signature); it is therefore not part of this delivery.
+**Run status (A66, A68).** Statements out of the payment engine scope (§A0a) are counted in the run message, never a finding. A run that selected no statement ends with status **N** (NO_DATA) and RAG grey plus a NO_DATA finding, unless `EBS_EMPTY_FEED_OK` = X. Lines of a rule group whose rule raised (PLUGIN_ERROR) are unevaluated: counted as failed, reported in the run message and in the result; such a package counts for the circuit breaker. An inverted FEB date range is rejected. A server file that is not valid UTF-8, or that cannot be read to its end, is rejected (A69). **The BAdI method signature must be copied from SE18 before the implementation is written** (house rule: never guess a signature); it is therefore not part of this delivery.
 
 ### B8. Not verified
-Syntax and typing checked offline with abaplint (v758 rules, SAP stub library). Not activated in SAP; ABAP Unit not executed; DDIC fields marked `VERIFY-DDIC` in `ZCL_CD_EBS_FEB_DAO` and `ZCL_CD_EBS_SAP_DAO` must be confirmed in SE11 before activation. Also to confirm (phase 6): **VERIFY-SE11 FEBEP-VB1OK / VB2OK** (posting area 1 / 2 completed — names, CHAR 1 with X when complete, and whether VB2OK is set for items without an area-2 posting; parameter `EBS_FEB_POSTED_FIELDS`); the 12-character width of OPBEL / AUGBL / DOC1R; the DFKKCR company-code field (`EBS_DFKKCR_BUKRS_FIELD`) and the FEBEP reason field (`EBS_FEB_REASON_FIELD`); READ DATASET return code 4 on an unterminated last line; the time zone of statement creation times (in-flight grace). Per-finding status: `Audit_Response_EBS.md`.
+Syntax and typing checked offline with abaplint (v758 rules, SAP stub library). Not activated in SAP; ABAP Unit not executed; DDIC fields marked `VERIFY-DDIC` in `ZCL_CD_EBS_FEB_DAO` and `ZCL_CD_EBS_SAP_DAO` must be confirmed in SE11 before activation. Also to confirm (phase 6): **VERIFY-SE11 FEBEP-VB1OK / VB2OK** (posting area 1 / 2 completed — names, CHAR 1 with X when complete, and whether VB2OK is set for items without an area-2 posting; parameter `EBS_FEB_POSTED_FIELDS`); the 12-character width of OPBEL / AUGBL / DOC1R; the DFKKCR company-code field (`EBS_DFKKCR_BUKRS_FIELD`) and the FEBEP reason field (`EBS_FEB_REASON_FIELD`); READ DATASET return code 4 on an unterminated last line; the time zone of statement creation times (in-flight grace); **the XBLNR layout** (bank text + 10-character account + counter) on a production sample of each bank and that the payment engine accounts in `ZCD_EBS_ACCT-ACCOUNT_NO` are maintained in upper case; `REPLACE_REGEXPR` in the CDS view (`Dashboard_EBS_Validation.md` §9). Per-finding status: `Audit_Response_EBS.md`.

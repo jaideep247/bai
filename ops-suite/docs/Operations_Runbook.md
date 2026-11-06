@@ -124,11 +124,23 @@ All three reports are re-runnable: EBS and HCK create a new run; FMON registry e
 3. **Still incomplete after the predecessors finished** → the lines were left unposted: work them in FEBAN post-processing (and FPCPL for payment-lot clarification) under the cash-management runbook, then re-run step 2.
 4. **Every statement of every run reports it** → check `EBS_FEB_POSTED_FIELDS` (VERIFY-SE11: VB1OK / VB2OK; if posting area 2 is not used set `VB1OK`). A name that is not a FEBEP field stops the run with message 051.
 
+## 5d. EBS statements out of scope — "n statements out of scope" in the run message
+
+Since 2026-11-06 (user decision) `ZCD_EBS_VALIDATE` validates, and the EBS dashboard shows, an imported statement only when **every** line's FEBEP-XBLNR carries an active payment engine account: XBLNR = bank text + 10-character account + counter (`JPMC8XX1174412334` → `8XX1174412`), compared with `ACCOUNT_NO` of the active rows in the EBS configuration app (`EBS_VALIDATION.md` §A0a). Any other statement is skipped: no finding, not on the dashboard, its earlier exceptions stay open; the run message says *n statements out of scope (lines not all payment engine accounts)*.
+
+1. **Expected?** Statements of house bank accounts that are not payment engine accounts, or genuinely mixed statements, are out of scope by design — nothing to do.
+2. **A payment engine statement is missing from the dashboard / the count rose unexpectedly** → look at its lines in FEBAN / SE16 FEBEP (KUKEY): derive the account from each XBLNR (letters removed, first 10 characters).
+   - Account not in the EBS configuration app, or the row is inactive → **maintain / activate the account** (`ZCD_EBS_ACCT`, field *Payment engine account (XBLNR, 10 characters)*, upper case, ACTIVE = X; new rows by transport from DV1, existing rows editable in production), then re-run the variant (idempotent).
+   - A line with a blank or unexpected XBLNR → clarify with Treasury / the bank interpretation owner how the line was imported; the statement stays out of scope until every line carries an account.
+   - The bank changed the XBLNR layout (account not 10 characters, digits in the bank text) → a change request: `GC_PE_ACCOUNT` and the dashboard view change together (`EBS_VALIDATION.md` §B6).
+3. Exceptions of a statement that went out of scope stay open (a statement not evaluated resolves nothing): close them in the exceptions app with a reason if the account is intentionally no longer a payment engine account.
+
 ## 5b. Statuses introduced by the audit fixes
 
 | Where | Status / finding | Meaning | Action |
 |---|---|---|---|
 | Run header | **N** (no data) | The source delivered nothing to evaluate; RAG grey, never green | Check the FEB date range or the file path; if an empty feed is normal for that variant set `EBS_EMPTY_FEED_OK` |
+| EBS run message | *n statements out of scope* | Imported statements whose lines are not all payment engine accounts (XBLNR) were skipped — no finding, not on the dashboard | §5d: expected, or maintain / activate the account in the EBS configuration app |
 | EBS statement | POSTING_INCOMPLETE (S13, warning) | Entries expected to post were not posted when the run read FEBEP; their posting-dependent checks were not evaluated | §5c: check the predecessor jobs, re-run `ZCD_EBS_VALIDATE` |
 | EBS line | AWAITING_LOT_TRANSFER (warning) | Lookup not found while the statement is younger than `EBS_INFLIGHT_HOURS` — FPB7 / FP09 may still be running | None if it clears on the next run; otherwise investigate the lot transfer |
 | EBS line | Disposition NOT_POSTED / ON_ACCOUNT / EXCEPTION / BLOCK | What the posting caller must do with the line | Follow the disposition; BLOCK lines need a release (EBS release app) or a fix |
