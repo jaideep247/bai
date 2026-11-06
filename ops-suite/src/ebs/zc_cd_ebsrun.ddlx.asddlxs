@@ -1,0 +1,128 @@
+// UI annotations: EBS validation dashboard - run history
+// Chart: lines by outcome per run date (default).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Validation run', typeNamePlural: 'Validation runs',
+                  title: { type: #STANDARD, value: 'StartedAt' },
+                  description: { type: #STANDARD, value: 'RunVariant' } }
+@UI.chart: [ { qualifier: 'LinesByOutcome',
+               title: 'Lines by outcome per run date',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'RunDate' ],
+               measures: [ 'PassedLineCount', 'WarningLineCount', 'FailedLineCount', 'BlockedLineCount',
+                           'UnevaluatedLineCount' ],
+               dimensionAttributes: [ { dimension: 'RunDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'PassedLineCount', role: #AXIS_1 },
+                                    { measure: 'WarningLineCount', role: #AXIS_1 },
+                                    { measure: 'FailedLineCount', role: #AXIS_1 },
+                                    { measure: 'BlockedLineCount', role: #AXIS_1 },
+                                    { measure: 'UnevaluatedLineCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StartedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'LinesByOutcome' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_EbsRun with
+{
+  @UI.facet: [ { id: 'Run', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Run', position: 10 },
+               { id: 'Counts', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Counts',
+                 label: 'Lines and findings', position: 20 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Findings of the run', position: 30 } ]
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Run variant'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  RunVariant;
+  @EndUserText.label: 'Started (UTC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  StartedAt;
+  @EndUserText.label: 'Ended (UTC)'
+  @UI.identification: [ { position: 30 } ]
+  EndedAt;
+  @EndUserText.label: 'Run date'
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RunDate;
+  @EndUserText.label: 'Run status'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  RunStatus;
+  @EndUserText.label: 'RAG'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'RagCriticality' } ]
+  @UI.identification: [ { position: 60, criticality: 'RagCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  RunRag;
+  @UI.hidden: true
+  RagCriticality;
+  @EndUserText.label: 'Completed'
+  @UI.identification: [ { position: 70 } ]
+  IsCompleted;
+  @EndUserText.label: 'Dashboard is as of this run'
+  @UI.identification: [ { position: 80 } ]
+  IsAsOfRun;
+  @EndUserText.label: 'Runtime (ms)'
+  @UI.identification: [ { position: 90 } ]
+  RuntimeMs;
+  @EndUserText.label: 'Run message (counts, unevaluated lines)'
+  @UI.identification: [ { position: 100 } ]
+  RunMessage;
+  @EndUserText.label: 'Runs'
+  RunCount;
+  @EndUserText.label: 'Lines validated'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 10 } ]
+  LineCount;
+  @EndUserText.label: 'Lines passed'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 20 } ]
+  PassedLineCount;
+  @EndUserText.label: 'Lines with warning'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 30 } ]
+  WarningLineCount;
+  @EndUserText.label: 'Lines failed'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 40 } ]
+  FailedLineCount;
+  @EndUserText.label: 'Lines blocked'
+  @UI.lineItem: [ { position: 90, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 50 } ]
+  BlockedLineCount;
+  @EndUserText.label: 'Lines not evaluated (posting incomplete)'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 60 } ]
+  UnevaluatedLineCount;
+  @EndUserText.label: 'Findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 70 } ]
+  FindingCount;
+  @EndUserText.label: 'Block findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 80 } ]
+  BlockFindingCount;
+  @EndUserText.label: 'Error findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 90 } ]
+  ErrorFindingCount;
+  @EndUserText.label: 'Warning findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 100 } ]
+  WarningFindingCount;
+  @EndUserText.label: 'POSTING_INCOMPLETE statements (S13)'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 110 } ]
+  PostingIncompleteCount;
+  @EndUserText.label: 'Duplicate findings'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 120 } ]
+  DuplicateCount;
+  @EndUserText.label: 'Unmapped BAI codes'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 130 } ]
+  UnmappedCodeCount;
+  @EndUserText.label: 'Statements with findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 140 } ]
+  StatementsWithFindings;
+  @EndUserText.label: 'Lines with findings'
+  @UI.fieldGroup: [ { qualifier: 'Counts', position: 150 } ]
+  LinesWithFindings;
+}

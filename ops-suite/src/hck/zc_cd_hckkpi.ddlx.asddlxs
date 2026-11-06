@@ -1,0 +1,65 @@
+// UI annotations: HCK health check dashboard - KPI
+// Overview-page KPI card on data point RedChecks / OverallRag. VERIFY-ADT: card rendering.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Morning report', typeNamePlural: 'Morning report',
+                  title: { type: #STANDARD, value: 'RunRag' } }
+annotate entity ZC_CD_HckKpi with
+{
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Report variant'
+  RunVariant;
+  @EndUserText.label: 'As of'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  AsOfAt;
+  @EndUserText.label: 'Overall RAG'
+  @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'RagCriticality' } ]
+  @UI.dataPoint: { qualifier: 'OverallRag', title: 'Overall RAG', criticality: 'RagCriticality' }
+  RunRag;
+  @UI.hidden: true
+  RagCriticality;
+  @EndUserText.label: 'Health score and critical / high counts'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  RunMessage;
+  @EndUserText.label: 'Report age (minutes)'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM, criticality: 'StaleCriticality' } ]
+  @UI.dataPoint: { qualifier: 'ReportAge', title: 'Report age (minutes)', criticality: 'StaleCriticality' }
+  AgeMinutes;
+  @EndUserText.label: 'Report stale'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM, criticality: 'StaleCriticality' } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+  @EndUserText.label: 'Checks'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  CheckCount;
+  @EndUserText.label: 'Green'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  GreenCheckCount;
+  @EndUserText.label: 'Amber'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'AmberChecks', title: 'Amber checks' }
+  AmberCheckCount;
+  @EndUserText.label: 'Red'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'RedChecks', title: 'Red checks', criticality: 'RagCriticality' }
+  RedCheckCount;
+  @EndUserText.label: 'Warm-up'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  WarmupCheckCount;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Open red exceptions'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  OpenRedCount;
+  @EndUserText.label: 'Open amber exceptions'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  OpenAmberCount;
+  @EndUserText.label: 'Overdue exceptions'
+  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
+  @UI.dataPoint: { qualifier: 'Overdue', title: 'Overdue exceptions' }
+  OverdueCount;
+}

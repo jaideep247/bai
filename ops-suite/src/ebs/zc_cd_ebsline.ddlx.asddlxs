@@ -1,0 +1,150 @@
+// UI annotations: EBS validation dashboard - statement line
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Statement line', typeNamePlural: 'Statement lines',
+                  title: { type: #STANDARD, value: 'BaiCode' },
+                  description: { type: #STANDARD, value: 'BankReference' } }
+@UI.chart: [ { qualifier: 'LinesByCode',
+               title: 'Lines by BAI code and validation status',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'BaiCode', 'ValidationStatus' ],
+               measures: [ 'LineCount' ],
+               dimensionAttributes: [ { dimension: 'BaiCode', role: #CATEGORY },
+                                      { dimension: 'ValidationStatus', role: #SERIES } ],
+               measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 } ] },
+             { qualifier: 'AmountByCode',
+               title: 'Line amounts by G/L account and BAI code (debit / credit, per currency)',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
+               measures: [ 'Amount' ],
+               dimensionAttributes: [ { dimension: 'GlAccount', role: #CATEGORY },
+                                      { dimension: 'BaiCode', role: #CATEGORY },
+                                      { dimension: 'DebitCreditInd', role: #SERIES },
+                                      { dimension: 'Currency', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'Amount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'Esnum', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'LinesByCode' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'AmountByCode',
+                             groupBy: [ 'GlAccount', 'BaiCode', 'DebitCreditInd', 'Currency' ],
+                             totalBy: [ 'GlAccount', 'BaiCode' ],
+                             total: [ 'Amount', 'LineCount' ],
+                             sortOrder: [ { by: 'GlAccount', direction: #ASC }, { by: 'BaiCode', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'AmountByCode' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_EbsLine with
+{
+  @UI.facet: [ { id: 'Line', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Line', position: 10 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Open findings', position: 20 },
+               { id: 'ReturnsNoc', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_ReturnsNoc',
+                 label: 'Returns / NOC lot items', position: 30 } ]
+  @EndUserText.label: 'Statement short key (KUKEY)'
+  @UI.identification: [ { position: 10 } ]
+  Kukey;
+  @EndUserText.label: 'Line (ESNUM)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  Esnum;
+  @UI.hidden: true
+  StmtObjectKey;
+  @UI.hidden: true
+  LineObjectKey;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Company code'
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  CompanyCode;
+  @EndUserText.label: 'House bank'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  HouseBank;
+  @EndUserText.label: 'House bank account ID'
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  HouseBankAccount;
+  @EndUserText.label: 'G/L account'
+  @UI.lineItem: [ { position: 25, importance: #HIGH } ]
+  @UI.identification: [ { position: 55 } ]
+  @UI.selectionField: [ { position: 35 } ]
+  GlAccount;
+  @EndUserText.label: 'Statement number'
+  @UI.identification: [ { position: 60 } ]
+  StatementNo;
+  @EndUserText.label: 'Statement date'
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  StatementDate;
+  @EndUserText.label: 'BAI / transaction code'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  BaiCode;
+  @EndUserText.label: 'Posting rule'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  PostingRule;
+  @EndUserText.label: 'Debit / credit'
+  @UI.lineItem: [ { position: 45, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  DebitCreditInd;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 110 } ]
+  Amount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 55, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  Currency;
+  @EndUserText.label: 'Booking date'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  BookingDate;
+  @EndUserText.label: 'Value date'
+  @UI.identification: [ { position: 140 } ]
+  ValueDate;
+  @EndUserText.label: 'Bank reference (payment document / cheque)'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.identification: [ { position: 150 } ]
+  BankReference;
+  @UI.hidden: true
+  BankRefNorm;
+  @EndUserText.label: 'Reference (XBLNR)'
+  @UI.identification: [ { position: 160 } ]
+  Xblnr;
+  @EndUserText.label: 'Posting document'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 170 } ]
+  PostingDocument;
+  @EndUserText.label: 'Posting year'
+  @UI.identification: [ { position: 180 } ]
+  PostingYear;
+  @EndUserText.label: 'Posted'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 190 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  IsPosted;
+  @EndUserText.label: 'Validation status'
+  @UI.lineItem: [ { position: 100, importance: #HIGH, criticality: 'ValidationCriticality' } ]
+  @UI.identification: [ { position: 200, criticality: 'ValidationCriticality' } ]
+  @UI.selectionField: [ { position: 70 } ]
+  ValidationStatus;
+  @UI.hidden: true
+  ValidationCriticality;
+  @EndUserText.label: 'Lines'
+  LineCount;
+  @EndUserText.label: 'Posted lines'
+  PostedLineCount;
+  @EndUserText.label: 'Lines with open findings'
+  LineWithFindingCount;
+  @EndUserText.label: 'Open findings'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Open duplicate findings'
+  DuplicateCount;
+  @EndUserText.label: 'Unmapped BAI code findings'
+  UnmappedCodeCount;
+}

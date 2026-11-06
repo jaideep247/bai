@@ -6,6 +6,7 @@
 *& teardown. Plug-in check doubles go through ZCL_CD_OPS_INJECTOR.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | inject_prism_dao( ), inject_prism_queue( ) for the PRISM status API.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - test injector for the factory</p>
 CLASS zcl_cd_fmon_injector DEFINITION
@@ -35,6 +36,14 @@ CLASS zcl_cd_fmon_injector DEFINITION
     CLASS-METHODS inject_adapter
       IMPORTING
         io_adapter TYPE REF TO zif_cd_fmon_adapter.
+
+    CLASS-METHODS inject_prism_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_fmon_prism_dao.
+
+    CLASS-METHODS inject_prism_queue
+      IMPORTING
+        io_queue TYPE REF TO zif_cd_fmon_prism_queue.
 
     CLASS-METHODS reset.
 
@@ -69,12 +78,24 @@ CLASS zcl_cd_fmon_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_prism_dao.
+    zcl_cd_fmon_factory=>go_prism_dao_double = io_dao.
+  ENDMETHOD.
+
+
+  METHOD inject_prism_queue.
+    zcl_cd_fmon_factory=>go_prism_queue_double = io_queue.
+  ENDMETHOD.
+
+
   METHOD reset.
     CLEAR: zcl_cd_fmon_factory=>go_dao_double,
            zcl_cd_fmon_factory=>go_ddic_double,
            zcl_cd_fmon_factory=>go_calendar_double,
            zcl_cd_fmon_factory=>go_lot_reader_double,
-           zcl_cd_fmon_factory=>go_adapter_double.
+           zcl_cd_fmon_factory=>go_adapter_double,
+           zcl_cd_fmon_factory=>go_prism_dao_double,
+           zcl_cd_fmon_factory=>go_prism_queue_double.
   ENDMETHOD.
 
 ENDCLASS.

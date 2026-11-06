@@ -11,6 +11,7 @@
 *&              truncated lots derive nothing, unknown age no verdict, receipt correction.
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-06 | PRISM status API: SLA verdict ranks stages in the file's direction (PRISM_*).
 *& 2026-11-06 | Modern-syntax sweep: NP.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
@@ -343,17 +344,21 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     DATA lv_reached TYPE timestampl.
     DATA lv_beyond TYPE abap_bool.
 
-    DATA(lv_target) = zcl_cd_fmon_status=>rank( is_sla-stage ).
-    IF lv_target = 0 OR zcl_cd_fmon_status=>direction_of( is_sla-stage ) <> is_file-direction.
+    " Ranks in the file's direction: PRISM_* stages belong to both directions
+    DATA(lv_target) = zcl_cd_fmon_status=>rank( iv_stage     = is_sla-stage
+                                                iv_direction = is_file-direction ).
+    IF lv_target = 0.
       RETURN.
     ENDIF.
 
-    " Sweep: by key (the verdict does not depend on the order of the events)
+    " Sweep: by key (the verdict does not depend on the order of the events); ranks in the
+    " file's direction - PRISM_* stages belong to both directions
     LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file WHERE file_id = is_file-file_id.
-      IF zcl_cd_fmon_status=>direction_of( <ls_event>-stage ) <> is_file-direction.
+      DATA(lv_rank) = zcl_cd_fmon_status=>rank( iv_stage     = <ls_event>-stage
+                                                iv_direction = is_file-direction ).
+      IF lv_rank = 0.
         CONTINUE.
       ENDIF.
-      DATA(lv_rank) = zcl_cd_fmon_status=>rank( <ls_event>-stage ).
       IF is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = <ls_event>-stage ) = abap_true.
         IF lv_reached IS INITIAL OR <ls_event>-event_at < lv_reached.
           lv_reached = <ls_event>-event_at.
@@ -373,7 +378,8 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
              OR is_admissible( iv_sla_stage = is_sla-stage iv_event_stage = is_file-outcome ) = abap_true ).
       lv_reached = is_file-last_event_at.
     ENDIF.
-    IF lv_reached IS INITIAL AND zcl_cd_fmon_status=>rank( is_file-stage ) > lv_target.
+    IF lv_reached IS INITIAL
+       AND zcl_cd_fmon_status=>rank( iv_stage = is_file-stage iv_direction = is_file-direction ) > lv_target.
       lv_beyond = abap_true.
     ENDIF.
 

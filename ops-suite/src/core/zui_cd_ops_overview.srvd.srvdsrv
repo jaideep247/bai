@@ -1,0 +1,23 @@
+@EndUserText.label: 'Production support overview page'
+@ObjectModel.leadingEntity.name: 'ZC_CD_OPSCRITEXC'
+// Binding to create in ADT: ZUI_CD_OPS_OVERVIEW_O4 (OData V4 - UI), the single data source of
+// the Fiori elements overview page (docs/Dashboard_Production_Support.md). It re-exposes the KPI
+// and latest-problem projections of the four area dashboards (same CDS objects, same DCL) and
+// adds the cross-area cards. Read-only: no behaviour definition.
+define service ZUI_CD_OPS_OVERVIEW {
+  // Cross-area cards
+  expose ZC_CD_OpsCritExc   as CriticalException;
+  expose ZC_CD_OpsFreshness as MonitorFreshness;
+  // File monitoring card
+  expose ZC_CD_FmonFlowKpi  as FileFlowKpi;
+  expose ZC_CD_FmonFlowFail as FileFailure;
+  // EBS validation card
+  expose ZC_CD_EbsKpi       as EbsKpi;
+  expose ZC_CD_EbsProblem   as EbsProblem;
+  // Health check card
+  expose ZC_CD_HckKpi       as HealthKpi;
+  expose ZC_CD_HckRed       as HealthRedCheck;
+  // Transactions card
+  expose ZC_CD_TrxKpi       as TransactionKpi;
+  expose ZC_CD_TrxProblem   as TransactionProblem;
+}

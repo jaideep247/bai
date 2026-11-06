@@ -1,0 +1,14 @@
+@EndUserText.label: 'EBS validation dashboard (read-only)'
+@ObjectModel.leadingEntity.name: 'ZC_CD_EBSSTMT'
+// Binding to create in ADT: ZUI_CD_EBS_DASH_O4 (OData V4 - UI). Read-only: no behaviour definition.
+define service ZUI_CD_EBS_DASH {
+  expose ZC_CD_EbsStmt    as EbsStatement;
+  expose ZC_CD_EbsLine    as EbsLine;
+  expose ZC_CD_EbsFind    as EbsFinding;
+  expose ZC_CD_EbsRetNoc  as EbsReturnNoc;
+  expose ZC_CD_EbsRun     as EbsRun;
+  expose ZC_CD_EbsAsOf    as ValidationAsOf;
+  // Tiles and the production-support overview page (KPI / list cards)
+  expose ZC_CD_EbsKpi     as EbsKpi;
+  expose ZC_CD_EbsProblem as LatestProblem;
+}

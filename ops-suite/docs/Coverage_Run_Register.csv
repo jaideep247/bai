@@ -1,6 +1,7 @@
 Object,ABAP Unit methods supplied,Required statement coverage percent,Measured statement coverage percent,Status
 ZCL_CD_EBS_BTC_RESOLVER,20,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,9,90,,Not run in target SAP
+ZCL_CD_EBS_DASH_CDS_TEST,18,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,62,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,7,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
@@ -13,14 +14,21 @@ ZCL_CD_EBS_SAP_DAO,7,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FEB,11,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,10,90,,Not run in target SAP
+ZCL_CD_FMON_ADAPTER_PRISM,4,90,,Not run in target SAP
+ZCL_CD_FMON_CHK_PRISM_FILE,5,90,,Not run in target SAP
+ZCL_CD_FMON_CHK_REJECT,2,90,,Not run in target SAP
 ZCL_CD_FMON_DAO,17,90,,Not run in target SAP
-ZCL_CD_FMON_ENGINE,29,90,,Not run in target SAP
+ZCL_CD_FMON_ENGINE,31,90,,Not run in target SAP
 ZCL_CD_FMON_FLOW_CDS_TEST,19,90,,Not run in target SAP
 ZCL_CD_FMON_LOT_READER,7,90,,Not run in target SAP
 ZCL_CD_FMON_OPS_POLICY,5,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_API,11,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_DAO,5,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_EVENT,20,90,,Not run in target SAP
+ZCL_CD_FMON_PRISM_PROC,7,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,44,90,,Not run in target SAP
-ZCL_CD_FMON_STATUS,15,90,,Not run in target SAP
+ZCL_CD_FMON_STATUS,24,90,,Not run in target SAP
 ZCL_CD_FMON_UTIL,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,14,90,,Not run in target SAP
 ZCL_CD_HCK_BUDGET,3,90,,Not run in target SAP
@@ -28,6 +36,7 @@ ZCL_CD_HCK_CANONICAL,3,90,,Not run in target SAP
 ZCL_CD_HCK_CYCLE_EVAL,14,90,,Not run in target SAP
 ZCL_CD_HCK_C_VOLUME,2,90,,Not run in target SAP
 ZCL_CD_HCK_DAO,16,90,,Not run in target SAP
+ZCL_CD_HCK_DASH_CDS_TEST,6,90,,Not run in target SAP
 ZCL_CD_HCK_ENGINE,20,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,3,90,,Not run in target SAP
 ZCL_CD_HCK_PARAM,3,90,,Not run in target SAP
@@ -48,6 +57,7 @@ ZCL_CD_OPS_CHN_HTTP,9,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_DAO,2,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_POLICY,9,90,,Not run in target SAP
 ZCL_CD_OPS_FACTORY,11,90,,Not run in target SAP
+ZCL_CD_OPS_OVW_CDS_TEST,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,7,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,4,90,,Not run in target SAP
@@ -55,3 +65,4 @@ ZCL_CD_OPS_STORE,18,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_DAO,9,90,,Not run in target SAP
 ZCL_CD_OPS_TRACE_ENGINE,28,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,14,90,,Not run in target SAP
+ZCL_CD_TRX_DASH_CDS_TEST,8,90,,Not run in target SAP

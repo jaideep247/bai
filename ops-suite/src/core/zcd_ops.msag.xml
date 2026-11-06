@@ -1127,6 +1127,120 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>250</MSGNR>
+     <TEXT>Field &amp;1 is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>251</MSGNR>
+     <TEXT>Field &amp;1 has an invalid value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>252</MSGNR>
+     <TEXT>Field &amp;1 is longer than &amp;2 characters</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>253</MSGNR>
+     <TEXT>Field &amp;1 is sent more than once</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>254</MSGNR>
+     <TEXT>Field &amp;1 must be a string, number or boolean</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>255</MSGNR>
+     <TEXT>Body is not valid JSON:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>256</MSGNR>
+     <TEXT>Body must be one JSON object</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>257</MSGNR>
+     <TEXT>Method &amp;1 is not allowed - use POST</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>258</MSGNR>
+     <TEXT>Content type &amp;1 is not supported - use application/json</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>259</MSGNR>
+     <TEXT>Body of &amp;1 bytes exceeds the limit of &amp;2 bytes</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>260</MSGNR>
+     <TEXT>No authorization to record PRISM events (ZCD_OPS &amp;1 &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>261</MSGNR>
+     <TEXT>Event &amp;1 is already recorded with a different payload</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>262</MSGNR>
+     <TEXT>Event &amp;1 could not be stored - retry later</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>263</MSGNR>
+     <TEXT>Field &amp;1 lies more than &amp;2 minutes in the future</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>264</MSGNR>
+     <TEXT>Field &amp;1 requires field &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>265</MSGNR>
+     <TEXT>&amp;1: PRISM could not process or deliver the file (direction &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>266</MSGNR>
+     <TEXT>&amp;1: reported by PRISM, but SAP has no generation record of it</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>267</MSGNR>
+     <TEXT>&amp;1: delivered by PRISM &amp;2 min ago, not yet received in SAP</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>268</MSGNR>
+     <TEXT>Event &amp;1: instant processing could not be queued (bgPF)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>300</MSGNR>
      <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
     </T100>

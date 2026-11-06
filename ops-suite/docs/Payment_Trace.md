@@ -53,14 +53,14 @@ There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA f
 | Partner `ZZ_MEMBER_NO = BUT000-BPEXT`, with SOURCE first, then without (legacy PCLM) | `docs/DEVELOPMENT_STANDARDS.md` §1 |
 | Table / field names of the request log are configuration, validated against the DDIC | HCK value query `src/hck/zcl_cd_hck_value_query.clas.abap`; FMON reader `src/fmon/zcl_cd_fmon_query.clas.abap:91` (validate), `src/fmon/zcl_cd_fmon_dao.clas.abap:315, 399-410` (approval + S_TABU_NAM) |
 
-Implementation: `ZCL_CD_OPS_TRACE_ENGINE` `trace_request` (`:469`, rule at `:485`), `resolve_partner` (`:530`), `check_items` (`:558`). Two SUCCESS rows → both AMBIGUOUS; a failed retry after the SUCCESS row is ignored; partner without source is shown as `PARTNER_WITHOUT_SOURCE`; a request partner that owns none of the FIN's items → `PARTNER_MISMATCH` (AMBIGUOUS, not traced further).
+Implementation: `ZCL_CD_OPS_TRACE_ENGINE` `trace_request` (`:470`, rule at `:486`), `resolve_partner` (`:531`), `check_items` (`:559`). Two SUCCESS rows → both AMBIGUOUS; a failed retry after the SUCCESS row is ignored; partner without source is shown as `PARTNER_WITHOUT_SOURCE`; a request partner that owns none of the FIN's items → `PARTNER_MISMATCH` (AMBIGUOUS, not traced further).
 
 ### 4.2 Separate clearing-reference lookup for reversed items
 
 After a reversal or clearing reset, `DFKKOP` of the request item carries a **new** AUGBL (or none), while the bank and G/L evidence (`FEBEP-CHECT`, `BSEG-XREF2`) still carries the **original** clearing reference. The trace therefore:
 
 1. reads the item's historical clearing references from the clearing-reset history (`TRACE_SRC_HISTORY`, candidate `DFKKRAPT`; key = item OPBEL, REF = historical clearing document, DATE / TIME = reset date / time — **field names VERIFY-SE11**, validated against the DDIC at run time through the FMON reader);
-2. traces payment, file, ACK, settlement / return and G/L **for every clearing reference** (current + historical), one attempt each — a reissue is a later attempt (`trace_history` `:635`, `build_attempts` `:725`);
+2. traces payment, file, ACK, settlement / return and G/L **for every clearing reference** (current + historical), one attempt each — a reissue is a later attempt (`trace_history` `:636`, `build_attempts` `:726`);
 3. treats reversal evidence without a history row as **`REVERSAL_HISTORY_MISSING`** (MISSING), and an unconfigured / unreadable history source as UNAVAILABLE — with reason `REVERSAL_HISTORY_MISSING` when the item shows reversal evidence. Neither is ever a pass; an unconfigured history keeps every trace INCOMPLETE, because the absence of an earlier attempt is then unproven.
 
 Reversal evidence used: `DFKKOP-AUGRD` in `TRACE_REVERSAL_AUGRD` (default `05`; then the current AUGBL is the reversal, not a payment attempt), or `DFKKKO-STBEL` set on the current clearing document. Both are standard fields **not used elsewhere in this repository — VERIFY-SE11**. `BKPF-STBLG` (used by `src/hck/zcl_cd_hck_dao.clas.abap:532`) excludes reversed G/L documents.

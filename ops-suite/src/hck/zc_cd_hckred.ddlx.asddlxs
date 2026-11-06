@@ -1,0 +1,43 @@
+// UI annotations: HCK health check dashboard - red and amber checks
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Red / amber check', typeNamePlural: 'Red and amber checks',
+                  title: { type: #STANDARD, value: 'CheckId' },
+                  description: { type: #STANDARD, value: 'CheckText' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StatusOrder', direction: #ASC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_HckRed with
+{
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  CheckId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Check text'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  CheckText;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Category;
+  @EndUserText.label: 'Category text'
+  CategoryText;
+  @EndUserText.label: 'Priority'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  Priority;
+  @EndUserText.label: 'Status'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  CheckStatus;
+  @UI.hidden: true
+  StatusCriticality;
+  @UI.hidden: true
+  StatusOrder;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Oldest due date'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  OldestDueDate;
+  @EndUserText.label: 'As of'
+  AsOfAt;
+}

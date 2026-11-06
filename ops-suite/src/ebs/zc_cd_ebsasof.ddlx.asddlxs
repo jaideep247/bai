@@ -1,0 +1,49 @@
+// UI annotations: EBS validation as of (last completed run)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Validation as of', typeNamePlural: 'Validation as of',
+                  title: { type: #STANDARD, value: 'AsOfAt' } }
+annotate entity ZC_CD_EbsAsOf with
+{
+  @UI.facet: [ { id: 'AsOf', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Validation run', position: 10 } ]
+  @UI.hidden: true
+  PaymentEngineArea;
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Run variant'
+  @UI.identification: [ { position: 10 } ]
+  RunVariant;
+  @EndUserText.label: 'As of (end of last completed run, UTC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  AsOfAt;
+  @EndUserText.label: 'Run started'
+  @UI.identification: [ { position: 30 } ]
+  RunStartedAt;
+  @EndUserText.label: 'Run status (S, W, E, N)'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  RunStatus;
+  @EndUserText.label: 'Run RAG'
+  @UI.identification: [ { position: 50 } ]
+  RunRag;
+  @EndUserText.label: 'Lines validated by the run'
+  @UI.identification: [ { position: 60 } ]
+  RunLineCount;
+  @EndUserText.label: 'Findings of the run'
+  @UI.identification: [ { position: 70 } ]
+  RunFindingCount;
+  @EndUserText.label: 'Age (minutes)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 80, criticality: 'StaleCriticality' } ]
+  @UI.dataPoint: { qualifier: 'ValidationAge', title: 'Validation age (minutes)', criticality: 'StaleCriticality' }
+  AgeMinutes;
+  @EndUserText.label: 'Stale after (minutes)'
+  @UI.identification: [ { position: 90 } ]
+  StaleAfterMinutes;
+  @EndUserText.label: 'Stale (older than 26 hours)'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.identification: [ { position: 100, criticality: 'StaleCriticality' } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+}

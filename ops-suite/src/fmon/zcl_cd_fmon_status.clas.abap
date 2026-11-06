@@ -7,13 +7,18 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | manual_allowed( ) for the manual-status app (design 6.4).
+*& 2026-11-06 | PRISM status API: rank per direction (PRISM_* stages in both directions),
+*&              fits_direction( ), is_origin( ), PRISM_FAILED superseded by later progress.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - file status state machine</p>
 "! Rules (also in FMON_FILE_MONITORING.md):
-"! <ol><li>A status outside the model, or of the other direction, is rejected.</li>
+"! <ol><li>A status outside the model, or of the other direction, is rejected.
+"! PRISM_RECEIVED / PRISM_DELIVERED / PRISM_FAILED belong to both directions.</li>
 "! <li>Without an outcome the file only moves to a stage of higher rank;
 "! skipping intermediate stages is allowed, going back is ignored.</li>
 "! <li>ACK_RECEIVED and NACK_REJECTED are final.</li>
+"! <li>PRISM_FAILED is an outcome that a later stage of the same or higher rank
+"! supersedes (PRISM retried and delivered, or SAP received the file).</li>
 "! <li>Inbound outcomes may only improve on a re-run:
 "! FAILED -> PARTIALLY_PROCESSED -> FULLY_PROCESSED. FULLY_PROCESSED is final.</li>
 "! <li>PARTIALLY_PROCESSED re-applied with another count updates the count only.</li></ol>
@@ -24,19 +29,40 @@ CLASS zcl_cd_fmon_status DEFINITION
 
   PUBLIC SECTION.
 
-    "! Rank of a status within its direction (1..4 outbound, 1..3 inbound, 0 unknown)
+    "! Rank of a status within a direction (outbound 10..40, inbound 3..30; 0 = not in
+    "! that direction or unknown). Without a direction, the stage's own direction is used;
+    "! a PRISM_* stage (both directions) then has rank 0.
     CLASS-METHODS rank
       IMPORTING
         iv_stage       TYPE zif_cd_fmon_types=>ty_stage
+        iv_direction   TYPE zif_cd_fmon_types=>ty_direction OPTIONAL
       RETURNING
         VALUE(rv_rank) TYPE i.
 
-    "! Direction a status belongs to (blank when unknown)
+    "! Direction a status belongs to (blank when unknown or when it belongs to both)
     CLASS-METHODS direction_of
       IMPORTING
         iv_stage            TYPE zif_cd_fmon_types=>ty_stage
       RETURNING
         VALUE(rv_direction) TYPE zif_cd_fmon_types=>ty_direction.
+
+    "! The status exists in the given direction (PRISM_* stages fit both)
+    CLASS-METHODS fits_direction
+      IMPORTING
+        iv_stage       TYPE zif_cd_fmon_types=>ty_stage
+        iv_direction   TYPE zif_cd_fmon_types=>ty_direction
+      RETURNING
+        VALUE(rv_fits) TYPE abap_bool.
+
+    "! First evidence of a file instance (audit A49): may open the instance of its own
+    "! business date. Outbound GENERATED_IN_SAP; inbound every stage up to FILE_RECEIVED
+    "! (PRISM receives and delivers an inbound file before SAP sees it).
+    CLASS-METHODS is_origin
+      IMPORTING
+        iv_stage         TYPE zif_cd_fmon_types=>ty_stage
+        iv_direction     TYPE zif_cd_fmon_types=>ty_direction
+      RETURNING
+        VALUE(rv_origin) TYPE abap_bool.
 
     CLASS-METHODS is_terminal
       IMPORTING
@@ -64,6 +90,20 @@ CLASS zcl_cd_fmon_status DEFINITION
         VALUE(rv_allowed) TYPE abap_bool.
 
   PRIVATE SECTION.
+    "! Stage ranks per direction; gaps leave room between SAP's own stages for PRISM's
+    CONSTANTS:
+      BEGIN OF gc_rank,
+        out_generated      TYPE i VALUE 10,
+        out_sent           TYPE i VALUE 20,
+        out_prism_received TYPE i VALUE 25,
+        out_forwarded      TYPE i VALUE 30,
+        out_response       TYPE i VALUE 40,
+        in_prism_received  TYPE i VALUE 3,
+        in_prism_delivered TYPE i VALUE 6,
+        in_received        TYPE i VALUE 10,
+        in_loaded          TYPE i VALUE 20,
+        in_outcome         TYPE i VALUE 30,
+      END OF gc_rank.
 
     "! Inbound outcome quality: FAILED 1, PARTIALLY 2, FULLY 3; others 0
     CLASS-METHODS quality
@@ -86,18 +126,54 @@ ENDCLASS.
 CLASS zcl_cd_fmon_status IMPLEMENTATION.
 
   METHOD rank.
-    rv_rank = SWITCH #( iv_stage
-                        WHEN zif_cd_fmon_types=>gc_stage-generated THEN 1
-                        WHEN zif_cd_fmon_types=>gc_stage-sent      THEN 2
-                        WHEN zif_cd_fmon_types=>gc_stage-forwarded THEN 3
-                        WHEN zif_cd_fmon_types=>gc_stage-ack       THEN 4
-                        WHEN zif_cd_fmon_types=>gc_stage-nack      THEN 4
-                        WHEN zif_cd_fmon_types=>gc_stage-received  THEN 1
-                        WHEN zif_cd_fmon_types=>gc_stage-loaded    THEN 2
-                        WHEN zif_cd_fmon_types=>gc_stage-fully     THEN 3
-                        WHEN zif_cd_fmon_types=>gc_stage-partially THEN 3
-                        WHEN zif_cd_fmon_types=>gc_stage-failed    THEN 3
-                        ELSE 0 ).
+    DATA(lv_direction) = COND #( WHEN iv_direction IS NOT INITIAL THEN iv_direction
+                                 ELSE direction_of( iv_stage ) ).
+    CASE lv_direction.
+      WHEN zif_cd_fmon_types=>gc_direction-outbound.
+        " PRISM_DELIVERED = forwarded to the bank / IRIS / source (same rank)
+        rv_rank = SWITCH #( iv_stage
+                            WHEN zif_cd_fmon_types=>gc_stage-generated       THEN gc_rank-out_generated
+                            WHEN zif_cd_fmon_types=>gc_stage-sent            THEN gc_rank-out_sent
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_received  THEN gc_rank-out_prism_received
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_delivered THEN gc_rank-out_forwarded
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_failed    THEN gc_rank-out_forwarded
+                            WHEN zif_cd_fmon_types=>gc_stage-forwarded       THEN gc_rank-out_forwarded
+                            WHEN zif_cd_fmon_types=>gc_stage-ack             THEN gc_rank-out_response
+                            WHEN zif_cd_fmon_types=>gc_stage-nack            THEN gc_rank-out_response
+                            ELSE 0 ).
+      WHEN zif_cd_fmon_types=>gc_direction-inbound.
+        rv_rank = SWITCH #( iv_stage
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_received  THEN gc_rank-in_prism_received
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_delivered THEN gc_rank-in_prism_delivered
+                            WHEN zif_cd_fmon_types=>gc_stage-prism_failed    THEN gc_rank-in_prism_delivered
+                            WHEN zif_cd_fmon_types=>gc_stage-received        THEN gc_rank-in_received
+                            WHEN zif_cd_fmon_types=>gc_stage-loaded          THEN gc_rank-in_loaded
+                            WHEN zif_cd_fmon_types=>gc_stage-fully           THEN gc_rank-in_outcome
+                            WHEN zif_cd_fmon_types=>gc_stage-partially       THEN gc_rank-in_outcome
+                            WHEN zif_cd_fmon_types=>gc_stage-failed          THEN gc_rank-in_outcome
+                            ELSE 0 ).
+      WHEN OTHERS.
+        rv_rank = 0.
+    ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD fits_direction.
+    rv_fits = xsdbool( iv_direction IS NOT INITIAL
+                       AND rank( iv_stage = iv_stage iv_direction = iv_direction ) > 0 ).
+  ENDMETHOD.
+
+
+  METHOD is_origin.
+    DATA(lv_rank) = rank( iv_stage = iv_stage iv_direction = iv_direction ).
+    CASE iv_direction.
+      WHEN zif_cd_fmon_types=>gc_direction-outbound.
+        rv_origin = xsdbool( lv_rank = gc_rank-out_generated ).
+      WHEN zif_cd_fmon_types=>gc_direction-inbound.
+        rv_origin = xsdbool( lv_rank > 0 AND lv_rank <= gc_rank-in_received ).
+      WHEN OTHERS.
+        rv_origin = abap_false.
+    ENDCASE.
   ENDMETHOD.
 
 
@@ -120,6 +196,7 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
   METHOD is_terminal.
     rv_terminal = xsdbool( iv_stage = zif_cd_fmon_types=>gc_stage-ack
                         OR iv_stage = zif_cd_fmon_types=>gc_stage-nack
+                        OR iv_stage = zif_cd_fmon_types=>gc_stage-prism_failed
                         OR iv_stage = zif_cd_fmon_types=>gc_stage-fully
                         OR iv_stage = zif_cd_fmon_types=>gc_stage-partially
                         OR iv_stage = zif_cd_fmon_types=>gc_stage-failed ).
@@ -127,8 +204,21 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
 
 
   METHOD apply.
-    IF rank( iv_stage ) = 0 OR direction_of( iv_stage ) <> cs_file-direction.
+    DATA(lv_rank) = rank( iv_stage = iv_stage iv_direction = cs_file-direction ).
+    IF lv_rank = 0.
       rv_result = zif_cd_fmon_types=>gc_transition-rejected.
+      RETURN.
+    ENDIF.
+
+    " PRISM_FAILED is superseded by later evidence of progress (PRISM retried, SAP received)
+    IF cs_file-outcome = zif_cd_fmon_types=>gc_stage-prism_failed
+       AND iv_stage <> zif_cd_fmon_types=>gc_stage-prism_failed
+       AND lv_rank >= rank( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_failed
+                            iv_direction = cs_file-direction ).
+      set_stage( EXPORTING iv_stage       = iv_stage
+                           iv_unprocessed = iv_unprocessed
+                 CHANGING  cs_file        = cs_file ).
+      rv_result = zif_cd_fmon_types=>gc_transition-advanced.
       RETURN.
     ENDIF.
 
@@ -154,7 +244,7 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    IF rank( iv_stage ) <= rank( cs_file-stage ).
+    IF lv_rank <= rank( iv_stage = cs_file-stage iv_direction = cs_file-direction ).
       rv_result = zif_cd_fmon_types=>gc_transition-ignored.
       RETURN.
     ENDIF.
@@ -187,9 +277,9 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
 
   METHOD set_stage.
     cs_file-stage = iv_stage.
-    IF is_terminal( iv_stage ) = abap_true.
-      cs_file-outcome = iv_stage.
-    ENDIF.
+    " A non-terminal stage reached after PRISM_FAILED clears that outcome (the only
+    " outcome a non-terminal stage can supersede)
+    cs_file-outcome = COND #( WHEN is_terminal( iv_stage ) = abap_true THEN iv_stage ).
     cs_file-unprocessed_count = COND #( WHEN iv_stage = zif_cd_fmon_types=>gc_stage-partially
                                         THEN iv_unprocessed
                                         ELSE 0 ).

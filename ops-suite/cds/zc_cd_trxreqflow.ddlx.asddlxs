@@ -1,0 +1,120 @@
+// UI annotations: Transactions dashboard - request funnel (cds/, after SE11)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment request', typeNamePlural: 'Payment requests',
+                  title: { type: #STANDARD, value: 'FinId' },
+                  description: { type: #STANDARD, value: 'SourceSystem' } }
+@UI.chart: [ { qualifier: 'Funnel',
+               title: 'Request funnel by source',
+               chartType: #COLUMN,
+               dimensions: [ 'SourceSystem' ],
+               measures: [ 'RequestedCount', 'ProcessedCount', 'PostedCount', 'PaidCount', 'AcknowledgedCount', 'SettledCount', 'ErroredCount', 'RejectedCount', 'ReturnedCount' ],
+               dimensionAttributes: [ { dimension: 'SourceSystem', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RequestedCount', role: #AXIS_1 },
+                                    { measure: 'ProcessedCount', role: #AXIS_1 },
+                                    { measure: 'PostedCount', role: #AXIS_1 },
+                                    { measure: 'PaidCount', role: #AXIS_1 },
+                                    { measure: 'AcknowledgedCount', role: #AXIS_1 },
+                                    { measure: 'SettledCount', role: #AXIS_1 },
+                                    { measure: 'ErroredCount', role: #AXIS_1 },
+                                    { measure: 'RejectedCount', role: #AXIS_1 },
+                                    { measure: 'ReturnedCount', role: #AXIS_1 } ] },
+             { qualifier: 'ByStage',
+               title: 'Requests by stage and source',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'RequestStage', 'SourceSystem' ],
+               measures: [ 'RequestedCount' ],
+               dimensionAttributes: [ { dimension: 'RequestStage', role: #CATEGORY },
+                                      { dimension: 'SourceSystem', role: #SERIES } ],
+               measureAttributes: [ { measure: 'RequestedCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'RequestDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Funnel' },
+                                               { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Errored', text: 'Errored requests', filter: 'RequestStage EQ ERRORED' } ]
+annotate entity ZC_CD_TrxReqFlow with
+{
+  @UI.facet: [ { id: 'Request', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Request', position: 10 } ]
+  @EndUserText.label: 'FIN number'
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'display',
+                    label: 'Payment trace' } ]
+  FinId;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  SourceSystem;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Request date'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  RequestDate;
+  @EndUserText.label: 'Request outcome (SUCCESS row rule)'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  RequestOutcome;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  CompanyCode;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Direction'
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  Direction;
+  @EndUserText.label: 'Posting date'
+  @UI.identification: [ { position: 80 } ]
+  PostingDate;
+  @EndUserText.label: 'Clearing / payment document'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  ClearingDoc;
+  @EndUserText.label: 'Cheque number'
+  @UI.identification: [ { position: 100 } ]
+  ChequeNo;
+  @EndUserText.label: 'Retrieval status'
+  @UI.identification: [ { position: 110 } ]
+  RetrievalStatus;
+  @EndUserText.label: 'Stage'
+  @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'StageCriticality' } ]
+  @UI.identification: [ { position: 120, criticality: 'StageCriticality' } ]
+  @UI.selectionField: [ { position: 80 } ]
+  RequestStage;
+  @UI.hidden: true
+  StageCriticality;
+  @EndUserText.label: 'Requested'
+  RequestedCount;
+  @EndUserText.label: 'Processed (SUCCESS row)'
+  ProcessedCount;
+  @EndUserText.label: 'Posted (open item)'
+  PostedCount;
+  @EndUserText.label: 'Paid'
+  PaidCount;
+  @EndUserText.label: 'Acknowledged (ACK)'
+  AcknowledgedCount;
+  @EndUserText.label: 'Settled / encashed'
+  SettledCount;
+  @EndUserText.label: 'Errored (no SUCCESS row)'
+  ErroredCount;
+  @EndUserText.label: 'Rejected (NACK)'
+  RejectedCount;
+  @EndUserText.label: 'Returned'
+  ReturnedCount;
+  @EndUserText.label: 'Attempts'
+  @UI.identification: [ { position: 130 } ]
+  AttemptCount;
+  @EndUserText.label: 'SUCCESS attempts'
+  SuccessAttempts;
+  @EndUserText.label: 'Failed attempts'
+  ErrorAttempts;
+}

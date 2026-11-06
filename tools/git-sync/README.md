@@ -60,7 +60,7 @@ Get-Content "$env:LOCALAPPDATA\git-sync\git-sync.log" -Tail 20
 - A PowerShell window may flash briefly at each run on some Windows builds.
 - The task runs a copy in `%LOCALAPPDATA%\git-sync`; re-run the installer after changing `git-sync.ps1`.
 - `-NoPush` from older installs is still accepted and has no effect (push is off unless `-Push`).
-- Not executed in the cloud session that wrote it (no PowerShell there); the first run on the PC is the test.
+- Not executed where it was written (no PowerShell available); the first run on the PC is the test.
   The git behaviour it relies on (a conflicting `pull --rebase` leaves a rebase in progress,
   `rebase --abort` restores HEAD and branch, `rebase --abort` without a rebase exits 128) was
   checked with a scripted conflict in a scratch repository on 2026-11-06 (audit A48).

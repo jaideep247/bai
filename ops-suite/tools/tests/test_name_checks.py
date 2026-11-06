@@ -63,11 +63,11 @@ class NameChecksFixture(unittest.TestCase):
         self.assertEqual(name_checks.method_name_failures(self.root), [])
 
     def test_transparent_table_above_16_fails(self):
-        self.put(os.path.join('ddic', 'core', 'zcd_ops_alert_rule.tabl.ddl'),
-                 TABLE.format(name='zcd_ops_alert_rule', field='rule_id'))
+        self.put(os.path.join('ddic', 'core', 'zcd_ops_long_table.tabl.ddl'),
+                 TABLE.format(name='zcd_ops_long_table', field='rule_id'))
         failures = name_checks.name_length_failures(self.root)
         self.assertEqual(len(failures), 1, failures)
-        self.assertIn('transparent table zcd_ops_alert_rule (18 > 16)', failures[0])
+        self.assertIn('transparent table zcd_ops_long_table (18 > 16)', failures[0])
 
     def test_long_field_method_and_attribute_fail(self):
         self.put(os.path.join('ddic', 'core', 'zcd_ops_alrule.tabl.ddl'),

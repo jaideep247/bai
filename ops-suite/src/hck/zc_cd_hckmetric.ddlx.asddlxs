@@ -1,0 +1,73 @@
+// UI annotations: HCK health check dashboard - metric history
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Measurement', typeNamePlural: 'Metric history',
+                  title: { type: #STANDARD, value: 'Metric' },
+                  description: { type: #STANDARD, value: 'Dimension1' } }
+@UI.chart: [ { qualifier: 'Trend',
+               title: 'Metric value per day, one line per DIM2 series',
+               chartType: #LINE,
+               dimensions: [ 'MeasuredDate', 'Dimension2' ],
+               measures: [ 'MetricValue' ],
+               dimensionAttributes: [ { dimension: 'MeasuredDate', role: #CATEGORY },
+                                      { dimension: 'Dimension2', role: #SERIES } ],
+               measureAttributes: [ { measure: 'MetricValue', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'MeasuredAt', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Trend' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_HckMetric with
+{
+  @UI.facet: [ { id: 'Metric', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Measurement', position: 10 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Open findings of the check', position: 20 } ]
+  @UI.hidden: true
+  RunId;
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  CheckId;
+  @EndUserText.label: 'Metric'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Metric;
+  @EndUserText.label: 'Dimension 1 (company code, job, source)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Dimension1;
+  @EndUserText.label: 'Dimension 2 (series)'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Dimension2;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Check text'
+  @UI.identification: [ { position: 50 } ]
+  CheckText;
+  @EndUserText.label: 'Category'
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  Category;
+  @EndUserText.label: 'Kind (V volume, L level, R rate)'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  MetricKind;
+  @EndUserText.label: 'Value'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.identification: [ { position: 80 } ]
+  MetricValue;
+  @EndUserText.label: 'Weight (rate denominator)'
+  @UI.identification: [ { position: 90 } ]
+  Weight;
+  @EndUserText.label: 'Measured (UTC)'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  MeasuredAt;
+  @EndUserText.label: 'Measured on'
+  @UI.selectionField: [ { position: 60 } ]
+  MeasuredDate;
+  @EndUserText.label: 'Measurements'
+  SampleCount;
+}

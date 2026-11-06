@@ -7,6 +7,8 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | PRISM SUCCESS rule and manual status tests (design 6.4, 6.5).
+*& 2026-11-06 | PRISM status API: PRISM_* stage order per direction, recoverable PRISM_FAILED,
+*&              direction fit and file-instance origin.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *&---------------------------------------------------------------------*
 CLASS ltc_status DEFINITION FINAL
@@ -49,6 +51,15 @@ CLASS ltc_status DEFINITION FINAL
     METHODS success_after_fail_wins FOR TESTING.
     METHODS manual_forward_is_allowed FOR TESTING.
     METHODS manual_backward_is_refused FOR TESTING.
+    METHODS prism_received_after_sent FOR TESTING.
+    METHODS prism_delivered_before_ack FOR TESTING.
+    METHODS prism_after_ack_is_ignored FOR TESTING.
+    METHODS inbound_prism_before_receipt FOR TESTING.
+    METHODS receipt_not_back_to_prism FOR TESTING.
+    METHODS prism_failed_is_outcome FOR TESTING.
+    METHODS prism_failed_superseded FOR TESTING.
+    METHODS prism_stage_fits_both FOR TESTING.
+    METHODS origin_rules_per_direction FOR TESTING.
 
 ENDCLASS.
 
@@ -307,6 +318,181 @@ CLASS ltc_status IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = zcl_cd_fmon_status=>manual_allowed( iv_stage = zif_cd_fmon_types=>gc_stage-nack is_file = ms_file )
           msg = 'A final ACK must not be overwritten by hand' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): outbound GENERATED < SENT_TO_PRISM < PRISM_RECEIVED.
+  METHOD prism_received_after_sent.
+    TRY.
+        configure_scenario( VALUE #( stage = zif_cd_fmon_types=>gc_stage-sent ) ).
+        DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-prism_received ).
+        cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'PRISM_RECEIVED must follow SENT_TO_PRISM' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-prism_received
+                                            msg = 'Stage must be PRISM_RECEIVED' ).
+        cl_abap_unit_assert=>assert_initial( act = ms_file-outcome msg = 'PRISM_RECEIVED is no outcome' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): outbound PRISM_DELIVERED (= forwarded) < ACK_RECEIVED.
+  METHOD prism_delivered_before_ack.
+    TRY.
+        configure_scenario( VALUE #( stage = zif_cd_fmon_types=>gc_stage-prism_received ) ).
+        DATA(lv_delivered) = act( zif_cd_fmon_types=>gc_stage-prism_delivered ).
+        DATA(lv_forwarded) = act( zif_cd_fmon_types=>gc_stage-forwarded ).
+        DATA(lv_ack) = act( zif_cd_fmon_types=>gc_stage-ack ).
+        cl_abap_unit_assert=>assert_equals( act = lv_delivered exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'PRISM_DELIVERED must follow PRISM_RECEIVED' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_forwarded exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'FORWARDED_TO_BANK has the rank of PRISM_DELIVERED' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_ack exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'ACK_RECEIVED must follow PRISM_DELIVERED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): a PRISM milestone reported after the bank ACK never moves the file back.
+  METHOD prism_after_ack_is_ignored.
+    TRY.
+        configure_scenario( VALUE #( stage = zif_cd_fmon_types=>gc_stage-ack outcome = zif_cd_fmon_types=>gc_stage-ack ) ).
+        DATA(lv_received) = act( zif_cd_fmon_types=>gc_stage-prism_received ).
+        DATA(lv_failed) = act( zif_cd_fmon_types=>gc_stage-prism_failed ).
+        cl_abap_unit_assert=>assert_equals( act = lv_received exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'A late PRISM_RECEIVED must be ignored' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_failed exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'PRISM_FAILED must not overwrite a final ACK' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-ack
+                                            msg = 'Outcome must stay ACK_RECEIVED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): inbound PRISM_RECEIVED < PRISM_DELIVERED < FILE_RECEIVED < FILE_LOADED.
+  METHOD inbound_prism_before_receipt.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true stage = zif_cd_fmon_types=>gc_stage-prism_received ) ).
+        DATA(lv_delivered) = act( zif_cd_fmon_types=>gc_stage-prism_delivered ).
+        DATA(lv_received) = act( zif_cd_fmon_types=>gc_stage-received ).
+        DATA(lv_loaded) = act( zif_cd_fmon_types=>gc_stage-loaded ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE string_table( ( CONV #( lv_delivered ) ) ( CONV #( lv_received ) ) ( CONV #( lv_loaded ) ) )
+          exp = VALUE string_table( ( CONV #( zif_cd_fmon_types=>gc_transition-advanced ) )
+                                    ( CONV #( zif_cd_fmon_types=>gc_transition-advanced ) )
+                                    ( CONV #( zif_cd_fmon_types=>gc_transition-advanced ) ) )
+          msg = 'Inbound stages must advance PRISM -> SAP receipt -> load' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-loaded
+                                            msg = 'Stage must be FILE_LOADED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): once SAP received an inbound file, a PRISM milestone is history only.
+  METHOD receipt_not_back_to_prism.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true stage = zif_cd_fmon_types=>gc_stage-received ) ).
+        DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-prism_delivered ).
+        cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'PRISM_DELIVERED after FILE_RECEIVED must be ignored' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-stage exp = zif_cd_fmon_types=>gc_stage-received
+                                            msg = 'Stage must stay FILE_RECEIVED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): PRISM_FAILED is a failure outcome of the file.
+  METHOD prism_failed_is_outcome.
+    TRY.
+        configure_scenario( VALUE #( stage = zif_cd_fmon_types=>gc_stage-prism_received ) ).
+        DATA(lv_result) = act( zif_cd_fmon_types=>gc_stage-prism_failed ).
+        cl_abap_unit_assert=>assert_equals( act = lv_result exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'PRISM_FAILED must be applied' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file-outcome exp = zif_cd_fmon_types=>gc_stage-prism_failed
+                                            msg = 'Outcome must be PRISM_FAILED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): a later PRISM_DELIVERED (PRISM retried) supersedes PRISM_FAILED; an
+  " earlier stage does not.
+  METHOD prism_failed_superseded.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_file.
+    TRY.
+        configure_scenario( VALUE #( stage   = zif_cd_fmon_types=>gc_stage-prism_failed
+                                     outcome = zif_cd_fmon_types=>gc_stage-prism_failed ) ).
+        DATA(lv_earlier) = act( zif_cd_fmon_types=>gc_stage-prism_received ).
+        ls_exp = ms_file.
+        ls_exp-stage = zif_cd_fmon_types=>gc_stage-prism_delivered.
+        CLEAR ls_exp-outcome.
+        DATA(lv_retry) = act( zif_cd_fmon_types=>gc_stage-prism_delivered ).
+        cl_abap_unit_assert=>assert_equals( act = lv_earlier exp = zif_cd_fmon_types=>gc_transition-ignored
+                                            msg = 'An earlier stage must not clear PRISM_FAILED' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_retry exp = zif_cd_fmon_types=>gc_transition-advanced
+                                            msg = 'PRISM_DELIVERED after PRISM_FAILED must advance' ).
+        cl_abap_unit_assert=>assert_equals( act = ms_file exp = ls_exp
+                                            msg = 'File must be PRISM_DELIVERED without outcome' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (PRISM API): PRISM_* stages belong to both directions, SAP's own stages to one.
+  METHOD prism_stage_fits_both.
+    TRY.
+        DATA(lt_act) = VALUE string_table(
+          ( |{ zcl_cd_fmon_status=>fits_direction( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_received
+                                                   iv_direction = zif_cd_fmon_types=>gc_direction-outbound ) }| )
+          ( |{ zcl_cd_fmon_status=>fits_direction( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_received
+                                                   iv_direction = zif_cd_fmon_types=>gc_direction-inbound ) }| )
+          ( |{ zcl_cd_fmon_status=>fits_direction( iv_stage     = zif_cd_fmon_types=>gc_stage-loaded
+                                                   iv_direction = zif_cd_fmon_types=>gc_direction-outbound ) }| )
+          ( |{ zcl_cd_fmon_status=>rank( zif_cd_fmon_types=>gc_stage-prism_failed ) }| ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_act
+          exp = VALUE string_table( ( |{ abap_true }| ) ( |{ abap_true }| ) ( |{ abap_false }| ) ( |0| ) )
+          msg = 'PRISM stages fit both directions; without a direction they have no rank' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (A49 with PRISM): outbound only GENERATED opens a file instance; inbound every stage
+  " up to FILE_RECEIVED does (PRISM sees an inbound file before SAP).
+  METHOD origin_rules_per_direction.
+    TRY.
+        DATA(lt_act) = VALUE string_table(
+          ( |{ zcl_cd_fmon_status=>is_origin( iv_stage     = zif_cd_fmon_types=>gc_stage-generated
+                                              iv_direction = zif_cd_fmon_types=>gc_direction-outbound ) }| )
+          ( |{ zcl_cd_fmon_status=>is_origin( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_received
+                                              iv_direction = zif_cd_fmon_types=>gc_direction-outbound ) }| )
+          ( |{ zcl_cd_fmon_status=>is_origin( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_delivered
+                                              iv_direction = zif_cd_fmon_types=>gc_direction-inbound ) }| )
+          ( |{ zcl_cd_fmon_status=>is_origin( iv_stage     = zif_cd_fmon_types=>gc_stage-received
+                                              iv_direction = zif_cd_fmon_types=>gc_direction-inbound ) }| )
+          ( |{ zcl_cd_fmon_status=>is_origin( iv_stage     = zif_cd_fmon_types=>gc_stage-loaded
+                                              iv_direction = zif_cd_fmon_types=>gc_direction-inbound ) }| ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_act
+          exp = VALUE string_table( ( |{ abap_true }| ) ( |{ abap_false }| ) ( |{ abap_true }| )
+                                    ( |{ abap_true }| ) ( |{ abap_false }| ) )
+          msg = 'Origin: GENERATED outbound; PRISM_* and FILE_RECEIVED inbound' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

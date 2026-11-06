@@ -45,17 +45,17 @@ Two real inputs instead of the population: one configured case (positive) and an
 | Statements | One BAI2 file per bank (`config/samples/bai2_sample.txt` as layout reference), one CAMT.053 and one CAMT.054 returns file |
 | Customizing | `config/*.csv`, `config/*_seed.md` loaded per `Implementation_Order.md` step 3 |
 | Kill switch | TVARVC `ZCD_EBS_VALIDATION_MODE` = M unless a case says otherwise |
-| Reset | Delete test runs from ZCD_OPS_RUN / _FINDING / _ALERT_LOG by RUN_ID after each case |
+| Reset | Delete test runs from ZCD_OPS_RUN / _FINDING / ZCD_OPS_ALLOG by RUN_ID after each case |
 
 Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-776 methods in 56 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+878 methods in the package test includes (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
-| Package `ZCD_OPS*` ABAP Unit | 776 / 776 green | pending |
+| Package `ZCD_OPS*` ABAP Unit | 878 / 878 green | pending |
 | Coverage per object | ≥ 90 % | pending |
 
 ## 6. Functional tests (QA1)
@@ -79,7 +79,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-12 | Kill switch E / M / O on a file with one unmapped code (pre-posting entry) | TVARVC row | **Out of scope for this release:** the pre-posting path (`VALIDATE_FOR_POSTING` / BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, blocked-line release) stays switched off; case moves with A02 to the future enforcement phase | not in this release |
 | EBS-13 | Circuit breaker (A104): **FEB source** (`P_FEB`) over ≥ 3 imported statements, each a controlled package, every package > 50 % of its lines unmapped (the statements were imported, posted and cleared before the run — post-posting detective control) | `P_PACK` = 1 (one statement per package); `EBS_CB_MIN_LINES` = 1, `EBS_CB_FAIL_PCT` = 50, `EBS_CB_PACKAGES` = 3; ≥ 3 test statements selected by `S_KUKEY` / date range | Package 3 trips the breaker: run status A (aborted), one CIRCUIT_BREAKER finding (rule CB, E), no further package read, alert per the ON_ABORT rule; with only 2 bad packages followed by a good one: no breaker (counter resets) | pending |
 | EBS-13a | Oversized or invalid single file through the **file source** (`P_FILE`) — one file is always one package, so the breaker cannot trip | (a) file not UTF-8; (b) BAI2 file cut off before the 98/99 trailers; (c) production-size file (largest observed day, `<line count, VERIFY with operations>`) | (a) read rejected, message 012, no run results (A69); (b) structural findings S00 / S06 TRAILER missing (B), lines not reported as validated (A86/A95); (c) one package, run completes or fails visibly; record runtime and memory — no size limit exists in code (`VERIFY` in QA1 whether one is needed) | pending |
-| EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN/FINDING/ALERT_LOG unchanged | pending |
+| EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN / ZCD_OPS_FINDING / ZCD_OPS_ALLOG unchanged | pending |
 | EBS-15 | POSTING_INCOMPLETE (operating model 2026-11-06): import a statement with a 466 (BAI466D, R19) and a 275 sweep line; run `ZCD_EBS_VALIDATE` (FEB source) **before** FEBP; then run FEBP and the clearing job and re-run the same variant | SE11 check of FEBEP-VB1OK / VB2OK done; `EBS_FEB_POSTED_FIELDS` default; seed S13 / NEEDS_POSTING | Run 1: one POSTING_INCOMPLETE (S13, W) on the statement counting the 466 line only (the 275 NOT_POSTED line is not counted); no R19 / R18 / S10 finding; run message "1 entries not evaluated (posting not complete)"; RAG amber, not green. Run 2: no POSTING_INCOMPLETE, R19 / R18 / S10 evaluated, the POSTING_INCOMPLETE exception resolved "Passed on re-run"; nothing posted, cleared or changed by either run (ST05 / table compare) | pending |
 
 ### 6.2 File monitoring
@@ -152,6 +152,44 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | FMD-11 | Expected file not received | Tile *Missing files* = 1; no file row |
 | FMD-12 | ST05 during use | SELECT only on the FMON / ops store tables; no write, lock or job |
 | FMD-13 | PRISM status API live: PRISM_RECEIVED / _DELIVERED / _FAILED | AT_PRISM; SENT (out) / RECEIVED (in); REJECTED |
+
+### 6.8 PRISM status API (`POST /sap/zcd_ops/prism_status`, `PRISM_Status_API.md`)
+
+Own approved change (switch S-PRISM); QA1 with the SICF node active for the test user only. ABAP Unit: `ZCL_CD_FMON_PRISM_EVENT` (20), `_API` (11), `_DAO` (5, OSQL), `_PROC` (7, real engine), `ZCL_CD_FMON_ADAPTER_PRISM` (4), `ZCL_CD_FMON_CHK_PRISM_FILE` (5), `ZCL_CD_FMON_CHK_REJECT` (2), PRISM tests of `ZCL_CD_FMON_STATUS` (9) and `ZCL_CD_FMON_ENGINE` (2). Harness: Postman / curl over HTTPS with the QA1 technical user's certificate.
+
+| ID | Case | Expected |
+|---|---|---|
+| PRISM-01 | Outbound ACH file generated and sent by SAP; PRISM posts RECEIVED, then DELIVERED (`occurredAt` = PRISM's times) | 202 each; `ZCD_FMON_PRISM` 2 rows; within seconds the board shows PRISM_RECEIVED then PRISM_DELIVERED with PRISM's times; `PROCESSED_AT` set; SBGRFCMON units ended |
+| PRISM-02 | Same call again (PRISM retry) | 200 DUPLICATE; no second row, no second unit, no new event |
+| PRISM-03 | Same `eventId`, other milestone | 409 CONFLICT; the first event unchanged |
+| PRISM-04 | FAILED with `errorCode` / `errorText` containing a 16-digit number | 202; text stored masked (`****` + last 4); finding PRISM_FAILED (E) and alert via the router; a later DELIVERED supersedes the outcome, the next 5-minute run resolves the exception |
+| PRISM-05 | Inbound BAI2: PRISM RECEIVED and DELIVERED before the statement import | Board: file instance opened by PRISM (PRISM_DELIVERED), FILE_RECEIVED / LOADED from SAP's evidence attach to it; without SAP receipt after GRACE_MIN → PRISM_NOT_LOADED |
+| PRISM-06 | Missing `eventId`, `fileReference`, `milestone`; bad `occurredAt`; local-time offset | 400 REJECTED listing every error; nothing stored |
+| PRISM-07 | GET; `text/plain`; charset ISO-8859-1 | 405 (`Allow: POST`); 415; 415 |
+| PRISM-08 | User without `Z_CD_OPS_PRISM`; no / wrong certificate; plain HTTP | 403; 401 (ICF); refused (SSL required) |
+| PRISM-09 | Body above `FMON_PRISM_MAX_BYTES` | 413; nothing stored |
+| PRISM-10 | Event for an outbound file SAP never generated (`interfaceId` or matching pattern) | Unit defers (row stays unprocessed); the 5-minute run opens the file; after GRACE_MIN PRISM_UNKNOWN_FILE (W) |
+| PRISM-11 | Event whose reference matches no interface and has no `interfaceId` | 202; UNMAPPED_FILE (W) every 5-minute run; applied after the interface row is transported |
+| PRISM-12 | bgPF: destination locked in SBGRFCCONF, post an event, unlock | 202; unit waits / fails in SBGRFCMON; the 5-minute run applies the event (safety net); after unlock no double event |
+| PRISM-13 | Concurrency: post events while the 5-minute run is active on the same file | No RUN_LOCKED for either; no stale overwrite (at most PERSIST_CONFLICT, then the next run converges); one event per milestone |
+| PRISM-14 | SLA: SENT_TO_PRISM, PRISM_RECEIVED after 25 min (SLA 15) | PRISM_RECEIVED_LATE (W) at once from the unit; on time → no finding; never received → NO_PRISM_RECEIVED (E) from the 5-minute run |
+| PRISM-15 | ST05 / SAT during PRISM-01 | Writes only `ZCD_FMON_PRISM`, `ZCD_FMON_FILE`, `ZCD_FMON_EVENT`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING`, alert log; no business table, file, job or routing touched |
+
+### 6.9 EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`, `Dashboard_EBS_Validation.md`)
+
+ABAP Unit: `ZCL_CD_EBS_DASH_CDS_TEST` (16 CDS tests: validation status from open findings, closed findings ignored, lines per statement, line status, as of on every row, account masked, bank-file messages hidden, line key, unevaluated lines, S13 / duplicates per run, KPI = last completed run of the day, as of / stale 26 h, returns by DFKKRP-RLGRD, NOCs by DFKKNRP-FLGRD via INFOF). QA1: cases **EBD-01 … EBD-12** of the dashboard doc §11 (stale, test / aborted runs, BLOCKED / POSTING_INCOMPLETE / NO_FINDINGS, duplicates, bank-file findings, returns / NOC, two runs a day, DCL, ST05).
+
+### 6.10 Health check dashboard (`ZUI_CD_HCK_DASH_O4`, `Dashboard_Health_Check.md`)
+
+ABAP Unit: `ZCL_CD_HCK_DASH_CDS_TEST` (6 CDS tests: status RED / AMBER / GREEN / WARMUP / NO_RESULT of the last completed run, older-run exceptions open but not the status, category = worst check, KPI counts, stale without completed run, 31-day metric history with DIM2 series). QA1: **HCD-01 … HCD-09** (doc §10).
+
+### 6.11 Transactions dashboard (`ZUI_CD_TRX_DASH_O4`; request side `ZUI_CD_TRX_REQ_O4` after SE11; `Dashboard_Transactions.md`)
+
+ABAP Unit: `ZCL_CD_TRX_DASH_CDS_TEST` (8 CDS tests: flow bucket per evidence, proposal runs ignored, 31-day window and FIN filter, direction from TFK042Z-XEINZ, KPI with distinct FIN numbers, errored / stuck list, return / NOC reasons from the lot items, no partner or member element). After SE11, in ADT: `ZCL_CD_TRX_REQ_CDS_TEST` (4 tests: **SUCCESS row rule** — a SUCCESS attempt wins over a later failed COUNTER —, errored, pending, member number not exposed). QA1: **TXD-01 … TXD-13** (doc §12), incl. the peak-volume ST05 / PlanViz run TXD-12.
+
+### 6.12 Production-support overview page (`ZUI_CD_OPS_OVERVIEW_O4`, `Dashboard_Production_Support.md`)
+
+ABAP Unit: `ZCL_CD_OPS_OVW_CDS_TEST` (5 CDS tests: one freshness row per monitor, stale by the area's threshold, open B / E exceptions only, overdue days, hidden bank-file message). QA1: **OVP-01 … OVP-08** (doc §7).
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

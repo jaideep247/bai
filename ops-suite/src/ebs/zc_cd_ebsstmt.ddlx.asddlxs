@@ -1,0 +1,165 @@
+// UI annotations: EBS validation dashboard (analytical list page)
+// Charts: statements by house bank and validation status (default), lines per
+// statement date, open findings by house bank. VERIFY-ADT: rendering in the V4 ALP.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Bank statement', typeNamePlural: 'Bank statements',
+                  title: { type: #STANDARD, value: 'HouseBank' },
+                  description: { type: #STANDARD, value: 'StatementDate' } }
+@UI.chart: [ { qualifier: 'StmtByBank',
+               title: 'Statements by house bank and validation status',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'HouseBank', 'ValidationStatus' ],
+               measures: [ 'StatementCount' ],
+               dimensionAttributes: [ { dimension: 'HouseBank', role: #CATEGORY },
+                                      { dimension: 'ValidationStatus', role: #SERIES } ],
+               measureAttributes: [ { measure: 'StatementCount', role: #AXIS_1 } ] },
+             { qualifier: 'LinesByDate',
+               title: 'Lines and lines with findings per statement date',
+               chartType: #LINE,
+               dimensions: [ 'StatementDate' ],
+               measures: [ 'LineCount', 'LineFindingCount' ],
+               dimensionAttributes: [ { dimension: 'StatementDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'LineCount', role: #AXIS_1 },
+                                    { measure: 'LineFindingCount', role: #AXIS_1 } ] },
+             { qualifier: 'FindingsByBank',
+               title: 'Open findings by house bank and account',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'HouseBank', 'HouseBankAccount' ],
+               measures: [ 'BlockFindingCount', 'ErrorFindingCount', 'WarningFindingCount' ],
+               dimensionAttributes: [ { dimension: 'HouseBank', role: #CATEGORY },
+                                      { dimension: 'HouseBankAccount', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'BlockFindingCount', role: #AXIS_1 },
+                                    { measure: 'ErrorFindingCount', role: #AXIS_1 },
+                                    { measure: 'WarningFindingCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StatementDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'StmtByBank' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'ByDate',
+                             sortOrder: [ { by: 'StatementDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'LinesByDate' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'ByBank',
+                             visualizations: [ { type: #AS_CHART, qualifier: 'FindingsByBank' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_EbsStmt with
+{
+  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'Statement', position: 10 },
+               { id: 'Stmt', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Statement', position: 10 },
+               { id: 'Measures', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Measures',
+                 label: 'Lines and open findings', position: 20 },
+               { id: 'AsOf', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'AsOf',
+                 label: 'Validation as of', position: 30 },
+               { id: 'Lines', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Lines',
+                 label: 'Lines', position: 20 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Open findings (statement and lines)', position: 30 },
+               { id: 'HeaderStatus', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'ValidationStatus',
+                 position: 10 },
+               { id: 'HeaderAsOf', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'ValidationAge',
+                 position: 20 } ]
+  @EndUserText.label: 'Statement short key (KUKEY)'
+  @UI.identification: [ { position: 10 } ]
+  Kukey;
+  @UI.hidden: true
+  StmtObjectKey;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  CompanyCode;
+  @EndUserText.label: 'House bank'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  HouseBank;
+  @EndUserText.label: 'House bank account ID'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  HouseBankAccount;
+  @EndUserText.label: 'G/L account'
+  @UI.lineItem: [ { position: 45, importance: #HIGH } ]
+  @UI.identification: [ { position: 45 } ]
+  @UI.selectionField: [ { position: 35 } ]
+  GlAccount;
+  @EndUserText.label: 'Statement number'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  StatementNo;
+  @EndUserText.label: 'Statement date'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 60 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  StatementDate;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 70 } ]
+  Currency;
+  @EndUserText.label: 'Statement date is today'
+  IsToday;
+  @EndUserText.label: 'Validation status'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'ValidationCriticality' } ]
+  @UI.identification: [ { position: 80, criticality: 'ValidationCriticality' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.dataPoint: { qualifier: 'ValidationStatus', title: 'Validation status', criticality: 'ValidationCriticality' }
+  ValidationStatus;
+  @UI.hidden: true
+  ValidationCriticality;
+  @EndUserText.label: 'Worst open severity'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 60 } ]
+  WorstSeverity;
+  @EndUserText.label: 'Validation as of (last completed run)'
+  @UI.lineItem: [ { position: 200, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 10 } ]
+  AsOfAt;
+  @UI.hidden: true
+  AsOfRunId;
+  @EndUserText.label: 'Validation age (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 20, criticality: 'MonitorCriticality' } ]
+  @UI.dataPoint: { qualifier: 'ValidationAge', title: 'Validation age (minutes)', criticality: 'MonitorCriticality' }
+  MonitorAgeMinutes;
+  @EndUserText.label: 'Validation stale'
+  @UI.fieldGroup: [ { qualifier: 'AsOf', position: 30, criticality: 'MonitorCriticality' } ]
+  MonitorIsStale;
+  @UI.hidden: true
+  MonitorCriticality;
+  @EndUserText.label: 'Statements'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 10 } ]
+  StatementCount;
+  @EndUserText.label: 'Lines'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 20 } ]
+  LineCount;
+  @EndUserText.label: 'Posted lines'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 30 } ]
+  PostedLineCount;
+  @EndUserText.label: 'Open findings'
+  @UI.lineItem: [ { position: 100, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 40 } ]
+  OpenFindingCount;
+  @EndUserText.label: 'Open block findings'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 50 } ]
+  BlockFindingCount;
+  @EndUserText.label: 'Open error findings'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 60 } ]
+  ErrorFindingCount;
+  @EndUserText.label: 'Open warning findings'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 70 } ]
+  WarningFindingCount;
+  @EndUserText.label: 'Open findings on lines'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 80 } ]
+  LineFindingCount;
+  @EndUserText.label: 'Open duplicate findings'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 90 } ]
+  DuplicateCount;
+  @EndUserText.label: 'Statements with POSTING_INCOMPLETE'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 100 } ]
+  PostingIncompleteStmtCount;
+  @EndUserText.label: 'Statements without open findings'
+  @UI.fieldGroup: [ { qualifier: 'Measures', position: 110 } ]
+  NoFindingStmtCount;
+}

@@ -1,0 +1,95 @@
+// UI annotations: HCK health check dashboard - run history (scorecard trend)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Morning report run', typeNamePlural: 'Morning report runs',
+                  title: { type: #STANDARD, value: 'StartedAt' },
+                  description: { type: #STANDARD, value: 'RunVariant' } }
+@UI.chart: [ { qualifier: 'Trend',
+               title: 'Checks red / amber / green / warm-up per run date',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'RunDate' ],
+               measures: [ 'RedCheckCount', 'AmberCheckCount', 'GreenCheckCount', 'WarmupCheckCount' ],
+               dimensionAttributes: [ { dimension: 'RunDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'RedCheckCount', role: #AXIS_1 },
+                                    { measure: 'AmberCheckCount', role: #AXIS_1 },
+                                    { measure: 'GreenCheckCount', role: #AXIS_1 },
+                                    { measure: 'WarmupCheckCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'StartedAt', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Trend' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_HckRun with
+{
+  @UI.facet: [ { id: 'Run', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Run', position: 10 },
+               { id: 'Findings', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_Findings',
+                 label: 'Findings of the run', position: 20 } ]
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Report variant'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  RunVariant;
+  @EndUserText.label: 'Started (UTC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  StartedAt;
+  @EndUserText.label: 'Ended (UTC)'
+  @UI.identification: [ { position: 30 } ]
+  EndedAt;
+  @EndUserText.label: 'Run date'
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  RunDate;
+  @EndUserText.label: 'Run status'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  RunStatus;
+  @EndUserText.label: 'Overall RAG'
+  @UI.lineItem: [ { position: 40, importance: #HIGH, criticality: 'RagCriticality' } ]
+  @UI.identification: [ { position: 60, criticality: 'RagCriticality' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  RunRag;
+  @UI.hidden: true
+  RagCriticality;
+  @EndUserText.label: 'Runtime (ms)'
+  @UI.identification: [ { position: 70 } ]
+  RuntimeMs;
+  @EndUserText.label: 'Health score and critical / high counts'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  @UI.identification: [ { position: 80 } ]
+  RunMessage;
+  @EndUserText.label: 'Runs'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 100 } ]
+  RunCount;
+  @EndUserText.label: 'Red runs'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  RedRunCount;
+  @EndUserText.label: 'Checks'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 120 } ]
+  CheckCount;
+  @EndUserText.label: 'Green'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  GreenCheckCount;
+  @EndUserText.label: 'Amber'
+  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 140 } ]
+  AmberCheckCount;
+  @EndUserText.label: 'Red'
+  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 150 } ]
+  RedCheckCount;
+  @EndUserText.label: 'Warm-up'
+  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 160 } ]
+  WarmupCheckCount;
+  @EndUserText.label: 'Findings'
+  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 170 } ]
+  FindingCount;
+}

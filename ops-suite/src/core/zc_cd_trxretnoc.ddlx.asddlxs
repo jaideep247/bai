@@ -1,0 +1,92 @@
+// UI annotations: Transactions dashboard - returns / NOC by reason
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Return / NOC item', typeNamePlural: 'Returns / NOC items',
+                  title: { type: #STANDARD, value: 'LotItemKey' },
+                  description: { type: #STANDARD, value: 'Reason' } }
+@UI.chart: [ { qualifier: 'ByReason',
+               title: 'Returns and NOCs by reason and payment method',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'Reason', 'LotKind' ],
+               measures: [ 'LotItemCount' ],
+               dimensionAttributes: [ { dimension: 'Reason', role: #CATEGORY },
+                                      { dimension: 'LotKind', role: #SERIES } ],
+               measureAttributes: [ { measure: 'LotItemCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByReason' },
+                                               { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CD_TrxRetNoc with
+{
+  @UI.facet: [ { id: 'Item', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Lot item', position: 10 } ]
+  @EndUserText.label: 'Document (OPBEL)'
+  @UI.identification: [ { position: 10 } ]
+  DocumentNo;
+  @EndUserText.label: 'Repetition item'
+  @UI.hidden: true
+  RepetitionItem;
+  @EndUserText.label: 'Item'
+  @UI.hidden: true
+  ItemNo;
+  @EndUserText.label: 'Sub-item'
+  @UI.hidden: true
+  SubItem;
+  @EndUserText.label: 'Kind (RETURN, NOC)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 10 } ]
+  LotKind;
+  @EndUserText.label: 'Lot item (return document / NOC lot/item)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  LotItemKey;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Reason (RLGRD / FLGRD)'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 40 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Reason;
+  @EndUserText.label: 'Returns lot status'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  LotStatus;
+  @EndUserText.label: 'FIN number'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 60 } ]
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  FinId;
+  @EndUserText.label: 'Company code'
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Posting date'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 80 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  PostingDate;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  @UI.selectionField: [ { position: 50 } ]
+  PaymentMethod;
+  @EndUserText.label: 'Direction'
+  @UI.identification: [ { position: 100 } ]
+  @UI.selectionField: [ { position: 60 } ]
+  Direction;
+  @EndUserText.label: 'Payment document'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 110 } ]
+  ClearingDoc;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 120 } ]
+  Currency;
+  @EndUserText.label: 'Amount (signed)'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 130 } ]
+  Amount;
+  @EndUserText.label: 'Lot items'
+  LotItemCount;
+  @EndUserText.label: 'Returns'
+  ReturnCount;
+  @EndUserText.label: 'NOCs'
+  NocCount;
+}
