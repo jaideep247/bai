@@ -2,7 +2,7 @@
 @EndUserText.label: 'Alert channels'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity ZR_CD_AlertChannel
-  as select from zcd_ops_alert_chn
+  as select from zcd_ops_alchn
   association to parent ZR_CD_OpsCfgAll as _OpsCfgAll on $projection.SingletonID = _OpsCfgAll.SingletonID
 {
       @EndUserText.label: 'Channel'

@@ -40,7 +40,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 
 ## Step 1 — DDIC (SE11 / ADT)
 
-1. Core: `ZCD_OPS_PARAM`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING` (+ indexes ~OPN, ~OBJ; carry-forward fields FIRST_SEEN_AT, OCCURRENCES, SUPERSEDED_BY, WAIVER_UNTIL), `ZCD_OPS_ALERT_RULE`, `ZCD_OPS_ALERT_CHN`, `ZCD_OPS_ALERT_LOG` (+ index ~RUL), `ZCD_OPS_LOCK` (delivery class L, never written — run-lock argument of `E_TABLE`).
+1. Core: `ZCD_OPS_PARAM`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING` (+ indexes ~OPN, ~OBJ; carry-forward fields FIRST_SEEN_AT, OCCURRENCES, SUPERSEDED_BY, WAIVER_UNTIL), `ZCD_OPS_ALRULE`, `ZCD_OPS_ALCHN`, `ZCD_OPS_ALLOG` (+ index ~RUL), `ZCD_OPS_LOCK` (delivery class L, never written — run-lock argument of `E_TABLE`).
 2. EBS: `ZCD_EBS_RULE_DEF`, `ZCD_BTC_MAP`, `ZCD_BTC_RULE`, `ZCD_EBS_ACCT` (+ index ~ACC), `ZCD_EBS_FLOW_PAT`, `ZCD_EBS_RSN_MAP`, `ZCD_EBS_LOOKUP` (rule R21; draft table `ZCD_D_EBSLKP`).
 3. FMON: `ZCD_FMON_IFACE`, `_SLA`, `_CAL`, `_SRC`, `_SRCMAP`, `_LOTCFG`, `_CHK`, `ZCD_FMON_FILE` (+ unique index IFACE_ID/FILE_REF), `ZCD_FMON_EVENT` (+ unique index SRC_ID/SRC_KEY/STAGE).
 4. HCK: `ZCD_HCK_DEF`, `_THRESH`, `_AGG`, `_TABWL`, `_DRIFT`, `ZCD_JOB_CYCLE`, `ZCD_JOB_STEP`, `ZCD_HCK_METRIC`, `ZCD_HCK_BASELINE`.
@@ -62,7 +62,7 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 
 | # | Item | Done when |
 |---|---|---|
-| 1c.1 | SE11 → Indexes on the 12 indexed tables (18 indexes, generated in the abapGit TABL XML from `// @index` markers; verify each after the pull): ZCD_FMON_FILE REF (unique)/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALERT_LOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
+| 1c.1 | SE11 → Indexes on the 12 indexed tables (18 indexes, generated in the abapGit TABL XML from `// @index` markers; verify each after the pull): ZCD_FMON_FILE REF (unique)/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALLOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
 | 1c.2 | `ZCD_FMON_TABWL` maintained for every table in ZCD_FMON_SRC / ZCD_FMON_LOTCFG (seed list `config/fmon_seed.md`) | Without it every legacy read is refused (PLUGIN_ERROR, message 244) |
 | 1c.3 | Role with `S_TABU_NAM` ACTVT 03 for those tables: batch user and online monitor users | No message 245 in a test run |
 | 1c.4 | Parameters in ZCD_OPS_PARAM: `FMON_AGE_BASIS` (default A), `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_POSTED_FIELDS` (default VB1OK,VB2OK — VERIFY-SE11), `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS` (`config/alert_seed.md`, `Audit_Response_EBS.md`) | Values confirmed with the process owner; VERIFY-DDIC field names checked in SE11 |
@@ -103,7 +103,7 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 ## Step 3 — Customizing (transport, client-dependent)
 
 1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see payment engine area docs).
-2. `ZCD_OPS_ALERT_CHN` and `ZCD_OPS_ALERT_RULE` from `config/alert_seed.md` (HTTP channel inactive until Basis creates the SM59 destination).
+2. `ZCD_OPS_ALCHN` and `ZCD_OPS_ALRULE` from `config/alert_seed.md` (HTTP channel inactive until Basis creates the SM59 destination).
 3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (payment engine reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account.
 4. FMON: `config/fmon_seed.md` once step 0.3 is done.
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).

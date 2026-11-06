@@ -618,9 +618,9 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_alert_stats.
-    " ZCD_OPS_ALERT_LOG is delivered by the core alert router
+    " ZCD_OPS_ALLOG is delivered by the core alert router
     SELECT channel, status, COUNT(*) AS item_count
-      FROM zcd_ops_alert_log
+      FROM zcd_ops_allog
       WHERE sent_at BETWEEN @iv_from AND @iv_to
       GROUP BY channel, status
       ORDER BY channel, status

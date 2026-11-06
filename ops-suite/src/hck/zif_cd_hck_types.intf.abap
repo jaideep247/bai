@@ -79,7 +79,7 @@ INTERFACE zif_cd_hck_types
   TYPES ty_channel       TYPE c LENGTH 10.
   "! ZCD_OPS_FINDING-DISPOSITION: O open, A assigned, I information, R resolved, W waived
   TYPES ty_disposition   TYPE c LENGTH 1.
-  "! ZCD_OPS_ALERT_LOG-STATUS: S sent, F failed, T throttled
+  "! ZCD_OPS_ALLOG-STATUS: S sent, F failed, T throttled
   TYPES ty_alert_status  TYPE c LENGTH 1.
 
   TYPES tt_category_range TYPE RANGE OF ty_category.
@@ -503,7 +503,7 @@ INTERFACE zif_cd_hck_types
   TYPES tt_baseline TYPE STANDARD TABLE OF ty_baseline WITH EMPTY KEY
                     WITH NON-UNIQUE SORTED KEY by_table COMPONENTS tabname.
 
-  "! ZCD_OPS_ALERT_LOG deliveries aggregated per channel and status
+  "! ZCD_OPS_ALLOG deliveries aggregated per channel and status
   TYPES:
     BEGIN OF ty_alert_stat,
       channel    TYPE ty_channel,

@@ -18,7 +18,7 @@
 | EBS validation | `ZCD_EBS_VALIDATE` (test mode to re-check), FEBAN/FPB7 for posting | `EBS_VALIDATION.md` §A3 |
 | File monitoring | File monitoring dashboard (launchpad, `ZUI_CD_FMON_FLOW_O4`) — §4b; `ZCD_FMON_MONITOR` file board | `FMON_FILE_MONITORING.md` part A, `Dashboard_File_Monitoring.md` |
 | Health checks | Morning report drill-down | `HCK_MORNING_REPORT.md` part A |
-| Alerts | SE16 ZCD_OPS_ALERT_LOG by rule | `ALERTING.md` part A |
+| Alerts | SE16 ZCD_OPS_ALLOG by rule | `ALERTING.md` part A |
 
 ## 3. Owned exceptions
 

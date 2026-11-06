@@ -3,7 +3,7 @@
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
-define table zcd_ops_alert_chn {
+define table zcd_ops_alchn {
   key mandt     : abap.clnt not null;
   key channel   : abap.char(10) not null;
   // Implements ZIF_CD_OPS_ALERT_CHANNEL

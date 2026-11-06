@@ -2,7 +2,7 @@
 *& Artifact: zif_cd_ops_alert_channel.intf.abap
 *& Purpose:
 *& One delivery channel (e-mail, application log, HTTP webhook). Channels are
-*& plug-ins configured in ZCD_OPS_ALERT_CHN; they deliver and nothing else.
+*& plug-ins configured in ZCD_OPS_ALCHN; they deliver and nothing else.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *&---------------------------------------------------------------------*

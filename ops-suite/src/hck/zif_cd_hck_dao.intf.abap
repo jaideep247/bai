@@ -229,7 +229,7 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Alert deliveries (ZCD_OPS_ALERT_LOG) per channel and status in a window
+  "! Alert deliveries (ZCD_OPS_ALLOG) per channel and status in a window
   METHODS get_alert_stats
     IMPORTING
       iv_from        TYPE timestampl

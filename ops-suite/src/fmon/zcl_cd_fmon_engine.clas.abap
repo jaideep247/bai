@@ -1225,7 +1225,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       reconcile_files( cs_run ).
       " Results are durable before anyone is told (a channel may COMMIT WORK itself)
       mo_store->commit( ).
-      " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALERT_RULE
+      " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALRULE
       TRY.
           zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = cs_run
                                                       it_findings = mt_findings ).

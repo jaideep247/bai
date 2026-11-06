@@ -30,7 +30,7 @@
 | SLA_DAYS_HCK_W | `3` | Due date of HCK warning findings |
 
 Alert routing of findings (channels, recipients, throttling, quiet hours) is customizing of the core
-table `ZCD_OPS_ALERT_RULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
+table `ZCD_OPS_ALRULE` — suggested HCK rule: payment engine area `HCK`, minimum severity `E`, channel `EMAIL`,
 digest per run, rule/group pattern `*` (confirm with the core owner).
 
 ## 2. Check catalog — `ZCD_HCK_DEF`

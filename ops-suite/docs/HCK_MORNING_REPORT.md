@@ -235,7 +235,7 @@ sequenceDiagram
 | `ZCD_HCK_METRIC` | A | MANDT, RUN_ID, CHECK_ID, METRIC, DIM1, DIM2 | Metric history for baselines, trends, dashboard. Index `HST` (CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT), `TIM` (MEASURED_AT) |
 | `ZCD_HCK_BASELINE` | A | MANDT, TABNAME | Golden baseline hash, row count, taken at / by (per system, never transported) |
 | Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` / `ZCD_OPS_PARAM` | A / A / C | — | Run header, findings / owned exceptions, parameters (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
-| Core `ZCD_OPS_ALERT_LOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
+| Core `ZCD_OPS_ALLOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
 
 Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `GROUP2` = check id. Severity B/E/W → owned exception with SLA (`SLA_DAYS_HCK_<sev>`).
 
@@ -376,7 +376,7 @@ Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG pe
 | **New SLG1 object** | Extend `PARAM1` of `B_APPLOG` |
 | **New table under drift control** | `ZCD_HCK_DRIFT` row, then take a baseline |
 | **Watch another payment engine area** | `ZCD_OPS_PARAM` `HCK_WATCH_PE_AREAS`, optional `HCK_MAX_AGE_H_<pe_area>` |
-| **Who is alerted** | Core `ZCD_OPS_ALERT_RULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
+| **Who is alerted** | Core `ZCD_OPS_ALRULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
 | New check *logic* (only when no existing class fits) | New class implementing `ZIF_CD_HCK_CHECK` (only SQL via a DAO method), then a `ZCD_HCK_DEF` row |
 
 Acceptance test 4 of the requirements baseline (statement balance rule) belongs to the EBS payment engine area's rule tables; for HCK the equivalent proof is that limits and rules are rows in `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` (QA1 case HCK-QA-04).
@@ -428,7 +428,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-09 | Baseline outlier | Run `B_JOB_RUNTIME` daily ≥ 3 days, then slow one job artificially | `BASELINE_OUTLIER` (AMBER) with mean and z in the message |
 | HCK-QA-10 | GL transfer completeness | Reconciliation key with totals records and no GL transfer in the window | `GL_TRANSFER_GAP` per key; metric GL_MISSING_KEYS |
 | HCK-QA-11 | Report in dialog and background | Run interactively in test mode; then as background job with productive variant and CSV export | Dialog: scorecard + ALV + drill-downs, nothing saved; background: spool lists, ZCD_OPS_RUN/FINDING rows, ZCD_HCK_METRIC rows, CSV file on the application server |
-| HCK-QA-12 | Mail and alerts | ALERT_MORNING maintained; P_MAIL = X; one red finding | One HTML mail (renders on phone and desktop, RAG chips); core `dispatch` logs to ZCD_OPS_ALERT_LOG per alert rule; test mode sends nothing |
+| HCK-QA-12 | Mail and alerts | ALERT_MORNING maintained; P_MAIL = X; one red finding | One HTML mail (renders on phone and desktop, RAG chips); core `dispatch` logs to ZCD_OPS_ALLOG per alert rule; test mode sends nothing |
 | HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_MODULE = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
 | HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `PE_AREA_STALE` for EBS |
 
@@ -479,4 +479,4 @@ Not verified (offline build): activation, DDIC existence, ABAP Unit execution, C
 
 **Dropped defects:** free-text dynamic SQL and a regex "SQL security validator" (replaced by whitelist + DDIC-validated names + quoted literals), WRITE lists (SALV + HTML), invented tables (only core and HCK tables plus standard tables marked VERIFY-DDIC), placeholder e-mail/export that never sent or wrote, mail only when "critical", `SELECT *`, missing test mode.
 
-**Changes vs the build brief:** `ZCD_HCK_AGG` keyed by CHECK_ID **+ AGG_ID** (one check holds several aggregates — volumes) and a `DATE_MODE` (AGE/DAY); `ZCD_HCK_DEF-ROUTE` removed — alert routing is now core customizing `ZCD_OPS_ALERT_RULE` via `dispatch( )`, the morning mail is a deliberate `send( 'MORNING' )`; `ZCD_JOB_STEP-DAY_OFFSET` added (cycles crossing midnight, e.g. BlackLine at 02:00); check interface gets an execution context (report date, now, test mode); pure rule classes split out (`SCORE`, `CYCLE_EVAL`, `AGG_QUERY`, `PARAM`) so they are tested without doubles; overdue exceptions include disposition A (assigned) as well as O; empty aggregates measure 0 under `*` so a silent feed is visible; DIM1 longer than 4 characters uses the `*` threshold row instead of being truncated; new check `E_ALERT_DELIVERY` reads `ZCD_OPS_ALERT_LOG`.
+**Changes vs the build brief:** `ZCD_HCK_AGG` keyed by CHECK_ID **+ AGG_ID** (one check holds several aggregates — volumes) and a `DATE_MODE` (AGE/DAY); `ZCD_HCK_DEF-ROUTE` removed — alert routing is now core customizing `ZCD_OPS_ALRULE` via `dispatch( )`, the morning mail is a deliberate `send( 'MORNING' )`; `ZCD_JOB_STEP-DAY_OFFSET` added (cycles crossing midnight, e.g. BlackLine at 02:00); check interface gets an execution context (report date, now, test mode); pure rule classes split out (`SCORE`, `CYCLE_EVAL`, `AGG_QUERY`, `PARAM`) so they are tested without doubles; overdue exceptions include disposition A (assigned) as well as O; empty aggregates measure 0 under `*` so a silent feed is visible; DIM1 longer than 4 characters uses the `*` threshold row instead of being truncated; new check `E_ALERT_DELIVERY` reads `ZCD_OPS_ALLOG`.

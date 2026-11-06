@@ -37,7 +37,7 @@ ENDCLASS.
 CLASS ltc_alert_dao IMPLEMENTATION.
 
   METHOD class_setup.
-    go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_OPS_ALERT_LOG' )
+    go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_OPS_ALLOG' )
                                                                             ( 'ZCD_OPS_FINDING' ) ) ).
   ENDMETHOD.
 
@@ -83,7 +83,7 @@ CLASS ltc_alert_dao IMPLEMENTATION.
         mo_cut->complete( ls_first ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->claim( intent_log( '000000000000000000000000000000E2' ) )
                                            msg = 'A failed intent must be claimable again' ).
-        SELECT MAX( attempt ) FROM zcd_ops_alert_log WHERE intent_key = @gc_intent INTO @DATA(lv_attempt).
+        SELECT MAX( attempt ) FROM zcd_ops_allog WHERE intent_key = @gc_intent INTO @DATA(lv_attempt).
         cl_abap_unit_assert=>assert_equals( act = lv_attempt exp = 2 msg = 'The retry is attempt 2' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

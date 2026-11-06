@@ -134,7 +134,7 @@ flowchart LR
   E2 --> E3[3. Line rules per rule group + '*' — blocked lines skipped]
   E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
   ST -->|reconcile package scope, commit per package| CB{Circuit breaker}
-  CB -->|end of run| AL[Alert router ZCD_OPS_ALERT_RULE]
+  CB -->|end of run| AL[Alert router ZCD_OPS_ALRULE]
   E3 -.->|validate_for_posting, mode E/M/O| BADI[BAdI FIEB_CHANGE_BS_DATA]
 ```
 

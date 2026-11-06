@@ -2,7 +2,7 @@
 @EndUserText.label: 'Alert rules'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity ZR_CD_AlertRule
-  as select from zcd_ops_alert_rule
+  as select from zcd_ops_alrule
   association to parent ZR_CD_OpsCfgAll as _OpsCfgAll on $projection.SingletonID = _OpsCfgAll.SingletonID
 {
       @EndUserText.label: 'Rule ID'

@@ -13,7 +13,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 004 | Run &1 status &2, RAG &3, items &4, |
 | 005 | failed &1, blocked &2. |
 | 006 | &1 more finding(s) in ZCD_OPS_FINDING. |
-| 007 | Channel &1 not configured or inactive in ZCD_OPS_ALERT_CHN |
+| 007 | Channel &1 not configured or inactive in ZCD_OPS_ALCHN |
 | 008 | Passed on re-run &1 |
 | 010 | Insert into table &1 failed |
 | 011 | Update of table &1 failed |

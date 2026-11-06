@@ -12,7 +12,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
 | Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep (ZCD_HCK_*, ZCD_JOB_*) | HCK |
-| Alerting & parameters | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALERT_RULE), AlertChannel (ZCD_OPS_ALERT_CHN), OpsParam (ZCD_OPS_PARAM) | CORE |
+| Alerting & parameters | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), OpsParam (ZCD_OPS_PARAM) | CORE |
 
 Shape — SAP's business-configuration maintenance object (verified against `SAP-samples/abap-platform-refscen-flight`, branch `ABAP-platform-2023`, carrier singleton):
 

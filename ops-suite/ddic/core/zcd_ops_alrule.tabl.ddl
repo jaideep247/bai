@@ -3,7 +3,7 @@
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #C
 @AbapCatalog.dataMaintenance : #ALLOWED
-define table zcd_ops_alert_rule {
+define table zcd_ops_alrule {
   key mandt       : abap.clnt not null;
   key rule_id     : abap.char(10) not null;
   // HCK / FMON / EBS or * for every payment engine area
@@ -18,7 +18,7 @@ define table zcd_ops_alert_rule {
   // Run-level trigger: R or A (run RAG equal or worse); blank = none
   min_rag         : abap.char(1);
   on_abort        : abap_boolean;
-  // EMAIL / APPLOG / HTTP (ZCD_OPS_ALERT_CHN)
+  // EMAIL / APPLOG / HTTP (ZCD_OPS_ALCHN)
   channel         : abap.char(10);
   // e-mail list | OBJECT/SUBOBJECT | SM59 destination
   destination     : abap.char(255);

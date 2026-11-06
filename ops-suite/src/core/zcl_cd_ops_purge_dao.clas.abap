@@ -54,7 +54,7 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
             AND f~run_id IS NULL
           INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-alert_log.
-        SELECT COUNT(*) FROM zcd_ops_alert_log WHERE sent_at < @iv_cutoff INTO @rv_count.
+        SELECT COUNT(*) FROM zcd_ops_allog WHERE sent_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_event.
         SELECT COUNT(*) FROM zcd_fmon_event WHERE created_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-hck_metric.
@@ -76,13 +76,13 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
 
       WHEN zif_cd_ops_purge_dao=>gc_target-alert_log.
         SELECT alert_id
-          FROM zcd_ops_alert_log
+          FROM zcd_ops_allog
           WHERE sent_at < @iv_cutoff
           ORDER BY alert_id
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_alerts)
           UP TO @iv_max ROWS.
         CHECK lt_alerts IS NOT INITIAL.
-        DELETE zcd_ops_alert_log FROM TABLE @lt_alerts.
+        DELETE zcd_ops_allog FROM TABLE @lt_alerts.
         rv_count = sy-dbcnt.
 
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_event.

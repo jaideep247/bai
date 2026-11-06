@@ -185,7 +185,7 @@ INTERFACE zif_cd_ops_types
     END OF ty_kv.
   TYPES tt_kv TYPE SORTED TABLE OF ty_kv WITH UNIQUE KEY name.
 
-  "! ---- Alert router (ZCD_OPS_ALERT_RULE / _CHN / _LOG) ----
+  "! ---- Alert router (ZCD_OPS_ALRULE / _CHN / _LOG) ----
   TYPES ty_channel     TYPE c LENGTH 10.
   TYPES ty_pattern     TYPE c LENGTH 35.
   TYPES ty_alert_dest  TYPE c LENGTH 255.
@@ -197,7 +197,7 @@ INTERFACE zif_cd_ops_types
       http   TYPE ty_channel VALUE 'HTTP',
     END OF gc_channel.
 
-  "! Delivery status in ZCD_OPS_ALERT_LOG
+  "! Delivery status in ZCD_OPS_ALLOG
   CONSTANTS:
     BEGIN OF gc_alert_status,
       sent      TYPE c LENGTH 1 VALUE 'S',

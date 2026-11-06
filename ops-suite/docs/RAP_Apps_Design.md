@@ -58,7 +58,7 @@ Pattern: SAP **business-configuration maintenance** shape — a **singleton root
 | EBS rules & mapping `ZUI_CD_EBS_CFG_O4` | `ZR_CD_EbsCfgAll` | ZCD_BTC_MAP, ZCD_BTC_RULE, ZCD_EBS_RULE_DEF, ZCD_EBS_ACCT, ZCD_EBS_FLOW_PAT, ZCD_EBS_RSN_MAP |
 | File monitoring setup `ZUI_CD_FMON_CFG_O4` | `ZR_CD_FmonCfgAll` | ZCD_FMON_IFACE, ZCD_FMON_SLA, ZCD_FMON_SRC, ZCD_FMON_SRCMAP, ZCD_FMON_CHK, ZCD_FMON_LOTCFG, ZCD_FMON_CAL |
 | Health check setup `ZUI_CD_HCK_CFG_O4` | `ZR_CD_HckCfgAll` | ZCD_HCK_DEF, ZCD_HCK_THRESH, ZCD_HCK_AGG, ZCD_HCK_AGGGRP (A103), ZCD_HCK_DRIFT, ZCD_HCK_TABWL, ZCD_JOB_CYCLE, ZCD_JOB_STEP |
-| Alerting & parameters `ZUI_CD_OPS_CFG_O4` | `ZR_CD_OpsCfgAll` | ZCD_OPS_ALERT_RULE, ZCD_OPS_ALERT_CHN, ZCD_OPS_PARAM |
+| Alerting & parameters `ZUI_CD_OPS_CFG_O4` | `ZR_CD_OpsCfgAll` | ZCD_OPS_ALRULE, ZCD_OPS_ALCHN, ZCD_OPS_PARAM |
 
 - Every customizing table gets `LAST_CHANGED_BY` (`abp_lastchange_user`), `LAST_CHANGED_AT` (`abp_lastchange_tstmpl`), `LOCAL_LAST_CHANGED_AT` (`abp_locinst_lastchange_tstmpl`). Engines and DAOs ignore them.
 - **Change policy** `ZCL_CD_OPS_CFG_POLICY` (pure, unit tested), input = client settings read from T000 (`CCCORACTIV`, `CCCATEGORY`) through an injectable reader:

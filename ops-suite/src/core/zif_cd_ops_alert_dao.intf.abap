@@ -1,8 +1,8 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_ops_alert_dao.intf.abap
 *& Purpose:
-*& Repository for alert configuration (ZCD_OPS_ALERT_RULE, ZCD_OPS_ALERT_CHN)
-*& and the delivery log ZCD_OPS_ALERT_LOG (throttling, escalation, audit).
+*& Repository for alert configuration (ZCD_OPS_ALRULE, ZCD_OPS_ALCHN)
+*& and the delivery log ZCD_OPS_ALLOG (throttling, escalation, audit).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | claim, complete, get_repeat_keys (audit A17, DEFAULT IGNORE).

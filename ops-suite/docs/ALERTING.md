@@ -37,11 +37,11 @@ flowchart LR
   FMON[FMON engine] --> R
   HCK[HCK engine] --> R
   R[ZCL_CD_OPS_ALERT_ROUTER.dispatch] --> P[ZCL_CD_OPS_ALERT_POLICY: match, quiet, throttle, escalate, build]
-  P --> C{Channel plug-in ZCD_OPS_ALERT_CHN}
+  P --> C{Channel plug-in ZCD_OPS_ALCHN}
   C --> M[ZCL_CD_OPS_CHN_EMAIL - BCS]
   C --> L[ZCL_CD_OPS_CHN_APPLOG - SLG1]
   C --> H[ZCL_CD_OPS_CHN_HTTP - SM59 webhook]
-  R --> LOG[(ZCD_OPS_ALERT_LOG)]
+  R --> LOG[(ZCD_OPS_ALLOG)]
 ```
 
 | Object | Role | Test level |
@@ -49,7 +49,7 @@ flowchart LR
 | ZIF_CD_OPS_ALERT | Port: `dispatch( run, findings )`, `send( route, subject, html )` | — |
 | ZCL_CD_OPS_ALERT_POLICY | Pure decisions (severity floor, CP patterns, run-level RAG/abort, quiet hours incl. midnight wrap, throttle, escalation, digest/per-finding with cap, HTML escaping) | Domain, 14 tests |
 | ZCL_CD_OPS_ALERT_ROUTER | Orchestration, logging, failure isolation | Application with doubles, 8 tests |
-| ZCL_CD_OPS_ALERT_DAO | ZCD_OPS_ALERT_RULE / _CHN / _LOG | OSQL (QA1) |
+| ZCL_CD_OPS_ALERT_DAO | ZCD_OPS_ALRULE / _CHN / _LOG | OSQL (QA1) |
 | ZCL_CD_OPS_CHN_EMAIL / _APPLOG / _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT | Integration (QA1); `ZCL_CD_OPS_CHN_HTTP=>to_json` / `dedup_key` are pure (9 domain tests) |
 
 ### LUW rule
@@ -57,8 +57,8 @@ The router and its channels commit (BCS sends on commit, BAL saves to the databa
 
 ### Customizing
 
-`ZCD_OPS_ALERT_RULE` (key RULE_ID): PE_AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
-`ZCD_OPS_ALERT_CHN` (key CHANNEL): CLASS_NAME, default DESTINATION, ACTIVE — a new channel is a class implementing `ZIF_CD_OPS_ALERT_CHANNEL` plus one row.
+`ZCD_OPS_ALRULE` (key RULE_ID): PE_AREA (`*` = all), MIN_SEVERITY, RULE/CHECK/GROUP1/GROUP2 patterns, MIN_RAG, ON_ABORT, CHANNEL, DESTINATION, DIGEST, MAX_ITEMS, THROTTLE_MIN, QUIET_FROM/TO, ESCALATE_AFTER, ESCALATION_DEST, ACTIVE.
+`ZCD_OPS_ALCHN` (key CHANNEL): CLASS_NAME, default DESTINATION, ACTIVE — a new channel is a class implementing `ZIF_CD_OPS_ALERT_CHANNEL` plus one row.
 `ZCD_OPS_PARAM`: `ALERT_<route>` and `ALERT_DEFAULT` recipient lists for `send( )`; `ALERT_ESCALATION_WINDOW_H` (default 24).
 
 Example rows: `config/alert_seed.md`.
@@ -72,7 +72,7 @@ Example rows: `config/alert_seed.md`.
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = lead DL |
 | Add Microsoft Teams | SM59 destination (Basis) + rule with CHANNEL HTTP |
-| Add a new channel type (e.g. SMS gateway) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALERT_CHN row |
+| Add a new channel type (e.g. SMS gateway) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALCHN row |
 
 ### Delivery guarantees (Phase 6 audit)
 
@@ -102,7 +102,7 @@ A claim left in status C by a dump blocks that intent until the operator complet
 
 | Key | Content | Use in the receiver |
 |---|---|---|
-| `ruleId` | Alert rule (`ZCD_OPS_ALERT_RULE`) | Routing / assignment group |
+| `ruleId` | Alert rule (`ZCD_OPS_ALRULE`) | Routing / assignment group |
 | `peArea` | Payment engine area: EBS, FMON, HCK, CORE | Routing, CI / service mapping |
 | `severity` | B block, E error, W warning, I information | Priority (table below) |
 | `subject`, `text` | Digest subject and body (escaped JSON strings) | Short and long description |

@@ -1,10 +1,10 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ops_alert_router.clas.abap
 *& Purpose:
-*& Configurable alert router for every payment engine area. Reads ZCD_OPS_ALERT_RULE and
-*& ZCD_OPS_ALERT_CHN through the alert DAO, lets ZCL_CD_OPS_ALERT_POLICY decide
+*& Configurable alert router for every payment engine area. Reads ZCD_OPS_ALRULE and
+*& ZCD_OPS_ALCHN through the alert DAO, lets ZCL_CD_OPS_ALERT_POLICY decide
 *& (severity, patterns, quiet hours, throttling, escalation) and delivers via
-*& channel plug-ins. Every decision is logged in ZCD_OPS_ALERT_LOG. A failing
+*& channel plug-ins. Every decision is logged in ZCD_OPS_ALLOG. A failing
 *& channel is logged and never aborts the calling run. Test-mode runs never alert.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).

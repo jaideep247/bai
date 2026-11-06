@@ -3,7 +3,7 @@
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #DISPLAY
-define table zcd_ops_alert_log {
+define table zcd_ops_allog {
   key mandt     : abap.clnt not null;
   key alert_id  : sysuuid_x16 not null;
   rule_id       : abap.char(10);

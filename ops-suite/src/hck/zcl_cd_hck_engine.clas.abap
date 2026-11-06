@@ -786,7 +786,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     ENDLOOP.
 
     DATA(lo_alert) = zcl_cd_ops_factory=>get_alert( ).
-    " alert routing (channels, recipients, throttling) is customizing of ZCD_OPS_ALERT_RULE
+    " alert routing (channels, recipients, throttling) is customizing of ZCD_OPS_ALRULE
     TRY.
         lo_alert->dispatch( is_run      = cs_report-run
                             it_findings = lt_findings ).

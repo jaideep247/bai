@@ -3,7 +3,7 @@
 > **First principle:** who hears about a problem, how fast and how loud is configuration, never code.
 > **Analogy:** a building's fire panel — zones (rules) are wired to sirens, pagers or the control room (channels) by the installer, not by the fire.
 
-## ZCD_OPS_ALERT_CHN
+## ZCD_OPS_ALCHN
 
 | CHANNEL | CLASS_NAME | DESTINATION | ACTIVE |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | APPLOG | ZCL_CD_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
 | HTTP | ZCL_CD_OPS_CHN_HTTP | ZCD_OPS_WEBHOOK *(SM59 destination, created by Basis)* | |
 
-## ZCD_OPS_ALERT_RULE
+## ZCD_OPS_ALRULE
 
 | RULE_ID | PE_AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -39,7 +39,7 @@ ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle 
 EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends
 the series).
 
-ZCD_OPS_ALERT_LOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
+ZCD_OPS_ALLOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATTEMPT) — create it in SE11
 before go-live; it is what stops two dispatchers sending the same alert (A17). Status values: S sent, F failed,
 T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial.
 
@@ -47,7 +47,7 @@ ZCD_OPS_PARAM for reports sent with `send( )`: `ALERT_MORNING` (morning report d
 
 Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUTER` unit tests):
 - Severity **B** (blocked, never posted) ignores quiet hours.
-- Throttled (T) and quiet-hour (Q) decisions are logged in ZCD_OPS_ALERT_LOG — nothing is silently dropped.
+- Throttled (T) and quiet-hour (Q) decisions are logged in ZCD_OPS_ALLOG — nothing is silently dropped.
 - A failing channel is logged as F and never aborts the run; the morning report's "alert delivery health" check counts F rows.
 - `send( )` without recipients or on an inactive channel logs F **and raises** (A45).
 - MAX_ITEMS keeps the most severe findings (B > E > W > I); the message names how many were held back (A63).

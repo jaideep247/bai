@@ -2,12 +2,12 @@
 *& Artifact: zcl_cd_hck_c_alert_health.clas.abap
 *& Purpose:
 *& Technical health: alert delivery of the suite - failed and throttled
-*& deliveries per channel in ZCD_OPS_ALERT_LOG within a time window.
+*& deliveries per channel in ZCD_OPS_ALLOG within a time window.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Health check - alert delivery health (ZCD_OPS_ALERT_LOG)</p>
+"! <p class="shorttext synchronized">Health check - alert delivery health (ZCD_OPS_ALLOG)</p>
 "! PARAM1 = window in hours back from now (default 24).
 "! Metrics per channel (DIM1): ALERT_FAILED (status F), ALERT_THROTTLED
 "! (status T); ALERT_FAILED '*' = 0 when nothing failed.

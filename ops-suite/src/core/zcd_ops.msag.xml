@@ -54,7 +54,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>007</MSGNR>
-     <TEXT>Channel &amp;1 not configured or inactive in ZCD_OPS_ALERT_CHN</TEXT>
+     <TEXT>Channel &amp;1 not configured or inactive in ZCD_OPS_ALCHN</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

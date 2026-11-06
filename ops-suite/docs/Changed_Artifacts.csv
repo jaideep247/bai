@@ -31,9 +31,9 @@ ddic/core/zcd_d_alchn.tabl.ddl,DDIC,
 ddic/core/zcd_d_alrule.tabl.ddl,DDIC,
 ddic/core/zcd_d_opscfg.tabl.ddl,DDIC,
 ddic/core/zcd_d_param.tabl.ddl,DDIC,
-ddic/core/zcd_ops_alert_chn.tabl.ddl,DDIC,
-ddic/core/zcd_ops_alert_log.tabl.ddl,DDIC,
-ddic/core/zcd_ops_alert_rule.tabl.ddl,DDIC,
+ddic/core/zcd_ops_alchn.tabl.ddl,DDIC,
+ddic/core/zcd_ops_allog.tabl.ddl,DDIC,
+ddic/core/zcd_ops_alrule.tabl.ddl,DDIC,
 ddic/core/zcd_ops_exc_hist.tabl.ddl,DDIC,
 ddic/core/zcd_ops_finding.tabl.ddl,DDIC,
 ddic/core/zcd_ops_lock.tabl.ddl,DDIC,
@@ -180,9 +180,9 @@ src/core/zcd_d_alrule.tabl.xml,abapGit,
 src/core/zcd_d_opscfg.tabl.xml,abapGit,
 src/core/zcd_d_param.tabl.xml,abapGit,
 src/core/zcd_ops.msag.xml,abapGit,
-src/core/zcd_ops_alert_chn.tabl.xml,abapGit,
-src/core/zcd_ops_alert_log.tabl.xml,abapGit,
-src/core/zcd_ops_alert_rule.tabl.xml,abapGit,
+src/core/zcd_ops_alchn.tabl.xml,abapGit,
+src/core/zcd_ops_allog.tabl.xml,abapGit,
+src/core/zcd_ops_alrule.tabl.xml,abapGit,
 src/core/zcd_ops_exc_hist.tabl.xml,abapGit,
 src/core/zcd_ops_finding.tabl.xml,abapGit,
 src/core/zcd_ops_lock.tabl.xml,abapGit,
@@ -198,7 +198,7 @@ src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_policy.clas.abap,ABAP,"Decides which alert rules fire for a run, whether quiet hours, throttling or"
 src/core/zcl_cd_ops_alert_policy.clas.testclasses.abap,ABAP,"Domain tests of the alert rules: severity floor, patterns, run-level RAG,"
 src/core/zcl_cd_ops_alert_policy.clas.xml,abapGit,
-src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every payment engine area. Reads ZCD_OPS_ALERT_RULE and
+src/core/zcl_cd_ops_alert_router.clas.abap,ABAP,Configurable alert router for every payment engine area. Reads ZCD_OPS_ALRULE and
 src/core/zcl_cd_ops_alert_router.clas.testclasses.abap,ABAP,"Application tests of the alert router with LTD_* doubles for the alert DAO,"
 src/core/zcl_cd_ops_alert_router.clas.xml,abapGit,
 src/core/zcl_cd_ops_auth.clas.abap,ABAP,The only AUTHORITY-CHECK on object ZCD_OPS. Thin wrapper - deliberately
@@ -275,7 +275,7 @@ src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every payment
 src/core/zif_cd_ops_alert.intf.xml,abapGit,
 src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, application log, HTTP webhook). Channels are"
 src/core/zif_cd_ops_alert_channel.intf.xml,abapGit,
-src/core/zif_cd_ops_alert_dao.intf.abap,ABAP,"Repository for alert configuration (ZCD_OPS_ALERT_RULE, ZCD_OPS_ALERT_CHN)"
+src/core/zif_cd_ops_alert_dao.intf.abap,ABAP,"Repository for alert configuration (ZCD_OPS_ALRULE, ZCD_OPS_ALCHN)"
 src/core/zif_cd_ops_alert_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_auth.intf.abap,ABAP,"Authorisation seam for the operations suite (object ZCD_OPS: ACTVT,"
 src/core/zif_cd_ops_auth.intf.xml,abapGit,

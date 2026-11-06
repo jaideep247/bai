@@ -115,10 +115,10 @@ SPEC = {
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
         title='Alerting and parameters', tables=[
-            ('zcd_ops_alert_rule', 'AlertRule', 'zcd_d_alrule', 'Alert rule', 'Alert rules', [],
+            ('zcd_ops_alrule', 'AlertRule', 'zcd_d_alrule', 'Alert rule', 'Alert rules', [],
              [('enum', 'pe_area', ',*,EBS,FMON,HCK'), ('enum', 'min_severity', ',' + SEV),
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to')]),
-            ('zcd_ops_alert_chn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
+            ('zcd_ops_alchn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
              [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL')]),
             ('zcd_ops_param', 'OpsParam', 'zcd_d_param', 'Parameter', 'Runtime parameters', [], []),
         ]),

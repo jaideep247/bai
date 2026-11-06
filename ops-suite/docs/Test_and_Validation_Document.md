@@ -30,7 +30,7 @@ Out of scope: transport import, activation, syntax and ATC (build hygiene); the 
 | Statement checks | None | S01–S12 (balances, sequence, account, date, duplicates, counts, coverage, completeness) |
 | File formats | FEBEP only | BAI2 and CAMT.053/054 files before import, plus FEBKO/FEBEP after import |
 | Results | Failed records only, ZBAI_* tables | Every run counted; owned exceptions with SLA in ZCD_OPS_FINDING |
-| Alerts | Hard-coded e-mail on failure rate | ZCD_OPS_ALERT_RULE: channels, throttling, quiet hours, escalation, log |
+| Alerts | Hard-coded e-mail on failure rate | ZCD_OPS_ALRULE: channels, throttling, quiet hours, escalation, log |
 | Morning report | Free-text SQL rules, WRITE list | Whitelisted, DDIC-validated checks A–E, baselines, ALV + HTML e-mail |
 
 ## 3. Test approach

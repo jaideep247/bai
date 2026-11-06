@@ -53,8 +53,8 @@ For owners of shared files and other work packages — not edited here:
 2. **FMON work package:** pass the adapter interface to `GET_PLUGIN` (A62).
 3. **Messages:** core 025, 026, 033 and HCK 360–369 appended to `config/zcd_ops_messages.md`; regenerate the
    message class with `tools/abapgit_serialize.py` after merging other work packages.
-4. **DDIC:** unique index `ZCD_OPS_ALERT_LOG~INT` (MANDT, INTENT_KEY, ATTEMPT) — generated into the abapGit TABL XML since the FMON work package's index support (merge 2026-11-06); verify after the first pull; new fields
-   ZCD_OPS_ALERT_LOG-INTENT_KEY/ATTEMPT, ZCD_OPS_ALERT_RULE-ESC_OVERRIDE, ZCD_HCK_BASELINE-HASH_VERSION,
+4. **DDIC:** unique index `ZCD_OPS_ALLOG~INT` (MANDT, INTENT_KEY, ATTEMPT) — generated into the abapGit TABL XML since the FMON work package's index support (merge 2026-11-06); verify after the first pull; new fields
+   ZCD_OPS_ALLOG-INTENT_KEY/ATTEMPT, ZCD_OPS_ALRULE-ESC_OVERRIDE, ZCD_HCK_BASELINE-HASH_VERSION,
    ZCD_HCK_METRIC-KIND/WEIGHT.
 5. **Shared docs** (`docs/ATC_Validation.md`, `docs/Class_Purpose_and_Modification_Log.md`, README): add
    `ZCL_CD_HCK_BUDGET`, `ZCL_CD_HCK_CANONICAL`, `ZCL_CD_HCK_DATASET`, `ZIF_CD_HCK_FILE`,

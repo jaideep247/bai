@@ -61,7 +61,7 @@ CLASS ltc_purge_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALERT_LOG' )
+      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' )
                                    ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ) ).
   ENDMETHOD.
 
@@ -181,8 +181,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
 
   " Rule: alert log rows are purged by their send time
   METHOD old_alert_log_is_deleted.
-    DATA lt_log TYPE STANDARD TABLE OF zcd_ops_alert_log WITH EMPTY KEY.
-    DATA ls_log TYPE zcd_ops_alert_log.
+    DATA lt_log TYPE STANDARD TABLE OF zcd_ops_allog WITH EMPTY KEY.
+    DATA ls_log TYPE zcd_ops_allog.
     TRY.
         ls_log-alert_id = gc-run_old.
         ls_log-sent_at  = gc-old.
@@ -195,7 +195,7 @@ CLASS ltc_purge_dao IMPLEMENTATION.
                                                    iv_cutoff = gc-cutoff
                                                    iv_today  = gc-today
                                                    iv_max    = 100 ).
-        SELECT COUNT(*) FROM zcd_ops_alert_log INTO @DATA(lv_left).
+        SELECT COUNT(*) FROM zcd_ops_allog INTO @DATA(lv_left).
         cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'Only the old alert must be deleted' ).
         cl_abap_unit_assert=>assert_equals( act = lv_left exp = 1 msg = 'The recent alert must remain' ).
       CATCH cx_root INTO DATA(lx_error).

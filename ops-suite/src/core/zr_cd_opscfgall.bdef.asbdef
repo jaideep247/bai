@@ -34,7 +34,7 @@ authorization master ( global )
 }
 
 define behavior for ZR_CD_AlertRule alias AlertRule
-persistent table zcd_ops_alert_rule
+persistent table zcd_ops_alrule
 with additional save
 draft table zcd_d_alrule
 lock dependent by _OpsCfgAll
@@ -50,7 +50,7 @@ etag master LocalLastChangedAt
   validation validateFields on save { create; update; }
   // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
   validation validateTransport on save { create; update; delete; }
-  mapping for zcd_ops_alert_rule
+  mapping for zcd_ops_alrule
   {
     RuleId = rule_id;
     PaymentEngineArea = pe_area;
@@ -81,7 +81,7 @@ etag master LocalLastChangedAt
 }
 
 define behavior for ZR_CD_AlertChannel alias AlertChannel
-persistent table zcd_ops_alert_chn
+persistent table zcd_ops_alchn
 with additional save
 draft table zcd_d_alchn
 lock dependent by _OpsCfgAll
@@ -97,7 +97,7 @@ etag master LocalLastChangedAt
   validation validateFields on save { create; update; }
   // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
   validation validateTransport on save { create; update; delete; }
-  mapping for zcd_ops_alert_chn
+  mapping for zcd_ops_alchn
   {
     Channel = channel;
     ClassName = class_name;

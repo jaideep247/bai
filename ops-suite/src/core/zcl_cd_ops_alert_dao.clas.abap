@@ -30,7 +30,7 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
     SELECT rule_id, pe_area, min_severity, rule_pattern, check_pattern, group1_pattern,
            group2_pattern, min_rag, on_abort, channel, destination, digest, max_items,
            throttle_min, quiet_from, quiet_to, escalate_after, escalation_dest, esc_override, active
-      FROM zcd_ops_alert_rule
+      FROM zcd_ops_alrule
       WHERE ( pe_area = @iv_pe_area OR pe_area = @gc_any_pe_area )
         AND active = @abap_true
       ORDER BY rule_id
@@ -40,7 +40,7 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_alert_dao~get_channels.
     SELECT channel, class_name, destination, active
-      FROM zcd_ops_alert_chn
+      FROM zcd_ops_alchn
       ORDER BY channel
       INTO CORRESPONDING FIELDS OF TABLE @rt_channels.
   ENDMETHOD.
@@ -49,7 +49,7 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
   METHOD zif_cd_ops_alert_dao~get_log.
     SELECT alert_id, rule_id, channel, run_id, pe_area, sent_at, status, destination, subject, error,
            intent_key, attempt
-      FROM zcd_ops_alert_log
+      FROM zcd_ops_allog
       WHERE rule_id  = @iv_rule_id
         AND sent_at >= @iv_since
       ORDER BY sent_at DESCENDING
@@ -58,8 +58,8 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_alert_dao~insert_log.
-    DATA lt_db TYPE STANDARD TABLE OF zcd_ops_alert_log WITH EMPTY KEY.
-    DATA ls_db TYPE zcd_ops_alert_log.
+    DATA lt_db TYPE STANDARD TABLE OF zcd_ops_allog WITH EMPTY KEY.
+    DATA ls_db TYPE zcd_ops_allog.
     IF it_log IS INITIAL.
       RETURN.
     ENDIF.
@@ -82,16 +82,16 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
     ENDLOOP.
     " Audit rows; a duplicate key (UUID collision) must not lose the others, so
     " sy-subrc 4 (some rows skipped) is accepted deliberately
-    INSERT zcd_ops_alert_log FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS. "#EC CI_SUBRC
+    INSERT zcd_ops_allog FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS. "#EC CI_SUBRC
   ENDMETHOD.
 
 
   METHOD zif_cd_ops_alert_dao~claim.
-    DATA ls_db TYPE zcd_ops_alert_log.
+    DATA ls_db TYPE zcd_ops_allog.
     " A17: an intent that is claimed (in delivery) or sent is never sent again; a failed
     " intent may be retried with the next attempt number
     SELECT intent_key, attempt, status
-      FROM zcd_ops_alert_log
+      FROM zcd_ops_allog
       WHERE intent_key = @is_log-intent_key
       ORDER BY attempt DESCENDING
       INTO TABLE @DATA(lt_attempts).
@@ -115,20 +115,20 @@ CLASS zcl_cd_ops_alert_dao IMPLEMENTATION.
     ls_db-attempt     = lines( lt_attempts ) + 1.
     ls_db-created_by  = sy-uname.
     " the unique index INT (MANDT, INTENT_KEY, ATTEMPT) rejects a parallel dispatcher
-    INSERT zcd_ops_alert_log FROM @ls_db.
+    INSERT zcd_ops_allog FROM @ls_db.
     rv_claimed_elsewhere = xsdbool( sy-subrc <> 0 ).
   ENDMETHOD.
 
 
   METHOD zif_cd_ops_alert_dao~complete.
-    UPDATE zcd_ops_alert_log
+    UPDATE zcd_ops_allog
       SET status  = @is_log-status,
           error   = @is_log-error,
           sent_at = @is_log-sent_at
       WHERE alert_id = @is_log-alert_id.
     IF sy-subrc <> 0.
       " the claim row is gone (purged): keep the evidence as a new row
-      INSERT zcd_ops_alert_log FROM @( CORRESPONDING #( is_log ) ).    "#EC CI_SUBRC
+      INSERT zcd_ops_allog FROM @( CORRESPONDING #( is_log ) ).    "#EC CI_SUBRC
     ENDIF.
   ENDMETHOD.
 
