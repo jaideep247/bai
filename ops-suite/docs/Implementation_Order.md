@@ -5,7 +5,25 @@
 
 Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`.
 
-**abapGit import (recommended).** The repository carries `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and full abapGit metadata: packages, classes, interfaces, programs, **all 30 tables** and the message class `ZCD_OPS`. Create package `ZCD_OPS` in DV1, link the repository in abapGit, pull. abapGit activates in dependency order, which replaces most of Steps 1–2 below; use them as the manual fallback and as the checklist for what must be active. Metadata is regenerated with `python3 tools/abapgit_serialize.py`.
+**abapGit import (recommended).** The repository carries `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and full abapGit metadata: packages, classes, interfaces, programs with text pools, **all 68 tables** (incl. draft tables and their secondary indexes), CDS / BDEF / DDLX / service definitions of the RAP apps and the message class `ZCD_OPS`. Create the transportable package `ZCD_OPS` in DV1 with the landscape's transport layer, link the repository in abapGit (online: `https://github.com/jaideep247/bai.git`, or offline: `git archive --format=zip -o bai-ops-suite.zip <commit>` → Import ZIP), pull and assign a Workbench request. abapGit activates in dependency order, which replaces most of Steps 1–2 below; use them as the manual fallback and as the checklist for what must be active. Metadata is regenerated with `python3 tools/abapgit_serialize.py`.
+
+**Pin the revision.** Pull one reviewed commit and record its SHA in the transport description; SAP can only pull what is pushed to the remote (use the offline ZIP otherwise).
+
+**What the pull does not create** (finish in ADT / SAP GUI, capture in the right request):
+
+| Artifact | Where | Step |
+|---|---|---|
+| Analytical CDS views and access control `ZI_CD_OpsAnalytics` in `ops-suite/cds/` (outside the import folder) | ADT, after the pull | 2.7 |
+| Service bindings `ZUI_*_O4` (in-scope apps only) and FLP tiles | ADT / launchpad designer | 1a, 1b |
+| Authorization object `ZCD_OPS`, field `ZCD_PE_AREA`, roles incl. `S_TABU_NAM` | SU21 / PFCG | 0, 1c.3 |
+| Customizing rows (`config/*.csv`, `*_seed.md`) — the pull loads no data | Configuration apps / SM30, customizing request | 3 |
+| Job variants and Control-M jobs | SE38 / Control-M | 4 |
+
+**Read-only rollout scope.** This release observes and reports: EBS shadow validation after statement import, posting and payment clearing; FMON; HCK; the payment trace. Kept outside the transport:
+- the *Blocked line releases* app (`ZR_/ZC_CD_EBSRELEASE`, behaviour pool `ZBP_R_CD_EBSRELEASE`, service definition `ZUI_CD_EBS_REL`) — listed in the `IGNORE` section of `/.abapgit.xml`, so abapGit does not pull it; no other object references it;
+- the reprocessing / clarification navigation targets (step 1c.7) — not created;
+- posting enforcement: the pre-posting path inside `ZCL_CD_EBS_ENGINE` (and its release table / DAO, which the engine needs to activate) is transported but dormant — no BAdI implementation exists and `ZCD_EBS_VALIDATION_MODE` = `O`;
+- integration changes: the HTTP alert channel class is transported but inactive (no SM59 destination, no active channel row).
 
 ## Step 0 — Pre-checks (blocking)
 
@@ -28,7 +46,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 4. HCK: `ZCD_HCK_DEF`, `_THRESH`, `_AGG`, `_TABWL`, `_DRIFT`, `ZCD_JOB_CYCLE`, `ZCD_JOB_STEP`, `ZCD_HCK_METRIC`, `ZCD_HCK_BASELINE`.
 5. No SM30 maintenance views: every delivery-class-C table is maintained in its RAP configuration app (`RAP_Config_Apps.md`, step 1a).
 6. Message class `ZCD_OPS` (262 messages: every user-facing text of the suite) — included in the abapGit pull; manual fallback from `config/zcd_ops_messages.md`. Text pools of the four reports and of `ZCL_CD_HCK_REPORT_HTML` / `ZCL_CD_OPS_ALERT_POLICY` come with the abapGit XML (source `docs/text_elements/`); translate both in SE63.
-7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are not in the abapGit XML — create them from the comments in `ddic/*/*.tabl.ddl`.
+7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are serialized into the abapGit TABL XML (DD12V/DD17V) from the `// @index` lines in `ddic/*/*.tabl.ddl`; after the pull, verify each one in SE11 (step 1c.1) — create it manually only if the pull reports it missing.
 7. Application log object/subobject `ZCD_OPS` / `ALERT` (SLG0) for the APPLOG channel.
 8. Authorization object `ZCD_OPS` — step 0.7 (reports, purge and the CDS access role `ZI_CD_OpsAnalytics`).
 
@@ -38,19 +56,19 @@ Follow `RAP_Config_Apps.md` §6: confirm the VERIFY-ADT items (business-configur
 
 ## Step 1b — RAP operations apps
 
-Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on the history association, `READ ENTITIES` in `save_modified`, `RAISE SHORTDUMP`), activate tables → abstract entities `ZA_CD_*` → `ZR_` / `ZC_` views → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions, then create and publish `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_EBS_REL_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`. Approver roles (ZCD_OPS 85) go only to users who do not request (segregation of duties).
+Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on the history association, `READ ENTITIES` in `save_modified`, `RAISE SHORTDUMP`), activate tables → abstract entities `ZA_CD_*` → `ZR_` / `ZC_` views → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions, then create and publish `ZUI_CD_OPS_EXC_O4`, `ZUI_CD_HCK_SUP_O4`, `ZUI_CD_FMON_MAN_O4`, `ZUI_CD_FMON_PRQ_O4`. **Not in this rollout:** `ZUI_CD_EBS_REL_O4` (blocked line releases — pre-posting enforcement, ignored by abapGit). Approver roles (ZCD_OPS 85) go only to users who do not request (segregation of duties).
 
 ## Step 1c — Phase 6 prerequisites (audit fixes)
 
 | # | Item | Done when |
 |---|---|---|
-| 1c.1 | SE11 → Indexes on the 11 indexed tables (17 indexes, now generated in the abapGit TABL XML from `// @index` markers): ZCD_FMON_FILE REF/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALERT_LOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
+| 1c.1 | SE11 → Indexes on the 12 indexed tables (18 indexes, generated in the abapGit TABL XML from `// @index` markers; verify each after the pull): ZCD_FMON_FILE REF (unique)/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALERT_LOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
 | 1c.2 | `ZCD_FMON_TABWL` maintained for every table in ZCD_FMON_SRC / ZCD_FMON_LOTCFG (seed list `config/fmon_seed.md`) | Without it every legacy read is refused (PLUGIN_ERROR, message 244) |
 | 1c.3 | Role with `S_TABU_NAM` ACTVT 03 for those tables: batch user and online monitor users | No message 245 in a test run |
 | 1c.4 | Parameters in ZCD_OPS_PARAM: `FMON_AGE_BASIS` (default A), `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_REASON_FIELD`, `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS` (`config/alert_seed.md`, `Audit_Response_EBS.md`) | Values confirmed with the process owner; VERIFY-DDIC field names checked in SE11 |
 | 1c.5 | Seeds: ZCD_EBS_RULE_DEF (BLOCKS_POSTING, R21, R22), ZCD_BTC_RULE (BLOCKS_POSTING overrides, 166D retrieval-log chain, `*` R22), ZCD_BTC_MAP (DISPOSITION, one canonical wildcard) | Resolver load shows no configuration findings |
 | 1c.6 | HCK baselines retaken once after transport (drift hash version 2) | No drift finding caused by the version change |
-| 1c.7 | Launchpad target mappings `ZCDBankStatement-reprocess` → FEBAN and `ZCDPaymentLot-clarify` → FPCPL in the operations catalog | Navigation buttons open the standard transactions |
+| 1c.7 | **Not in this rollout (read-only scope).** Launchpad target mappings `ZCDBankStatement-reprocess` → FEBAN and `ZCDPaymentLot-clarify` → FPCPL stay uncreated; operators use the runbook transactions directly | The navigation buttons stay hidden (no target mapping) |
 | 1c.8 | Payment trace (`Payment_Trace.md` §5, §9): SE11 check of every VERIFY-SE11 field (DFKKRAPT, ZCDT_REGUT, ZCD_PAYM_REQ_LOG, ACK tables, ZCD_CHECK_HIST, DFKKOP-AUGRD/PYMET, DFKKKO-STBEL); parameters `TRACE_SRC_REQUEST`, `TRACE_SRC_HISTORY`, `TRACE_SRC_REGUT`, `TRACE_SRC_ACK`, `TRACE_SRC_CHQ_HIST`, `TRACE_BP_SOURCE_FIELD`, `TRACE_MAX_ROWS`, `TRACE_REVERSAL_AUGRD`, `TRACE_GL_AWTYP`, `TRACE_CHECK_METHODS`, `TRACE_NO_ACK_METHODS`, `TRACE_ACK_NACK_VALUES`, `TRACE_CHQ_FAILED`, `TRACE_BANK_LOOKBACK_DAYS`; `ZCD_FMON_TABWL` rows for DFKKRAPT, BUT000 (if a source field is configured) and every other configured table not yet approved; role with ZCD_OPS 03 (CORE + company codes) and S_TABU_NAM 03 for those tables | A QA1 trace of one ACH, one cheque and one reissued payment shows no SOURCE_NOT_CONFIGURED / SOURCE_NOT_READABLE row |
 
 ## Step 2 — Classes, in dependency order (activate each group together)
@@ -76,7 +94,7 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (payment engine reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account.
 4. FMON: `config/fmon_seed.md` once step 0.3 is done.
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).
-6. TVARVC `ZCD_EBS_VALIDATION_MODE` = `M` (monitor) for go-live; `E` only after the QA1 shadow run is signed off.
+6. TVARVC `ZCD_EBS_VALIDATION_MODE` = `O` (off). The batch run `ZCD_EBS_VALIDATE` never reads it; it governs only the dormant pre-posting path, which has no caller in this release.
 
 ## Step 4 — Jobs (Control-M)
 
