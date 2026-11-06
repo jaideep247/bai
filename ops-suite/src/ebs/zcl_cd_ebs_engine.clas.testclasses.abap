@@ -18,6 +18,7 @@
 *& 2026-11-06 | Audit A91: kill switch missing, invalid, off and SQL failure (TEST-INJECTION tvarvc_read).
 *& 2026-11-06 | Audit A98: contradictory blank / * map rows block through the posting decision.
 *& 2026-11-06 | Audit A95: missing 99 blocks through the posting decision (parsed BAI2 file).
+*& 2026-11-06 | Audit A97: end-to-end parser-to-engine tests (configuration-only code, informational code); dispatch test commented.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -306,6 +307,12 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS posting_check_refreshes_params FOR TESTING.
     METHODS map_conflict_blocks_posting  FOR TESTING.
     METHODS missing_99_blocks_posting    FOR TESTING.
+    METHODS e2e_config_only_code_posts   FOR TESTING.
+    METHODS e2e_info_code_not_posted     FOR TESTING.
+    "! A97: map row and rule assignment for BAI2 165 / 890 in group CFGONLY - configuration only
+    METHODS configure_code
+      IMPORTING
+        iv_code TYPE zif_cd_ebs_types=>ty_btc_code.
     "! A95/A97: package of a BAI2 file parsed by ZCL_CD_EBS_PARSER_BAI2 (file source)
     METHODS file_package
       IMPORTING
@@ -497,7 +504,9 @@ CLASS ltc_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Acceptance test 3: a new bank code plus a rule assignment is validated with no code change
+  " Acceptance test 3 - ENGINE DISPATCH ONLY: a normalised line (synthetic code 987, no parser)
+  " is routed by configuration to its rule group. The parser-to-engine proof with a real
+  " BAI2 file is e2e_config_only_code_posts (A97)
   METHOD new_code_needs_config_only.
     DATA(ls_flags) = default_flags( ).
     ls_flags-assign_sign_rule = abap_true.
@@ -1383,15 +1392,71 @@ CLASS ltc_engine IMPLEMENTATION.
   " A95: a BAI2 file without 99 is blocked through the final ENFORCE decision
   METHOD missing_99_blocks_posting.
     TRY.
-        sign_scenario( default_flags( ) ).
+        " The code is mapped and valid - only the missing trailer can block
+        configure_code( '165' ).
         DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
                               iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
                               is_package = file_package( small_bai2( iv_no_99 = abap_true ) ) ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = 'MISSING_TRAILER' ] ) )
+          msg = 'The block must come from the missing 99 trailer' ).
         cl_abap_unit_assert=>assert_true( act = ls_decision-block
                                           msg = 'A file without its 99 trailer must not be posted' ).
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ls_decision-dispositions[ disposition = zif_cd_ops_types=>gc_action-auto_post ] ) )
           msg = 'No parsed line may be released for posting' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD configure_code.
+    INSERT VALUE #( scheme = zif_cd_ebs_types=>gc_scheme-bai2 btc_code = iv_code flow_type = zif_cd_ebs_types=>gc_flow-any
+                    category = 'C01' rule_group = 'CFGONLY' exp_cdi = zif_cd_ebs_types=>gc_cdi-credit
+                    active = abap_true ) INTO TABLE mo_cfg->mt_map.
+    IF NOT line_exists( mo_cfg->mt_rules[ rule_group = 'CFGONLY' ] ).
+      add_rule( iv_group = 'CFGONLY' iv_id = 'R01' iv_class = gc_test-sign_class
+                iv_level = zif_cd_ebs_types=>gc_level-line ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  " A97 end to end: BAI2 file text -> ZCL_CD_EBS_PARSER_BAI2 -> file source -> engine. A monetary
+  " code mapped only by configuration (map row + rule row) is validated and AUTO_POST
+  METHOD e2e_config_only_code_posts.
+    TRY.
+        configure_code( '165' ).
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+                              iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+                              is_package = file_package( small_bai2( ) ) ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-block msg = 'A configured, valid entry must not block' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE string_table( FOR l IN ls_decision-package-lines ( |{ l-btc_code }/{ l-rule_group }| ) )
+          exp = VALUE string_table( ( `165/CFGONLY` ) )
+          msg = 'The parsed line must be routed by configuration only' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( ls_decision-dispositions[ 1 ]-disposition OPTIONAL )
+                                            exp = zif_cd_ops_types=>gc_action-auto_post
+                                            msg = 'The configured entry must be AUTO_POST' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A97 negative: an informational BAI2 code (7xx-9xx, here 890) stays out of posting even when
+  " a map row exists - the parser does not emit it, so configuration alone cannot post it
+  METHOD e2e_info_code_not_posted.
+    TRY.
+        configure_code( '165' ).
+        configure_code( '890' ).
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+                              iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+                              is_package = file_package( small_bai2( iv_extra = `16,890,,,BR0002,,INFO ONLY/` ) ) ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_decision-package-lines[ btc_code = '890' ] ) )
+                                           msg = 'An informational code must never become a postable line' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_decision-dispositions ) exp = 1
+                                            msg = 'Only the monetary entry gets a posting disposition' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

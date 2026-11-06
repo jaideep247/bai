@@ -204,6 +204,8 @@ All steps in the **EBS configuration app** (`ZUI_CD_EBS_CFG_O4`). New rows are c
 5. **Only if nothing above can express the check** — a new rule class (one class, test-first, ZCD_EBS_RULE_DEF row).
 6. Test in DV1 with a statement containing the code (test mode), transport, re-run in QA1, record in `Legacy_Parity_Comparison.md` if it replaces a legacy validator.
 
+**Configuration only, or a parser change? (A97)** Configuration is enough when the parser already emits the entry as a monetary line: BAI2 detail codes 100–399 (credit) and 400–699 (debit) with a supported funds type (blank, 0, 1, 2, Z, V, S, D), and every booked CAMT entry (`Sts` BOOK) with an ISO or proprietary code. A **parser change** is needed when the bank profile differs in layout: BAI2 informational codes 700–999 (dropped as INFO_CODE_SKIPPED — a map row alone never posts them), a new funds-type layout or field position (else FUNDS_LAYOUT), a CAMT namespace / version outside camt.053 / camt.054 .001.02–08 (else CAMT_DOCUMENT), camt.052 reports, or an entry status other than BOOK that the business wants posted. Proof: `e2e_config_only_code_posts` (file text → parser → engine, configuration only) and `e2e_info_code_not_posted`.
+
 ### B7. Pre-posting hook (BAdI FIEB_CHANGE_BS_DATA)
 The engine exposes `validate_for_posting( iv_mode = zcl_cd_ebs_engine=>read_mode( ) is_package = … )`. The BAdI implementation maps the BAdI's statement structures to `ZIF_CD_EBS_TYPES=>TY_PACKAGE` and, when `block = abap_true`, prevents posting of the affected items.
 
