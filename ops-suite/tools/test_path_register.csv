@@ -1,0 +1,64 @@
+object,path,covered_by,reason
+ZBP_R_CD_EBSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_EBSRELEASE,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes (object ignored by abapGit, .abapgit.xml)"
+ZBP_R_CD_FMONCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_FMONFILE,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
+ZBP_R_CD_FMONPRQWA,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
+ZBP_R_CD_HCKCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_HCKSUPPRESS,own,,"global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
+ZBP_R_CD_OPSCFGALL,own,,"global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_OPSEXCEPTION,exempt,,"instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-10; every decision tested in ZCL_CD_OPS_EXC_POLICY"
+ZCL_CD_EBS_INJECTOR,covered,ZCL_CD_EBS_FACTORY,test seam: every slot injected and reset in the factory test
+ZCL_CD_EBS_R_R01_SIGN,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R02_BOUNDS,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R03_CURRENCY,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R04_REFERENCE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R05_REASON,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R07C_CHECK,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R07L_RETRIEVAL,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R07R_RETURN_LOT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R07_PAYMENT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R08_CHECK_AMOUNT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R09_DUPLICATE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R10_VALUE_DATE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R12_CODE_TOTAL,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R15_POSTING_RULE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R18_GL_BALANCE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R19_FI_DOCUMENT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R21_LOOKUP,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_R22_DUP_HISTORY,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S01_CONTINUITY,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S02_BALANCE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S03_SEQUENCE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S04_ACCOUNT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S05_DATE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S07_DUPLICATE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S09_COVERAGE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S10_COMPLETE,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S12_COUNT,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_R_S13_POSTED,covered,ZCL_CD_EBS_RULE_BASE,rule class: tested through the rule test classes of the abstract base
+ZCL_CD_EBS_SAP_DAO,own,,GET_RETRIEVALS select on ZCD_ACH_RTRV_LOG (VERIFY-DDIC status field) - QA1; its field check is unit tested
+ZCL_CD_FMON_CHK_ACK_MATCH,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_DUPLICATE,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_LATE,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_LOT,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_MISSING,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_NOC_AGING,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_SIZE,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_CHK_SLA,covered,ZCL_CD_FMON_ENGINE,thin check loop over ZCL_CD_FMON_RULES: engine tests run it
+ZCL_CD_FMON_DAO,own,,"READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11"
+ZCL_CD_FMON_FACTORY,covered,ZCL_CD_FMON_ENGINE,construction only: every engine test resolves through it
+ZCL_CD_FMON_INJECTOR,covered,ZCL_CD_FMON_ENGINE,test seam: injected and reset by every engine test
+ZCL_CD_FMON_PRISM_QUEUE,own,,CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case PRISM-12
+ZCL_CD_HCK_DAO,own,,"technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
+ZCL_CD_HCK_DATASET,own,,"success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
+ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,construction only: every engine test resolves through it
+ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,test seam: injected and reset by every engine test
+ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,construction only: the gate test resolves through it
+ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,test seam: injected and reset by the gate test
+ZCL_CD_OPS_CHN_HTTP,own,,delivery over CL_HTTP_CLIENT - QA1 alert cases; JSON body and de-duplication unit tested
+ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,test seam: every slot injected and reset in the factory test
+ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,test helper class of the plug-in creation tests
+ZCL_CD_OPS_STORE,own,,COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
+ZCL_CD_OPS_TRACE_DAO,own,,"reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
+ZCX_CD_OPS_ERROR,covered,ZCL_CD_OPS_FACTORY,exception class: raised and caught in every application test

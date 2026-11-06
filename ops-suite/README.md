@@ -59,6 +59,8 @@ cd ops-suite && npx @abaplint/cli@2
 python3 tools/portable_checks.py "$(command -v abaplint)"
 ```
 
+Test paths: every class has its own test include or a row in `tools/test_path_register.csv` (covering include or exemption with reason); `tools/test_checks.py` (run by the portable checks) also proves that DAO tests double every table they reach and that no test of a class without SQL uses a real DAO. The per-class register is `docs/Coverage_Run_Register.csv`.
+
 **What this proves and what it does not:** abaplint checks syntax and typing against SAP stubs at 7.58 rules; the portable checks prove house-rule compliance. The ATC-equivalent run (`abaplint.atc.json`, see `docs/ATC_Validation.md`) leaves two documented exemptions. Neither proves activation, DDIC existence, the real ATC result or ABAP Unit results — those happen in DV1 (`Test_and_Validation_Document.md` §5). Fields marked `VERIFY-DDIC` in the DAO classes must be confirmed in SE11 first.
 
 ## Keeping local and cloud in sync

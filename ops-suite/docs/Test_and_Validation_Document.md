@@ -51,7 +51,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-902 methods in the package test includes (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+1093 methods in the 104 package test includes (every class of `src/` has a test path: 104 own includes, 46 covered by another include, 1 exempt - `Coverage_Run_Register.csv`) (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|

@@ -42,69 +42,171 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 906 ABAP Unit methods in 68 test includes
+## 4. Coverage today — 1093 ABAP Unit methods; 151 classes: 104 with an own test include, 46 covered by another include, 1 exempt
 
-Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.py` regenerates on every run (so this table cannot drift from the code). Python fixture tests for the generators: `tools/tests/test_abapgit_serialize.py` (6), run in CI.
+Every class of `src/` has one row in `Coverage_Run_Register.csv` (columns: test path, covering include, methods, required / measured coverage, status). `tools/portable_checks.py` regenerates the register from the test includes and from `tools/test_path_register.csv` (covering include or exemption, each with its reason), and refuses a class without either (check `test_path_every_class`). Coverage itself is measured only in DV1 (ABAP Unit with coverage, 90 % statement coverage per class) and recorded in the register.
 
-| Payment engine area | Object (test include) | Methods | Level |
-|---|---|---|---|
-| Core | ZCL_CD_OPS_ALERT_DAO | 3 | OSQL |
-| Core | ZCL_CD_OPS_ALERT_POLICY | 17 | Domain |
-| Core | ZCL_CD_OPS_ALERT_ROUTER | 14 | Application |
-| Core | ZCL_CD_OPS_CFG_CHECKS (configuration apps: field validations) | 17 | Domain |
-| Core | ZCL_CD_OPS_CFG_GATE (configuration apps: features, transport, authorisation) | 7 | Application |
-| Core | ZCL_CD_OPS_CFG_POLICY (configuration apps: client policy) | 11 | Domain |
-| Core | ZCL_CD_OPS_CHN_HTTP (`TO_JSON`, `DEDUP_KEY`: webhook schema, escaping, de-duplication) | 9 | Domain |
-| Core | ZCL_CD_OPS_EXC_DAO (find open, resolve with history) | 2 | OSQL |
-| Core | ZCL_CD_OPS_EXC_POLICY (exceptions app: lifecycle, four-eyes) | 9 | Domain |
-| Core | ZCL_CD_OPS_FACTORY (plug-in creation, injection seams) | 11 | Domain |
-| Core | ZCL_CD_OPS_PURGE (retention rules, packages, test mode) | 5 | Domain / Application |
-| Core | ZCL_CD_OPS_PURGE_DAO | 7 | OSQL |
-| Core | ZCL_CD_OPS_TRACE_DAO (payment trace: items by FIN, FEBEP by reference and date, FMON file window, G/L keys) | 9 | OSQL |
-| Core | ZCL_CD_OPS_TRACE_ENGINE (payment trace: ACH / cheque chains, reversed and reissued items, ambiguity, gaps, authorisation) | 28 | Application |
-| Core | ZCL_CD_OPS_RUN_GUARD (refused run when the run lock is held) | 4 | Application |
-| Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 18 | OSQL |
-| Core | ZCL_CD_OPS_UTIL | 14 | Domain |
-| EBS | ZCL_CD_EBS_BTC_RESOLVER | 20 | Domain |
-| EBS | ZCL_CD_EBS_CFG_DAO | 9 | OSQL |
-| EBS | ZCL_CD_EBS_ENGINE | 68 | Application |
-| EBS | ZCL_CD_EBS_FEB_DAO | 7 | OSQL |
-| EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
-| EBS | ZCL_CD_EBS_PARSER_BAI2 | 27 | Domain |
-| EBS | ZCL_CD_EBS_PARSER_CAMT | 24 | Domain |
-| EBS | ZCL_CD_EBS_PE_SCOPE (payment engine account from XBLNR, statement scope) | 17 | Domain |
-| EBS | ZCL_CD_EBS_RELEASE_DAO | 1 | OSQL |
-| EBS | ZCL_CD_EBS_RELEASE_POLICY (blocked-line release) | 7 | Domain |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_R05_LOT_REASON, LTC_STMT_RULES — all 28 rule classes) | 106 | Domain / Application |
-| EBS | ZCL_CD_EBS_SAP_DAO | 7 | OSQL |
-| EBS | ZCL_CD_EBS_SRC_FEB | 11 | Application |
-| EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
-| FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 10 | Domain / Application |
-| FMON | ZCL_CD_FMON_DAO | 17 | OSQL |
-| FMON | ZCL_CD_FMON_ENGINE | 31 | Application |
-| FMON | ZCL_CD_FMON_FLOW_CDS_TEST (file monitoring dashboard CDS views, `cl_cds_test_environment`) | 19 | CDS |
-| FMON | ZCL_CD_FMON_LOT_READER | 7 | Application |
-| FMON | ZCL_CD_FMON_OPS_POLICY (manual status, PRISM handled manually) | 5 | Domain |
-| FMON | ZCL_CD_FMON_QUERY | 8 | Domain |
-| FMON | ZCL_CD_FMON_RULES (incl. LTC_THROTTLE, PRISM queue allowance) | 55 | Domain |
-| FMON | ZCL_CD_FMON_STATUS | 24 | Domain |
-| FMON | ZCL_CD_FMON_UTIL (file-reference digest, A100) | 5 | Domain |
-| HCK | ZCL_CD_HCK_AGG_QUERY | 14 | Domain |
-| HCK | ZCL_CD_HCK_BUDGET | 3 | Domain |
-| HCK | ZCL_CD_HCK_CANONICAL | 3 | Domain |
-| HCK | ZCL_CD_HCK_C_VOLUME (expected groups measured zero, A103) | 2 | Application |
-| HCK | ZCL_CD_HCK_CYCLE_EVAL | 14 | Domain |
-| HCK | ZCL_CD_HCK_DAO | 16 | OSQL |
-| HCK | ZCL_CD_HCK_ENGINE | 20 | Application |
-| HCK | ZCL_CD_HCK_EXPORT | 3 | Domain |
-| HCK | ZCL_CD_HCK_PARAM | 3 | Domain |
-| HCK | ZCL_CD_HCK_PAYREQ_RULES (known-table rules: SPE, CANCELLED, ZECT_STATUS) | 8 | Domain |
-| HCK | ZCL_CD_HCK_REPORT_HTML | 8 | Domain |
-| HCK | ZCL_CD_HCK_SCORE | 6 | Domain |
-| HCK | ZCL_CD_HCK_STATS | 12 | Domain |
-| HCK | ZCL_CD_HCK_SUPPRESSION (suppression matcher, four-eyes) | 8 | Domain |
-| HCK | ZCL_CD_HCK_THRESHOLD | 16 | Domain |
-| HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
+Checks that keep the tests away from the real database (all portable, `tools/test_checks.py`, fixture tests `tools/tests/test_test_checks.py`):
+
+| Check | Rule | Limits (static, best effort) |
+|---|---|---|
+| `test_path_every_class` | Own test include, or a register row naming a covering include that mentions the class, or an exemption with reason; stale rows fail | — |
+| `osql_doubles_complete` | A test include of a class with Open SQL creates `cl_osql_test_environment` / `cl_cds_test_environment`, and every table read or written by the methods its tests call (and the private helpers they call) is in a double list | Dynamic names (`FROM (lv_table)`) not resolved; SQL inside an injected TEST-SEAM is excluded; a table a test never reaches is declared with `" osql-not-reached: <TABLE>` |
+| `no_real_dao_in_tests` | A test include of a class without SQL injects doubles (`ZCL_CD_*_INJECTOR=>INJECT_*`) when the class gets a DAO / the store from a factory, and never creates a real DAO / store | Methods reached through another class are not followed |
+
+| Payment engine area | Object | Test path | Methods | Covering include / partial exemption |
+|---|---|---|---|---|
+| Core | ZBP_R_CD_OPSCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| Core | ZBP_R_CD_OPSEXCEPTION | exempt | 0 | Exempt: instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-10; every decision tested in ZCL_CD_OPS_EXC_POLICY |
+| Core | ZCL_CD_OPS_ALERT_DAO | own test include | 7 |  |
+| Core | ZCL_CD_OPS_ALERT_POLICY | own test include | 17 |  |
+| Core | ZCL_CD_OPS_ALERT_ROUTER | own test include | 14 |  |
+| Core | ZCL_CD_OPS_AUTH | own test include | 4 |  |
+| Core | ZCL_CD_OPS_CFG_AUTH | own test include | 2 |  |
+| Core | ZCL_CD_OPS_CFG_CHECKS | own test include | 17 |  |
+| Core | ZCL_CD_OPS_CFG_CLIENT | own test include | 4 |  |
+| Core | ZCL_CD_OPS_CFG_FACTORY | covered | 0 | ZCL_CD_OPS_CFG_GATE |
+| Core | ZCL_CD_OPS_CFG_GATE | own test include | 7 |  |
+| Core | ZCL_CD_OPS_CFG_INJECTOR | covered | 0 | ZCL_CD_OPS_CFG_GATE |
+| Core | ZCL_CD_OPS_CFG_POLICY | own test include | 11 |  |
+| Core | ZCL_CD_OPS_CFG_TRANSPORT | own test include | 2 |  |
+| Core | ZCL_CD_OPS_CHN_APPLOG | own test include | 5 |  |
+| Core | ZCL_CD_OPS_CHN_EMAIL | own test include | 4 |  |
+| Core | ZCL_CD_OPS_CHN_HTTP | own test include | 9 | partial: delivery over CL_HTTP_CLIENT - QA1 alert cases; JSON body and de-duplication unit tested |
+| Core | ZCL_CD_OPS_CLOCK | own test include | 3 |  |
+| Core | ZCL_CD_OPS_EXC_DAO | own test include | 2 |  |
+| Core | ZCL_CD_OPS_EXC_POLICY | own test include | 9 |  |
+| Core | ZCL_CD_OPS_FACTORY | own test include | 11 |  |
+| Core | ZCL_CD_OPS_INJECTOR | covered | 0 | ZCL_CD_OPS_FACTORY |
+| Core | ZCL_CD_OPS_LOCK | own test include | 4 |  |
+| Core | ZCL_CD_OPS_OVW_CDS_TEST | own test include | 5 |  |
+| Core | ZCL_CD_OPS_PLUGIN_PROBE | covered | 0 | ZCL_CD_OPS_FACTORY |
+| Core | ZCL_CD_OPS_PURGE | own test include | 5 |  |
+| Core | ZCL_CD_OPS_PURGE_DAO | own test include | 8 |  |
+| Core | ZCL_CD_OPS_RUN_GUARD | own test include | 4 |  |
+| Core | ZCL_CD_OPS_STORE | own test include | 24 | partial: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double |
+| Core | ZCL_CD_OPS_TRACE_DAO | own test include | 14 | partial: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes |
+| Core | ZCL_CD_OPS_TRACE_ENGINE | own test include | 28 |  |
+| Core | ZCL_CD_OPS_UTIL | own test include | 14 |  |
+| Core | ZCL_CD_TRX_DASH_CDS_TEST | own test include | 8 |  |
+| Core | ZCX_CD_OPS_ERROR | covered | 0 | ZCL_CD_OPS_FACTORY |
+| EBS | ZBP_R_CD_EBSCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| EBS | ZBP_R_CD_EBSRELEASE | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes (object ignored by abapGit, .abapgit.xml) |
+| EBS | ZCL_CD_EBS_BTC_RESOLVER | own test include | 20 |  |
+| EBS | ZCL_CD_EBS_CFG_DAO | own test include | 15 |  |
+| EBS | ZCL_CD_EBS_DASH_CDS_TEST | own test include | 21 |  |
+| EBS | ZCL_CD_EBS_ENGINE | own test include | 68 |  |
+| EBS | ZCL_CD_EBS_FACTORY | own test include | 4 |  |
+| EBS | ZCL_CD_EBS_FEB_DAO | own test include | 7 |  |
+| EBS | ZCL_CD_EBS_FINDING | own test include | 5 |  |
+| EBS | ZCL_CD_EBS_INJECTOR | covered | 0 | ZCL_CD_EBS_FACTORY |
+| EBS | ZCL_CD_EBS_PARSER_BAI2 | own test include | 27 |  |
+| EBS | ZCL_CD_EBS_PARSER_CAMT | own test include | 24 |  |
+| EBS | ZCL_CD_EBS_PE_SCOPE | own test include | 17 |  |
+| EBS | ZCL_CD_EBS_RELEASE_DAO | own test include | 1 |  |
+| EBS | ZCL_CD_EBS_RELEASE_POLICY | own test include | 7 |  |
+| EBS | ZCL_CD_EBS_RULE_BASE | own test include | 106 |  |
+| EBS | ZCL_CD_EBS_R_R01_SIGN | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R02_BOUNDS | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R03_CURRENCY | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R04_REFERENCE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R05_REASON | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R07C_CHECK | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R07L_RETRIEVAL | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R07R_RETURN_LOT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R07_PAYMENT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R08_CHECK_AMOUNT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R09_DUPLICATE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R10_VALUE_DATE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R12_CODE_TOTAL | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R15_POSTING_RULE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R18_GL_BALANCE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R19_FI_DOCUMENT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R21_LOOKUP | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_R22_DUP_HISTORY | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S01_CONTINUITY | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S02_BALANCE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S03_SEQUENCE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S04_ACCOUNT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S05_DATE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S07_DUPLICATE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S09_COVERAGE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S10_COMPLETE | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S12_COUNT | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_R_S13_POSTED | covered | 0 | ZCL_CD_EBS_RULE_BASE |
+| EBS | ZCL_CD_EBS_SAP_DAO | own test include | 15 | partial: GET_RETRIEVALS select on ZCD_ACH_RTRV_LOG (VERIFY-DDIC status field) - QA1; its field check is unit tested |
+| EBS | ZCL_CD_EBS_SRC_FEB | own test include | 11 |  |
+| EBS | ZCL_CD_EBS_SRC_FILE | own test include | 4 |  |
+| FMON | ZBP_R_CD_FMONCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| FMON | ZBP_R_CD_FMONFILE | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
+| FMON | ZBP_R_CD_FMONPRQWA | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
+| FMON | ZCL_CD_FMON_ADAPTER_GENERIC | own test include | 10 |  |
+| FMON | ZCL_CD_FMON_ADAPTER_PRISM | own test include | 4 |  |
+| FMON | ZCL_CD_FMON_CALENDAR | own test include | 9 |  |
+| FMON | ZCL_CD_FMON_CHK_ACK_MATCH | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_DUPLICATE | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_LATE | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_LOT | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_MISSING | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_NOC_AGING | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_PRISM_FILE | own test include | 5 |  |
+| FMON | ZCL_CD_FMON_CHK_REJECT | own test include | 2 |  |
+| FMON | ZCL_CD_FMON_CHK_SIZE | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_CHK_SLA | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_DAO | own test include | 24 | partial: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11 |
+| FMON | ZCL_CD_FMON_DDIC | own test include | 6 |  |
+| FMON | ZCL_CD_FMON_ENGINE | own test include | 33 |  |
+| FMON | ZCL_CD_FMON_FACTORY | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_FLOW_CDS_TEST | own test include | 19 |  |
+| FMON | ZCL_CD_FMON_INJECTOR | covered | 0 | ZCL_CD_FMON_ENGINE |
+| FMON | ZCL_CD_FMON_LOT_READER | own test include | 7 |  |
+| FMON | ZCL_CD_FMON_OPS_POLICY | own test include | 5 |  |
+| FMON | ZCL_CD_FMON_PRISM_API | own test include | 11 |  |
+| FMON | ZCL_CD_FMON_PRISM_DAO | own test include | 5 |  |
+| FMON | ZCL_CD_FMON_PRISM_EVENT | own test include | 20 |  |
+| FMON | ZCL_CD_FMON_PRISM_HTTP | own test include | 2 |  |
+| FMON | ZCL_CD_FMON_PRISM_OP | own test include | 1 |  |
+| FMON | ZCL_CD_FMON_PRISM_PROC | own test include | 11 |  |
+| FMON | ZCL_CD_FMON_PRISM_QUEUE | own test include | 1 | partial: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case PRISM-12 |
+| FMON | ZCL_CD_FMON_QUERY | own test include | 8 |  |
+| FMON | ZCL_CD_FMON_RULES | own test include | 55 |  |
+| FMON | ZCL_CD_FMON_STATUS | own test include | 24 |  |
+| FMON | ZCL_CD_FMON_UTIL | own test include | 5 |  |
+| HCK | ZBP_R_CD_HCKCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| HCK | ZBP_R_CD_HCKSUPPRESS | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
+| HCK | ZCL_CD_HCK_AGG_QUERY | own test include | 14 |  |
+| HCK | ZCL_CD_HCK_BUDGET | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_CANONICAL | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_CYCLE_EVAL | own test include | 14 |  |
+| HCK | ZCL_CD_HCK_C_ALERT_HEALTH | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_C_APPLOG | own test include | 4 |  |
+| HCK | ZCL_CD_HCK_C_CHQ_STATUS | own test include | 4 |  |
+| HCK | ZCL_CD_HCK_C_CONFIG_DRIFT | own test include | 6 |  |
+| HCK | ZCL_CD_HCK_C_GENERIC_AGG | own test include | 5 |  |
+| HCK | ZCL_CD_HCK_C_GL_TRANSFER | own test include | 5 |  |
+| HCK | ZCL_CD_HCK_C_JOB_CYCLE | own test include | 5 |  |
+| HCK | ZCL_CD_HCK_C_JOB_RUNTIME | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_C_OVERDUE_EXC | own test include | 2 |  |
+| HCK | ZCL_CD_HCK_C_PRQ_CANCEL | own test include | 4 |  |
+| HCK | ZCL_CD_HCK_C_PRQ_SPE | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_C_TECH_JOBS | own test include | 8 |  |
+| HCK | ZCL_CD_HCK_C_TECH_SYS | own test include | 2 |  |
+| HCK | ZCL_CD_HCK_C_VOLUME | own test include | 2 |  |
+| HCK | ZCL_CD_HCK_DAO | own test include | 26 | partial: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1 |
+| HCK | ZCL_CD_HCK_DASH_CDS_TEST | own test include | 6 |  |
+| HCK | ZCL_CD_HCK_DATASET | own test include | 4 | partial: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written) |
+| HCK | ZCL_CD_HCK_ENGINE | own test include | 20 |  |
+| HCK | ZCL_CD_HCK_EXPORT | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_FACTORY | covered | 0 | ZCL_CD_HCK_ENGINE |
+| HCK | ZCL_CD_HCK_INJECTOR | covered | 0 | ZCL_CD_HCK_ENGINE |
+| HCK | ZCL_CD_HCK_PARAM | own test include | 3 |  |
+| HCK | ZCL_CD_HCK_PAYREQ_RULES | own test include | 8 |  |
+| HCK | ZCL_CD_HCK_REPORT_HTML | own test include | 8 |  |
+| HCK | ZCL_CD_HCK_SCORE | own test include | 6 |  |
+| HCK | ZCL_CD_HCK_STATS | own test include | 12 |  |
+| HCK | ZCL_CD_HCK_SUPPRESSION | own test include | 8 |  |
+| HCK | ZCL_CD_HCK_THRESHOLD | own test include | 16 |  |
+| HCK | ZCL_CD_HCK_VALUE_QUERY | own test include | 6 |  |
 
 ### Requirements baseline acceptance tests mapped to proof
 
@@ -119,32 +221,46 @@ Counts are taken from `Coverage_Run_Register.csv`, which `tools/portable_checks.
 | 7 | Unmapped BTC never posts | EBS `unmapped_btc_always_blocks`, `unmapped_code_always_blocked`, `enforce_mode_blocks_posting` |
 | 8 | Returns/NOC with unprocessed item stays PARTIALLY_PROCESSED and alerts | FMON `partial_returns_stay_partial`, `partial_returns_are_alerted`, `source_cannot_close_open_lot` |
 
-## 5. Deliberately not unit tested, and why
+## 5. Deliberately not unit tested (or only in part), and why
 
-| Object | Reason | Covered instead by |
+Updated 2026-11-06 (coverage gap closure): the SAP-service wrappers, the HCK checks, the FMON calendar /
+DDIC wrappers, the PRISM ICF handler / bgPF classes, the EBS factory and the DAO reads that had no test now
+have their own tests. Production code got test seams only where a kernel or SAP API call had to be replaced;
+each is listed in the modification log of its class.
+
+| Test seam(s) | Class | Replaces |
 |---|---|---|
-| ZCL_CD_OPS_CHN_EMAIL / _APPLOG, delivery part of _HTTP | Thin wrappers over BCS, BAL, CL_HTTP_CLIENT; a double would only assert that we call what we call | Router tests with a channel double; QA1 alert cases; the JSON body of _HTTP is unit tested |
-| ZCL_CD_OPS_ALERT_DAO | Three SELECTs and one INSERT | Router tests with DAO double; QA1 |
-| ZCL_CD_OPS_INJECTOR, ZCL_CD_EBS/_FMON/_HCK_FACTORY / _INJECTOR | Construction only | Every application test resolves its CUT through them; plug-in creation of the core factory is unit tested |
-| ZCL_CD_OPS_CLOCK | Two system-field reads | Injected clock doubles in every time-dependent test |
-| Behaviour pools `ZBP_R_CD_OPSEXCEPTION`, `_EBSRELEASE`, `_HCKSUPPRESS`, `_FMONFILE`, `_FMONPRQWA`; their CDS, BDEF, SRVD | Thin handlers: every decision in a tested policy class | Policy tests; QA1 OPS-01 … OPS-10 (`RAP_Ops_Apps.md` §5) |
-| Check classes `ZCL_CD_HCK_C_PRQ_SPE`, `_C_CHQ_STATUS`, `_C_PRQ_CANCEL` | Parameter reading + DAO calls; rules in `ZCL_CD_HCK_PAYREQ_RULES`, queries in `ZCL_CD_HCK_VALUE_QUERY` (both tested) | QA1 HCK-QA-15 … 17 |
-| `ZCL_CD_HCK_DAO=>SELECT_VALUES` | Dynamic read of a validated query on landscape tables with unconfirmed fields | Builder tests; QA1 |
-| Behaviour pools `ZBP_R_CD_*CFGALL`, CDS, BDEF, SRVD of the configuration apps | Generated (`tools/rap_generate.py`), thin | Gate / checks tests; DV1 cases `RAP_Config_Apps.md` §6 |
-| ZCL_CD_OPS_CFG_CLIENT, ZCL_CD_OPS_CFG_TRANSPORT, ZCL_CD_OPS_CFG_AUTH | T000 / E070 reads, SAP CTS API wrapper, adapter to ZCL_CD_OPS_AUTH | Gate tests with doubles; DV1 |
-| ZCL_CD_OPS_AUTH | One `AUTHORITY-CHECK` on ZCD_OPS; a test would assert the kernel | Injected auth double (`injected_auth_is_returned`); QA1 role tests (allowed / refused per activity and payment engine area) |
-| ZCL_CD_OPS_LOCK | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` (`VERIFY-SE37`) | Engine tests with a lock double (held lock, release); QA1: two parallel runs of the same variant — the second is refused with RUN_LOCKED |
-| ZCL_CD_EBS_RULE_BASE | Abstract | Through the 28 rule classes |
-| ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
-| ZCL_CD_EBS_SAP_DAO (retrievals, checks, FI lines, G/L balance) | Fields `VERIFY-DDIC` until SE11 confirms them | Rule tests with SAP-DAO double; OSQL tests for confirmed paths; QA1 |
-| ZCL_CD_FMON_DAO=>INSERT_EVENT — EVENT_NO collision retry | A collision needs two sessions inserting at once; one OSQL session always sees its own MAX | OSQL tests for idempotency and numbering; QA1: two parallel `ZCD_FMON_MONITOR` runs for the same date, then every source event recorded exactly once |
-| ZCL_CD_FMON_PRISM_HTTP (ICF handler of the PRISM status API) | Copies method, content type and body across the ICF boundary and writes the answer back; every decision is in `ZCL_CD_FMON_PRISM_API` | `ltc_api` (11 methods, every HTTP status); QA1 PRISM-01 … 15 |
-| ZCL_CD_FMON_PRISM_QUEUE, ZCL_CD_FMON_PRISM_OP (bgPF) | Thin wrappers over CL_BGMC_PROCESS_FACTORY / IF_BGMC_OP_SINGLE_TX_UNCONTR (VERIFY-ADT); a double would assert the framework | Queue seam in `ltc_api`, unit body in `ltc_proc` (real engine); QA1 PRISM-12 |
-| ZCL_CD_FMON_CALENDAR, ZCL_CD_FMON_DDIC, ZCL_CD_FMON_DAO=>READ_LEGACY | Factory calendar FMs, RTTI, unknown legacy structures | Pure rules + engine with doubles; QA1 FMON 01, 05, 07, 08, 10, 11 |
-| 9 FMON check classes, 11 HCK check classes | Thin loops over pure rule classes | Rule tests + engine tests with every check configured |
-| ZCL_CD_HCK_DAO technical reads (TBTCO, BALHDR, SNAP, VBHDR, ENQUEUE_READ) | Standard tables / FMs with unverified fields | Pure evaluators + QA1 |
-| Reports ZCD_EBS_VALIDATE, ZCD_FMON_MONITOR, ZCD_MORNING_REPORT, ZCD_OPS_PURGE | Selection screen, authorisation and ALV | QA1 functional cases |
-| CDS views and DCL (`cds/` analytics; the DCL `ZC_CD_FMONFLOW` and the UI annotations of the file monitoring dashboard) | `cds/` not in the lint scope; DCL and UI rendering not executable offline (the file monitoring dashboard views themselves are covered by `ZCL_CD_FMON_FLOW_CDS_TEST`) | ADT data preview in DV1; QA1 dashboard cases (HCK-QA-13, FMD-01 … FMD-13) |
+| `AUTH_AREA`, `AUTH_BUKRS` | ZCL_CD_OPS_AUTH | `AUTHORITY-CHECK` on ZCD_OPS |
+| `ENQUEUE`, `DEQUEUE` | ZCL_CD_OPS_LOCK | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` (return code and holder kept in locals) |
+| `BAL_CREATE`, `BAL_ADD`, `BAL_SAVE`, `BAL_REFRESH` | ZCL_CD_OPS_CHN_APPLOG | BAL function modules |
+| `BCS_SEND`, `BCS_COMMIT` | ZCL_CD_OPS_CHN_EMAIL | BCS send and its `COMMIT WORK` (BCS error kept in a local) |
+| `CTS_API` | ZCL_CD_OPS_CFG_TRANSPORT | `MBC_CP_API` recording (API error kept in a local) |
+| `TO_FACTORY_DATE`, `TO_DATE` | ZCL_CD_FMON_CALENDAR | factory calendar function modules |
+| `TABLE_AUTH` | ZCL_CD_FMON_DDIC | `AUTHORITY-CHECK` S_TABU_NAM |
+| `BGPF` | ZCL_CD_FMON_PRISM_QUEUE | bgPF process factory (error kept in a local) |
+| `TVARVC_READ` (existing) | ZCL_CD_EBS_ENGINE=>READ_MODE | kill-switch read of TVARVC |
+
+Injections never modify SY fields and never raise (the ATC-equivalent rules `sy_modification` /
+`uncaught_exception` see injection code as test code): the production code keeps return codes and caught
+exceptions in local variables, the injection sets those.
+
+What remains outside ABAP Unit (each with its register row and the case that covers it):
+
+| Object | What is not unit tested | Reason | Covered instead by |
+|---|---|---|---|
+| ZBP_R_CD_OPSEXCEPTION | whole pool (exempt) | instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled tables, not parsed by the offline lint | `ZCL_CD_OPS_EXC_POLICY`; QA1 OPS-01 … OPS-10 |
+| ZBP_R_CD_*CFGALL (4, generated) | global features, validations, saver | `GET PERMISSIONS … FEATURES` and the handler-direct fallback (`CREATE OBJECT … FOR TESTING`, `LOCAL FRIENDS` of a local handler) are not parsed by abaplint 2.120.92 | global authorization tested (EML `GET PERMISSIONS ONLY GLOBAL AUTHORIZATION`, VERIFY-ADT); gate / checks / policy tests; DV1 cases `RAP_Config_Apps.md` §6 |
+| ZBP_R_CD_EBSRELEASE, _FMONFILE, _FMONPRQWA, _HCKSUPPRESS | actions, determinations, validations, saver | as above | global authorization tested (VERIFY-ADT); policy tests; QA1 `RAP_Ops_Apps.md` §5. EBSRELEASE is ignored by abapGit (`.abapgit.xml`) but tested in the repository |
+| ZCL_CD_HCK_DATASET | success path of OPEN / TRANSFER DATASET | writes to the application server | error paths unit tested (nothing written); QA1 |
+| ZCL_CD_FMON_PRISM_QUEUE | `CX_BGMC` branch | instantiating `CX_BGMC` is VERIFY-ADT on 7.58 SP01 | QA PRISM-12 |
+| ZCL_CD_OPS_CHN_HTTP | delivery over CL_HTTP_CLIENT | network call | JSON body and de-duplication unit tested; QA1 alert cases |
+| ZCL_CD_FMON_DAO | READ_LEGACY / SELECT_LEGACY, EVENT_NO collision retry | unknown legacy structures; a collision needs two sessions | OSQL tests for idempotency and numbering; QA1 FMON 01, 05, 07, 08, 10, 11 |
+| ZCL_CD_HCK_DAO | SNAP / VBHDR / ENQUEUE_READ reads, calendar FM, success path of dynamic aggregate / value query / table hash | standard tables / FMs with unverified fields, landscape tables | pure evaluators + checks with DAO doubles; QA1 |
+| ZCL_CD_EBS_SAP_DAO | GET_RETRIEVALS select | ZCD_ACH_RTRV_LOG status field VERIFY-DDIC | field check unit tested; QA1 |
+| ZCL_CD_OPS_TRACE_DAO | reads delegated to the EBS SAP DAO / FMON reader | tested in those classes | — |
+| ZCL_CD_OPS_STORE | COMMIT / ROLLBACK | one statement each | engine LUW tests with the store double |
+| Reports ZCD_EBS_VALIDATE, ZCD_FMON_MONITOR, ZCD_MORNING_REPORT, ZCD_OPS_PURGE | selection screen, authorisation and ALV | programs, not classes | QA1 functional cases |
+| CDS views and DCL (`cds/` analytics; DCL `ZC_CD_FMONFLOW`, UI annotations) | DCL and UI rendering | not executable offline | CDS test classes; ADT data preview in DV1; QA1 dashboard cases |
 
 ## 6. What to run, and when
 

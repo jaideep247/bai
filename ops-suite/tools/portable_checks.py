@@ -2,7 +2,8 @@
 """Portable consistency checks for the ops suite (no SAP system needed).
 
 Evidence of house-rule compliance only - NOT SAP activation, ATC or ABAP Unit
-results. Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv and
+results. Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv (one row per class:
+own test include / covered by / exempt, from tools/test_path_register.csv) and
 docs/Changed_Artifacts.csv.  Usage:  python3 tools/portable_checks.py [abaplint-binary]
 """
 import csv, json, os, re, subprocess, sys, datetime
@@ -124,6 +125,20 @@ check('method_names', name_checks.method_name_failures(ROOT),
       'Methods are snake_case, never start with a data prefix (lv_, it_, mo_, gc_, ...) and have '
       '30 characters at most (test methods included).')
 
+# Test paths (tools/test_checks.py): every class reached by a test or exempt with a reason,
+# OSQL doubles complete, no real DAO in the tests of a class without SQL
+import test_checks  # noqa: E402
+check('test_path_every_class', test_checks.test_path_failures(ROOT),
+      'Every class has its own test include, or a row in tools/test_path_register.csv naming the covering '
+      'test include (which mentions the class) or an exemption with its reason.')
+check('osql_doubles_complete', test_checks.osql_double_failures(ROOT),
+      'A test include of a class with Open SQL uses cl_osql_test_environment / cl_cds_test_environment and '
+      'doubles every table the tested methods (and their helpers) read or write; injected test seams and '
+      'osql-not-reached markers excluded (static, best effort - dynamic table names are not resolved).')
+check('no_real_dao_in_tests', test_checks.real_dao_failures(ROOT),
+      'A test include of a class without SQL injects doubles when the class gets a DAO / the store from a '
+      'factory, and never creates a real DAO / store.')
+
 check('pcre_only', name_checks.posix_regex_failures(ROOT),
       'Regular expressions use PCRE only (pcre = / PCRE); POSIX (regex =, FIND / REPLACE ... REGEX, '
       'CL_ABAP_REGEX POSIX) is obsolete since ABAP 7.55.')
@@ -170,12 +185,23 @@ result = {
     'measured_coverage': None, 'checks': checks}
 json.dump(result, open(os.path.join(docs, 'portable_checks.json'), 'w'), indent=2)
 
+# One row per class (tools/test_checks.py): own test include, covered by another one, or exempt
+_paths = test_checks.load_register(ROOT)
+_classes = sorted({obj_name(f).upper() for f in files if f.endswith('.clas.abap')} | set(register))
 with open(os.path.join(docs, 'Coverage_Run_Register.csv'), 'w', newline='') as fh:
     w = csv.writer(fh)
-    w.writerow(['Object', 'ABAP Unit methods supplied', 'Required statement coverage percent',
-                'Measured statement coverage percent', 'Status'])
-    for owner in sorted(register):
-        w.writerow([owner, register[owner], 90, '', 'Not run in target SAP'])
+    w.writerow(['Object', 'Test path', 'Covered by', 'ABAP Unit methods supplied',
+                'Required statement coverage percent', 'Measured statement coverage percent', 'Status'])
+    for owner in _classes:
+        kind, covered_by, reason = _paths.get(owner, ('own', '', ''))
+        if owner in register:
+            status = 'Not run in target SAP' + (f'; partial exemption: {reason}' if reason else '')
+            w.writerow([owner, 'own test include', '', register[owner], 90, '', status])
+        elif kind == 'covered':
+            w.writerow([owner, 'covered', covered_by, 0, 90, '',
+                        f'Not run in target SAP; measured in {covered_by} ({reason})'])
+        else:
+            w.writerow([owner, 'exempt', '', 0, '', '', f'Exempt: {reason}'])
 
 with open(os.path.join(docs, 'Changed_Artifacts.csv'), 'w', newline='') as fh:
     w = csv.writer(fh)

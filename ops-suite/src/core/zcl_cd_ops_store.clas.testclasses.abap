@@ -13,6 +13,7 @@
 *& 2026-11-06 | Parameter snapshot per run (audit A64).
 *& 2026-11-06 | Performance fix 5: carry-forward by (type, key) pairs and binary search - other type untouched,
 *&            | newest earlier row inherited.
+*& 2026-11-06 | ltc_store_runs: finish, last run, runs since, findings read (coverage gap closure).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -579,6 +580,188 @@ CLASS ltc_store IMPLEMENTATION.
                                             msg = 'refresh_params reads the table again' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! OSQL tests of the run header life cycle and the run / finding reads (ZCD_OPS_RUN,
+"! ZCD_OPS_FINDING and ZCD_OPS_PARAM doubled; clock double through ZCL_CD_OPS_INJECTOR).
+"! COMMIT / ROLLBACK are one statement each and covered by the engine LUW tests (store double).
+CLASS ltc_store_runs DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        variant TYPE zif_cd_ops_types=>ty_variant VALUE 'DAILY',
+        other   TYPE zif_cd_ops_types=>ty_variant VALUE 'WEEKLY',
+        since   TYPE timestampl VALUE '20261105000000.0000000',
+        later   TYPE timestampl VALUE '20261105120000.0000000',
+        key     TYPE zif_cd_ops_types=>ty_object_key VALUE 'S0001/1',
+        code    TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
+        run_x   TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000EE',
+        msgno   TYPE symsgno VALUE '011',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_ops_store.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+    METHODS teardown.
+
+    METHODS finished_run_is_last_run FOR TESTING.
+    METHODS running_run_is_not_last FOR TESTING.
+    METHODS last_run_per_variant FOR TESTING.
+    METHODS runs_since_exclude_test_mode FOR TESTING.
+    METHODS findings_read_by_run FOR TESTING.
+    METHODS finish_unknown_run_raises FOR TESTING.
+
+    METHODS finished_run
+      IMPORTING
+        iv_variant    TYPE zif_cd_ops_types=>ty_variant
+      RETURNING
+        VALUE(rs_run) TYPE zif_cd_ops_types=>ty_run
+      RAISING
+        zcx_cd_ops_error.
+ENDCLASS.
+
+
+CLASS ltc_store_runs IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_PARAM' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_cut = NEW zcl_cd_ops_store( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+    CLEAR mo_cut.
+  ENDMETHOD.
+
+
+  METHOD finished_run.
+    rs_run = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs
+                                iv_variant = iv_variant ).
+    rs_run-status = zif_cd_ops_types=>gc_run_status-success.
+    rs_run-rag    = zif_cd_ops_types=>gc_rag-green.
+    mo_cut->finish_run( rs_run ).
+  ENDMETHOD.
+
+
+  " Rule: a finished run is the last run of its payment engine area, with its status
+  METHOD finished_run_is_last_run.
+    TRY.
+        DATA(ls_run) = finished_run( gc_test-variant ).
+        DATA(ls_last) = mo_cut->get_last_run( zif_cd_ops_types=>gc_pe_area-ebs ).
+        cl_abap_unit_assert=>assert_equals( act = ls_last-run_id exp = ls_run-run_id msg = 'The finished run' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_last-status exp = zif_cd_ops_types=>gc_run_status-success
+                                            msg = 'Status written by finish_run' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_last_run( zif_cd_ops_types=>gc_pe_area-health_check )
+                                             msg = 'Other area has no run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a run still running is never reported as the last completed run
+  METHOD running_run_is_not_last.
+    TRY.
+        mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_last_run( zif_cd_ops_types=>gc_pe_area-ebs )
+                                             msg = 'Running run is not the last run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: with a variant only runs of that variant count
+  METHOD last_run_per_variant.
+    TRY.
+        DATA(ls_run) = finished_run( gc_test-variant ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->get_last_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_variant = gc_test-variant )-run_id
+          exp = ls_run-run_id
+          msg = 'Run of the variant' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = mo_cut->get_last_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_variant = gc_test-other )
+          msg = 'Other variant has no run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: runs since a time stamp, test-mode runs excluded (they are never written)
+  METHOD runs_since_exclude_test_mode.
+    TRY.
+        finished_run( gc_test-variant ).
+        mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lines( mo_cut->get_runs_since( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_since = gc_test-since ) )
+          exp = 1
+          msg = 'One real run since the time stamp' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = mo_cut->get_runs_since( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_since = gc_test-later )
+          msg = 'No run after the later time stamp' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the findings of a run are read back in their order
+  METHOD findings_read_by_run.
+    DATA lt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA ls_finding TYPE zif_cd_ops_types=>ty_finding.
+    TRY.
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
+        ls_finding-object_key = gc_test-key.
+        ls_finding-check_code = gc_test-code.
+        ls_finding-severity   = zif_cd_ops_types=>gc_severity-info.
+        INSERT ls_finding INTO TABLE lt_findings.
+        mo_cut->save_findings( EXPORTING it_findings = lt_findings
+                               CHANGING  cs_run      = ls_run ).
+        DATA(lt_read) = mo_cut->get_findings( ls_run-run_id ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_read ) exp = 1 msg = 'The saved finding' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_read[ 1 ]-check_code exp = gc_test-code msg = 'Check code read' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_findings( gc_test-run_x ) msg = 'Unknown run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: finishing a run whose header is not stored raises 011 - never a silent loss
+  METHOD finish_unknown_run_raises.
+    DATA ls_run TYPE zif_cd_ops_types=>ty_run.
+    ls_run-run_id  = gc_test-run_x.
+    ls_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
+    TRY.
+        mo_cut->finish_run( ls_run ).
+        cl_abap_unit_assert=>fail( msg = 'Unknown run must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = gc_test-msgno
+                                            msg = 'Update error is message 011' ).
     ENDTRY.
   ENDMETHOD.
 

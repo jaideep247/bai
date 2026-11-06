@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-06"
   },
-  "passed": 18,
-  "total": 18,
+  "passed": 21,
+  "total": 21,
   "abap_files": 311,
-  "declared_unit_methods": 1083,
+  "declared_unit_methods": 1093,
   "measured_coverage": null,
   "checks": [
     {
@@ -98,6 +98,24 @@
       "name": "method_names",
       "passed": true,
       "detail": "Methods are snake_case, never start with a data prefix (lv_, it_, mo_, gc_, ...) and have 30 characters at most (test methods included).",
+      "failures": []
+    },
+    {
+      "name": "test_path_every_class",
+      "passed": true,
+      "detail": "Every class has its own test include, or a row in tools/test_path_register.csv naming the covering test include (which mentions the class) or an exemption with its reason.",
+      "failures": []
+    },
+    {
+      "name": "osql_doubles_complete",
+      "passed": true,
+      "detail": "A test include of a class with Open SQL uses cl_osql_test_environment / cl_cds_test_environment and doubles every table the tested methods (and their helpers) read or write; injected test seams and osql-not-reached markers excluded (static, best effort - dynamic table names are not resolved).",
+      "failures": []
+    },
+    {
+      "name": "no_real_dao_in_tests",
+      "passed": true,
+      "detail": "A test include of a class without SQL injects doubles when the class gets a DAO / the store from a factory, and never creates a real DAO / store.",
       "failures": []
     },
     {

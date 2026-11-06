@@ -87,6 +87,8 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 - Shape: a `ty_flags` struct for scenario intent, one `configure_scenario` helper, one act helper that gets the CUT from the factory, assertions with `assert_equals` and a `msg` on every assertion, constants instead of literals.
 - `cl_abap_testdouble`: interface names lowercase; `set_parameter` only on EXPORTING/CHANGING/RETURNING; never guess a signature.
 - Test through the public seam; no `LOCAL FRIENDS` when `run( )` reaches the behaviour.
+- Every class has a test path: its own test include, or a row in `tools/test_path_register.csv` naming the covering test include or an exemption with its reason (partial exemptions of an own include are rows too). `docs/Coverage_Run_Register.csv` is generated from it (one row per class). Portable checks `test_path_every_class`, `osql_doubles_complete` (every table the tested DAO methods read is doubled) and `no_real_dao_in_tests` (`tools/test_checks.py`).
+- Kernel / SAP API calls (AUTHORITY-CHECK, ENQUEUE, BAL, BCS, CTS, calendar FMs, bgPF) are tested through a `TEST-SEAM` around the call only; the production code keeps return codes and caught exceptions in local variables so that the `TEST-INJECTION` sets locals (never SY fields, never a RAISE). Each seam is named in the class's modification log.
 - Coverage target ≥ 90 % (engine-redesign) — requirements baseline minimum 85 %. Assert absence of side effects (no save, no commit, no alert) where relevant.
 
 ## 3. Architecture
