@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1a | Dangling submodule gitlinks `src`, `abapGit` without `.gitmodules` → empty clone | **Yes (repo root)** | Gitlinks removed from the index; commits recorded in `legacy/README.md` |
 | 1b | No `.abapgit.xml`, no package descriptors, abapGit cannot import | **Yes** | `/.abapgit.xml` (starting folder `/ops-suite/src/`, PREFIX logic), `package.devc.xml` per folder → `ZCD_OPS`, `ZCD_OPS_CORE/_EBS/_FMON/_HCK`; object XML for every class, interface, program; **30 tables as abapGit TABL XML**; message class `ZCD_OPS` as MSAG XML. Generator: `tools/abapgit_serialize.py`. Non-abapGit files moved out of `src` (`ops-suite/cds/`, `docs/text_elements/`) |
-| 1c | 65 redundant root markdown files | **Yes (repo root)** | Moved to `legacy/framework_v1_docs/`; root has `README.md` + master prompt only |
+| 1c | 65 redundant root markdown files | **Yes (repo root)** | Moved to `legacy/framework_v1_docs/`; root has `README.md` + requirements baseline only |
 | 3.1 | FEBEP keyed by BELNR/GJAHR instead of KUKEY/ESNUM | No | Lines are keyed `FEB<KUKEY>/<ESNUM>` (`ZCL_CD_EBS_SRC_FEB`, test `lines_keyed_to_statement`); findings by RUN_ID + FINDING_NO. BELNR is data only (rules R19/R20) |
 | 3.2a | `SORTED … UNIQUE KEY` on DOC1R / SELW1 / ZTNUM / AUGBL → `ITAB_DUPLICATE_KEY` | No | Every DAO SELECT target is a STANDARD table; unique keys are used only for customizing primary keys, key lists built with `INSERT` (duplicates ignored, no dump) and hashed aggregates |
 | 3.2b | ZTNUM unique only per house bank; DOC1R not unique in DPAYH | **Yes (latent)** | `TY_CHECK` carries HBKID/HKTID; R07C/R08/R12 use `checks_for_line( )` (since performance fix 1: `register_match( )`, `Performance_Review.md`) scoped to the statement's house bank account (test `r08_other_house_bank_ignored`). DPAYH read excludes proposal runs (`XVORL = space`, VERIFY-DDIC) and is ordered newest run first |
@@ -70,7 +70,7 @@ Second review, this time of `ops-suite` itself (engines and FMON DAO). Each find
 
 # Part D — static repository audit A01–A105 (consolidated index)
 
-The audit reviewed `main` at `8cdfdce`; all fixes below are on branch `claude/loving-albattani-qexsjc` (phase 6 merged 2026-11-06) and were taken to `main` afterwards. Per-finding verdict, fix, tests and residual risk: `Audit_Response_EBS.md`, `Audit_Response_FMON.md`, `Audit_Response_HCK_CORE.md`. Business decisions: `RAP_Apps_Design.md` (D-1…D-6) and `Release_Readiness.md` §3. Nothing here has been executed in SAP — gates in `Release_Readiness.md`.
+The audit reviewed `main` at `8cdfdce`; all fixes below are on `main` (phase 6, 2026-11-06). Per-finding verdict, fix, tests and residual risk: `Audit_Response_EBS.md`, `Audit_Response_FMON.md`, `Audit_Response_HCK_CORE.md`. Business decisions: `RAP_Apps_Design.md` (D-1…D-6) and `Release_Readiness.md` §3. Nothing here has been executed in SAP — gates in `Release_Readiness.md`.
 
 | Finding | Status |
 |---|---|

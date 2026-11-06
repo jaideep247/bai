@@ -2,13 +2,13 @@
 
 | Item | Value |
 |---|---|
-| Scope | EBS stream: `src/ebs/**`, `ddic/ebs/**`, `config/zcd_btc_*.csv`, `config/zcd_ebs_*.csv`, EBS part of `tools/rap_generate.py`, EBS messages 500–599 |
+| Scope | EBS work package: `src/ebs/**`, `ddic/ebs/**`, `config/zcd_btc_*.csv`, `config/zcd_ebs_*.csv`, EBS part of `tools/rap_generate.py`, EBS messages 500–599 |
 | Audit snapshot | 8cdfdce (findings verified against the current branch before each fix) |
-| Branch | `worktree-agent-a615c5b12c980722a` (merged with `claude/loving-albattani-qexsjc` incl. FMON and HCK/core streams) |
+| Branch | merged to `main` incl. FMON and HCK/core work package |
 | Evidence | abaplint 2.120.92 (`abaplint.json` 0 issues; `abaplint.atc.json` only the FMON/HCK exemptions), portable checks 15/15, `tools/tests` OK. **Not activated in SAP; ABAP Unit not executed.** |
 | Date | 2026-11-06 |
 
-Verdict key: **Confirmed** = the defect existed in the code as described; **Decision** = business decision implemented; **Already fixed** = fixed on the branch before this stream.
+Verdict key: **Confirmed** = the defect existed in the code as described; **Decision** = business decision implemented; **Already fixed** = fixed on the branch before this work package.
 
 ## 1. Findings
 
@@ -28,7 +28,7 @@ Verdict key: **Confirmed** = the defect existed in the code as described; **Deci
 | A33 R03 / S04 blanks | Confirmed | Missing currency is a finding (CURRENCY_MISSING, ACCOUNT_CURRENCY_MISSING), never a pass | `r03_missing_currency`, `s04_missing_currency` | — |
 | A34 unknown sign, gross totals | Confirmed | FEB source keeps the sign unknown unless EPVOZ is a configured indicator; S02 reports CDI_UNKNOWN and compares gross credits / debits with the declared totals | `unknown_epvoz_has_no_sign`, `s02_unknown_cdi_reported`, `s02_gross_totals_compared` | — |
 | A35 statement-keyed access | Confirmed (performance) | `tt_line` secondary key `stmt`; statement rules read their lines by key | Covered by the statement-rule tests (e.g. `s10_unposted_sweep_ok`) | No runtime measurement offline |
-| A62 plug-in interface (EBS part) | Confirmed | Rule and parser plug-ins pass `ZIF_CD_EBS_RULE` / `ZIF_CD_EBS_PARSER` to `ZCL_CD_OPS_FACTORY=>GET_PLUGIN` (RTTI check before CREATE OBJECT) | Core factory tests (HCK/core stream); EBS failure path `failing_rule_does_not_abort` | — |
+| A62 plug-in interface (EBS part) | Confirmed | Rule and parser plug-ins pass `ZIF_CD_EBS_RULE` / `ZIF_CD_EBS_PARSER` to `ZCL_CD_OPS_FACTORY=>GET_PLUGIN` (RTTI check before CREATE OBJECT) | Core factory tests (HCK/core work package); EBS failure path `failing_rule_does_not_abort` | — |
 | A64 parameter snapshot (EBS part) | Confirmed | `validate_for_posting( )` starts no run and refreshes the store's parameter snapshot once per call | `posting_check_refreshes_params` | — |
 | A65 document-key width | Confirmed | Key width taken from the key type (`TY_DOCNO`); before conversion: `EBS_KEYLEN_DOCNO` > width = KEY_LENGTH_CONFIG (not releasable), longer reference = REF_TOO_LONG, non-alphanumeric = REF_FORMAT; R07, R07L, R07R, R21 (per key kind) — never truncated | `r07_refs_share_12_chars` (two references sharing 12 characters), `r07_key_length_over_width`, `r07_ref_format_rejected`, `r21_key_length_over_width` | OPBEL_KK / AUGBL_KK / DPAYH-DOC1R = CHAR 12 VERIFY-DDIC; ZTNUM (35) width not enforced in R07C/R08/R12 — bank CHECT is shorter (VERIFY-DDIC) |
 | A66 plug-in failures | Confirmed | Lines whose rule group (or a `*` rule) had a PLUGIN_ERROR are **unevaluated**: counted as failed, in `ty_result-unevaluated` and the run message, never passed; a package with a PLUGIN_ERROR feeds the circuit breaker regardless of `EBS_CB_MIN_LINES` | `plugin_error_unevaluated`, `plugin_error_trips_breaker` | Core `ty_run` has no unevaluated counter (merge note) |
@@ -50,7 +50,7 @@ Verdict key: **Confirmed** = the defect existed in the code as described; **Deci
 | A104 QA case EBS-13 asked for a circuit breaker over 3 packages through a file, but the file source always delivers one package | Confirmed (documentation) | EBS-13 rewritten: FEB source, `P_PACK` = 1, ≥ 3 imported statements as controlled packages, `EBS_CB_MIN_LINES` 1, plus the reset case; new EBS-13a for an oversized or invalid single file through the file source (not UTF-8, missing trailers, production-size file). EBS-12 marked out of scope: the pre-posting path stays switched off in this release | QA1 cases (no ABAP change) | No file-size limit exists in code — `VERIFY` in QA1 whether one is needed |
 | A105 Legacy_Parity_Comparison said the COMPLETE 4 195 counter was never incremented | Confirmed (documentation error) | Corrected: the counter **is** incremented per DPAYH row matching LAUFD / LAUFI from CHECT; the real difference is run-level (COMPLETE 4) vs payment-level DOC1R lookup (v4 and R07). Legacy references pinned to commit `0a4a6b0` and file paths with line numbers; QA case PAR-195 added (parity §4, Test and Validation §7) | QA1 case PAR-195 | `VERIFY-SE11` CHECT layout (LAUFD 8 + LAUFI 5) and DPAYH-DOC1R length (C6) |
 
-## 2. VERIFY markers added in this stream
+## 2. VERIFY markers added in this work package
 
 - `EBS_DFKKCR_BUKRS_FIELD` — DFKKCR company-code field (A07).
 - `EBS_FEB_REASON_FIELD` — FEBEP reason field (A28); FEBEP-VORGC / VGEXT / EPVOZ in `get_recent_items` (A14).
@@ -60,13 +60,13 @@ Verdict key: **Confirmed** = the defect existed in the code as described; **Deci
 
 ## Merge notes
 
-For the coordinator — shared documents this stream does not own:
+For the release owner — shared documents this work package does not own:
 
 - **Core run status (A68):** add `gc_run_status-no_data = 'N'` to `ZIF_CD_OPS_TYPES` and let the morning report / alert policy treat N with RAG grey; the engine uses `zcl_cd_ebs_engine=>gc_status_no_data` until then.
 - **Core run counters (A66):** `ty_run` has no unevaluated counter; EBS reports it in `ty_result-unevaluated` and the run message. Add `unevaluated_items` to `ty_run` / ZCD_OPS_RUN if wanted.
 - **README / Class_Purpose_and_Modification_Log:** new class `ZCL_CD_EBS_R_R22_DUP_HISTORY` (rule R22); changed purpose of `ZCL_CD_EBS_ENGINE` (dispositions, NO_DATA, unevaluated, alert summaries, kill-switch diagnostic) and of both parsers (A86, A92–A96).
 - **Implementation_Order / Operations_Runbook:** new parameters `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_REASON_FIELD`, `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS`; seeds ZCD_EBS_RULE_DEF (BLOCKS_POSTING, R22), ZCD_BTC_RULE (BLOCKS_POSTING, NONE rows, BAI166D chain, `*` R22), ZCD_BTC_MAP (DISPOSITION).
-- **TDD_Approach_and_Coverage / Test_and_Validation:** acceptance test 3 is now proved end to end by `e2e_config_only_code_posts`; `new_code_needs_config_only` is engine dispatch only. Test method count after this stream: 648 (portable checks, whole suite incl. merged streams).
-- **ATC_Validation:** no new exemptions; the three ATC-equivalent issues come from the FMON / HCK streams.
+- **TDD_Approach_and_Coverage / Test_and_Validation:** acceptance test 3 is now proved end to end by `e2e_config_only_code_posts`; `new_code_needs_config_only` is engine dispatch only. Test method count after this work package: 648 (portable checks, whole suite incl. merged work packages).
+- **ATC_Validation:** no new exemptions; the three ATC-equivalent issues come from the FMON / HCK work package.
 - **Review_Response:** point to this document for the EBS findings.
 - **BAdI FIEB_CHANGE_BS_DATA (not delivered):** must call `read_mode( IMPORTING es_diagnostic = … )`, log the diagnostic, and act on `ty_decision-dispositions`.

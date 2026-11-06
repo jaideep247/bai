@@ -13,7 +13,7 @@ define table zcd_btc_map {
   key bank_key : abap.char(15) not null;
   // D disbursement, C collection, * any
   key flow_type : abap.char(1) not null;
-  // Master prompt category C01..X01
+  // Requirements baseline category C01..X01
   category     : abap.char(4);
   // Rule group in ZCD_BTC_RULE; blank = category
   rule_group   : abap.char(10);

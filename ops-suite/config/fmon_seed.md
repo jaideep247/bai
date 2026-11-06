@@ -31,7 +31,7 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | PAYREQ_PRISM_IN | FULLY_PROCESSED | 60 | P | E | request received but no SUCCESS row within an hour ‹confirm› |
 | ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | 60 | P | W | only if a source reports the forward |
 | ACH_PNC_DISB_OUT | ACK_RECEIVED | 240 | G | E | ‹confirm with bank cut-off› |
-| WIRE_JPMC_OUT | ACK_RECEIVED | 30 | G | E | master prompt: "wire ack within 30 minutes" |
+| WIRE_JPMC_OUT | ACK_RECEIVED | 30 | G | E | requirements baseline: "wire ack within 30 minutes" |
 | ACH_RET_PNC_IN | FULLY_PROCESSED | 480 | G | E | FP09 lot complete same day ‹confirm› |
 | NOC_PNC_IN | FILE_LOADED | 60 | P | W | |
 | ACH_PNC_DISB_OUT | PRISM_RECEIVED | 15 | P | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |

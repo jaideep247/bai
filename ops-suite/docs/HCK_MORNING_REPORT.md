@@ -379,7 +379,7 @@ Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG pe
 | **Who is alerted** | Core `ZCD_OPS_ALERT_RULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
 | New check *logic* (only when no existing class fits) | New class implementing `ZIF_CD_HCK_CHECK` (only SQL via a DAO method), then a `ZCD_HCK_DEF` row |
 
-Acceptance test 4 of the master prompt (statement balance rule) belongs to the EBS payment engine area's rule tables; for HCK the equivalent proof is that limits and rules are rows in `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` (QA1 case HCK-QA-04).
+Acceptance test 4 of the requirements baseline (statement balance rule) belongs to the EBS payment engine area's rule tables; for HCK the equivalent proof is that limits and rules are rows in `ZCD_HCK_THRESH` / `ZCD_HCK_AGG` (QA1 case HCK-QA-04).
 
 ## 14. Testing
 

@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ebs_btc_resolver.clas.testclasses.abap
 *& Purpose:
 *& Domain tests for BTC mapping, flow derivation and the zero-suspense rule
-*& (master prompt R14 / acceptance test 7). No doubles: the resolver is pure
+*& (requirements baseline R14 / acceptance test 7). No doubles: the resolver is pure
 *& logic over configuration passed in. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).

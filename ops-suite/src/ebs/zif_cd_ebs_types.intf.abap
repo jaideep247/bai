@@ -88,7 +88,7 @@ INTERFACE zif_cd_ebs_types
       file TYPE ty_source VALUE 'FILE',
     END OF gc_source.
 
-  "! Category used for unmapped codes (master prompt X01)
+  "! Category used for unmapped codes (requirements baseline X01)
   CONSTANTS gc_category_unmapped TYPE ty_category VALUE 'X01'.
 
   "! Balance type codes (ISO 20022 names; BAI2 010 -> OPBD, 015 -> CLBD)

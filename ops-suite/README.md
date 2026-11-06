@@ -7,7 +7,7 @@ Built against `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (repository root) for the
 
 ## What is in it
 
-| Payment engine area | Folder | Delivers | Master prompt |
+| Payment engine area | Folder | Delivers | Requirements baseline |
 |---|---|---|---|
 | **Core** | `src/core` | Result/exception store (ZCD_OPS_RUN / ZCD_OPS_FINDING) with exception carry-forward and auto-resolution on re-run, parameters, configurable alert router (rules, e-mail / application log / HTTP webhook, throttling, quiet hours, escalation, delivery log), authorisation object ZCD_OPS, run lock per payment engine area and variant, retention purge `ZCD_OPS_PURGE`, read-only 360° payment trace `ZCD_OPS_PAYMENT_TRACE`, factory/injector, clock | Shared engine, store, alert router |
 | **EBS validation** | `src/ebs` | BAI2 + CAMT.053/054 parsers, BTC rule engine (C01–X01, R01–R19, R21 (configurable lookup), S01–S12), zero-suspense blocking, pre-posting decision with kill switch, report `ZCD_EBS_VALIDATE` | Framework 3 |
@@ -57,7 +57,7 @@ python3 tools/portable_checks.py "$(command -v abaplint)"
 
 ## Keeping local and cloud in sync
 
-GitHub (`jaideep247/bai`, branch `claude/loving-albattani-qexsjc`) is the master copy. Cloud sessions (phone or browser) commit and push there; the local clone pulls from it.
+GitHub (`jaideep247/bai`, branch `main`) is the master copy. Changes are committed and pushed there; the local clone pulls from it.
 
 - VS Code user settings: `git.autofetch` (every 120 s), `git.postCommitCommand: sync`, `git.confirmSync: false`, `git.pullBeforeCheckout`.
 - Commit when a piece of work is done — VS Code pushes it; a cloud session sees it after `git fetch`.

@@ -3,7 +3,7 @@
 > **First principle:** a transmission is monitored only when it has an interface row, an SAP evidence source for each stage, and an owner; anything else is invisible, and invisible is not the same as healthy.
 > **Analogy:** a post room logbook — a parcel that never got a line in the book can go missing without anyone noticing it is gone.
 
-Status 2026-11-06. Sources: `config/fmon_seed.md` (example rows), the payment engine reference (landscape facts) and `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (FMON section). **No row below has been confirmed against PS4.** The master prompt puts this inventory first in the delivery order.
+Status 2026-11-06. Sources: `config/fmon_seed.md` (example rows), the payment engine reference (landscape facts) and `MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md` (FMON section). **No row below has been confirmed against PS4.** The requirements baseline puts this inventory first in the delivery order.
 
 ## 1. Coverage
 
@@ -49,13 +49,13 @@ Legend: **Seeded** = example row in `fmon_seed.md` (pattern, owner and SE11 fiel
 
 **Built, switched off (2026-11-06): the PRISM status API** — `POST /sap/zcd_ops/prism_status`, plain REST JSON over HTTPS, one event per call (`docs/PRISM_Status_API.md`). PRISM calls it for every flow when it has received a file / message (`RECEIVED`), delivered it (`DELIVERED`) or given up (`FAILED`); SAP stores the call in `ZCD_FMON_PRISM` and applies it **at once** (bgPF unit, seconds) as the FMON stage `PRISM_RECEIVED` / `PRISM_DELIVERED` / `PRISM_FAILED` with PRISM's own timestamp; the 5-minute FMON job applies any event a unit could not (safety net). The API writes only to the suite's FMON store — no business data, no change to payment files, jobs or routing. `counterparty` accepts any system code (bank, IRIS, BLACKLINE, OFSAA, STRIPE, BRIDGER, source codes) and `fileReference` is the file name or, for API flows (Bridger screening, payment status updates, payment requests), the message / request reference the FMON interface is keyed by — as for `PAYREQ_PRISM_IN`. §8 of the API document lists, for every row above, the milestones, reference and interface PRISM uses; seed rows exist only for the seeded interfaces, the others are *to configure*.
 
-New callbacks are outside the read-only rollout (master prompt, operating boundary): the API ships as **its own approved change** — the ICF node is created inactive and switched on after CAB approval (`Implementation_Order.md`, switch S-PRISM). Until then, the manual-status app records a milestone an operator verified in the PRISM console or B2B portal (operator, time, evidence reference).
+New callbacks are outside the read-only rollout (requirements baseline, operating boundary): the API ships as **its own approved change** — the ICF node is created inactive and switched on after CAB approval (`Implementation_Order.md`, switch S-PRISM). Until then, the manual-status app records a milestone an operator verified in the PRISM console or B2B portal (operator, time, evidence reference).
 
 ## 2. Structural limits (true even for seeded rows)
 
 1. **FMON reads SAP evidence tables, not the transport.** A file that lands in an inbound directory but is never loaded leaves no table row, so FMON cannot see it. `UNMAPPED_FILE` only catches rows in configured source tables that match no interface.
 2. **Operating-system steps are not observed.** Encrypt, decrypt, archive and transfer run through `ZICD_CALL_SM69_COMMAND_NEW`. HCK can see that the job ran; nothing confirms that the file moved.
-3. **Generation is not delivery.** `ZCDT_REGUT` proves that SAP generated the file. Only PRISM or bank evidence proves the next milestone (master prompt FMON §2).
+3. **Generation is not delivery.** `ZCDT_REGUT` proves that SAP generated the file. Only PRISM or bank evidence proves the next milestone (requirements baseline FMON §2).
 4. **The calendar defines "missing".** A flow without a `ZCD_FMON_CAL` row can be late or failed, but never *missing*.
 
 ## 3. How to close the inventory (read-only, no change to any interface)

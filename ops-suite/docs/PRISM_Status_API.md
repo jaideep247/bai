@@ -7,7 +7,7 @@ Status 2026-11-06: **built, lint-clean, ABAP Unit not executed, switched off.** 
 
 ## 1. Operating boundary
 
-The master prompt lists *new payment APIs or callbacks* as outside the read-only rollout. This API is therefore **its own approved change**, separate from the read-only release:
+The requirements baseline lists *new payment APIs or callbacks* as outside the read-only rollout. This API is therefore **its own approved change**, separate from the read-only release:
 
 | It does | It never does |
 |---|---|

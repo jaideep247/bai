@@ -14,7 +14,7 @@
 "! Two shapes: header table links lot to file and items are read by lot key
 "! (HDR_* fields), or the item table carries the file link (ITEM_LINK_FIELD).
 "! An item is done when its status is in DONE_VALUES; every other item is an
-"! unaccounted transaction (master prompt: "no silent suspense").
+"! unaccounted transaction (requirements baseline: "no silent suspense").
 CLASS zcl_cd_fmon_lot_reader DEFINITION
   PUBLIC
   FINAL

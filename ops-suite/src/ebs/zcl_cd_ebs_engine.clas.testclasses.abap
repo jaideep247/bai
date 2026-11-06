@@ -2,8 +2,8 @@
 *& Artifact: zcl_cd_ebs_engine.clas.testclasses.abap
 *& Purpose:
 *& Application tests of the EBS engine with LTD_* doubles for the source,
-*& customizing, store, alert router and a failing rule plug-in. Proves master
-*& prompt acceptance tests 3 (new code by customizing) and 7 (unmapped code
+*& customizing, store, alert router and a failing rule plug-in. Proves requirements
+*& baseline acceptance tests 3 (new code by customizing) and 7 (unmapped code
 *& always blocked). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).

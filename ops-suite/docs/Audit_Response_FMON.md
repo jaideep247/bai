@@ -3,7 +3,7 @@
 > **First principle:** a monitor may only say "processed", "on time" or "complete" when the evidence proves it; everything else is reported as unknown.
 > **Analogy:** an auditor's tick mark — it goes on a line only after the voucher has been seen, never because the next line looked fine.
 
-Scope: audit findings A04, A05, A38–A41, A49–A52 (file monitoring) plus coordinator items "secondary indexes for all tables" and A89 (serializer). Each finding was first checked against the code at `28e6ab5`; the verdict says what was found there.
+Scope: audit findings A04, A05, A38–A41, A49–A52 (file monitoring) plus release-owner items "secondary indexes for all tables" and A89 (serializer). Each finding was first checked against the code at `28e6ab5`; the verdict says what was found there.
 
 Verdicts: **Confirmed** = the defect existed as described; **Partly** = some of it was already handled (evidence named); **Already fixed** = nothing to do.
 
@@ -58,14 +58,14 @@ None in ABAP source. Open ADT verifications are listed in the residual column (F
 
 ## Merge notes
 
-Shared files this stream did not edit; please apply at merge:
+Shared files this work package did not edit; please apply at merge:
 
 1. **`docs/TDD_Approach_and_Coverage.md`** — FMON row: 129 test methods (+37, names in the table above); add the python fixture suite `tools/tests/test_abapgit_serialize.py` (6 tests).
 2. **CI (`.github/workflows/abaplint.yml`) or `tools/portable_checks.py`** — add `python3 -m unittest discover -s tools/tests` so the serializer fixture runs in CI.
 3. **`docs/Implementation_Order.md`** — after the FMON tables: (a) maintain `ZCD_FMON_TABWL` for every table in ZCD_FMON_SRC / ZCD_FMON_LOTCFG (seed list in `config/fmon_seed.md`) — without it every legacy read is refused; (b) role with `S_TABU_NAM` ACTVT 03 for those tables for the batch user and online monitor users; (c) after the abapGit pull check SE11 → Indexes on the 11 indexed tables (zcd_fmon_file REF/BDT/OUT/NAM/CHK, zcd_fmon_event SRC, zcd_fmon_prq_wa REF, plus the 8 of note 6); (d) set `FMON_AGE_BASIS` (default A).
 4. **`docs/ATC_Validation.md`** — exemption note: `zcl_cd_fmon_dao` `db_operation_in_loop` now also covers the version-checked `save_files` loop (row lock + compare per row, bounded by the files of one run).
 5. **`docs/Class_Purpose_and_Modification_Log.md`** — rows for: ZCD_FMON_TABWL (approved tables), ZR_/ZC_CD_FMONTABLEALLOW (+ draft ZCD_D_FMTABWL); modification lines 2026-11-06 for zcl_cd_fmon_engine / _dao / _rules / _query / _lot_reader / _adapter_generic / _calendar / _ddic / _util / _chk_sla, zif_cd_fmon_types / _dao / _ddic / _calendar, zbp_r_cd_fmonfile.
-6. **Index XML outside FMON** — the serializer now emits DD12V/DD17V for core (zcd_ops_finding OPN/OBJ, zcd_ops_exc_hist FND, zcd_ops_alert_log RUL, zcd_ops_run MOD), EBS (zcd_ebs_acct ACC, zcd_ebs_release OBJ) and HCK (zcd_hck_metric HST/TIM, zcd_hck_suppress ACT). Only the index comment lines of those DDLs changed (old prose → marker). If another stream edits those DDL comments, keep the `// @index` lines and re-run the serializer.
+6. **Index XML outside FMON** — the serializer now emits DD12V/DD17V for core (zcd_ops_finding OPN/OBJ, zcd_ops_exc_hist FND, zcd_ops_alert_log RUL, zcd_ops_run MOD), EBS (zcd_ebs_acct ACC, zcd_ebs_release OBJ) and HCK (zcd_hck_metric HST/TIM, zcd_hck_suppress ACT). Only the index comment lines of those DDLs changed (old prose → marker). If another work package edits those DDL comments, keep the `// @index` lines and re-run the serializer.
 7. **`docs/Changed_Artifacts.csv`** — new: ddic/fmon/zcd_fmon_tabwl.tabl.ddl, src/fmon/zcd_fmon_tabwl.tabl.xml, zcd_d_fmtabwl.tabl.xml, zr_/zc_cd_fmontableallow ddls/ddlx, tools/tests/test_abapgit_serialize.py, docs/Audit_Response_FMON.md.
 8. **`docs/Test_and_Validation_Document.md`** — QA cases: same daily file name on two days → two instances; undated ACK with two open instances → FILE_REF_AMBIGUOUS; table not in ZCD_FMON_TABWL → PLUGIN_ERROR msg 244; batch user without S_TABU_NAM → msg 245; manual status set during a run → PERSIST_CONFLICT, manual status kept.
 9. **Generated check outputs** — `docs/portable_checks.json`, `docs/Coverage_Run_Register.csv` and the check rows of `docs/Changed_Artifacts.csv` are rewritten by `tools/portable_checks.py`; they were restored here to avoid merge conflicts. Re-run the checks after the merge (expected in this branch: 500 declared unit methods; FMON adapter 10, DAO 14, engine 28, lot reader 5, query 8, rules 44).
