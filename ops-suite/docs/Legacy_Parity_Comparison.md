@@ -3,7 +3,7 @@
 > **First principle:** business rules are copied from legacy, not reasoned out. Every difference is deliberate, listed here and covered by a test.
 > **Analogy:** moving house with an inventory list — every box that left the old house is ticked off in the new one, and anything thrown away is written down with the reason.
 
-**Baseline compared:** `BAI_Validators_ABAP75_Refactor_Pack_v4_FIX195_DOC1R` (29 Dec 2025, latest validator logic) and `bai-validation-framework-COMPLETE (4)` (latest mass-validator framework). Earlier packs (COMPLETE 1–3, refactor v1–v3, `ZFIR_BANK_POST_VALIDATION_V2`) were read for intent only.
+**Baseline compared:** `BAI_Validators_ABAP75_Refactor_Pack_v4_FIX195_DOC1R`; conflicts with the first framework `jaideep247/src` are in §3a — (29 Dec 2025, latest validator logic) and `bai-validation-framework-COMPLETE (4)` (latest mass-validator framework). Earlier packs (COMPLETE 1–3, refactor v1–v3, `ZFIR_BANK_POST_VALIDATION_V2`) were read for intent only.
 
 **Status:** Draft — parity is proven by the unit tests named below (not yet executed in SAP) and must be confirmed by a shadow run in QA1 (§4).
 
@@ -55,6 +55,27 @@
 | Flow derivation by amount sign / DFKKOP `AUGBL = … OR …` full scan | ZFIR_BANK_POST_VALIDATION_V2 | Wrong flow; database load | Configured patterns and account default |
 | NOC app reads DFKKRNP/DFKKRNIT | NOC_Fiori_App | Tables do not exist in this landscape | FMON lot reader configured for DFKKNRK/DFKKNRP |
 | Free-text dynamic SQL from customizing; `WRITE` lists; `GUID_CREATE` | Morning report (Z_HEALTH_CHECK_REPORT_FINAL) | SQL injection surface; no ALV/background output | Whitelisted, DDIC-validated aggregate checks; ALV + HTML e-mail (HCK module) |
+
+## 3a. Third reference: first framework `jaideep247/src` (`ZCL_CD_BANK_VAL_*`)
+
+Repository `jaideep247/src`, commit `b17df42` (uploaded 18–19 Jan 2026; git history does not show when the logic was written, so it cannot be ranked against v4 by date). It was **never activated as it stands**: `ZCL_CD_BANK_VAL_VORGC_581` line 119 declares `DATA(…) TYPE HASHED TABLE`, which does not compile. It is a reference for intent, not proof of DDIC names.
+
+### Conflicts between the three references — business decision needed
+
+| # | Topic | v4 validators | `src` | ops-suite today | Decision needed / how to close |
+|---|---|---|---|---|---|
+| C1 | **166 disbursement** | DFKKRP exists, lot status 5 | Retrieval log: status AP → pass; otherwise DFKKRP by SELW1 must exist **and** retrieval status AF; then DPAYH status RETURNED | R04 + R07R (lot status 5) | Does 166 also need the retrieval-log and DPAYH checks? R07 / R07L are configuration rows in ZCD_BTC_RULE; the AP-or-(DFKKRP and AF) condition would need a parameter on R07L |
+| C2 | 168 disbursement | DFKKRP lot status 5, DPAYH RETURNED, retrieval AF | DFKKRP by SELW1, DPAYH RETURNED (no lot status, no retrieval check) | v4 set (stricter) | Confirm the lot-status and retrieval checks are wanted for 168 |
+| C3 | 195 | DPAYH exists by DOC1R | Placeholder: wire check not implemented, every line valid | v4 (R07) | None — `src` has no rule here |
+| C4 | Retrieval status field in ZCD_ACH_RTRV_LOG | ZZ_RTRV_STATUS (168) / ZZRETRIEVAL_STATUS (468) | ZZ_RTRVL_STATUS | Parameter `EBS_RTRV_STATUS_FIELD`, default ZZ_RTRV_STATUS, validated against the DDIC | **SE11**: three candidate names; set the parameter to the real one |
+| C5 | Amounts for 581 | DFKKCR-RWBTR vs FEBEP-KWBTR | DFKKCR-WRBTR vs FEBEP-WRBTR | DFKKCR-RWBTR vs FEBEP-KWBTR (VERIFY-DDIC) | **SE11**: which DFKKCR amount field exists |
+| C6 | DOC1R key length (DPAYH) | 16 | 24 | 12 (`EBS_KEYLEN_DOCNO`) | **SE11** DPAYH-DOC1R length and one real DPAYH row in QA1 |
+| C7 | 581 register rows | Unique by ZTNUM | Unique hashed by ZTNUM; single read `UP TO 1 ROWS` without ORDER BY; 300-second cache | All rows per ZTNUM summed, scoped to the house bank account; no cache | None — D7 |
+
+### What `src` confirms and what is not taken
+
+- **Confirms** D3: `src` also joins DFKKRP by **SELW1** (not OPBEL), and uses parameterised status values — both already in ops-suite.
+- **Not taken:** the TTL cache (stale data inside a financial validation; ops-suite reads per package), global `*_TD` test-double classes (ops-suite uses local `LTD_*`), exceptions for business outcomes (`ZCX_BANK_VAL_*_ERROR` per failed line — ops-suite writes findings), the 195 placeholder.
 
 ## 4. How parity is confirmed before go-live (QA1)
 
