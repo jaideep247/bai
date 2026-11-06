@@ -1646,6 +1646,12 @@
      <MSGNR>523</MSGNR>
      <TEXT>Reason &amp;1 is not a &amp;2 code</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>524</MSGNR>
+     <TEXT>&amp;1: not declared on the trailer (computed value not accepted)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

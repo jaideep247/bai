@@ -279,3 +279,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 521 | Entry &1 imported without posting rule; map prescribes &2 |
 | 522 | Reason &1: mapping in ZCD_EBS_RSN_MAP incomplete (&2) |
 | 523 | Reason &1 is not a &2 code |
+| 524 | &1: not declared on the trailer (computed value not accepted) |

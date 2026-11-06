@@ -18,6 +18,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A03: configuration gaps (unusable assignment, group without usable rule) block; NONE rows skipped.
+*& 2026-11-06 | Audit A27/A86: package (parser) findings honour the blocks-posting flag of their rule.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -154,6 +155,12 @@ CLASS zcl_cd_ebs_engine DEFINITION
 
     "! A03: assignments that cannot run and mapped rule groups without any usable rule
     "! are configuration gaps - one finding with action BLOCK per affected line (or run)
+    "! A27/A86: findings that arrive with the package (parser S00/S06/S12) honour the
+    "! 'blocks posting' flag of their rule like rule plug-in findings do
+    METHODS apply_blocking_flags
+      CHANGING
+        ct_findings TYPE zif_cd_ops_types=>tt_finding.
+
     METHODS configuration_gaps
       IMPORTING
         it_lines           TYPE zif_cd_ebs_types=>tt_line
@@ -343,6 +350,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   METHOD validate_package.
     load_configuration( ).
     INSERT LINES OF cs_package-findings INTO TABLE rt_findings.
+    apply_blocking_flags( CHANGING ct_findings = rt_findings ).
 
     mo_resolver->enrich_statements( CHANGING ct_statements = cs_package-statements ).
     INSERT LINES OF mo_resolver->resolve( EXPORTING it_statements = cs_package-statements
@@ -461,6 +469,15 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DELETE mt_rules WHERE active = abap_false.
     SORT mt_rules BY level rule_group seq rule_id.
     mv_config_ready = abap_true.
+  ENDMETHOD.
+
+
+  METHOD apply_blocking_flags.
+    LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE action IS INITIAL.
+      IF line_exists( mt_rules[ rule_id = <ls_finding>-rule_id blocks_posting = abap_true unusable = abap_false ] ).
+        <ls_finding>-action = zif_cd_ops_types=>gc_action-block.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

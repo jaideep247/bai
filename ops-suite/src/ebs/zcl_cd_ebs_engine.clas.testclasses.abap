@@ -11,6 +11,7 @@
 *& 2026-11-06 | Exception carry-forward: package scope reconciled; skipped after a rule failure.
 *& 2026-11-06 | Release tests approved_release_unblocks, other_block_still_blocks, rule_failure_not_releasable.
 *& 2026-11-06 | Audit A27 / A03: blocking flag, empty and unusable rule groups.
+*& 2026-11-06 | Audit A27/A86: parser (package) findings honour the blocks-posting flag.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -276,6 +277,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS validated_lines_reconciled   FOR TESTING.
     METHODS failed_rule_skips_reconcile  FOR TESTING.
     METHODS blocking_rule_blocks_posting FOR TESTING.
+    METHODS parser_count_flag_blocks FOR TESTING.
+    METHODS parser_count_advisory FOR TESTING.
     METHODS advisory_rule_never_blocks   FOR TESTING.
     METHODS empty_rule_group_blocks      FOR TESTING.
     METHODS none_row_makes_group_optional FOR TESTING.
@@ -870,6 +873,55 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ls_decision-findings[ check_code = zif_cd_ebs_types=>gc_check_code-sign_mismatch ] ) )
           msg = 'An unusable rule must not be executed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A27/A86: a parser count discrepancy (S12) blocks posting when S12's flag is on (seed ON)
+  METHOD parser_count_flag_blocks.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        add_rule( iv_group = zif_cd_ebs_types=>gc_rule_group_all iv_id = 'S12' iv_class = 'ZCL_CD_EBS_R_S12_COUNT'
+                  iv_level = zif_cd_ebs_types=>gc_level-statement ).
+        mo_cfg->mt_rules[ rule_id = 'S12' ]-blocks_posting = abap_true.
+        add_rule( iv_group = gc_test-group_new iv_id = 'R01' iv_class = gc_test-sign_class
+                  iv_level = zif_cd_ebs_types=>gc_level-line ).
+        ASSIGN mo_source->mt_packages[ 1 ] TO FIELD-SYMBOL(<ls_package>).
+        INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S12' check_code = 'BAI2_RECORD_COUNT'
+                        severity = zif_cd_ops_types=>gc_severity-error )
+          INTO TABLE <ls_package>-findings.
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A parser count discrepancy of a blocking rule must block posting' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_decision-findings[ rule_id = 'S12' ]-action OPTIONAL )
+          exp = zif_cd_ops_types=>gc_action-block
+          msg = 'The parser finding must carry action BLOCK from the rule flag' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A27/A86: with the flag off the parser count discrepancy is recorded but does not block
+  METHOD parser_count_advisory.
+    TRY.
+        configure_scenario( default_flags( ) ).
+        add_rule( iv_group = zif_cd_ebs_types=>gc_rule_group_all iv_id = 'S12' iv_class = 'ZCL_CD_EBS_R_S12_COUNT'
+                  iv_level = zif_cd_ebs_types=>gc_level-statement ).
+        add_rule( iv_group = gc_test-group_new iv_id = 'R01' iv_class = gc_test-sign_class
+                  iv_level = zif_cd_ebs_types=>gc_level-line ).
+        ASSIGN mo_source->mt_packages[ 1 ] TO FIELD-SYMBOL(<ls_package>).
+        INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S12' check_code = 'BAI2_RECORD_COUNT'
+                        severity = zif_cd_ops_types=>gc_severity-error )
+          INTO TABLE <ls_package>-findings.
+        DATA(ls_decision) = decide( ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-block
+                                           msg = 'An advisory parser finding must not block posting' ).
+        cl_abap_unit_assert=>assert_initial( act = VALUE #( ls_decision-findings[ rule_id = 'S12' ]-action OPTIONAL )
+                                             msg = 'The advisory parser finding keeps a blank action' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

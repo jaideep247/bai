@@ -7,7 +7,7 @@ S05,S,ZCL_CD_EBS_R_S05_DATE,E,EXCEPTION,Statement date sanity,X,
 S07,S,ZCL_CD_EBS_R_S07_DUPLICATE,B,BLOCK,Duplicate statement,X,X
 S09,S,ZCL_CD_EBS_R_S09_COVERAGE,E,NOTIFY,100 % BTC mapping coverage,X,
 S10,S,ZCL_CD_EBS_R_S10_COMPLETE,W,EXCEPTION,Every entry posted or blocked (completeness),X,
-S12,S,ZCL_CD_EBS_R_S12_COUNT,E,EXCEPTION,Entry count = declared count (imported),X,
+S12,S,ZCL_CD_EBS_R_S12_COUNT,E,EXCEPTION,Entry count = declared count (file trailers and imported),X,X
 R18,S,ZCL_CD_EBS_R_R18_GL_BALANCE,W,NOTIFY,Bank G/L balance = statement closing,X,
 R01,L,ZCL_CD_EBS_R_R01_SIGN,E,EXCEPTION,Amount sign vs expected direction,X,
 R02,L,ZCL_CD_EBS_R_R02_BOUNDS,W,EXCEPTION,Amount bounds (also R11 fee tolerance),X,

@@ -15,6 +15,7 @@
 *& 2026-11-06 | Audit A14: R22 duplicate history (check code, message, look-back parameter).
 *& 2026-11-06 | Audit A26 / A32 / A34 / A35: disposition, statement key, sign and gross-total check codes.
 *& 2026-11-06 | Audit A28: reason mapping completeness and kind, FEBEP reason field.
+*& 2026-11-06 | Audit A86: message TRAILER_FIELD_MISSING.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -607,6 +608,7 @@ INTERFACE zif_cd_ebs_types
       posting_rule_unresolved     TYPE zif_cd_ops_types=>ty_msgno VALUE '521',
       reason_map_incomplete       TYPE zif_cd_ops_types=>ty_msgno VALUE '522',
       reason_kind                 TYPE zif_cd_ops_types=>ty_msgno VALUE '523',
+      trailer_field_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '524',
     END OF gc_msg.
 
 ENDINTERFACE.
