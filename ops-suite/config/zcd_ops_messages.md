@@ -1,6 +1,7 @@
 # Message class ZCD_OPS
 
-Number ranges: 001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK · 400–449 configuration apps (RAP).
+Number ranges: 001–099 and 700–799 core · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
+Every user-facing text of the suite is one of these messages (built with `ZCL_CD_OPS_UTIL=>TEXT( )`) or a text symbol (`docs/text_elements/`); numbers are referenced through the `gc_msg-*` constants of each area's types interface.
 Create in SE91 exactly as listed (short texts ≤ 73 characters).
 
 | No. | Text |

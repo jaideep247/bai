@@ -35,7 +35,7 @@ Field names **not** in the reference (still `VERIFY-SE11`): the FIN-number and t
 | Cheque status went **backwards** (illegal transition) | HCK check (new check class) | `ZECT_STATUS` ordering, terminal 3 / 4 / 9, 10 → 9 allowed | `ZCD_CHECK_HIST` key and sequence fields |
 | Paid payment request left **CANCELLED** (PCLM) | HCK check (new check class) | CANCELLED = money will not leave; a paid request must never be CANCELLED | Paid indicator (via FIN number → DFKKOP / DPAYH) |
 | Handled-manually record for payment requests | FMON operations app (§6.5 of `RAP_Apps_Design.md`) | Request reference as delivered by PRISM | — |
-| EBS: BAI 143 / 452 | EBS | Known unmapped codes in production | Treasury: category and posting rule before a `ZCD_BTC_MAP` row is added; until then **R14 blocks them** (never posted to the wrong clearing account) |
+| EBS: BAI 143 / 452 | EBS | Known unmapped codes in production | **Built (2026-11-06):** 143 → rule group BAI166C on collection accounts only (disbursement stays blocked by R14); 452 → BAI468D |
 | EBS: BAI 452 has a non-blank XBLNR | EBS (rule R-level check once mapped) | `XBLNR` never blank for 452 | — |
 
 Every field name above that is not confirmed goes into configuration (not code) and is validated against the DDIC at runtime, so a wrong name produces a PLUGIN_ERROR / configuration finding instead of a wrong result.

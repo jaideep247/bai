@@ -86,7 +86,13 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - **Durable before notified:** commit the run header at start; commit results and run end before any alert or mail (a channel may `COMMIT WORK` itself); never commit a half-written save — `store->rollback( )`.
 
 ### Message class ZCD_OPS ranges
-001–099 core · 100–199 EBS · 200–299 FMON · 300–399 HCK. Each payment engine area documents its messages in `config/zcd_ops_messages.md`.
+001–099 / 700–799 core · 100–199 / 500–599 EBS · 200–299 / 600–649 FMON · 300–399 / 650–699 HCK · 400–449 configuration apps. Every message is listed in `config/zcd_ops_messages.md` (the serializer writes the message class from it).
+
+### No hardcoding (phase 5)
+- **No user-facing text as a literal.** A text a user reads is a ZCD_OPS message, built only with `zcl_cd_ops_util=>text( iv_msgno = zif_cd_<area>_types=>gc_msg-<name> iv_v1 … iv_v4 [iv_tail] )` (long values such as exception texts go into `iv_tail`, never into a 50-character message variable), or a text symbol of the program / class (`TEXT-nnn`, source `docs/text_elements/<object>.texts.md`, serialized into the abapGit TPOOL).
+- **No technical value as a literal** outside declarations: check codes, parameter names and defaults, statuses, keywords, prefixes, patterns are named constants in the area's types interface (or class constants), parameters in ZCD_OPS_PARAM, or customizing. SAP-defined values use SAP constants (e.g. `cl_abap_typedescr=>typekind_*`).
+- Allowed exceptions are syntax or wire formats only, each listed with its reason in `tools/literal_allowlist.txt`.
+- Guarded by `tools/portable_checks.py` (`no_inline_texts`, `message_constants_exist`); inventory in `docs/Hardcoding_Inventory.md`.
 
 ### DDIC
 Tables as ADT DDL source in `ddic/<pe_area>/<name>.tabl.ddl`. Delivery class C for customizing (SM30), A for application data. Note required secondary indexes in a comment.

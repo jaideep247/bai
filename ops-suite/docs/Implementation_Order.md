@@ -23,11 +23,11 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 ## Step 1 — DDIC (SE11 / ADT)
 
 1. Core: `ZCD_OPS_PARAM`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING` (+ indexes ~OPN, ~OBJ; carry-forward fields FIRST_SEEN_AT, OCCURRENCES, SUPERSEDED_BY, WAIVER_UNTIL), `ZCD_OPS_ALERT_RULE`, `ZCD_OPS_ALERT_CHN`, `ZCD_OPS_ALERT_LOG` (+ index ~RUL), `ZCD_OPS_LOCK` (delivery class L, never written — run-lock argument of `E_TABLE`).
-2. EBS: `ZCD_EBS_RULE_DEF`, `ZCD_BTC_MAP`, `ZCD_BTC_RULE`, `ZCD_EBS_ACCT` (+ index ~ACC), `ZCD_EBS_FLOW_PAT`, `ZCD_EBS_RSN_MAP`.
+2. EBS: `ZCD_EBS_RULE_DEF`, `ZCD_BTC_MAP`, `ZCD_BTC_RULE`, `ZCD_EBS_ACCT` (+ index ~ACC), `ZCD_EBS_FLOW_PAT`, `ZCD_EBS_RSN_MAP`, `ZCD_EBS_LOOKUP` (rule R21; draft table `ZCD_D_EBSLKP`).
 3. FMON: `ZCD_FMON_IFACE`, `_SLA`, `_CAL`, `_SRC`, `_SRCMAP`, `_LOTCFG`, `_CHK`, `ZCD_FMON_FILE` (+ unique index IFACE_ID/FILE_REF), `ZCD_FMON_EVENT` (+ unique index SRC_ID/SRC_KEY/STAGE).
 4. HCK: `ZCD_HCK_DEF`, `_THRESH`, `_AGG`, `_TABWL`, `_DRIFT`, `ZCD_JOB_CYCLE`, `ZCD_JOB_STEP`, `ZCD_HCK_METRIC`, `ZCD_HCK_BASELINE`.
-5. Table maintenance generator (SM30) for every delivery-class-C table; authorization group `ZCD_OPS`.
-6. Message class `ZCD_OPS` (52 messages) — included in the abapGit pull; manual fallback from `config/zcd_ops_messages.md`.
+5. No SM30 maintenance views: every delivery-class-C table is maintained in its RAP configuration app (`RAP_Config_Apps.md`, step 1a).
+6. Message class `ZCD_OPS` (262 messages: every user-facing text of the suite) — included in the abapGit pull; manual fallback from `config/zcd_ops_messages.md`. Text pools of the four reports and of `ZCL_CD_HCK_REPORT_HTML` / `ZCL_CD_OPS_ALERT_POLICY` come with the abapGit XML (source `docs/text_elements/`); translate both in SE63.
 7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are not in the abapGit XML — create them from the comments in `ddic/*/*.tabl.ddl`.
 7. Application log object/subobject `ZCD_OPS` / `ALERT` (SLG0) for the APPLOG channel.
 8. Authorization object `ZCD_OPS` — step 0.7 (reports, purge and the CDS access role `ZI_CD_OpsAnalytics`).

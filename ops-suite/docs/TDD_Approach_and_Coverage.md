@@ -17,7 +17,7 @@
 
 | Order | Objects | Evidence |
 |---|---|---|
-| **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 25 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB` | Red state observed by the lead developer in the lint output |
+| **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 26 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB` | Red state observed by the lead developer in the lint output |
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
 | **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
@@ -26,6 +26,7 @@
 | **Test first, EBS rule audit** (part C) | 7 rule tests (`r07_any_run_with_status_ok` … `r18_unmapped_gl_reported`) written before the fixes | `Review_Response_2026-11-06.md` part C |
 | **Test first, operations apps** (phase 3) — tests written before each class / engine change; not executed | `ZCL_CD_OPS_EXC_POLICY`, `ZCL_CD_OPS_EXC_DAO`, `ZCL_CD_EBS_RELEASE_POLICY`, `ZCL_CD_EBS_RELEASE_DAO`, `ZCL_CD_HCK_SUPPRESSION`, `ZCL_CD_HCK_PAYREQ_RULES`, `ZCL_CD_HCK_VALUE_QUERY`, `ZCL_CD_FMON_OPS_POLICY`, `ZCL_CD_FMON_STATUS=>MANUAL_ALLOWED`; engine tests for release and suppression; store `pending_waiver_is_carried` | `RAP_Ops_Apps.md` §3 |
 | **Test after (characterisation)**, phase 3 | `success_wins_over_later_fail`, `success_after_fail_wins` (existing state-machine behaviour, pinned for the PRISM SUCCESS rule) | `RAP_Ops_Apps.md` §3 |
+| **Test first, phase 5** (no hardcoding, R21) | `text_fills_message_vars`, `text_tail_is_not_truncated` (ZCL_CD_OPS_UTIL), `r21_missing_record_reported`, `r21_any_allowed_status_ok`, `r21_status_not_allowed`, `r21_unknown_lookup_raises`, `bai143_collections_only`, `bai452_validated_as_468`, `sweep_275_575_not_validated` | Written before the helper / rule / map rows; texts moved without behaviour change (existing assertions kept, FMON lot test asserts message number and variables) |
 | **No unit test by design** | See §5 | Covered by the listed alternative |
 
 **What "red" and "green" mean here.** In this build red was a test that did not compile against missing code and green was a clean abaplint run. That proves each test targets the new code; it does **not** prove the tests pass. True red/green — an assertion failing, then passing — happens at the first ABAP Unit run in DV1. Until then no test result exists.
@@ -39,11 +40,11 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 456 ABAP Unit methods in 47 test includes
+## 4. Coverage today — 463 ABAP Unit methods in 47 test includes
 
 | Payment engine area | Object (test include) | Methods | Level |
 |---|---|---|---|
-| Core | ZCL_CD_OPS_UTIL | 12 | Domain |
+| Core | ZCL_CD_OPS_UTIL | 14 | Domain |
 | Core | ZCL_CD_OPS_ALERT_POLICY | 14 | Domain |
 | Core | ZCL_CD_OPS_ALERT_ROUTER | 8 | Application |
 | Core | ZCL_CD_OPS_STORE (incl. exception carry-forward and reconciliation) | 13 | OSQL |
@@ -63,10 +64,10 @@
 | HCK | ZCL_CD_HCK_SUPPRESSION (suppression matcher, four-eyes) | 8 | Domain |
 | HCK | ZCL_CD_HCK_PAYREQ_RULES (known-table rules: SPE, CANCELLED, ZECT_STATUS) | 8 | Domain |
 | HCK | ZCL_CD_HCK_VALUE_QUERY (DDIC-checked value queries) | 6 | Domain |
-| EBS | ZCL_CD_EBS_BTC_RESOLVER | 14 | Domain |
+| EBS | ZCL_CD_EBS_BTC_RESOLVER | 16 | Domain |
 | EBS | ZCL_CD_EBS_FINDING | 5 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FILE | 4 | Application |
-| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 25 rule classes) | 44 | Domain / Application |
+| EBS | ZCL_CD_EBS_RULE_BASE (LTC_LINE_RULES, LTC_LOOKUP_RULES, LTC_STMT_RULES — all 26 rule classes) | 48 | Domain / Application |
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 17 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 14 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FEB | 6 | Application |
@@ -113,7 +114,7 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 | ZCL_CD_OPS_CFG_CLIENT, ZCL_CD_OPS_CFG_TRANSPORT, ZCL_CD_OPS_CFG_AUTH | T000 / E070 reads, SAP CTS API wrapper, adapter to ZCL_CD_OPS_AUTH | Gate tests with doubles; DV1 |
 | ZCL_CD_OPS_AUTH | One `AUTHORITY-CHECK` on ZCD_OPS; a test would assert the kernel | Injected auth double (`injected_auth_is_returned`); QA1 role tests (allowed / refused per activity and payment engine area) |
 | ZCL_CD_OPS_LOCK | `ENQUEUE_E_TABLE` / `DEQUEUE_E_TABLE` (`VERIFY-SE37`) | Engine tests with a lock double (held lock, release); QA1: two parallel runs of the same variant — the second is refused with RUN_LOCKED |
-| ZCL_CD_EBS_RULE_BASE | Abstract | Through the 25 rule classes |
+| ZCL_CD_EBS_RULE_BASE | Abstract | Through the 26 rule classes |
 | ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
 | ZCL_CD_EBS_SAP_DAO (retrievals, checks, FI lines, G/L balance) | Fields `VERIFY-DDIC` until SE11 confirms them | Rule tests with SAP-DAO double; OSQL tests for confirmed paths; QA1 |
 | ZCL_CD_FMON_DAO=>INSERT_EVENT — EVENT_NO collision retry | A collision needs two sessions inserting at once; one OSQL session always sees its own MAX | OSQL tests for idempotency and numbering; QA1: two parallel `ZCD_FMON_MONITOR` runs for the same date, then every source event recorded exactly once |
