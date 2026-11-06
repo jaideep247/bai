@@ -21,6 +21,7 @@
 *& 2026-11-06 | Performance fix 1: register memo (one read per package, new package re-reads, no key leak), zero flag parity.
 *& 2026-11-06 | Performance fix 2: R22 history once per account per package, statement windows kept apart.
 *& 2026-11-06 | Performance fix 4: rows of a key found by secondary key wherever they sit in the result.
+*& 2026-11-06 | Performance fix 6: LTD_SAP_DAO answers get_gl_balances (balance per request, reads counted).
 *& 2026-11-06 | Operating model: S13 POSTING_INCOMPLETE (one per statement with the count, file statement ignored).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
@@ -82,6 +83,8 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
     DATA mt_checks     TYPE zif_cd_ebs_sap_dao=>tt_check.
     DATA mt_fi_lines   TYPE zif_cd_ebs_sap_dao=>tt_fi_line.
     DATA mv_gl_balance TYPE zif_cd_ops_types=>ty_amount.
+    DATA mv_gl_reads TYPE i.
+    DATA mt_gl_requests TYPE zif_cd_ebs_sap_dao=>tt_gl_request.
     DATA mt_docno_seen TYPE zif_cd_ebs_sap_dao=>tt_docno.
     DATA mt_ztnum_seen TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
     DATA mv_check_reads TYPE i.
@@ -130,8 +133,12 @@ CLASS ltd_sap_dao IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
-  METHOD zif_cd_ebs_sap_dao~get_gl_balance.
-    rv_balance = mv_gl_balance.
+  METHOD zif_cd_ebs_sap_dao~get_gl_balances.
+    mv_gl_reads += 1.
+    mt_gl_requests = it_requests.
+    LOOP AT it_requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+      INSERT VALUE #( request_no = <ls_request>-request_no balance = mv_gl_balance ) INTO TABLE rt_balances.
+    ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_ebs_sap_dao~get_lookup_rows.
     ms_lookup_used = is_lookup.
@@ -1622,6 +1629,7 @@ CLASS ltc_stmt_rules DEFINITION FINAL FOR TESTING
     METHODS r22_history_once_per_package FOR TESTING.
     METHODS r22_windows_per_statement    FOR TESTING.
     METHODS r18_gl_by_house_bank         FOR TESTING.
+    METHODS r18_one_read_per_package     FOR TESTING.
     METHODS s04_house_bank_preferred     FOR TESTING.
     METHODS s04_missing_currency         FOR TESTING.
     METHODS add_second_account_statement
@@ -1726,6 +1734,32 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
         run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings
                                              msg = 'R18 must find the G/L account by house bank account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 6: two closing statements, one balance read; each statement compared on its own
+  METHOD r18_one_read_per_package.
+    TRY.
+        mo_sap_dao->mv_gl_balance = '1150.00'.
+        add_statement( iv_opening = '1000.00' iv_closing = '1150.00' ).
+        add_statement( iv_opening = '1150.00' iv_closing = '1200.00' ).
+        mt_stmts[ 2 ]-stmt_key  = 'S0002'.
+        mt_stmts[ 2 ]-stmt_date = gc_test-today + 1.
+        run( iv_class = 'ZCL_CD_EBS_R_R18_GL_BALANCE' is_rule = rule( 'R18' ) ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-gl_ne_closing
+                         iv_msg        = 'Only the statement closing at 1200 differs from the G/L' ).
+        cl_abap_unit_assert=>assert_equals( act = mt_findings[ 1 ]-object_key exp = mt_stmts[ 2 ]-stmt_key
+                                            msg = 'The finding belongs to the second statement' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mv_gl_reads exp = 1
+                                            msg = 'One G/L balance read for the package' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_sap_dao->mt_gl_requests ) exp = 2
+                                            msg = 'One request per closing statement' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_sap_dao->mt_gl_requests[ 2 ]-stmt_date
+                                            exp = mt_stmts[ 2 ]-stmt_date
+                                            msg = 'Each request carries its own statement date' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

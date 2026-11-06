@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Operating model: posting-area flag names are DDIC-validated (unknown name raises).
 *& 2026-11-06 | Performance fix 3: posting-flag tests moved to ZCL_CD_EBS_FEB_DAO (read joined the item read).
+*& 2026-11-06 | Performance fix 6: G/L balances of several statements in one aggregate (ACDOCA double).
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -30,6 +31,8 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
     METHODS return_item_found_by_selw1   FOR TESTING.
     METHODS empty_keys_read_nothing      FOR TESTING.
     METHODS payment_found_by_doc1r       FOR TESTING.
+    METHODS gl_balances_per_request      FOR TESTING.
+    METHODS gl_balances_empty_requests   FOR TESTING.
 ENDCLASS.
 
 
@@ -37,7 +40,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DPAYH' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DPAYH' ) ( 'ACDOCA' ) ( 'ZCD_OPS_PARAM' ) ) ).
   ENDMETHOD.
 
 
@@ -90,6 +93,83 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     TRY.
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_return_items( VALUE #( ) )
                                              msg = 'Empty key list must return nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 6: one aggregate returns the balance of every request - same SUM as the former
+  " per-statement read (ledger 0L, company code, account, currency, posting date up to the
+  " request's date); a request without postings returns no row.
+  " VERIFY-ADT: internal table as JOIN source (@itab) inside cl_osql_test_environment
+  METHOD gl_balances_per_request.
+    DATA lt_acdoca TYPE STANDARD TABLE OF acdoca WITH EMPTY KEY.
+    DATA ls_acdoca TYPE acdoca.
+    DATA lt_requests TYPE zif_cd_ebs_sap_dao=>tt_gl_request.
+    DATA ls_request TYPE zif_cd_ebs_sap_dao=>ty_gl_request.
+    TRY.
+        ls_acdoca-rldnr  = '0L'.
+        ls_acdoca-rbukrs = 'US01'.
+        ls_acdoca-gjahr  = '2026'.
+        ls_acdoca-racct  = '0011001000'.
+        ls_acdoca-rtcur  = 'USD'.
+        ls_acdoca-belnr  = '0000000001'.
+        ls_acdoca-budat  = '20261101'.
+        ls_acdoca-tsl    = '100.00'.
+        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        ls_acdoca-belnr  = '0000000002'.
+        ls_acdoca-budat  = '20261104'.
+        ls_acdoca-tsl    = '50.00'.
+        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        " after the first request's date, before the second's
+        ls_acdoca-belnr  = '0000000003'.
+        ls_acdoca-budat  = '20261106'.
+        ls_acdoca-tsl    = '25.00'.
+        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        " other ledger and other currency never count
+        ls_acdoca-belnr  = '0000000004'.
+        ls_acdoca-rldnr  = '2L'.
+        ls_acdoca-tsl    = '1000.00'.
+        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        ls_acdoca-belnr  = '0000000005'.
+        ls_acdoca-rldnr  = '0L'.
+        ls_acdoca-rtcur  = 'EUR'.
+        ls_acdoca-tsl    = '7.00'.
+        INSERT ls_acdoca INTO TABLE lt_acdoca.
+        go_env->insert_test_data( lt_acdoca ).
+        ls_request-bukrs      = 'US01'.
+        ls_request-gl_account = '0011001000'.
+        ls_request-currency   = 'USD'.
+        ls_request-request_no = 1.
+        ls_request-stmt_date  = '20261105'.
+        INSERT ls_request INTO TABLE lt_requests.
+        ls_request-request_no = 2.
+        ls_request-stmt_date  = '20261110'.
+        INSERT ls_request INTO TABLE lt_requests.
+        ls_request-request_no = 3.
+        ls_request-gl_account = '0011009999'.
+        INSERT ls_request INTO TABLE lt_requests.
+        DATA(lt_balances) = mo_cut->get_gl_balances( lt_requests ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_balances[ request_no = 1 ]-balance OPTIONAL )
+                                            exp = CONV zif_cd_ops_types=>ty_amount( '150.00' )
+                                            msg = 'Postings up to 05 Nov: 100 + 50' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( lt_balances[ request_no = 2 ]-balance OPTIONAL )
+                                            exp = CONV zif_cd_ops_types=>ty_amount( '175.00' )
+                                            msg = 'Postings up to 10 Nov: 100 + 50 + 25' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_balances[ request_no = 3 ] ) )
+                                           msg = 'An account without postings has no row (balance 0)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fix 6: no request, no read
+  METHOD gl_balances_empty_requests.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_gl_balances( VALUE #( ) )
+                                             msg = 'Empty request list must return nothing' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -14,6 +14,7 @@
 *& 2026-11-06 | Operating model: get_febep_posting (FEBEP posting-area flags, DEFAULT IGNORE).
 *& 2026-11-06 | Performance fix 3: get_febep_reasons / get_febep_posting moved into ZIF_CD_EBS_FEB_DAO get_items.
 *& 2026-11-06 | Performance fix 4: non-unique sorted secondary keys on the result tables (rules loop USING KEY).
+*& 2026-11-06 | Performance fix 6: get_gl_balances - one ACDOCA aggregate for all closing statements (was one per statement).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -156,14 +157,30 @@ INTERFACE zif_cd_ebs_sap_dao
     RETURNING
       VALUE(rt_lines) TYPE tt_fi_line.
 
-  "! Bank G/L balance in transaction currency up to and including iv_date
-  METHODS get_gl_balance
+  "! Fix 6: one bank G/L balance request per closing statement (R18)
+  TYPES:
+    BEGIN OF ty_gl_request,
+      request_no TYPE i,
+      bukrs      TYPE ty_fi_key-bukrs,
+      gl_account TYPE ty_fi_line-hkont,
+      currency   TYPE zif_cd_ops_types=>ty_currency,
+      stmt_date  TYPE d,
+    END OF ty_gl_request.
+  TYPES tt_gl_request TYPE SORTED TABLE OF ty_gl_request WITH UNIQUE KEY request_no.
+  TYPES:
+    BEGIN OF ty_gl_balance,
+      request_no TYPE i,
+      balance    TYPE zif_cd_ops_types=>ty_amount,
+    END OF ty_gl_balance.
+  TYPES tt_gl_balance TYPE HASHED TABLE OF ty_gl_balance WITH UNIQUE KEY request_no.
+
+  "! Bank G/L balances in transaction currency up to and including each request's date,
+  "! one aggregate statement for all requests. A request without postings has no row
+  "! (balance 0, as SUM over no rows gave before)
+  METHODS get_gl_balances
     IMPORTING
-      iv_bukrs          TYPE zif_cd_ebs_sap_dao=>ty_fi_key-bukrs
-      iv_gl_account     TYPE zif_cd_ebs_sap_dao=>ty_fi_line-hkont
-      iv_currency       TYPE zif_cd_ops_types=>ty_currency
-      iv_date           TYPE d
+      it_requests        TYPE tt_gl_request
     RETURNING
-      VALUE(rv_balance) TYPE zif_cd_ops_types=>ty_amount.
+      VALUE(rt_balances) TYPE tt_gl_balance.
 
 ENDINTERFACE.

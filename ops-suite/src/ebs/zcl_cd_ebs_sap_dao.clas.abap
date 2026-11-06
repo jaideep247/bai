@@ -14,6 +14,7 @@
 *& 2026-11-06 | Audit A28: return reason from the configured FEBEP field.
 *& 2026-11-06 | Operating model: posting state from the configured FEBEP posting-area flags.
 *& 2026-11-06 | Performance fix 3: FEBEP reason / posting-flag reads moved into ZCL_CD_EBS_FEB_DAO get_items (one pass).
+*& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -169,18 +170,25 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ebs_sap_dao~get_gl_balance.
+  METHOD zif_cd_ebs_sap_dao~get_gl_balances.
+    CHECK it_requests IS NOT INITIAL.
     DATA(lv_ledger) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = 'EBS_GL_LEDGER'
                                                                   iv_default = CONV #( gc_default_ledger ) ).
-    " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance
-    SELECT SUM( tsl )
-      FROM acdoca
-      WHERE rldnr  = @lv_ledger
-        AND rbukrs = @iv_bukrs
-        AND racct  = @iv_gl_account
-        AND rtcur  = @iv_currency
-        AND budat <= @iv_date
-      INTO @rv_balance.
+    " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance.
+    " Fix 6: the requests are an internal table joined on the database (HANA), one SUM per
+    " request (same filters as the former per-statement SUM: ledger, company code, account,
+    " currency, posting date up to the statement date)
+    SELECT r~request_no, SUM( a~tsl ) AS balance
+      FROM acdoca AS a
+      INNER JOIN @it_requests AS r
+        ON  a~rbukrs = r~bukrs
+        AND a~racct  = r~gl_account
+        AND a~rtcur  = r~currency
+        AND a~budat <= r~stmt_date
+      WHERE a~rldnr = @lv_ledger
+      GROUP BY r~request_no
+      ORDER BY r~request_no
+      INTO CORRESPONDING FIELDS OF TABLE @rt_balances.
   ENDMETHOD.
 
 
