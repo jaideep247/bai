@@ -16,5 +16,6 @@ define root view entity ZC_CD_FmonCfgAll
       _FmonSourceMap : redirected to composition child ZC_CD_FmonSourceMap,
       _FmonCheck : redirected to composition child ZC_CD_FmonCheck,
       _FmonLotCfg : redirected to composition child ZC_CD_FmonLotCfg,
-      _FmonCalendar : redirected to composition child ZC_CD_FmonCalendar
+      _FmonCalendar : redirected to composition child ZC_CD_FmonCalendar,
+      _FmonTableAllow : redirected to composition child ZC_CD_FmonTableAllow
 }

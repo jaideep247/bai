@@ -18,4 +18,5 @@ define table zcd_ops_alert_log {
   error         : abap.char(255);
   created_by    : syuname;
 }
-// Secondary index ZCD_OPS_ALERT_LOG~RUL : MANDT, RULE_ID, SENT_AT (throttling / escalation)
+// Secondary index RUL: throttling / escalation
+// @index RUL: MANDT, RULE_ID, SENT_AT

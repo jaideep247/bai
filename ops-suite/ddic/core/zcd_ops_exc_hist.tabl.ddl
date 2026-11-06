@@ -20,4 +20,5 @@ define table zcd_ops_exc_hist {
   created_by      : syuname;
   created_at      : timestampl;
 }
-// Secondary index ZCD_OPS_EXC_HIST~FND : MANDT, RUN_ID, FINDING_NO (history of one exception)
+// Secondary index FND: history of one exception
+// @index FND: MANDT, RUN_ID, FINDING_NO

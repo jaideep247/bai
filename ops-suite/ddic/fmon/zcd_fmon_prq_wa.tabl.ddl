@@ -20,4 +20,5 @@ define table zcd_fmon_prq_wa {
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
   last_changed_at       : abp_lastchange_tstmpl;
 }
-// Secondary index ZCD_FMON_PRQ_WA~REF : MANDT, REQUEST_REF (history of one request)
+// Secondary index REF: history of one request
+// @index REF: MANDT, REQUEST_REF

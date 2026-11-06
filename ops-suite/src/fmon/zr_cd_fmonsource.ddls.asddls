@@ -36,6 +36,8 @@ define view entity ZR_CD_FmonSource
       source_field as SourceField,
       @EndUserText.label: 'Line of business field'
       lob_field as LobField,
+      @EndUserText.label: 'Item key field'
+      item_key_field as ItemKeyField,
       @EndUserText.label: 'Default stage'
       default_stage as DefaultStage,
       @EndUserText.label: 'Adapter class'

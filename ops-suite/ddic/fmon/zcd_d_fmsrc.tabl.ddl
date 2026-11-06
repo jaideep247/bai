@@ -21,6 +21,7 @@ define table zcd_d_fmsrc {
   checksumfield : abap.char(30);
   sourcefield : abap.char(30);
   lobfield : abap.char(30);
+  itemkeyfield : abap.char(30);
   defaultstage : abap.char(20);
   adapterclass : abap.char(30);
   active : abap_boolean;

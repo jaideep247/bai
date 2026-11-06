@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Audit A51: CHECK_APPROVED against ZCD_FMON_TABWL.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC validation of configured reads</p>
 CLASS zcl_cd_fmon_query DEFINITION
@@ -37,6 +38,15 @@ CLASS zcl_cd_fmon_query DEFINITION
       IMPORTING
         is_query  TYPE zif_cd_fmon_types=>ty_query
         it_fields TYPE zif_cd_fmon_types=>tt_ddic_field
+      RAISING
+        zcx_cd_ops_error.
+
+    "! Audit A51: the table and every queried field (and the date / IN field) must be
+    "! approved in ZCD_FMON_TABWL (field '*' = all fields of the table)
+    CLASS-METHODS check_approved
+      IMPORTING
+        is_query TYPE zif_cd_fmon_types=>ty_query
+        it_allow TYPE zif_cd_fmon_types=>tt_tab_allow
       RAISING
         zcx_cd_ops_error.
 
@@ -125,6 +135,35 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e201(zcd_ops) WITH iv_field iv_table.
     ENDIF.
+  ENDMETHOD.
+
+  METHOD check_approved.
+    DATA lt_used TYPE SORTED TABLE OF zif_cd_fmon_types=>ty_fieldname WITH UNIQUE KEY table_line.
+    DATA(lv_table) = to_upper( condense( CONV string( is_query-table_name ) ) ).
+    DATA(lt_table_rows) = VALUE zif_cd_fmon_types=>tt_tab_allow(
+      FOR ls_allow IN it_allow WHERE ( table_name = lv_table ) ( ls_allow ) ).
+    IF lt_table_rows IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e244(zcd_ops) WITH lv_table.
+    ENDIF.
+    IF line_exists( lt_table_rows[ field_name = zif_cd_fmon_types=>gc_wildcard ] ).
+      RETURN.
+    ENDIF.
+    LOOP AT is_query-fields INTO DATA(ls_field).
+      INSERT to_upper( condense( ls_field-field ) ) INTO TABLE lt_used.
+    ENDLOOP.
+    IF is_query-date_field IS NOT INITIAL.
+      INSERT to_upper( condense( is_query-date_field ) ) INTO TABLE lt_used.
+    ENDIF.
+    IF is_query-in_field IS NOT INITIAL.
+      INSERT to_upper( condense( is_query-in_field ) ) INTO TABLE lt_used.
+    ENDIF.
+    LOOP AT lt_used INTO DATA(lv_field).
+      IF NOT line_exists( lt_table_rows[ field_name = lv_field ] ).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e249(zcd_ops) WITH lv_field lv_table.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.

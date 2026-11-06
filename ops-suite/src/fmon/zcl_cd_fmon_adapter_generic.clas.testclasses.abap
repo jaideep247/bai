@@ -6,6 +6,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | Audit A39/A52: malformed rows, payment key, half-open day range.
 *&---------------------------------------------------------------------*
 CLASS ltc_mapping DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -38,6 +39,10 @@ CLASS ltc_mapping DEFINITION FINAL
     METHODS wildcard_row_maps_the_rest FOR TESTING.
     METHODS no_status_field_uses_default FOR TESTING.
     METHODS file_key_is_correlation_ref FOR TESTING.
+    METHODS malformed_count_quarantined FOR TESTING.
+    METHODS invalid_date_quarantined FOR TESTING.
+    METHODS payment_key_is_taken_over FOR TESTING.
+    METHODS day_range_is_half_open FOR TESTING.
 
 ENDCLASS.
 
@@ -87,6 +92,72 @@ CLASS ltc_mapping IMPLEMENTATION.
   METHOD act.
     rs_record = zcl_cd_fmon_adapter_generic=>to_record( is_request = ms_request
                                                        is_raw     = ms_raw ).
+  ENDMETHOD.
+
+
+  " Audit A52: a count that is not a number is not a known zero - the row is quarantined
+  METHOD malformed_count_quarantined.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_raw-rec_count = `1O`.
+        DATA(ls_record) = act( ).
+        cl_abap_unit_assert=>assert_true( act = ls_record-malformed
+                                          msg = 'A non-numeric count must mark the row malformed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_record-malformed_role exp = zif_cd_fmon_types=>gc_role-rec_count
+                                            msg = 'The malformed field must be named' ).
+        cl_abap_unit_assert=>assert_false( act = ls_record-count_known
+                                           msg = 'A malformed count must not be a known count' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A52: a date that does not exist gives no event time - the row is quarantined
+  METHOD invalid_date_quarantined.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_raw-ev_date = `20261340`.
+        DATA(ls_record) = act( ).
+        cl_abap_unit_assert=>assert_true( act = ls_record-malformed
+                                          msg = 'An invalid date must mark the row malformed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_record-malformed_role exp = zif_cd_fmon_types=>gc_role-ev_date
+                                            msg = 'The date field must be named' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A39: the payment identity of a per-payment ACK row is taken over for dedupe
+  METHOD payment_key_is_taken_over.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_request-src-item_key_field = 'PAYNO'.
+        ms_raw-item_key = `PAY0001`.
+        cl_abap_unit_assert=>assert_equals( act = act( )-item_key exp = 'PAY0001'
+                                            msg = 'The payment key must be on the record' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Audit A52: a timestamp-restricted read ends at the next local midnight (exclusive),
+  " so rows with fractional seconds after 23:59:59 are not lost
+  METHOD day_range_is_half_open.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_request-src-table_name = 'ZCD_ACH_ACK'.
+        ms_request-src-ts_field   = 'ACK_TS'.
+        ms_request-date_from      = '20261102'.
+        ms_request-date_to        = '20261102'.
+        DATA(ls_query) = zcl_cd_fmon_adapter_generic=>build_query( ms_request ).
+        cl_abap_unit_assert=>assert_equals( act = ls_query-ts_to exp = '20261103000000'
+                                            msg = 'The range must end at the next midnight' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
   ENDMETHOD.
 
 

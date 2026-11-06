@@ -25,4 +25,5 @@ define table zcd_ebs_acct {
   last_changed_at       : abp_lastchange_tstmpl;
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
-// Secondary index ZCD_EBS_ACCT~ACC : MANDT, ACCOUNT_NO (file statements)
+// Secondary index ACC: file statements
+// @index ACC: MANDT, ACCOUNT_NO

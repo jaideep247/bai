@@ -22,6 +22,7 @@ authorization master ( global )
   association _FmonCheck { create ( features : global ); with draft; }
   association _FmonLotCfg { create ( features : global ); with draft; }
   association _FmonCalendar { create ( features : global ); with draft; }
+  association _FmonTableAllow { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -42,6 +43,8 @@ authorization master ( global )
     validation FmonLotCfg ~ validateTransport;
     validation FmonCalendar ~ validateFields;
     validation FmonCalendar ~ validateTransport;
+    validation FmonTableAllow ~ validateFields;
+    validation FmonTableAllow ~ validateTransport;
   }
 }
 
@@ -150,6 +153,7 @@ etag master LocalLastChangedAt
     ChecksumField = checksum_field;
     SourceField = source_field;
     LobField = lob_field;
+    ItemKeyField = item_key_field;
     DefaultStage = default_stage;
     AdapterClass = adapter_class;
     Active = active;
@@ -283,6 +287,35 @@ etag master LocalLastChangedAt
     WindowFrom = window_from;
     WindowTo = window_to;
     FcalId = fcal_id;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonTableAllow alias FmonTableAllow
+persistent table zcd_fmon_tabwl
+with additional save
+draft table zcd_d_fmtabwl
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) TableName, FieldName;
+  field ( mandatory : create ) TableName, FieldName;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_tabwl
+  {
+    TableName = table_name;
+    FieldName = field_name;
+    Active = active;
+    Description = description;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

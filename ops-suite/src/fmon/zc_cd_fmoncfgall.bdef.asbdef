@@ -19,6 +19,7 @@ define behavior for ZC_CD_FmonCfgAll alias FmonCfgAll
   use association _FmonCheck { create; with draft; }
   use association _FmonLotCfg { create; with draft; }
   use association _FmonCalendar { create; with draft; }
+  use association _FmonTableAllow { create; with draft; }
 }
 
 define behavior for ZC_CD_FmonIface alias FmonIface
@@ -76,6 +77,15 @@ use etag
 }
 
 define behavior for ZC_CD_FmonCalendar alias FmonCalendar
+use etag
+{
+  use update;
+  use delete;
+
+  use association _FmonCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_FmonTableAllow alias FmonTableAllow
 use etag
 {
   use update;

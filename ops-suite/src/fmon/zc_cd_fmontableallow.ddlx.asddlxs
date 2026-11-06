@@ -1,0 +1,35 @@
+// UI annotations: File monitoring setup - Approved tables
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Approved table',
+                     typeNamePlural: 'Approved tables',
+                     title: { type: #STANDARD, value: 'TableName' } } }
+annotate entity ZC_CD_FmonTableAllow with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  TableName;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  FieldName;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Active;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Description;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

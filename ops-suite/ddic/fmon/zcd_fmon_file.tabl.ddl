@@ -28,6 +28,8 @@ define table zcd_fmon_file {
   unprocessed_count : abap.int4;
   ack_count         : abap.int4;
   ack_amount        : abap.dec(23,2);
+  // ACK/NACK count reported by the source (X); blank = not reported (not zero)
+  ack_known         : abap_boolean;
   nack_count        : abap.int4;
   // Source rows of the first stage (> 1 = generated/received more than once)
   origin_rows       : abap.int4;
@@ -39,9 +41,11 @@ define table zcd_fmon_file {
   changed_at        : timestampl;
   changed_by        : syuname;
 }
-// Secondary indexes:
-//   ZCD_FMON_FILE~REF (UNIQUE) : MANDT, IFACE_ID, FILE_REF      (correlation of legacy rows)
-//   ZCD_FMON_FILE~BDT          : MANDT, BUSINESS_DATE, IFACE_ID (board / evaluation window)
-//   ZCD_FMON_FILE~OUT          : MANDT, OUTCOME, BUSINESS_DATE  (open files under watch)
-//   ZCD_FMON_FILE~NAM          : MANDT, FILE_NAME               (duplicate history)
-//   ZCD_FMON_FILE~CHK          : MANDT, CHECKSUM                (duplicate history)
+// Secondary indexes (serialized to abapGit by tools/abapgit_serialize.py):
+//   REF (UNIQUE): file instance = interface + reference + business date (audit A49) -
+//   identical daily file names are separate instances, never merged
+// @index REF UNIQUE: MANDT, IFACE_ID, FILE_REF, BUSINESS_DATE
+// @index BDT: MANDT, BUSINESS_DATE, IFACE_ID
+// @index OUT: MANDT, OUTCOME, BUSINESS_DATE
+// @index NAM: MANDT, FILE_NAME
+// @index CHK: MANDT, CHECKSUM
