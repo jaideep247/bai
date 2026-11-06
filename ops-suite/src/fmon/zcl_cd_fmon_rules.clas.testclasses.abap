@@ -8,6 +8,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A38-A41: ACK known counts, SLA evidence, truncated lots, age basis.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
+*& 2026-11-06 | ltc_throttle: PRISM throttle of ACH / wire files (queue position, scope, cap,
+*&              allowance on the delivery stage and on later stages measured from generation).
 *&---------------------------------------------------------------------*
 CLASS ltc_rules DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -383,6 +385,7 @@ CLASS ltc_rules IMPLEMENTATION.
         ls_exp-state       = zif_cd_fmon_types=>gc_sla_state-missing.
         ls_exp-elapsed_min = 210.
         ls_exp-basis_at    = gc_t0430.
+        ls_exp-allowed_min = 30.
         DATA(ls_verdict) = zcl_cd_fmon_rules=>sla_verdict( is_file   = ls_file
                                                           is_sla    = prism_sla( )
                                                           it_events = lt_events
@@ -877,6 +880,492 @@ CLASS ltc_rules IMPLEMENTATION.
           act = zcl_cd_fmon_rules=>receipt_correction( space )
           exp = zif_cd_fmon_types=>gc_fcal_correct-previous
           msg = 'Blank basis must default to A' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! PRISM throttle (user 2026-11-06): PRISM sends ACH and wire files to the bank one at a time,
+"! 2 minutes apart. Pure tests of the queue, the position and the SLA allowance.
+CLASS ltc_throttle DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_date TYPE d VALUE '20261106'.
+    "! SENT_TO_PRISM of every file (first event, basis G)
+    CONSTANTS gc_t1650 TYPE timestampl VALUE '20261106165000'.
+    "! PRISM receipts of an evening ACH cycle: 17:00:00, then one every 5 seconds
+    CONSTANTS gc_t1700 TYPE timestampl VALUE '20261106170000'.
+    CONSTANTS gc_receipt_step TYPE i VALUE 5.
+    CONSTANTS gc_base_min TYPE i VALUE 5.
+    CONSTANTS gc_throttle_min TYPE i VALUE 2.
+    CONSTANTS gc_queue_max TYPE i VALUE 30.
+    CONSTANTS:
+      BEGIN OF gc_iface,
+        ach       TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_PNC_DISB_OUT',
+        wire      TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'WIRE_JPMC_OUT',
+        pospay    TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'CHECK_POSPAY_OUT',
+        blackline TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'BLACKLINE_OUT',
+      END OF gc_iface.
+    CONSTANTS:
+      BEGIN OF gc_method,
+        ach   TYPE zif_cd_fmon_types=>ty_pay_method VALUE 'ACH',
+        wire  TYPE zif_cd_fmon_types=>ty_pay_method VALUE 'WIRE',
+        check TYPE zif_cd_fmon_types=>ty_pay_method VALUE 'CHECK',
+        list  TYPE zif_cd_fmon_types=>ty_value_list VALUE 'ACH,WIRE',
+      END OF gc_method.
+    CONSTANTS:
+      BEGIN OF gc_bank,
+        pnc  TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'PNC',
+        jpmc TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'JPMC',
+      END OF gc_bank.
+
+    DATA mt_files TYPE zif_cd_fmon_types=>tt_file.
+    DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
+
+    METHODS setup.
+
+    METHODS ifaces
+      RETURNING
+        VALUE(rt_ifaces) TYPE zif_cd_fmon_types=>tt_iface.
+
+    METHODS add_iface
+      IMPORTING
+        iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id
+        iv_method   TYPE zif_cd_fmon_types=>ty_pay_method
+        iv_bank     TYPE zif_cd_fmon_types=>ty_bank_key
+      CHANGING
+        ct_ifaces   TYPE zif_cd_fmon_types=>tt_iface.
+
+    METHODS throttle
+      IMPORTING
+        iv_minutes         TYPE i DEFAULT gc_throttle_min
+        iv_scope           TYPE zif_cd_fmon_types=>ty_queue_scope DEFAULT zif_cd_fmon_types=>gc_queue_scope-all
+      RETURNING
+        VALUE(rs_throttle) TYPE zif_cd_fmon_types=>ty_throttle.
+
+    "! Receipt time of the n-th file of the cycle (17:00:00 + (n - 1) x 5 s)
+    METHODS receipt
+      IMPORTING
+        iv_no        TYPE i
+      RETURNING
+        VALUE(rv_at) TYPE timestampl.
+
+    "! File n: SENT_TO_PRISM at 16:50, PRISM_RECEIVED at iv_received (blank = no PRISM evidence)
+    METHODS add_file
+      IMPORTING
+        iv_no       TYPE i
+        iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id DEFAULT gc_iface-ach
+        iv_received TYPE timestampl OPTIONAL.
+
+    METHODS add_event
+      IMPORTING
+        iv_no    TYPE i
+        iv_stage TYPE zif_cd_fmon_types=>ty_stage
+        iv_at    TYPE timestampl.
+
+    "! ACH cycle: files 1..n received 5 seconds apart, none delivered yet
+    METHODS add_cycle
+      IMPORTING
+        iv_files TYPE i.
+
+    METHODS position
+      IMPORTING
+        iv_no         TYPE i
+        is_throttle   TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rs_pos) TYPE zif_cd_fmon_types=>ty_queue_pos.
+
+    "! SLA verdict of file n for the stage with the file's queue allowance (default throttle)
+    METHODS verdict
+      IMPORTING
+        iv_no             TYPE i
+        iv_stage          TYPE zif_cd_fmon_types=>ty_stage DEFAULT zif_cd_fmon_types=>gc_stage-prism_delivered
+        iv_basis          TYPE zif_cd_fmon_types=>ty_sla_basis DEFAULT zif_cd_fmon_types=>gc_sla_basis-previous
+        iv_max_minutes    TYPE i DEFAULT gc_base_min
+        is_throttle       TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rs_verdict) TYPE zif_cd_fmon_types=>ty_sla_verdict.
+
+    METHODS plus
+      IMPORTING
+        iv_at        TYPE timestampl
+        iv_secs      TYPE i
+      RETURNING
+        VALUE(rv_at) TYPE timestampl.
+
+    METHODS file_id
+      IMPORTING
+        iv_no        TYPE i
+      RETURNING
+        VALUE(rv_id) TYPE zif_cd_fmon_types=>ty_file_id.
+
+    METHODS single_file_gets_base_sla FOR TESTING.
+    METHODS fifth_file_on_time_at_9_min FOR TESTING.
+    METHODS fifth_file_late_after_13_min FOR TESTING.
+    METHODS scope_c_queues_per_bank FOR TESTING.
+    METHODS pospay_not_throttled FOR TESTING.
+    METHODS queue_over_max_is_long FOR TESTING.
+    METHODS ack_from_generation_shifted FOR TESTING.
+    METHODS ack_after_delivery_not_shifted FOR TESTING.
+    METHODS zero_throttle_keeps_today FOR TESTING.
+    METHODS no_receipt_keeps_today FOR TESTING.
+    METHODS delivered_file_is_not_ahead FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_throttle IMPLEMENTATION.
+
+  METHOD setup.
+    CLEAR: mt_files, mt_events.
+  ENDMETHOD.
+
+
+  METHOD ifaces.
+    add_iface( EXPORTING iv_iface_id = gc_iface-ach iv_method = gc_method-ach iv_bank = gc_bank-pnc
+               CHANGING  ct_ifaces   = rt_ifaces ).
+    add_iface( EXPORTING iv_iface_id = gc_iface-wire iv_method = gc_method-wire iv_bank = gc_bank-jpmc
+               CHANGING  ct_ifaces   = rt_ifaces ).
+    add_iface( EXPORTING iv_iface_id = gc_iface-pospay iv_method = gc_method-check iv_bank = gc_bank-pnc
+               CHANGING  ct_ifaces   = rt_ifaces ).
+    add_iface( EXPORTING iv_iface_id = gc_iface-blackline iv_method = space iv_bank = space
+               CHANGING  ct_ifaces   = rt_ifaces ).
+  ENDMETHOD.
+
+
+  METHOD add_iface.
+    DATA ls_iface TYPE zif_cd_fmon_types=>ty_iface.
+    ls_iface-iface_id   = iv_iface_id.
+    ls_iface-direction  = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_iface-pay_method = iv_method.
+    ls_iface-bank_key   = iv_bank.
+    ls_iface-active     = abap_true.
+    INSERT ls_iface INTO TABLE ct_ifaces.
+  ENDMETHOD.
+
+
+  METHOD throttle.
+    rs_throttle-minutes   = iv_minutes.
+    rs_throttle-scope     = iv_scope.
+    rs_throttle-methods   = gc_method-list.
+    rs_throttle-queue_max = gc_queue_max.
+  ENDMETHOD.
+
+
+  METHOD receipt.
+    rv_at = plus( iv_at = gc_t1700 iv_secs = ( iv_no - 1 ) * gc_receipt_step ).
+  ENDMETHOD.
+
+
+  METHOD plus.
+    TRY.
+        rv_at = cl_abap_tstmp=>add( tstmp = iv_at secs = iv_secs ).
+      CATCH cx_parameter_invalid_range cx_parameter_invalid_type INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Invalid test time: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD file_id.
+    rv_id = CONV zif_cd_fmon_types=>ty_file_id( iv_no ).
+  ENDMETHOD.
+
+
+  METHOD add_file.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    ls_file-file_id        = file_id( iv_no ).
+    ls_file-iface_id       = iv_iface_id.
+    ls_file-direction      = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_file-file_name      = |FILE_{ iv_no }|.
+    ls_file-business_date  = gc_date.
+    ls_file-stage          = zif_cd_fmon_types=>gc_stage-sent.
+    ls_file-first_event_at = gc_t1650.
+    ls_file-last_event_at  = gc_t1650.
+    INSERT ls_file INTO TABLE mt_files.
+    add_event( iv_no = iv_no iv_stage = zif_cd_fmon_types=>gc_stage-sent iv_at = gc_t1650 ).
+    IF iv_received IS NOT INITIAL.
+      add_event( iv_no = iv_no iv_stage = zif_cd_fmon_types=>gc_stage-prism_received iv_at = iv_received ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add_event.
+    DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
+    ls_event-file_id  = file_id( iv_no ).
+    ls_event-stage    = iv_stage.
+    ls_event-event_at = iv_at.
+    INSERT ls_event INTO TABLE mt_events.
+  ENDMETHOD.
+
+
+  METHOD add_cycle.
+    DO iv_files TIMES.
+      add_file( iv_no = sy-index iv_received = receipt( sy-index ) ).
+    ENDDO.
+  ENDMETHOD.
+
+
+  METHOD position.
+    rs_pos = zcl_cd_fmon_rules=>queue_position( iv_file_id  = file_id( iv_no )
+                                               it_queue    = zcl_cd_fmon_rules=>build_queue(
+                                                               it_files    = mt_files
+                                                               it_events   = mt_events
+                                                               it_ifaces   = ifaces( )
+                                                               is_throttle = is_throttle )
+                                               is_throttle = is_throttle ).
+  ENDMETHOD.
+
+
+  METHOD verdict.
+    DATA ls_sla TYPE zif_cd_fmon_types=>ty_sla.
+    ls_sla-iface_id    = gc_iface-ach.
+    ls_sla-stage       = iv_stage.
+    ls_sla-max_minutes = iv_max_minutes.
+    ls_sla-basis       = iv_basis.
+    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    rs_verdict = zcl_cd_fmon_rules=>sla_verdict(
+                   is_file      = mt_files[ file_id = file_id( iv_no ) ]
+                   is_sla       = ls_sla
+                   it_events    = mt_events
+                   iv_now       = plus( iv_at = gc_t1700 iv_secs = 86400 )
+                   iv_queue_min = position( iv_no = iv_no is_throttle = is_throttle )-delay_min ).
+  ENDMETHOD.
+
+
+  " Rule: a file alone in the PRISM queue gets the base SLA only - delivered after 6 min with
+  " SLA 5 is late.
+  METHOD single_file_gets_base_sla.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_queue_pos.
+    TRY.
+        add_cycle( 1 ).
+        add_event( iv_no = 1 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 1 ) iv_secs = 360 ) ).
+        ls_exp-queued = abap_true.
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 1 is_throttle = throttle( ) ) exp = ls_exp
+                                            msg = 'A file alone has nobody ahead and no allowance' ).
+        DATA(ls_verdict) = verdict( iv_no = 1 is_throttle = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-late }/{ gc_base_min }|
+                                            msg = 'Delivery after 6 min (SLA 5, no queue) must be late' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: 5 ACH files received together - the 5th waits for 4 files at 2 min each, so its
+  " delivery 9 min after receipt is on time (allowed 5 + 4 x 2 = 13 min).
+  METHOD fifth_file_on_time_at_9_min.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_queue_pos.
+    TRY.
+        add_cycle( 5 ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 5 ) iv_secs = 540 ) ).
+        ls_exp-queued    = abap_true.
+        ls_exp-ahead     = 4.
+        ls_exp-counted   = 4.
+        ls_exp-delay_min = 8.
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 5 is_throttle = throttle( ) ) exp = ls_exp
+                                            msg = 'The 5th file has 4 files ahead: 8 min allowance' ).
+        DATA(ls_verdict) = verdict( iv_no = 5 is_throttle = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-elapsed_min }/|
+                                               && |{ ls_verdict-allowed_min }/{ ls_verdict-queue_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-ok }/9/13/8|
+                                            msg = 'Delivered after 9 min, allowed 13 min: on time' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the allowance is not open-ended - the 5th file delivered 14 min after receipt
+  " (base 5 + 8 + 1) is late.
+  METHOD fifth_file_late_after_13_min.
+    TRY.
+        add_cycle( 5 ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 5 ) iv_secs = 840 ) ).
+        DATA(ls_verdict) = verdict( iv_no = 5 is_throttle = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-elapsed_min }/|
+                                               && |{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-late }/14/13|
+                                            msg = 'Delivered after 14 min, allowed 13 min: late' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: scope A = one PRISM queue for all throttled files (the wire waits behind 3 ACH files);
+  " scope C = one queue per bank (the JPMC wire has nobody ahead, the PNC ACH files keep theirs).
+  METHOD scope_c_queues_per_bank.
+    TRY.
+        add_cycle( 3 ).
+        add_file( iv_no = 4 iv_iface_id = gc_iface-wire iv_received = receipt( 4 ) ).
+        DATA(lv_scope_c) = zif_cd_fmon_types=>gc_queue_scope-counterparty.
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ position( iv_no = 4 is_throttle = throttle( ) )-ahead }/|
+             && |{ position( iv_no = 4 is_throttle = throttle( iv_scope = lv_scope_c ) )-ahead }/|
+             && |{ position( iv_no = 3 is_throttle = throttle( iv_scope = lv_scope_c ) )-ahead }|
+          exp = |3/0/2|
+          msg = 'Scope A: one queue (3 ahead); scope C: per bank (0 for JPMC, 2 for the 3rd PNC file)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (user 2026-11-06): only ACH and wire files are throttled. A positive pay or a BlackLine
+  " file sent in the same cycle is neither queued itself nor counted in the ACH queue.
+  METHOD pospay_not_throttled.
+    TRY.
+        add_file( iv_no = 1 iv_received = receipt( 1 ) ).
+        add_file( iv_no = 2 iv_iface_id = gc_iface-pospay iv_received = receipt( 2 ) ).
+        add_file( iv_no = 3 iv_iface_id = gc_iface-blackline iv_received = receipt( 3 ) ).
+        add_file( iv_no = 4 iv_received = receipt( 4 ) ).
+        DATA(lt_ifaces) = ifaces( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ zcl_cd_fmon_rules=>is_throttled( is_iface    = lt_ifaces[ iface_id = gc_iface-ach ]
+                                                    is_throttle = throttle( ) ) }/|
+             && |{ zcl_cd_fmon_rules=>is_throttled( is_iface    = lt_ifaces[ iface_id = gc_iface-wire ]
+                                                    is_throttle = throttle( ) ) }/|
+             && |{ zcl_cd_fmon_rules=>is_throttled( is_iface    = lt_ifaces[ iface_id = gc_iface-pospay ]
+                                                    is_throttle = throttle( ) ) }/|
+             && |{ zcl_cd_fmon_rules=>is_throttled( is_iface    = lt_ifaces[ iface_id = gc_iface-blackline ]
+                                                    is_throttle = throttle( ) ) }|
+          exp = |{ abap_true }/{ abap_true }//|
+          msg = 'ACH and wire are throttled; positive pay and BlackLine are not' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ position( iv_no = 4 is_throttle = throttle( ) )-ahead }/|
+             && |{ position( iv_no = 2 is_throttle = throttle( ) )-queued }/|
+             && |{ position( iv_no = 3 is_throttle = throttle( ) )-queued }|
+          exp = |1//|
+          msg = 'Only the earlier ACH file is ahead; the others are not queued' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the allowance covers a queue of up to FMON_PRISM_QUEUE_MAX (30) files. The 31st file
+  " gets no more than the 30th (29 files ahead counted) and its queue is reported as long.
+  METHOD queue_over_max_is_long.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_queue_pos.
+    TRY.
+        add_cycle( gc_queue_max + 1 ).
+        ls_exp-queued    = abap_true.
+        ls_exp-ahead     = gc_queue_max.
+        ls_exp-counted   = gc_queue_max - 1.
+        ls_exp-delay_min = ( gc_queue_max - 1 ) * gc_throttle_min.
+        ls_exp-long      = abap_true.
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = gc_queue_max + 1 is_throttle = throttle( ) )
+                                            exp = ls_exp
+                                            msg = 'Queue of 31 files: allowance capped, PRISM_QUEUE_LONG' ).
+        cl_abap_unit_assert=>assert_false( act = position( iv_no = gc_queue_max is_throttle = throttle( ) )-long
+                                           msg = 'A queue of exactly 30 files is still covered' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an ACK SLA measured from generation (basis G) is shifted by the same queue wait:
+  " 5th file, ACK SLA 240 min, ACK 247 min after the first event is on time (allowed 248).
+  METHOD ack_from_generation_shifted.
+    TRY.
+        add_cycle( 5 ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                   iv_at = plus( iv_at = gc_t1650 iv_secs = 14820 ) ).
+        DATA(ls_verdict) = verdict( iv_no          = 5
+                                    iv_stage       = zif_cd_fmon_types=>gc_stage-ack
+                                    iv_basis       = zif_cd_fmon_types=>gc_sla_basis-generation
+                                    iv_max_minutes = 240
+                                    is_throttle    = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-elapsed_min }/|
+                                               && |{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-ok }/247/248|
+                                            msg = 'ACK after 247 min with 240 + 8 allowed: on time' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an ACK SLA measured from the previous stage (basis P) starts at the recorded delivery
+  " - the queue wait is already behind it, so no allowance is added.
+  METHOD ack_after_delivery_not_shifted.
+    TRY.
+        add_cycle( 5 ).
+        DATA(lv_delivered) = plus( iv_at = receipt( 5 ) iv_secs = 540 ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered iv_at = lv_delivered ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                   iv_at = plus( iv_at = lv_delivered iv_secs = 3660 ) ).
+        DATA(ls_verdict) = verdict( iv_no          = 5
+                                    iv_stage       = zif_cd_fmon_types=>gc_stage-ack
+                                    iv_max_minutes = 60
+                                    is_throttle    = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-queue_min }/|
+                                               && |{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-late }/0/60|
+                                            msg = 'ACK 61 min after delivery (basis P, SLA 60): late, no allowance' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: FMON_PRISM_THROTTLE_MIN = 0 is today's behaviour - no queue, base SLA only.
+  METHOD zero_throttle_keeps_today.
+    TRY.
+        add_cycle( 5 ).
+        add_event( iv_no = 5 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 5 ) iv_secs = 540 ) ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>build_queue( it_files    = mt_files
+                                                it_events   = mt_events
+                                                it_ifaces   = ifaces( )
+                                                is_throttle = throttle( iv_minutes = 0 ) )
+          msg = 'Throttle 0: no PRISM queue' ).
+        DATA(ls_verdict) = verdict( iv_no = 5 is_throttle = throttle( iv_minutes = 0 ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-late }/{ gc_base_min }|
+                                            msg = 'Throttle 0: delivery after 9 min with SLA 5 is late' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: without PRISM_RECEIVED evidence a file has no queue position (today's behaviour) and
+  " is not counted ahead of others.
+  METHOD no_receipt_keeps_today.
+    TRY.
+        add_file( iv_no = 1 ).
+        add_file( iv_no = 2 iv_received = receipt( 2 ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ position( iv_no = 1 is_throttle = throttle( ) )-queued }/|
+             && |{ position( iv_no = 2 is_throttle = throttle( ) )-ahead }|
+          exp = |/0|
+          msg = 'No receipt evidence: not queued and not counted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a file PRISM had already sent on (or failed) before this file arrived is not ahead.
+  METHOD delivered_file_is_not_ahead.
+    TRY.
+        add_cycle( 3 ).
+        add_event( iv_no = 1 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered iv_at = receipt( 2 ) ).
+        add_event( iv_no = 2 iv_stage = zif_cd_fmon_types=>gc_stage-prism_failed iv_at = receipt( 2 ) ).
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 3 is_throttle = throttle( ) )-ahead
+                                            exp = 0
+                                            msg = 'Files that left the queue before the receipt are not ahead' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

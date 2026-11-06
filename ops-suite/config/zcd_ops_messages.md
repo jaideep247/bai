@@ -211,6 +211,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 266 | &1: reported by PRISM, but SAP has no generation record of it |
 | 267 | &1: delivered by PRISM &2 min ago, not yet received in SAP |
 | 268 | Event &1: instant processing could not be queued (bgPF) |
+| 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
+| 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
 | 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
 | 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |

@@ -13,6 +13,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PRISM status API: SLA verdict ranks stages in the file's direction (PRISM_*).
 *& 2026-11-06 | Modern-syntax sweep: NP.
+*& 2026-11-06 | PRISM throttle (user 2026-11-06): throttled files, PRISM queue and position,
+*&              queue allowance in the SLA verdict of the delivery stage and later stages.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -86,14 +88,64 @@ CLASS zcl_cd_fmon_rules DEFINITION
     "! PARTIALLY / FAILED never meet a processing SLA. A later stage without the SLA
     "! stage's own event is INFERRED, not met. Basis P = latest event of the highest
     "! lower rank, G = first event.
+    "! PRISM throttle: iv_queue_min (QUEUE_POSITION-DELAY_MIN) is added to the SLA minutes of an
+    "! outbound stage at or after delivery (PRISM_DELIVERED = FORWARDED_TO_BANK, ACK) when the
+    "! basis lies before the delivery: basis G, or basis P measured from a stage below delivery.
+    "! A basis P stage measured from the recorded delivery (e.g. ACK after PRISM_DELIVERED) is
+    "! not shifted - the queue wait is already behind it.
     CLASS-METHODS sla_verdict
       IMPORTING
         is_file           TYPE zif_cd_fmon_types=>ty_file
         is_sla            TYPE zif_cd_fmon_types=>ty_sla
         it_events         TYPE zif_cd_fmon_types=>tt_event
         iv_now            TYPE timestampl
+        iv_queue_min      TYPE i DEFAULT 0
       RETURNING
         VALUE(rs_verdict) TYPE zif_cd_fmon_types=>ty_sla_verdict.
+
+    "! PRISM throttles the file (user 2026-11-06): throttle on (minutes > 0), outbound interface
+    "! and its payment method in the configured list (ACH, WIRE). Positive pay, stop pay, IRIS,
+    "! BlackLine, OFSAA and source files are not throttled.
+    CLASS-METHODS is_throttled
+      IMPORTING
+        is_iface            TYPE zif_cd_fmon_types=>ty_iface
+        is_throttle         TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rv_throttled) TYPE abap_bool.
+
+    "! Stage the PRISM queue delays: delivery rank in the outbound direction
+    "! (PRISM_DELIVERED, FORWARDED_TO_BANK)
+    CLASS-METHODS is_queue_stage
+      IMPORTING
+        iv_stage        TYPE zif_cd_fmon_types=>ty_stage
+      RETURNING
+        VALUE(rv_queue) TYPE abap_bool.
+
+    "! PRISM queue of the throttled files with PRISM receipt evidence: received = first
+    "! PRISM_RECEIVED event, left = first event at delivery rank or later (PRISM_DELIVERED,
+    "! FORWARDED_TO_BANK, PRISM_FAILED, ACK / NACK). Queue key per scope (A blank, C bank key).
+    "! Empty when the throttle is off.
+    CLASS-METHODS build_queue
+      IMPORTING
+        it_files        TYPE zif_cd_fmon_types=>tt_file
+        it_events       TYPE zif_cd_fmon_types=>tt_event
+        it_ifaces       TYPE zif_cd_fmon_types=>tt_iface
+        is_throttle     TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rt_queue) TYPE zif_cd_fmon_types=>tt_queue.
+
+    "! Files ahead of the file in its queue when PRISM received it: same business date and
+    "! queue key, received earlier or at the same time (PRISM's order within one instant is
+    "! unknown, so a tie counts as ahead - never a false late) and not yet sent on at that
+    "! moment. The allowance counts at most QUEUE_MAX - 1 files; a longer queue is LONG.
+    "! A file without a queue entry (not throttled, no receipt evidence) is not QUEUED.
+    CLASS-METHODS queue_position
+      IMPORTING
+        iv_file_id    TYPE zif_cd_fmon_types=>ty_file_id
+        it_queue      TYPE zif_cd_fmon_types=>tt_queue
+        is_throttle   TYPE zif_cd_fmon_types=>ty_throttle
+      RETURNING
+        VALUE(rs_pos) TYPE zif_cd_fmon_types=>ty_queue_pos.
 
     "! NO_<label> for missing, <label>_LATE for late, blank for ok
     CLASS-METHODS sla_code
@@ -192,6 +244,19 @@ CLASS zcl_cd_fmon_rules DEFINITION
         VALUE(rs_cfg) TYPE zif_cd_fmon_types=>ty_lotcfg.
 
   PRIVATE SECTION.
+
+    "! Queue of a throttled interface: blank (scope A), else its bank key ('*' when blank)
+    CLASS-METHODS queue_key
+      IMPORTING
+        is_iface      TYPE zif_cd_fmon_types=>ty_iface
+        iv_scope      TYPE zif_cd_fmon_types=>ty_queue_scope
+      RETURNING
+        VALUE(rv_key) TYPE zif_cd_fmon_types=>ty_bank_key.
+
+    "! Outbound rank at which a file has left the PRISM queue (= PRISM_DELIVERED)
+    CLASS-METHODS delivery_rank
+      RETURNING
+        VALUE(rv_rank) TYPE i.
 
     CLASS-METHODS dimension_matches
       IMPORTING
@@ -387,6 +452,15 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
                                     THEN is_file-first_event_at
                                     ELSE lv_prev_at ).
     rs_verdict-reached_at = lv_reached.
+    " PRISM throttle: the queue wait lies between the basis and the stage only when the basis is
+    " before the delivery (G, or P from a stage below delivery)
+    IF iv_queue_min > 0
+       AND is_file-direction = zif_cd_fmon_types=>gc_direction-outbound
+       AND lv_target >= delivery_rank( )
+       AND ( is_sla-basis = zif_cd_fmon_types=>gc_sla_basis-generation OR lv_prev_rank < delivery_rank( ) ).
+      rs_verdict-queue_min = iv_queue_min.
+    ENDIF.
+    rs_verdict-allowed_min = is_sla-max_minutes + rs_verdict-queue_min.
     IF lv_reached IS INITIAL AND lv_beyond = abap_true.
       " A later stage was observed without the SLA stage's own event: not evidenced
       rs_verdict-state = zif_cd_fmon_types=>gc_sla_state-inferred.
@@ -399,16 +473,118 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
     IF lv_reached IS INITIAL.
       rs_verdict-elapsed_min = zcl_cd_fmon_util=>minutes_between( iv_from = rs_verdict-basis_at
                                                                   iv_to   = iv_now ).
-      IF rs_verdict-elapsed_min > is_sla-max_minutes.
+      IF rs_verdict-elapsed_min > rs_verdict-allowed_min.
         rs_verdict-state = zif_cd_fmon_types=>gc_sla_state-missing.
       ENDIF.
     ELSE.
       rs_verdict-elapsed_min = zcl_cd_fmon_util=>minutes_between( iv_from = rs_verdict-basis_at
                                                                   iv_to   = lv_reached ).
-      IF rs_verdict-elapsed_min > is_sla-max_minutes.
+      IF rs_verdict-elapsed_min > rs_verdict-allowed_min.
         rs_verdict-state = zif_cd_fmon_types=>gc_sla_state-late.
       ENDIF.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_throttled.
+    IF is_throttle-minutes <= 0 OR is_iface-direction <> zif_cd_fmon_types=>gc_direction-outbound.
+      RETURN.
+    ENDIF.
+    DATA(lv_method) = to_upper( condense( CONV string( is_iface-pay_method ) ) ).
+    IF lv_method IS INITIAL OR lv_method = zif_cd_fmon_types=>gc_wildcard.
+      RETURN.
+    ENDIF.
+    LOOP AT zcl_cd_ops_util=>split_list( is_throttle-methods ) ASSIGNING FIELD-SYMBOL(<lv_method>).
+      IF to_upper( <lv_method> ) = lv_method.
+        rv_throttled = abap_true.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD is_queue_stage.
+    rv_queue = xsdbool( iv_stage IS NOT INITIAL
+                    AND zcl_cd_fmon_status=>rank( iv_stage     = iv_stage
+                                                  iv_direction = zif_cd_fmon_types=>gc_direction-outbound )
+                        = delivery_rank( ) ).
+  ENDMETHOD.
+
+
+  METHOD delivery_rank.
+    rv_rank = zcl_cd_fmon_status=>rank( iv_stage     = zif_cd_fmon_types=>gc_stage-prism_delivered
+                                        iv_direction = zif_cd_fmon_types=>gc_direction-outbound ).
+  ENDMETHOD.
+
+
+  METHOD queue_key.
+    IF iv_scope <> zif_cd_fmon_types=>gc_queue_scope-counterparty.
+      RETURN.
+    ENDIF.
+    rv_key = to_upper( condense( is_iface-bank_key ) ).
+    IF rv_key IS INITIAL.
+      rv_key = zif_cd_fmon_types=>gc_wildcard.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD build_queue.
+    DATA ls_entry TYPE zif_cd_fmon_types=>ty_queue_entry.
+
+    IF is_throttle-minutes <= 0.
+      RETURN.
+    ENDIF.
+    DATA(lv_left_rank) = delivery_rank( ).
+    LOOP AT it_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      READ TABLE it_ifaces ASSIGNING FIELD-SYMBOL(<ls_iface>) WITH TABLE KEY iface_id = <ls_file>-iface_id.
+      IF sy-subrc <> 0
+         OR is_throttled( is_iface = <ls_iface> is_throttle = is_throttle ) = abap_false
+         OR line_exists( rt_queue[ file_id = <ls_file>-file_id ] ).
+        CONTINUE.
+      ENDIF.
+      CLEAR ls_entry.
+      ls_entry-file_id       = <ls_file>-file_id.
+      ls_entry-business_date = <ls_file>-business_date.
+      ls_entry-queue_key     = queue_key( is_iface = <ls_iface> iv_scope = is_throttle-scope ).
+      LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file WHERE file_id = <ls_file>-file_id.
+        IF <ls_event>-stage = zif_cd_fmon_types=>gc_stage-prism_received.
+          IF ls_entry-received_at IS INITIAL OR <ls_event>-event_at < ls_entry-received_at.
+            ls_entry-received_at = <ls_event>-event_at.
+          ENDIF.
+        ELSEIF zcl_cd_fmon_status=>rank( iv_stage     = <ls_event>-stage
+                                         iv_direction = zif_cd_fmon_types=>gc_direction-outbound ) >= lv_left_rank
+           AND ( ls_entry-left_at IS INITIAL OR <ls_event>-event_at < ls_entry-left_at ).
+          ls_entry-left_at = <ls_event>-event_at.
+        ENDIF.
+      ENDLOOP.
+      " No PRISM receipt evidence: the file has no known queue position (today's behaviour)
+      IF ls_entry-received_at IS NOT INITIAL.
+        INSERT ls_entry INTO TABLE rt_queue.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD queue_position.
+    READ TABLE it_queue ASSIGNING FIELD-SYMBOL(<ls_self>) WITH TABLE KEY file_id = iv_file_id.
+    IF sy-subrc <> 0 OR is_throttle-minutes <= 0.
+      RETURN.
+    ENDIF.
+    rs_pos-queued = abap_true.
+    LOOP AT it_queue ASSIGNING FIELD-SYMBOL(<ls_other>) USING KEY by_queue
+         WHERE business_date = <ls_self>-business_date
+           AND queue_key     = <ls_self>-queue_key.
+      IF <ls_other>-file_id <> iv_file_id
+         AND <ls_other>-received_at <= <ls_self>-received_at
+         AND ( <ls_other>-left_at IS INITIAL OR <ls_other>-left_at > <ls_self>-received_at ).
+        rs_pos-ahead += 1.
+      ENDIF.
+    ENDLOOP.
+    " A queue of up to QUEUE_MAX files (incl. this one) is covered; a longer one is reported
+    DATA(lv_max) = nmax( val1 = is_throttle-queue_max val2 = 1 ).
+    rs_pos-counted   = nmin( val1 = rs_pos-ahead val2 = lv_max - 1 ).
+    rs_pos-delay_min = rs_pos-counted * is_throttle-minutes.
+    rs_pos-long      = xsdbool( rs_pos-ahead + 1 > lv_max ).
   ENDMETHOD.
 
 
