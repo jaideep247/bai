@@ -5,11 +5,16 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 
 | No. | Text |
 |---|---|
+| 000 | &1 &2 &3 &4 |
 | 001 | Run ID could not be generated |
 | 010 | Insert into table &1 failed |
 | 011 | Update of table &1 failed |
 | 012 | Read of table &1 failed |
 | 020 | Alert for route &1 could not be sent |
+| 021 | Alert rule &1 has no recipient |
+| 022 | Application log &1/&2 could not be written |
+| 023 | HTTP destination &1 could not be reached (&2) |
+| 024 | HTTP destination &1 answered &2 &3 |
 | 030 | Class &1 does not exist |
 | 031 | Class &1 cannot be instantiated as a plug-in |
 | 032 | Class &1 does not implement interface &2 |
@@ -17,14 +22,20 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 041 | No authorization for &1 activity &2 |
 | 050 | Configuration missing: &1 &2 |
 | 051 | Configuration value &1 for &2 is invalid |
-| 021 | Alert rule &1 has no recipient |
-| 022 | Application log &1/&2 could not be written |
-| 023 | HTTP destination &1 could not be reached (&2) |
-| 024 | HTTP destination &1 answered &2 &3 |
-| 000 | &1 &2 &3 &4 |
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |
 | 151 | XML content could not be parsed: &1 |
 | 152 | Unsupported XML message &1/&2; expected camt.053 or camt.054 |
+| 200 | Table &1 not found in the DDIC or not a flat DDIC structure |
+| 201 | Field &1 does not exist in table &2 |
+| 202 | &1 is not a valid DDIC name |
+| 203 | Field &1 of table &2 has type &3, expected &4 |
+| 204 | Source &1: no field configured for &2 |
+| 205 | Read of table &1 failed: &2 |
+| 206 | Factory calendar &1: date &2 cannot be converted |
+| 208 | Lot configuration &1 &2: field &3 missing |
+| 209 | Read of table &1 has no date or key restriction |
+| 211 | File ID could not be generated |
+| 220 | File monitoring &1: &2 file(s), &3 finding(s), RAG &4 |
 | 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
 | 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |

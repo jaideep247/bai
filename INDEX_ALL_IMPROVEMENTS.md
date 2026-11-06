@@ -70,6 +70,8 @@ Start here → **`COMPREHENSIVE_HARDCODING_REMOVAL_STATUS.md`**
 | File | Purpose |
 |------|---------|
 | **MASTER_PROMPT_FSCD_OPERATIONS_SUITE.md** | Master prompt for the FS-CD/FI-CA suite: Health Check, File Monitoring (SAP → PRISM → Bank), BAI2/CAMT EBS validation with BTC rule engine, Job Cycle monitor and Control-M fallback |
+| **ops-suite/README.md** | **The implementation**: core + alerting, EBS validation (BAI2 + CAMT), file monitoring, health check and morning report — start here |
+| **legacy/README.md** | Snapshot of the superseded BAI validators, framework packs and morning report v1 |
 
 ### 🚀 Deployment & Operations
 

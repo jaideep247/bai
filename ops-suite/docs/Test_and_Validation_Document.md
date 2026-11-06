@@ -1,0 +1,149 @@
+# Payment Engine Operations Suite — Test and Validation Document
+
+| | |
+|---|---|
+| **Status** | **Draft** — written before execution. Every result is an expected value or pending; nothing here is a passed test |
+| **Objects under test** | `ZCL_CD_OPS_*`, `ZCL_CD_EBS_*`, `ZCL_CD_FMON_*`, `ZCL_CD_HCK_*` and their interfaces; reports `ZCD_EBS_VALIDATE`, `ZCD_FMON_MONITOR`, `ZCD_MORNING_REPORT`; tables `ZCD_OPS_*`, `ZCD_BTC_*`, `ZCD_EBS_*`, `ZCD_FMON_*`, `ZCD_HCK_*`, `ZCD_JOB_*` |
+| **Comparison** | Legacy BAI validators v4 (`Z_BAI_MASS_VALIDATION`) against `ZCD_EBS_VALIDATE` (shadow run); legacy morning report v1 for coverage of checks |
+| **Landscape** | DV1 — ABAP Unit · QA1 — functional, parity, integration, performance |
+| **Change / transport / incident** | `<CHG number>` · `<transport numbers>` · `<incident number>` |
+
+Approvals, production execution and post-implementation verification are covered by the CAB document, not here.
+
+---
+
+## 1. Scope
+
+> **First principle:** a change is proven by comparing what it does with what it replaces, on the same input.
+> **Analogy:** a new route is judged by driving both routes on the same morning, not by reading the map.
+
+In scope: ABAP Unit tests; EBS validation of imported statements and of bank files before import; BTC mapping and zero-suspense blocking; file registry, event chain, SLA, returns/NOC completeness; health checks, job-cycle monitoring, morning report; configurable alerting; parity with the legacy validators; performance at production volume.
+
+Out of scope: transport import, activation, syntax and ATC (build hygiene); the BAdI FIEB_CHANGE_BS_DATA implementation (not delivered — signature from SE18 first); job retrigger (next phase); PRISM and bank internals beyond the file and ack tables.
+
+## 2. What is being compared
+
+| Aspect | Legacy | New |
+|---|---|---|
+| Codes validated | 10 hard-coded validator classes; any other code unchecked | Every code: mapped (category + configured rules) or blocked (R14) |
+| Flow (collection/disbursement) | Configured but not applied | XBLNR pattern or account default; map rows per flow |
+| Statement checks | None | S01–S12 (balances, sequence, account, date, duplicates, counts, coverage, completeness) |
+| File formats | FEBEP only | BAI2 and CAMT.053/054 files before import, plus FEBKO/FEBEP after import |
+| Results | Failed records only, ZBAI_* tables | Every run counted; owned exceptions with SLA in ZCD_OPS_FINDING |
+| Alerts | Hard-coded e-mail on failure rate | ZCD_OPS_ALERT_RULE: channels, throttling, quiet hours, escalation, log |
+| Morning report | Free-text SQL rules, WRITE list | Whitelisted, DDIC-validated checks A–E, baselines, ALV + HTML e-mail |
+
+## 3. Test approach
+
+Two real inputs instead of the population: one configured case (positive) and an adjacent unconfigured one (negative), so the difference is attributable to one customizing row. Close each negative by adding the row and re-running. Alter one configuration row at a time and restore it between cases.
+
+## 4. Test data and configuration
+
+| Item | Value |
+|---|---|
+| House bank accounts | One disbursement (JPMC), one collection (BOA) in `ZCD_EBS_ACCT` |
+| Statements | One BAI2 file per bank (`config/samples/bai2_sample.txt` as layout reference), one CAMT.053 and one CAMT.054 returns file |
+| Customizing | `config/*.csv`, `config/*_seed.md` loaded per `Implementation_Order.md` step 3 |
+| Kill switch | TVARVC `ZCD_EBS_VALIDATION_MODE` = M unless a case says otherwise |
+| Reset | Delete test runs from ZCD_OPS_RUN / _FINDING / _ALERT_LOG by RUN_ID after each case |
+
+Production data never leaves the system; extracts for evidence are anonymised.
+
+## 5. ABAP Unit tests (DV1)
+
+296 methods in 29 test includes, listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+
+| Run | Expected | Actual |
+|---|---|---|
+| Package `ZCD_OPS*` ABAP Unit | 296 / 296 green | pending |
+| Coverage per object | ≥ 90 % | pending |
+
+## 6. Functional tests (QA1)
+
+### 6.1 EBS validation
+
+| ID | Scenario | Configuration | Expected result | Actual / status |
+|---|---|---|---|---|
+| EBS-01 | BAI2 file before import, all codes mapped, balances consistent | Seed map | Run S, no B/E findings | pending |
+| EBS-02 | Same file with one detail record changed to an unmapped type code | Seed map | Line blocked, R14 UNMAPPED_BTC (B), S09 BTC_COVERAGE on the statement, no posting in enforce mode | pending |
+| EBS-03 | Acceptance 3: add a ZCD_BTC_MAP row for the code from EBS-02 + ZCD_BTC_RULE R01/R04 | +1 map row, +2 rule rows | Line validated by R01/R04, no R14 | pending |
+| EBS-04 | Acceptance 4: opening differs from prior closing by 0.02 | ZCD_BTC_RULE `*`/S01 TOLERANCE 0.01, SEVERITY B, ACTION BLOCK | S01 OPENING_NE_PRIOR_CLOSING (B); with deviation 0.01 no finding | pending |
+| EBS-05 | BAI2 file with wrong 49 account control total | — | Parser S06 BAI2_ACCT_CTRL_TOTAL (B) | pending |
+| EBS-06 | CAMT.053 with TxsSummry sum not matching entries | — | S06 CAMT_SUM_MISMATCH (B), S12 if counts differ | pending |
+| EBS-07 | CAMT.054 returns with RtrInf R01 and an unmapped R99 | ZCD_EBS_RSN_MAP R01 only | R05 REASON_UNMAPPED on the R99 line only | pending |
+| EBS-08 | CAMT line with Prtry code 168 issuer BAI | `EBS_CAMT_BAI_FALLBACK` = X | Maps to BAI2 168 rules; with blank parameter → R14 | pending |
+| EBS-09 | Imported statement (FEB source), 168 on disbursement account, payment not RETURNED in DPAYH | Seed group BAI168D | R07 PAYMENT_STATUS | pending |
+| EBS-10 | 581 checks paid with one register amount off by 1.00 | Seed group BAI581D | R08 CHECK_AMOUNT_MISMATCH on that check, R12 CODE_TOTAL_MISMATCH on the statement | pending |
+| EBS-11 | Same statement file delivered twice | — | S07 STMT_ALREADY_IMPORTED (B) | pending |
+| EBS-12 | Kill switch E / M / O on a file with one unmapped code (pre-posting entry) | TVARVC row | E: block; M: findings, no block; O: no validation; row deleted: behaves as M | pending |
+| EBS-13 | Circuit breaker: file with > 50 % unmapped lines in 3 packages | `EBS_CB_MIN_LINES` 1, package size 1 | Run status A, CIRCUIT_BREAKER finding, alert per ON_ABORT rule | pending |
+| EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN/FINDING/ALERT_LOG unchanged | pending |
+
+### 6.2 File monitoring
+Fourteen cases FMON-01 … FMON-14 (outbound ACH end to end, re-run idempotency, no PRISM handoff, wire ack beyond 30 min, NACK, ack count mismatch, BAI statement missing/late, holiday calendar, **returns file partially processed then completed — acceptance 8**, wrong field name in customizing, NOC aging day 6 vs day 7, test mode, **new source and LOB by customizing — acceptance 2**, duplicate file). Configuration and expected results: `FMON_FILE_MONITORING.md` §B5.
+
+### 6.3 Health checks and morning report
+Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by company code — acceptance 1**, customizing-only threshold change, **new job-cycle step — acceptance 5**, each job-cycle state, config drift and baseline, plug-in failure, stale module (health of health), e-mail, background run with export, dashboard). Configuration and expected results: `HCK_MORNING_REPORT.md` §14.
+
+### 6.4 Alerting
+
+| ID | Scenario | Configuration | Expected result | Actual / status |
+|---|---|---|---|---|
+| ALR-01 | EBS run with a B finding at 23:00 | Rule EBS_BLOCK with quiet 22:00–06:00 | Delivered (B overrides quiet hours), log S | pending |
+| ALR-02 | EBS run with E findings at 23:00 | Rule EBS_ERROR with quiet hours | Not delivered, log Q | pending |
+| ALR-03 | Two runs 10 minutes apart | THROTTLE_MIN 30 | Second run logged T | pending |
+| ALR-04 | Third consecutive alerting run | ESCALATE_AFTER 3 | Escalation list added | pending |
+| ALR-05 | E-mail channel with invalid address | — | Log F; morning report alert-delivery check amber/red; run itself unaffected | pending |
+| ALR-06 | HTTP channel to SM59 test endpoint | Destination by Basis | JSON body received, log S; non-2xx → log F | pending |
+| ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
+
+## 7. Behaviour comparison — legacy against new (shadow run, QA1)
+
+Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–D11 of that document.
+
+| BAI code / flow | Legacy failures | New findings | Differences explained by | Status |
+|---|---|---|---|---|
+| 166 D / 166 C / 168 D / 195 D / 255 D / 275 D / 466 D / 468 D / 575 D / 581 D | pending | pending | pending | pending |
+
+## 8. Integration (QA1)
+PRISM file hand-off and ack tables populated by the real interfaces; registry events derived from them in the right order (FMON-01, FMON-05). BCS, SLG1 and SM59 channels (ALR-05 … 07).
+
+## 9. Transaction and crash boundaries (QA1)
+Cancel `ZCD_EBS_VALIDATE` (SM50) between packages: findings of committed packages remain, run stays status R, the morning report's health-of-health check flags it. Re-run produces a new run; no duplicate events in ZCD_FMON_EVENT (unique index).
+
+## 10. Concurrency (QA1)
+Two `ZCD_FMON_MONITOR` jobs started together: no run lock is delivered — the schedule must keep one job at a time (documented limitation). EBS runs are read-only on FEBKO/FEBEP and safe in parallel.
+
+## 11. Performance (QA1, acceptance 6)
+
+| Metric | Target | Tool | Result |
+|---|---|---|---|
+| Aggregate health check runtime | < 2 min | ST12 / SAT | pending |
+| Detail check runtime | < 10 min | ST12 | pending |
+| DB load during peak (FPY1 window) | < 5 % | ST04 / DBACOCKPIT | pending |
+| EBS validation of 50k statement lines | to be baselined | Run runtime in ZCD_OPS_RUN | pending |
+
+## 12. Operations and recovery
+Runbook `Operations_Runbook.md` walked through by IT support on QA1 findings (one per triage row).
+
+## 13. Defensive checks with no executable test
+- `ZCL_CD_EBS_ENGINE=>READ_MODE` fallback to monitor when TVARVC cannot be read — requires a database error.
+- `ZCL_CD_OPS_ALERT_ROUTER=>NEW_ID` UUID failure branch — `cl_system_uuid` does not fail in practice.
+- `ZCL_CD_OPS_UTIL=>ELAPSED_MS` invalid-time-stamp branch — inputs come from `GET TIME STAMP`.
+
+## 14. Evidence index
+| # | Evidence | File |
+|---|---|---|
+| E1 | ABAP Unit result (package) | pending |
+| E2 | Coverage per object | `Coverage_Run_Register.csv` (to update) |
+| E3 | Portable checks (offline) | `portable_checks.json` — 12/12 passed, abaplint 0 issues (not SAP evidence) |
+| E4 | Shadow-run comparison extract | pending |
+| E5 | Performance traces | pending |
+
+## 15. Pre-submission checklist
+- [ ] Every `VERIFY-DDIC` marker answered (`Implementation_Order.md` step 0)
+- [ ] Real object names, change, transport and incident numbers filled in
+- [ ] ABAP Unit and coverage executed and recorded
+- [ ] QA1 cases executed; status column filled; screenshots in the evidence index
+- [ ] Shadow run differences all explained by D1–D11
+- [ ] Status changed from Draft to Final only after execution
