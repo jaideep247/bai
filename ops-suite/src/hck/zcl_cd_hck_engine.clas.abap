@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Run header committed at start; results committed before alerts and report mail.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -181,6 +182,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     IF rs_report-run-started_at IS INITIAL.
       rs_report-run-started_at = mo_clock->now( ).
     ENDIF.
+    IF is_selection-test_mode = abap_false.
+      " Run header durable first: a run that dumps stays visible as status R
+      mo_store->commit( ).
+    ENDIF.
 
     DATA(ls_context) = VALUE zif_cd_hck_types=>ty_context( report_date = rs_report-report_date
                                                            now_date    = lv_today
@@ -225,10 +230,11 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     IF is_selection-test_mode = abap_true.
       RETURN.
     ENDIF.
-    notify( EXPORTING is_selection = is_selection
-            CHANGING  cs_report    = rs_report ).
+    " Results are durable before anyone is told (a channel may COMMIT WORK itself)
     mo_store->finish_run( rs_report-run ).
     mo_store->commit( ).
+    notify( EXPORTING is_selection = is_selection
+            CHANGING  cs_report    = rs_report ).
   ENDMETHOD.
 
 
@@ -566,6 +572,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     IF lt_failures IS NOT INITIAL.
       mo_store->save_findings( EXPORTING it_findings = lt_failures
                                CHANGING  cs_run      = cs_report-run ).
+      mo_store->finish_run( cs_report-run ).
+      mo_store->commit( ).
     ENDIF.
   ENDMETHOD.
 

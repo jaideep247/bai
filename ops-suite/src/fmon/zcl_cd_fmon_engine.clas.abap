@@ -7,6 +7,8 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | Run header committed at start; results committed before alerts;
+*&              failed registry save rolled back; READ TABLE replaces OPTIONAL + sy-subrc.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -217,6 +219,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       iv_module    = zif_cd_ops_types=>gc_module-file_monitor
       iv_variant   = COND #( WHEN iv_iface_id IS INITIAL THEN 'ALL' ELSE iv_iface_id )
       iv_test_mode = iv_test_mode ).
+    IF mv_test_mode = abap_false.
+      " Run header durable first: a later rollback of a failed registry save keeps the run
+      mo_store->commit( ).
+    ENDIF.
 
     load_config( ).
     sync_sources( ).
@@ -794,7 +800,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_save TYPE zif_cd_fmon_types=>tt_file.
 
     LOOP AT mt_changed INTO DATA(lv_file_id).
-      DATA(ls_file) = VALUE #( mt_files[ file_id = lv_file_id ] OPTIONAL ).
+      " READ TABLE sets sy-subrc; a table expression with OPTIONAL does not
+      READ TABLE mt_files INTO DATA(ls_file) WITH TABLE KEY file_id = lv_file_id.
       IF sy-subrc = 0.
         ls_file-changed_at = mv_now.
         ls_file-changed_by = sy-uname.
@@ -808,6 +815,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           mo_dao->insert_event( ls_event ).
         ENDLOOP.
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        " Never commit a half-written registry (files without their events or vice versa)
+        mo_store->rollback( ).
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = 'ZCD_FMON_FILE'
                         iv_message = |Registry not saved: { lx_ops->get_text( ) }| ).
@@ -896,8 +905,11 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     mo_store->save_findings( EXPORTING it_findings = mt_findings
                              CHANGING  cs_run      = cs_run ).
+    mo_store->finish_run( cs_run ).
 
     IF mv_test_mode = abap_false.
+      " Results are durable before anyone is told (a channel may COMMIT WORK itself)
+      mo_store->commit( ).
       " Alert thresholds, recipients, channels and throttling live in ZCD_OPS_ALERT_RULE
       TRY.
           zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = cs_run
@@ -912,12 +924,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
           APPEND LINES OF lt_alert_error TO mt_findings.
+          mo_store->finish_run( cs_run ).
+          mo_store->commit( ).
       ENDTRY.
-    ENDIF.
-
-    mo_store->finish_run( cs_run ).
-    IF mv_test_mode = abap_false.
-      mo_store->commit( ).
     ENDIF.
   ENDMETHOD.
 

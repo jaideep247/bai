@@ -68,6 +68,10 @@ CLASS ltd_alert DEFINITION FINAL FOR TESTING.
     DATA mv_send_calls TYPE i.
     DATA mv_dispatch_calls TYPE i.
     DATA mv_last_route TYPE zif_cd_ops_types=>ty_param_name.
+    "! When bound, dispatch( ) records how far the run was persisted at that moment
+    DATA mo_store TYPE REF TO ltd_store.
+    DATA mv_commits_seen TYPE i.
+    DATA mv_finishes_seen TYPE i.
 ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
@@ -78,6 +82,10 @@ CLASS ltd_alert IMPLEMENTATION.
 
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatch_calls = mv_dispatch_calls + 1.
+    IF mo_store IS BOUND.
+      mv_commits_seen  = mo_store->mv_commit_calls.
+      mv_finishes_seen = mo_store->mv_finish_calls.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.
 
@@ -203,6 +211,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS mail_goes_to_morning_route FOR TESTING.
     METHODS stale_module_fails_self FOR TESTING.
     METHODS category_rag_and_score FOR TESTING.
+    METHODS alerts_sent_after_commit FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -478,6 +487,23 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-categories exp = lt_exp msg = 'RAG per category A-E' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 40 msg = '(2*100 + 3*0) / 5 = 40' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-overall_rag exp = gc_red msg = 'Red H check forces RED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: results are durable before anyone is told - run header committed at start,
+  " findings and run end committed before alerts and the report mail (review 2026-11-06)
+  METHOD alerts_sent_after_commit.
+    TRY.
+        configure_scenario( VALUE #( red_metric = abap_true ) ).
+        mo_alert->mo_store = mo_store.
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_finishes_seen exp = 1
+                                            msg = 'The run must be finished before alerts are dispatched' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_commits_seen exp = 2
+                                            msg = 'Run start and results must be committed before alerts' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

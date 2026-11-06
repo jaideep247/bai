@@ -20,6 +20,7 @@
 | **Test first** — test include written before the class; lint failed ("class/method not found") until the class existed | `ZCL_CD_EBS_BTC_RESOLVER`, `ZCL_CD_OPS_ALERT_POLICY`, `ZCL_CD_OPS_ALERT_ROUTER`, the 26 `ZCL_CD_EBS_R_*` rules (via `ZCL_CD_EBS_RULE_BASE` test include), `ZCL_CD_EBS_ENGINE`, `ZCL_CD_EBS_SRC_FEB` | Red state observed by the lead developer in the lint output |
 | **Test first — reported, not independently verifiable** | `ZCL_CD_EBS_PARSER_BAI2`, `ZCL_CD_EBS_PARSER_CAMT`, all FMON and HCK classes with test includes | Stated in the hand-over reports of the developers who built them; no file history records the order |
 | **Test after** (characterisation tests, written once the class existed) | `ZCL_CD_OPS_UTIL`, `ZCL_CD_OPS_STORE`, `ZCL_CD_EBS_CFG_DAO`, `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO` (written before the TDD approach was adopted for this build); `ZCL_CD_EBS_FINDING`, `ZCL_CD_OPS_FACTORY` (plug-in creation), `ZCL_CD_OPS_CHN_HTTP` (`TO_JSON`), `ZCL_CD_EBS_SRC_FILE` (gap closure, 2026-11-06) | Modification log of each test include |
+| **Test first, audit fixes 2026-11-06** — test written before the fix, fix written after; not executed (no ABAP Unit offline) | `ZCL_CD_EBS_ENGINE` (`failed_rule_blocks_posting`, `broken_config_blocks_posting`), `ZCL_CD_FMON_ENGINE` (`alerts_sent_after_commit`, `persist_error_rolls_back`), `ZCL_CD_HCK_ENGINE` (`alerts_sent_after_commit`) | `Review_Response_2026-11-06.md` part B |
 | **No unit test by design** | See §5 | Covered by the listed alternative |
 
 **What "red" and "green" mean here.** In this build red was a test that did not compile against missing code and green was a clean abaplint run. That proves each test targets the new code; it does **not** prove the tests pass. True red/green — an assertion failing, then passing — happens at the first ABAP Unit run in DV1. Until then no test result exists.
@@ -33,7 +34,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 316 ABAP Unit methods in 33 test includes
+## 4. Coverage today — 321 ABAP Unit methods in 33 test includes
 
 | Module | Object (test include) | Methods | Level |
 |---|---|---|---|
@@ -50,17 +51,17 @@
 | EBS | ZCL_CD_EBS_PARSER_BAI2 | 17 | Domain |
 | EBS | ZCL_CD_EBS_PARSER_CAMT | 14 | Domain |
 | EBS | ZCL_CD_EBS_SRC_FEB | 6 | Application |
-| EBS | ZCL_CD_EBS_ENGINE | 12 | Application |
+| EBS | ZCL_CD_EBS_ENGINE | 14 | Application |
 | EBS | ZCL_CD_EBS_CFG_DAO / _FEB_DAO / _SAP_DAO | 3 + 3 + 3 | OSQL |
 | FMON | ZCL_CD_FMON_STATUS | 11 | Domain |
 | FMON | ZCL_CD_FMON_RULES | 35 | Domain |
 | FMON | ZCL_CD_FMON_QUERY | 5 | Domain |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | 6 | Domain / Application |
 | FMON | ZCL_CD_FMON_LOT_READER | 3 | Application |
-| FMON | ZCL_CD_FMON_ENGINE | 11 | Application |
+| FMON | ZCL_CD_FMON_ENGINE | 13 | Application |
 | FMON | ZCL_CD_FMON_DAO | 6 | OSQL |
 | HCK | ZCL_CD_HCK_STATS / _THRESHOLD / _SCORE / _CYCLE_EVAL / _AGG_QUERY / _REPORT_HTML / _PARAM | 12 + 11 + 6 + 11 + 12 + 7 + 3 | Domain |
-| HCK | ZCL_CD_HCK_ENGINE | 9 | Application |
+| HCK | ZCL_CD_HCK_ENGINE | 10 | Application |
 | HCK | ZCL_CD_HCK_DAO | 4 | OSQL |
 
 Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master prompt). **Measured coverage: none yet** — record it in `Coverage_Run_Register.csv` after the first DV1 run.
@@ -89,6 +90,7 @@ Coverage targets: ≥ 90 % statements per object (house), ≥ 85 % (master promp
 | ZCL_CD_EBS_RULE_BASE | Abstract | Through the 26 rule classes |
 | ZCL_CD_EBS_ENGINE=>READ_MODE | Kill-switch read of TVARVC (deliberately no factory) | `must_block` tests per mode; QA1 switch cases |
 | ZCL_CD_EBS_SAP_DAO (retrievals, checks, FI lines, G/L balance) | Fields `VERIFY-DDIC` until SE11 confirms them | Rule tests with SAP-DAO double; OSQL tests for confirmed paths; QA1 |
+| ZCL_CD_FMON_DAO=>INSERT_EVENT — EVENT_NO collision retry | A collision needs two sessions inserting at once; one OSQL session always sees its own MAX | OSQL tests for idempotency and numbering; QA1: two parallel `ZCD_FMON_MONITOR` runs for the same date, then every source event recorded exactly once |
 | ZCL_CD_FMON_CALENDAR, ZCL_CD_FMON_DDIC, ZCL_CD_FMON_DAO=>READ_LEGACY | Factory calendar FMs, RTTI, unknown legacy structures | Pure rules + engine with doubles; QA1 FMON 01, 05, 07, 08, 10, 11 |
 | 9 FMON check classes, 11 HCK check classes | Thin loops over pure rule classes | Rule tests + engine tests with every check configured |
 | ZCL_CD_HCK_DAO technical reads (TBTCO, BALHDR, SNAP, VBHDR, ENQUEUE_READ) | Standard tables / FMs with unverified fields | Pure evaluators + QA1 |

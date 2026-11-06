@@ -5,6 +5,7 @@
 *& findings (ZCD_OPS_FINDING) and runtime parameters (ZCD_OPS_PARAM).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | rollback( ) added (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared result store and parameters</p>
 "! One auditable store for all modules: run headers (ZCD_OPS_RUN),
@@ -40,6 +41,10 @@ INTERFACE zif_cd_ops_store
       zcx_cd_ops_error.
 
   METHODS commit.
+
+  "! Undo this LUW's uncommitted changes (e.g. a registry saved only in part).
+  "! Callers commit the run header first, so the run itself survives.
+  METHODS rollback DEFAULT IGNORE.
 
   "! Read a parameter from ZCD_OPS_PARAM; returns iv_default when not maintained
   METHODS get_param

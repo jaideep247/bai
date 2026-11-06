@@ -1,7 +1,7 @@
 Object,ABAP Unit methods supplied,Required statement coverage percent,Measured statement coverage percent,Status
 ZCL_CD_EBS_BTC_RESOLVER,13,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,3,90,,Not run in target SAP
-ZCL_CD_EBS_ENGINE,12,90,,Not run in target SAP
+ZCL_CD_EBS_ENGINE,14,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,3,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,5,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_BAI2,17,90,,Not run in target SAP
@@ -12,7 +12,7 @@ ZCL_CD_EBS_SRC_FEB,6,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,4,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,6,90,,Not run in target SAP
 ZCL_CD_FMON_DAO,6,90,,Not run in target SAP
-ZCL_CD_FMON_ENGINE,11,90,,Not run in target SAP
+ZCL_CD_FMON_ENGINE,13,90,,Not run in target SAP
 ZCL_CD_FMON_LOT_READER,3,90,,Not run in target SAP
 ZCL_CD_FMON_QUERY,5,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,35,90,,Not run in target SAP
@@ -20,7 +20,7 @@ ZCL_CD_FMON_STATUS,11,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,12,90,,Not run in target SAP
 ZCL_CD_HCK_CYCLE_EVAL,11,90,,Not run in target SAP
 ZCL_CD_HCK_DAO,4,90,,Not run in target SAP
-ZCL_CD_HCK_ENGINE,9,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,10,90,,Not run in target SAP
 ZCL_CD_HCK_PARAM,3,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,7,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,6,90,,Not run in target SAP

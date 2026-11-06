@@ -26,3 +26,24 @@
 - ATC-equivalent rule set: 184 findings fixed down to 1 documented exemption — `ATC_Validation.md`.
 - Portable checks: see `portable_checks.json`.
 - Not verified: abapGit pull into DV1, activation, ABAP Unit run — first DV1 import is the test.
+
+---
+
+# Part B — runtime audit of ops-suite (2026-11-06)
+
+Second review, this time of `ops-suite` itself (engines and FMON DAO). Each finding was checked against the code before it was answered.
+
+| Prio | Finding | Verdict | Fix | Test (written before the fix) |
+|---|---|---|---|---|
+| P0 | EBS: a rule that raises gives `PLUGIN_ERROR` with action NOTIFY; `must_block` blocks only on B / BLOCK → **posting allowed in enforce mode** | **Confirmed** | `PLUGIN_ERROR` carries action BLOCK. Also: `validate_for_posting` no longer raises — validation that cannot run at all (e.g. configuration unreadable) is a `VALIDATION_ERROR` finding with action BLOCK. Monitor mode unchanged | `failed_rule_blocks_posting`, `broken_config_blocks_posting` |
+| P1 | FMON: `EVENT_NO = MAX + 1` — parallel writers take the same number | **Confirmed** | On sy-subrc 4 the business key is re-checked: recorded → idempotent; otherwise a new number, at most 3 attempts, then `ZCX_CD_OPS_ERROR` (message 010) | Collision not reproducible in one session — §5 of `TDD_Approach_and_Coverage.md`, QA1 parallel-run case |
+| P1 | FMON: every failed INSERT treated as "duplicate" | **Confirmed** (sy-subrc 4 can be the primary key or the unique index SRC) | Same fix: the business key decides. Other database errors raise `CX_SY_OPEN_SQL_DB` and roll back the LUW (unchanged, correct) | As above |
+| P1 | FMON: partial persistence | **Confirmed**, wider than reported: (a) the e-mail channel's own `COMMIT WORK` committed findings and registry before the run was finished; (b) files saved but events failed → the final commit wrote a half registry | Run header committed at start; registry failure → `rollback( )` (new store method) + `PERSIST_ERROR` finding; results and run end committed before alerts | `persist_error_rolls_back`, `alerts_sent_after_commit` |
+| P2 | Alerts dispatched before the durable commit | **Confirmed in FMON and HCK** (EBS already committed first) | Commit, then dispatch; a dispatch failure is saved and committed separately. HCK now also commits its run header at start, so a run that dumps stays visible (status R) to the health-of-the-health-check | `alerts_sent_after_commit` (FMON, HCK) |
+| P2 | `VALUE #( … OPTIONAL )` followed by `IF sy-subrc = 0` | **Confirmed — introduced in the ATC round** (table expressions do not set sy-subrc) | `READ TABLE … WITH TABLE KEY` + sy-subrc. Only occurrence in the suite | Lint rule; no behavioural test (the stale sy-subrc was 0 in practice) |
+
+**Not done in this change (proposed, awaiting decision):**
+- A durable alert outbox with retry. Today: alerts go out after the commit; failed deliveries are findings and appear in morning report category E.
+- A run lock per module + variant, and carrying forward open exceptions across re-runs (owner and due date kept, auto-resolved when the item passes).
+
+**Verification:** abaplint 0 issues / 309 files; ATC-equivalent set: 2 documented exemptions; portable checks 13/13; 321 unit test methods. None executed in SAP yet.

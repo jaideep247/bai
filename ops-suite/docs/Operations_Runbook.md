@@ -30,7 +30,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 |---|---|---|
 | EBS validation blocks postings wrongly | TVARVC `ZCD_EBS_VALIDATION_MODE` = `M` (or `O`) | Monitor only / off — no transport needed |
 | Alert storm | Deactivate the rule in ZCD_OPS_ALERT_RULE or raise THROTTLE_MIN | Immediate, logged |
-| A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running |
+| A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. **EBS in enforce mode:** a failing rule blocks posting of its packages (fail closed). Deactivating the rule removes that check — get the rule owner's approval, or switch to `M` for the affected period |
 | Remove the suite | Unschedule the three jobs, set the switch to `O` | Back to previous behaviour in < 15 min |
 
 ## 5. Re-running

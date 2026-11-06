@@ -7,7 +7,7 @@
   "passed": 13,
   "total": 13,
   "abap_files": 153,
-  "declared_unit_methods": 316,
+  "declared_unit_methods": 321,
   "measured_coverage": null,
   "checks": [
     {
@@ -85,7 +85,7 @@
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 1 finding(s), 1 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 2 finding(s), 2 documented exemption(s).",
       "failures": []
     }
   ]

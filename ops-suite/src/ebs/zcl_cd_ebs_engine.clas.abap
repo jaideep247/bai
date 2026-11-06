@@ -11,6 +11,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Findings kept in memory capped at EBS_RESULT_MAX; RAG accumulated per package (review 3.5).
+*& 2026-11-06 | Fail closed: PLUGIN_ERROR and VALIDATION_ERROR have action BLOCK; validate_for_posting never raises.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -66,14 +67,14 @@ CLASS zcl_cd_ebs_engine DEFINITION
         zcx_cd_ops_error.
 
     "! Pre-posting decision for the BAdI. iv_mode comes from read_mode( ).
+    "! Never raises: validation that cannot run is a VALIDATION_ERROR finding
+    "! with action BLOCK (fail closed in enforce mode).
     METHODS validate_for_posting
       IMPORTING
         iv_mode            TYPE ty_mode
         is_package         TYPE zif_cd_ebs_types=>ty_package
       RETURNING
-        VALUE(rs_decision) TYPE ty_decision
-      RAISING
-        zcx_cd_ops_error.
+        VALUE(rs_decision) TYPE ty_decision.
 
     "! Block posting? Only in enforce mode, on a B finding or an action BLOCK.
     CLASS-METHODS must_block
@@ -269,7 +270,20 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     IF iv_mode = gc_mode-off.
       RETURN.
     ENDIF.
-    rs_decision-findings = validate_package( CHANGING cs_package = rs_decision-package ).
+    TRY.
+        rs_decision-findings = validate_package( CHANGING cs_package = rs_decision-package ).
+      CATCH cx_root INTO DATA(lx_error).
+        " Deliberately broad, fail closed: a validation that could not run is never
+        " permission to post (enforce mode blocks on action BLOCK)
+        INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
+                        object_key  = 'VALIDATE_FOR_POSTING'
+                        rule_id     = 'ENG'
+                        check_code  = 'VALIDATION_ERROR'
+                        severity    = zif_cd_ops_types=>gc_severity-error
+                        action      = zif_cd_ops_types=>gc_action-block
+                        message     = |Validation could not run: { lx_error->get_text( ) }| )
+          INTO TABLE rs_decision-findings.
+    ENDTRY.
     rs_decision-block = must_block( iv_mode = iv_mode it_findings = rs_decision-findings ).
   ENDMETHOD.
 
@@ -330,14 +344,16 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                                         it_statements = it_statements
                                         it_lines      = it_lines ).
       CATCH cx_root INTO DATA(lx_error).
-        " Deliberately broad: one broken rule must never stop the validation of the others
+        " Deliberately broad: one broken rule must never stop the validation of the others.
+        " Fail closed: action BLOCK, so validate_for_posting( ) blocks in enforce mode -
+        " a check that could not run is never permission to post.
         INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
                         object_key  = is_rule-class_name
                         group2      = is_rule-rule_group
                         rule_id     = is_rule-rule_id
                         check_code  = 'PLUGIN_ERROR'
                         severity    = zif_cd_ops_types=>gc_severity-error
-                        action      = zif_cd_ops_types=>gc_action-notify
+                        action      = zif_cd_ops_types=>gc_action-block
                         message     = |Rule { is_rule-rule_id } ({ is_rule-class_name }) failed: { lx_error->get_text( ) }| )
           INTO TABLE rt_findings.
     ENDTRY.

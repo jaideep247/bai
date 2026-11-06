@@ -6,6 +6,7 @@
 *& created as owned exceptions (status OPEN) with an SLA due date taken from
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-06 | rollback( ) added.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -163,6 +164,11 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
   METHOD zif_cd_ops_store~commit.
     COMMIT WORK.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_store~rollback.
+    ROLLBACK WORK.
   ENDMETHOD.
 
 

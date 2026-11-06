@@ -19,6 +19,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_saved TYPE zif_cd_fmon_types=>tt_file.
     DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mv_save_calls TYPE i.
+    DATA mv_fail_save TYPE abap_bool.
 ENDCLASS.
 
 
@@ -58,6 +59,9 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~save_files.
     mv_save_calls += 1.
+    IF mv_fail_save = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_FILE'.
+    ENDIF.
     mt_saved = it_files.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~insert_event.
@@ -147,6 +151,7 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
     DATA mv_finish_calls TYPE i.
     DATA mv_commit_calls TYPE i.
+    DATA mv_rollback_calls TYPE i.
 ENDCLASS.
 
 
@@ -166,6 +171,9 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~commit.
     mv_commit_calls += 1.
   ENDMETHOD.
+  METHOD zif_cd_ops_store~rollback.
+    mv_rollback_calls += 1.
+  ENDMETHOD.
   METHOD zif_cd_ops_store~get_param.
     rv_value = iv_default.
   ENDMETHOD.
@@ -178,6 +186,10 @@ CLASS ltd_alert DEFINITION FINAL FOR TESTING.
     DATA mv_dispatch_calls TYPE i.
     DATA mv_send_calls TYPE i.
     DATA mt_dispatched TYPE zif_cd_ops_types=>tt_finding.
+    "! When bound, dispatch( ) records how far the run was persisted at that moment
+    DATA mo_store TYPE REF TO ltd_store.
+    DATA mv_commits_seen TYPE i.
+    DATA mv_finishes_seen TYPE i.
 ENDCLASS.
 
 
@@ -188,6 +200,10 @@ CLASS ltd_alert IMPLEMENTATION.
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatch_calls += 1.
     mt_dispatched = it_findings.
+    IF mo_store IS BOUND.
+      mv_commits_seen  = mo_store->mv_commit_calls.
+      mv_finishes_seen = mo_store->mv_finish_calls.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.
 
@@ -325,6 +341,8 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS test_mode_writes_nothing FOR TESTING.
     METHODS unmapped_status_is_reported FOR TESTING.
     METHODS noc_age_is_in_banking_days FOR TESTING.
+    METHODS alerts_sent_after_commit FOR TESTING.
+    METHODS persist_error_rolls_back FOR TESTING.
 
 ENDCLASS.
 
@@ -708,6 +726,41 @@ CLASS ltc_engine IMPLEMENTATION.
                                            msg = 'NOC_AGING finding expected' ).
         cl_abap_unit_assert=>assert_equals( act = ls_aging-severity exp = zif_cd_ops_types=>gc_severity-error
                                             msg = 'NOC aging is a compliance error (E)' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: results are durable before anyone is told - run header committed at start,
+  " findings and run end committed before the alert router is called (review 2026-11-06)
+  METHOD alerts_sent_after_commit.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        mo_alert->mo_store = mo_store.
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_finishes_seen exp = 1
+                                            msg = 'The run must be finished before alerts are dispatched' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_commits_seen exp = 2
+                                            msg = 'Run start and results must be committed before alerts' ).
+      CATCH cx_root INTO DATA(lx).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a registry that cannot be saved completely is rolled back, never committed
+  " half-written; the failure is a PERSIST_ERROR finding
+  METHOD persist_error_rolls_back.
+    TRY.
+        configure_scenario( VALUE #( returns_open = 1 ) ).
+        mo_dao->mv_fail_save = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollback_calls exp = 1
+                                            msg = 'A failed registry save must be rolled back' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-persist_error ] ) )
+          msg = 'The failure must be recorded as PERSIST_ERROR' ).
       CATCH cx_root INTO DATA(lx).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx->get_text( ) }| ).
     ENDTRY.

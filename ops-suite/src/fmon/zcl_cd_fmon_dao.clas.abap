@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
+*& 2026-11-06 | insert_event: duplicate key re-checked against the business key; EVENT_NO retried (parallel writers).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -23,6 +24,16 @@ CLASS zcl_cd_fmon_dao DEFINITION
 
   PRIVATE SECTION.
     TYPES ty_db_files TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
+
+    "! Attempts at a free EVENT_NO when a parallel writer took the same number
+    CONSTANTS gc_insert_attempts TYPE i VALUE 3.
+
+    "! The business event (SRC_ID + SRC_KEY + STAGE) is already recorded
+    METHODS event_exists
+      IMPORTING
+        is_event         TYPE zif_cd_fmon_types=>ty_event
+      RETURNING
+        VALUE(rv_exists) TYPE abap_bool.
 
     "! De-duplicated, comma-separated field list (strict mode) for the dynamic SELECT
     METHODS field_list
@@ -200,7 +211,43 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~insert_event.
     DATA ls_db TYPE zcd_fmon_event.
 
-    " Unique secondary index SRC_ID / SRC_KEY / STAGE: at most one row
+    IF event_exists( is_event ) = abap_true.
+      RETURN.
+    ENDIF.
+
+    ls_db = CORRESPONDING #( is_event ).
+    ls_db-created_by = sy-uname.
+    ls_db-created_at = zcl_cd_ops_factory=>get_clock( )->now( ).
+
+    " EVENT_NO is MAX + 1 per file, so a parallel writer can take the same number and
+    " the primary key rejects the insert (sy-subrc 4). sy-subrc 4 alone does not say
+    " which key was hit: re-check the business key - recorded means idempotent,
+    " otherwise retry with a new number. Any other database error raises
+    " CX_SY_OPEN_SQL_DB and the whole LUW is rolled back.
+    DO gc_insert_attempts TIMES.
+      " Bounded retry (gc_insert_attempts), repeated only after a key collision
+      SELECT MAX( event_no )                             "#EC CI_SEL_NESTED
+        FROM zcd_fmon_event
+        WHERE file_id = @is_event-file_id
+        INTO @DATA(lv_last_no).
+      ls_db-event_no = lv_last_no + 1.
+      INSERT zcd_fmon_event FROM @ls_db.
+      IF sy-subrc = 0.
+        rv_inserted = abap_true.
+        RETURN.
+      ENDIF.
+      IF event_exists( is_event ) = abap_true.
+        RETURN.
+      ENDIF.
+    ENDDO.
+
+    RAISE EXCEPTION TYPE zcx_cd_ops_error
+      MESSAGE e010(zcd_ops) WITH 'ZCD_FMON_EVENT'.
+  ENDMETHOD.
+
+
+  METHOD event_exists.
+    " Unique secondary index SRC: SRC_ID / SRC_KEY / STAGE - at most one row
     SELECT file_id
       FROM zcd_fmon_event
       WHERE src_id  = @is_event-src_id
@@ -209,23 +256,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       ORDER BY file_id
       INTO TABLE @DATA(lt_existing)
       UP TO 1 ROWS.
-    DATA(lv_existing) = VALUE #( lt_existing[ 1 ]-file_id OPTIONAL ).
-    IF lv_existing IS NOT INITIAL.
-      RETURN.
-    ENDIF.
-
-    SELECT MAX( event_no )
-      FROM zcd_fmon_event
-      WHERE file_id = @is_event-file_id
-      INTO @DATA(lv_last_no).
-
-    ls_db = CORRESPONDING #( is_event ).
-    ls_db-event_no   = lv_last_no + 1.
-    ls_db-created_by = sy-uname.
-    ls_db-created_at = zcl_cd_ops_factory=>get_clock( )->now( ).
-    INSERT zcd_fmon_event FROM @ls_db.
-    " sy-subrc 4 = the same event was written concurrently: still idempotent
-    rv_inserted = xsdbool( sy-subrc = 0 ).
+    rv_exists = xsdbool( lt_existing IS NOT INITIAL ).
   ENDMETHOD.
 
 

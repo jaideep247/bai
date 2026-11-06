@@ -27,10 +27,14 @@ CLASS ltd_cfg DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_cfg_dao.
     DATA mt_map   TYPE zif_cd_ebs_types=>tt_btc_map.
     DATA mt_rules TYPE zif_cd_ebs_types=>tt_rule_cfg.
+    DATA mv_broken TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_cfg IMPLEMENTATION.
   METHOD zif_cd_ebs_cfg_dao~get_btc_map.
+    IF mv_broken = abap_true.
+      RAISE EXCEPTION NEW cx_sy_itab_line_not_found( ).
+    ENDIF.
     rt_map = mt_map.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_rules.
@@ -203,6 +207,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS enforce_mode_blocks_posting  FOR TESTING.
     METHODS monitor_mode_never_blocks    FOR TESTING.
     METHODS off_mode_validates_nothing   FOR TESTING.
+    METHODS failed_rule_blocks_posting   FOR TESTING.
+    METHODS broken_config_blocks_posting FOR TESTING.
 ENDCLASS.
 
 
@@ -513,6 +519,51 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = ls_decision-block msg = 'Off mode must not block' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fail closed: in ENFORCE mode a rule that raises blocks posting - a broken
+  " check is never permission to post an unvalidated line (review 2026-11-06)
+  METHOD failed_rule_blocks_posting.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-assign_fail_rule = abap_true.
+    configure_scenario( ls_flags ).
+    DATA(ls_package) = mo_source->mt_packages[ 1 ].
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = ls_package ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'A failing rule must block posting in enforce mode' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_decision-findings[ check_code = 'PLUGIN_ERROR' ]-action OPTIONAL )
+          exp = zif_cd_ops_types=>gc_action-block
+          msg = 'PLUGIN_ERROR must carry action BLOCK' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Fail closed: validation that cannot run at all (configuration unreadable)
+  " blocks posting in enforce mode instead of raising to the BAdI
+  METHOD broken_config_blocks_posting.
+    DATA(ls_flags) = default_flags( ).
+    configure_scenario( ls_flags ).
+    mo_cfg->mv_broken = abap_true.
+    DATA(ls_package) = mo_source->mt_packages[ 1 ].
+    TRY.
+        DATA(ls_decision) = NEW zcl_cd_ebs_engine( )->validate_for_posting(
+          iv_mode    = zcl_cd_ebs_engine=>gc_mode-enforce
+          is_package = ls_package ).
+        cl_abap_unit_assert=>assert_true( act = ls_decision-block
+                                          msg = 'Validation that could not run must block in enforce mode' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_decision-findings[ check_code = 'VALIDATION_ERROR' ] ) )
+          msg = 'The reason must be recorded as VALIDATION_ERROR' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Must not raise: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 

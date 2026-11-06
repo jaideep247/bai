@@ -101,7 +101,8 @@ if lint_bin:
 check('abaplint_clean', lint_failures, lint_detail)
 
 # ATC-equivalent rule set (abaplint.atc.json); documented exemptions only, see docs/ATC_Validation.md
-ATC_KNOWN = {('src/hck/zcl_cd_hck_dao.clas.abap', 'select_add_order_by')}
+ATC_KNOWN = {('src/hck/zcl_cd_hck_dao.clas.abap', 'select_add_order_by'),
+             ('src/fmon/zcl_cd_fmon_dao.clas.abap', 'db_operation_in_loop')}
 atc_detail, atc_failures = 'ATC-equivalent set not run (no binary given)', ['not run']
 if lint_bin:
     out = subprocess.run([lint_bin, 'abaplint.atc.json'], cwd=ROOT, capture_output=True, text=True).stdout
