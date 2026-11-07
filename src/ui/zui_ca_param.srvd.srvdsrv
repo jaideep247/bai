@@ -1,0 +1,10 @@
+@EndUserText.label: 'Parameter framework maintenance'
+define service ZUI_CA_PARAM {
+  expose ZC_CA_ParamArea        as Area;
+  expose ZC_CA_ParamDef         as Definition;
+  expose ZC_CA_ParamVal         as Value;
+  expose ZI_CA_ParamKindVH      as KindValueHelp;
+  expose ZI_CA_ParamValueTypeVH as ValueTypeValueHelp;
+  expose ZI_CA_ParamSignVH      as SignValueHelp;
+  expose ZI_CA_ParamOptionVH    as OptionValueHelp;
+}

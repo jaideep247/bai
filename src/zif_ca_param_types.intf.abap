@@ -258,6 +258,20 @@ INTERFACE zif_ca_param_types
       request        TYPE ty_field VALUE 'TRANSPORTREQUEST',
     END OF gc_field.
 
+  "! Persistent tables and RAP entity aliases of the maintenance app (transport recording)
+  CONSTANTS:
+    BEGIN OF gc_table,
+      area       TYPE ty_field VALUE 'ZCA_PARAM_AREA',
+      definition TYPE ty_field VALUE 'ZCA_PARAM_DEF',
+      value      TYPE ty_field VALUE 'ZCA_PARAM_VAL',
+    END OF gc_table.
+  CONSTANTS:
+    BEGIN OF gc_entity,
+      area       TYPE ty_field VALUE 'Area',
+      definition TYPE ty_field VALUE 'Definition',
+      value      TYPE ty_field VALUE 'Value',
+    END OF gc_entity.
+
   "! Authorization object ZCA_PARAM (maintenance only; runtime reads are not checked)
   CONSTANTS:
     BEGIN OF gc_auth,
