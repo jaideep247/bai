@@ -13,6 +13,8 @@ define table zcd_fmon_sla {
   basis        : abap.char(1);
   // Severity when the stage is overdue (late arrival uses check parameter LATE_SEVERITY)
   severity     : abap.char(1);
+  // Production-maintainable (RAP_Config_Apps.md 2): a row is switched off, never deleted
+  active       : abap_boolean;
   // RAP configuration apps (design 5): set by the framework, ignored by engines
   last_changed_by       : abp_lastchange_user;
   last_changed_at       : abp_lastchange_tstmpl;

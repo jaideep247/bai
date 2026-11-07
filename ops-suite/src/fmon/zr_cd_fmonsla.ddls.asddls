@@ -16,6 +16,8 @@ define view entity ZR_CD_FmonSla
       basis as Basis,
       @EndUserText.label: 'Severity'
       severity as Severity,
+      @EndUserText.label: 'Active'
+      active as Active,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

@@ -28,6 +28,10 @@ annotate entity ZC_CD_FmonSla with
   @UI.identification: [{ position: 50 }]
   Severity;
 
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Active;
+
   @UI.hidden: true
   LastChangedBy;
 

@@ -29,6 +29,7 @@
 *&            | 200,000).
 *& 2026-11-07 | TY_MONITOR_CFG (ZCD_OPS_MONCFG); TY_PE_AREA_STATUS-STALE_AFTER_MIN / AGE_MIN.
 *& 2026-11-07 | Check code PARAM_INVALID (configuration check ZCL_CD_HCK_C_PARAM, parameters in ZCA_PARAM).
+*& 2026-11-07 | CONFIG_CHANGED_IN_PROD / message 374: drift of a production-maintainable table is information.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -205,6 +206,8 @@ INTERFACE zif_cd_hck_types
       suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
       "! A parameter of the suite that ZCA_PARAM refuses (ZCL_CD_HCK_C_PARAM)
       param_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
+      "! A production-maintainable table changed since its baseline (expected: maintained in production)
+      config_prod_change TYPE zif_cd_ops_types=>ty_check_code VALUE 'CONFIG_CHANGED_IN_PROD',
     END OF gc_code.
 
   CONSTANTS:
@@ -757,6 +760,7 @@ INTERFACE zif_cd_hck_types
       baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
       step_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '371',
       suppression_invalid         TYPE zif_cd_ops_types=>ty_msgno VALUE '372',
+      config_prod_change          TYPE zif_cd_ops_types=>ty_msgno VALUE '374',
     END OF gc_msg.
 
 ENDINTERFACE.

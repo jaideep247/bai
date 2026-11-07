@@ -207,6 +207,14 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
 | 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
 | 271 | Interface &1: file name pattern &2 is not valid PCRE - not used |
+| 272 | &1 &2: file not received by &3 (&4 due) |
+| 273 | &1 &2: received, not imported by &3 (&4 due) |
+| 274 | &1 &2: imported, not fully posted by &3 (&4 due) |
+| 275 | &1 of &2 payment engine account(s) imported. |
+| 276 | &1 of &2 in-scope line(s) not posted; |
+| 277 | Bank &1, statement date &2: |
+| 278 | &1 &2: stage &4 not reached by &3 |
+| 279 | Posting state not read or statement read capped - not proven; |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
@@ -277,6 +285,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
 | 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
 | 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
+| 374 | Table &1 is maintained in production: changed since baseline of &2 (rows &3) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

@@ -9,6 +9,9 @@
 *& 2026-11-06 | Baseline of another hash version reported as outdated, not as drift (audit A57).
 *& 2026-11-06 | Stops between tables when the time budget is used up (audit A18).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
+*& 2026-11-07 | A production-maintainable table (ZCL_CD_OPS_CFG_POLICY=>IS_PROD_MAINTAINABLE) that changed
+*&            | is CONFIG_CHANGED_IN_PROD (information, not counted as drift): rows created or edited
+*&            | directly in production are expected there, but stay visible every morning.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - configuration drift vs golden baseline</p>
 "! A changed table = CONFIG_DRIFT (E), a table without baseline =
@@ -81,6 +84,21 @@ CLASS zcl_cd_hck_c_config_drift IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       IF ls_baseline-hash = ls_current-hash.
+        CONTINUE.
+      ENDIF.
+      " Production-maintainable (deadlines, SLAs, calendar, alert rules): expected production
+      " maintenance - information until the baseline is taken again, never an exception
+      IF zcl_cd_ops_cfg_policy=>is_prod_maintainable( ls_table-tabname ) = abap_true.
+        INSERT VALUE #( object_key = ls_table-tabname
+                        check_code = zif_cd_hck_types=>gc_code-config_prod_change
+                        severity   = zif_cd_ops_types=>gc_severity-info
+                        action     = zif_cd_ops_types=>gc_action-notify
+                        reference  = ls_baseline-taken_by
+                        message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-config_prod_change
+                                                            iv_v1    = ls_table-tabname
+                                                            iv_v2    = |{ ls_baseline-taken_at TIMESTAMP = ISO }|
+                                                            iv_v3    = |{ ls_baseline-row_count } -> { ls_current-row_count }| )
+                        ) INTO TABLE rs_result-findings.
         CONTINUE.
       ENDIF.
       lv_drifted = lv_drifted + 1.

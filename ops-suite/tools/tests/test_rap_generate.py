@@ -66,3 +66,31 @@ class PcreCheckTemplateTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+class ProductionMaintainableTest(unittest.TestCase):
+    """The generator spec flag prod_create and ZIF_CD_OPS_CFG_TYPES=>GC_PROD_MAINTAINABLE name the
+    same tables (RAP_Config_Apps.md 2: per-table change policy, user requirement 2026-11-07)."""
+
+    def abap_list(self):
+        path = os.path.join(rap_generate.ROOT, 'src', 'core', 'zif_cd_ops_cfg_types.intf.abap')
+        text = open(path, encoding='utf-8').read()
+        value = re.search(r'gc_prod_maintainable\s+TYPE\s+\w+\s+VALUE\s+`([^`]*)`', text).group(1)
+        return {v.strip().lower() for v in value.split(',') if v.strip()}
+
+    def spec_list(self):
+        return {entry[0] for app in rap_generate.SPEC.values() for entry in app['tables']
+                if len(entry) > 7 and entry[7].get('prod_create')}
+
+    def test_spec_and_abap_agree(self):
+        self.assertEqual(self.spec_list(), self.abap_list())
+
+    def test_deadline_sla_calendar_alert_rules(self):
+        self.assertTrue({'zcd_fmon_deadl', 'zcd_fmon_sla', 'zcd_fmon_cal', 'zcd_ops_alrule'} <= self.spec_list())
+
+    def test_flagged_create_asks_gate_with_table(self):
+        path = os.path.join(rap_generate.ROOT, 'src', 'fmon', 'zbp_r_cd_fmoncfgall.clas.locals_imp.abap')
+        text = open(path, encoding='utf-8').read()
+        self.assertIn('iv_table = lif_c=>gc_tab-fmondeadline', text)
+        self.assertIn('result-%assoc-_FmonSource = lv_create.', text)

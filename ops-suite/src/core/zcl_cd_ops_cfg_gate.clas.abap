@@ -8,6 +8,7 @@
 *& Handlers stay thin: they only translate answers into RAP results.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-07 | create_allowed( iv_table ): production-maintainable tables (per-table policy).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: gate for behaviour pools</p>
 CLASS zcl_cd_ops_cfg_gate DEFINITION
@@ -21,7 +22,10 @@ CLASS zcl_cd_ops_cfg_gate DEFINITION
       RETURNING
         VALUE(rs_decision) TYPE zif_cd_ops_cfg_types=>ty_decision.
 
+    "! New entries of the table (blank = the client policy only, as before)
     METHODS create_allowed
+      IMPORTING
+        iv_table          TYPE clike OPTIONAL
       RETURNING
         VALUE(rv_allowed) TYPE abap_bool.
 
@@ -86,7 +90,8 @@ CLASS zcl_cd_ops_cfg_gate IMPLEMENTATION.
 
 
   METHOD create_allowed.
-    rv_allowed = decision( )-create_allowed.
+    rv_allowed = zcl_cd_ops_cfg_policy=>create_allowed( is_decision = decision( )
+                                                        iv_table    = iv_table ).
   ENDMETHOD.
 
 

@@ -6,6 +6,7 @@
 *& clock are test doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Production-maintainable table changed: information CONFIG_CHANGED_IN_PROD, no drift.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -66,6 +67,7 @@ CLASS ltc_config_drift DEFINITION FINAL FOR TESTING
     CONSTANTS:
       gc_check     TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_DRIFT',
       gc_table     TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_MAP',
+      gc_prod_tab  TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_FMON_DEADL',
       gc_hash_old  TYPE zif_cd_hck_types=>ty_hash VALUE 'AAAA',
       gc_hash_new  TYPE zif_cd_hck_types=>ty_hash VALUE 'BBBB',
       gc_version_1 TYPE zif_cd_hck_types=>ty_hash_version VALUE '01',
@@ -80,6 +82,8 @@ CLASS ltc_config_drift DEFINITION FINAL FOR TESTING
         old_version TYPE abap_bool,
         hash_error  TYPE abap_bool,
         exhausted   TYPE abap_bool,
+        "! The table is production-maintainable (ZCD_FMON_DEADL)
+        prod_table  TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_dao TYPE REF TO ltd_dao.
@@ -93,6 +97,7 @@ CLASS ltc_config_drift DEFINITION FINAL FOR TESTING
     METHODS other_version_is_outdated FOR TESTING.
     METHODS hash_error_is_error FOR TESTING.
     METHODS exhausted_budget_stops FOR TESTING.
+    METHODS prod_change_is_information FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -130,7 +135,11 @@ CLASS ltc_config_drift IMPLEMENTATION.
 
   METHOD configure_scenario.
     DATA ls_hash TYPE zif_cd_hck_types=>ty_baseline.
-    ls_hash-tabname      = gc_table.
+    IF is_flags-prod_table = abap_true.
+      CLEAR mo_dao->mt_tables.
+      INSERT VALUE #( tabname = gc_prod_tab ) INTO TABLE mo_dao->mt_tables.
+    ENDIF.
+    ls_hash-tabname      = COND #( WHEN is_flags-prod_table = abap_true THEN gc_prod_tab ELSE gc_table ).
     ls_hash-hash         = gc_hash_old.
     ls_hash-row_count    = 1.
     ls_hash-taken_by     = gc_owner.
@@ -260,6 +269,23 @@ CLASS ltc_config_drift IMPLEMENTATION.
                                iv_code     = zif_cd_hck_types=>gc_code-budget_exhausted
                                iv_severity = zif_cd_ops_types=>gc_severity-warning ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_hash_calls exp = 0 msg = 'No hash computed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-07): a production-maintainable table changed since its baseline is expected
+  " production maintenance - information CONFIG_CHANGED_IN_PROD, not drift, metric unchanged
+  METHOD prod_change_is_information.
+    TRY.
+        configure_scenario( VALUE #( baseline = abap_true changed = abap_true prod_table = abap_true ) ).
+        DATA(ls_result) = act( ).
+        assert_single_finding( is_result   = ls_result
+                               iv_code     = zif_cd_hck_types=>gc_code-config_prod_change
+                               iv_severity = zif_cd_ops_types=>gc_severity-info ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-metrics[ 1 ]-value exp = 0
+                                            msg = 'Not counted as a drifted table' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

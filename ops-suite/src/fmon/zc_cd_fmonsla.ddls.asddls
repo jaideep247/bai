@@ -12,6 +12,7 @@ define view entity ZC_CD_FmonSla
       MaxMinutes,
       Basis,
       Severity,
+      Active,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

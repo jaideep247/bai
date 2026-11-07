@@ -12,6 +12,7 @@ define table zcd_d_fmcal {
   windowfrom : abap.tims;
   windowto : abap.tims;
   fcalid : abap.char(2);
+  active : abap_boolean;
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

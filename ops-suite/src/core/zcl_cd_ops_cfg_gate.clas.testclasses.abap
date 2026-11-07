@@ -7,6 +7,7 @@
 *& ZCL_CD_OPS_CFG_INJECTOR; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
+*& 2026-11-07 | Production creates rows of a production-maintainable table (per-table policy).
 *&---------------------------------------------------------------------*
 CLASS ltd_client DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -96,6 +97,7 @@ CLASS ltc_gate DEFINITION FINAL FOR TESTING
     METHODS dv1_records_on_request       FOR TESTING.
     METHODS auth_asks_area_and_actvt   FOR TESTING.
     METHODS client_is_read_once          FOR TESTING.
+    METHODS production_creates_deadline  FOR TESTING.
 ENDCLASS.
 
 
@@ -234,6 +236,22 @@ CLASS ltc_gate IMPLEMENTATION.
         lo_gate->check_request( gc_request ).
         cl_abap_unit_assert=>assert_equals( act = mo_client->mv_read_calls exp = 1
                                             msg = 'Client settings must be read once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-07): production offers 'create' for a production-maintainable table only
+  METHOD production_creates_deadline.
+    TRY.
+        configure_scenario( VALUE #( production = abap_true ) ).
+        DATA(lo_gate) = cut( ).
+        cl_abap_unit_assert=>assert_true( act = lo_gate->create_allowed( iv_table = 'ZCD_FMON_DEADL' )
+                                          msg = 'Create a deadline row in production' ).
+        cl_abap_unit_assert=>assert_false( act = lo_gate->create_allowed( iv_table = 'ZCD_FMON_SRC' )
+                                           msg = 'No new source row in production' ).
+        cl_abap_unit_assert=>assert_false( act = lo_gate->delete_allowed( ) msg = 'Still no delete in production' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

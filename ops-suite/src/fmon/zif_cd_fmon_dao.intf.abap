@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A04/A49: version-checked save returns conflicts; reference lookup bounded by date.
 *& 2026-11-06 | Performance fix 8: count_legacy - grouped COUNT(*) on the same validated read path (DEFAULT IGNORE).
+*& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL, DEFAULT IGNORE); SLA and calendar rows: active only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -18,13 +19,20 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rt_ifaces) TYPE zif_cd_fmon_types=>tt_iface.
 
+  "! Active stage SLAs (ZCD_FMON_SLA; production deactivates a row, never deletes it)
   METHODS get_slas
     RETURNING
       VALUE(rt_slas) TYPE zif_cd_fmon_types=>tt_sla.
 
+  "! Active expected-file rows (ZCD_FMON_CAL)
   METHODS get_calendars
     RETURNING
       VALUE(rt_cals) TYPE zif_cd_fmon_types=>tt_cal.
+
+  "! Active stage deadlines (ZCD_FMON_DEADL: stage reached by a clock time of a business day)
+  METHODS get_deadlines DEFAULT IGNORE
+    RETURNING
+      VALUE(rt_deadlines) TYPE zif_cd_fmon_types=>tt_deadline.
 
   "! Active legacy source adapters (ZCD_FMON_SRC)
   METHODS get_sources

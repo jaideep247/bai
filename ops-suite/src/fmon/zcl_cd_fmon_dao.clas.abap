@@ -15,6 +15,7 @@
 *&            | validated path as read_legacy (shared select_legacy).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
+*& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL); SLA and calendar rows read active only (production deactivates).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -106,6 +107,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~get_slas.
     SELECT iface_id, stage, max_minutes, basis, severity
       FROM zcd_fmon_sla
+      WHERE active = @abap_true
       INTO CORRESPONDING FIELDS OF TABLE @rt_slas.
   ENDMETHOD.
 
@@ -113,7 +115,16 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~get_calendars.
     SELECT iface_id, day_type, expected_count, window_from, window_to, fcal_id
       FROM zcd_fmon_cal
+      WHERE active = @abap_true
       INTO CORRESPONDING FIELDS OF TABLE @rt_cals.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_fmon_dao~get_deadlines.
+    SELECT iface_id, stage, day_type, due_time, severity, active, description
+      FROM zcd_fmon_deadl
+      WHERE active = @abap_true
+      INTO CORRESPONDING FIELDS OF TABLE @rt_deadlines.
   ENDMETHOD.
 
 

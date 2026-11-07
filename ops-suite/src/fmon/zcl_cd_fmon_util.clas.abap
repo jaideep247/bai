@@ -8,6 +8,7 @@
 *& 2026-11-06 | Audit A52: IS_NUMBER for numeric source fields.
 *& 2026-11-06 | Long references keep their identity through a SHA-1 digest; IS_DIGEST_REF, CANONICAL_NAME (audit A100).
 *& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
+*& 2026-11-07 | IFACE_DAY_KEY: one object key of interface-day findings (expected files, stage deadlines).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -104,6 +105,15 @@ CLASS zcl_cd_fmon_util DEFINITION
         iv_text       TYPE clike
       RETURNING
         VALUE(rv_ok)  TYPE abap_bool.
+
+    "! Object key of a finding about an interface and business date (no registered file):
+    "! FILE_MISSING / UNEXPECTED_FILE / STAGE_DEADLINE_MISSED, reconciled by the engine
+    CLASS-METHODS iface_day_key
+      IMPORTING
+        iv_iface_id   TYPE zif_cd_fmon_types=>ty_iface_id
+        iv_date       TYPE d
+      RETURNING
+        VALUE(rv_key) TYPE zif_cd_ops_types=>ty_object_key.
 
     CLASS-METHODS file_hex
       IMPORTING
@@ -237,6 +247,11 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
 
   METHOD canonical_name.
     rv_name = to_upper( condense( CONV string( iv_value ) ) ).
+  ENDMETHOD.
+
+
+  METHOD iface_day_key.
+    rv_key = |{ iv_iface_id }/{ iv_date }|.
   ENDMETHOD.
 
 

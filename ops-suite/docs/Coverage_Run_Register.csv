@@ -51,10 +51,12 @@ ZCL_CD_EBS_SAP_DAO,own test include,,15,90,,Not run in target SAP; partial exemp
 ZCL_CD_EBS_SRC_FEB,own test include,,11,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,own test include,,4,90,,Not run in target SAP
 ZCL_CD_EBS_STMT_EVIDENCE,own test include,,10,90,,Not run in target SAP
+ZCL_CD_FMON_ADAPTER_FEB,own test include,,8,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,own test include,,10,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_PRISM,own test include,,4,90,,Not run in target SAP
 ZCL_CD_FMON_CALENDAR,own test include,,9,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_ACK_MATCH,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
+ZCL_CD_FMON_CHK_DEADLINE,own test include,,12,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_DUPLICATE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_LATE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_LOT,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
@@ -64,7 +66,7 @@ ZCL_CD_FMON_CHK_PRISM_FILE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_REJECT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_FMON_CHK_SIZE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_CHK_SLA,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
-ZCL_CD_FMON_DAO,own test include,,24,90,,"Not run in target SAP; partial exemption: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11"
+ZCL_CD_FMON_DAO,own test include,,25,90,,"Not run in target SAP; partial exemption: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11"
 ZCL_CD_FMON_DDIC,own test include,,6,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,own test include,,34,90,,Not run in target SAP
 ZCL_CD_FMON_FACTORY,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (construction only: every engine test resolves through it)
@@ -81,7 +83,7 @@ ZCL_CD_FMON_PRISM_PROC,own test include,,11,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_QUEUE,own test include,,1,90,,Not run in target SAP; partial exemption: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case PRISM-12
 ZCL_CD_FMON_QUERY,own test include,,8,90,,Not run in target SAP
 ZCL_CD_FMON_RULES,own test include,,59,90,,Not run in target SAP
-ZCL_CD_FMON_STATUS,own test include,,24,90,,Not run in target SAP
+ZCL_CD_FMON_STATUS,own test include,,27,90,,Not run in target SAP
 ZCL_CD_FMON_UTIL,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,own test include,,14,90,,Not run in target SAP
 ZCL_CD_HCK_BUDGET,own test include,,3,90,,Not run in target SAP
@@ -90,7 +92,7 @@ ZCL_CD_HCK_CYCLE_EVAL,own test include,,14,90,,Not run in target SAP
 ZCL_CD_HCK_C_ALERT_HEALTH,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_APPLOG,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
-ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,6,90,,Not run in target SAP
+ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_C_GENERIC_AGG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_CYCLE,own test include,,6,90,,Not run in target SAP
@@ -125,9 +127,9 @@ ZCL_CD_OPS_CFG_AUTH,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CHECKS,own test include,,22,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CLIENT,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_CFG_GATE (construction only: the gate test resolves through it)
-ZCL_CD_OPS_CFG_GATE,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_CFG_GATE,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_CFG_GATE (test seam: injected and reset by the gate test)
-ZCL_CD_OPS_CFG_POLICY,own test include,,11,90,,Not run in target SAP
+ZCL_CD_OPS_CFG_POLICY,own test include,,15,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_TRANSPORT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_APPLOG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_EMAIL,own test include,,7,90,,Not run in target SAP
