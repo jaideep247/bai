@@ -20,8 +20,9 @@ define table zcd_hck_seqout {
   // severity when the evidence does not match (blank = E)
   severity         : abap.char(1);
   description      : abap.char(60);
-  // the row applies only when the cheque register state (DFKKCR-STATE) is in this list (blank = any)
-  reg_state        : abap.char(10);
+  // the row applies only when the cheque register state (DFKKCR-STATE) is in this list (blank = any);
+  // tokens BLANK or one state character, validated on save; 40 = the rule parameter length (no truncation)
+  reg_state        : abap.char(40);
   // reaching this outcome is itself a finding with this code (open list, e.g. CHEQUE_CLARIFICATION)
   finding          : abap.char(30);
   active           : abap_boolean;

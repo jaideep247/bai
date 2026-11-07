@@ -41,6 +41,8 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         ('dest', ('channel'|'class', field), dest_field, ...): the alert channel plug-in checks
 #         the destination(s) it would deliver to (ZCL_CD_OPS_CFG_CHECKS=>INVALID_DESTINATION;
 #         e-mail = shared SO23 distribution lists) - message 419
+#         ('valid', field, 'zcl_x=>method', msg): a value check of the payment engine area (the
+#         method takes iv_value, returns abap_true when valid) - message gc_msg-<msg>
 # ---------------------------------------------------------------------------
 SEV = 'B,E,W,I'
 # Stages a clock-time deadline may name (ZCD_FMON_DEADL): inbound receipt / import / processing,
@@ -139,10 +141,13 @@ SPEC = {
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
             ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
             ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role', 'Bank transaction code roles', [],
-             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'compare_amount', ',X,R')]),
+             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'compare_amount', ',X,R,C')]),
             ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
              [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
-              ('enum', 'severity', ',' + SEV)]),
+              ('enum', 'severity', ',' + SEV),
+              # Code review 2026-11-07: register state tokens and the outcome finding catalogue
+              ('valid', 'reg_state', 'zcl_cd_hck_ev_support=>reg_state_valid', 'reg_state_invalid'),
+              ('valid', 'finding', 'zcl_cd_hck_ev_support=>outcome_finding_valid', 'finding_invalid')]),
         ]),
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
@@ -186,7 +191,7 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           # In-flight check configuration (user rules 2026-11-07)
           'pay_methods': 'Payment methods (comma list)', 'age_basis': 'Ageing basis',
           'required': 'Required (X must hold, C condition, N must not hold)', 'evidence_class': 'Evidence class',
-          'compare_amount': 'Compare amount (X returns lot, R payment)', 'reg_state': 'Register state (cheque, blank = any)',
+          'compare_amount': 'Compare amount (X returns lot, R payment, C correction)', 'reg_state': 'Register state (cheque, blank = any)',
           'finding': 'Finding code of the outcome (blank = none)',
           'seq_pattern': 'Role sequence (PCRE, whole value)',
           'expected_dfkkrp': 'Returns lot items expected (blank = not checked)',
@@ -563,6 +568,12 @@ def abap_check(t, chk, root):
                 "    IF lv_dest_invalid IS NOT INITIAL.",
                 f"      INSERT VALUE #( number = {msg}dest_invalid v1 = ls_row-{src} v2 = lv_dest_invalid",
                 f"                      element = {el(dests[0])} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'valid':
+        e, method, name = fmap[chk[1]], chk[2], chk[3]
+        return [f"    IF {method}( ls_row-{e} ) = abap_false.",
+                f"      INSERT VALUE #( number = {msg}{name} v1 = ls_row-{e}",
+                f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'positive':
         e = fmap[chk[1]]

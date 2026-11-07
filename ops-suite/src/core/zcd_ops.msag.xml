@@ -1931,6 +1931,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>420</MSGNR>
+     <TEXT>&amp;1: each token must be BLANK or one register state character</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>421</MSGNR>
+     <TEXT>&amp;1 is not a finding code of the in-flight check (upper case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>
@@ -2389,6 +2401,18 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>679</MSGNR>
      <TEXT>- lifecycle &amp;1: monetary line without role</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>680</MSGNR>
+     <TEXT>- cheque &amp;1 (state &amp;2), not the deciding cheque:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>681</MSGNR>
+     <TEXT>- outcome row &amp;1 needs the cheque register state: no DFKKCR row</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

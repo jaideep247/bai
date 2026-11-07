@@ -8,6 +8,7 @@
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Message 418: a pattern field is not valid PCRE.
 *& 2026-11-07 | GC_PROD_MAINTAINABLE withdrawn: new rows only by transport from DV1 (user decision, D-3).
+*& 2026-11-07 | Messages 420 / 421: register state tokens and outcome finding codes of ZCD_HCK_SEQOUT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -143,6 +144,9 @@ INTERFACE zif_cd_ops_cfg_types
       not_positive       TYPE ty_msg_number VALUE '417',
       pattern_invalid    TYPE ty_msg_number VALUE '418',
       dest_invalid       TYPE ty_msg_number VALUE '419',
+      "! ZCD_HCK_SEQOUT-REG_STATE / FINDING (code review of the cheque lifecycle, 2026-11-07)
+      reg_state_invalid  TYPE ty_msg_number VALUE '420',
+      finding_invalid    TYPE ty_msg_number VALUE '421',
     END OF gc_msg.
 
 ENDINTERFACE.

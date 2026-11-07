@@ -109,6 +109,7 @@ CLASS ltc_ev_stmt_cheque IMPLEMENTATION.
 
   METHOD collect.
     DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    zcl_cd_hck_ev_support=>start_collection( ).
     INSERT VALUE #( doc1r = gc_doc1 laufd = '20261001' bukrs = gc_bukrs ) INTO TABLE lt_payments.
     INSERT VALUE #( doc1r = gc_doc2 laufd = '20261001' bukrs = gc_bukrs ) INTO TABLE lt_payments.
     rs_result = NEW zcl_cd_hck_ev_stmt_cheque( )->zif_cd_hck_evidence~collect(

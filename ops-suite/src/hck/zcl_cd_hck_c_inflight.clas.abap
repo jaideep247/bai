@@ -30,6 +30,8 @@
 *& 2026-11-07 | Design review: REQUIRED X / C / N mandatory - a mandatory kind not configured,
 *&            | invalid or unreadable makes the purpose undetermined (CLEARING_UNDETERMINED,
 *&            | PAY_UNDETERMINED, configuration finding W); only informational rows are skipped.
+*& 2026-11-07 | Code review: every anomaly of an evidence is listed (TY_EVIDENCE-MORE); the shared
+*&            | reads of the evidence kinds start per run (ZCL_CD_HCK_EV_SUPPORT=>START_COLLECTION).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -279,6 +281,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
     CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_groups, mt_watched, mt_working, mt_listed,
            mt_excluded, mt_findings.
+    " The evidence kinds share their reads (cheques, statement lines, lifecycles) within this run only
+    zcl_cd_hck_ev_support=>start_collection( ).
     mv_calendar = to_upper( condense( is_def-param1 ) ).
     load_configuration( EXPORTING is_def    = is_def
                         CHANGING  cs_result = rs_result ).
@@ -558,22 +562,31 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       DATA(ls_evidence) = VALUE #( ls_group-evidence[ doc1r = is_payment-doc1r ] OPTIONAL ).
-      " One kind used by several purposes reports its anomaly once per payment and code
-      IF ls_evidence-anomaly IS NOT INITIAL
-         AND NOT line_exists( mt_listed[ doc1r = is_payment-doc1r code = ls_evidence-anomaly ] ).
+      IF ls_evidence-anomaly IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      " Every anomaly of the evidence, the primary one first; one kind used by several purposes
+      " reports each anomaly once per payment and code
+      DATA(lt_anomalies) = VALUE zif_cd_hck_runtime_types=>tt_anomaly(
+                             ( code = ls_evidence-anomaly severity = ls_evidence-severity detail = ls_evidence-detail ) ).
+      INSERT LINES OF ls_evidence-more INTO TABLE lt_anomalies.
+      LOOP AT lt_anomalies ASSIGNING FIELD-SYMBOL(<ls_anomaly>).
+        IF line_exists( mt_listed[ doc1r = is_payment-doc1r code = <ls_anomaly>-code ] ).
+          CONTINUE.
+        ENDIF.
         INSERT VALUE #( key      = lv_key
-                        code     = ls_evidence-anomaly
-                        severity = ls_evidence-severity
+                        code     = <ls_anomaly>-code
+                        severity = <ls_anomaly>-severity
                         laufd    = is_payment-laufd
                         doc1r    = is_payment-doc1r
                         line     = payment_line( is_payment = is_payment
-                                                 iv_what    = ls_evidence-anomaly
+                                                 iv_what    = <ls_anomaly>-code
                                                  iv_tail    = zcl_cd_ops_util=>text(
                                                                 iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_anomaly
                                                                 iv_v1    = label( <ls_rule> )
-                                                                iv_tail  = ls_evidence-detail ) ) ) INTO TABLE mt_listed.
-        rv_status = gc_status-inconsistent.
-      ENDIF.
+                                                                iv_tail  = <ls_anomaly>-detail ) ) ) INTO TABLE mt_listed.
+      ENDLOOP.
+      rv_status = gc_status-inconsistent.
     ENDLOOP.
 
     " Purposes in order: the first one with evidence decides

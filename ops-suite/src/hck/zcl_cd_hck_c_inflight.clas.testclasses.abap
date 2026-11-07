@@ -20,6 +20,7 @@
 *&            | purpose undetermined (no CLEARED on the indicator alone, no later purpose);
 *&            | informational rows skipped; Stripe rows as seeded (C) and the explicit switch (blank);
 *&            | test cheques and statement lines carry the house bank account (cheque link).
+*& 2026-11-07 | Code review: every anomaly of an evidence is listed (every_anomaly_listed).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -167,6 +168,8 @@ CLASS ltd_evidence DEFINITION FINAL FOR TESTING.
     DATA mv_anomaly_doc TYPE zif_cd_hck_runtime_types=>ty_docno.
     DATA mv_unconfigured TYPE abap_bool.
     DATA mv_fail TYPE abap_bool.
+    "! The anomaly document also gets a further anomaly (PENDING_OUTCOME_MISSING)
+    DATA mv_more TYPE abap_bool.
     DATA mv_calls TYPE i.
     DATA mv_asked TYPE i.
 ENDCLASS.
@@ -188,7 +191,11 @@ CLASS ltd_evidence IMPLEMENTATION.
       IF <ls_payment>-doc1r = mv_anomaly_doc.
         INSERT VALUE #( doc1r    = <ls_payment>-doc1r
                         anomaly  = zif_cd_hck_runtime_types=>gc_code-unexpected_seq
-                        severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE rs_result-evidence.
+                        severity = zif_cd_ops_types=>gc_severity-warning
+                        more     = COND #( WHEN mv_more = abap_true
+                                           THEN VALUE #( ( code     = zif_cd_hck_runtime_types=>gc_code-pending_overdue
+                                                           severity = zif_cd_ops_types=>gc_severity-error ) ) ) )
+          INTO TABLE rs_result-evidence.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -283,6 +290,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS purpose_order_returned_first FOR TESTING.
     METHODS partial_return_return_code  FOR TESTING.
     METHODS anomaly_listed_not_aged     FOR TESTING.
+    METHODS every_anomaly_listed        FOR TESTING.
     METHODS unusable_kind_fails_closed  FOR TESTING.
     METHODS info_row_unconfigured_skipped FOR TESTING.
     METHODS mandatory_unconfig_no_clear FOR TESTING.
@@ -1118,6 +1126,27 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid ] ) )
           msg = 'The unusable kind is reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 4: every anomaly of an evidence is its own finding, the primary one first
+  METHOD every_anomaly_listed.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        mo_ev_a->mv_anomaly_doc = gc_doc1.
+        mo_ev_a->mv_more        = abap_true.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-unexpected_seq )
+                       iv_doc     = gc_doc1 )
+          msg = 'Primary anomaly listed' ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-pending_overdue )
+                       iv_doc     = gc_doc1 )
+          msg = 'Further anomaly listed too' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

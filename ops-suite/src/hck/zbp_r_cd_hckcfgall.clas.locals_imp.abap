@@ -32,12 +32,14 @@ INTERFACE lif_c.
       datemode                       TYPE string VALUE `DATEMODE`,
       evidenceclass                  TYPE string VALUE `EVIDENCECLASS`,
       expecteddfkkrp                 TYPE string VALUE `EXPECTEDDFKKRP`,
+      finding                        TYPE string VALUE `FINDING`,
       flow                           TYPE string VALUE `FLOW`,
       groupfield                     TYPE string VALUE `GROUPFIELD`,
       jobname                        TYPE string VALUE `JOBNAME`,
       priority                       TYPE string VALUE `PRIORITY`,
       purpose                        TYPE string VALUE `PURPOSE`,
       red                            TYPE string VALUE `RED`,
+      regstate                       TYPE string VALUE `REGSTATE`,
       required                       TYPE string VALUE `REQUIRED`,
       scheme                         TYPE string VALUE `SCHEME`,
       seqpattern                     TYPE string VALUE `SEQPATTERN`,
@@ -89,7 +91,7 @@ INTERFACE lif_c.
       hckaggregate_cond2op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_cond3op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_datemode          TYPE string VALUE `,AGE,DAY`,
-      hckbtcrole_compareamount       TYPE string VALUE `,X,R`,
+      hckbtcrole_compareamount       TYPE string VALUE `,X,R,C`,
       hckbtcrole_flow                TYPE string VALUE `D,C`,
       hckbtcrole_scheme              TYPE string VALUE `BAI2,ISO,PRTRY`,
       hckcheckdef_category           TYPE string VALUE `A,B,C,D,E`,
@@ -1537,6 +1539,14 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Severity
                         v2 = lif_c=>gc_el-severity v3 = lif_c=>gc_val-hckseqoutcome_severity
                         element = lif_c=>gc_el-severity ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_hck_ev_support=>reg_state_valid( ls_row-RegState ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-reg_state_invalid v1 = ls_row-RegState
+                        element = lif_c=>gc_el-regstate ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_hck_ev_support=>outcome_finding_valid( ls_row-Finding ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-finding_invalid v1 = ls_row-Finding
+                        element = lif_c=>gc_el-finding ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

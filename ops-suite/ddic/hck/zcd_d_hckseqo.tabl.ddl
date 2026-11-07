@@ -15,7 +15,7 @@ define table zcd_d_hckseqo {
   maxagedays : abap.int4;
   severity : abap.char(1);
   description : abap.char(60);
-  regstate : abap.char(10);
+  regstate : abap.char(40);
   finding : abap.char(30);
   active : abap_boolean;
   changedby : syuname;

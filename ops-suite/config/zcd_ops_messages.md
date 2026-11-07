@@ -326,6 +326,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 417 | &1 must be greater than zero |
 | 418 | &1 is not a valid PCRE pattern (matched to the whole value, any case) |
 | 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
+| 420 | &1: each token must be BLANK or one register state character |
+| 421 | &1 is not a finding code of the in-flight check (upper case) |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
@@ -403,6 +405,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 677 | &1 not usable |
 | 678 | no role for code &1 posted &2 amount &3 (&4) - add ZCD_HCK_BTCROLE row |
 | 679 | - lifecycle &1: monetary line without role |
+| 680 | - cheque &1 (state &2), not the deciding cheque: |
+| 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

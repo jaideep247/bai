@@ -9,6 +9,8 @@
 *& live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (clearing / return evidence as plug-ins, user rule 5).
+*& 2026-11-07 | Code review: register state tokens and outcome finding catalogue (save validation of
+*&            | ZCD_HCK_SEQOUT), live cheque of a reissue.
 *&---------------------------------------------------------------------*
 CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -76,6 +78,9 @@ CLASS ltc_ev_support DEFINITION FINAL FOR TESTING
     METHODS lines_by_doc_one_read      FOR TESTING.
     METHODS lines_capped               FOR TESTING.
     METHODS gl_lines_keys_and_accounts FOR TESTING.
+    METHODS reg_state_tokens_validated FOR TESTING.
+    METHODS outcome_finding_catalogue  FOR TESTING.
+    METHODS live_cheque_not_voided     FOR TESTING.
 ENDCLASS.
 
 
@@ -112,6 +117,55 @@ CLASS ltc_ev_support IMPLEMENTATION.
   METHOD ref_key_without_zeros.
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_hck_ev_support=>ref_key( ' 000300 001' ) exp = `300001`
                                         msg = 'Blanks and leading zeros removed' ).
+  ENDMETHOD.
+
+
+  " Code review 6: REG_STATE tokens are BLANK or one upper-case state character (nothing else is stored)
+  METHOD reg_state_tokens_validated.
+    cl_abap_unit_assert=>assert_true( act = zcl_cd_hck_ev_support=>reg_state_valid( 'BLANK,B,V' ) msg = 'Valid list' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_cd_hck_ev_support=>reg_state_valid( space ) msg = 'Blank = any' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_ev_support=>reg_state_valid( 'B,VX' ) msg = 'Two characters' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_ev_support=>reg_state_valid( 'b' ) msg = 'Lower case' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_ev_support=>reg_state_valid( 'BLANKS' ) msg = 'Not the token' ).
+  ENDMETHOD.
+
+
+  " Code review 6: FINDING is blank or an upper-case code of the catalogue
+  METHOD outcome_finding_catalogue.
+    cl_abap_unit_assert=>assert_true(
+      act = zcl_cd_hck_ev_support=>outcome_finding_valid( zif_cd_hck_runtime_types=>gc_code-cheque_clarify )
+      msg = 'Catalogue code' ).
+    cl_abap_unit_assert=>assert_true( act = zcl_cd_hck_ev_support=>outcome_finding_valid( space ) msg = 'Blank = none' ).
+    cl_abap_unit_assert=>assert_false(
+      act = zcl_cd_hck_ev_support=>outcome_finding_valid( to_lower( zif_cd_hck_runtime_types=>gc_code-cheque_clarify ) )
+      msg = 'Lower case refused' ).
+    cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_ev_support=>outcome_finding_valid( 'CHEQUE_TYPO' )
+                                       msg = 'Unknown code refused' ).
+  ENDMETHOD.
+
+
+  " Code review 2: of a voided cheque and its reissue the cheque not voided decides; all voided = newest
+  METHOD live_cheque_not_voided.
+    DATA lt_checks TYPE zif_cd_ops_trace_types=>tt_check.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    ls_check-doc1r = gc_doc1.
+    ls_check-ztnum = '0000000009'.
+    ls_check-state = 'V'.
+    INSERT ls_check INTO TABLE lt_checks.
+    ls_check-ztnum = '0000000005'.
+    ls_check-state = 'B'.
+    INSERT ls_check INTO TABLE lt_checks.
+    ls_check-doc1r = gc_doc2.
+    ls_check-ztnum = '0000000001'.
+    ls_check-state = 'V'.
+    INSERT ls_check INTO TABLE lt_checks.
+    ls_check-ztnum = '0000000002'.
+    INSERT ls_check INTO TABLE lt_checks.
+    DATA(lt_live) = zcl_cd_hck_ev_support=>live_cheques( lt_checks ).
+    cl_abap_unit_assert=>assert_equals( act = lt_live[ doc1r = gc_doc1 ]-ztnum exp = '0000000005'
+                                        msg = 'The cheque not voided decides' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_live[ doc1r = gc_doc2 ]-ztnum exp = '0000000002'
+                                        msg = 'All voided: the newest' ).
   ENDMETHOD.
 
 

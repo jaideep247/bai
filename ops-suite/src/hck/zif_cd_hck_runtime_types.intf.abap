@@ -19,6 +19,8 @@
 *&            | purpose undetermined, CLEARING_UNDETERMINED), unmapped monetary bank codes
 *&            | (BTC_ROLE_MISSING, exclusions HCK_BTC_INFO_<scheme>), cheque link by suffix and
 *&            | house bank account (CHEQUE_LINK_AMBIGUOUS).
+*& 2026-11-07 | Code review of the cheque lifecycle: every anomaly of an evidence (TY_EVIDENCE-MORE),
+*&            | correction lines (compare C), voided state, register missing, outcome finding catalogue.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -346,6 +348,9 @@ INTERFACE zif_cd_hck_runtime_types
     BEGIN OF gc_compare,
       returns_lot TYPE c LENGTH 1 VALUE 'X',
       register    TYPE c LENGTH 1 VALUE 'R',
+      "! The bank corrected the line before (e.g. 399 / 699): an earlier R line is not compared -
+      "! its amount was superseded and the cheque is cleared manually in FPCHR
+      correction  TYPE c LENGTH 1 VALUE 'C',
     END OF gc_compare.
 
   "! Statement link of the lifecycle evidence (PARAM2): blank = FEBEP-CHECT = AUGBL, ZTNUM =
@@ -353,6 +358,9 @@ INTERFACE zif_cd_hck_runtime_types
   CONSTANTS gc_link_cheque TYPE string VALUE `ZTNUM`.
   "! Token of a status list (PARAM1 of the cheque status evidence) for the blank (open) state
   CONSTANTS gc_state_blank TYPE string VALUE `BLANK`.
+  "! DFKKCR-STATE of a voided cheque (confirmed 2026-11-07): of several cheques of one payment
+  "! (void and reissue) the newest cheque not voided decides the payment
+  CONSTANTS gc_state_voided TYPE string VALUE `V`.
 
   "! ZCD_HCK_SEQOUT: the first active pattern (by SEQ) matching the whole role sequence decides
   TYPES:
@@ -450,6 +458,15 @@ INTERFACE zif_cd_hck_runtime_types
   TYPES tt_ref_row TYPE STANDARD TABLE OF ty_ref_row WITH EMPTY KEY.
   TYPES tt_ref_value TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_ref WITH UNIQUE KEY table_line.
 
+  "! A further anomaly of the evidence of one payment (every anomaly is reported)
+  TYPES:
+    BEGIN OF ty_anomaly,
+      code     TYPE zif_cd_ops_types=>ty_check_code,
+      severity TYPE zif_cd_ops_types=>ty_severity,
+      detail   TYPE string,
+    END OF ty_anomaly.
+  TYPES tt_anomaly TYPE STANDARD TABLE OF ty_anomaly WITH EMPTY KEY.
+
   "! Evidence of one kind for one payment; a payment without a row has no evidence
   TYPES:
     BEGIN OF ty_evidence,
@@ -463,6 +480,8 @@ INTERFACE zif_cd_hck_runtime_types
       severity   TYPE zif_cd_ops_types=>ty_severity,
       "! Short evidence text for the finding (keys, status values, sequence)
       detail     TYPE string,
+      "! Anomalies after the primary one (ANOMALY), in the order found; each is its own finding
+      more       TYPE tt_anomaly,
     END OF ty_evidence.
   TYPES tt_evidence TYPE HASHED TABLE OF ty_evidence WITH UNIQUE KEY doc1r.
 
@@ -525,6 +544,12 @@ INTERFACE zif_cd_hck_runtime_types
       "! A statement line fits several cheques of the same house bank account (cheque number
       "! suffix): no cashing evidence is inherited
       cheque_ambiguous   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_LINK_AMBIGUOUS',
+      "! The outcome row that matches needs the cheque register state but the payment has no
+      "! cheque register row (DFKKCR) for the link of the rule
+      register_missing   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_REGISTER_MISSING',
+      "! Outcome findings of cheques (ZCD_HCK_SEQOUT-FINDING): several 581 / 255, correction
+      cheque_clarify     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
+      manual_clearing    TYPE zif_cd_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -630,6 +655,8 @@ INTERFACE zif_cd_hck_runtime_types
       unusable_invalid    TYPE zif_cd_ops_types=>ty_msgno VALUE '677',
       ev_role_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '678',
       ev_indeterminate    TYPE zif_cd_ops_types=>ty_msgno VALUE '679',
+      ev_other_cheque     TYPE zif_cd_ops_types=>ty_msgno VALUE '680',
+      ev_register_missing TYPE zif_cd_ops_types=>ty_msgno VALUE '681',
     END OF gc_msg.
 
 ENDINTERFACE.
