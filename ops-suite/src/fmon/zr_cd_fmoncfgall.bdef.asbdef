@@ -194,6 +194,7 @@ etag master LocalLastChangedAt
     AdapterClass = adapter_class;
     Active = active;
     Description = description;
+    GroupFields = group_fields;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

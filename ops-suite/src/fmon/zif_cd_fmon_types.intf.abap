@@ -31,6 +31,11 @@
 *&            | parameter FMON_FEB_STMT_OFFSET, unprocessed count of a source record.
 *& 2026-11-07 | Design review: TY_OBSERVATION / TY_INSTANCE_PICK (file generation identity -
 *&            | one instance per file across midnight and daylight saving).
+*& 2026-11-07 | Regenerated files (user 2026-11-07): generation group of a file (ZCD_FMON_SRC-GROUP_FIELDS,
+*&            | ZCD_FMON_FILE-GEN_GROUP), roles GROUP_1..4, regeneration settings and PRISM duplicate-name
+*&            | failures in the check context, check codes FILE_REPLACED / REGENERATION_MISSING /
+*&            | FILE_REGENERATED_NOT_FAILED / PRISM_DUPLICATE_NAME, parameters FMON_REGEN_WAIT_MIN /
+*&            | FMON_PRISM_DUP_NAME_CODES, messages 280-283 (284 raised by the adapter).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -89,6 +94,10 @@ INTERFACE zif_cd_fmon_types
   "! PRISM queue scope (FMON_PRISM_THROTTLE_SCOPE): C = one queue per bank (bank key of the
   "! interface; confirmed 2026-11-06, the delivered default), A = one queue for all throttled files
   TYPES ty_queue_scope  TYPE c LENGTH 1.
+  "! Comma list of field names (ZCD_FMON_SRC-GROUP_FIELDS)
+  TYPES ty_field_list   TYPE c LENGTH 100.
+  "! PRISM error code (ZCD_FMON_PRISM-ERROR_CODE)
+  TYPES ty_prism_error  TYPE c LENGTH 20.
 
   "! File reference longer than the correlation key (audit A100): first PREFIX characters of the
   "! canonical name + MARKER + SHA-1 hex of the whole canonical name = exactly WIDTH characters
@@ -217,7 +226,20 @@ INTERFACE zif_cd_fmon_types
       item_key    TYPE ty_role VALUE 'ITEM_KEY',
       item_status TYPE ty_role VALUE 'ITEM_STATUS',
       file_link   TYPE ty_role VALUE 'FILE_LINK',
+      "! Fields of the generation group (ZCD_FMON_SRC-GROUP_FIELDS, in their configured order)
+      group_1     TYPE ty_role VALUE 'GROUP_1',
+      group_2     TYPE ty_role VALUE 'GROUP_2',
+      group_3     TYPE ty_role VALUE 'GROUP_3',
+      group_4     TYPE ty_role VALUE 'GROUP_4',
     END OF gc_role.
+
+  "! Generation group (user 2026-11-07: a file PRISM could not deliver is regenerated with a new
+  "! name for the same payments): at most MAX_FIELDS fields, values joined by SEPARATOR
+  CONSTANTS:
+    BEGIN OF gc_generation,
+      max_fields TYPE i VALUE 4,
+      separator  TYPE c LENGTH 1 VALUE '/',
+    END OF gc_generation.
 
   CONSTANTS:
     BEGIN OF gc_check_code,
@@ -262,6 +284,14 @@ INTERFACE zif_cd_fmon_types
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
       "! A stage of ZCD_FMON_DEADL not reached by its clock time on a business day
       deadline_missed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'STAGE_DEADLINE_MISSED',
+      "! Information: the PRISM_FAILED file was replaced by a regenerated file of its generation group
+      file_replaced    TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REPLACED',
+      "! The PRISM_FAILED file has no regenerated file after FMON_REGEN_WAIT_MIN minutes
+      regen_missing    TYPE zif_cd_ops_types=>ty_check_code VALUE 'REGENERATION_MISSING',
+      "! A regenerated file exists although the earlier file of its group did not fail (duplicate risk)
+      regen_not_failed TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REGENERATED_NOT_FAILED',
+      "! PRISM rejected the file because it already received that name (FMON_PRISM_DUP_NAME_CODES)
+      prism_dup_name   TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_DUPLICATE_NAME',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCA_PARAM (defaults in brackets)
@@ -296,6 +326,11 @@ INTERFACE zif_cd_fmon_types
       "! Working days from the bank statement date (FEBKO-AZDAT) to the business date of the
       "! statement file (FEB adapter): 1 = prior-day statement, 0 = same-day statement [1]
       feb_stmt_offset TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_FEB_STMT_OFFSET',
+      "! Minutes after PRISM_FAILED within which SAP regenerates the file; later = REGENERATION_MISSING,
+      "! 0 = not reported [60]
+      regen_wait_min  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_REGEN_WAIT_MIN',
+      "! PRISM error codes meaning "file name already received" (comma list, whole value) [blank]
+      dup_name_codes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_DUP_NAME_CODES',
     END OF gc_param.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
@@ -407,6 +442,8 @@ INTERFACE zif_cd_fmon_types
       adapter_class   TYPE zif_cd_ops_types=>ty_class_name,
       active          TYPE abap_bool,
       description     TYPE ty_text60,
+      "! Generation group fields (comma list, at most 4; blank = no regeneration link)
+      group_fields    TYPE ty_field_list,
     END OF ty_src.
   TYPES tt_src TYPE SORTED TABLE OF ty_src WITH UNIQUE KEY src_id.
 
@@ -491,6 +528,9 @@ INTERFACE zif_cd_fmon_types
       created_at        TYPE timestampl,
       changed_at        TYPE timestampl,
       changed_by        TYPE syuname,
+      "! Generation group key (payment run of the file, ZCD_FMON_SRC-GROUP_FIELDS): files of one
+      "! interface and group are generations of the same payments; blank = not linked
+      gen_group         TYPE ty_file_ref,
       "! Not stored: the row exists in ZCD_FMON_FILE and CHANGED_AT as read (version check, audit A04)
       db_exists         TYPE abap_bool,
       db_version        TYPE timestampl,
@@ -599,6 +639,10 @@ INTERFACE zif_cd_fmon_types
       item_key    TYPE string,
       item_status TYPE string,
       file_link   TYPE string,
+      group_1     TYPE string,
+      group_2     TYPE string,
+      group_3     TYPE string,
+      group_4     TYPE string,
     END OF ty_raw_row.
   TYPES tt_raw_row TYPE STANDARD TABLE OF ty_raw_row WITH EMPTY KEY.
 
@@ -677,6 +721,8 @@ INTERFACE zif_cd_fmon_types
       "! Statement evidence (FEB adapter); EVIDENCE_ONLY = no stage, evidence for the checks only
       evidence      TYPE ty_stmt_evidence,
       evidence_only TYPE abap_bool,
+      "! Generation group key (blank = the source has no GROUP_FIELDS)
+      gen_group     TYPE ty_file_ref,
     END OF ty_src_record.
   TYPES tt_src_record TYPE STANDARD TABLE OF ty_src_record WITH EMPTY KEY.
 
@@ -758,6 +804,47 @@ INTERFACE zif_cd_fmon_types
       long      TYPE abap_bool,
     END OF ty_queue_pos.
 
+  " ---------------------------------------------------------------- regenerated files
+  "! Generation group of an interface (ZCD_FMON_FILE index GRP)
+  TYPES:
+    BEGIN OF ty_group_key,
+      iface_id  TYPE ty_iface_id,
+      gen_group TYPE ty_file_ref,
+    END OF ty_group_key.
+  TYPES tt_group_key TYPE STANDARD TABLE OF ty_group_key WITH EMPTY KEY.
+
+  "! Regeneration settings (ZCA_PARAM FMON_REGEN_WAIT_MIN / FMON_PRISM_DUP_NAME_CODES)
+  TYPES:
+    BEGIN OF ty_regen,
+      wait_min  TYPE i,
+      dup_codes TYPE ty_value_list,
+    END OF ty_regen.
+
+  "! A PRISM FAILED milestone whose error code says "name already received" (ZCD_FMON_PRISM)
+  TYPES:
+    BEGIN OF ty_prism_failure,
+      "! Normalised like every FMON reference (ZCL_CD_FMON_UTIL=>NORMALIZE_REF)
+      file_ref    TYPE ty_file_ref,
+      error_code  TYPE ty_prism_error,
+      occurred_at TYPE timestampl,
+    END OF ty_prism_failure.
+  TYPES tt_prism_failure TYPE STANDARD TABLE OF ty_prism_failure WITH EMPTY KEY.
+
+  "! Verdict on a file PRISM could not deliver (ZCL_CD_FMON_RULES=>FAILED_VERDICT)
+  TYPES:
+    BEGIN OF ty_failed_verdict,
+      "! PRISM_FAILED, FILE_REPLACED or PRISM_DUPLICATE_NAME
+      code         TYPE zif_cd_ops_types=>ty_check_code,
+      "! FILE_REPLACED: the regenerated file that replaces it
+      replaced_by  TYPE ty_file,
+      "! PRISM_DUPLICATE_NAME: PRISM's error code
+      error_code   TYPE ty_prism_error,
+      "! Minutes since the (latest) PRISM failure
+      failed_min   TYPE i,
+      "! No regenerated file after FMON_REGEN_WAIT_MIN minutes (with PRISM_FAILED only)
+      regen_missing TYPE abap_bool,
+    END OF ty_failed_verdict.
+
   "! Everything a check may look at. Checks are pure: no SQL, no clock.
   TYPES:
     BEGIN OF ty_check_ctx,
@@ -780,6 +867,11 @@ INTERFACE zif_cd_fmon_types
       time_zone     TYPE ty_time_zone,
       "! Statement evidence read by this run (FEB adapter)
       statements    TYPE tt_stmt_evidence,
+      "! Every known file of the generation groups of the files (the files themselves included)
+      generations   TYPE tt_file,
+      "! Regeneration settings and PRISM failures with a duplicate-name error code
+      regen         TYPE ty_regen,
+      prism_failures TYPE tt_prism_failure,
     END OF ty_check_ctx.
 
   "! SLA verdict: ' ' = met or not yet due, M = stage not reached and overdue,
@@ -856,6 +948,8 @@ INTERFACE zif_cd_fmon_types
       throttle_methods TYPE string VALUE `ACH,WIRE`,
       queue_max        TYPE i VALUE 30,
       feb_stmt_offset  TYPE i VALUE 1,
+      "! SAP regenerates a file PRISM could not deliver within an hour ‹confirm with payment operations›
+      regen_wait_min   TYPE i VALUE 60,
     END OF gc_param_default.
 
   "! File monitoring dashboard (CDS, docs/Dashboard_File_Monitoring.md): the monitor is stale
@@ -970,6 +1064,10 @@ INTERFACE zif_cd_fmon_types
       deadline_statement          TYPE zif_cd_ops_types=>ty_msgno VALUE '277',
       deadline_stage              TYPE zif_cd_ops_types=>ty_msgno VALUE '278',
       deadline_not_proven         TYPE zif_cd_ops_types=>ty_msgno VALUE '279',
+      file_replaced               TYPE zif_cd_ops_types=>ty_msgno VALUE '280',
+      regen_missing               TYPE zif_cd_ops_types=>ty_msgno VALUE '281',
+      regen_not_failed            TYPE zif_cd_ops_types=>ty_msgno VALUE '282',
+      prism_dup_name              TYPE zif_cd_ops_types=>ty_msgno VALUE '283',
     END OF gc_msg.
 
 ENDINTERFACE.

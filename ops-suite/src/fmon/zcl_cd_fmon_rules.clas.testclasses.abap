@@ -16,6 +16,9 @@
 *&              bank); bank queues do not delay each other; scope A still works when configured.
 *& 2026-11-07 | Design review: ltc_instance - file generation identity (one instance across
 *&              midnight, re-read, next-day file of the same name, out-of-order evidence).
+*& 2026-11-07 | ltc_regen - regenerated files (user 2026-11-07): generation key, replaced failed file,
+*&            | regeneration wait boundary, PRISM duplicate-name codes, regenerated file whose earlier
+*&            | generation did not fail, generation order.
 *&---------------------------------------------------------------------*
 CLASS ltc_rules DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -1943,6 +1946,525 @@ CLASS ltc_instance IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = |{ ls_spring-state }/{ ls_spring-elapsed_min }|
                                             exp = |{ zif_cd_fmon_types=>gc_sla_state-ok }/25|
                                             msg = 'Spring forward: 25 UTC minutes across the missing hour are on time' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Regenerated files (user 2026-11-07): a file PRISM could not deliver is regenerated under a new
+"! name for the same payments; the generation group (payment run) links the generations
+CLASS ltc_regen DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_iface TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_BOA_OUT'.
+    CONSTANTS gc_other_iface TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'POSPAY_BOA_OUT'.
+    CONSTANTS gc_group TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/RUN01/BOA1'.
+    CONSTANTS gc_inner_blank TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102//BOA1'.
+    CONSTANTS gc_dup_code TYPE zif_cd_fmon_types=>ty_prism_error VALUE 'DUPLICATE_NAME'.
+    CONSTANTS gc_prefix_code TYPE zif_cd_fmon_types=>ty_prism_error VALUE 'DUPLICATE'.
+    CONSTANTS gc_wait_min TYPE i VALUE 60.
+    CONSTANTS:
+      BEGIN OF gc_id,
+        failed TYPE zif_cd_fmon_types=>ty_file_id VALUE '00000000000000000000000000000011',
+        regen  TYPE zif_cd_fmon_types=>ty_file_id VALUE '00000000000000000000000000000012',
+        third  TYPE zif_cd_fmon_types=>ty_file_id VALUE '00000000000000000000000000000013',
+        before TYPE zif_cd_fmon_types=>ty_file_id VALUE '00000000000000000000000000000010',
+      END OF gc_id.
+    CONSTANTS:
+      BEGIN OF gc_name,
+        failed TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_BOA_20261102_01.TXT',
+        regen  TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_BOA_20261102_02.TXT',
+        third  TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_BOA_20261102_03.TXT',
+        before TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_BOA_20261102_00.TXT',
+      END OF gc_name.
+    "! UTC: generations at 16:50 / 17:00 / 17:40 / 18:30, PRISM failure at 17:10; the wait of 60
+    "! minutes ends at 18:10 (on time) and is over at 18:11
+    CONSTANTS:
+      BEGIN OF gc_at,
+        before    TYPE timestampl VALUE '20261102165000',
+        failed    TYPE timestampl VALUE '20261102170000',
+        failure   TYPE timestampl VALUE '20261102171000',
+        regen     TYPE timestampl VALUE '20261102174000',
+        third     TYPE timestampl VALUE '20261102183000',
+        wait_end  TYPE timestampl VALUE '20261102181000',
+        wait_over TYPE timestampl VALUE '20261102181100',
+      END OF gc_at.
+
+    DATA mt_generations TYPE zif_cd_fmon_types=>tt_file.
+    DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
+    DATA mt_failures TYPE zif_cd_fmon_types=>tt_prism_failure.
+    DATA ms_regen TYPE zif_cd_fmon_types=>ty_regen.
+
+    METHODS setup.
+
+    "! A generation of the group (outcome PRISM_FAILED when iv_failed, else stage iv_stage)
+    METHODS add_generation
+      IMPORTING
+        iv_id     TYPE zif_cd_fmon_types=>ty_file_id
+        iv_name   TYPE zif_cd_fmon_types=>ty_file_name
+        iv_at     TYPE timestampl
+        iv_stage  TYPE zif_cd_fmon_types=>ty_stage DEFAULT zif_cd_fmon_types=>gc_stage-prism_delivered
+        iv_failed TYPE abap_bool DEFAULT abap_false
+        iv_iface  TYPE zif_cd_fmon_types=>ty_iface_id DEFAULT gc_iface
+        iv_group  TYPE zif_cd_fmon_types=>ty_file_ref DEFAULT gc_group.
+
+    "! A PRISM failure of the failed file's name with an error code
+    METHODS add_failure
+      IMPORTING
+        iv_code TYPE zif_cd_fmon_types=>ty_prism_error
+        iv_at   TYPE timestampl DEFAULT gc_at-failure.
+
+    METHODS generation
+      IMPORTING
+        iv_id          TYPE zif_cd_fmon_types=>ty_file_id
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
+
+    "! Verdict on the failed file at iv_now
+    METHODS verdict
+      IMPORTING
+        iv_now            TYPE timestampl DEFAULT gc_at-wait_end
+      RETURNING
+        VALUE(rs_verdict) TYPE zif_cd_fmon_types=>ty_failed_verdict.
+
+    METHODS key_joins_fields_in_order FOR TESTING.
+    METHODS key_blank_values_no_link FOR TESTING.
+    METHODS key_keeps_inner_blank FOR TESTING.
+    METHODS failed_replaced_by_next FOR TESTING.
+    METHODS no_group_stays_prism_failed FOR TESTING.
+    METHODS other_iface_not_replacement FOR TESTING.
+    METHODS earlier_file_not_replacement FOR TESTING.
+    METHODS wait_end_not_missing FOR TESTING.
+    METHODS wait_passed_is_missing FOR TESTING.
+    METHODS zero_wait_never_missing FOR TESTING.
+    METHODS dup_code_is_duplicate_name FOR TESTING.
+    METHODS dup_code_ignores_case FOR TESTING.
+    METHODS other_code_stays_failed FOR TESTING.
+    METHODS empty_code_list_stays_failed FOR TESTING.
+    METHODS dup_before_generation_ignored FOR TESTING.
+    METHODS replaced_wins_over_dup_name FOR TESTING.
+    METHODS regen_after_delivery_flagged FOR TESTING.
+    METHODS regen_in_flight_flagged FOR TESTING.
+    METHODS regen_after_failure_ok FOR TESTING.
+    METHODS first_generation_not_flagged FOR TESTING.
+    METHODS same_instant_ordered_by_id FOR TESTING.
+    METHODS chain_uses_latest_earlier FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_regen IMPLEMENTATION.
+
+  METHOD setup.
+    CLEAR: mt_generations, mt_events, mt_failures, ms_regen.
+    ms_regen-wait_min  = gc_wait_min.
+    ms_regen-dup_codes = gc_dup_code.
+  ENDMETHOD.
+
+
+  METHOD add_generation.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
+    ls_file-file_id        = iv_id.
+    ls_file-iface_id       = iv_iface.
+    ls_file-direction      = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_file-file_name      = iv_name.
+    ls_file-file_ref       = zcl_cd_fmon_util=>normalize_ref( iv_name ).
+    ls_file-gen_group      = iv_group.
+    ls_file-stage          = iv_stage.
+    ls_file-first_event_at = iv_at.
+    ls_file-last_event_at  = iv_at.
+    IF iv_failed = abap_true.
+      ls_file-stage         = zif_cd_fmon_types=>gc_stage-prism_failed.
+      ls_file-outcome       = zif_cd_fmon_types=>gc_stage-prism_failed.
+      ls_file-last_event_at = gc_at-failure.
+      ls_event-file_id  = iv_id.
+      ls_event-stage    = zif_cd_fmon_types=>gc_stage-prism_failed.
+      ls_event-event_at = gc_at-failure.
+      INSERT ls_event INTO TABLE mt_events.
+    ENDIF.
+    INSERT ls_file INTO TABLE mt_generations.
+  ENDMETHOD.
+
+
+  METHOD add_failure.
+    DATA ls_failure TYPE zif_cd_fmon_types=>ty_prism_failure.
+    ls_failure-file_ref    = zcl_cd_fmon_util=>normalize_ref( gc_name-failed ).
+    ls_failure-error_code  = iv_code.
+    ls_failure-occurred_at = iv_at.
+    INSERT ls_failure INTO TABLE mt_failures.
+  ENDMETHOD.
+
+
+  METHOD generation.
+    rs_file = VALUE #( mt_generations[ file_id = iv_id ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  METHOD verdict.
+    rs_verdict = zcl_cd_fmon_rules=>failed_verdict( is_file        = generation( gc_id-failed )
+                                                    it_generations = mt_generations
+                                                    it_events      = mt_events
+                                                    it_failures    = mt_failures
+                                                    is_regen       = ms_regen
+                                                    iv_now         = iv_now ).
+  ENDMETHOD.
+
+
+  " Rule: the generation key is the configured fields' values in their order, joined by '/'.
+  METHOD key_joins_fields_in_order.
+    TRY.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>generation_key( VALUE #( ( `20261102` ) ( ` RUN01` ) ( `boa1` ) ( `` ) ) )
+          exp = gc_group
+          msg = 'Values condensed, upper case, trailing blank field dropped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a row whose group fields are all blank is not linked to any generation.
+  METHOD key_blank_values_no_link.
+    TRY.
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>generation_key( VALUE #( ( `` ) ( ` ` ) ( `` ) ( `` ) ) )
+          msg = 'No key, no link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (boundary): a blank field between two values keeps its position, so two runs never collide.
+  METHOD key_keeps_inner_blank.
+    TRY.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>generation_key( VALUE #( ( `20261102` ) ( `` ) ( `BOA1` ) ) )
+          exp = gc_inner_blank
+          msg = 'The blank middle field stays a position' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (a): a failed file with a later generation of its group is replaced - information that
+  " names the replacing file, no PRISM_FAILED.
+  METHOD failed_replaced_by_next.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        DATA(ls_verdict) = verdict( iv_now = gc_at-wait_over ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-file_replaced
+                                            msg = 'The failure is answered by the regenerated file' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-replaced_by-file_name
+                                            exp = gc_name-regen
+                                            msg = 'The verdict names the replacing file' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-regen_missing
+                                           msg = 'A replaced file is not missing its regeneration' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (no group configured): exactly as before - PRISM_FAILED, never replaced, never missing.
+  METHOD no_group_stays_prism_failed.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true
+                        iv_group = space ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen iv_group = space ).
+        DATA(ls_verdict) = verdict( iv_now = gc_at-wait_over ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'Without a generation group a failure stays PRISM_FAILED' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-regen_missing
+                                           msg = 'Without a generation group no REGENERATION_MISSING' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (negative): a file of another interface of the same payment run (e.g. positive pay of the
+  " run) is not a regeneration.
+  METHOD other_iface_not_replacement.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen iv_iface = gc_other_iface ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'Another interface never replaces the file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (negative): only a later generation replaces the failed file, never an earlier one.
+  METHOD earlier_file_not_replacement.
+    TRY.
+        add_generation( iv_id = gc_id-before iv_name = gc_name-before iv_at = gc_at-before ).
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'An earlier generation does not answer the failure' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (b, boundary): exactly FMON_REGEN_WAIT_MIN minutes after the failure is still in time.
+  METHOD wait_end_not_missing.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        DATA(ls_verdict) = verdict( iv_now = gc_at-wait_end ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-failed_min
+                                            exp = gc_wait_min
+                                            msg = 'Minutes since the PRISM failure (UTC)' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-regen_missing
+                                           msg = 'At the end of the wait the regeneration is not overdue' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (b): one minute after the wait, a failed file without regeneration is REGENERATION_MISSING
+  " in addition to its PRISM_FAILED.
+  METHOD wait_passed_is_missing.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        DATA(ls_verdict) = verdict( iv_now = gc_at-wait_over ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'PRISM_FAILED stays open and escalates as before' ).
+        cl_abap_unit_assert=>assert_true( act = ls_verdict-regen_missing
+                                          msg = 'The overdue regeneration is reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (b): FMON_REGEN_WAIT_MIN = 0 switches REGENERATION_MISSING off.
+  METHOD zero_wait_never_missing.
+    TRY.
+        ms_regen-wait_min = 0.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        cl_abap_unit_assert=>assert_false( act = verdict( iv_now = gc_at-wait_over )-regen_missing
+                                           msg = 'Wait 0 never reports a missing regeneration' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d): PRISM rejected the name as already received - its own code, with PRISM's error code.
+  METHOD dup_code_is_duplicate_name.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_failure( gc_dup_code ).
+        DATA(ls_verdict) = verdict( iv_now = gc_at-wait_over ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_dup_name
+                                            msg = 'A duplicate name is reported as such' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-error_code
+                                            exp = gc_dup_code
+                                            msg = 'PRISM error code in the verdict' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-regen_missing
+                                           msg = 'The duplicate-name finding already says regenerate' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d): the code list is matched to the whole value, case ignored.
+  METHOD dup_code_ignores_case.
+    TRY.
+        ms_regen-dup_codes = to_lower( gc_dup_code ).
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_failure( gc_dup_code ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_dup_name
+                                            msg = 'A code in another case matches' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d, negative): an error code outside the list is an ordinary PRISM failure; a code that
+  " is only the beginning of a listed one does not match (whole value).
+  METHOD other_code_stays_failed.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_failure( gc_prefix_code ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'Only a listed code is a duplicate name' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d, delivered default): an empty code list never reports a duplicate name.
+  METHOD empty_code_list_stays_failed.
+    TRY.
+        CLEAR ms_regen-dup_codes.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_failure( gc_dup_code ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'Default (codes to VERIFY with PRISM): no duplicate name' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d, boundary): a failure before the file's first event belongs to an earlier generation.
+  METHOD dup_before_generation_ignored.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_failure( iv_code = gc_dup_code iv_at = gc_at-before ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                            msg = 'An older failure of the name is not this generation' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: once the file is regenerated, the duplicate-name rejection is answered too.
+  METHOD replaced_wins_over_dup_name.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        add_failure( gc_dup_code ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-code
+                                            exp = zif_cd_fmon_types=>gc_check_code-file_replaced
+                                            msg = 'The regenerated file answers the rejection' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (c): a regenerated file whose earlier generation was delivered (also after a PRISM retry
+  " superseded a failure) is a possible duplicate - the earlier generation is returned.
+  METHOD regen_after_delivery_flagged.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>unfailed_predecessor( is_file        = generation( gc_id-regen )
+                                                         it_generations = mt_generations )-file_id
+          exp = gc_id-failed
+          msg = 'Both generations delivered: the earlier one is named' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (c): an earlier generation still in flight (generated, not yet at PRISM) also counts.
+  METHOD regen_in_flight_flagged.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed
+                        iv_stage = zif_cd_fmon_types=>gc_stage-generated ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>unfailed_predecessor( is_file        = generation( gc_id-regen )
+                                                         it_generations = mt_generations )-stage
+          exp = zif_cd_fmon_types=>gc_stage-generated
+          msg = 'The earlier generation in flight is a duplicate risk' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (c, negative): regeneration after a PRISM failure is the expected recovery.
+  METHOD regen_after_failure_ok.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>unfailed_predecessor( is_file        = generation( gc_id-regen )
+                                                         it_generations = mt_generations )
+          msg = 'A replacement of a failed file is not a duplicate' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (c, negative): the first generation of a payment run is never a regeneration.
+  METHOD first_generation_not_flagged.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>unfailed_predecessor( is_file        = generation( gc_id-failed )
+                                                         it_generations = mt_generations )
+          msg = 'Nothing was generated before the first file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (boundary): two generations of the same instant are ordered by file ID - one of them is
+  " the earlier, so a same-second regeneration is neither missed nor reported twice.
+  METHOD same_instant_ordered_by_id.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-failed ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>previous_generation( is_file        = generation( gc_id-regen )
+                                                        it_generations = mt_generations )-file_id
+          exp = gc_id-failed
+          msg = 'The lower file ID is the earlier generation' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>previous_generation( is_file        = generation( gc_id-failed )
+                                                        it_generations = mt_generations )
+          msg = 'The earlier one has no predecessor' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: generations chain pairwise - a failed file is replaced by the next one, a third generation
+  " is judged against the second (the latest earlier one), not the first.
+  METHOD chain_uses_latest_earlier.
+    TRY.
+        add_generation( iv_id = gc_id-failed iv_name = gc_name-failed iv_at = gc_at-failed iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-regen iv_name = gc_name-regen iv_at = gc_at-regen iv_failed = abap_true ).
+        add_generation( iv_id = gc_id-third iv_name = gc_name-third iv_at = gc_at-third ).
+        cl_abap_unit_assert=>assert_equals( act = verdict( )-replaced_by-file_id
+                                            exp = gc_id-regen
+                                            msg = 'The first failure is answered by the second generation' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = zcl_cd_fmon_rules=>unfailed_predecessor( is_file        = generation( gc_id-third )
+                                                         it_generations = mt_generations )
+          msg = 'The third generation replaces the failed second one' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_fmon_rules=>next_generation( is_file        = generation( gc_id-regen )
+                                                    it_generations = mt_generations )-file_id
+          exp = gc_id-third
+          msg = 'The second failure is answered by the third generation' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

@@ -40,6 +40,9 @@ define table zcd_fmon_file {
   created_at        : timestampl;
   changed_at        : timestampl;
   changed_by        : syuname;
+  // Generation group key (ZCD_FMON_SRC-GROUP_FIELDS of the generating source, user 2026-11-07):
+  // the only link between a regenerated file and the file it replaces - no copied amounts or counts
+  gen_group         : abap.char(70);
 }
 // Secondary indexes (serialized to abapGit by tools/abapgit_serialize.py):
 //   REF (UNIQUE): file instance = interface + reference + business date (audit A49) -
@@ -49,3 +52,5 @@ define table zcd_fmon_file {
 // @index OUT: MANDT, OUTCOME, BUSINESS_DATE
 // @index NAM: MANDT, FILE_NAME
 // @index CHK: MANDT, CHECKSUM
+//   GRP: the generations of a payment run (regenerated files, ZCL_CD_FMON_DAO=>GET_GROUP_FILES)
+// @index GRP: MANDT, IFACE_ID, GEN_GROUP

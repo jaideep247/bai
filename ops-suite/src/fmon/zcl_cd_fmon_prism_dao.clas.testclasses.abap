@@ -7,6 +7,7 @@
 *& SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
+*& 2026-11-07 | Regenerated files: read_failures reads FAILED milestones with a listed error code only.
 *&---------------------------------------------------------------------*
 CLASS ltc_prism_dao DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -41,6 +42,7 @@ CLASS ltc_prism_dao DEFINITION FINAL
     METHODS other_payload_is_conflict FOR TESTING.
     METHODS unprocessed_read_skips_done FOR TESTING.
     METHODS mark_keeps_first_time FOR TESTING.
+    METHODS failures_by_listed_code FOR TESTING.
 
 ENDCLASS.
 
@@ -142,6 +144,32 @@ CLASS ltc_prism_dao IMPLEMENTATION.
                                                     FOR ls_row IN lt_rows ( ls_row-event_id ) )
                                             exp = VALUE zif_cd_fmon_prism_types=>tt_event_id( ( gc_test-event_id ) )
                                             msg = 'Only the unprocessed event must be read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (regenerated files): only FAILED milestones with a listed error code (duplicate name) of the
+  " window are read - other codes, other milestones and an empty list read nothing.
+  METHOD failures_by_listed_code.
+    CONSTANTS lc_dup TYPE zif_cd_fmon_prism_types=>ty_error_code VALUE 'NAME_EXISTS'.
+    TRY.
+        DATA(ls_dup) = new_row( gc_test-event_id ).
+        ls_dup-milestone  = zif_cd_fmon_prism_types=>gc_milestone-failed.
+        ls_dup-error_code = lc_dup.
+        mo_cut->insert_event( ls_dup ).
+        DATA(ls_other) = new_row( gc_test-other_id ).
+        ls_other-milestone  = zif_cd_fmon_prism_types=>gc_milestone-failed.
+        ls_other-error_code = 'BANK_DOWN'.
+        mo_cut->insert_event( ls_other ).
+        DATA(lt_rows) = mo_cut->read_failures( it_codes = VALUE #( ( lc_dup ) ) iv_since = '20261101' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE zif_cd_fmon_prism_types=>tt_event_id(
+                                                    FOR ls_row IN lt_rows ( ls_row-event_id ) )
+                                            exp = VALUE zif_cd_fmon_prism_types=>tt_event_id( ( gc_test-event_id ) )
+                                            msg = 'Only the failure with the listed code' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_cut->read_failures( it_codes = VALUE #( ) iv_since = '20261101' )
+                                             msg = 'An empty code list reads nothing' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

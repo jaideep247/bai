@@ -76,6 +76,9 @@ annotate entity ZC_CD_FmonSource with
   @UI.identification: [{ position: 200 }]
   Description;
 
+  @UI.identification: [{ position: 210 }]
+  GroupFields;
+
   @UI.hidden: true
   LastChangedBy;
 

@@ -19,6 +19,10 @@
 *&              specificity = literal characters of the pattern (ZCL_CD_OPS_UTIL=>PCRE_LITERALS).
 *& 2026-11-07 | Design review: FILE_INSTANCE - file generation identity (the instance is fixed by
 *&              the file's first evidence; later events attach whatever their date or time).
+*& 2026-11-07 | Regenerated files (user 2026-11-07): GENERATION_KEY, PREVIOUS_ / NEXT_GENERATION,
+*&            | FAILED_VERDICT (replaced / duplicate name / regeneration missing), UNFAILED_PREDECESSOR
+*&            | (a regenerated file whose earlier generation did not fail); FILE_INSTANCE comment: the
+*&            | reference is unique per generation (confirmed by the user 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -264,8 +268,8 @@ CLASS zcl_cd_fmon_rules DEFINITION
     "! <li>else (only instances of later dates) first evidence not after the earliest one's first
     "! event attaches to it (earlier evidence that reached SAP late);</li>
     "! <li>otherwise none: blank ID - the caller opens an instance or defers.</li></ol>
-    "! Contract assumption (VERIFY with PRISM): the reference is unique per file generation; a
-    "! name PRISM reuses is told apart by the business date of the new generation only.
+    "! The reference is unique per file generation (confirmed by the user 2026-11-07: PRISM rejects a
+    "! name it has already received); rule 4 keeps a reused inbound name of a later day apart.
     CLASS-METHODS file_instance
       IMPORTING
         is_obs         TYPE zif_cd_fmon_types=>ty_observation
@@ -274,7 +278,81 @@ CLASS zcl_cd_fmon_rules DEFINITION
       RETURNING
         VALUE(rs_pick) TYPE zif_cd_fmon_types=>ty_instance_pick.
 
+    "! Generation group key of a file (regenerated files, user 2026-11-07): the values of the
+    "! configured group fields condensed, joined by '/' up to the last non-blank value, upper case;
+    "! longer than the reference = prefix + digest (ZCL_CD_FMON_UTIL=>NORMALIZE_REF). Every value
+    "! blank = no key (the file is not linked).
+    CLASS-METHODS generation_key
+      IMPORTING
+        it_values     TYPE string_table
+      RETURNING
+        VALUE(rv_key) TYPE zif_cd_fmon_types=>ty_file_ref.
+
+    "! The latest generation of the file's interface and generation group generated before it
+    "! (first event, then file ID); initial without a group or an earlier generation
+    CLASS-METHODS previous_generation
+      IMPORTING
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+        it_generations TYPE zif_cd_fmon_types=>tt_file
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
+
+    "! The first generation of the file's interface and generation group generated after it
+    CLASS-METHODS next_generation
+      IMPORTING
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+        it_generations TYPE zif_cd_fmon_types=>tt_file
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
+
+    "! Verdict on a file with outcome PRISM_FAILED (user 2026-11-07: SAP regenerates a file PRISM
+    "! could not deliver under a new name for the same payments). In this order:
+    "! <ol><li>a later generation of its group exists: FILE_REPLACED (the failure is answered;
+    "! the new file follows its own SLA);</li>
+    "! <li>a PRISM failure of this generation (not before its first event) carries an error code of
+    "! the duplicate-name list (whole value, case ignored): PRISM_DUPLICATE_NAME - regenerate,
+    "! do not resend;</li>
+    "! <li>otherwise PRISM_FAILED, with REGENERATION_MISSING when the file has a generation group,
+    "! the wait is on (> 0) and more minutes than the wait passed since the latest failure.</li></ol>
+    "! A file without a generation group and an empty code list is PRISM_FAILED as before.
+    CLASS-METHODS failed_verdict
+      IMPORTING
+        is_file           TYPE zif_cd_fmon_types=>ty_file
+        it_generations    TYPE zif_cd_fmon_types=>tt_file
+        it_events         TYPE zif_cd_fmon_types=>tt_event
+        it_failures       TYPE zif_cd_fmon_types=>tt_prism_failure
+        is_regen          TYPE zif_cd_fmon_types=>ty_regen
+        iv_now            TYPE timestampl
+      RETURNING
+        VALUE(rs_verdict) TYPE zif_cd_fmon_types=>ty_failed_verdict.
+
+    "! A regenerated file whose previous generation did not fail - delivered, acknowledged or still
+    "! in flight (any outcome but PRISM_FAILED): that generation (FILE_REGENERATED_NOT_FAILED,
+    "! possible duplicate payment file to the bank / IRIS); initial otherwise
+    CLASS-METHODS unfailed_predecessor
+      IMPORTING
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+        it_generations TYPE zif_cd_fmon_types=>tt_file
+      RETURNING
+        VALUE(rs_file) TYPE zif_cd_fmon_types=>ty_file.
+
   PRIVATE SECTION.
+
+    "! is_first was generated before is_second (first event, then file ID: a strict order)
+    CLASS-METHODS generated_before
+      IMPORTING
+        is_first         TYPE zif_cd_fmon_types=>ty_file
+        is_second        TYPE zif_cd_fmon_types=>ty_file
+      RETURNING
+        VALUE(rv_before) TYPE abap_bool.
+
+    "! is_other is another generation of the file (same interface and non-blank group)
+    CLASS-METHODS same_group
+      IMPORTING
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+        is_other       TYPE zif_cd_fmon_types=>ty_file
+      RETURNING
+        VALUE(rv_same) TYPE abap_bool.
 
     "! First evidence that continues the instance: the instance has not reached the stage yet
     "! (the rest of the file's first evidence, e.g. SAP's receipt after PRISM's delivery across
@@ -810,6 +888,111 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
         RETURN.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD generation_key.
+    DATA lv_last TYPE i.
+    DATA lt_parts TYPE string_table.
+    LOOP AT it_values ASSIGNING FIELD-SYMBOL(<lv_value>).
+      DATA(lv_part) = condense( <lv_value> ).
+      INSERT lv_part INTO TABLE lt_parts.
+      IF lv_part IS NOT INITIAL.
+        lv_last = lines( lt_parts ).
+      ENDIF.
+    ENDLOOP.
+    IF lv_last = 0.
+      RETURN.
+    ENDIF.
+    DATA(lv_cut) = lv_last + 1.
+    DELETE lt_parts FROM lv_cut.
+    rv_key = zcl_cd_fmon_util=>normalize_ref(
+               concat_lines_of( table = lt_parts sep = zif_cd_fmon_types=>gc_generation-separator ) ).
+  ENDMETHOD.
+
+
+  METHOD generated_before.
+    rv_before = xsdbool( is_first-first_event_at < is_second-first_event_at
+                         OR ( is_first-first_event_at = is_second-first_event_at
+                              AND is_first-file_id < is_second-file_id ) ).
+  ENDMETHOD.
+
+
+  METHOD same_group.
+    rv_same = xsdbool( is_file-gen_group IS NOT INITIAL
+                       AND is_other-file_id   <> is_file-file_id
+                       AND is_other-iface_id  = is_file-iface_id
+                       AND is_other-gen_group = is_file-gen_group ).
+  ENDMETHOD.
+
+
+  METHOD previous_generation.
+    LOOP AT it_generations ASSIGNING FIELD-SYMBOL(<ls_other>).
+      IF same_group( is_file = is_file is_other = <ls_other> ) = abap_true
+         AND generated_before( is_first = <ls_other> is_second = is_file ) = abap_true
+         AND ( rs_file IS INITIAL OR generated_before( is_first = rs_file is_second = <ls_other> ) = abap_true ).
+        rs_file = <ls_other>.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD next_generation.
+    LOOP AT it_generations ASSIGNING FIELD-SYMBOL(<ls_other>).
+      IF same_group( is_file = is_file is_other = <ls_other> ) = abap_true
+         AND generated_before( is_first = is_file is_second = <ls_other> ) = abap_true
+         AND ( rs_file IS INITIAL OR generated_before( is_first = <ls_other> is_second = rs_file ) = abap_true ).
+        rs_file = <ls_other>.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD failed_verdict.
+    DATA lv_failed_at TYPE timestampl.
+
+    rs_verdict-code = zif_cd_fmon_types=>gc_check_code-prism_failed.
+    LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file WHERE file_id = is_file-file_id.
+      IF <ls_event>-stage = zif_cd_fmon_types=>gc_stage-prism_failed AND <ls_event>-event_at > lv_failed_at.
+        lv_failed_at = <ls_event>-event_at.
+      ENDIF.
+    ENDLOOP.
+    IF lv_failed_at IS INITIAL.
+      lv_failed_at = is_file-last_event_at.
+    ENDIF.
+    rs_verdict-failed_min = zcl_cd_fmon_util=>minutes_between( iv_from = lv_failed_at
+                                                               iv_to   = iv_now ).
+
+    rs_verdict-replaced_by = next_generation( is_file = is_file it_generations = it_generations ).
+    IF rs_verdict-replaced_by IS NOT INITIAL.
+      rs_verdict-code = zif_cd_fmon_types=>gc_check_code-file_replaced.
+      RETURN.
+    ENDIF.
+
+    DATA(lt_codes) = zcl_cd_ops_util=>split_list( is_regen-dup_codes ).
+    LOOP AT it_failures ASSIGNING FIELD-SYMBOL(<ls_failure>)
+         WHERE file_ref = is_file-file_ref AND occurred_at >= is_file-first_event_at.
+      DATA(lv_code) = to_upper( condense( CONV string( <ls_failure>-error_code ) ) ).
+      LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
+        IF to_upper( <lv_code> ) = lv_code AND lv_code IS NOT INITIAL.
+          rs_verdict-code       = zif_cd_fmon_types=>gc_check_code-prism_dup_name.
+          rs_verdict-error_code = <ls_failure>-error_code.
+          RETURN.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+
+    rs_verdict-regen_missing = xsdbool( is_file-gen_group IS NOT INITIAL
+                                        AND is_regen-wait_min > 0
+                                        AND rs_verdict-failed_min > is_regen-wait_min ).
+  ENDMETHOD.
+
+
+  METHOD unfailed_predecessor.
+    DATA(ls_previous) = previous_generation( is_file = is_file it_generations = it_generations ).
+    IF ls_previous IS NOT INITIAL AND ls_previous-outcome <> zif_cd_fmon_types=>gc_stage-prism_failed.
+      rs_file = ls_previous.
+    ENDIF.
   ENDMETHOD.
 
 

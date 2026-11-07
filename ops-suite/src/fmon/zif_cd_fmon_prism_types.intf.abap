@@ -9,6 +9,7 @@
 *& 2026-11-06 | Instant processing (bgPF unit per event): PROCESSED_AT, adapter, parameters.
 *& 2026-11-07 | FMON_PRISM_INSTANT is BOOL in ZCA_PARAM: a value row with blank value = registry only (the open
 *&            | item of the blank flag is closed); comments name ZCA_PARAM.
+*& 2026-11-07 | TT_ERROR_CODE (regenerated files: PRISM duplicate-name failures).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - types and wire format</p>
 "! Contract: docs/PRISM_Status_API.md. JSON keys, milestone, direction and error code values
@@ -234,6 +235,8 @@ INTERFACE zif_cd_fmon_prism_types
     END OF ty_row.
   TYPES tt_row TYPE STANDARD TABLE OF ty_row WITH EMPTY KEY.
   TYPES tt_event_id TYPE STANDARD TABLE OF ty_event_id WITH EMPTY KEY.
+  "! PRISM error codes (FMON_PRISM_DUP_NAME_CODES: name already received)
+  TYPES tt_error_code TYPE STANDARD TABLE OF ty_error_code WITH EMPTY KEY.
 
   " ---------------------------------------------------------------- parsing
   "! One top-level JSON member: name, JSON-XML kind (str, num, bool, null) and text value

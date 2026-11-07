@@ -190,7 +190,9 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'finding': 'Finding code of the outcome (blank = none)',
           'seq_pattern': 'Role sequence (PCRE, whole value)',
           'expected_dfkkrp': 'Returns lot items expected (blank = not checked)',
-          'max_age_days': 'Maximum age of a pending outcome (days)'}
+          'max_age_days': 'Maximum age of a pending outcome (days)',
+          # Regenerated files (user 2026-11-07): payment run of a file, e.g. LAUFD,LAUFI,HBKID
+          'group_fields': 'Generation group fields (comma list)'}
 ADMIN = ('last_changed_by', 'last_changed_at', 'local_last_changed_at')
 LEGACY_ADMIN = ('changed_by', 'changed_at')
 

@@ -8,6 +8,8 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A39/A52: malformed rows, payment key, half-open day range.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
+*& 2026-11-07 | Regenerated files (user 2026-11-07): GROUP_FIELDS give the record's generation group,
+*&            | no GROUP_FIELDS no group, more than four fields refused (284).
 *&---------------------------------------------------------------------*
 CLASS ltc_mapping DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -44,11 +46,76 @@ CLASS ltc_mapping DEFINITION FINAL
     METHODS invalid_date_quarantined FOR TESTING.
     METHODS payment_key_is_taken_over FOR TESTING.
     METHODS day_range_is_half_open FOR TESTING.
+    METHODS group_fields_give_generation FOR TESTING.
+    METHODS no_group_fields_no_generation FOR TESTING.
+    METHODS five_group_fields_refused FOR TESTING.
 
 ENDCLASS.
 
 
 CLASS ltc_mapping IMPLEMENTATION.
+
+  " Rule (regenerated files): the values of GROUP_FIELDS, in their configured order, are the
+  " record's generation group (payment run LAUFD / LAUFI / house bank of ZCDT_REGUT - VERIFY-SE11).
+  METHOD group_fields_give_generation.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_request-src-group_fields = 'LAUFD, LAUFI,HBKID'.
+        DATA(ls_query) = zcl_cd_fmon_adapter_generic=>build_query( ms_request ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE zif_cd_fmon_types=>tt_qfield( FOR ls_field IN ls_query-fields
+                                                    WHERE ( role = zif_cd_fmon_types=>gc_role-group_1
+                                                         OR role = zif_cd_fmon_types=>gc_role-group_2
+                                                         OR role = zif_cd_fmon_types=>gc_role-group_3
+                                                         OR role = zif_cd_fmon_types=>gc_role-group_4 )
+                                                    ( ls_field ) )
+          exp = VALUE zif_cd_fmon_types=>tt_qfield( ( role = zif_cd_fmon_types=>gc_role-group_1 field = 'LAUFD' )
+                                                    ( role = zif_cd_fmon_types=>gc_role-group_2 field = 'LAUFI' )
+                                                    ( role = zif_cd_fmon_types=>gc_role-group_3 field = 'HBKID' ) )
+          msg = 'The group fields are read in their configured order' ).
+        ms_raw-group_1 = `20261102`.
+        ms_raw-group_2 = `RUN01`.
+        ms_raw-group_3 = `BOA1`.
+        cl_abap_unit_assert=>assert_equals( act = act( )-gen_group
+                                            exp = '20261102/RUN01/BOA1'
+                                            msg = 'Generation group key of the record' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (no generation group configured): behaviour as before - no group key, no extra field read.
+  METHOD no_group_fields_no_generation.
+    TRY.
+        configure_scenario( VALUE #( status = `A` ) ).
+        ms_raw-group_1 = `20261102`.
+        cl_abap_unit_assert=>assert_initial( act = act( )-gen_group
+                                             msg = 'Without GROUP_FIELDS the record is not linked' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( zcl_cd_fmon_adapter_generic=>build_query( ms_request )-fields[
+                                        role = zif_cd_fmon_types=>gc_role-group_1 ] ) )
+          msg = 'No group field is read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (boundary): at most four group fields - a fifth is a configuration error, never ignored.
+  METHOD five_group_fields_refused.
+    configure_scenario( VALUE #( status = `A` ) ).
+    ms_request-src-group_fields = 'LAUFD,LAUFI,HBKID,HKTID,BUKRS'.
+    TRY.
+        zcl_cd_fmon_adapter_generic=>build_query( ms_request ).
+        cl_abap_unit_assert=>fail( msg = 'Five group fields must be refused' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = '284'
+                                            msg = 'Message 284 names the limit' ).
+    ENDTRY.
+  ENDMETHOD.
+
 
   METHOD configure_scenario.
     DATA ls_map TYPE zif_cd_fmon_types=>ty_srcmap.

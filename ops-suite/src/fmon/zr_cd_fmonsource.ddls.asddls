@@ -46,6 +46,8 @@ define view entity ZR_CD_FmonSource
       active as Active,
       @EndUserText.label: 'Description'
       description as Description,
+      @EndUserText.label: 'Generation group fields (comma list)'
+      group_fields as GroupFields,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

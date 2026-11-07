@@ -1265,6 +1265,36 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>280</MSGNR>
+     <TEXT>&amp;1: replaced by regenerated file &amp;2 (generation &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>281</MSGNR>
+     <TEXT>&amp;1: PRISM failed &amp;2 min ago, not regenerated yet (generation &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>282</MSGNR>
+     <TEXT>&amp;1: regenerated, but &amp;2 did not fail (&amp;3) - possible duplicate</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>283</MSGNR>
+     <TEXT>&amp;1: PRISM already has this name (error &amp;2) - regenerate, do not resend</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>284</MSGNR>
+     <TEXT>Source &amp;1: at most &amp;2 generation group fields (GROUP_FIELDS)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>

@@ -27,6 +27,10 @@
 *&            | of the same name on consecutive days = two instances, daylight saving (repeated /
 *&            | missing hour) = one instance with SLA minutes on UTC. DAO double serves recorded
 *&            | events (MT_OLD_EVENTS); act( ) takes the run date.
+*& 2026-11-07 | Regenerated files (user 2026-11-07), 5-minute run: a PRISM_FAILED file whose payment run
+*&            | was regenerated is FILE_REPLACED (not PRISM_FAILED) and its generation group is stored; an
+*&            | earlier generation found only in the registry (index GRP) is evaluated and reconciled; no
+*&            | generation group = PRISM_FAILED as before and no group read. DAO double: MT_GROUP_FILES.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -50,10 +54,21 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mv_sql_error TYPE abap_bool.
     "! Recorded events of registry rows (ZCD_FMON_EVENT as an earlier run left it)
     DATA mt_old_events TYPE zif_cd_fmon_types=>tt_event.
+    "! Registered generations of the generation groups (index GRP) and the number of reads
+    DATA mt_group_files TYPE zif_cd_fmon_types=>tt_file.
+    DATA mv_group_reads TYPE i.
 ENDCLASS.
 
 
 CLASS ltd_dao IMPLEMENTATION.
+  METHOD zif_cd_fmon_dao~get_group_files.
+    mv_group_reads += 1.
+    LOOP AT mt_group_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      IF line_exists( it_keys[ iface_id = <ls_file>-iface_id gen_group = <ls_file>-gen_group ] ).
+        INSERT <ls_file> INTO TABLE rt_files.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_ifaces.
     rt_ifaces = mt_ifaces.
   ENDMETHOD.
@@ -430,7 +445,8 @@ CLASS ltc_engine DEFINITION FINAL
         iv_amount    TYPE zif_cd_ops_types=>ty_amount DEFAULT 0
         iv_date      TYPE d DEFAULT gc_date
         iv_item      TYPE zif_cd_fmon_types=>ty_key_value OPTIONAL
-        iv_malformed TYPE abap_bool DEFAULT abap_false.
+        iv_malformed TYPE abap_bool DEFAULT abap_false
+        iv_group     TYPE zif_cd_fmon_types=>ty_file_ref OPTIONAL.
 
     "! A registry instance of the outbound file from an earlier run (lookup by reference)
     METHODS existing_file
@@ -512,6 +528,20 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS same_name_two_days_two_files FOR TESTING.
     METHODS dst_fall_back_one_instance FOR TESTING.
     METHODS dst_spring_forward_one_inst FOR TESTING.
+    METHODS regen_replaces_failed_file FOR TESTING.
+    METHODS regen_peer_in_registry_found FOR TESTING.
+    METHODS no_group_failure_unchanged FOR TESTING.
+
+    "! Regenerated files: the failed file (generated 04:30, PRISM failed 04:40) and, when
+    "! iv_regenerate, its regeneration of 05:00; both of payment run iv_group; checks F_PRFAIL
+    "! (reject, OUTCOME=PRISM_FAILED) and F_REGEN
+    METHODS configure_regen
+      IMPORTING
+        iv_group      TYPE zif_cd_fmon_types=>ty_file_ref
+        iv_regenerate TYPE abap_bool.
+
+    CONSTANTS gc_regen_file TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_PNC_20261102_02'.
+    CONSTANTS gc_run_group TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/RUN01/PNC1'.
 
     "! Inbound statement interface (same file name every day) with SLA rows FILE_RECEIVED and
     "! PRISM_DELIVERED (30 min, basis P) and the PRISM source
@@ -609,6 +639,7 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_rec-count_known = abap_true.
     ENDIF.
     ls_rec-amount        = iv_amount.
+    ls_rec-gen_group     = iv_group.
     INSERT ls_rec INTO TABLE mo_adapter->mt_records.
   ENDMETHOD.
 
@@ -1382,6 +1413,113 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_src-active        = abap_true.
     ls_src-adapter_class = space.
     INSERT ls_src INTO TABLE mo_dao->mt_srcs.
+  ENDMETHOD.
+
+
+  METHOD configure_regen.
+    DATA ls_check TYPE zif_cd_fmon_types=>ty_chk.
+    configure_scenario( VALUE #( ) ).
+    add_prism_source( ).
+    ls_check-check_id   = 'C_PRFAIL'.
+    ls_check-class_name = 'ZCL_CD_FMON_CHK_REJECT'.
+    ls_check-severity   = zif_cd_ops_types=>gc_severity-error.
+    ls_check-params     = 'OUTCOME=PRISM_FAILED'.
+    ls_check-active     = abap_true.
+    INSERT ls_check INTO TABLE mo_dao->mt_checks.
+    add_check( iv_check_id = 'C_REGEN' iv_class = 'ZCL_CD_FMON_CHK_REGEN' ).
+    add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                iv_at = '20261102043000' iv_group = iv_group ).
+    add_record( iv_src_id = gc_src_prism iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_failed
+                iv_at = '20261102044000' ).
+    IF iv_regenerate = abap_true.
+      add_record( iv_src_id = gc_src_out iv_name = gc_regen_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                  iv_at = '20261102050000' iv_group = iv_group ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  " Rule (a, 5-minute run): the failed file of a regenerated payment run is FILE_REPLACED
+  " (information naming the new file) instead of PRISM_FAILED, the group is stored on both files and
+  " the failed file is in the reconcile scope, so its open PRISM_FAILED exception is resolved.
+  METHOD regen_replaces_failed_file.
+    TRY.
+        configure_regen( iv_group = gc_run_group iv_regenerate = abap_true ).
+        DATA(ls_result) = act( ).
+        DATA(lt_codes) = codes( VALUE #( FOR ls_found IN ls_result-findings WHERE ( object_key = gc_out_file )
+                                         ( ls_found ) ) ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_codes[ table_line = `FILE_REPLACED` ] ) )
+                                          msg = 'The failed file is replaced' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_codes[ table_line = `PRISM_FAILED` ] ) )
+                                           msg = 'Its PRISM_FAILED is not raised again' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-regen_not_failed ] ) )
+          msg = 'A regeneration after a failure is no duplicate' ).
+        cl_abap_unit_assert=>assert_equals( act = VALUE #( mo_dao->mt_saved[ file_name = gc_regen_file ]-gen_group OPTIONAL )
+                                            exp = gc_run_group
+                                            msg = 'Only the link is stored on the new file' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key( gc_out_file ) ] ) )
+          msg = 'The failed file is reconciled (its PRISM_FAILED is resolved)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (c, 5-minute run): the earlier generation of a regenerated file is read from the registry
+  " by its group (index GRP) even outside the day's files; delivered = FILE_REGENERATED_NOT_FAILED on
+  " the new file, and the earlier file is evaluated with the run.
+  METHOD regen_peer_in_registry_found.
+    DATA ls_peer TYPE zif_cd_fmon_types=>ty_file.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_check( iv_check_id = 'C_REGEN' iv_class = 'ZCL_CD_FMON_CHK_REGEN' ).
+        ls_peer-file_id        = '000000000000000000000000000000E1'.
+        ls_peer-iface_id       = gc_out.
+        ls_peer-file_name      = gc_out_file.
+        ls_peer-file_ref       = zcl_cd_fmon_util=>normalize_ref( gc_out_file ).
+        ls_peer-direction      = zif_cd_fmon_types=>gc_direction-outbound.
+        ls_peer-business_date  = gc_prev_day2.
+        ls_peer-stage          = zif_cd_fmon_types=>gc_stage-prism_delivered.
+        ls_peer-first_event_at = '20261031230000'.
+        ls_peer-last_event_at  = '20261031231000'.
+        ls_peer-gen_group      = gc_run_group.
+        ls_peer-db_exists      = abap_true.
+        INSERT ls_peer INTO TABLE mo_dao->mt_group_files.
+        add_record( iv_src_id = gc_src_out iv_name = gc_regen_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102050000' iv_group = gc_run_group ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-regen_not_failed
+                                                          object_key = gc_regen_file ] ) )
+          msg = 'Possible duplicate payment file on the regenerated file' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = CONV zif_cd_ops_types=>ty_object_key( gc_out_file ) ] ) )
+          msg = 'The earlier generation is evaluated with the run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (no generation group configured): exactly as before - PRISM_FAILED, no group read.
+  METHOD no_group_failure_unchanged.
+    TRY.
+        configure_regen( iv_group = space iv_regenerate = abap_true ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-prism_failed
+                                                          object_key = gc_out_file ] ) )
+          msg = 'PRISM_FAILED as before' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-file_replaced ] ) )
+          msg = 'No link without a generation group' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mv_group_reads
+                                            exp = 0
+                                            msg = 'No group read without a generation group' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
   ENDMETHOD.
 
 

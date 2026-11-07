@@ -16,6 +16,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL); SLA and calendar rows read active only (production deactivates).
+*& 2026-11-07 | Regenerated files (user 2026-11-07): GEN_GROUP in every registry read, get_group_files
+*&            | (index GRP), GROUP_FIELDS of the source rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -131,7 +133,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD zif_cd_fmon_dao~get_sources.
     SELECT src_id, iface_id, table_name, file_key_field, file_name_field, date_field, time_field,
            ts_field, status_field, count_field, amount_field, size_field, checksum_field,
-           source_field, lob_field, default_stage, adapter_class, active, description
+           source_field, lob_field, default_stage, adapter_class, active, description, group_fields
       FROM zcd_fmon_src
       WHERE active = @abap_true
       INTO CORRESPONDING FIELDS OF TABLE @rt_sources.
@@ -168,7 +170,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
            business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
            unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
-           last_event_at, src_id, src_key, created_at, changed_at, changed_by
+           last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
       FROM zcd_fmon_file
       FOR ALL ENTRIES IN @it_keys
       WHERE iface_id       = @it_keys-iface_id
@@ -179,13 +181,31 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD zif_cd_fmon_dao~get_group_files.
+    CHECK it_keys IS NOT INITIAL.
+    " index GRP: MANDT, IFACE_ID, GEN_GROUP - the generations of the payment runs in the run
+    SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
+           business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
+           unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
+           last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
+      FROM zcd_fmon_file
+      FOR ALL ENTRIES IN @it_keys
+      WHERE iface_id       = @it_keys-iface_id
+        AND gen_group      = @it_keys-gen_group
+        AND business_date >= @iv_since
+      INTO CORRESPONDING FIELDS OF TABLE @rt_files.
+    SORT rt_files BY file_id.
+    mark_loaded( CHANGING ct_files = rt_files ).
+  ENDMETHOD.
+
+
   METHOD zif_cd_fmon_dao~get_eval_files.
     DATA lv_no_outcome TYPE zif_cd_fmon_types=>ty_stage.
     IF iv_iface_id IS INITIAL.
       SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
              business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
              unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
-             last_event_at, src_id, src_key, created_at, changed_at, changed_by
+             last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
         FROM zcd_fmon_file
         WHERE business_date BETWEEN @iv_date_from AND @iv_date_to
            OR ( business_date >= @iv_open_since
@@ -197,7 +217,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
              business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
              unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
-             last_event_at, src_id, src_key, created_at, changed_at, changed_by
+             last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
         FROM zcd_fmon_file
         WHERE iface_id = @iv_iface_id
           AND ( business_date BETWEEN @iv_date_from AND @iv_date_to
@@ -218,7 +238,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
              business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
              unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
-             last_event_at, src_id, src_key, created_at, changed_at, changed_by
+             last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
         FROM zcd_fmon_file
         FOR ALL ENTRIES IN @it_names
         WHERE file_name      = @it_names-table_line
@@ -230,7 +250,7 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       SELECT file_id, iface_id, file_ref, direction, file_type, source_sys, lob, pay_method, file_name,
              business_date, size_bytes, size_known, record_count, control_total, checksum, stage, outcome,
              unprocessed_count, ack_count, ack_amount, nack_count, origin_rows, first_event_at,
-             last_event_at, src_id, src_key, created_at, changed_at, changed_by
+             last_event_at, src_id, src_key, created_at, changed_at, changed_by, gen_group
         FROM zcd_fmon_file
         FOR ALL ENTRIES IN @it_checksums
         WHERE checksum       = @it_checksums-table_line
