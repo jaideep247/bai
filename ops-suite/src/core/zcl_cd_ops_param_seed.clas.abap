@@ -1161,7 +1161,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
         developer_owned TYPE abap_bool VALUE IS INITIAL,
-        description     TYPE zif_ca_param_types=>ty_description VALUE 'Throttle queue: A one for all / C one per counterparty',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'PRISM queue: C one per bank (confirmed) / A one for all',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
       END OF gc_d067.
     CONSTANTS:

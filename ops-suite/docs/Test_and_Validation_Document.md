@@ -171,7 +171,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 
 ### 6.8 PRISM status API (`POST /sap/zcd_ops/prism_status`, `PRISM_Status_API.md`)
 
-Own approved change (switch S-PRISM); QA1 with the SICF node active for the test user only. ABAP Unit: `ZCL_CD_FMON_PRISM_EVENT` (20), `_API` (11), `_DAO` (5, OSQL), `_PROC` (11, real engine, incl. 4 PRISM-throttle cases), `ZCL_CD_FMON_ADAPTER_PRISM` (4), `ZCL_CD_FMON_CHK_PRISM_FILE` (5), `ZCL_CD_FMON_CHK_REJECT` (2), PRISM tests of `ZCL_CD_FMON_STATUS` (9) and `ZCL_CD_FMON_ENGINE` (2), PRISM throttle `ZCL_CD_FMON_RULES` / ltc_throttle (11). Harness: Postman / curl over HTTPS with the QA1 technical user's certificate.
+Own approved change (switch S-PRISM); QA1 with the SICF node active for the test user only. ABAP Unit: `ZCL_CD_FMON_PRISM_EVENT` (20), `_API` (11), `_DAO` (5, OSQL), `_PROC` (11, real engine, incl. 4 PRISM-throttle cases), `ZCL_CD_FMON_ADAPTER_PRISM` (4), `ZCL_CD_FMON_CHK_PRISM_FILE` (5), `ZCL_CD_FMON_CHK_REJECT` (2), PRISM tests of `ZCL_CD_FMON_STATUS` (9) and `ZCL_CD_FMON_ENGINE` (2), PRISM throttle `ZCL_CD_FMON_RULES` / ltc_throttle (14). Harness: Postman / curl over HTTPS with the QA1 technical user's certificate.
 
 | ID | Case | Expected |
 |---|---|---|
@@ -192,7 +192,7 @@ Own approved change (switch S-PRISM); QA1 with the SICF node active for the test
 | PRISM-16 | **PRISM throttle** (user 2026-11-06: ACH and wire files 2 min per file): 5 ACH files of `ACH_PNC_DISB_OUT` sent together; PRISM posts RECEIVED for all five within a minute, then DELIVERED one every 2 minutes; SLA `PRISM_DELIVERED` 5 P, `FMON_PRISM_THROTTLE_MIN` 2 | The 5th file, DELIVERED about 10 min after its RECEIVED, is on time (allowed 5 + 4 × 2 = 13 min): no PRISM_DELIVERED_LATE for any of the five; a DELIVERED of the 5th file after 14 min → PRISM_DELIVERED_LATE (W), text "SLA 13 min incl. PRISM queue allowance" |
 | PRISM-17 | Queue of 31 ACH files (`FMON_PRISM_QUEUE_MAX` 30): RECEIVED for all, DELIVERED withheld | PRISM_QUEUE_LONG (W) on the 31st file (once, from check `F_PRISMDLV`); its delivery allowance stops at 29 files ahead (5 + 58 min); NO_PRISM_DELIVERED only after that |
 | PRISM-18 | Not throttled: an IRIS cheque print file and a positive pay file (`CHECK_POSPAY_OUT`) sent in the same cycle as 5 ACH files | Their delivery SLA has no allowance (base minutes only) and they are not counted in the ACH queue (the 5th ACH file keeps 4 files ahead) |
-| PRISM-19 | Scope and switch: repeat PRISM-16 with an ACH file to PNC and a wire to JPMC, `FMON_PRISM_THROTTLE_SCOPE` A, then C; then `FMON_PRISM_THROTTLE_MIN` 0 | A: the wire waits behind the ACH files; C: the wire has nobody ahead; 0: no allowance, results as before 2026-11-06 |
+| PRISM-19 | Scope and switch: repeat PRISM-16 with ACH files to PNC, a wire to JPMC and an ACH file to BOA, `FMON_PRISM_THROTTLE_SCOPE` C (delivered default), then A as a value row; then `FMON_PRISM_THROTTLE_MIN` 0 | C: the JPMC wire and the BOA file have nobody ahead (no PNC / JPMC file counts in the BOA queue), the PNC files keep their own queue; A: the wire and the BOA file wait behind the ACH files; 0: no allowance, results as before 2026-11-06 (ABAP Unit `bank_queues_do_not_wait`, `scope_a_one_queue_when_set`) |
 | PRISM-15 | ST05 / SAT during PRISM-01 | Writes only `ZCD_FMON_PRISM`, `ZCD_FMON_FILE`, `ZCD_FMON_EVENT`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING`, alert log; no business table, file, job or routing touched |
 
 ### 6.9 EBS validation dashboard (`ZUI_CD_EBS_DASH_O4`, `Dashboard_EBS_Validation.md`)

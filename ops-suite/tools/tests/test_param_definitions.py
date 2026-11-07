@@ -62,6 +62,8 @@ ROWS = {
     'FIX_FLAG': "CD_OPS,FIX_FLAG,P,BOOL,,,,,,,,A flag,TEAM\n",
     'FIX_LIMIT': "CD_OPS,FIX_LIMIT,P,INT,1,,10,,,,,A limit,TEAM\n",
 }
+SCOPE_DEF = {'NAME': 'FIX_SCOPE', 'VALUE_TYPE': 'CHAR', 'ALLOWED_PCRE': '[AC]'}
+LIST_DEF = {'NAME': 'FIX_FIELDS', 'VALUE_TYPE': 'LIST', 'ALLOWED_PCRE': '[A-Z][A-Z0-9_]*'}
 RUNTIME = {(pd.OPS_TYPES, 'gc_param_prefix-alert'): ('const', pd.OPS_TYPES, 'gc_param_default-route')}
 
 
@@ -130,6 +132,30 @@ class ParamDefinitionsTest(unittest.TestCase):
     def test_bool_default_must_be_x_or_blank(self):
         rows = dict(ROWS, FIX_FLAG="CD_OPS,FIX_FLAG,P,BOOL,,,N,,,,,A flag,TEAM\n")
         self.assertTrue(any('BOOL default' in f for f in self._failures(rows)))
+
+    def test_allowed_pattern_whole_value(self):
+        self.assertIsNone(pd.pattern_mismatch(SCOPE_DEF, 'C'))
+        self.assertIsNone(pd.pattern_mismatch(SCOPE_DEF, 'a'))
+        self.assertEqual(pd.pattern_mismatch(SCOPE_DEF, 'AC'), 'AC')
+
+    def test_allowed_pattern_per_list_element(self):
+        self.assertIsNone(pd.pattern_mismatch(LIST_DEF, 'VB1OK, VB2OK'))
+        self.assertEqual(pd.pattern_mismatch(LIST_DEF, 'VB1OK,1X'), '1X')
+
+    def test_default_outside_pattern_is_reported(self):
+        rows = dict(ROWS, FIX_LIMIT="CD_OPS,FIX_LIMIT,P,INT,1,,10,[1-9],,,,A limit,TEAM\n")
+        self.assertTrue(any('FIX_LIMIT' in f and 'allowed pattern' in f for f in self._failures(rows)))
+
+    def test_delivered_queue_scope_is_c(self):
+        """Design review 2026-11-07: one PRISM queue per bank is confirmed - definition default,
+        value row and code default are C."""
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        _, defs, values, _ = pd.load(root)
+        name = 'FMON_PRISM_THROTTLE_SCOPE'
+        self.assertEqual(next(d['DEFAULT_VALUE'] for d in defs if d['NAME'] == name), 'C')
+        self.assertEqual([v['LOW'] for v in values if v['NAME'] == name], ['C'])
+        names = pd.expected_names(root)
+        self.assertEqual(pd.code_default(root, name, names[name]), 'C')
 
 
 if __name__ == '__main__':

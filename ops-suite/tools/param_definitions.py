@@ -17,11 +17,15 @@ Purpose:  The suite's runtime parameters in the framework ZCA_PARAM (areas CD_OP
               constant of the same key, or the source named in DEFAULTS; none = blank);
             - flags (default X, or the read compared with abap_true / IS INITIAL) are BOOL,
               every BOOL is such a flag, and no parameter read is compared with an off token 'N';
+            - the delivered default and every value row match ALLOWED_PCRE (whole value, case
+              ignored, every element of a LIST - the framework validator's rule), so a value
+              the framework would refuse never ships (e.g. FMON_PRISM_THROTTLE_SCOPE C);
             - the generated class is up to date.
 Usage:    python3 tools/param_definitions.py           -> regenerate the seed class
           python3 tools/param_definitions.py --check   -> report drift / incompleteness, exit 1
 Modification log:
 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
+2026-11-07 | Default and value rows checked against ALLOWED_PCRE (design review: queue scope C).
 """
 import csv
 import io
@@ -299,6 +303,19 @@ def flag_reads(root, names):
 
 
 # ------------------------------------------------------------------ format
+def pattern_mismatch(d, value):
+    """The element of value that ALLOWED_PCRE refuses (None: allowed or no pattern). Same rule as
+    ZCL_CA_PARAM_VALIDATOR->CHECK_PATTERN: whole value, case ignored, each element of a LIST."""
+    if not d['ALLOWED_PCRE'] or not value:
+        return None
+    elements = [e.strip() for e in value.split(',')] if d['VALUE_TYPE'] == 'LIST' else [value]
+    try:
+        pattern = re.compile(d['ALLOWED_PCRE'], re.IGNORECASE)
+    except re.error:
+        return None
+    return next((e for e in elements if not pattern.fullmatch(e)), None)
+
+
 def format_failures(areas, defs, values):
     fails = []
     area_ids = [a['AREA'] for a in areas]
@@ -352,6 +369,9 @@ def format_failures(areas, defs, values):
                 re.compile(d['ALLOWED_PCRE'])
             except re.error:
                 fails.append(f'{where}: allowed pattern does not compile')
+        refused = pattern_mismatch(d, d['DEFAULT_VALUE'])
+        if refused is not None:
+            fails.append(f"{where}: default '{refused}' does not match the allowed pattern {d['ALLOWED_PCRE']}")
     order = {a: i for i, a in enumerate(area_ids)}
     if keys != sorted(keys, key=lambda k: (order.get(k[0], len(order)), k[1])):
         fails.append(f'{DEFS_CSV}: rows must be sorted by area (order of {AREAS_CSV}) and name')
@@ -369,6 +389,9 @@ def format_failures(areas, defs, values):
             fails.append(f'{where}: {v["LOW"]} is not an integer')
         if d['VALUE_TYPE'] == 'BOOL' and v['LOW'] not in ('', 'X'):
             fails.append(f'{where}: BOOL value must be X or blank')
+        refused = pattern_mismatch(d, v['LOW'])
+        if refused is not None:
+            fails.append(f"{where}: value '{refused}' does not match the allowed pattern {d['ALLOWED_PCRE']}")
     return fails
 
 

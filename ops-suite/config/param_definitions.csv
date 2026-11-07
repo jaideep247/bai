@@ -65,7 +65,7 @@ CD_FMON,FMON_PRISM_MAX_BYTES,P,INT,1,,16384,,,,,Request body limit of the PRISM 
 CD_FMON,FMON_PRISM_QUEUE_MAX,P,INT,1,,30,,,,,Throttle queue length covered by the allowance,PE RTB
 CD_FMON,FMON_PRISM_THROTTLE_METHODS,P,LIST,,,"ACH,WIRE",,,,,Payment methods PRISM throttles (comma list),PE RTB
 CD_FMON,FMON_PRISM_THROTTLE_MIN,P,INT,0,,2,,,,,Minutes PRISM waits per throttled file (0 = none),PE RTB
-CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,Throttle queue: A one for all / C one per counterparty,PE RTB
+CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,PRISM queue: C one per bank (confirmed) / A one for all,PE RTB
 CD_FMON,FMON_RETURNS_WEEKDAYS,P,LIST,,,,[1-7],,,,Weekdays (1 = Monday) that are ACH returns cycle days,PE RTB
 CD_FMON,FMON_TIME_ZONE,P,CHAR,,,UTC,,,X,,Time zone of legacy date/time fields and calendars,PE RTB
 CD_HCK,HCK_FLAT_TOL_PCT,P,INT,0,,10,,,,,Flat history: adverse change beyond this % is an outlier,PE RTB

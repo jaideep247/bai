@@ -201,7 +201,7 @@ FMON (`FMON_FILE_MONITORING.md` §A3a) does not raise `PRISM_DELIVERED_LATE` / `
 | Item | Rule |
 |---|---|
 | Throttled file | Outbound interface whose `PAY_METHOD` is in `FMON_PRISM_THROTTLE_METHODS` (default `ACH,WIRE`) and `FMON_PRISM_THROTTLE_MIN` > 0. Not throttled: positive pay, stop pay, IRIS, BlackLine, OFSAA, cost centre, source files, every inbound file |
-| Queue | Throttled files of the same business date; `FMON_PRISM_THROTTLE_SCOPE` `A` = one PRISM queue for all of them, `C` = one queue per bank (default, confirmed) (`ZCD_FMON_IFACE-BANK_KEY`) — **to confirm with the PRISM team** |
+| Queue | Throttled files of the same business date; `FMON_PRISM_THROTTLE_SCOPE` **`C` = one queue per bank** (`ZCD_FMON_IFACE-BANK_KEY`; confirmed by the user 2026-11-06 — the definition default and the delivered value row), `A` = one PRISM queue for all of them (only if PRISM ever changes to a single queue) |
 | Position | Files PRISM received earlier (or in the same instant) that it had not yet delivered / failed when it received this file — taken from the `RECEIVED` / `DELIVERED` / `FAILED` events of the register |
 | Allowance | SLA minutes + `FMON_PRISM_THROTTLE_MIN` × files ahead, on `PRISM_DELIVERED` / `FORWARDED_TO_BANK` and on later stages measured from generation (basis G, e.g. `ACK_RECEIVED`) |
 | Cap | A queue of up to `FMON_PRISM_QUEUE_MAX` files (default 30, incl. the file) is covered; a longer one gets no more allowance and is reported as `PRISM_QUEUE_LONG` (W) |
@@ -271,7 +271,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | ZCA_PARAM `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
 | ZCA_PARAM `FMON_PRISM_INSTANT` (BOOL) | `X` (unit saves findings and alerts, default) / a value row with blank value (registry only) — the 2026-11-07 open item (blank could not switch it off in ZCD_OPS_PARAM) is closed by the BOOL semantics of ZCA_PARAM; deliver the value row so production can switch it |
 | ZCA_PARAM `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
-| ZCA_PARAM `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `A` / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
+| ZCA_PARAM `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `C` (one queue per bank, confirmed; value row delivered) / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
 | Volumes | ≈ 2–3 events per file (RECEIVED, DELIVERED, sometimes FAILED); a few thousand rows a day, one bgPF unit and one run record (variant `PRISM`) each; the table grows ≈ 1 M rows per year |

@@ -12,6 +12,8 @@
 *&              allowance on the delivery stage and on later stages measured from generation).
 *& 2026-11-06 | PCRE interface name patterns: complete file name, any case, more literal characters win,
 *&              invalid pattern never resolves.
+*& 2026-11-07 | Design review: the throttle helper uses the delivered queue scope C (one queue per
+*&              bank); bank queues do not delay each other; scope A still works when configured.
 *&---------------------------------------------------------------------*
 CLASS ltc_rules DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -986,6 +988,7 @@ CLASS ltc_throttle DEFINITION FINAL
       BEGIN OF gc_iface,
         ach       TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_PNC_DISB_OUT',
         wire      TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'WIRE_JPMC_OUT',
+        ach_boa   TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_BOA_DISB_OUT',
         pospay    TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'CHECK_POSPAY_OUT',
         blackline TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'BLACKLINE_OUT',
       END OF gc_iface.
@@ -1000,6 +1003,7 @@ CLASS ltc_throttle DEFINITION FINAL
       BEGIN OF gc_bank,
         pnc  TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'PNC',
         jpmc TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'JPMC',
+        boa  TYPE zif_cd_fmon_types=>ty_bank_key VALUE 'BOA',
       END OF gc_bank.
 
     DATA mt_files TYPE zif_cd_fmon_types=>tt_file.
@@ -1022,7 +1026,8 @@ CLASS ltc_throttle DEFINITION FINAL
     METHODS throttle
       IMPORTING
         iv_minutes         TYPE i DEFAULT gc_throttle_min
-        iv_scope           TYPE zif_cd_fmon_types=>ty_queue_scope DEFAULT zif_cd_fmon_types=>gc_queue_scope-all
+        iv_scope           TYPE zif_cd_fmon_types=>ty_queue_scope
+                           DEFAULT zif_cd_fmon_types=>gc_param_default-throttle_scope
       RETURNING
         VALUE(rs_throttle) TYPE zif_cd_fmon_types=>ty_throttle.
 
@@ -1086,6 +1091,9 @@ CLASS ltc_throttle DEFINITION FINAL
     METHODS fifth_file_on_time_at_9_min FOR TESTING.
     METHODS fifth_file_late_after_13_min FOR TESTING.
     METHODS scope_c_queues_per_bank FOR TESTING.
+    METHODS default_scope_is_per_bank FOR TESTING.
+    METHODS bank_queues_do_not_wait FOR TESTING.
+    METHODS scope_a_one_queue_when_set FOR TESTING.
     METHODS pospay_not_throttled FOR TESTING.
     METHODS queue_over_max_is_long FOR TESTING.
     METHODS ack_from_generation_shifted FOR TESTING.
@@ -1108,6 +1116,8 @@ CLASS ltc_throttle IMPLEMENTATION.
     add_iface( EXPORTING iv_iface_id = gc_iface-ach iv_method = gc_method-ach iv_bank = gc_bank-pnc
                CHANGING  ct_ifaces   = rt_ifaces ).
     add_iface( EXPORTING iv_iface_id = gc_iface-wire iv_method = gc_method-wire iv_bank = gc_bank-jpmc
+               CHANGING  ct_ifaces   = rt_ifaces ).
+    add_iface( EXPORTING iv_iface_id = gc_iface-ach_boa iv_method = gc_method-ach iv_bank = gc_bank-boa
                CHANGING  ct_ifaces   = rt_ifaces ).
     add_iface( EXPORTING iv_iface_id = gc_iface-pospay iv_method = gc_method-check iv_bank = gc_bank-pnc
                CHANGING  ct_ifaces   = rt_ifaces ).
@@ -1287,11 +1297,78 @@ CLASS ltc_throttle IMPLEMENTATION.
         add_file( iv_no = 4 iv_iface_id = gc_iface-wire iv_received = receipt( 4 ) ).
         DATA(lv_scope_c) = zif_cd_fmon_types=>gc_queue_scope-counterparty.
         cl_abap_unit_assert=>assert_equals(
-          act = |{ position( iv_no = 4 is_throttle = throttle( ) )-ahead }/|
+          act = |{ position( iv_no = 4 is_throttle = throttle( iv_scope = zif_cd_fmon_types=>gc_queue_scope-all ) )-ahead }/|
              && |{ position( iv_no = 4 is_throttle = throttle( iv_scope = lv_scope_c ) )-ahead }/|
              && |{ position( iv_no = 3 is_throttle = throttle( iv_scope = lv_scope_c ) )-ahead }|
           exp = |3/0/2|
           msg = 'Scope A: one queue (3 ahead); scope C: per bank (0 for JPMC, 2 for the 3rd PNC file)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (confirmed by the user 2026-11-06, design review 2026-11-07): the delivered queue scope
+  " is C - one PRISM queue per bank.
+  METHOD default_scope_is_per_bank.
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = throttle( )-scope
+                                            exp = zif_cd_fmon_types=>gc_queue_scope-counterparty
+                                            msg = 'FMON_PRISM_THROTTLE_SCOPE must default to C (one queue per bank)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (scope C, the default): bank queues are independent. Three JPMC wires reach PRISM before
+  " a BOA ACH file; the JPMC files are not counted in the BOA file's position, so the BOA file gets
+  " the base SLA only (delivered after 6 min with SLA 5 is late) while the 3rd JPMC wire keeps
+  " its 2 files ahead.
+  METHOD bank_queues_do_not_wait.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_queue_pos.
+    TRY.
+        add_file( iv_no = 1 iv_iface_id = gc_iface-wire iv_received = receipt( 1 ) ).
+        add_file( iv_no = 2 iv_iface_id = gc_iface-wire iv_received = receipt( 2 ) ).
+        add_file( iv_no = 3 iv_iface_id = gc_iface-wire iv_received = receipt( 3 ) ).
+        add_file( iv_no = 4 iv_iface_id = gc_iface-ach_boa iv_received = receipt( 4 ) ).
+        add_event( iv_no = 4 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 4 ) iv_secs = 360 ) ).
+        ls_exp-queued = abap_true.
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 4 is_throttle = throttle( ) ) exp = ls_exp
+                                            msg = 'No JPMC file may count in the BOA queue position' ).
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 3 is_throttle = throttle( ) )-ahead
+                                            exp = 2
+                                            msg = 'The 3rd JPMC wire keeps the 2 JPMC files ahead' ).
+        DATA(ls_verdict) = verdict( iv_no = 4 is_throttle = throttle( ) ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-late }/{ gc_base_min }|
+                                            msg = 'The BOA delivery gets no allowance for the JPMC queue' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: scope A, when configured, is still one queue for every throttled file - the same BOA
+  " file has the 3 JPMC wires ahead and its delivery after 6 min is on time (5 + 3 x 2 = 11 min).
+  METHOD scope_a_one_queue_when_set.
+    TRY.
+        add_file( iv_no = 1 iv_iface_id = gc_iface-wire iv_received = receipt( 1 ) ).
+        add_file( iv_no = 2 iv_iface_id = gc_iface-wire iv_received = receipt( 2 ) ).
+        add_file( iv_no = 3 iv_iface_id = gc_iface-wire iv_received = receipt( 3 ) ).
+        add_file( iv_no = 4 iv_iface_id = gc_iface-ach_boa iv_received = receipt( 4 ) ).
+        add_event( iv_no = 4 iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                   iv_at = plus( iv_at = receipt( 4 ) iv_secs = 360 ) ).
+        DATA(ls_scope_a) = throttle( iv_scope = zif_cd_fmon_types=>gc_queue_scope-all ).
+        cl_abap_unit_assert=>assert_equals( act = position( iv_no = 4 is_throttle = ls_scope_a )-ahead
+                                            exp = 3
+                                            msg = 'Scope A: the JPMC wires are ahead of the BOA file' ).
+        DATA(ls_verdict) = verdict( iv_no = 4 is_throttle = ls_scope_a ).
+        cl_abap_unit_assert=>assert_equals( act = |{ ls_verdict-state }/{ ls_verdict-allowed_min }|
+                                            exp = |{ zif_cd_fmon_types=>gc_sla_state-ok }/|
+                                               && |{ gc_base_min + 3 * gc_throttle_min }|
+                                            msg = 'Scope A: delivery after 6 min is within 5 + 3 x 2 min' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

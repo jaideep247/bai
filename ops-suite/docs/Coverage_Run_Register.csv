@@ -82,7 +82,7 @@ ZCL_CD_FMON_PRISM_OP,own test include,,1,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_PROC,own test include,,11,90,,Not run in target SAP
 ZCL_CD_FMON_PRISM_QUEUE,own test include,,1,90,,Not run in target SAP; partial exemption: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case PRISM-12
 ZCL_CD_FMON_QUERY,own test include,,8,90,,Not run in target SAP
-ZCL_CD_FMON_RULES,own test include,,59,90,,Not run in target SAP
+ZCL_CD_FMON_RULES,own test include,,62,90,,Not run in target SAP
 ZCL_CD_FMON_STATUS,own test include,,27,90,,Not run in target SAP
 ZCL_CD_FMON_UTIL,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_AGG_QUERY,own test include,,14,90,,Not run in target SAP

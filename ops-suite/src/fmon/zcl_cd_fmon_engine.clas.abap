@@ -320,7 +320,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
     "! PRISM queues of the business dates of the throttled files in the run. Files and events
     "! in memory are used as they are; a business date the run did not load completely (single
     "! event, one interface, open file of an older date) is read from the registry - other
-    "! interfaces' throttled files share the queue (scope A)
+    "! interfaces' throttled files of the same queue share it (scope C: the same bank; scope A: all)
     METHODS build_queue
       IMPORTING
         is_throttle     TYPE zif_cd_fmon_types=>ty_throttle

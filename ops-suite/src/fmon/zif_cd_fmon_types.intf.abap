@@ -84,8 +84,8 @@ INTERFACE zif_cd_fmon_types
   TYPES ty_age_basis    TYPE c LENGTH 1.
   "! Factory-calendar correction option of DATE_CONVERT_TO_FACTORYDATE ('+' next, '-' previous)
   TYPES ty_fcal_correct TYPE c LENGTH 1.
-  "! PRISM queue scope (FMON_PRISM_THROTTLE_SCOPE): A = one queue for all throttled files,
-  "! C = one queue per counterparty (bank key of the interface)
+  "! PRISM queue scope (FMON_PRISM_THROTTLE_SCOPE): C = one queue per bank (bank key of the
+  "! interface; confirmed 2026-11-06, the delivered default), A = one queue for all throttled files
   TYPES ty_queue_scope  TYPE c LENGTH 1.
 
   "! File reference longer than the correlation key (audit A100): first PREFIX characters of the
