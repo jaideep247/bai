@@ -282,9 +282,10 @@ REQUIRED: `X` must hold and indicates the purpose, `C` must hold (condition, nev
 | D | ACH | CLEARED | 020 | ZCL_CD_HCK_EV_PAY_STATUS | `CLEARED` | | X | Rule 1: DPAYH-ZZ_PAYMENT_STATUS | X |
 | D | ACH | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED,RETRIEVED` | | X | Rule 4: 466 → 168 / retrieval 166 | X |
 | D | CHQ | VOIDED | 010 | ZCL_CD_HCK_EV_CHQ_STATUS | `V` | | X | Rule 2: DFKKCR-STATE V = voided | X |
-| D | CHQ | VOIDED | 020 | ZCL_CD_HCK_EV_STMT_CHEQUE | `13` | | N | Rule 2: no statement line for a voided cheque | X |
+| D | CHQ | VOIDED | 020 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED,CLEARED_MANUAL` | `ZTNUM` (PARAM3 `13`) | N | Rule 2: no cashed line for a voided cheque (255 + V = voided after return) | X |
+| D | CHQ | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED` | `ZTNUM` (PARAM3 `13`) | X | 581,255 / 255 with the register state of a return (blank today) | X |
 | D | CHQ | CLEARED | 010 | ZCL_CD_HCK_EV_CHQ_STATUS | `B` | | X | Rule 2: DFKKCR-STATE B = cashed | X |
-| D | CHQ | CLEARED | 020 | ZCL_CD_HCK_EV_STMT_CHEQUE | `13` | | X | Rule 2: FEBEP-CHECT = last 13 of ZTNUM | X |
+| D | CHQ | CLEARED | 020 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED,CLEARED_MANUAL` | `ZTNUM` (PARAM3 `13`) | X | Rule 2: 581 on the statement (CHECT = last 13 of ZTNUM) or cleared manually after a correction | X |
 | C | ACH | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED` | | X | Rule 4: 468, 468 with one returns lot item | X |
 | C | ACH | PENDING | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `REDEPOSIT_PENDING` | | X | Delayed redeposit (one 468, within 10 days) | X |
 | C | ACH | CLEARED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED` | | X | 166 / 143 (also after a redeposit) | X |
@@ -329,6 +330,10 @@ What the card rows give: cleared G/L line without payout log row = `CLEARING_INC
 | C | ACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
 | C | ACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
 | C | CRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
+| D | CHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
+| D | CHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
+| D | CHQ | BAI2 | 399 | CORRECTION | | Bank correction of cheque number / amount (confirmed) | X |
+| D | CHQ | BAI2 | 699 | CORRECTION | | Bank correction (confirmed); further correction codes = more rows (open list) | X |
 | D | ACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
 | D | ACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
 
@@ -351,6 +356,18 @@ The same code means different things per flow + class: 468 = collection failure 
 | D | WIR | 020 | `ORIGINAL,RETURNED` | RETURNED | 1 | | | 495 → 195 (confirmed) | X |
 | D | ACI | 010 | `ORIGINAL` | CLEARED | 0 | | | International ACH - **confirm** | (blank) |
 | D | ACI | 020 | `ORIGINAL,RETURNED` | RETURNED | 1 | | | International ACH return - **confirm** | (blank) |
+
+Disbursement cheques (lines linked by DFKKCR-DOC1R = AUGBL → ZTNUM → last 13 characters = FEBEP-CHECT; REG_STATE = DFKKCR-STATE list, `BLANK` = blank state; FINDING = the outcome is itself a finding, its DESCRIPTION goes into the detail; EXPECTED_DFKKRP 0 for every cheque outcome - confirmed: a returned cheque has no returns lot, only the register changes, so a returns lot = `RETURN_INCONSISTENT`):
+
+| FLOW | METHOD_CLASS | SEQ | SEQ_PATTERN | REG_STATE | OUTCOME | FINDING | EXPECTED_DFKKRP | SEVERITY | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|---|---|---|
+| D | CHQ | 001 | `.*CORRECTION.*` | `B` | CLEARED_MANUAL | | 0 | | Correction, cleared manually in FPCHR (confirmed) | X |
+| D | CHQ | 002 | `.*CORRECTION.*` | | MANUAL_CLEARING | MANUAL_CLEARING_REQUIRED | 0 | E | Correction on the statement - clear manually in FPCHR | X |
+| D | CHQ | 010 | `.*(CASHED.*CASHED\|RETURNED.*RETURNED).*` | | CLARIFICATION | CHEQUE_CLARIFICATION | 0 | E | Several 581 / 255 for one cheque - check the clarification worklist | X |
+| D | CHQ | 020 | `CASHED` | | CLEARED | | 0 | | 581 (confirmed; with state B by the CLEARED rule) | X |
+| D | CHQ | 030 | `(CASHED,)?RETURNED` | `BLANK` | RETURNED | | 0 | | Returned cheque: register state blank today (confirmed; may change if the register gets a returned status - change REG_STATE only) | X |
+| D | CHQ | 040 | `(CASHED,)?RETURNED` | `V` | RETURNED_VOIDED | | 0 | | Voided after the return (confirmed, counted as VOIDED) | X |
+| D | CHQ | 050 | `(CASHED,)?RETURNED` | `B` | RETURN_NOT_REGISTERED | RETURN_INCONSISTENT | 0 | E | 255 on the statement but the cheque register still shows cashed | X |
 
 No REDEPOSIT_PENDING row for wires (no delayed redeposit). Any other sequence is `UNEXPECTED_SEQUENCE` (codes and dates in the detail). Longer retrieval sequences are not specified yet. OUTCOME values are an open list: an outcome counts only where a §8c row names it in PARAM1 (IN_FLIGHT or any unlisted outcome = in flight, aged).
 
