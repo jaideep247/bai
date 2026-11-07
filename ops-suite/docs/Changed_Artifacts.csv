@@ -1154,6 +1154,9 @@ src/hck/zcl_cd_hck_c_job_runtime.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_overdue_exc.clas.abap,ABAP,Exception queues: owned exceptions of every suite payment engine area (ZCD_OPS_FINDING)
 src/hck/zcl_cd_hck_c_overdue_exc.clas.testclasses.abap,ABAP,Unit tests of the overdue exceptions check: count and oldest age per
 src/hck/zcl_cd_hck_c_overdue_exc.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_param.clas.abap,ABAP,Configuration check PARAM_INVALID: reads every parameter of the suite's
+src/hck/zcl_cd_hck_c_param.clas.testclasses.abap,ABAP,Unit tests of the configuration check PARAM_INVALID with the REAL framework
+src/hck/zcl_cd_hck_c_param.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_cancel.clas.abap,ABAP,Check: paid payment request left CANCELLED (PCLM). CANCELLED means money
 src/hck/zcl_cd_hck_c_prq_cancel.clas.testclasses.abap,ABAP,Unit tests of the paid-but-cancelled payment request check: a cancelled
 src/hck/zcl_cd_hck_c_prq_cancel.clas.xml,abapGit,

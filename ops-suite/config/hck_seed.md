@@ -61,6 +61,7 @@ uncapped count.
 | C_OVERDUE_EXC | Owned exceptions past their due date | C | ZCL_CD_HCK_C_OVERDUE_EXC | X | 70 | H | | | | 60 |
 | C_PPO_BACKLOG | Postprocessing (PPO) backlog older than 3 days | C | ZCL_CD_HCK_C_GENERIC_AGG | X | 80 | M | | | | 120 |
 | D_CONFIG_DRIFT | Customizing drift vs golden baseline | D | ZCL_CD_HCK_C_CONFIG_DRIFT | X | 90 | M | | | | 120 |
+| D_PARAM_INVALID | Parameters ZCA_PARAM refuses (areas CD_OPS / CD_EBS / CD_FMON / CD_HCK) | D | ZCL_CD_HCK_C_PARAM | X | 95 | H | | | | 60 |
 | E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_.*` | `120` (min) | `30` (grace min) | 60 |
 | E_SYSTEM | Short dumps, update errors, locks | E | ZCL_CD_HCK_C_TECH_SYS | X | 110 | M | | | | 60 |
 | E_ALERT_DELIVERY | Alert delivery health (failed / throttled) | E | ZCL_CD_HCK_C_ALERT_HEALTH | X | 120 | M | `24` (hours) | | | 60 |
@@ -98,6 +99,7 @@ uncapped count.
 | E_SYSTEM | UPDATE_ERRORS | * | 1 | 5 | X | NONE | | |
 | E_SYSTEM | LOCK_MAX_AGE_MIN | * | 60 | 240 | X | NONE | | |
 | E_ALERT_DELIVERY | ALERT_FAILED | * | 1 | 5 | X | NONE | | |
+| D_PARAM_INVALID | PARAM_INVALID | * | 1 | 1 | X | NONE | | |
 
 Rules: higher-is-worse → a zero limit means *not set*; lower-is-worse (`' '`) → both limits apply
 (`PAY_REQ` red 0 = no payment requests yesterday is RED); amber = red = 0 → static limits off.

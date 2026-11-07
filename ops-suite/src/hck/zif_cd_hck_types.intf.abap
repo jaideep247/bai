@@ -28,6 +28,7 @@
 *&            | HCK_MAX_JOB_NAMES (20,000); GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES are now the hard ceilings (50,000 /
 *&            | 200,000).
 *& 2026-11-07 | TY_MONITOR_CFG (ZCD_OPS_MONCFG); TY_PE_AREA_STATUS-STALE_AFTER_MIN / AGE_MIN.
+*& 2026-11-07 | Check code PARAM_INVALID (configuration check ZCL_CD_HCK_C_PARAM, parameters in ZCA_PARAM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -202,6 +203,8 @@ INTERFACE zif_cd_hck_types
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
       "! A suppression key pattern is not valid PCRE - suppression not applied
       suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
+      "! A parameter of the suite that ZCA_PARAM refuses (ZCL_CD_HCK_C_PARAM)
+      param_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
     END OF gc_code.
 
   CONSTANTS:

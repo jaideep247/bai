@@ -95,6 +95,7 @@ ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_CYCLE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_RUNTIME,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_OVERDUE_EXC,own test include,,2,90,,Not run in target SAP
+ZCL_CD_HCK_C_PARAM,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_CANCEL,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_SPE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_JOBS,own test include,,9,90,,Not run in target SAP
