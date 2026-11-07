@@ -127,14 +127,11 @@ INTERFACE zif_cd_ops_cfg_types
   "! Message class ZCD_OPS, range 400-449 (configuration apps)
   CONSTANTS:
     BEGIN OF gc_msg,
-      create_not_allowed TYPE ty_msg_number VALUE '401',
       request_missing    TYPE ty_msg_number VALUE '402',
       request_unknown    TYPE ty_msg_number VALUE '403',
       request_not_cust   TYPE ty_msg_number VALUE '404',
       request_released   TYPE ty_msg_number VALUE '405',
-      delete_not_allowed TYPE ty_msg_number VALUE '406',
       not_authorized     TYPE ty_msg_number VALUE '407',
-      record_failed      TYPE ty_msg_number VALUE '408',
       class_invalid      TYPE ty_msg_number VALUE '410',
       table_invalid      TYPE ty_msg_number VALUE '411',
       field_invalid      TYPE ty_msg_number VALUE '412',

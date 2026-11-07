@@ -1,11 +1,12 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_stats.clas.abap
 *& Purpose:
-*& Pure descriptive statistics for rolling baselines: mean, median, sample
+*& Pure descriptive statistics for rolling baselines: mean, sample
 *& standard deviation, percentile, z-score and IQR outlier test.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | median removed (no caller; percentile( 50 ) is the median).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - statistics (pure, no DB)</p>
 "! Empty input never dumps: every function returns 0 / abap_false.
@@ -22,11 +23,6 @@ CLASS zcl_cd_hck_stats DEFINITION
       RETURNING
         VALUE(rv_value) TYPE zif_cd_hck_types=>ty_value.
 
-    CLASS-METHODS median
-      IMPORTING
-        it_values       TYPE zif_cd_hck_types=>tt_value
-      RETURNING
-        VALUE(rv_value) TYPE zif_cd_hck_types=>ty_value.
 
     "! Sample standard deviation (n - 1); 0 for fewer than two values
     CLASS-METHODS std_dev
@@ -84,12 +80,6 @@ CLASS zcl_cd_hck_stats IMPLEMENTATION.
       lv_sum = lv_sum + <lv_value>.
     ENDLOOP.
     rv_value = lv_sum / lines( it_values ).
-  ENDMETHOD.
-
-
-  METHOD median.
-    rv_value = percentile( it_values  = it_values
-                           iv_percent = 50 ).
   ENDMETHOD.
 
 

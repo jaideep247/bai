@@ -33,7 +33,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 |---|---|---|---|---|
 | Automatic recording of changes (`CCCORACTIV = 1`) — DV1 customizing client | yes | yes | yes | **required**; open customizing request or task; every change recorded |
 | Changes without recording (`' '`) — sandbox | yes | yes | yes | not checked, not recorded |
-| No changes allowed (`2`) / no transports (`3`) — QA1 | **no** (message 401) | **yes**, direct, change-logged | **no** (406) | none |
+| No changes allowed (`2`) / no transports (`3`) — QA1 | **no** | **yes**, direct, change-logged | **no** | none |
 | Role production (`CCCATEGORY = P`) — PS4, whatever the change option | **no** | **yes**, direct, change-logged | **no** | none |
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.

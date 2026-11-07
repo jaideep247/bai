@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-07"
   },
-  "passed": 23,
-  "total": 23,
+  "passed": 26,
+  "total": 26,
   "abap_files": 311,
-  "declared_unit_methods": 1128,
+  "declared_unit_methods": 1126,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (2084 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (2057 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "334 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "307 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -128,6 +128,24 @@
       "name": "no_cp_patterns",
       "passed": true,
       "detail": "Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).",
+      "failures": []
+    },
+    {
+      "name": "messages_used",
+      "passed": true,
+      "detail": "Every ZCD_OPS message (config/zcd_ops_messages.md) is raised by production code: a message-number constant that production code reads, MESSAGE eNNN(zcd_ops) or NUMBER = literal.",
+      "failures": []
+    },
+    {
+      "name": "params_used",
+      "passed": true,
+      "detail": "Every parameter-name constant (gc_param, gc_param_prefix of a types interface) is read by production code.",
+      "failures": []
+    },
+    {
+      "name": "constants_used",
+      "passed": true,
+      "detail": "Every types-interface constant is referenced by code, a test or CDS (documentation does not count); message numbers, check codes, parameter names and defaults one by one, other structures as value domains.",
       "failures": []
     },
     {

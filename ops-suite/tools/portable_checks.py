@@ -2,7 +2,7 @@
 """Portable consistency checks for the ops suite (no SAP system needed).
 
 Evidence of house-rule compliance only - NOT SAP activation, ATC or ABAP Unit
-results. Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv (one row per class:
+results (usage checks: tools/usage_checks.py). Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv (one row per class:
 own test include / covered by / exempt, from tools/test_path_register.csv) and
 docs/Changed_Artifacts.csv.  Usage:  python3 tools/portable_checks.py [abaplint-binary]
 """
@@ -145,6 +145,17 @@ check('pcre_only', name_checks.posix_regex_failures(ROOT),
 check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
       'Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP '
       "comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).")
+
+# Nothing declared that nothing uses (tools/usage_checks.py)
+import usage_checks  # noqa: E402
+check('messages_used', usage_checks.message_failures(ROOT),
+      'Every ZCD_OPS message (config/zcd_ops_messages.md) is raised by production code: a message-number '
+      'constant that production code reads, MESSAGE eNNN(zcd_ops) or NUMBER = literal.')
+check('params_used', usage_checks.param_failures(ROOT),
+      'Every parameter-name constant (gc_param, gc_param_prefix of a types interface) is read by production code.')
+check('constants_used', usage_checks.constant_failures(ROOT),
+      'Every types-interface constant is referenced by code, a test or CDS (documentation does not count); '
+      'message numbers, check codes, parameter names and defaults one by one, other structures as value domains.')
 
 # Facts CDS holds as literals agree with their single ABAP source (tools/cds_abap_parity.py)
 import cds_abap_parity  # noqa: E402

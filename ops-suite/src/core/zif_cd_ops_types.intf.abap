@@ -374,15 +374,9 @@ INTERFACE zif_cd_ops_types
       passed_on_rerun             TYPE zif_cd_ops_types=>ty_msgno VALUE '008',
       no_recipient                TYPE zif_cd_ops_types=>ty_msgno VALUE '021',
       applog_partial              TYPE zif_cd_ops_types=>ty_msgno VALUE '025',
-      bcs_not_sent                TYPE zif_cd_ops_types=>ty_msgno VALUE '026',
-      interface_not_found         TYPE zif_cd_ops_types=>ty_msgno VALUE '033',
       alert_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '742',
       pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
       pattern_too_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '744',
-      pattern_migration           TYPE zif_cd_ops_types=>ty_msgno VALUE '745',
-      pattern_check_summary       TYPE zif_cd_ops_types=>ty_msgno VALUE '746',
-      pattern_values_capped       TYPE zif_cd_ops_types=>ty_msgno VALUE '747',
-      pattern_not_changeable      TYPE zif_cd_ops_types=>ty_msgno VALUE '748',
     END OF gc_msg.
 
 ENDINTERFACE.

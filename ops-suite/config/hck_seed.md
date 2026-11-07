@@ -209,8 +209,6 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 | No. | Text |
 |---|---|
-| 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
-| 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
@@ -221,7 +219,6 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 | 309 | Date field &1 of table &2 is not of type DATS |
 | 310 | Check &1 has no aggregate definition in ZCD_HCK_AGG |
 | 311 | Hash of table &1 could not be calculated |
-| 312 | (reserved) |
 | 313 | Lock table could not be read (ENQUEUE_READ return code &1) |
 | 314 | Configuration baseline taken for &1 tables &2 |
 | 315 | Morning report exported to &1 |

@@ -42,7 +42,7 @@
 | OSQL | always | repository SQL: filters, keys, ordering, idempotency, empty-key guards | `cl_osql_test_environment` | cheap |
 | Integration | QA1 only | wrappers over SAP standard (BCS, BAL, HTTP, factory calendar, RTTI, TBTCO/BALHDR/SNAP/VBHDR reads, dynamic SQL on legacy tables) | `RISK LEVEL DANGEROUS`, TVARVC-gated, functional test cases | manual |
 
-## 4. Coverage today — 1128 ABAP Unit methods; 150 classes: 103 with an own test include, 46 covered by another include, 1 exempt
+## 4. Coverage today — 1126 ABAP Unit methods; 150 classes: 103 with an own test include, 46 covered by another include, 1 exempt
 
 Every class of `src/` has one row in `Coverage_Run_Register.csv` (columns: test path, covering include, methods, required / measured coverage, status). `tools/portable_checks.py` regenerates the register from the test includes and from `tools/test_path_register.csv` (covering include or exemption, each with its reason), and refuses a class without either (check `test_path_every_class`). Coverage itself is measured only in DV1 (ABAP Unit with coverage, 90 % statement coverage per class) and recorded in the register.
 
@@ -100,7 +100,7 @@ Found by the fake (behaviour unchanged, tests corrected): a blank value can neve
 | Core | ZCL_CD_OPS_STORE | own test include | 27 | partial: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double |
 | Core | ZCL_CD_OPS_TRACE_DAO | own test include | 14 | partial: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes |
 | Core | ZCL_CD_OPS_TRACE_ENGINE | own test include | 28 |  |
-| Core | ZCL_CD_OPS_UTIL | own test include | 24 |  |
+| Core | ZCL_CD_OPS_UTIL | own test include | 22 |  |
 | Core | ZCL_CD_TRX_DASH_CDS_TEST | own test include | 8 |  |
 | Core | ZCX_CD_OPS_ERROR | covered | 0 | ZCL_CD_OPS_FACTORY |
 | EBS | ZBP_R_CD_EBSCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |

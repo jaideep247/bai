@@ -7,6 +7,7 @@
 *& class (characterisation tests). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (TDD gap closure).
+*& 2026-11-07 | file_is_parsed_only_once without the removed get_file.
 *&---------------------------------------------------------------------*
 CLASS ltd_parser DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -112,14 +113,12 @@ CLASS ltc_src_file IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " The file is parsed once, and get_file returns that result for display/registry
+  " The file is parsed once per source
   METHOD file_is_parsed_only_once.
     TRY.
         mo_cut->zif_cd_ebs_source~next_package( ).
         mo_cut->zif_cd_ebs_source~next_package( ).
         cl_abap_unit_assert=>assert_equals( act = mo_parser->mv_calls exp = 1 msg = 'Parser must run once' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_file( )-file_name exp = `JPMC_20261105.bai`
-                                            msg = 'get_file must return the parsed file' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

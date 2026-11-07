@@ -162,12 +162,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 223 | &1: &2 bytes (min &3, max &4) |
 | 224 | &1: &2 after &3 min (SLA &4 min) |
 | 225 | Source &1 (&2): |
-| 226 | Reference &1 of &2 reused on &3: configure a unique FILE_KEY_FIELD |
 | 227 | Source &1: no interface matches file &2 |
 | 228 | Source &1: status '&2' has no &3 stage in ZCD_FMON_SRCMAP |
 | 229 | Lot reader &1 (&2): |
 | 230 | Stage &1 cannot be set by hand on file &2 (current stage &3) |
-| 231 | Factory calendar &1 (calendar days used): |
 | 232 | PRISM request, handling reference and reason are required |
 | 233 | Factory calendar &1 (NORMAL day used): |
 | 234 | Check &1 (&2): |
@@ -208,8 +206,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
 | 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
 | 271 | Interface &1: file name pattern &2 is not valid PCRE - not used |
-| 300 | Check &1: class &2 does not implement ZIF_CD_HCK_CHECK |
-| 301 | Check &1 failed: &2 |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
@@ -220,7 +216,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 309 | Date field &1 of table &2 is not of type DATS |
 | 310 | Check &1 has no aggregate definition in ZCD_HCK_AGG |
 | 311 | Hash of table &1 could not be calculated |
-| 312 | (reserved) |
 | 313 | Lock table could not be read (ENQUEUE_READ return code &1) |
 | 314 | Configuration baseline taken for &1 tables &2 |
 | 315 | Morning report exported to &1 |
@@ -254,7 +249,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 343 | &1 > &2 STALE |
 | 344 | Check &1: PARAM1 (application log objects) is not maintained |
 | 345 | Check &1: PARAM1 (job name patterns) is not maintained |
-| 346 | At least &1 reconciliation keys without GL document (list capped) |
 | 347 | No active job cycle configured |
 | 348 | OK - &1 metric(s) within limits |
 | 349 | (+&1 more) |
@@ -282,12 +276,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
 | 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
 | 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
-| 401 | New entries are created in DV1 and transported (client &1) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |
 | 405 | Transport request &1 is released or no longer modifiable |
-| 406 | Entries are deleted in DV1 and transported (client &1) |
 | 407 | No authorization for &1 of &2 configuration (object ZCD_OPS) |
 | 408 | Changes could not be recorded on transport request &1 |
 | 410 | Class &1 does not exist or does not implement &2 |
@@ -374,8 +366,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 725 | Document &1 has no FIKEY |
 | 726 | Not applicable: &1 |
 | 727 | No link key - earlier stage &1 not verified |
-| 728 | Row cap &1 reached reading &2 - result may be incomplete |
-| 729 | Nothing found for FIN &1 source &2 document &3 cheque &4 |
 | 730 | G/L line &1 / &2 account &3 XREF2 &4 |
 | 731 | Enter a FIN ID, a clearing document or a cheque number |
 | 732 | FIKEY &1 has no summary record in DFKKSUMC |

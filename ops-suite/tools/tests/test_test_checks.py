@@ -28,10 +28,10 @@ ENGINE = """CLASS zcl_cd_x_engine IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 """
-SEAMED = """CLASS zcl_cd_x_switch IMPLEMENTATION.
-  METHOD read_mode.
-    TEST-SEAM tvarvc_read.
-      SELECT SINGLE low FROM tvarvc WHERE name = @gc_name INTO @lv_low.
+SEAMED = """CLASS zcl_cd_x_reader IMPLEMENTATION.
+  METHOD read_value.
+    TEST-SEAM table_read.
+      SELECT SINGLE value FROM zcd_x_tab WHERE name = @gc_name INTO @lv_value.
     END-TEST-SEAM.
   ENDMETHOD.
 ENDCLASS.
@@ -129,8 +129,8 @@ class OsqlDoublesComplete(unittest.TestCase):
         self.assertEqual(len(test_checks.osql_double_failures(self.tree.root)), 1)
 
     def test_injected_seam_needs_no_double(self):
-        self.tree.add('zcl_cd_x_switch', SEAMED, 'TEST-INJECTION tvarvc_read.\nEND-TEST-INJECTION.\n'
-                                                'zcl_cd_x_switch=>read_mode( ).\n')
+        self.tree.add('zcl_cd_x_reader', SEAMED, 'TEST-INJECTION table_read.\nEND-TEST-INJECTION.\n'
+                                                'zcl_cd_x_reader=>read_value( ).\n')
         self.assertEqual(test_checks.osql_double_failures(self.tree.root), [])
 
     def test_not_reached_marker_accepted(self):

@@ -13,6 +13,7 @@
 *& 2026-11-06 | Configured patterns are PCRE (user decision 2026-11-06): pcre_valid, pcre_match
 *&              (whole value, case-insensitive), pcre_literals (specificity).
 *& 2026-11-07 | param_int: the one integer-parameter helper (replaces five private copies).
+*& 2026-11-07 | rag_from_value removed (no caller).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -53,16 +54,6 @@ CLASS zcl_cd_ops_util DEFINITION
       RETURNING
         VALUE(rv_severity) TYPE zif_cd_ops_types=>ty_severity.
 
-    "! RAG from a measured value and amber/red thresholds.
-    "! iv_higher_is_worse = abap_true: value >= red -> R, >= amber -> A.
-    CLASS-METHODS rag_from_value
-      IMPORTING
-        iv_value           TYPE decfloat34
-        iv_amber           TYPE decfloat34
-        iv_red             TYPE decfloat34
-        iv_higher_is_worse TYPE abap_bool DEFAULT abap_true
-      RETURNING
-        VALUE(rv_rag)      TYPE zif_cd_ops_types=>ty_rag.
 
     "! RAG from findings: any B/E -> R, any W -> A, else G
     CLASS-METHODS rag_from_findings
@@ -236,19 +227,6 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
         rv_severity  = <ls_finding>-severity.
       ENDIF.
     ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD rag_from_value.
-    IF iv_higher_is_worse = abap_true.
-      rv_rag = COND #( WHEN iv_value >= iv_red   THEN zif_cd_ops_types=>gc_rag-red
-                       WHEN iv_value >= iv_amber THEN zif_cd_ops_types=>gc_rag-amber
-                       ELSE zif_cd_ops_types=>gc_rag-green ).
-    ELSE.
-      rv_rag = COND #( WHEN iv_value <= iv_red   THEN zif_cd_ops_types=>gc_rag-red
-                       WHEN iv_value <= iv_amber THEN zif_cd_ops_types=>gc_rag-amber
-                       ELSE zif_cd_ops_types=>gc_rag-green ).
-    ENDIF.
   ENDMETHOD.
 
 

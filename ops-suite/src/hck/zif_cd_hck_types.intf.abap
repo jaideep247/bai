@@ -732,18 +732,12 @@ INTERFACE zif_cd_hck_types
       mail_subject_1              TYPE zif_cd_ops_types=>ty_msgno VALUE '341',
       mail_subject_2              TYPE zif_cd_ops_types=>ty_msgno VALUE '342',
       stale_age                   TYPE zif_cd_ops_types=>ty_msgno VALUE '343',
-      param1_log_objects          TYPE zif_cd_ops_types=>ty_msgno VALUE '344',
-      param1_job_patterns         TYPE zif_cd_ops_types=>ty_msgno VALUE '345',
-      gl_gaps_capped              TYPE zif_cd_ops_types=>ty_msgno VALUE '346',
       no_job_cycle                TYPE zif_cd_ops_types=>ty_msgno VALUE '347',
       summary_ok                  TYPE zif_cd_ops_types=>ty_msgno VALUE '348',
       summary_more                TYPE zif_cd_ops_types=>ty_msgno VALUE '349',
       self_check_text             TYPE zif_cd_ops_types=>ty_msgno VALUE '350',
       area_never_ran              TYPE zif_cd_ops_types=>ty_msgno VALUE '351',
       area_last_ran               TYPE zif_cd_ops_types=>ty_msgno VALUE '352',
-      report_date_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '353',
-      report_file_missing         TYPE zif_cd_ops_types=>ty_msgno VALUE '354',
-      report_mail_test_mode       TYPE zif_cd_ops_types=>ty_msgno VALUE '355',
       report_list_header          TYPE zif_cd_ops_types=>ty_msgno VALUE '356',
       report_category             TYPE zif_cd_ops_types=>ty_msgno VALUE '357',
       report_area                 TYPE zif_cd_ops_types=>ty_msgno VALUE '358',
@@ -760,8 +754,6 @@ INTERFACE zif_cd_hck_types
       baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
       step_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '371',
       suppression_invalid         TYPE zif_cd_ops_types=>ty_msgno VALUE '372',
-      param_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '373',
-      pattern_values_capped       TYPE zif_cd_ops_types=>ty_msgno VALUE '747',
     END OF gc_msg.
 
 ENDINTERFACE.

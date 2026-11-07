@@ -201,7 +201,6 @@ INTERFACE zif_cd_fmon_prism_types
       store_failed        TYPE zif_cd_ops_types=>ty_msgno VALUE '262',
       occurred_in_future  TYPE zif_cd_ops_types=>ty_msgno VALUE '263',
       total_needs_ccy     TYPE zif_cd_ops_types=>ty_msgno VALUE '264',
-      not_queued          TYPE zif_cd_ops_types=>ty_msgno VALUE '268',
     END OF gc_msg.
 
   " ---------------------------------------------------------------- stored event

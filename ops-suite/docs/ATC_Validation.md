@@ -5,11 +5,11 @@
 
 ## 1. How it is checked
 
-| Layer | Tool | Config | Result (2026-11-06) |
+| Layer | Tool | Config | Result (2026-11-07) |
 |---|---|---|---|
-| Syntax, typing, house rules | abaplint 2.x, ABAP 7.58, SAP stubs (`abaplint/deps`) and the suite's own abapGit table/message definitions | `ops-suite/abaplint.json` | **0 issues / 309 files** |
-| ATC-equivalent checks | abaplint rules mapped to SAP Code Inspector / SLIN / security / DDIC checks | `ops-suite/abaplint.atc.json` | **2 findings = 2 documented exemptions** (§4) |
-| House rules not in abaplint | `tools/portable_checks.py` | — | 22/22 checks passed (incl. `name_lengths`, `method_names`, `pcre_only`, `no_cp_patterns`, `test_path_every_class`, `osql_doubles_complete`, `no_real_dao_in_tests`) |
+| Syntax, typing, house rules | abaplint 2.x, ABAP 7.58, SAP stubs (`abaplint/deps`) and the suite's own abapGit table/message definitions | `ops-suite/abaplint.json` (incl. `unused_methods`, `unused_types`, `unused_ddic` — exclusions in §4) | **0 issues / 1133 files** |
+| ATC-equivalent checks | abaplint rules mapped to SAP Code Inspector / SLIN / security / DDIC checks | `ops-suite/abaplint.atc.json` | **3 findings = 3 documented exemptions** (§4) |
+| House rules not in abaplint | `tools/portable_checks.py` | — | 26/26 checks passed (incl. `name_lengths`, `method_names`, `pcre_only`, `no_cp_patterns`, `test_path_every_class`, `osql_doubles_complete`, `no_real_dao_in_tests`, `messages_used`, `params_used`, `constants_used`) |
 | Continuous | GitHub Actions `.github/workflows/abaplint.yml` | both configs on every push | fails on any new finding |
 
 ## 2. ATC check categories covered offline
@@ -47,7 +47,8 @@
 |---|---|---|
 | `ZCL_CD_HCK_DAO=>EXECUTE_AGGREGATE` (line 189 after the performance fixes of 2026-11-06) | SELECT without ORDER BY | Aggregate without GROUP BY returns exactly one row; pseudo comment `"#EC CI_NOORDER` set (honoured by ATC; abaplint's rule ignores pseudo comments) |
 | `ZCL_CD_OPS_ALERT_DAO=>INSERT_LOG` | sy-subrc after INSERT … ACCEPTING DUPLICATE KEYS | Duplicate audit keys are skipped on purpose; `"#EC CI_SUBRC` set |
-| `ZBP_R_CD_*` behaviour pools | `check_abstract`, `unused_methods` | ABAP requires `ABSTRACT FINAL … FOR BEHAVIOR OF`; handler methods are called by the RAP framework. Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these |
+| `ZBP_R_CD_*` behaviour pools | `check_abstract`, `unused_methods` | ABAP requires `ABSTRACT FINAL … FOR BEHAVIOR OF`; handler methods are called by the RAP framework. Excluded by file pattern in `abaplint.atc.json` and (`unused_methods`) `abaplint.json`; real ATC does not report these |
+| Draft tables `ZCD_D_*`, `ZCD_OPS_LOCK`, `ZCD_FMON_PRQ_WA` | `unused_ddic` (`abaplint.json`) | Draft tables are named only in the behaviour definitions (`draft table`); `ZCD_OPS_LOCK` is the lock argument of `E_TABLE`, named in a constant of `ZCL_CD_OPS_LOCK`; `ZCD_FMON_PRQ_WA` is the persistent table of a RAP BO (CDS / BDEF only). abaplint does not follow these references. Excluded by file pattern |
 | `ZCL_CD_FMON_DAO=>INSERT_EVENT` and `SAVE_FILES` | Database operation in loop | INSERT_EVENT: bounded retry (3 attempts) only after a primary-key collision with a parallel writer. SAVE_FILES (audit A04): row lock + version compare per registry row, bounded by the files of one run. `"#EC CI_SEL_NESTED` set |
 | `ZCL_CD_EBS_FEB_DAO` (item read, performance fix 3), `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_FMON_DAO`, `ZCL_CD_HCK_DAO` | Dynamic SQL (security / Code Vulnerability Analyzer) | Table and field names come only from customizing or class constants and are validated against the DDIC (and the whitelist ZCD_HCK_TABWL); values are bound host variables or escaped with `cl_abap_dyn_prg=>quote`; no user input reaches the statement. Excluded file-by-file in `abaplint.atc.json`, so new dynamic SQL anywhere else still fails |
 

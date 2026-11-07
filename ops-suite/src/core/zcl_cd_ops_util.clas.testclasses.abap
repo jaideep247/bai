@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | PCRE patterns: whole-value match, case ignored, invalid pattern, literal count.
 *& 2026-11-07 | param_int (shared integer parameter helper) over the shared fake ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | Tests of the removed rag_from_value dropped.
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -19,8 +20,6 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     METHODS block_outranks_error         FOR TESTING.
     METHODS worst_of_mixed_findings      FOR TESTING.
-    METHODS red_at_red_threshold         FOR TESTING.
-    METHODS lower_is_worse_inverts_rag   FOR TESTING.
     METHODS warning_findings_are_amber   FOR TESTING.
     METHODS red_beats_amber              FOR TESTING.
     METHODS key_padded_after_zero_strip  FOR TESTING.
@@ -68,24 +67,6 @@ CLASS ltc_util IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>worst_severity( lt_findings )
                                         exp = zif_cd_ops_types=>gc_severity-block
                                         msg = 'Worst of W, B, I must be B' ).
-  ENDMETHOD.
-
-
-  " A value equal to the red threshold is red
-  METHOD red_at_red_threshold.
-    cl_abap_unit_assert=>assert_equals(
-      act = zcl_cd_ops_util=>rag_from_value( iv_value = 10 iv_amber = 5 iv_red = 10 )
-      exp = zif_cd_ops_types=>gc_rag-red
-      msg = 'Value at the red threshold must be red' ).
-  ENDMETHOD.
-
-
-  " Lower-is-worse metrics (e.g. pass rate) turn red below the threshold
-  METHOD lower_is_worse_inverts_rag.
-    cl_abap_unit_assert=>assert_equals(
-      act = zcl_cd_ops_util=>rag_from_value( iv_value = 80 iv_amber = 95 iv_red = 90 iv_higher_is_worse = abap_false )
-      exp = zif_cd_ops_types=>gc_rag-red
-      msg = 'Pass rate 80 with red at 90 must be red' ).
   ENDMETHOD.
 
 

@@ -1,10 +1,11 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_stats.clas.testclasses.abap
 *& Purpose:
-*& Unit tests of the pure statistics helper (mean, median, standard
+*& Unit tests of the pure statistics helper (mean, standard
 *& deviation, percentile, z-score, IQR); does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-07 | Median tests call percentile( 50 ) (median removed).
 *&---------------------------------------------------------------------*
 CLASS ltc_stats DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -16,8 +17,8 @@ CLASS ltc_stats DEFINITION FINAL FOR TESTING
     METHODS mean_of_empty_is_zero FOR TESTING.
     METHODS single_value_zero_stddev FOR TESTING.
     METHODS mean_of_known_series FOR TESTING.
-    METHODS median_even_count_averages FOR TESTING.
-    METHODS median_odd_count_is_middle FOR TESTING.
+    METHODS p50_even_count_averages FOR TESTING.
+    METHODS p50_odd_count_is_middle FOR TESTING.
     METHODS sample_stddev_known_series FOR TESTING.
     METHODS percentile_interpolates FOR TESTING.
     METHODS zscore_measures_distance FOR TESTING.
@@ -103,8 +104,8 @@ CLASS ltc_stats IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: median of an even count is the average of the two middle values
-  METHOD median_even_count_averages.
+  " Rule: the 50th percentile of an even count is the average of the two middle values
+  METHOD p50_even_count_averages.
     DATA lt_values TYPE zif_cd_hck_types=>tt_value.
     DATA lv_value TYPE zif_cd_hck_types=>ty_value.
     TRY.
@@ -116,7 +117,8 @@ CLASS ltc_stats IMPLEMENTATION.
         INSERT lv_value INTO TABLE lt_values.
         lv_value = 2.
         INSERT lv_value INTO TABLE lt_values.
-        cl_abap_unit_assert=>assert_equals( act = zcl_cd_hck_stats=>median( lt_values )
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_hck_stats=>percentile( it_values  = lt_values
+                                                                                iv_percent = 50 )
                                             exp = '2.5'
                                             msg = 'Median of 1,2,3,4 (unsorted) must be 2.5' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -125,10 +127,11 @@ CLASS ltc_stats IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: median of an odd count is the middle value
-  METHOD median_odd_count_is_middle.
+  " Rule: the 50th percentile of an odd count is the middle value
+  METHOD p50_odd_count_is_middle.
     TRY.
-        cl_abap_unit_assert=>assert_equals( act = zcl_cd_hck_stats=>median( series_1_to_5( ) )
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_hck_stats=>percentile( it_values  = series_1_to_5( )
+                                                                                iv_percent = 50 )
                                             exp = 3
                                             msg = 'Median of 1..5 must be 3' ).
       CATCH cx_root INTO DATA(lx_error).

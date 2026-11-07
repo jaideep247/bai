@@ -472,7 +472,6 @@ INTERFACE zif_cd_ops_trace_types
   " ---------------------------------------------------------------- messages (ZCD_OPS)
   CONSTANTS:
     BEGIN OF gc_msg,
-      summary           TYPE zif_cd_ops_types=>ty_msgno VALUE '700',
       request_row       TYPE zif_cd_ops_types=>ty_msgno VALUE '701',
       no_success_row    TYPE zif_cd_ops_types=>ty_msgno VALUE '702',
       not_configured    TYPE zif_cd_ops_types=>ty_msgno VALUE '703',
@@ -500,10 +499,7 @@ INTERFACE zif_cd_ops_trace_types
       no_fikey          TYPE zif_cd_ops_types=>ty_msgno VALUE '725',
       not_applicable    TYPE zif_cd_ops_types=>ty_msgno VALUE '726',
       no_link           TYPE zif_cd_ops_types=>ty_msgno VALUE '727',
-      row_cap           TYPE zif_cd_ops_types=>ty_msgno VALUE '728',
-      not_found         TYPE zif_cd_ops_types=>ty_msgno VALUE '729',
       gl_line           TYPE zif_cd_ops_types=>ty_msgno VALUE '730',
-      input_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '731',
       not_summarised    TYPE zif_cd_ops_types=>ty_msgno VALUE '732',
       stage_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '733',
       partner_legacy    TYPE zif_cd_ops_types=>ty_msgno VALUE '737',

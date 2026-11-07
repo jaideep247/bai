@@ -947,12 +947,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>226</MSGNR>
-     <TEXT>Reference &amp;1 of &amp;2 reused on &amp;3: configure a unique FILE_KEY_FIELD</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>227</MSGNR>
      <TEXT>Source &amp;1: no interface matches file &amp;2</TEXT>
     </T100>
@@ -973,12 +967,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>230</MSGNR>
      <TEXT>Stage &amp;1 cannot be set by hand on file &amp;2 (current stage &amp;3)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>231</MSGNR>
-     <TEXT>Factory calendar &amp;1 (calendar days used):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1223,18 +1211,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>300</MSGNR>
-     <TEXT>Check &amp;1: class &amp;2 does not implement ZIF_CD_HCK_CHECK</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>301</MSGNR>
-     <TEXT>Check &amp;1 failed: &amp;2</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>
@@ -1291,12 +1267,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>311</MSGNR>
      <TEXT>Hash of table &amp;1 could not be calculated</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>312</MSGNR>
-     <TEXT>(reserved)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1499,12 +1469,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>346</MSGNR>
-     <TEXT>At least &amp;1 reconciliation keys without GL document (list capped)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>347</MSGNR>
      <TEXT>No active job cycle configured</TEXT>
     </T100>
@@ -1667,12 +1631,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>401</MSGNR>
-     <TEXT>New entries are created in DV1 and transported (client &amp;1)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>
@@ -1693,12 +1651,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>405</MSGNR>
      <TEXT>Transport request &amp;1 is released or no longer modifiable</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>406</MSGNR>
-     <TEXT>Entries are deleted in DV1 and transported (client &amp;1)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2215,18 +2167,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>727</MSGNR>
      <TEXT>No link key - earlier stage &amp;1 not verified</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>728</MSGNR>
-     <TEXT>Row cap &amp;1 reached reading &amp;2 - result may be incomplete</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>729</MSGNR>
-     <TEXT>Nothing found for FIN &amp;1 source &amp;2 document &amp;3 cheque &amp;4</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

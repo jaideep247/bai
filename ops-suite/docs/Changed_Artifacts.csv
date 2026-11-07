@@ -1204,8 +1204,8 @@ src/hck/zcl_cd_hck_report_html.clas.xml,abapGit,
 src/hck/zcl_cd_hck_score.clas.abap,ABAP,"Pure scorecard: weighted health score 0-100, overall RAG, RAG per"
 src/hck/zcl_cd_hck_score.clas.testclasses.abap,ABAP,"Unit tests of the scorecard rules: health score 0-100, overall RAG,"
 src/hck/zcl_cd_hck_score.clas.xml,abapGit,
-src/hck/zcl_cd_hck_stats.clas.abap,ABAP,"Pure descriptive statistics for rolling baselines: mean, median, sample"
-src/hck/zcl_cd_hck_stats.clas.testclasses.abap,ABAP,"Unit tests of the pure statistics helper (mean, median, standard"
+src/hck/zcl_cd_hck_stats.clas.abap,ABAP,"Pure descriptive statistics for rolling baselines: mean, sample"
+src/hck/zcl_cd_hck_stats.clas.testclasses.abap,ABAP,"Unit tests of the pure statistics helper (mean, standard"
 src/hck/zcl_cd_hck_stats.clas.xml,abapGit,
 src/hck/zcl_cd_hck_suppression.clas.abap,ABAP,"Health-check suppression rules (design 6.3), pure: an active suppression"
 src/hck/zcl_cd_hck_suppression.clas.testclasses.abap,ABAP,Pure tests of the suppression matcher (design 6.3): which findings an
@@ -1301,10 +1301,12 @@ tools/portable_checks.py,Other,
 tools/rap_generate.py,Other,
 tools/test_checks.py,Other,
 tools/test_path_register.csv,Doc,
+tools/usage_checks.py,Other,
 tools/__pycache__/cds_abap_parity.cpython-313.pyc,Other,
 tools/__pycache__/literal_scan.cpython-313.pyc,Other,
 tools/__pycache__/name_checks.cpython-313.pyc,Other,
 tools/__pycache__/test_checks.cpython-313.pyc,Other,
+tools/__pycache__/usage_checks.cpython-313.pyc,Other,
 tools/tests/test_abapgit_serialize.py,Other,
 tools/tests/test_cds_abap_parity.py,Other,
 tools/tests/test_modernize.py,Other,
@@ -1314,3 +1316,4 @@ tools/tests/test_pattern_dao_fields.py,Other,
 tools/tests/test_pcre_only.py,Other,
 tools/tests/test_rap_generate.py,Other,
 tools/tests/test_test_checks.py,Other,
+tools/tests/test_usage_checks.py,Other,

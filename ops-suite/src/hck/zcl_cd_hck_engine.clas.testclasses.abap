@@ -13,6 +13,7 @@
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | moncfg_threshold_wins, no_moncfg_keeps_hours_rule (ZCD_OPS_MONCFG first, hours rule unchanged).
+*& 2026-11-07 | Failing check double raises generic message 000 (unused message 301 removed).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -221,7 +222,7 @@ CLASS ltd_check IMPLEMENTATION.
   METHOD zif_cd_hck_check~execute.
     IF mv_raise = abap_true.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e301(zcd_ops) WITH is_def-check_id 'simulated failure'.
+        MESSAGE e000(zcd_ops) WITH is_def-check_id 'simulated failure' space space.
     ENDIF.
     ms_seen_context = is_context.
     rs_result = ms_result.

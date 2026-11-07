@@ -6,6 +6,7 @@
 *& structural findings (S00/S06/S11/S12) to the engine as one package.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-07 | get_file removed (no caller).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source bank file</p>
 CLASS zcl_cd_ebs_src_file DEFINITION
@@ -22,10 +23,6 @@ CLASS zcl_cd_ebs_src_file DEFINITION
         iv_format    TYPE zif_cd_ebs_types=>ty_format
         iv_file_name TYPE string OPTIONAL.
 
-    "! Parsed file of the last package (header data for display / registry)
-    METHODS get_file
-      RETURNING
-        VALUE(rs_file) TYPE zif_cd_ebs_types=>ty_file.
 
   PRIVATE SECTION.
     DATA mv_content   TYPE string.
@@ -57,11 +54,6 @@ CLASS zcl_cd_ebs_src_file IMPLEMENTATION.
     rs_package-statements = ms_file-statements.
     rs_package-lines      = ms_file-lines.
     rs_package-findings   = ms_file-findings.
-  ENDMETHOD.
-
-
-  METHOD get_file.
-    rs_file = ms_file.
   ENDMETHOD.
 
 ENDCLASS.

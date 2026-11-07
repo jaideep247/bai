@@ -28,6 +28,19 @@
     "unknown_types": false,
     "check_no_handler_pragma": true,
     "unused_variables": true,
+    "unused_methods": {
+      "exclude": [
+        "/src/[a-z]+/zbp_r_cd_[a-z]+\\.clas\\.locals_imp\\.abap$"
+      ]
+    },
+    "unused_types": true,
+    "unused_ddic": {
+      "exclude": [
+        "/src/[a-z]+/zcd_d_[a-z]+\\.tabl\\.xml$",
+        "/src/core/zcd_ops_lock\\.tabl\\.xml$",
+        "/src/fmon/zcd_fmon_prq_wa\\.tabl\\.xml$"
+      ]
+    },
     "definitions_top": false,
     "sql_escape_host_variables": true,
     "max_one_statement": true,
