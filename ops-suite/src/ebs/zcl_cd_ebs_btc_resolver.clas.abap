@@ -16,6 +16,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Flow patterns and the BAI issuer are PCRE matched to the complete value (case ignored);
 *&              an invalid flow pattern reached before a match blocks the line (FLOW_PATTERN_INVALID).
+*& 2026-11-07 | map_action no longer copied to the line (posting disposition removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION
@@ -255,7 +256,6 @@ CLASS zcl_cd_ebs_btc_resolver IMPLEMENTATION.
       <ls_line>-pay_method  = ls_map-pay_method.
       <ls_line>-map_posting = ls_map-posting_rule.
       <ls_line>-not_posted  = xsdbool( ls_map-disposition = zif_cd_ebs_types=>gc_disposition-not_posted ).
-      <ls_line>-map_action  = ls_map-action.
 
       IF ls_map-action = zif_cd_ops_types=>gc_action-block.
         <ls_line>-blocked = abap_true.

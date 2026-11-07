@@ -285,7 +285,7 @@ INTERFACE zif_cd_ops_types
       min_rag         TYPE ty_rag,
       on_abort        TYPE abap_bool,
       channel         TYPE ty_channel,
-      "! E-mail list, SM59 destination or log object - meaning depends on the channel
+      "! E-mail list or log object - meaning depends on the channel
       destination     TYPE ty_alert_dest,
       "! X = one digest per rule and run; blank = one message per finding
       digest          TYPE abap_bool,

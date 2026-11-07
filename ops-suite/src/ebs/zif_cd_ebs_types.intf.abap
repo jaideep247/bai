@@ -36,6 +36,7 @@
 *&            | EBS_GL_LEDGER, EBS_RTRV_STATUS_FIELD default, parser classes, prefix EBS_PARSER_.
 *& 2026-11-07 | GC_FINDING_CLASS (ZCD_EBS_RULE_DEF-FINDING_CLASS: DUPLICATE, POSTING).
 *& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
+*& 2026-11-07 | ty_line-map_action removed (read only by the removed posting disposition).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -237,8 +238,6 @@ INTERFACE zif_cd_ebs_types
       blocked       TYPE abap_bool,
       "! A26: the map row expects the entry not to be posted (disposition NOT_POSTED)
       not_posted    TYPE abap_bool,
-      "! A85: action of the map row (AUTO_POST / EXCEPTION / ON_ACCOUNT / BLOCK)
-      map_action    TYPE zif_cd_ops_types=>ty_action,
       "! A93: CAMT entry status (Ntry/Sts or Ntry/Sts/Cd); only BOOK entries become lines
       entry_status  TYPE c LENGTH 4,
       "! Operating model 2026-11-06: posting state of an imported entry from the FEBEP
