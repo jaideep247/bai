@@ -19,9 +19,9 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 | EBS – latest problems | List | `EbsProblem` | Open B / E findings, POSTING_INCOMPLETE | `ZCDEbsValidation-analyze` |
 | **Health checks** | KPI | `HealthKpi` (data points `OverallRag`, `RedChecks`, `AmberChecks`, `Overdue`, `ReportAge`) | Overall RAG of the last morning report, red / amber checks, overdue exceptions, health-score text | `ZCDHealthCheck-analyze` |
 | Health checks – reds | List | `HealthRedCheck` | Red and amber checks of the last run | `ZCDHealthCheck-analyze` |
-| **Transactions** | Analytical + KPI | `TransactionKpi` (chart `Funnel`, variant `Today`, data points `Transactions`, `Paid`, `Settled`, `Returned`, `Open`) | Funnel posted → paid → settled, returned, open — live | `ZCDTransaction-analyze` |
-| Transactions – errored / stuck | List | `TransactionProblem` | Returned, reversed, overdue open disbursements | `ZCDTransaction-analyze` (row: `ZCDPaymentTrace-display`, proposed) |
-| Requests (after SE11) | Analytical | `PaymentRequest` of `cds/ZUI_CD_TRX_REQ` (second data source, §2) | Requested → processed → posted → paid → acknowledged → settled; errored | Request funnel app |
+| **Transactions** | Analytical + KPI | `TransactionKpi` (chart `Funnel`, variant `Today`, data points `Transactions`, `Paid`, `Cleared`, `Returned`, `Open`) | Funnel posted → paid → cleared (canonical payment outcome, 2026-11-07), returned, open | `ZCDTransaction-analyze` |
+| Transactions – errored / stuck | List | `TransactionProblem` | Returned, reversed, inconsistent, undetermined, ambiguous (canonical outcome), overdue open disbursements | `ZCDTransaction-analyze` (row: `ZCDPaymentTrace-display`, proposed) |
+| Requests (after SE11) | Analytical | `PaymentRequest` of `cds/ZUI_CD_TRX_REQ` (second data source, §2; parameterised: request date window, as of) | Requested → processed → posted → paid → acknowledged → cleared; errored | Request funnel app |
 
 Global filter: none mandatory (the area entities have different dimensions); each card applies its own selection variant. The page is as fresh as its sources: three cards read monitor runs (the freshness card says how old), the transactions cards are live.
 
@@ -37,7 +37,7 @@ Alternative: an OVP over the four area services as separate data sources (`dataS
 
 | Entity | CDS | Rule |
 |---|---|---|
-| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions are live — no row |
+| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions: the items are live, the outcomes come from the 5-minute snapshot (CORE run variant `PAY_OUTCOME`, watermarks `ZCD_PAY_OUTWM-UPDATED_AT`); a freshness row for it is proposed, not built (`Operations_Runbook.md` §5m) |
 | `CriticalException` | `ZR_CD_OpsCritExc` over `ZCD_OPS_FINDING` | Disposition O / A, severity B / E, all areas; GROUP1 never exposed; EBS bank-file statement messages hidden; `DaysOverdue` = today − due date |
 
 DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on both — the area of each row.
