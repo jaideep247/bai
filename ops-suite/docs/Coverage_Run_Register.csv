@@ -11,7 +11,7 @@ ZBP_R_CD_OPSEXCEPTION,exempt,,0,,,"Exempt: instance authorization / features and
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
-ZCL_CD_EBS_ENGINE,own test include,,68,90,,Not run in target SAP
+ZCL_CD_EBS_ENGINE,own test include,,43,90,,Not run in target SAP
 ZCL_CD_EBS_FACTORY,own test include,,4,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,own test include,,9,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,own test include,,5,90,,Not run in target SAP

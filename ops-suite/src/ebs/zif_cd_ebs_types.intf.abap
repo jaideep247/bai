@@ -22,7 +22,6 @@
 *& 2026-11-06 | Audit A85: map action carried on the line.
 *& 2026-11-06 | FS-CD review: in-flight grace (EBS_INFLIGHT_HOURS, AWAITING_LOT_TRANSFER).
 *& 2026-11-06 | Audit A62: plug-in interface names for the factory RTTI check.
-*& 2026-11-06 | Audit A91: kill switch fallback check code and message.
 *& 2026-11-06 | Audit A98: MAP_CONFLICT check code and message.
 *& 2026-11-06 | Audit A96: message FUNDS_LAYOUT.
 *& 2026-11-06 | Audit A92-A94: CAMT entry status on the line; messages 536-540.
@@ -528,16 +527,8 @@ INTERFACE zif_cd_ebs_types
   "! Engine findings that are not about a rule: object key and pseudo rule ID
   CONSTANTS:
     BEGIN OF gc_engine,
-      posting_object TYPE c LENGTH 20 VALUE 'VALIDATE_FOR_POSTING',
-      rule_id        TYPE zif_cd_ops_types=>ty_rule_id VALUE 'ENG',
+      rule_id TYPE zif_cd_ops_types=>ty_rule_id VALUE 'ENG',
     END OF gc_engine.
-
-  "! TVARVC kill switch: a parameter (type P) with line number 0000
-  CONSTANTS:
-    BEGIN OF gc_tvarvc,
-      type_parameter TYPE c LENGTH 1 VALUE 'P',
-      numb_single    TYPE c LENGTH 4 VALUE '0000',
-    END OF gc_tvarvc.
 
   "! Statement keys of imported statements: FEB<KUKEY>
   CONSTANTS gc_feb_stmt_prefix TYPE c LENGTH 3 VALUE 'FEB'.
@@ -567,8 +558,6 @@ INTERFACE zif_cd_ebs_types
       posting_incomplete             TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE',
       "! FS-CD review: not found yet, statement within EBS_INFLIGHT_HOURS (W, NOTIFY)
       awaiting_lot_transfer          TYPE zif_cd_ops_types=>ty_check_code VALUE 'AWAITING_LOT_TRANSFER',
-      "! A91: the kill switch could not be read or holds no valid mode - MONITOR used
-      kill_switch_fallback           TYPE zif_cd_ops_types=>ty_check_code VALUE 'KILL_SWITCH_FALLBACK',
       "! A98: ZCD_BTC_MAP rows that normalise to one key (blank flow = '*') but differ
       map_conflict                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_CONFLICT',
       "! PCRE patterns: a ZCD_EBS_FLOW_PAT pattern that does not compile (line blocked)
@@ -633,7 +622,6 @@ INTERFACE zif_cd_ebs_types
       unmapped_btc                TYPE zif_cd_ops_types=>ty_msgno VALUE '100',
       map_action_block            TYPE zif_cd_ops_types=>ty_msgno VALUE '101',
       circuit_breaker             TYPE zif_cd_ops_types=>ty_msgno VALUE '102',
-      validation_could_not_run    TYPE zif_cd_ops_types=>ty_msgno VALUE '103',
       rule_failed                 TYPE zif_cd_ops_types=>ty_msgno VALUE '104',
       file_is_empty_expected_bai2 TYPE zif_cd_ops_types=>ty_msgno VALUE '105',
       type_code_in_line_is        TYPE zif_cd_ops_types=>ty_msgno VALUE '106',
@@ -758,7 +746,6 @@ INTERFACE zif_cd_ebs_types
       file_encoding               TYPE zif_cd_ops_types=>ty_msgno VALUE '530',
       file_read_error             TYPE zif_cd_ops_types=>ty_msgno VALUE '531',
       awaiting_lot_transfer       TYPE zif_cd_ops_types=>ty_msgno VALUE '532',
-      kill_switch_fallback        TYPE zif_cd_ops_types=>ty_msgno VALUE '533',
       map_conflict                TYPE zif_cd_ops_types=>ty_msgno VALUE '534',
       funds_layout                TYPE zif_cd_ops_types=>ty_msgno VALUE '535',
       camt_document               TYPE zif_cd_ops_types=>ty_msgno VALUE '536',

@@ -45,7 +45,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 100 | Code &1 &2 bank &3 flow &4 not in ZCD_BTC_MAP: blocked, never suspense |
 | 101 | Category &1 is configured never to post |
 | 102 | Run stopped: &1 consecutive packages above &2 % failures |
-| 103 | Validation could not run: |
 | 104 | Rule &1 (&2) failed: |
 | 105 | File &1 is empty: expected BAI2 records, found none |
 | 106 | Type code &1 in line &2 is non-monetary information; no line created |
@@ -338,7 +337,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 530 | File &1 is not valid UTF-8 (after line &2) - not validated |
 | 531 | File &1: read error (return code &2) after line &3 - not validated |
 | 532 | Entry &1: &2 not found yet - statement within the &3 h in-flight window |
-| 533 | Kill switch &1: &2 - validation mode M (monitor) used |
 | 534 | ZCD_BTC_MAP rows for &1 &2 bank &3 flow &4 contradict each other (blank flow = *) |
 | 535 | Entry type &1 in line &2: funds-type layout invalid (&3) - entry not read |
 | 536 | CAMT document &1: &2 &3 not accepted |

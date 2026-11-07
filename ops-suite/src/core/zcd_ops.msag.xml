@@ -245,12 +245,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>103</MSGNR>
-     <TEXT>Validation could not run:</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>104</MSGNR>
      <TEXT>Rule &amp;1 (&amp;2) failed:</TEXT>
     </T100>
@@ -1999,12 +1993,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>532</MSGNR>
      <TEXT>Entry &amp;1: &amp;2 not found yet - statement within the &amp;3 h in-flight window</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>533</MSGNR>
-     <TEXT>Kill switch &amp;1: &amp;2 - validation mode M (monitor) used</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

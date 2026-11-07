@@ -5,26 +5,20 @@
 *& suspense) -> statement checks -> line rules per rule group, all resolved
 *& from customizing. Works on any source (bank file or FEBKO/FEBEP), persists
 *& findings through the core store per package, has a circuit breaker and
-*& hands the run to the alert router. validate_for_posting( ) is the
-*& pre-posting entry for BAdI FIEB_CHANGE_BS_DATA, governed by the TVARVC kill
-*& switch ZCD_EBS_VALIDATION_MODE (E enforce / M monitor / O off).
+*& hands the run to the alert router. Read-only towards production data: it
+*& reads statements and payment engine evidence and writes only suite records.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Findings kept in memory capped at EBS_RESULT_MAX; RAG accumulated per package (review 3.5).
-*& 2026-11-06 | Fail closed: PLUGIN_ERROR and VALIDATION_ERROR have action BLOCK; validate_for_posting never raises.
+*& 2026-11-06 | Fail closed: PLUGIN_ERROR has action BLOCK.
 *& 2026-11-06 | Run lock per variant (refused run when held); body moved to execute( ).
 *& 2026-11-06 | Exception carry-forward: each package's lines and statements reconciled.
-*& 2026-11-06 | Posting gate honours approved blocked-line releases (design 6.2).
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A03: configuration gaps (unusable assignment, group without usable rule) block; NONE rows skipped.
-*& 2026-11-06 | Audit A27/A86: package (parser) findings honour the blocks-posting flag of their rule.
 *& 2026-11-06 | Audit A66/A67/A68: unevaluated lines, technical breaker; alerts over complete summaries;
 *&            | exact line cap; NO_DATA run.
-*& 2026-11-06 | Audit A85: typed posting disposition per line (BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST).
-*& 2026-11-06 | In-flight grace: AWAITING_LOT_TRANSFER lines are EXCEPTION in the posting disposition.
-*& 2026-11-06 | Audit A62/A64: rule plug-ins created with interface check; parameter snapshot refreshed per posting check.
-*& 2026-11-06 | Audit A91: kill switch read failure / missing / invalid value -> MONITOR with KILL_SWITCH_FALLBACK diagnostic.
+*& 2026-11-06 | Audit A62: rule plug-ins created with interface check.
 *& 2026-11-06 | NO_DATA status taken from the core run-status constants.
 *& 2026-11-06 | Operating model (post-posting detective control): an imported entry expected to
 *&            | post but not posted is POSTING_OPEN - rules flagged NEEDS_POSTING are not evaluated
@@ -41,6 +35,9 @@
 *& 2026-11-06 | Run with every statement out of scope is NO_DATA (grey), not green; count in the message.
 *& 2026-11-07 | Parameter names / defaults from ZIF_CD_OPS_TYPES / ZIF_CD_EBS_TYPES; integer parameters with
 *&            | ZCL_CD_OPS_UTIL=>PARAM_INT (private int_param removed); parameters through GET_PARAMS.
+*& 2026-11-07 | Read-only scope (user decision): pre-posting path (validate_for_posting, must_block,
+*&            | dispositions, release lookup), TVARVC kill switch read_mode and the blocks-posting
+*&            | flag (apply_blocking_flags) removed - the batch run ZCD_EBS_VALIDATE is the only entry.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -49,26 +46,12 @@ CLASS zcl_cd_ebs_engine DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    TYPES ty_mode TYPE c LENGTH 1.
-
-    CONSTANTS:
-      BEGIN OF gc_mode,
-        enforce TYPE ty_mode VALUE 'E',
-        monitor TYPE ty_mode VALUE 'M',
-        off     TYPE ty_mode VALUE 'O',
-      END OF gc_mode.
-
     CONSTANTS:
       BEGIN OF gc_check_code,
-        plugin_error     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
-        validation_error TYPE zif_cd_ops_types=>ty_check_code VALUE 'VALIDATION_ERROR',
+        plugin_error TYPE zif_cd_ops_types=>ty_check_code VALUE 'PLUGIN_ERROR',
       END OF gc_check_code.
 
-    "! TVARVC kill switch (type P, NUMB 0000)
-    CONSTANTS gc_switch_name TYPE c LENGTH 30 VALUE 'ZCD_EBS_VALIDATION_MODE'.
-
-    "! A68: run status of a run that selected no statement (RAG grey). The core run status
-    "! list has no such value yet - merge note in docs/Audit_Response_EBS.md
+    "! A68: run status of a run that selected no statement (RAG grey)
     CONSTANTS gc_status_no_data TYPE zif_cd_ops_types=>ty_run_status VALUE zif_cd_ops_types=>gc_run_status-no_data.
 
     TYPES:
@@ -90,27 +73,6 @@ CLASS zcl_cd_ebs_engine DEFINITION
         out_of_scope TYPE i,
       END OF ty_result.
 
-    "! A85: posting disposition of one line - AUTO_POST, EXCEPTION, ON_ACCOUNT, BLOCK or
-    "! NOT_POSTED. Precedence BLOCK > NOT_POSTED > EXCEPTION > ON_ACCOUNT > AUTO_POST
-    "! (docs/EBS_VALIDATION.md, section 'Posting disposition')
-    TYPES:
-      BEGIN OF ty_disposition,
-        line_key    TYPE zif_cd_ops_types=>ty_object_key,
-        stmt_key    TYPE zif_cd_ebs_types=>ty_stmt_key,
-        line_no     TYPE i,
-        disposition TYPE zif_cd_ops_types=>ty_action,
-      END OF ty_disposition.
-    TYPES tt_disposition TYPE SORTED TABLE OF ty_disposition WITH UNIQUE KEY line_key.
-
-    TYPES:
-      BEGIN OF ty_decision,
-        block        TYPE abap_bool,
-        findings     TYPE zif_cd_ops_types=>tt_finding,
-        package      TYPE zif_cd_ebs_types=>ty_package,
-        "! A85: one disposition per line (empty in mode OFF)
-        dispositions TYPE tt_disposition,
-      END OF ty_decision.
-
     "! Validate every package of a source and persist the run (unless test mode)
     METHODS run
       IMPORTING
@@ -131,84 +93,7 @@ CLASS zcl_cd_ebs_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! Pre-posting decision for the BAdI. iv_mode comes from read_mode( ).
-    "! Never raises: validation that cannot run is a VALIDATION_ERROR finding
-    "! with action BLOCK (fail closed in enforce mode).
-    METHODS validate_for_posting
-      IMPORTING
-        iv_mode            TYPE ty_mode
-        is_package         TYPE zif_cd_ebs_types=>ty_package
-      RETURNING
-        VALUE(rs_decision) TYPE ty_decision.
-
-    "! Block posting? Only in enforce mode, on a B finding or an action BLOCK.
-    CLASS-METHODS must_block
-      IMPORTING
-        iv_mode         TYPE ty_mode
-        it_findings     TYPE zif_cd_ops_types=>tt_finding
-      RETURNING
-        VALUE(rv_block) TYPE abap_bool.
-
-    "! Kill switch. Read directly (no factory, no cache) so the emergency path
-    "! depends only on this class and one TVARVC row. A91: a missing row, a value that is
-    "! not E / M / O, or a failed read (database error) gives MONITOR and an operational
-    "! diagnostic in es_diagnostic (KILL_SWITCH_FALLBACK, W) for the caller to log.
-    CLASS-METHODS read_mode
-      EXPORTING
-        es_diagnostic  TYPE zif_cd_ops_types=>ty_finding
-      RETURNING
-        VALUE(rv_mode) TYPE ty_mode.
-
   PRIVATE SECTION.
-    "! A85: disposition per line from the released findings (line, statement and package
-    "! scope), the map row (NOT_POSTED, action) and the mode. A finding contributes BLOCK
-    "! (severity B or action BLOCK - the A27 flag sets the latter), EXCEPTION (action
-    "! EXCEPTION, or blank action with severity E) or ON_ACCOUNT (its action); NOTIFY and
-    "! released findings contribute nothing; AWAITING_LOT_TRANSFER (in-flight grace) is
-    "! EXCEPTION, never AUTO_POST. Outside ENFORCE a BLOCK becomes EXCEPTION.
-    METHODS dispositions
-      IMPORTING
-        iv_mode                TYPE ty_mode
-        is_package             TYPE zif_cd_ebs_types=>ty_package
-        it_findings            TYPE zif_cd_ops_types=>tt_finding
-      RETURNING
-        VALUE(rt_dispositions) TYPE tt_disposition.
-
-    "! A85: what one finding contributes to the disposition of the lines in its scope
-    CLASS-METHODS finding_disposition
-      IMPORTING
-        is_finding            TYPE zif_cd_ops_types=>ty_finding
-      RETURNING
-        VALUE(rv_disposition) TYPE zif_cd_ops_types=>ty_action.
-
-    "! A85: the stronger of two dispositions by precedence
-    CLASS-METHODS stronger
-      IMPORTING
-        iv_current            TYPE zif_cd_ops_types=>ty_action
-        iv_candidate          TYPE zif_cd_ops_types=>ty_action
-      RETURNING
-        VALUE(rv_disposition) TYPE zif_cd_ops_types=>ty_action.
-
-    CLASS-METHODS disposition_rank
-      IMPORTING
-        iv_disposition TYPE zif_cd_ops_types=>ty_action
-      RETURNING
-        VALUE(rv_rank) TYPE i.
-
-    "! A91: diagnostic of a kill-switch fallback to MONITOR
-    CLASS-METHODS mode_fallback
-      IMPORTING
-        iv_reason            TYPE clike
-      RETURNING
-        VALUE(rs_diagnostic) TYPE zif_cd_ops_types=>ty_finding.
-
-    "! Approved blocked-line releases applied to the findings of a posting check
-    METHODS apply_releases
-      IMPORTING
-        it_findings        TYPE zif_cd_ops_types=>tt_finding
-      RETURNING
-        VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
-
     "! The run itself, under the run lock taken by run( )
     METHODS execute
       IMPORTING
@@ -243,10 +128,9 @@ CLASS zcl_cd_ebs_engine DEFINITION
     TYPES tt_plugin TYPE HASHED TABLE OF ty_plugin WITH UNIQUE KEY class_name.
 
     "! Active rules in execution order (level, rule group, sequence, rule ID - primary index).
-    "! Sorted secondary keys for the lookups per finding (BY_RULE) and per line (BY_GROUP,
-    "! BY_POSTING); rows of one key keep the primary order
+    "! Sorted secondary keys for the lookups per line (BY_GROUP, BY_POSTING); rows of one key
+    "! keep the primary order
     TYPES tt_rule TYPE STANDARD TABLE OF zif_cd_ebs_types=>ty_rule_cfg WITH EMPTY KEY
-                  WITH NON-UNIQUE SORTED KEY by_rule COMPONENTS rule_id blocks_posting unusable
                   WITH NON-UNIQUE SORTED KEY by_group COMPONENTS rule_group unusable
                   WITH NON-UNIQUE SORTED KEY by_posting COMPONENTS needs_posting level unusable rule_group.
 
@@ -261,13 +145,6 @@ CLASS zcl_cd_ebs_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! A03: assignments that cannot run and mapped rule groups without any usable rule
-    "! are configuration gaps - one finding with action BLOCK per affected line (or run)
-    "! A27/A86: findings that arrive with the package (parser S00/S06/S12) honour the
-    "! 'blocks posting' flag of their rule like rule plug-in findings do
-    METHODS apply_blocking_flags
-      CHANGING
-        ct_findings TYPE zif_cd_ops_types=>tt_finding.
 
     METHODS configuration_gaps
       IMPORTING
@@ -593,7 +470,6 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     zcl_cd_ebs_rule_base=>clear_memo( ).
     load_configuration( ).
     INSERT LINES OF cs_package-findings INTO TABLE rt_findings.
-    apply_blocking_flags( CHANGING ct_findings = rt_findings ).
 
     mo_resolver->enrich_statements( CHANGING ct_statements = cs_package-statements ).
     INSERT LINES OF mo_resolver->resolve( EXPORTING it_statements = cs_package-statements
@@ -667,215 +543,6 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD validate_for_posting.
-    rs_decision-package = is_package.
-    IF iv_mode = gc_mode-off.
-      RETURN.
-    ENDIF.
-    " A64: no run is started here, so the parameter snapshot is refreshed once per call
-    zcl_cd_ops_factory=>get_store( )->refresh_params( ).
-    TRY.
-        rs_decision-findings = validate_package( CHANGING cs_package = rs_decision-package ).
-      CATCH cx_root INTO DATA(lx_error).
-        " Deliberately broad, fail closed: a validation that could not run is never
-        " permission to post (enforce mode blocks on action BLOCK)
-        INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
-                        object_key  = zif_cd_ebs_types=>gc_engine-posting_object
-                        rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
-                        check_code  = gc_check_code-validation_error
-                        severity    = zif_cd_ops_types=>gc_severity-error
-                        action      = zif_cd_ops_types=>gc_action-block
-                        message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-validation_could_not_run
-                                                             iv_tail  = lx_error->get_text( ) ) )
-          INTO TABLE rs_decision-findings.
-    ENDTRY.
-    rs_decision-findings = apply_releases( rs_decision-findings ).
-    rs_decision-block = must_block( iv_mode = iv_mode it_findings = rs_decision-findings ).
-    rs_decision-dispositions = dispositions( iv_mode     = iv_mode
-                                             is_package  = rs_decision-package
-                                             it_findings = rs_decision-findings ).
-  ENDMETHOD.
-
-
-  METHOD dispositions.
-    TYPES:
-      BEGIN OF ty_scope,
-        object_key  TYPE zif_cd_ops_types=>ty_object_key,
-        disposition TYPE zif_cd_ops_types=>ty_action,
-      END OF ty_scope.
-    TYPES tt_scope TYPE HASHED TABLE OF ty_scope WITH UNIQUE KEY object_key.
-    DATA lt_lines TYPE tt_scope.
-    DATA lt_statements TYPE tt_scope.
-    DATA lv_package TYPE zif_cd_ops_types=>ty_action.
-
-    IF iv_mode = gc_mode-off.
-      RETURN.
-    ENDIF.
-    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
-      DATA(lv_contribution) = finding_disposition( <ls_finding> ).
-      IF lv_contribution IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      CASE <ls_finding>-object_type.
-        WHEN zcl_cd_ebs_finding=>gc_object_type-line.
-          READ TABLE lt_lines ASSIGNING FIELD-SYMBOL(<ls_line_scope>) WITH TABLE KEY object_key = <ls_finding>-object_key.
-          IF sy-subrc = 0.
-            <ls_line_scope>-disposition = stronger( iv_current = <ls_line_scope>-disposition iv_candidate = lv_contribution ).
-          ELSE.
-            INSERT VALUE #( object_key = <ls_finding>-object_key disposition = lv_contribution ) INTO TABLE lt_lines.
-          ENDIF.
-        WHEN zcl_cd_ebs_finding=>gc_object_type-statement.
-          READ TABLE lt_statements ASSIGNING FIELD-SYMBOL(<ls_stmt_scope>)
-               WITH TABLE KEY object_key = <ls_finding>-object_key.
-          IF sy-subrc = 0.
-            <ls_stmt_scope>-disposition = stronger( iv_current = <ls_stmt_scope>-disposition iv_candidate = lv_contribution ).
-          ELSE.
-            INSERT VALUE #( object_key = <ls_finding>-object_key disposition = lv_contribution ) INTO TABLE lt_statements.
-          ENDIF.
-        WHEN OTHERS.
-          " Run / file: the whole package
-          lv_package = stronger( iv_current = lv_package iv_candidate = lv_contribution ).
-      ENDCASE.
-    ENDLOOP.
-
-    LOOP AT is_package-lines ASSIGNING FIELD-SYMBOL(<ls_line>).
-      DATA(lv_key) = zcl_cd_ebs_finding=>line_key( <ls_line> ).
-      " Map row: AUTO_POST unless it says otherwise
-      DATA(lv_disposition) = COND zif_cd_ops_types=>ty_action(
-        WHEN <ls_line>-not_posted = abap_true THEN zif_cd_ebs_types=>gc_disposition-not_posted
-        WHEN <ls_line>-map_action = zif_cd_ops_types=>gc_action-exception
-          OR <ls_line>-map_action = zif_cd_ops_types=>gc_action-on_account THEN <ls_line>-map_action
-        ELSE zif_cd_ops_types=>gc_action-auto_post ).
-      " A blocked line whose block was released is still not auto-postable (no usable mapping)
-      IF <ls_line>-blocked = abap_true.
-        lv_disposition = stronger( iv_current = lv_disposition iv_candidate = zif_cd_ops_types=>gc_action-exception ).
-      ENDIF.
-      lv_disposition = stronger( iv_current   = lv_disposition
-                                 iv_candidate = VALUE #( lt_lines[ object_key = lv_key ]-disposition OPTIONAL ) ).
-      lv_disposition = stronger( iv_current   = lv_disposition
-                                 iv_candidate = VALUE #( lt_statements[ object_key = CONV zif_cd_ops_types=>ty_object_key(
-                                                                                       <ls_line>-stmt_key ) ]-disposition OPTIONAL ) ).
-      lv_disposition = stronger( iv_current = lv_disposition iv_candidate = lv_package ).
-      IF iv_mode <> gc_mode-enforce AND lv_disposition = zif_cd_ops_types=>gc_action-block.
-        " Monitor mode never blocks: the line is handed over as an exception
-        lv_disposition = zif_cd_ops_types=>gc_action-exception.
-      ENDIF.
-      INSERT VALUE #( line_key    = lv_key
-                      stmt_key    = <ls_line>-stmt_key
-                      line_no     = <ls_line>-line_no
-                      disposition = lv_disposition ) INTO TABLE rt_dispositions.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD finding_disposition.
-    rv_disposition = COND #(
-      " In-flight grace: held for the transfer - never auto-posted on a missing lot / payment
-      WHEN is_finding-check_code = zif_cd_ebs_types=>gc_check_code-awaiting_lot_transfer
-        THEN zif_cd_ops_types=>gc_action-exception
-      WHEN is_finding-severity = zif_cd_ops_types=>gc_severity-block
-        OR is_finding-action   = zif_cd_ops_types=>gc_action-block      THEN zif_cd_ops_types=>gc_action-block
-      WHEN is_finding-action   = zif_cd_ops_types=>gc_action-exception
-        OR ( is_finding-action IS INITIAL
-             AND is_finding-severity = zif_cd_ops_types=>gc_severity-error ) THEN zif_cd_ops_types=>gc_action-exception
-      WHEN is_finding-action   = zif_cd_ops_types=>gc_action-on_account THEN zif_cd_ops_types=>gc_action-on_account ).
-  ENDMETHOD.
-
-
-  METHOD stronger.
-    rv_disposition = COND #( WHEN disposition_rank( iv_candidate ) > disposition_rank( iv_current )
-                             THEN iv_candidate
-                             ELSE iv_current ).
-  ENDMETHOD.
-
-
-  METHOD disposition_rank.
-    rv_rank = SWITCH #( iv_disposition
-                        WHEN zif_cd_ops_types=>gc_action-block           THEN 5
-                        WHEN zif_cd_ebs_types=>gc_disposition-not_posted THEN 4
-                        WHEN zif_cd_ops_types=>gc_action-exception       THEN 3
-                        WHEN zif_cd_ops_types=>gc_action-on_account      THEN 2
-                        WHEN zif_cd_ops_types=>gc_action-auto_post       THEN 1
-                        ELSE 0 ).
-  ENDMETHOD.
-
-
-  METHOD apply_releases.
-    " Design 6.2: approved releases (second user) turn exactly their line's block into
-    " information. A failing lookup changes nothing - the gate stays closed.
-    rt_findings = it_findings.
-    DATA(lt_keys) = zcl_cd_ebs_release_policy=>releasable_keys( it_findings ).
-    CHECK lt_keys IS NOT INITIAL.
-    TRY.
-        rt_findings = zcl_cd_ebs_release_policy=>apply(
-                        it_findings = it_findings
-                        it_releases = zcl_cd_ebs_factory=>get_release_dao( )->get_approved( lt_keys ) ).
-      CATCH cx_root ##CATCH_ALL ##NO_HANDLER.
-        " deliberately broad and silent: without the release data the blocks stand
-    ENDTRY.
-  ENDMETHOD.
-
-
-  METHOD must_block.
-    IF iv_mode <> gc_mode-enforce.
-      RETURN.
-    ENDIF.
-    rv_block = xsdbool( line_exists( it_findings[ severity = zif_cd_ops_types=>gc_severity-block ] )
-                     OR line_exists( it_findings[ action = zif_cd_ops_types=>gc_action-block ] ) ).
-  ENDMETHOD.
-
-
-  METHOD read_mode.
-    " Deliberate exception to the DAO rule (engine-redesign kill switch): read
-    " straight from TVARVC, bypassing the buffer, in the entry method only.
-    DATA lv_low TYPE tvarvc-low.
-    DATA lv_subrc TYPE sysubrc.
-    CLEAR es_diagnostic.
-    rv_mode = gc_mode-monitor.
-    TRY.
-        TEST-SEAM tvarvc_read.
-          SELECT SINGLE low
-            FROM tvarvc BYPASSING BUFFER
-            WHERE name = @gc_switch_name
-              AND type = @zif_cd_ebs_types=>gc_tvarvc-type_parameter
-              AND numb = @zif_cd_ebs_types=>gc_tvarvc-numb_single
-            INTO @lv_low.
-          lv_subrc = sy-subrc.
-        END-TEST-SEAM.
-      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
-        es_diagnostic = mode_fallback( lx_sql->get_text( ) ).
-        RETURN.
-      CATCH cx_root INTO DATA(lx_error).
-        " Deliberately broad: the emergency path must always answer (documented MONITOR)
-        es_diagnostic = mode_fallback( lx_error->get_text( ) ).
-        RETURN.
-    ENDTRY.
-    IF lv_subrc <> 0.
-      es_diagnostic = mode_fallback( zif_cd_ebs_types=>gc_tvarvc-type_parameter ).
-      RETURN.
-    ENDIF.
-    DATA(lv_value) = condense( CONV string( lv_low ) ).
-    IF lv_value = gc_mode-enforce OR lv_value = gc_mode-monitor OR lv_value = gc_mode-off.
-      rv_mode = lv_value.
-    ELSE.
-      es_diagnostic = mode_fallback( lv_value ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD mode_fallback.
-    rs_diagnostic = VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
-                             object_key  = gc_switch_name
-                             rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
-                             check_code  = zif_cd_ebs_types=>gc_check_code-kill_switch_fallback
-                             severity    = zif_cd_ops_types=>gc_severity-warning
-                             action      = zif_cd_ops_types=>gc_action-notify
-                             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-kill_switch_fallback
-                                                                  iv_v1    = gc_switch_name
-                                                                  iv_v2    = iv_reason ) ).
-  ENDMETHOD.
-
-
   METHOD load_configuration.
     IF mv_config_ready = abap_true.
       RETURN.
@@ -894,15 +561,6 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DELETE mt_rules WHERE active = abap_false.
     SORT mt_rules BY level rule_group seq rule_id.
     mv_config_ready = abap_true.
-  ENDMETHOD.
-
-
-  METHOD apply_blocking_flags.
-    LOOP AT ct_findings ASSIGNING FIELD-SYMBOL(<ls_finding>) WHERE action IS INITIAL.
-      IF line_exists( mt_rules[ KEY by_rule rule_id = <ls_finding>-rule_id blocks_posting = abap_true unusable = abap_false ] ).
-        <ls_finding>-action = zif_cd_ops_types=>gc_action-block.
-      ENDIF.
-    ENDLOOP.
   ENDMETHOD.
 
 
@@ -974,8 +632,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                                         it_lines      = it_lines ).
       CATCH cx_root INTO DATA(lx_error).
         " Deliberately broad: one broken rule must never stop the validation of the others.
-        " Fail closed: action BLOCK, so validate_for_posting( ) blocks in enforce mode -
-        " a check that could not run is never permission to post.
+        " Fail closed: action BLOCK - a check that could not run is never a pass.
         INSERT VALUE #( object_type = zcl_cd_ebs_finding=>gc_object_type-run
                         object_key  = is_rule-class_name
                         group2      = is_rule-rule_group
