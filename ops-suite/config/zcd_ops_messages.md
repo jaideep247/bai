@@ -285,6 +285,26 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
 | 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
 | 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
+| 375 | Check &1: PARAM1 (number range objects) is not maintained |
+| 376 | Number range &1 interval &2: &3 % used, &4 numbers left |
+| 377 | Number range object &1 has no internal interval for &2 or &3 |
+| 378 | Number range &1 interval &2: limits or level are not a valid number |
+| 379 | Read capped by &1 at &2 rows for &3 - result may be incomplete |
+| 380 | &1 queue &2 / &3 state &4: |
+| 381 | &1 entry(ies), oldest &2 min - look in &3 |
+| 382 | Queue source &1 (&2) was not read: |
+| 383 | bgRFC is not monitored: PARAM4 (bgRFC source) of check &1 is blank |
+| 384 | Check &1: no payment method is mapped to a method class |
+| 385 | Payment method &1 is mapped to two method classes (&2, &3) |
+| 386 | Check &1: no limits in ZCD_HCK_THRESH for &2 - not evaluated |
+| 387 | Check &1: no factory calendar (PARAM1) - business days = calendar days |
+| 388 | &1: &2 payment(s) not cleared beyond the limit, &3 critical, oldest &4 |
+| 389 | Payment &1, method &2, run date &3, aged from &4, |
+| 390 | age &1, amount &2 &3 |
+| 391 | (no value date: run date used) |
+| 392 | &1 payment(s) without value date aged from the run date (&2) |
+| 393 | Method class &1 is not monitored: parameter &2 is blank |
+| 394 | Time field &1 of table &2 is not of type TIMS |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

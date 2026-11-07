@@ -18,6 +18,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reasons: RLGRD with the returns (shared EBS read); NOC items through the
 *&            | shared EBS read DFKKNRP by INFOF, capped like the cheque read.
+*& 2026-11-07 | get_checks_by_doc also reads the encashment date BANCD (in-flight check A_INFLIGHT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -196,8 +197,9 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
     CHECK it_docno IS NOT INITIAL.
-    " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL. VERIFY-DDIC: RWBTR, CRSTATUS (as the EBS read)
-    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus
+    " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL. VERIFY-DDIC: RWBTR, CRSTATUS (as the EBS read),
+    " BANCD (encashment date; read for the morning report check A_INFLIGHT)
+    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus, bancd
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_docno
       WHERE doc1r = @it_docno-table_line

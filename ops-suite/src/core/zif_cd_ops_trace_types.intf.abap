@@ -12,6 +12,7 @@
 *& 2026-11-06 | Return / NOC reasons: TY_RETURN-RLGRD, NOC stage and lot item (DFKKNRP), messages 739-741.
 *& 2026-11-07 | Parameter TRACE_REVERSAL_AUGRD removed: GC_REVERSAL_AUGRD '05' (only reversal reason).
 *& 2026-11-07 | Comments: TRACE_ parameters in ZCA_PARAM, area CD_OPS (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | TY_CHECK-BANCD (cheque encashment date) for the in-flight check A_INFLIGHT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -358,6 +359,8 @@ INTERFACE zif_cd_ops_trace_types
       doc1r    TYPE ty_docno,
       amount   TYPE zif_cd_ops_types=>ty_amount,
       crstatus TYPE c LENGTH 20,
+      "! Encashment date of the cheque (DFKKCR-BANCD, VERIFY-DDIC); read by get_checks_by_doc
+      bancd    TYPE d,
     END OF ty_check.
   TYPES tt_check TYPE STANDARD TABLE OF ty_check WITH EMPTY KEY.
 

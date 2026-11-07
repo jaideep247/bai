@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-07 | inject_param_dao (ZCA_PARAM data access, e.g. ZCL_CA_PARAM_DAO_MEM).
+*& 2026-11-07 | inject_runtime_dao (reads of E_NUMRANGE, E_QUEUES, A_INFLIGHT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - test injector for the HCK factory</p>
 "! Always call reset( ) in teardown.
@@ -25,6 +26,11 @@ CLASS zcl_cd_hck_injector DEFINITION
       IMPORTING
         io_dao TYPE REF TO zif_ca_param_dao.
 
+    "! Reads of the runtime checks (number ranges, queues, payments in flight)
+    CLASS-METHODS inject_runtime_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_hck_runtime_dao.
+
     CLASS-METHODS reset.
 
 ENDCLASS.
@@ -43,9 +49,15 @@ CLASS zcl_cd_hck_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_runtime_dao.
+    zcl_cd_hck_factory=>go_runtime_dao_double = io_dao.
+  ENDMETHOD.
+
+
   METHOD reset.
     CLEAR: zcl_cd_hck_factory=>go_dao_double,
-           zcl_cd_hck_factory=>go_param_dao_double.
+           zcl_cd_hck_factory=>go_param_dao_double,
+           zcl_cd_hck_factory=>go_runtime_dao_double.
   ENDMETHOD.
 
 ENDCLASS.

@@ -12,6 +12,7 @@
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Return / NOC reasons: NOC lot items by INFOF through the shared EBS read, capped.
 *& 2026-11-06 | ltc_trace_dao_reads: partners, clearing items, headers, file events, method kind (gap closure).
+*& 2026-11-07 | Cheque by payment document carries the encashment date BANCD (check A_INFLIGHT).
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -126,6 +127,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     ls_cr-hktid = 'CHK01'.
     ls_cr-ztnum = gc_test-ztnum.
     ls_cr-doc1r = gc_test-payment.
+    ls_cr-bancd = '20261104'.
     INSERT ls_cr INTO TABLE lt_cr.
     go_env->insert_test_data( lt_cr ).
   ENDMETHOD.
@@ -229,6 +231,8 @@ CLASS ltc_trace_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'One cheque' ).
         cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-ztnum exp = gc_test-ztnum msg = 'Cheque number' ).
         cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-hbkid exp = 'JPMC1' msg = 'House bank kept' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-bancd exp = '20261104'
+                                            msg = 'Encashment date read (VERIFY-DDIC BANCD)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
