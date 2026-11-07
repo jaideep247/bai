@@ -8,9 +8,10 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
 *& 2026-11-06 | Generic lookup rule R21 (ZCD_EBS_LOOKUP) - new validations by configuration.
-*& 2026-11-06 | Audit A03 / A27: unusable assignments returned (LEFT OUTER JOIN), blocks-posting flag resolved.
+*& 2026-11-06 | Audit A03: unusable assignments returned (LEFT OUTER JOIN).
 *& 2026-11-06 | Operating model: NEEDS_POSTING of the rule registry carried on the assignment.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - customizing repository</p>
 CLASS zcl_cd_ebs_cfg_dao DEFINITION
@@ -43,7 +44,7 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
            r~severity, r~action, r~param1, r~param2, r~param3, r~tolerance, r~window_days,
            r~active, d~description,
            d~default_severity, d~default_action,
-           d~active AS def_active, d~blocks_posting AS default_blocks, r~blocks_posting AS blocks_override,
+           d~active AS def_active,
            d~needs_posting
       FROM zcd_btc_rule AS r
       LEFT OUTER JOIN zcd_ebs_rule_def AS d ON d~rule_id = r~rule_id
@@ -55,10 +56,6 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
       DATA(ls_rule) = CORRESPONDING zif_cd_ebs_types=>ty_rule_cfg( <ls_row> ).
       ls_rule-unusable = xsdbool( <ls_row>-rule_id <> zif_cd_ebs_types=>gc_rule_none
                                   AND ( <ls_row>-class_name IS INITIAL OR <ls_row>-def_active = abap_false ) ).
-      ls_rule-blocks_posting = SWITCH #( <ls_row>-blocks_override
-                                         WHEN zif_cd_ebs_types=>gc_blocks_override-yes THEN abap_true
-                                         WHEN zif_cd_ebs_types=>gc_blocks_override-no  THEN abap_false
-                                         ELSE <ls_row>-default_blocks ).
       IF ls_rule-severity IS INITIAL.
         ls_rule-severity = <ls_row>-default_severity.
       ENDIF.

@@ -13,7 +13,6 @@ define table zcd_d_ruledef {
   defaultaction : abap.char(10);
   description : abap.char(60);
   active : abap_boolean;
-  blocksposting : abap_boolean;
   needsposting : abap_boolean;
   findingclass : abap.char(10);
   lastchangedby : abp_lastchange_user;

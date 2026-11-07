@@ -6,16 +6,16 @@
 
 | | Before (f10b8f0) | Now |
 |---|---|---|
-| Literals in production ABAP | 1909 | 2129 |
+| Literals in production ABAP | 1909 | 2125 |
 | User-facing text (1) | 516 | 0 |
 | Technical value (2) | 274 | 0 |
-| Legitimate (3) | 1119 | 2129 |
+| Legitimate (3) | 1119 | 2125 |
 
 Same scanner and allow-list for both columns. Texts live in message class ZCD_OPS (built only through `ZCL_CD_OPS_UTIL=>TEXT( )`) or in text symbols; values in named constants of the area types interfaces, class constants, the generated `lif_c` interfaces of the configuration apps, or SAP constants. The portable check `no_inline_texts` keeps categories 1 and 2 at zero; the total grows with new code, not with hardcoding.
 
 ## Now
 
-Literals in production ABAP: **2129** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **2129**.
+Literals in production ABAP: **2125** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **2125**.
 
 Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfaces), separators and format characters, names SAP syntax requires as literals (CALL FUNCTION, AUTHORITY-CHECK OBJECT / ID, MESSAGE TYPE), and allow-listed lines (`tools/literal_allowlist.txt`, each with its reason).
 
@@ -23,8 +23,8 @@ Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfa
 
 | Reason | Literals |
 |---|---|
-| Named constants in the area types interfaces | 1034 |
-| CONSTANTS / TYPES / DATA / PARAMETERS declarations | 802 |
+| Named constants in the area types interfaces | 1032 |
+| CONSTANTS / TYPES / DATA / PARAMETERS declarations | 800 |
 | Separators | 156 |
 | Names SAP syntax requires (CALL FUNCTION, AUTHORITY-CHECK, MESSAGE TYPE) | 77 |
 | Allow-listed lines (wire formats, SQL fragments - `tools/literal_allowlist.txt`) | 26 |
@@ -37,7 +37,7 @@ Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfa
 | Area (`src/`) | Literals |
 |---|---|
 | CORE | 592 |
-| EBS | 615 |
+| EBS | 611 |
 | FMON | 449 |
 | HCK | 473 |
 

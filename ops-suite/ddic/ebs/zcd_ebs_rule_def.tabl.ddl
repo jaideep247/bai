@@ -14,8 +14,6 @@ define table zcd_ebs_rule_def {
   default_action   : abap.char(10);
   description      : abap.char(60);
   active           : abap_boolean;
-  // A27: findings block posting in enforce mode (default; ZCD_BTC_RULE may override)
-  blocks_posting   : abap_boolean;
   // Operating model 2026-11-06: reads SAP evidence of the posting / clearing - not evaluated
   // for an imported entry that is expected to post but is not posted (POSTING_INCOMPLETE)
   needs_posting    : abap_boolean;

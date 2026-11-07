@@ -28,8 +28,6 @@ define view entity ZR_CD_BtcRule
       window_days as WindowDays,
       @EndUserText.label: 'Active'
       active as Active,
-      @EndUserText.label: 'Blocks posting'
-      blocks_posting as BlocksPosting,
       @EndUserText.label: 'Changed by (SM30)'
       changed_by as ChangedBy,
       @EndUserText.label: 'Changed at (SM30)'

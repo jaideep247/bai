@@ -17,7 +17,6 @@ define table zcd_d_btcrule {
   tolerance : abap.dec(15,2);
   windowdays : abap.int4;
   active : abap_boolean;
-  blocksposting : abap.char(1);
   changedby : syuname;
   changedat : timestampl;
   lastchangedby : abp_lastchange_user;

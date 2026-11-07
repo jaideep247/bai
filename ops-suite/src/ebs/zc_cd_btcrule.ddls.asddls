@@ -18,7 +18,6 @@ define view entity ZC_CD_BtcRule
       Tolerance,
       WindowDays,
       Active,
-      BlocksPosting,
       ChangedBy,
       ChangedAt,
       LastChangedBy,

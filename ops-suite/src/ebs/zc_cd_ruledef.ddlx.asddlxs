@@ -38,12 +38,9 @@ annotate entity ZC_CD_RuleDef with
 
   @UI.lineItem: [{ position: 80 }]
   @UI.identification: [{ position: 80 }]
-  BlocksPosting;
-
-  @UI.identification: [{ position: 90 }]
   NeedsPosting;
 
-  @UI.identification: [{ position: 100 }]
+  @UI.identification: [{ position: 90 }]
   FindingClass;
 
   @UI.hidden: true

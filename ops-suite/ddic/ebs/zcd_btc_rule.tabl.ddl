@@ -19,8 +19,6 @@ define table zcd_btc_rule {
   tolerance      : abap.dec(15,2);
   window_days    : abap.int4;
   active         : abap_boolean;
-  // A27: Y = blocks posting, N = advisory, blank = rule default (ZCD_EBS_RULE_DEF)
-  blocks_posting : abap.char(1);
   changed_by     : syuname;
   changed_at     : timestampl;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

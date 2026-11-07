@@ -5,7 +5,7 @@
 *& (object key, grouping, reference, amount). Pure; no database access.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Audit A27: findings of a blocking rule carry action BLOCK (rule_action).
+*& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - finding builder</p>
 CLASS zcl_cd_ebs_finding DEFINITION
@@ -75,12 +75,6 @@ CLASS zcl_cd_ebs_finding DEFINITION
       RETURNING
         VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
 
-    "! Action of a rule's findings: BLOCK when the rule blocks posting (A27), else the configured action
-    CLASS-METHODS rule_action
-      IMPORTING
-        is_rule          TYPE zif_cd_ebs_types=>ty_rule_cfg
-      RETURNING
-        VALUE(rv_action) TYPE zif_cd_ops_types=>ty_action.
 
 ENDCLASS.
 
@@ -134,7 +128,7 @@ CLASS zcl_cd_ebs_finding IMPLEMENTATION.
                            iv_rule_id    = is_rule-rule_id
                            iv_check_code = iv_check_code
                            iv_severity   = is_rule-severity
-                           iv_action     = rule_action( is_rule )
+                           iv_action     = is_rule-action
                            iv_message    = iv_message
                            iv_details    = iv_details ).
   ENDMETHOD.
@@ -145,17 +139,9 @@ CLASS zcl_cd_ebs_finding IMPLEMENTATION.
                                 iv_rule_id    = is_rule-rule_id
                                 iv_check_code = iv_check_code
                                 iv_severity   = is_rule-severity
-                                iv_action     = rule_action( is_rule )
+                                iv_action     = is_rule-action
                                 iv_message    = iv_message
                                 iv_amount     = iv_amount ).
-  ENDMETHOD.
-
-
-  METHOD rule_action.
-    " A27: findings of a rule whose 'blocks posting' flag is on carry action BLOCK, so the
-    " posting gate (enforce mode) and the blocked-line release app treat them alike
-    rv_action = COND #( WHEN is_rule-blocks_posting = abap_true THEN zif_cd_ops_types=>gc_action-block
-                        ELSE is_rule-action ).
   ENDMETHOD.
 
 ENDCLASS.

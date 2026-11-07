@@ -6,10 +6,11 @@
 *& excluded. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Audit A03 / A27: unusable assignments and blocks-posting resolution.
+*& 2026-11-06 | Audit A03: unusable assignments.
 *& 2026-11-06 | Operating model: NEEDS_POSTING carried from the rule registry.
 *& 2026-11-06 | ltc_cfg_reads: BTC map, accounts, flow patterns, reason map, lookups (coverage gap closure).
 *& 2026-11-06 | Flow pattern seeds are PCRE.
+*& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -27,13 +28,11 @@ CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
         iv_group    TYPE char10
         iv_rule     TYPE char10
         iv_severity TYPE char1 OPTIONAL
-        iv_active   TYPE abap_bool DEFAULT abap_true
-        iv_blocks   TYPE char1 OPTIONAL.
+        iv_active   TYPE abap_bool DEFAULT abap_true.
     METHODS insert_definition
       IMPORTING
         iv_rule   TYPE char10
-        iv_active TYPE abap_bool
-        iv_blocks TYPE abap_bool.
+        iv_active TYPE abap_bool.
 
     METHODS registry_default_fills_blank FOR TESTING.
     METHODS assignment_severity_wins     FOR TESTING.
@@ -41,8 +40,6 @@ CLASS ltc_cfg_dao DEFINITION FINAL FOR TESTING
     METHODS missing_definition_unusable  FOR TESTING.
     METHODS inactive_definition_unusable FOR TESTING.
     METHODS none_row_is_not_unusable     FOR TESTING.
-    METHODS blocks_default_from_registry FOR TESTING.
-    METHODS blocks_override_wins         FOR TESTING.
     METHODS needs_posting_from_registry  FOR TESTING.
 ENDCLASS.
 
@@ -84,7 +81,6 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
     ls_rule-seq        = 10.
     ls_rule-severity   = iv_severity.
     ls_rule-active     = iv_active.
-    ls_rule-blocks_posting = iv_blocks.
     INSERT ls_rule INTO TABLE lt_rule.
     go_env->insert_test_data( lt_rule ).
   ENDMETHOD.
@@ -99,7 +95,6 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
     ls_def-default_severity = 'E'.
     ls_def-default_action   = 'EXCEPTION'.
     ls_def-active           = iv_active.
-    ls_def-blocks_posting   = iv_blocks.
     INSERT ls_def INTO TABLE lt_def.
     go_env->insert_test_data( lt_def ).
   ENDMETHOD.
@@ -163,7 +158,7 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
   " A03: an assignment whose definition is inactive is returned as UNUSABLE
   METHOD inactive_definition_unusable.
     TRY.
-        insert_definition( iv_rule = 'R07' iv_active = abap_false iv_blocks = abap_true ).
+        insert_definition( iv_rule = 'R07' iv_active = abap_false ).
         insert_rule( iv_group = 'G1' iv_rule = 'R07' ).
         DATA(lt_rules) = mo_cut->get_rules( ).
         cl_abap_unit_assert=>assert_true( act = VALUE #( lt_rules[ rule_id = 'R07' ]-unusable OPTIONAL )
@@ -181,37 +176,6 @@ CLASS ltc_cfg_dao IMPLEMENTATION.
         DATA(lt_rules) = mo_cut->get_rules( ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rules ) exp = 1 msg = 'The NONE row must be returned' ).
         cl_abap_unit_assert=>assert_false( act = lt_rules[ 1 ]-unusable msg = 'A NONE row is not unusable' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " A27: without an override the registry decides whether the rule blocks posting
-  METHOD blocks_default_from_registry.
-    TRY.
-        insert_definition( iv_rule = 'R07' iv_active = abap_true iv_blocks = abap_true ).
-        insert_rule( iv_group = 'G1' iv_rule = 'R07' ).
-        DATA(lt_rules) = mo_cut->get_rules( ).
-        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_rules[ rule_id = 'R07' ]-blocks_posting OPTIONAL )
-                                          msg = 'The registry default must make R07 blocking' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " A27: Y / N on the assignment overrides the registry default
-  METHOD blocks_override_wins.
-    TRY.
-        insert_definition( iv_rule = 'R07' iv_active = abap_true iv_blocks = abap_true ).
-        insert_rule( iv_group = 'G1' iv_rule = 'R07' iv_blocks = 'N' ).
-        insert_rule( iv_group = 'G2' iv_rule = 'R01' iv_blocks = 'Y' ).
-        DATA(lt_rules) = mo_cut->get_rules( ).
-        cl_abap_unit_assert=>assert_false( act = VALUE #( lt_rules[ rule_group = 'G1' ]-blocks_posting OPTIONAL )
-                                           msg = 'N must make a blocking rule advisory for this group' ).
-        cl_abap_unit_assert=>assert_true( act = VALUE #( lt_rules[ rule_group = 'G2' ]-blocks_posting OPTIONAL )
-                                          msg = 'Y must make an advisory rule blocking for this group' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -20,8 +20,6 @@ define view entity ZR_CD_RuleDef
       description as Description,
       @EndUserText.label: 'Active'
       active as Active,
-      @EndUserText.label: 'Blocks posting'
-      blocks_posting as BlocksPosting,
       @EndUserText.label: 'Needs posting'
       needs_posting as NeedsPosting,
       @EndUserText.label: 'Finding class'

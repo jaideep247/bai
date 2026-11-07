@@ -16,7 +16,6 @@ INTERFACE lif_c.
   CONSTANTS:
     BEGIN OF gc_el,
       actioncode                     TYPE string VALUE `ACTIONCODE`,
-      blocksposting                  TYPE string VALUE `BLOCKSPOSTING`,
       classname                      TYPE string VALUE `CLASSNAME`,
       defaultaction                  TYPE string VALUE `DEFAULTACTION`,
       defaultseverity                TYPE string VALUE `DEFAULTSEVERITY`,
@@ -63,7 +62,6 @@ INTERFACE lif_c.
       btcmap_flowtype                TYPE string VALUE `D,C,*`,
       btcmap_scheme                  TYPE string VALUE `BAI2,ISO,PRTRY`,
       btcrule_actioncode             TYPE string VALUE `,AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
-      btcrule_blocksposting          TYPE string VALUE `,Y,N`,
       btcrule_severity               TYPE string VALUE `,B,E,W,I`,
       ebslookup_keykind              TYPE string VALUE `DOCNO,ZTNUM,REFERENCE`,
       flowpattern_flowtype           TYPE string VALUE `D,C`,
@@ -333,12 +331,6 @@ CLASS lhc_btcrule IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ActionCode
                         v2 = lif_c=>gc_el-actioncode v3 = lif_c=>gc_val-btcrule_actioncode
                         element = lif_c=>gc_el-actioncode ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-BlocksPosting )
-                                        iv_list  = lif_c=>gc_val-btcrule_blocksposting ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-BlocksPosting
-                        v2 = lif_c=>gc_el-blocksposting v3 = lif_c=>gc_val-btcrule_blocksposting
-                        element = lif_c=>gc_el-blocksposting ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
