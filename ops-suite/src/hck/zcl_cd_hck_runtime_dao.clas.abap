@@ -334,7 +334,8 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_runtime_dao~get_seq_outcomes.
-    SELECT flow, method_class, seq, seq_pattern, outcome, expected_dfkkrp, max_age_days, severity, description
+    SELECT flow, method_class, seq, seq_pattern, outcome, expected_dfkkrp, max_age_days, severity, description,
+           reg_state, finding
       FROM zcd_hck_seqout
       WHERE active = @abap_true
       ORDER BY flow, method_class, seq

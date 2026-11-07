@@ -546,6 +546,8 @@ etag master LocalLastChangedAt
     MaxAgeDays = max_age_days;
     Severity = severity;
     Description = description;
+    RegState = reg_state;
+    Finding = finding;
     Active = active;
     ChangedBy = changed_by;
     ChangedAt = changed_at;

@@ -21,6 +21,7 @@ INTERFACE lif_c.
       baselinemode                   TYPE string VALUE `BASELINEMODE`,
       category                       TYPE string VALUE `CATEGORY`,
       classname                      TYPE string VALUE `CLASSNAME`,
+      compareamount                  TYPE string VALUE `COMPAREAMOUNT`,
       cond1field                     TYPE string VALUE `COND1FIELD`,
       cond1op                        TYPE string VALUE `COND1OP`,
       cond2field                     TYPE string VALUE `COND2FIELD`,
@@ -88,6 +89,7 @@ INTERFACE lif_c.
       hckaggregate_cond2op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_cond3op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_datemode          TYPE string VALUE `,AGE,DAY`,
+      hckbtcrole_compareamount       TYPE string VALUE `,X,R`,
       hckbtcrole_flow                TYPE string VALUE `D,C`,
       hckbtcrole_scheme              TYPE string VALUE `BAI2,ISO,PRTRY`,
       hckcheckdef_category           TYPE string VALUE `A,B,C,D,E`,
@@ -1413,6 +1415,12 @@ CLASS lhc_hckbtcrole IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Scheme
                         v2 = lif_c=>gc_el-scheme v3 = lif_c=>gc_val-hckbtcrole_scheme
                         element = lif_c=>gc_el-scheme ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-CompareAmount )
+                                        iv_list  = lif_c=>gc_val-hckbtcrole_compareamount ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-CompareAmount
+                        v2 = lif_c=>gc_el-compareamount v3 = lif_c=>gc_val-hckbtcrole_compareamount
+                        element = lif_c=>gc_el-compareamount ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

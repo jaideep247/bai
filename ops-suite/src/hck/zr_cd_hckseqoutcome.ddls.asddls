@@ -24,6 +24,10 @@ define view entity ZR_CD_HckSeqOutcome
       severity as Severity,
       @EndUserText.label: 'Description'
       description as Description,
+      @EndUserText.label: 'Register state (cheque, blank = any)'
+      reg_state as RegState,
+      @EndUserText.label: 'Finding code of the outcome (blank = none)'
+      finding as Finding,
       @EndUserText.label: 'Active'
       active as Active,
       @EndUserText.label: 'Changed by (SM30)'

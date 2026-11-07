@@ -13,6 +13,8 @@
 *&            | read replaced by BSEG XREF2; CLEARING_ / RETURN_INCONSISTENT (user rules 1-5);
 *&            | BAI lifecycle per payment: roles ZCD_HCK_BTCROLE, outcomes ZCD_HCK_SEQOUT (user
 *&            | correction of rule 4), UNEXPECTED_SEQUENCE, PENDING_OUTCOME_MISSING.
+*& 2026-11-07 | Cheque lifecycle (581 / 255 / corrections): statement link by cheque number, outcome
+*&            | rows with register state and own finding, amount compared with the register.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -327,10 +329,23 @@ INTERFACE zif_cd_hck_runtime_types
       scheme         TYPE ty_scheme,
       btc_code       TYPE ty_btc_code,
       role           TYPE ty_btc_role,
-      "! X: the amount of a line of this role is compared with the returns lot (DFKKRP)
-      compare_amount TYPE abap_bool,
+      "! X: the amount of a line of this role is compared with the returns lot (DFKKRP),
+      "! R: with the payment amount of the cheque (DPAYH-RWBTR of the AUGBL)
+      compare_amount TYPE c LENGTH 1,
     END OF ty_btc_role_row.
   TYPES tt_btc_role TYPE SORTED TABLE OF ty_btc_role_row WITH UNIQUE KEY flow method_class scheme btc_code.
+
+  CONSTANTS:
+    BEGIN OF gc_compare,
+      returns_lot TYPE c LENGTH 1 VALUE 'X',
+      register    TYPE c LENGTH 1 VALUE 'R',
+    END OF gc_compare.
+
+  "! Statement link of the lifecycle evidence (PARAM2): blank = FEBEP-CHECT = AUGBL, ZTNUM =
+  "! FEBEP-CHECT = last PARAM3 characters of the cheque number DFKKCR-ZTNUM (default 13)
+  CONSTANTS gc_link_cheque TYPE string VALUE `ZTNUM`.
+  "! Token of a status list (PARAM1 of the cheque status evidence) for the blank (open) state
+  CONSTANTS gc_state_blank TYPE string VALUE `BLANK`.
 
   "! ZCD_HCK_SEQOUT: the first active pattern (by SEQ) matching the whole role sequence decides
   TYPES:
@@ -347,6 +362,10 @@ INTERFACE zif_cd_hck_runtime_types
       "! Severity when the evidence does not match (blank = E)
       severity        TYPE zif_cd_ops_types=>ty_severity,
       description     TYPE zif_cd_hck_types=>ty_text,
+      "! The row applies only when the register state (DFKKCR-STATE, cheque link) is in this list
+      reg_state       TYPE ty_rule_param,
+      "! Reaching this outcome is itself a finding with this code (e.g. CHEQUE_CLARIFICATION)
+      finding         TYPE zif_cd_ops_types=>ty_check_code,
     END OF ty_seq_outcome.
   TYPES tt_seq_outcome TYPE SORTED TABLE OF ty_seq_outcome WITH UNIQUE KEY flow method_class seq.
 
@@ -484,6 +503,8 @@ INTERFACE zif_cd_hck_runtime_types
       unexpected_seq     TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNEXPECTED_SEQUENCE',
       "! A pending outcome (e.g. redeposit) is older than its MAX_AGE_DAYS
       pending_overdue    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PENDING_OUTCOME_MISSING',
+      "! Amount of the cheque-paid line differs from the payment amount (manual clearing in FPCHR)
+      cheque_amount      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_AMOUNT_MISMATCH',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -573,6 +594,8 @@ INTERFACE zif_cd_hck_runtime_types
       ev_ref_row          TYPE zif_cd_ops_types=>ty_msgno VALUE '668',
       ev_zuonr            TYPE zif_cd_ops_types=>ty_msgno VALUE '669',
       ev_zuonr_changed    TYPE zif_cd_ops_types=>ty_msgno VALUE '670',
+      ev_cheque           TYPE zif_cd_ops_types=>ty_msgno VALUE '672',
+      ev_cheque_amount    TYPE zif_cd_ops_types=>ty_msgno VALUE '673',
     END OF gc_msg.
 
 ENDINTERFACE.

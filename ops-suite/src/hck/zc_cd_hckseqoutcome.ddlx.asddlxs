@@ -44,6 +44,12 @@ annotate entity ZC_CD_HckSeqOutcome with
   Description;
 
   @UI.identification: [{ position: 100 }]
+  RegState;
+
+  @UI.identification: [{ position: 110 }]
+  Finding;
+
+  @UI.identification: [{ position: 120 }]
   Active;
 
   @UI.hidden: true

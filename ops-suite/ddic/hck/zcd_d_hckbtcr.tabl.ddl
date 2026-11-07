@@ -11,7 +11,7 @@ define table zcd_d_hckbtcr {
   key btccode : abap.char(35) not null;
   singletonid : abap.int1;
   role : abap.char(15);
-  compareamount : abap_boolean;
+  compareamount : abap.char(1);
   description : abap.char(60);
   active : abap_boolean;
   changedby : syuname;

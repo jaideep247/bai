@@ -111,7 +111,7 @@ ZCL_CD_HCK_DAO,own test include,,28,90,,"Not run in target SAP; partial exemptio
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
 ZCL_CD_HCK_ENGINE,own test include,,22,90,,Not run in target SAP
-ZCL_CD_HCK_EV_BTC_SEQ,own test include,,13,90,,Not run in target SAP
+ZCL_CD_HCK_EV_BTC_SEQ,own test include,,22,90,,Not run in target SAP
 ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_XREF2,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_ZUONR,own test include,,3,90,,Not run in target SAP

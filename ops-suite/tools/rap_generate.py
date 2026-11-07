@@ -139,7 +139,7 @@ SPEC = {
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
             ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
             ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role', 'Bank transaction code roles', [],
-             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY')]),
+             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'compare_amount', ',X,R')]),
             ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
              [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
               ('enum', 'severity', ',' + SEV)]),
@@ -186,7 +186,8 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           # In-flight check configuration (user rules 2026-11-07)
           'pay_methods': 'Payment methods (comma list)', 'age_basis': 'Ageing basis',
           'required': 'Required (X must hold, C condition, N must not hold)', 'evidence_class': 'Evidence class',
-          'compare_amount': 'Compare amount with returns lot',
+          'compare_amount': 'Compare amount (X returns lot, R payment)', 'reg_state': 'Register state (cheque, blank = any)',
+          'finding': 'Finding code of the outcome (blank = none)',
           'seq_pattern': 'Role sequence (PCRE, whole value)',
           'expected_dfkkrp': 'Returns lot items expected (blank = not checked)',
           'max_age_days': 'Maximum age of a pending outcome (days)'}

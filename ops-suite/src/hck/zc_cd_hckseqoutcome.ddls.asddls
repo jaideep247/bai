@@ -16,6 +16,8 @@ define view entity ZC_CD_HckSeqOutcome
       MaxAgeDays,
       Severity,
       Description,
+      RegState,
+      Finding,
       Active,
       ChangedBy,
       ChangedAt,

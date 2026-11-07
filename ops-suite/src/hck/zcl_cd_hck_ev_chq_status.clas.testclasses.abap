@@ -7,6 +7,7 @@
 *& is a double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (user rule 2: B cashed, V voided, blank open).
+*& 2026-11-07 | Token BLANK.
 *&---------------------------------------------------------------------*
 CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -115,11 +116,13 @@ CLASS ltc_ev_chq_status IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: blank state (open) never holds, the row shows the status
+  " Rule: blank state (open) holds only for the token BLANK
   METHOD blank_never_holds.
     TRY.
         DATA(ls_result) = collect( 'B,V' ).
         cl_abap_unit_assert=>assert_false( act = ls_result-evidence[ doc1r = gc_open ]-found msg = 'Open does not hold' ).
+        ls_result = collect( |V,{ zif_cd_hck_runtime_types=>gc_state_blank }| ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-evidence[ doc1r = gc_open ]-found msg = 'Token BLANK holds for blank' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

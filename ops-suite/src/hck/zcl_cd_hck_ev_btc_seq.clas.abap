@@ -14,9 +14,17 @@
 *& compared line differing from the lot (RETURN_INCONSISTENT); a pending
 *& outcome older than MAX_AGE_DAYS after its last line
 *& (PENDING_OUTCOME_MISSING). Lines whose code has no role are ignored.
-*& One read each of lines, lots and configuration per run. Read-only.
+*& Cheques (PARAM2 = ZTNUM): the lines are linked by FEBEP-CHECT = the
+*& last PARAM3 (13) characters of DFKKCR-ZTNUM, an outcome row may require
+*& a register state (DFKKCR-STATE, cheque by DFKKCR-DOC1R = AUGBL) and may
+*& raise its own finding (e.g. CHEQUE_CLARIFICATION, MANUAL_CLEARING_
+*& REQUIRED), and a line of a role compared with R must carry the payment
+*& amount (DPAYH-RWBTR of the AUGBL; CHEQUE_AMOUNT_MISMATCH). One read each of lines, lots, cheques and
+*& configuration per run. Read-only: nothing is cleared (FPCHR is manual).
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction of rule 4: lifecycle of BAI / ISO codes per payment).
+*& 2026-11-07 | Cheque lifecycle 581 / 255 / corrections: cheque-number link, register state, outcome
+*&            | finding, register amount (user facts on disbursement cheques).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION
@@ -37,7 +45,7 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
         role    TYPE zif_cd_hck_runtime_types=>ty_btc_role,
         code    TYPE zif_cd_hck_runtime_types=>ty_btc_code,
         amount  TYPE zif_cd_ops_types=>ty_amount,
-        compare TYPE abap_bool,
+        compare TYPE c LENGTH 1,
       END OF ty_step.
     TYPES tt_step TYPE STANDARD TABLE OF ty_step WITH EMPTY KEY.
 
@@ -50,6 +58,17 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
       END OF ty_lot.
     TYPES tt_lot TYPE HASHED TABLE OF ty_lot WITH UNIQUE KEY doc1r.
 
+    "! Cheque register of a payment document (cheque link only; DFKKCR-DOC1R = AUGBL) with the
+    "! payment amount (DPAYH) the cashed line is compared with
+    TYPES:
+      BEGIN OF ty_register,
+        doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
+        state  TYPE string,
+        amount TYPE zif_cd_ops_types=>ty_amount,
+        ztnum  TYPE string,
+      END OF ty_register.
+    TYPES tt_register TYPE HASHED TABLE OF ty_register WITH UNIQUE KEY doc1r.
+
     DATA mt_outcomes TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
     DATA mt_targets TYPE string_table.
     DATA mv_today TYPE d.
@@ -59,16 +78,36 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
         is_payment         TYPE zif_cd_hck_runtime_types=>ty_issued_payment
         it_steps           TYPE tt_step
         is_lot             TYPE ty_lot
+        is_register        TYPE ty_register
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence.
 
-    "! The first active outcome of the flow + class whose pattern matches the whole sequence
+    "! The first active outcome of the flow + class whose pattern matches the whole sequence and
+    "! whose register state list (if any) contains the register state
     METHODS match
       IMPORTING
         is_payment        TYPE zif_cd_hck_runtime_types=>ty_issued_payment
         iv_sequence       TYPE string
+        is_register       TYPE ty_register
       RETURNING
         VALUE(rs_outcome) TYPE zif_cd_hck_runtime_types=>ty_seq_outcome.
+
+    "! Cheques of the payments (one read), mapped by the cheque-number suffix
+    CLASS-METHODS cheque_links
+      IMPORTING
+        it_payments    TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+        iv_length      TYPE i
+      EXPORTING
+        et_ref_doc     TYPE zcl_cd_hck_ev_support=>tt_ref_doc
+        et_register    TYPE tt_register.
+
+    "! The last line of a role compared with the register differs from the cheque amount
+    CLASS-METHODS register_mismatch
+      IMPORTING
+        it_steps       TYPE tt_step
+        is_register    TYPE ty_register
+      RETURNING
+        VALUE(rv_text) TYPE string.
 
     "! Lot items expected differ, lot without line or amount differs: the detail, else blank
     CLASS-METHODS lot_mismatch
@@ -88,6 +127,9 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
   METHOD zif_cd_hck_evidence~collect.
     DATA lt_lots TYPE tt_lot.
     DATA lt_steps TYPE tt_step.
+    DATA lt_ref_doc TYPE zcl_cd_hck_ev_support=>tt_ref_doc.
+    DATA lt_register TYPE tt_register.
+    DATA ls_lines TYPE zcl_cd_hck_ev_support=>ty_doc_lines.
     mt_targets = zcl_cd_hck_ev_support=>tokens(
                    zcl_cd_hck_ev_support=>required_param( iv_value = is_rule-param1
                                                           iv_name  = zif_cd_hck_runtime_types=>gc_rule_param-param1
@@ -108,8 +150,22 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     ENDLOOP.
     mv_today = zcl_cd_ops_factory=>get_clock( )->today( ).
 
-    DATA(ls_lines) = zcl_cd_hck_ev_support=>lines_by_doc( it_payments = it_payments
-                                                         iv_max_rows = iv_max_rows ).
+    " Statement link: payment document (default) or the cheque number suffix (PARAM2 = ZTNUM)
+    IF to_upper( condense( CONV string( is_rule-param2 ) ) ) = zif_cd_hck_runtime_types=>gc_link_cheque.
+      cheque_links( EXPORTING it_payments = it_payments
+                              iv_length   = nmax( val1 = 1
+                                                  val2 = zcl_cd_hck_param=>int(
+                                                           iv_value   = is_rule-param3
+                                                           iv_default = zif_cd_hck_runtime_types=>gc_check_default-ztnum_suffix ) )
+                    IMPORTING et_ref_doc  = lt_ref_doc
+                              et_register = lt_register ).
+      ls_lines = zcl_cd_hck_ev_support=>lines_by_ref( it_ref_doc  = lt_ref_doc
+                                                      iv_from     = zcl_cd_hck_ev_support=>earliest_run( it_payments )
+                                                      iv_max_rows = iv_max_rows ).
+    ELSE.
+      ls_lines = zcl_cd_hck_ev_support=>lines_by_doc( it_payments = it_payments
+                                                      iv_max_rows = iv_max_rows ).
+    ENDIF.
     rs_result-capped = ls_lines-capped.
     rs_result-source = zif_cd_ops_trace_types=>gc_table-febep.
     LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_returns( zcl_cd_hck_ev_support=>docnos( it_payments ) )
@@ -145,9 +201,14 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
       ENDLOOP.
       " The lifecycle in statement order: statement date, statement, line
       SORT lt_steps BY budat kukey esnum.
-      DATA(ls_evidence) = evaluate( is_payment = <ls_payment>
-                                    it_steps   = lt_steps
-                                    is_lot     = VALUE #( lt_lots[ doc1r = <ls_payment>-doc1r ] OPTIONAL ) ).
+      " Cheque link: DFKKCR-DOC1R = AUGBL; the amount compared is the payment amount (DPAYH-RWBTR of
+      " the same AUGBL), so no unconfirmed register amount field is needed
+      DATA(ls_register) = VALUE ty_register( lt_register[ doc1r = <ls_payment>-doc1r ] OPTIONAL ).
+      ls_register-amount = abs( <ls_payment>-amount ).
+      DATA(ls_evidence) = evaluate( is_payment  = <ls_payment>
+                                    it_steps    = lt_steps
+                                    is_lot      = VALUE #( lt_lots[ doc1r = <ls_payment>-doc1r ] OPTIONAL )
+                                    is_register = ls_register ).
       IF ls_evidence IS NOT INITIAL.
         INSERT ls_evidence INTO TABLE rs_result-evidence.
       ENDIF.
@@ -181,7 +242,13 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
                            iv_tail  = |{ lv_sequence } ({ concat_lines_of( table = lt_codes
                                                                            sep   = zif_cd_hck_runtime_types=>gc_role_sep ) })| ).
 
-    DATA(ls_outcome) = match( is_payment = is_payment iv_sequence = lv_sequence ).
+    IF is_register-ztnum IS NOT INITIAL.
+      rs_evidence-detail = |{ rs_evidence-detail } | &&
+                           |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_cheque
+                                                     iv_v1    = is_register-ztnum
+                                                     iv_v2    = is_register-state ) }|.
+    ENDIF.
+    DATA(ls_outcome) = match( is_payment = is_payment iv_sequence = lv_sequence is_register = is_register ).
     IF ls_outcome IS INITIAL.
       rs_evidence-anomaly  = zif_cd_hck_runtime_types=>gc_code-unexpected_seq.
       rs_evidence-severity = zif_cd_ops_types=>gc_severity-error.
@@ -196,10 +263,24 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     rs_evidence-severity = COND #( WHEN ls_outcome-severity IS INITIAL THEN zif_cd_ops_types=>gc_severity-error
                                    ELSE ls_outcome-severity ).
 
+    " An outcome that is itself a finding (clarification, manual clearing): its description says why
+    IF ls_outcome-finding IS NOT INITIAL.
+      rs_evidence-anomaly = ls_outcome-finding.
+      rs_evidence-detail  = |{ rs_evidence-detail } { ls_outcome-description }|.
+      RETURN.
+    ENDIF.
     DATA(lv_mismatch) = lot_mismatch( is_outcome = ls_outcome it_steps = it_steps is_lot = is_lot ).
     IF lv_mismatch IS NOT INITIAL.
       rs_evidence-anomaly = zif_cd_hck_runtime_types=>gc_code-return_inconsist.
       rs_evidence-detail  = |{ rs_evidence-detail } { lv_mismatch }|.
+      RETURN.
+    ENDIF.
+    lv_mismatch = register_mismatch( it_steps = it_steps is_register = is_register ).
+    IF lv_mismatch IS NOT INITIAL.
+      rs_evidence-found    = abap_false.
+      rs_evidence-anomaly  = zif_cd_hck_runtime_types=>gc_code-cheque_amount.
+      rs_evidence-severity = zif_cd_ops_types=>gc_severity-error.
+      rs_evidence-detail   = |{ rs_evidence-detail } { lv_mismatch }|.
       RETURN.
     ENDIF.
 
@@ -219,6 +300,12 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
   METHOD match.
     LOOP AT mt_outcomes ASSIGNING FIELD-SYMBOL(<ls_outcome>)
          WHERE flow = is_payment-flow AND method_class = is_payment-class.
+      IF <ls_outcome>-reg_state IS NOT INITIAL.
+        DATA(lt_states) = zcl_cd_hck_ev_support=>tokens( <ls_outcome>-reg_state ).
+        IF NOT line_exists( lt_states[ table_line = is_register-state ] ).
+          CONTINUE.
+        ENDIF.
+      ENDIF.
       IF zcl_cd_ops_util=>pcre_match( iv_value = iv_sequence iv_pattern = <ls_outcome>-seq_pattern ) = abap_true.
         rs_outcome = <ls_outcome>.
         RETURN.
@@ -241,11 +328,53 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     DATA(lv_index) = lines( it_steps ).
     WHILE lv_index > 0.
       DATA(ls_step) = it_steps[ lv_index ].
-      IF ls_step-compare = abap_true.
+      IF ls_step-compare = zif_cd_hck_runtime_types=>gc_compare-returns_lot.
         IF ls_step-amount <> is_lot-amount.
           rv_text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_amount_differs
                                            iv_v1    = |{ ls_step-amount STYLE = SIMPLE }|
                                            iv_v2    = |{ is_lot-amount STYLE = SIMPLE }| ).
+        ENDIF.
+        RETURN.
+      ENDIF.
+      lv_index = lv_index - 1.
+    ENDWHILE.
+  ENDMETHOD.
+
+
+
+  METHOD cheque_links.
+    CLEAR: et_ref_doc, et_register.
+    DATA(lt_docno) = zcl_cd_hck_ev_support=>docnos( it_payments ).
+    IF lt_docno IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_checks_by_doc( lt_docno ) ASSIGNING FIELD-SYMBOL(<ls_check>)
+         WHERE ztnum IS NOT INITIAL.
+      DATA(lv_suffix) = zcl_cd_hck_ev_stmt_cheque=>suffix( iv_ztnum = <ls_check>-ztnum iv_length = iv_length ).
+      INSERT VALUE #( ref   = zcl_cd_hck_ev_support=>ref_key( lv_suffix )
+                      raw   = lv_suffix
+                      doc1r = <ls_check>-doc1r ) INTO TABLE et_ref_doc.
+      " Register state as maintained (blank = open); the first cheque of a document is its register
+      INSERT VALUE #( doc1r = <ls_check>-doc1r
+                      state = COND #( WHEN <ls_check>-state IS INITIAL THEN zif_cd_hck_runtime_types=>gc_state_blank
+                                      ELSE to_upper( CONV string( <ls_check>-state ) ) )
+                      ztnum = condense( CONV string( <ls_check>-ztnum ) ) ) INTO TABLE et_register.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD register_mismatch.
+    IF is_register-ztnum IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lv_index) = lines( it_steps ).
+    WHILE lv_index > 0.
+      DATA(ls_step) = it_steps[ lv_index ].
+      IF ls_step-compare = zif_cd_hck_runtime_types=>gc_compare-register.
+        IF ls_step-amount <> is_register-amount.
+          rv_text = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_cheque_amount
+                                           iv_v1    = |{ ls_step-amount STYLE = SIMPLE }|
+                                           iv_v2    = |{ is_register-amount STYLE = SIMPLE }| ).
         ENDIF.
         RETURN.
       ENDIF.

@@ -13,8 +13,9 @@ define table zcd_hck_btcrole {
   key btc_code     : abap.char(35) not null;
   // open list of configuration (e.g. ORIGINAL, RETURNED, COLLECTED, COLLECT_FAIL)
   role             : abap.char(15);
-  // X: the amount of a line of this role is compared with the returns lot (DFKKRP)
-  compare_amount   : abap_boolean;
+  // X: the amount of a line of this role is compared with the returns lot (DFKKRP), R: with the
+  // payment amount of the cheque (DPAYH via DFKKCR-DOC1R = AUGBL), blank: not compared
+  compare_amount   : abap.char(1);
   description      : abap.char(60);
   active           : abap_boolean;
   changed_by       : syuname;

@@ -12,6 +12,8 @@
 *& repository and clock are doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction of rule 4: BAI lifecycle per payment).
+*& 2026-11-07 | ltc_ev_btc_seq_chq: cheque lifecycle 581 / 255 / corrections (link by cheque number,
+*&            | register state, clarification, manual clearing, register amount).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -36,6 +38,7 @@ CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ops_trace_dao PARTIALLY IMPLEMENTED.
     DATA mt_lines TYPE zif_cd_ops_trace_types=>tt_bank_line.
     DATA mt_returns TYPE zif_cd_ops_trace_types=>tt_return.
+    DATA mt_checks TYPE zif_cd_ops_trace_types=>tt_check.
     DATA mv_line_reads TYPE i.
     DATA mv_lot_reads TYPE i.
 ENDCLASS.
@@ -53,6 +56,10 @@ CLASS ltd_trace_dao IMPLEMENTATION.
   METHOD zif_cd_ops_trace_dao~get_returns.
     mv_lot_reads = mv_lot_reads + 1.
     rt_returns = mt_returns.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
+    rt_checks = mt_checks.
   ENDMETHOD.
 ENDCLASS.
 
@@ -478,6 +485,295 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
         evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466` iv_target = `CLEARED` ).
         cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_line_reads exp = 1 msg = 'One line read' ).
         cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_lot_reads exp = 1 msg = 'One lot read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      gc_doc    TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300001',
+      "! 20 characters; the statement carries the last 13
+      gc_ztnum  TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0011234567890123',
+      gc_chect  TYPE zif_cd_ops_trace_types=>ty_ref VALUE '1234567890123',
+      gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
+      gc_d      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'D',
+      gc_chq    TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
+      gc_blank  TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'BLANK',
+      gc_clarify TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
+      gc_manual TYPE zif_cd_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
+      gc_fpchr  TYPE zif_cd_hck_types=>ty_text VALUE 'Correction on the statement - clear manually in FPCHR'.
+
+    DATA mo_dao TYPE REF TO ltd_runtime_dao.
+    DATA mo_trace TYPE REF TO ltd_trace_dao.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS role
+      IMPORTING
+        iv_code    TYPE clike
+        iv_role    TYPE clike
+        iv_compare TYPE c DEFAULT space.
+    METHODS outcome
+      IMPORTING
+        iv_seq       TYPE zif_cd_hck_runtime_types=>ty_rule_seq
+        iv_pattern   TYPE clike
+        iv_outcome   TYPE clike
+        iv_reg_state TYPE clike OPTIONAL
+        iv_finding   TYPE clike OPTIONAL
+        iv_text      TYPE clike OPTIONAL.
+    "! Cheque (DFKKCR-DOC1R = AUGBL) with state, payment amount, lines of the codes (CHECT = last 13 of ZTNUM)
+    METHODS evaluate
+      IMPORTING
+        iv_codes           TYPE clike
+        iv_state           TYPE clike DEFAULT space
+        iv_payment_amount  TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount
+        iv_target          TYPE clike
+        iv_chect           TYPE zif_cd_ops_trace_types=>ty_ref DEFAULT gc_chect
+      RETURNING
+        VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
+      RAISING
+        zcx_cd_ops_error.
+
+    METHODS cashed_and_returned       FOR TESTING.
+    METHODS returned_still_cashed     FOR TESTING.
+    METHODS multiple_581_clarification FOR TESTING.
+    METHODS multiple_255_clarification FOR TESTING.
+    METHODS correction_state_blank    FOR TESTING.
+    METHODS correction_state_cashed   FOR TESTING.
+    METHODS cheque_amount_mismatch    FOR TESTING.
+    METHODS link_by_suffix_13         FOR TESTING.
+    METHODS unexpected_cheque_order   FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
+
+  METHOD setup.
+    mo_dao = NEW #( ).
+    zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
+    mo_trace = NEW #( ).
+    zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    " Seed (config/hck_seed.md section 8e / 8f): disbursement cheques
+    role( iv_code = '581' iv_role = 'CASHED' iv_compare = zif_cd_hck_runtime_types=>gc_compare-register ).
+    role( iv_code = '255' iv_role = 'RETURNED' ).
+    role( iv_code = '399' iv_role = 'CORRECTION' ).
+    role( iv_code = '699' iv_role = 'CORRECTION' ).
+    outcome( iv_seq = '001' iv_pattern = '.*CORRECTION.*' iv_outcome = 'CLEARED_MANUAL' iv_reg_state = 'B' ).
+    outcome( iv_seq = '002' iv_pattern = '.*CORRECTION.*' iv_outcome = 'MANUAL_CLEARING'
+             iv_finding = gc_manual iv_text = gc_fpchr ).
+    outcome( iv_seq = '010' iv_pattern = '.*(CASHED.*CASHED|RETURNED.*RETURNED).*' iv_outcome = 'CLARIFICATION'
+             iv_finding = gc_clarify iv_text = 'Several 581 / 255 for one cheque - check the clarification worklist' ).
+    outcome( iv_seq = '020' iv_pattern = 'CASHED' iv_outcome = 'CLEARED' ).
+    outcome( iv_seq = '030' iv_pattern = '(CASHED,)?RETURNED' iv_outcome = 'RETURNED' iv_reg_state = gc_blank ).
+    outcome( iv_seq = '040' iv_pattern = '(CASHED,)?RETURNED' iv_outcome = 'RETURNED_VOIDED' iv_reg_state = 'V' ).
+    outcome( iv_seq = '050' iv_pattern = '(CASHED,)?RETURNED' iv_outcome = 'RETURN_NOT_REGISTERED' iv_reg_state = 'B'
+             iv_finding = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+             iv_text = '255 on the statement but the cheque register still shows cashed' ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
+    CLEAR: mo_dao, mo_trace.
+  ENDMETHOD.
+
+
+  METHOD role.
+    DATA ls_role TYPE zif_cd_hck_runtime_types=>ty_btc_role_row.
+    ls_role-flow           = gc_d.
+    ls_role-method_class   = gc_chq.
+    ls_role-scheme         = 'BAI2'.
+    ls_role-btc_code       = iv_code.
+    ls_role-role           = iv_role.
+    ls_role-compare_amount = iv_compare.
+    INSERT ls_role INTO TABLE mo_dao->mt_roles.
+  ENDMETHOD.
+
+
+  METHOD outcome.
+    DATA ls_outcome TYPE zif_cd_hck_runtime_types=>ty_seq_outcome.
+    ls_outcome-flow            = gc_d.
+    ls_outcome-method_class    = gc_chq.
+    ls_outcome-seq             = iv_seq.
+    ls_outcome-seq_pattern     = iv_pattern.
+    ls_outcome-outcome         = iv_outcome.
+    " Confirmed: no returns lot for a returned cheque (only the register changes)
+    ls_outcome-expected_dfkkrp = '0'.
+    ls_outcome-reg_state       = iv_reg_state.
+    ls_outcome-finding         = iv_finding.
+    ls_outcome-description     = iv_text.
+    INSERT ls_outcome INTO TABLE mo_dao->mt_outcomes.
+  ENDMETHOD.
+
+
+  METHOD evaluate.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    CLEAR: mo_trace->mt_lines, mo_trace->mt_checks.
+    ls_check-doc1r  = gc_doc.
+    ls_check-ztnum  = gc_ztnum.
+    ls_check-state  = iv_state.
+    INSERT ls_check INTO TABLE mo_trace->mt_checks.
+    SPLIT iv_codes AT ',' INTO TABLE DATA(lt_codes).
+    LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
+      CLEAR ls_line.
+      ls_line-kukey = '00000201'.
+      ls_line-esnum = sy-tabix.
+      ls_line-chect = iv_chect.
+      ls_line-vorgc = <lv_code>.
+      ls_line-budat = CONV d( '20261001' ) + sy-tabix.
+      ls_line-kwbtr = gc_amount.
+      INSERT ls_line INTO TABLE mo_trace->mt_lines.
+    ENDLOOP.
+    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount )
+      INTO TABLE lt_payments.
+    DATA(ls_result) = NEW zcl_cd_hck_ev_btc_seq( )->zif_cd_hck_evidence~collect(
+                        it_payments = lt_payments
+                        is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ' param1 = iv_target
+                                               param2 = zif_cd_hck_runtime_types=>gc_link_cheque param3 = '13' )
+                        iv_max_rows = 100 ).
+    rs_evidence = VALUE #( ls_result-evidence[ doc1r = gc_doc ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  " Rule: 581 with state B = cleared; 581,255 or 255 with state blank = returned (no DFKKRP, not
+  " aged); 255 with state V = voided after the return (consistent)
+  METHOD cashed_and_returned.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = '581: cleared' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = '581: consistent' ).
+        ls_evidence = evaluate( iv_codes = `581,255` iv_target = `RETURNED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = '581,255 with blank state: returned' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No returns lot expected' ).
+        cl_abap_unit_assert=>assert_true( act = evaluate( iv_codes = `255` iv_target = `RETURNED` )-found
+                                          msg = '255 alone: returned' ).
+        cl_abap_unit_assert=>assert_true( act = evaluate( iv_codes = `581,255` iv_state = 'V' iv_target = `RETURNED_VOIDED` )-found
+                                          msg = 'Voided after the return' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: 255 while the register still shows B = RETURN_INCONSISTENT (register not updated); a
+  " returns lot for a cheque = RETURN_INCONSISTENT (unexpected lot)
+  METHOD returned_still_cashed.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,255` iv_state = 'B' iv_target = `RETURNED` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+                                            msg = 'Register still cashed' ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not a consistent return' ).
+        INSERT VALUE #( selw1 = gc_doc ) INTO TABLE mo_trace->mt_returns.
+        ls_evidence = evaluate( iv_codes = `581,255` iv_target = `RETURNED` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+                                            msg = 'Unexpected returns lot' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: several 581 for one cheque = CHEQUE_CLARIFICATION (configured finding, severity E)
+  METHOD multiple_581_clarification.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,581` iv_state = 'B' iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = gc_clarify msg = 'Clarification' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_cd_ops_types=>gc_severity-error msg = 'Error' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = `clarification worklist` ) >= 0 )
+                                          msg = 'Says where to look' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: several 255 for one cheque = CHEQUE_CLARIFICATION
+  METHOD multiple_255_clarification.
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = evaluate( iv_codes = `581,255,255` iv_target = `RETURNED` )-anomaly
+                                            exp = gc_clarify msg = 'Clarification' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a correction code while the register is not B = MANUAL_CLEARING_REQUIRED naming the cheque
+  " number, codes with dates and FPCHR
+  METHOD correction_state_blank.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,399` iv_target = `CLEARED,CLEARED_MANUAL` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = gc_manual msg = 'Manual clearing required' ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not cleared' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = CONV string( gc_ztnum ) ) >= 0 )
+                                          msg = 'Cheque number named' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = `399 2026-10-03` ) >= 0 )
+                                          msg = 'Codes and dates named' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = `FPCHR` ) >= 0 )
+                                          msg = 'FPCHR named' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a correction after support cleared the cheque (state B) = CLEARED_MANUAL, no finding
+  METHOD correction_state_cashed.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,699` iv_state = 'B' iv_target = `CLEARED,CLEARED_MANUAL` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Cleared manually' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the 581 amount must equal the payment amount (DPAYH of the AUGBL; role compared with R)
+  METHOD cheque_amount_mismatch.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581` iv_state = 'B' iv_payment_amount = '300.00' iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = zif_cd_hck_runtime_types=>gc_code-cheque_amount
+                                            msg = 'Amount mismatch' ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not cleared' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: cheque lines are linked by FEBEP-CHECT = last 13 characters of ZTNUM, not by the document
+  METHOD link_by_suffix_13.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` )-found
+                                          msg = 'Suffix 13 linked' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` iv_chect = '300001' )
+          msg = 'The payment document is no cheque link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a cheque sequence no row matches (255 before 581) is UNEXPECTED_SEQUENCE
+  METHOD unexpected_cheque_order.
+    TRY.
+        cl_abap_unit_assert=>assert_equals( act = evaluate( iv_codes = `255,581` iv_target = `CLEARED` )-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-unexpected_seq
+                                            msg = 'Unexpected' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

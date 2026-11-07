@@ -16,7 +16,7 @@ define view entity ZR_CD_HckBtcRole
       1 as SingletonID,
       @EndUserText.label: 'Role'
       role as Role,
-      @EndUserText.label: 'Compare amount with returns lot'
+      @EndUserText.label: 'Compare amount (X returns lot, R payment)'
       compare_amount as CompareAmount,
       @EndUserText.label: 'Description'
       description as Description,
