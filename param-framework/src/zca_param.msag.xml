@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZCA_PARAM</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Cross-application parameter framework</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Parameter area &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Parameter area &amp;1 is not active</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Parameter &amp;2 is not defined in area &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Mandatory parameter &amp;1 / &amp;2 has no value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Parameter &amp;1 / &amp;2 is a single value but has &amp;3 value rows</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Value '&amp;3' of parameter &amp;1 / &amp;2 is not a valid &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Value &amp;3 of parameter &amp;1 / &amp;2 is below the minimum &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Value &amp;3 of parameter &amp;1 / &amp;2 is above the maximum &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Value '&amp;3' of parameter &amp;1 / &amp;2 does not match the allowed pattern</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Allowed pattern '&amp;3' of parameter &amp;1 / &amp;2 is not valid PCRE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>DDIC type &amp;3 of parameter &amp;1 / &amp;2 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>Class &amp;3 of parameter &amp;1 / &amp;2 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>Class &amp;3 of parameter &amp;1 / &amp;2 does not implement &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>Parameter &amp;1 / &amp;2 has value type &amp;3 and cannot be read as &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>Parameter &amp;1 / &amp;2 has kind &amp;3 and cannot be read as &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>Row &amp;3 of parameter &amp;1 / &amp;2 has sign/option &amp;4; a list needs I EQ</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>017</MSGNR>
+     <TEXT>Row &amp;3 of parameter &amp;1 / &amp;2: sign/option/high '&amp;4' not valid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>018</MSGNR>
+     <TEXT>Parameter &amp;1 / &amp;2 has no value and no default</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>019</MSGNR>
+     <TEXT>Name '&amp;3' is invalid: A-Z, 0-9, _; it must start with a letter</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>020</MSGNR>
+     <TEXT>Kind '&amp;3' of parameter &amp;1 / &amp;2 is not valid (P or S)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>021</MSGNR>
+     <TEXT>Value type '&amp;3' of parameter &amp;1 / &amp;2 is not valid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>022</MSGNR>
+     <TEXT>Field &amp;3 is not allowed for value type &amp;4 (parameter &amp;1 / &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>023</MSGNR>
+     <TEXT>Minimum &amp;3 is greater than maximum &amp;4 (parameter &amp;1 / &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>024</MSGNR>
+     <TEXT>Interface &amp;3 of parameter &amp;1 / &amp;2 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>025</MSGNR>
+     <TEXT>Value type LIST needs kind P (parameter &amp;1 / &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>040</MSGNR>
+     <TEXT>Enter an open customizing request for the changes to area &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>041</MSGNR>
+     <TEXT>Request &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>042</MSGNR>
+     <TEXT>Request &amp;1 is not a customizing request or task</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>043</MSGNR>
+     <TEXT>Request &amp;1 is not modifiable (released or locked)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>044</MSGNR>
+     <TEXT>Area &amp;1: areas and definitions are maintained only by transport</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>045</MSGNR>
+     <TEXT>Values of parameter &amp;1 / &amp;2 cannot be changed in this client</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>047</MSGNR>
+     <TEXT>Changes could not be recorded on request &amp;1</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

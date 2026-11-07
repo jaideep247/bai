@@ -1,0 +1,141 @@
+// Behavior: Parameter areas, definitions and values
+managed implementation in class zbp_r_ca_paramarea unique;
+strict ( 2 );
+with draft;
+
+// Area (root) -> Definition -> Value, one draft per area. Rules (docs/DESIGN.md, section 8):
+// areas, definitions, new values and deletions only in a client that records customizing
+// changes (on a customizing request, recorded with MBC_CP_API); existing values also in
+// other clients when the area is PROD_EDITABLE and the definition not DEVELOPER_OWNED.
+define behavior for ZR_CA_ParamArea alias Area
+persistent table zca_param_area
+with additional save
+draft table zca_d_pararea
+lock master
+total etag LastChangedAt
+authorization master ( global, instance )
+etag master LocalLastChangedAt
+{
+  create ( features : global );
+  update ( features : instance );
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Area;
+  field ( mandatory : create ) Area;
+  field ( features : instance ) Description, OwnerTeam, ProdEditable, Active, TransportRequest;
+  association _Definition { create ( features : instance ); with draft; }
+
+  determination setAreaDefaults on modify { create; }
+  validation validateArea on save { create; update; }
+  validation validateTransport on save { create; update; }
+
+  draft action ( features : instance ) Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation validateArea;
+    validation validateTransport;
+    validation Definition~validateDefinition;
+    validation Definition~validateTransport;
+    validation Value~validateValue;
+    validation Value~validateTransport;
+  }
+
+  mapping for zca_param_area
+  {
+    Area = area;
+    Description = description;
+    OwnerTeam = owner_team;
+    ProdEditable = prod_editable;
+    Active = active;
+    TransportRequest = transport_request;
+    CreatedBy = created_by;
+    CreatedAt = created_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_ParamDef alias Definition
+persistent table zca_param_def
+with additional save
+draft table zca_d_pardef
+lock dependent by _Area
+authorization dependent by _Area
+etag master LocalLastChangedAt
+{
+  update ( features : instance );
+  delete ( features : instance );
+  field ( readonly ) Area, CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Name;
+  field ( mandatory : create ) Name;
+  field ( mandatory ) Kind, ValueType;
+  association _Area { with draft; }
+  association _Value { create ( features : instance ); with draft; }
+
+  determination setDefinitionDefaults on modify { create; }
+  validation validateDefinition on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+
+  mapping for zca_param_def
+  {
+    Area = area;
+    Name = name;
+    Kind = kind;
+    ValueType = value_type;
+    MinValue = min_value;
+    MaxValue = max_value;
+    DefaultValue = default_value;
+    AllowedPcre = allowed_pcre;
+    InterfaceName = interface_name;
+    Mandatory = mandatory;
+    DeveloperOwned = developer_owned;
+    Description = description;
+    Owner = owner;
+    CreatedBy = created_by;
+    CreatedAt = created_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CA_ParamVal alias Value
+persistent table zca_param_val
+with additional save
+draft table zca_d_parval
+lock dependent by _Area
+authorization dependent by _Area
+etag master LocalLastChangedAt
+early numbering
+{
+  update ( features : instance );
+  delete ( features : instance );
+  field ( readonly ) Area, Name, Numb, CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  association _Area { with draft; }
+  association _Definition { with draft; }
+
+  determination setValueDefaults on modify { create; }
+  validation validateValue on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+
+  mapping for zca_param_val
+  {
+    Area = area;
+    Name = name;
+    Numb = numb;
+    Sign = sign;
+    Opti = opti;
+    Low = low;
+    High = high;
+    CreatedBy = created_by;
+    CreatedAt = created_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

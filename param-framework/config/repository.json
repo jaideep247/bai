@@ -1,0 +1,16 @@
+{
+  "starting_folder": "/src/",
+  "master_language": "E",
+  "packages": {
+    "": ["ZCA_PARAM", "Cross-application parameter framework"],
+    "ui": ["ZCA_PARAM_UI", "Parameter framework: maintenance app (RAP)"]
+  },
+  "ddic_package_folder": "",
+  "draft_package_folder": "ui",
+  "message_class": {
+    "name": "ZCA_PARAM",
+    "text": "Cross-application parameter framework",
+    "source": "config/zca_param_messages.md",
+    "folder": ""
+  }
+}

@@ -1,0 +1,7 @@
+@EndUserText.label: 'Parameter definitions: display per area'
+@MappingRole: true
+define role ZC_CA_ParamDef {
+  // display (ACTVT 03) per area, authorization object ZCA_PARAM; runtime reads (ZCL_CA_PARAM_DAO) are not affected
+  grant select on ZC_CA_ParamDef
+    where ( Area ) = aspect pfcg_auth( ZCA_PARAM, ZCA_PARAR, ACTVT = '03' );
+}
