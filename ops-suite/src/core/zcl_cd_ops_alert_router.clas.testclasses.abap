@@ -12,6 +12,7 @@
 *& 2026-11-06 | Test invalid_rule_pattern_logged: a rule pattern that is not valid PCRE is logged F, nothing sent.
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
+*& 2026-11-07 | Delivered message no longer carries intent key / raise time (webhook fields removed).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -526,13 +527,8 @@ CLASS ltc_alert_router IMPLEMENTATION.
                                             msg = 'The delivered alert is the claimed one' ).
         cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_claims[ 1 ]-intent_key
                                                  msg = 'The claim carries the alert intent' ).
-        " De-duplication: the channel receives the same intent key and raise time as the claim
-        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-intent_key
-                                            exp = mo_dao->mt_claims[ 1 ]-intent_key
-                                            msg = 'The delivered message carries the claimed intent key' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-occurred_at
-                                            exp = mo_dao->mt_claims[ 1 ]-sent_at
-                                            msg = 'The delivered message carries the claim time' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_claims[ 1 ]-sent_at
+                                                 msg = 'The claim carries the claim time' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

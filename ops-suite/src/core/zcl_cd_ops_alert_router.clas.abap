@@ -19,6 +19,7 @@
 *&              visible in the alert log and the HCK alert health check, never a silent no-match.
 *& 2026-11-07 | Parameter names / default from ZIF_CD_OPS_TYPES; parameters through GET_PARAMS;
 *&            | escalation window with ZCL_CD_OPS_UTIL=>PARAM_INT.
+*& 2026-11-07 | Intent key and claim time stay on the claim only (webhook de-duplication fields removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -311,8 +312,6 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     LOOP AT it_messages INTO DATA(ls_message).
       ls_message-alert_id  = new_id( ).
       ls_message-extnumber = |{ is_run-pe_area }/{ is_run-run_id }/{ ls_message-rule_id }|.
-      ls_message-occurred_at = zcl_cd_ops_factory=>get_clock( )->now( ).
-      ls_message-intent_key  = intent_key( ls_message ).
       " A17: durable claim first (status C, committed) - a second dispatcher sees it and a
       " failure after the external send still leaves evidence of the delivery attempt
       DATA(ls_claim) = VALUE zif_cd_ops_types=>ty_alert_log( alert_id    = ls_message-alert_id
@@ -320,11 +319,11 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
                                                             channel     = ls_message-channel
                                                             run_id      = is_run-run_id
                                                             pe_area     = is_run-pe_area
-                                                            sent_at     = ls_message-occurred_at
+                                                            sent_at     = zcl_cd_ops_factory=>get_clock( )->now( )
                                                             status      = zif_cd_ops_types=>gc_alert_status-claimed
                                                             destination = ls_message-destination
                                                             subject     = ls_message-subject
-                                                            intent_key  = ls_message-intent_key ).
+                                                            intent_key  = intent_key( ls_message ) ).
       IF io_dao->claim( ls_claim ) = abap_true.
         CONTINUE.
       ENDIF.
