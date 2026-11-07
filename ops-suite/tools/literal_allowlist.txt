@@ -15,18 +15,3 @@ src/hck/zcl_cd_hck_dao.clas.abap ) AS total    # dynamic aggregate field list
 src/hck/zcl_cd_hck_value_query.clas.abap  AS v   # dynamic field list alias
 src/hck/zcl_cd_hck_value_query.clas.abap  AND   # dynamic WHERE: conjunction
 
-# Webhook payload (JSON keys are the receiver's interface, see ALERTING.md)
-src/core/zcl_cd_ops_chn_http.clas.abap "ruleId":
-src/core/zcl_cd_ops_chn_http.clas.abap "peArea":
-src/core/zcl_cd_ops_chn_http.clas.abap "severity":
-src/core/zcl_cd_ops_chn_http.clas.abap "subject":
-src/core/zcl_cd_ops_chn_http.clas.abap "items":
-src/core/zcl_cd_ops_chn_http.clas.abap "text":
-src/core/zcl_cd_ops_chn_http.clas.abap "runId":
-src/core/zcl_cd_ops_chn_http.clas.abap "dedupKey":
-src/core/zcl_cd_ops_chn_http.clas.abap "eventAction":
-src/core/zcl_cd_ops_chn_http.clas.abap "source":
-src/core/zcl_cd_ops_chn_http.clas.abap "system":
-src/core/zcl_cd_ops_chn_http.clas.abap "occurredAt":
-src/core/zcl_cd_ops_chn_http.clas.abap "correlation":
-src/core/zcl_cd_ops_chn_http.clas.abap "logId":

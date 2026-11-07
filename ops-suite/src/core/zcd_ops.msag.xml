@@ -101,18 +101,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>023</MSGNR>
-     <TEXT>HTTP destination &amp;1 could not be reached (&amp;2)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>024</MSGNR>
-     <TEXT>HTTP destination &amp;1 answered &amp;2 &amp;3</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>025</MSGNR>
      <TEXT>Application log &amp;1/&amp;2 written only in part (&amp;3 of &amp;4 lines)</TEXT>
     </T100>

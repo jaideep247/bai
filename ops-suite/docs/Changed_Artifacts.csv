@@ -300,9 +300,6 @@ src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
 src/core/zcl_cd_ops_chn_email.clas.testclasses.abap,ABAP,Unit tests of the e-mail alert channel through test seams BCS_SEND and
 src/core/zcl_cd_ops_chn_email.clas.xml,abapGit,
-src/core/zcl_cd_ops_chn_http.clas.abap,ABAP,Alert channel HTTP: POSTs the alert as JSON to an SM59 destination (e.g. a
-src/core/zcl_cd_ops_chn_http.clas.testclasses.abap,ABAP,"Domain tests of the webhook JSON body (TO_JSON): fields present, quotes and"
-src/core/zcl_cd_ops_chn_http.clas.xml,abapGit,
 src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
 src/core/zcl_cd_ops_clock.clas.testclasses.abap,ABAP,"Unit tests of the system clock: today and time are the system fields,"
 src/core/zcl_cd_ops_clock.clas.xml,abapGit,
@@ -386,7 +383,7 @@ src/core/zi_cd_trxretnocu.ddls.asddls,CDS,
 src/core/zi_cd_trxretnocu.ddls.xml,abapGit,
 src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every payment engine area. dispatch( ) applies the alert
 src/core/zif_cd_ops_alert.intf.xml,abapGit,
-src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, application log, HTTP webhook). Channels are"
+src/core/zif_cd_ops_alert_channel.intf.abap,ABAP,"One delivery channel (e-mail, application log). Channels are"
 src/core/zif_cd_ops_alert_channel.intf.xml,abapGit,
 src/core/zif_cd_ops_alert_dao.intf.abap,ABAP,"Repository for alert configuration (ZCD_OPS_ALRULE, ZCD_OPS_ALCHN)"
 src/core/zif_cd_ops_alert_dao.intf.xml,abapGit,

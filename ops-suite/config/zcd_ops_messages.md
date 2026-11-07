@@ -21,8 +21,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 020 | Alert for route &1 could not be sent |
 | 021 | Alert rule &1 has no recipient |
 | 022 | Application log &1/&2 could not be written |
-| 023 | HTTP destination &1 could not be reached (&2) |
-| 024 | HTTP destination &1 answered &2 &3 |
 | 025 | Application log &1/&2 written only in part (&3 of &4 lines) |
 | 026 | E-mail for &1 was not accepted by SAPconnect (BCS send result) |
 | 030 | Class &1 does not exist |

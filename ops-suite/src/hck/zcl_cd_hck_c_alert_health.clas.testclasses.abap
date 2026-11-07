@@ -6,6 +6,7 @@
 *& test double from the HCK injector; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Throttled channel of the test is APPLOG (webhook channel removed).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -30,7 +31,7 @@ CLASS ltc_alert_health DEFINITION FINAL FOR TESTING
     CONSTANTS:
       gc_check   TYPE zif_cd_hck_types=>ty_check_id VALUE 'E_ALERTS',
       gc_mail    TYPE zif_cd_hck_types=>ty_channel VALUE 'EMAIL',
-      gc_hook    TYPE zif_cd_hck_types=>ty_channel VALUE 'WEBHOOK',
+      gc_applog  TYPE zif_cd_hck_types=>ty_channel VALUE 'APPLOG',
       gc_failed  TYPE i VALUE 3,
       gc_thrott  TYPE i VALUE 2,
       gc_today   TYPE d VALUE '20261106',
@@ -85,7 +86,7 @@ CLASS ltc_alert_health IMPLEMENTATION.
       INSERT ls_stat INTO TABLE mo_dao->mt_stats.
     ENDIF.
     IF is_flags-throttled = abap_true.
-      ls_stat-channel    = gc_hook.
+      ls_stat-channel    = gc_applog.
       ls_stat-status     = zif_cd_hck_types=>gc_alert_status-throttled.
       ls_stat-item_count = gc_thrott.
       INSERT ls_stat INTO TABLE mo_dao->mt_stats.
@@ -119,7 +120,7 @@ CLASS ltc_alert_health IMPLEMENTATION.
         configure_scenario( VALUE #( failed = abap_true throttled = abap_true ) ).
         INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-failed dim1 = gc_mail value = gc_failed )
           INTO TABLE lt_exp.
-        INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-throttled dim1 = gc_hook value = gc_thrott )
+        INSERT VALUE #( metric = zcl_cd_hck_c_alert_health=>gc_metric-throttled dim1 = gc_applog value = gc_thrott )
           INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp

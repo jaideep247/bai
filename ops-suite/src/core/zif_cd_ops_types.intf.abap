@@ -20,6 +20,7 @@
 *& 2026-11-07 | Transactions dashboard date windows GC_TRX_DASHBOARD (single source, cds_abap_parity).
 *& 2026-11-07 | Core parameter names / prefixes / defaults (GC_PARAM, GC_PARAM_PREFIX, GC_PARAM_DEFAULT);
 *&            | TT_PARAM_RANGE and GC_RANGE for ZIF_CD_OPS_PARAMS=>GET_RANGE.
+*& 2026-11-07 | Channel HTTP removed with the webhook channel (read-only scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -251,7 +252,6 @@ INTERFACE zif_cd_ops_types
     BEGIN OF gc_channel,
       email  TYPE ty_channel VALUE 'EMAIL',
       applog TYPE ty_channel VALUE 'APPLOG',
-      http   TYPE ty_channel VALUE 'HTTP',
     END OF gc_channel.
 
   "! Delivery status in ZCD_OPS_ALLOG
@@ -327,7 +327,7 @@ INTERFACE zif_cd_ops_types
       item_count  TYPE i,
       "! External ID of the application log (SLG1): payment engine area / run / rule
       extnumber   TYPE ty_extnumber,
-      "! Alert intent (A17), equal for every attempt of the same alert: webhook dedupKey
+      "! Alert intent (A17), equal for every attempt of the same alert (claim de-duplication)
       intent_key  TYPE ty_intent_key,
       "! UTC time the alert was raised (claim time)
       occurred_at TYPE timestampl,

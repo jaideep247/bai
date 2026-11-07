@@ -8,6 +8,7 @@
 *& 2026-11-06 | Initial version (audit A17).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | ltc_alert_dao_reads: rules, channels, log read and insert (coverage gap closure).
+*& 2026-11-07 | Second channel of the ordering test is APPLOG (webhook channel removed).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -139,7 +140,7 @@ CLASS ltc_alert_dao_reads DEFINITION FINAL FOR TESTING
         rule_off  TYPE zif_cd_ops_types=>ty_rule_id VALUE 'EBS_OFF',
         any_area  TYPE zif_cd_ops_types=>ty_pe_area VALUE '*',
         mail      TYPE c LENGTH 10 VALUE 'EMAIL',
-        hook      TYPE c LENGTH 10 VALUE 'WEBHOOK',
+        applog    TYPE c LENGTH 10 VALUE 'APPLOG',
         alert_old TYPE sysuuid_x16 VALUE '000000000000000000000000000000C1',
         alert_new TYPE sysuuid_x16 VALUE '000000000000000000000000000000C2',
         since     TYPE timestampl VALUE '20261105000000.0000000',
@@ -216,14 +217,14 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
     DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_alchn WITH EMPTY KEY.
     DATA ls_row TYPE zcd_ops_alchn.
     TRY.
-        ls_row-channel = gc_test-hook.
-        INSERT ls_row INTO TABLE lt_rows.
         ls_row-channel = gc_test-mail.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-channel = gc_test-applog.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_channels) = mo_cut->get_channels( ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_channels ) exp = 2 msg = 'Both channels' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_channels[ 1 ]-channel exp = gc_test-mail
+        cl_abap_unit_assert=>assert_equals( act = lt_channels[ 1 ]-channel exp = gc_test-applog
                                             msg = 'Ordered by channel' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

@@ -1,7 +1,7 @@
 # Alert configuration — example rows (confirm before transport)
 
 > **First principle:** who hears about a problem, how fast and how loud is configuration, never code.
-> **Analogy:** a building's fire panel — zones (rules) are wired to sirens, pagers or the control room (channels) by the installer, not by the fire.
+> **Analogy:** a building's fire panel — zones (rules) are wired to sirens or the control room (channels) by the installer, not by the fire.
 
 ## ZCD_OPS_ALCHN
 
@@ -9,7 +9,6 @@
 |---|---|---|---|
 | EMAIL | ZCL_CD_OPS_CHN_EMAIL | *(blank — rule gives recipients)* | X |
 | APPLOG | ZCL_CD_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
-| HTTP | ZCL_CD_OPS_CHN_HTTP | ZCD_OPS_WEBHOOK *(SM59 destination, created by Basis)* | |
 
 ## ZCD_OPS_ALRULE
 
@@ -27,7 +26,7 @@ configuration app refuses a pattern that does not compile (message 418); check w
 | FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | payment-ops DL | X | 50 | 30 | — | 3 / RTB lead DL |
 | NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | compliance DL | X | 100 | 1440 | — | — |
 | HCK_RED | HCK | E | | | R | X | EMAIL | RTB support DL | X | 50 | 60 | 22:00–06:00 | 2 / RTB lead DL |
-| ALL_ABORT | * | B | | | | X | HTTP | ZCD_OPS_WEBHOOK | X | 20 | 15 | — | — |
+| ALL_ABORT | * | B | | | | X | EMAIL | RTB support DL | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | RTB support DL | | 10 | 60 | — | — |
 
 Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgement targets proposed, confirm with RTB operations):
@@ -37,8 +36,6 @@ Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgemen
 | EBS_BLOCK, ALL_ABORT | P1 | 15 min, 24×7 |
 | EBS_ERROR, FMON_PART, FMON_SLA, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
 | EBS_LOG | P3 | Next business day (morning report) |
-
-For a webhook receiver map `dedupKey` to the de-duplication field (ServiceNow *Message key*, PagerDuty `dedup_key`).
 
 ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on
 EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends

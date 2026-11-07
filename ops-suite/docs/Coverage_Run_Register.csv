@@ -129,7 +129,6 @@ ZCL_CD_OPS_CFG_POLICY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_TRANSPORT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_APPLOG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_EMAIL,own test include,,4,90,,Not run in target SAP
-ZCL_CD_OPS_CHN_HTTP,own test include,,9,90,,Not run in target SAP; partial exemption: delivery over CL_HTTP_CLIENT - QA1 alert cases; JSON body and de-duplication unit tested
 ZCL_CD_OPS_CLOCK,own test include,,3,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_DAO,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_POLICY,own test include,,9,90,,Not run in target SAP

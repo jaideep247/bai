@@ -55,7 +55,6 @@ ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,construction only: every engine tes
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,test seam: injected and reset by every engine test
 ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,construction only: the gate test resolves through it
 ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,test seam: injected and reset by the gate test
-ZCL_CD_OPS_CHN_HTTP,own,,delivery over CL_HTTP_CLIENT - QA1 alert cases; JSON body and de-duplication unit tested
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,test seam: every slot injected and reset in the factory test
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,test helper class of the plug-in creation tests
 ZCL_CD_OPS_STORE,own,,COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
