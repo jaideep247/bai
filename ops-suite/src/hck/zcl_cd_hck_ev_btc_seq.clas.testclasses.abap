@@ -7,13 +7,16 @@
 *& 195), redeposit pending inside and outside its maximum age, unexpected
 *& sequence, returns lot count and amount mismatches, lot without return
 *& line, ordering by statement date / line, one code with different
-*& meanings per flow, ISO code of a CAMT line, codes without role ignored,
-*& invalid pattern, one read per kind. Runtime DAO, payment trace
+*& meanings per flow, ISO code of a CAMT line, unmapped monetary codes
+*& (INDETERMINATE, BTC_ROLE_MISSING) and the approved informational
+*& exclusions / lines without amount, invalid pattern, one read per kind. Runtime DAO, payment trace
 *& repository and clock are doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction of rule 4: BAI lifecycle per payment).
 *& 2026-11-07 | ltc_ev_btc_seq_chq: cheque lifecycle 581 / 255 / corrections (link by cheque number,
 *&            | register state, clarification, manual clearing, register amount).
+*& 2026-11-07 | Design review: unknown monetary code = INDETERMINATE + BTC_ROLE_MISSING; exclusion
+*&            | list HCK_BTC_INFO_BAI2 and zero-amount lines ignored; parameters injected.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -106,6 +109,7 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
     DATA mo_trace TYPE REF TO ltd_trace_dao.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
@@ -160,7 +164,9 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
     METHODS ordered_by_date_and_line   FOR TESTING.
     METHODS code_468_differs_by_flow   FOR TESTING.
     METHODS iso_code_of_camt_line      FOR TESTING.
-    METHODS code_without_role_ignored  FOR TESTING.
+    METHODS unknown_monetary_indeterminate FOR TESTING.
+    METHODS unknown_excluded_code_ignored FOR TESTING.
+    METHODS unknown_zero_amount_ignored FOR TESTING.
     METHODS invalid_pattern_raises     FOR TESTING.
     METHODS one_read_per_kind          FOR TESTING.
 ENDCLASS.
@@ -174,6 +180,8 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     " Seed (config/hck_seed.md): collections ACH
     role( iv_flow = gc_c iv_class = gc_ach iv_code = '166' iv_role = 'COLLECTED' ).
     role( iv_flow = gc_c iv_class = gc_ach iv_code = '143' iv_role = 'COLLECTED' ).
@@ -215,7 +223,7 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_trace.
+    CLEAR: mo_dao, mo_trace, mo_params.
   ENDMETHOD.
 
 
@@ -455,12 +463,59 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a code without a role of the flow / class is ignored (listed nowhere)
-  METHOD code_without_role_ignored.
+  " Acceptance (design review 1): ORIGINAL then a monetary code without a role of the flow / class
+  " = lifecycle INDETERMINATE (never CLEARED) and BTC_ROLE_MISSING naming code, date, amount, class
+  METHOD unknown_monetary_indeterminate.
     TRY.
+        DATA(ls_evidence) = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Never CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-btc_role_missing
+                                            msg = 'Role missing' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Error' ).
         cl_abap_unit_assert=>assert_true(
-          act = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` )-found
-          msg = 'Unmapped code ignored' ).
+          act = xsdbool( find( val = ls_evidence-detail sub = zif_cd_hck_runtime_types=>gc_outcome-indeterminate ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_bai } 999| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ CONV d( gc_first + 1 ) DATE = ISO }| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_amount STYLE = SIMPLE }| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_d }{ gc_ach }| ) >= 0 )
+          msg = 'Detail names INDETERMINATE, scheme / code, date, amount, flow / class' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 1): an unknown code on the approved exclusion list of its scheme
+  " (HCK_BTC_INFO_BAI2) is ignored - the lifecycle decides as without the line
+  METHOD unknown_excluded_code_ignored.
+    TRY.
+        mo_params->set( iv_name  = CONV #( |{ zif_cd_hck_runtime_types=>gc_param_prefix-btc_info }{ gc_bai }| )
+                        iv_value = `998,999` ).
+        DATA(ls_evidence) = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Excluded code ignored: CLEARED' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No anomaly' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a line without amount (non-monetary) and without role is not part of the lifecycle
+  METHOD unknown_zero_amount_ignored.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    TRY.
+        evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466` iv_target = `CLEARED` ).
+        ls_line-kukey = '00000101'.
+        ls_line-esnum = 9.
+        ls_line-chect = gc_ref.
+        ls_line-vorgc = '999'.
+        ls_line-budat = gc_first.
+        INSERT ls_line INTO TABLE mo_trace->mt_lines.
+        DATA(ls_evidence) = collect( iv_flow = gc_d iv_class = gc_ach iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Zero-amount line ignored' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No anomaly' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -562,6 +617,7 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     " Seed (config/hck_seed.md section 8e / 8f): disbursement cheques
     role( iv_code = '581' iv_role = 'CASHED' iv_compare = zif_cd_hck_runtime_types=>gc_compare-register ).
     role( iv_code = '255' iv_role = 'RETURNED' ).

@@ -2381,6 +2381,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>678</MSGNR>
+     <TEXT>no role for code &amp;1 posted &amp;2 amount &amp;3 (&amp;4) - add ZCD_HCK_BTCROLE row</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>679</MSGNR>
+     <TEXT>- lifecycle &amp;1: monetary line without role</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>

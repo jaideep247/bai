@@ -401,6 +401,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 675 | - not determinable (mandatory evidence unavailable): |
 | 676 | &1 not configured |
 | 677 | &1 not usable |
+| 678 | no role for code &1 posted &2 amount &3 (&4) - add ZCD_HCK_BTCROLE row |
+| 679 | - lifecycle &1: monetary line without role |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

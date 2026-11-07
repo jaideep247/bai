@@ -546,6 +546,14 @@ INTERFACE zif_cd_hck_runtime_types
       inflight_max_rows TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_MAX_ROWS',
     END OF gc_param.
 
+  "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of
+  "! ZIF_CD_EBS_TYPES=>GC_SCHEME) = approved informational bank codes of the scheme (comma list):
+  "! codes that never concern the payment; a line of such a code is ignored by the lifecycle
+  CONSTANTS:
+    BEGIN OF gc_param_prefix,
+      btc_info TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_BTC_INFO_',
+    END OF gc_param_prefix.
+
   CONSTANTS:
     BEGIN OF gc_param_default,
       queue_err_states  TYPE string VALUE `SYSFAIL,CPICERR`,
@@ -620,6 +628,8 @@ INTERFACE zif_cd_hck_runtime_types
       undetermined        TYPE zif_cd_ops_types=>ty_msgno VALUE '675',
       unusable_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '676',
       unusable_invalid    TYPE zif_cd_ops_types=>ty_msgno VALUE '677',
+      ev_role_missing     TYPE zif_cd_ops_types=>ty_msgno VALUE '678',
+      ev_indeterminate    TYPE zif_cd_ops_types=>ty_msgno VALUE '679',
     END OF gc_msg.
 
 ENDINTERFACE.

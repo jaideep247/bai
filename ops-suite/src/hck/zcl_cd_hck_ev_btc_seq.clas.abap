@@ -13,7 +13,11 @@
 *& EXPECTED_DFKKRP, a lot without a return line, or the amount of the last
 *& compared line differing from the lot (RETURN_INCONSISTENT); a pending
 *& outcome older than MAX_AGE_DAYS after its last line
-*& (PENDING_OUTCOME_MISSING). Lines whose code has no role are ignored.
+*& (PENDING_OUTCOME_MISSING). A line whose code has no role is ignored only
+*& when it carries no amount or its code is an approved informational
+*& exclusion of its scheme (ZCA_PARAM HCK_BTC_INFO_<scheme>); any other
+*& unmapped line is a relevant event: lifecycle INDETERMINATE (never
+*& found) and BTC_ROLE_MISSING (E) naming code, date, amount, flow / class.
 *& Cheques (PARAM2 = ZTNUM): the lines are linked by FEBEP-CHECT = the
 *& last PARAM3 (13) characters of DFKKCR-ZTNUM, an outcome row may require
 *& a register state (DFKKCR-STATE, cheque by DFKKCR-DOC1R = AUGBL) and may
@@ -25,6 +29,8 @@
 *& 2026-11-07 | Initial version (user correction of rule 4: lifecycle of BAI / ISO codes per payment).
 *& 2026-11-07 | Cheque lifecycle 581 / 255 / corrections: cheque-number link, register state, outcome
 *&            | finding, register amount (user facts on disbursement cheques).
+*& 2026-11-07 | Design review: unmapped monetary codes no longer disappear - INDETERMINATE +
+*&            | BTC_ROLE_MISSING; approved informational exclusions per scheme (HCK_BTC_INFO_<scheme>).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION
@@ -69,9 +75,26 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
       END OF ty_register.
     TYPES tt_register TYPE HASHED TABLE OF ty_register WITH UNIQUE KEY doc1r.
 
+    "! Approved informational codes of a scheme (HCK_BTC_INFO_<scheme>), read once per collect
+    TYPES:
+      BEGIN OF ty_info,
+        scheme TYPE zif_cd_hck_runtime_types=>ty_scheme,
+        codes  TYPE string_table,
+      END OF ty_info.
+    TYPES tt_info TYPE HASHED TABLE OF ty_info WITH UNIQUE KEY scheme.
+
     DATA mt_outcomes TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
     DATA mt_targets TYPE string_table.
+    DATA mt_info TYPE tt_info.
     DATA mv_today TYPE d.
+
+    "! The code is an approved informational exclusion of its scheme (never concerns the payment)
+    METHODS is_informational
+      IMPORTING
+        iv_scheme     TYPE zif_cd_hck_runtime_types=>ty_scheme
+        iv_code       TYPE clike
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
 
     METHODS evaluate
       IMPORTING
@@ -130,6 +153,8 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     DATA lt_ref_doc TYPE zcl_cd_hck_ev_support=>tt_ref_doc.
     DATA lt_register TYPE tt_register.
     DATA ls_lines TYPE zcl_cd_hck_ev_support=>ty_doc_lines.
+    DATA lt_unmapped TYPE string_table.
+    CLEAR mt_info.
     mt_targets = zcl_cd_hck_ev_support=>tokens(
                    zcl_cd_hck_ev_support=>required_param( iv_value = is_rule-param1
                                                           iv_name  = zif_cd_hck_runtime_types=>gc_rule_param-param1
@@ -179,7 +204,7 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     ENDLOOP.
 
     LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
-      CLEAR lt_steps.
+      CLEAR: lt_steps, lt_unmapped.
       LOOP AT ls_lines-lines USING KEY by_doc ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE doc1r = <ls_payment>-doc1r.
         DATA(ls_code) = zcl_cd_ebs_src_feb=>line_code( iv_vorgc = <ls_line>-line-vorgc
                                                        iv_vgext = <ls_line>-line-vgext ).
@@ -189,6 +214,17 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
                             scheme       = ls_code-scheme
                             btc_code     = ls_code-btc_code.
         IF sy-subrc <> 0.
+          " No role: a line without amount or an approved informational code is not part of the
+          " lifecycle; any other line on the reference is an event the role table does not know
+          IF <ls_line>-line-kwbtr <> 0
+             AND is_informational( iv_scheme = ls_code-scheme iv_code = ls_code-btc_code ) = abap_false.
+            INSERT zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_role_missing
+                                          iv_v1    = |{ ls_code-scheme } { ls_code-btc_code }|
+                                          iv_v2    = |{ <ls_line>-line-budat DATE = ISO }|
+                                          iv_v3    = |{ <ls_line>-line-kwbtr STYLE = SIMPLE }|
+                                          iv_v4    = |{ <ls_payment>-flow }{ <ls_payment>-class }| )
+              INTO TABLE lt_unmapped.
+          ENDIF.
           CONTINUE.
         ENDIF.
         INSERT VALUE #( budat   = <ls_line>-line-budat
@@ -199,6 +235,19 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
                         amount  = abs( <ls_line>-line-kwbtr )
                         compare = <ls_role>-compare_amount ) INTO TABLE lt_steps.
       ENDLOOP.
+      " An unmapped monetary line: the lifecycle is INDETERMINATE (never CLEARED / RETURNED) and the
+      " role table needs the row
+      IF lt_unmapped IS NOT INITIAL.
+        INSERT VALUE #( doc1r    = <ls_payment>-doc1r
+                        hits     = lines( lt_steps )
+                        anomaly  = zif_cd_hck_runtime_types=>gc_code-btc_role_missing
+                        severity = zif_cd_ops_types=>gc_severity-error
+                        detail   = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_indeterminate
+                                                             iv_v1    = zif_cd_hck_runtime_types=>gc_outcome-indeterminate ) } | &&
+                                   concat_lines_of( table = lt_unmapped sep = zif_cd_hck_runtime_types=>gc_role_sep ) )
+          INTO TABLE rs_result-evidence.
+        CONTINUE.
+      ENDIF.
       " The lifecycle in statement order: statement date, statement, line
       SORT lt_steps BY budat kukey esnum.
       " Cheque link: DFKKCR-DOC1R = AUGBL; the amount compared is the payment amount (DPAYH-RWBTR of
@@ -294,6 +343,18 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
                                                       iv_v1    = lv_age
                                                       iv_v2    = ls_outcome-max_age_days ) }|.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_informational.
+    READ TABLE mt_info ASSIGNING FIELD-SYMBOL(<ls_info>) WITH TABLE KEY scheme = iv_scheme.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( scheme = iv_scheme
+                      codes  = zcl_cd_hck_ev_support=>tokens( zcl_cd_ops_factory=>get_params( )->get_param(
+                                 iv_name = CONV #( |{ zif_cd_hck_runtime_types=>gc_param_prefix-btc_info }{ iv_scheme }| ) ) ) )
+        INTO TABLE mt_info ASSIGNING <ls_info>.
+    ENDIF.
+    rv_yes = xsdbool( line_exists( <ls_info>-codes[ table_line = to_upper( condense( CONV string( iv_code ) ) ) ] ) ).
   ENDMETHOD.
 
 

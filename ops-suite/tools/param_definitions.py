@@ -63,6 +63,8 @@ RUNTIME = {
         ('list', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_default-watch_pe_areas'),
     (os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_param_prefix-parser'):
         ('struct', os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_format', None),
+    (os.path.join('src', 'hck', 'zif_cd_hck_runtime_types.intf.abap'), 'gc_param_prefix-btc_info'):
+        ('struct', os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_scheme', None),
 }
 
 _RULE_BASE = os.path.join('src', 'ebs', 'zcl_cd_ebs_rule_base.clas.abap')

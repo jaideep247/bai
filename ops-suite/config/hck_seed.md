@@ -339,6 +339,14 @@ What the card rows give: cleared G/L line without payout log row = `CLEARING_INC
 
 The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
 
+**Codes without a role (design review 2026-11-07).** A monetary line (amount ≠ 0) on the payment reference whose code has no row here is `BTC_ROLE_MISSING` (E, lifecycle INDETERMINATE - the payment is never concluded CLEARED / RETURNED by the lifecycle) unless the code is an approved informational exclusion of its scheme in ZCA_PARAM (area `CD_HCK`, LIST, delivered blank - add a code only with the business confirmation that it never concerns the payment):
+
+| Parameter | Value (example, **confirm**) | Meaning |
+|---|---|---|
+| `HCK_BTC_INFO_BAI2` | (blank) | BAI2 type codes that never concern a payment (e.g. a bank fee or an information line carrying the payment reference) |
+| `HCK_BTC_INFO_ISO` | (blank) | ISO Domain-Family-Sub-family codes of CAMT lines, same meaning |
+| `HCK_BTC_INFO_PRTRY` | (blank) | Proprietary codes, same meaning |
+
 ### 8f. `ZCD_HCK_SEQOUT` — outcomes of role sequences (first active pattern by SEQ matching the whole sequence)
 
 | FLOW | METHOD_CLASS | SEQ | SEQ_PATTERN | OUTCOME | EXPECTED_DFKKRP | MAX_AGE_DAYS | SEVERITY | DESCRIPTION | ACTIVE |

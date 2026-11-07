@@ -68,6 +68,9 @@ CD_FMON,FMON_PRISM_THROTTLE_MIN,P,INT,0,,2,,,,,Minutes PRISM waits per throttled
 CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,Throttle queue: A one for all / C one per counterparty,PE RTB
 CD_FMON,FMON_RETURNS_WEEKDAYS,P,LIST,,,,[1-7],,,,Weekdays (1 = Monday) that are ACH returns cycle days,PE RTB
 CD_FMON,FMON_TIME_ZONE,P,CHAR,,,UTC,,,X,,Time zone of legacy date/time fields and calendars,PE RTB
+CD_HCK,HCK_BTC_INFO_BAI2,P,LIST,,,,,,,,BAI2 codes that never concern a payment (in-flight check),PE RTB
+CD_HCK,HCK_BTC_INFO_ISO,P,LIST,,,,,,,,ISO codes that never concern a payment (in-flight check),PE RTB
+CD_HCK,HCK_BTC_INFO_PRTRY,P,LIST,,,,,,,,Proprietary codes never concerning a payment (in-flight),PE RTB
 CD_HCK,HCK_FLAT_TOL_PCT,P,INT,0,,10,,,,,Flat history: adverse change beyond this % is an outlier,PE RTB
 CD_HCK,HCK_INFLIGHT_MAX_ROWS,P,INT,,,5000,,,,,Payments read per window of A_INFLIGHT (ceiling 50000),PE RTB
 CD_HCK,HCK_LOOKBACK_RUNS,P,INT,1,,8,,,,,Default baseline history points,PE RTB

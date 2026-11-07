@@ -6,16 +6,16 @@
 
 | | Before (f10b8f0) | Now |
 |---|---|---|
-| Literals in production ABAP | 1909 | 3157 |
+| Literals in production ABAP | 1909 | 3180 |
 | User-facing text (1) | 516 | 0 |
 | Technical value (2) | 274 | 0 |
-| Legitimate (3) | 1119 | 3157 |
+| Legitimate (3) | 1119 | 3180 |
 
 Same scanner and allow-list for both columns. Texts live in message class ZCD_OPS (built only through `ZCL_CD_OPS_UTIL=>TEXT( )`) or in text symbols; values in named constants of the area types interfaces, class constants, the generated `lif_c` interfaces of the configuration apps, or SAP constants. The portable check `no_inline_texts` keeps categories 1 and 2 at zero; the total grows with new code, not with hardcoding.
 
 ## Now
 
-Literals in production ABAP: **3157** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **3157**.
+Literals in production ABAP: **3180** — user-facing text (1): **0**, technical value (2): **0**, legitimate (3): **3180**.
 
 Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfaces), separators and format characters, names SAP syntax requires as literals (CALL FUNCTION, AUTHORITY-CHECK OBJECT / ID, MESSAGE TYPE), and allow-listed lines (`tools/literal_allowlist.txt`, each with its reason).
 
@@ -23,9 +23,9 @@ Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfa
 
 | Reason | Literals |
 |---|---|
-| CONSTANTS / TYPES / DATA / PARAMETERS declarations | 1657 |
-| Named constants in the area types interfaces | 1182 |
-| Separators | 199 |
+| CONSTANTS / TYPES / DATA / PARAMETERS declarations | 1675 |
+| Named constants in the area types interfaces | 1185 |
+| Separators | 201 |
 | Names SAP syntax requires (CALL FUNCTION, AUTHORITY-CHECK, MESSAGE TYPE) | 78 |
 | Repository object names | 14 |
 | Allow-listed lines (wire formats, SQL fragments - `tools/literal_allowlist.txt`) | 12 |
@@ -36,10 +36,10 @@ Category 3 = declarations (CONSTANTS / TYPES / DATA / PARAMETERS / types interfa
 
 | Area (`src/`) | Literals |
 |---|---|
-| CORE | 1319 |
+| CORE | 1337 |
 | EBS | 609 |
 | FMON | 474 |
-| HCK | 755 |
+| HCK | 760 |
 
 ### Files with category 1 or 2 literals
 
