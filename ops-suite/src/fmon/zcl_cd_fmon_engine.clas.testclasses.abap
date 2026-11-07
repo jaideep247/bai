@@ -20,6 +20,8 @@
 *& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
+*& 2026-11-07 | BAI deadline: statement evidence of a source reaches the deadline check (evidence-only
+*&            | records not applied), unprocessed count of a record, interface-day key reconciled.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -29,6 +31,8 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_srcs TYPE zif_cd_fmon_types=>tt_src.
     DATA mt_lotcfgs TYPE zif_cd_fmon_types=>tt_lotcfg.
     DATA mt_checks TYPE zif_cd_fmon_types=>tt_chk.
+    DATA mt_cals TYPE zif_cd_fmon_types=>tt_cal.
+    DATA mt_deadlines TYPE zif_cd_fmon_types=>tt_deadline.
     DATA mt_saved TYPE zif_cd_fmon_types=>tt_file.
     DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mv_save_calls TYPE i.
@@ -50,7 +54,10 @@ CLASS ltd_dao IMPLEMENTATION.
     rt_slas = mt_slas.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_calendars.
-    CLEAR rt_cals.
+    rt_cals = mt_cals.
+  ENDMETHOD.
+  METHOD zif_cd_fmon_dao~get_deadlines.
+    rt_deadlines = mt_deadlines.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_sources.
     rt_sources = mt_srcs.
@@ -339,6 +346,9 @@ CLASS ltc_engine DEFINITION FINAL
     CONSTANTS gc_prism_only TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_PNC_20261102_99'.
     CONSTANTS gc_fail_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_FAILING_CHECK'.
     CONSTANTS gc_lot_check TYPE zif_cd_fmon_types=>ty_check_id VALUE 'C_LOT'.
+    CONSTANTS gc_bai TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'BAI_JPMC_IN'.
+    CONSTANTS gc_bai_ref TYPE zif_cd_fmon_types=>ty_file_ref VALUE 'FEB/JPMC/20261101'.
+    CONSTANTS gc_src_feb TYPE zif_cd_fmon_types=>ty_src_id VALUE 'FEB'.
 
     DATA mo_dao TYPE REF TO ltd_dao.
     DATA mo_adapter TYPE REF TO ltd_adapter.
@@ -453,6 +463,16 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS source_full_event_is_capped FOR TESTING.
     METHODS prism_events_become_stages FOR TESTING.
     METHODS prism_only_file_surfaces FOR TESTING.
+    METHODS feb_evidence_drives_deadline FOR TESTING.
+    METHODS feb_partial_sets_unprocessed FOR TESTING.
+
+    "! BAI statement interface, its calendar, a 01:00 FULLY_PROCESSED deadline and a FEB source
+    "! record (statement evidence: 2 accounts expected, iv_imported imported, iv_open lines open)
+    METHODS add_statement_flow
+      IMPORTING
+        iv_imported TYPE i
+        iv_open     TYPE i
+        iv_stage    TYPE zif_cd_fmon_types=>ty_stage.
 
     "! The PRISM source as the 5-minute run reads it (generic records via LTD adapter)
     METHODS add_prism_source.
@@ -1347,5 +1367,102 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
-ENDCLASS.
 
+  METHOD add_statement_flow.
+    DATA ls_cal TYPE zif_cd_fmon_types=>ty_cal.
+    DATA ls_deadline TYPE zif_cd_fmon_types=>ty_deadline.
+    DATA ls_src TYPE zif_cd_fmon_types=>ty_src.
+    DATA ls_rec TYPE zif_cd_fmon_types=>ty_src_record.
+
+    add_iface( iv_iface_id = gc_bai iv_direction = zif_cd_fmon_types=>gc_direction-inbound
+               iv_file_type = zif_cd_fmon_types=>gc_file_type-statement iv_pattern = space ).
+    ls_cal-iface_id       = gc_bai.
+    ls_cal-day_type       = zif_cd_fmon_types=>gc_day_type-normal.
+    ls_cal-expected_count = 1.
+    ls_cal-window_from    = '000000'.
+    ls_cal-window_to      = '001000'.
+    INSERT ls_cal INTO TABLE mo_dao->mt_cals.
+    ls_deadline-iface_id = gc_bai.
+    ls_deadline-stage    = zif_cd_fmon_types=>gc_stage-fully.
+    ls_deadline-day_type = zif_cd_fmon_types=>gc_wildcard.
+    ls_deadline-due_time = '010000'.
+    ls_deadline-severity = zif_cd_ops_types=>gc_severity-error.
+    ls_deadline-active   = abap_true.
+    INSERT ls_deadline INTO TABLE mo_dao->mt_deadlines.
+    add_check( iv_check_id = 'C_DEADL' iv_class = 'ZCL_CD_FMON_CHK_DEADLINE' ).
+    ls_src-src_id = gc_src_feb.
+    ls_src-active = abap_true.
+    INSERT ls_src INTO TABLE mo_dao->mt_srcs.
+
+    ls_rec-src_id        = gc_src_feb.
+    ls_rec-iface_id      = gc_bai.
+    ls_rec-file_ref      = gc_bai_ref.
+    ls_rec-business_date = gc_date.
+    ls_rec-event_at      = '20261102075500'.
+    ls_rec-stage         = iv_stage.
+    ls_rec-raw_status    = iv_stage.
+    ls_rec-rec_count     = 10.
+    ls_rec-count_known   = abap_true.
+    ls_rec-unprocessed   = iv_open.
+    ls_rec-evidence_only = xsdbool( iv_stage IS INITIAL ).
+    ls_rec-evidence-iface_id          = gc_bai.
+    ls_rec-evidence-business_date     = gc_date.
+    ls_rec-evidence-bank_key          = 'JPMC'.
+    ls_rec-evidence-stmt_date         = gc_prev_day.
+    ls_rec-evidence-accounts_expected = 2.
+    ls_rec-evidence-accounts_imported = iv_imported.
+    ls_rec-evidence-lines_total       = 10.
+    ls_rec-evidence-lines_open        = iv_open.
+    ls_rec-evidence-posting_known     = abap_true.
+    INSERT ls_rec INTO TABLE mo_adapter->mt_records.
+  ENDMETHOD.
+
+
+  " Rule (BAI deadline): an evidence-only record (nothing imported) is never applied as a stage
+  " (no UNMAPPED_STATUS), its evidence reaches the deadline check (NOT_RECEIVED after the due
+  " time) and the interface-day key is reconciled (closed by a later run that meets the deadline)
+  METHOD feb_evidence_drives_deadline.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_flow( iv_imported = 0 iv_open = 0 iv_stage = space ).
+        DATA(ls_result) = act( ).
+        DATA(lv_key) = zcl_cd_fmon_util=>iface_day_key( iv_iface_id = gc_bai iv_date = gc_date ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-deadline_missed ]-group2
+                         OPTIONAL )
+          exp = zif_cd_fmon_types=>gc_deadline_cond-not_received
+          msg = 'Deadline missed: nothing received or imported' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-unmapped_status ] ) )
+          msg = 'An evidence-only record is no unmapped status' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_store->mt_reconciled[ table_line = lv_key ] ) )
+                                          msg = 'Interface-day key reconciled' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (BAI deadline): a PARTIALLY_PROCESSED record carries its unprocessed count into the
+  " registry; the deadline names the open lines (NOT_POSTED)
+  METHOD feb_partial_sets_unprocessed.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_flow( iv_imported = 2 iv_open = 3 iv_stage = zif_cd_fmon_types=>gc_stage-partially ).
+        DATA(ls_result) = act( ).
+        DATA(ls_row) = VALUE #( ls_result-board[ iface_id = gc_bai file_name = space ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-outcome exp = zif_cd_fmon_types=>gc_stage-partially
+                                            msg = 'Statement file partially processed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-unprocessed_count exp = 3
+                                            msg = 'Three lines not posted' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_result-findings[ check_code = zif_cd_fmon_types=>gc_check_code-deadline_missed ]-group2
+                         OPTIONAL )
+          exp = zif_cd_fmon_types=>gc_deadline_cond-not_posted
+          msg = 'Deadline missed: imported, not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.

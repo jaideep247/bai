@@ -68,7 +68,7 @@ ZCL_CD_FMON_CHK_SIZE,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; mea
 ZCL_CD_FMON_CHK_SLA,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (thin check loop over ZCL_CD_FMON_RULES: engine tests run it)
 ZCL_CD_FMON_DAO,own test include,,25,90,,"Not run in target SAP; partial exemption: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11"
 ZCL_CD_FMON_DDIC,own test include,,6,90,,Not run in target SAP
-ZCL_CD_FMON_ENGINE,own test include,,34,90,,Not run in target SAP
+ZCL_CD_FMON_ENGINE,own test include,,36,90,,Not run in target SAP
 ZCL_CD_FMON_FACTORY,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (construction only: every engine test resolves through it)
 ZCL_CD_FMON_FLOW_CDS_TEST,own test include,,20,90,,Not run in target SAP
 ZCL_CD_FMON_INJECTOR,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (test seam: injected and reset by every engine test)
