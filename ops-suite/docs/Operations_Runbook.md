@@ -109,6 +109,19 @@ PRISM reports every file / message it receives, delivers or cannot deliver (`PRI
 
 Switch off (emergency, e.g. a flood of calls): deactivate the SICF node `/sap/zcd_ops/prism_status` — PRISM then gets 403/404 and buffers; FMON keeps working from SAP's own evidence. Stopping only the instant units: ZCA_PARAM `FMON_PRISM_INSTANT` value row set to blank (BOOL off = registry only; app *Parameter areas*, area `CD_FMON`) or lock the bgPF destination in SBGRFCCONF (the 5-minute run takes over).
 
+## 4d. BAI not processed by 10:00 — STAGE_DEADLINE_MISSED (L1 / L2)
+
+Mail from rule `FMON_BAIDL` to `ZCD_PAYOPS` between 10:00 and 10:05 (`FMON_FILE_MONITORING.md` §A3b). One finding per interface and business date; later runs do not mail again (ZCD_OPS_ALLOG status R) until the escalation to `ZCD_RTBLEAD` after 30 minutes. The message (and the finding's GROUP2) names the earliest missing step. Nothing in SAP is changed from here.
+
+| GROUP2 / message | What it means | Next diagnostic check (no change to anything) | Owner |
+|---|---|---|---|
+| `NOT_RECEIVED` (272) | No statement file of the bank arrived, no statement of the date is in FEBKO | FMON board / dashboard for the interface (PRISM_DELIVERED?); PRISM console; Control-M statement job; bank portal | Integration (PRISM) / Treasury |
+| `NOT_IMPORTED` (273, "x of y payment engine account(s) imported") | The file is there (PRISM delivered, or some accounts imported) but FEBKO lacks the statement of at least one payment engine account | FF.5 / FEBAN import log of the run; FEBKO by house bank (BUKRS / HBKID / HKTID of the missing accounts, statement date in the message); is an account new or inactive in ZCD_EBS_ACCT (EBS configuration app)? | Cash management (bank statement import) |
+| `NOT_POSTED` (274, "n of m in-scope line(s) not posted") | Every account imported; lines that should post are not posted (same definition as EBS POSTING_INCOMPLETE; an unmapped code also counts here) | FEBAN post-processing for the statement date; the FEBP job in SM37; EBS dashboard POSTING_INCOMPLETE / UNMAPPED_BTC for the statements | Cash management / payment operations |
+| "Posting state not read or statement read capped" (279) | Imported, but processing cannot be proven (EBS_FEB_POSTED_FIELDS OFF, or more statements than FMON_MAX_ROWS) | Parameter values (app *Parameter areas*); suite admin | Suite admin |
+
+When the step is done the next 5-minute run resolves the exception automatically (no manual close). A false alert on a bank holiday: check the factory calendar of `ZCD_FMON_CAL` (HOLIDAY row with 0 files); on a day without a statement for an account: check that the account still receives daily statements (VERIFY item, Release_Readiness).
+
 ## 5. Re-running
 
 All three reports are re-runnable: EBS and HCK create a new run; FMON registry events are idempotent (same source row, same stage = one event). Use test mode to check a fix before a productive re-run.
@@ -179,6 +192,19 @@ the suite. The alert rule names the list (`config/alert_seed.md`: `ZCD_PAYOPS`, 
 | Alert logged S but nobody received it | SOST for the send request: list empty, member without e-mail address, or SAPconnect (SCOT) queue not running |
 
 SO23 lists are client-specific and not transported: keep members aligned in QA1 and PS4 by hand.
+
+## 5h. Adding a deadline alert directly in production (PS4) and back-porting it (2026-11-07)
+
+ZCD_FMON_DEADL, ZCD_FMON_SLA, ZCD_FMON_CAL and ZCD_OPS_ALRULE are **production-maintainable** (`RAP_Config_Apps.md` §2): new rows can be created in PS4 without a transport; nothing can be deleted there — a row is switched off with *Active*. Who may do it: ZCD_OPS ACTVT 02 for FMON (deadline, SLA, calendar) and CORE (alert rule) — the production key-user role; every change is table-logged (SCU3) and carries *Last changed by / at*.
+
+Example — "alert if the PNC ACH returns file is not fully processed by 16:00":
+1. **Check the interface and calendar.** App *File monitoring setup* → *Interfaces*: the interface exists and is active (`ACH_RET_PNC_IN`). → *Expected files per day type*: a NORMAL row with expected count ≥ 1 exists (the deadline is evaluated only on business days the calendar expects a file; a HOLIDAY row with 0 keeps holidays silent). Missing: create the calendar row here (production-maintainable).
+2. **Create the deadline.** *Stage deadlines (clock time)* → *Create*: interface `ACH_RET_PNC_IN`, stage `FULLY_PROCESSED` (allowed: FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED), day type `*` (or NORMAL / MONTH_END / RETURNS_DAY for a day-specific time), due time `16:00` (time zone of `FMON_TIME_ZONE`), severity `E`, active `X`, description. Save (no customizing request is asked for in PS4).
+3. **Route the alert.** App *Alerting and monitor freshness* → *Alert rules*: an existing rule with check pattern `STAGE_DEADLINE_MISSED` and a group1 pattern that matches the interface already routes it (e.g. extend `FMON_BAIDL`'s group1 pattern, or create a new rule: payment engine area FMON, minimum severity E, check pattern `STAGE_DEADLINE_MISSED`, group1 pattern `ACH_RET_PNC_IN`, channel EMAIL, destination an **SO23 shared list** (e.g. `ZCD_RETOPS`), escalate after 6 runs to `ZCD_RTBLEAD`, active). E-mail only — never an APPLOG rule (SLG1 kept to a minimum).
+4. **Check without waiting.** `ZCD_FMON_MONITOR` in test mode for today after the due time: the board shows the interface row with STAGE_DEADLINE_MISSED (or nothing when the stage is reached); test mode sends no mail.
+5. **Switch off** instead of delete: set *Active* blank on the deadline (and the rule, if it was only for it).
+6. **Back-port (same week, mandatory).** In DV1, app *File monitoring setup* (and *Alerting*) with a customizing request: create the identical rows (same keys and values), release the request, import into QA1 and PS4. The import overwrites the PS4 rows with the same values, so DV1, QA1 and PS4 stay identical and the next release does not remove the production row. Record the PS4 change and the request number in the change ticket (CAB note, `Release_Readiness.md`).
+7. **Morning report.** If the table is under drift control (`config/hck_seed.md` §6) the next morning shows `CONFIG_CHANGED_IN_PROD` (information) until the configuration baseline is taken again after the back-port transport.
 
 ## 6. Who to call
 

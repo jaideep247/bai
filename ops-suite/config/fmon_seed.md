@@ -46,6 +46,19 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | WIRE_JPMC_OUT | PRISM_DELIVERED | 5 | P | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
 | BAI_JPMC_IN | FILE_RECEIVED | 30 | P | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
 
+Every SLA row is delivered with `ACTIVE = X`. The table is production-maintainable (RAP_Config_Apps.md §2): support may add a row directly in PS4; a row is switched off with `ACTIVE` blank, never deleted there.
+
+## ZCD_FMON_DEADL (stage reached by a clock time of a business day — user requirement 2026-11-07)
+
+"Alert if BAI is not processed until 10 AM" (JPMC and BOA, 10:00 in `FMON_TIME_ZONE`, normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*`). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. Production-maintainable: a similar alert is a new row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created directly in PS4 (`Operations_Runbook.md` §5h).
+
+| IFACE_ID | STAGE | DAY_TYPE | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
+|---|---|---|---|---|---|---|
+| BAI_JPMC_IN | FULLY_PROCESSED | * | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
+| BAI_BOA_IN | FULLY_PROCESSED | * | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
+
+At 10:00 the finding `STAGE_DEADLINE_MISSED` names the earliest missing step (GROUP2): `NOT_RECEIVED` (no file, no statement), `NOT_IMPORTED` (received, statements of x of y payment engine accounts in FEBKO), `NOT_POSTED` (every account imported, n of m in-scope FEBEP lines not posted), with bank and statement date. Stages a deadline may name (configuration app): FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED.
+
 SLA rows for the other PRISM-routed flows (`docs/PRISM_Status_API.md` §8) are **to configure** once their interface rows exist; no example is given for unseeded interfaces.
 
 **PRISM throttle (confirmed by the user 2026-11-06): PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank; positive pay and stop pay are not throttled.** **One queue per bank** (JPMC, BOA, PNC … each wait 2 minutes between their own files; files to different banks do not wait for each other — confirmed by the user 2026-11-06, scope `C`); the gap is **1–2 minutes per file** (parameter default 2) and is measured from the PRISM status API timestamps (PRISM_RECEIVED → PRISM_DELIVERED) after go-live, then `FMON_PRISM_THROTTLE_MIN` is tuned. Maintain the `PRISM_DELIVERED` / `FORWARDED_TO_BANK` row of a throttled interface as the **base** time PRISM needs for one file; FMON adds `FMON_PRISM_THROTTLE_MIN` × the ACH / wire files queued ahead of it (same business date, queue scope `FMON_PRISM_THROTTLE_SCOPE`), capped at a queue of `FMON_PRISM_QUEUE_MAX` files (`docs/FMON_FILE_MONITORING.md` §A3a). Worked example for `ACH_PNC_DISB_OUT`:
@@ -66,9 +79,12 @@ Throttled = outbound interface with `PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS
 | BAI_JPMC_IN | NORMAL | 1 | 08:00 | 08:20 | ‹US› | wiki: BAI JPMC 8.20 am |
 | BAI_BOA_IN | NORMAL | 1 | 08:00 | 08:20 | ‹US› | wiki: BAI BOA 8.20 am |
 | BAI_JPMC_IN | HOLIDAY | 0 | | | ‹US› | no statement on bank holidays ‹confirm› |
+| BAI_BOA_IN | HOLIDAY | 0 | | | ‹US› | no statement on bank holidays ‹confirm› |
 | WIRE_JPMC_OUT | NORMAL | 1 | 13:30 | 14:00 | ‹US› | wiki: WIRE CORP 1.30 pm |
 | ACH_PNC_DISB_OUT | NORMAL | 3 | 17:00 | 19:30 | ‹US› | wiki: ACH PNC & PUB evening 5/6/7 pm |
 | ACH_PNC_DISB_OUT | MONTH_END | 4 | 17:00 | 21:00 | ‹US› | example only |
+
+Every calendar row is delivered with `ACTIVE = X` (production-maintainable; switched off, never deleted in PS4).
 
 ## ZCD_FMON_SRC (legacy source adapters — field names to be filled from SE11)
 
@@ -81,7 +97,10 @@ Throttled = outbound interface with `PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS
 | ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | | (blank) |
 | STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | | (blank) |
 | PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | | FILE_RECEIVED | (blank) |
+| FEB | (blank: every inbound STATEMENT interface with a bank key) | FEBKO | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_FEB |
 | PRISM | (blank: `interfaceId` or name pattern) | ZCD_FMON_PRISM | (blank) | FILE_REF | (blank) | (blank) | OCCURRED_AT | MILESTONE | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_PRISM |
+
+**Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_FMON_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (JPMC, BOA) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (default 1: Monday's file carries Friday's statement ‹VERIFY with Treasury›) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
 
 **PRISM status API (`docs/PRISM_Status_API.md`).** The row above is confirmed (the suite's own table, `ddic/fmon/zcd_fmon_prism.tabl.ddl`). `ADAPTER_CLASS` must be `ZCL_CD_FMON_ADAPTER_PRISM`: the 5-minute run then reads only events no instant unit processed (`PROCESSED_AT` initial, window on `RECEIVED_AT`) and the instant unit finds its source by this class. `FILE_NAME_FIELD = FILE_REF` gives the generic key rules (upper-case canonical name, A100 digest for long names, business date from `OCCURRED_AT` in `FMON_TIME_ZONE`, A49). `COUNT_FIELD` / `AMOUNT_FIELD` stay blank on purpose: PRISM's counts are evidence in `ZCD_FMON_PRISM`, not the file's control figures. An `interfaceId` sent by PRISM selects the interface; otherwise the name pattern decides; no match = `UNMAPPED_FILE`. For correlation the SAP-side source of the same flow must key the file by its name (`FILE_KEY_FIELD` blank or the name field), or PRISM must send the SAP file key.
 
@@ -162,6 +181,7 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_FILERCV | ZCL_CD_FMON_CHK_SLA | E | STAGE=FILE_RECEIVED;LATE_SEVERITY=W |
 | F_PRFAIL | ZCL_CD_FMON_CHK_REJECT | E | OUTCOME=PRISM_FAILED |
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
+| F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - rows of ZCD_FMON_DEADL; row SEVERITY wins) |
 
 `F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled). `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
 
@@ -185,6 +205,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_PRISM_THROTTLE_SCOPE | C | `A` = one PRISM queue for all throttled files; `C` = one queue per bank (`ZCD_FMON_IFACE-BANK_KEY`). **C is confirmed and the default** (one PRISM queue per bank, user 2026-11-06) |
 | FMON_PRISM_THROTTLE_METHODS | ACH,WIRE | payment methods (`ZCD_FMON_IFACE-PAY_METHOD`) PRISM throttles; positive pay / stop pay are not throttled |
 | FMON_PRISM_QUEUE_MAX | 30 | longest PRISM queue (files incl. the file) the allowance covers; a longer one is `PRISM_QUEUE_LONG` (W) |
+| FMON_FEB_STMT_OFFSET | 1 | working days from the bank statement date (FEBKO-AZDAT) to the business date of the statement file (FEB adapter): 1 = prior-day statement (Monday file = Friday statement), 0 = same-day ‹VERIFY with Treasury› |
 | FMON_AGE_BASIS | A | NOC / returns age in working days: `A` counts from the first working day **after** receipt, `N` treats a receipt on a non-working day as received on the next working day (audit A41). If the factory calendar cannot convert the dates the age is unknown: no aging finding, warning 248 instead |
 
 ## Alerting
