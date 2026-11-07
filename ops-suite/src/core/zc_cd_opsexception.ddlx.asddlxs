@@ -1,9 +1,6 @@
 // UI annotations: Owned exceptions (exceptions app)
-// Navigation hints (2026-11-06): the object of an EBS exception opens in FEBAN, a payment
-// lot reference in FPCPL, through launchpad target mappings of the custom semantic objects
-// ZCDBankStatement-reprocess (SAP GUI transaction FEBAN) and ZCDPaymentLot-clarify (FPCPL).
-// VERIFY-ADT: @Consumption.semanticObject in the metadata extension and the target mappings
-// (docs/ALERTING.md, "Navigation from the operations apps").
+// 2026-11-07: navigation to FEBAN / FPCPL removed - the suite records exceptions and does not
+// reprocess statements or clarify payment lots (read-only scope)
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -29,13 +26,8 @@ annotate entity ZC_CD_OpsException with
   @UI.identification: [ { position: 20 } ]
   @UI.selectionField: [ { position: 20 } ]
   CheckCode;
-  @Consumption.semanticObject: 'ZCDBankStatement'
-  @UI.lineItem: [ { position: 30, importance: #HIGH },
-                  { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'reprocess',
-                    label: 'Bank statement (FEBAN)' } ]
-  @UI.identification: [ { position: 30 },
-                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'reprocess',
-                          label: 'Bank statement (FEBAN)' } ]
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
   ObjectKey;
   @UI.lineItem: [ { position: 40, importance: #HIGH } ]
   @UI.identification: [ { position: 40 } ]
@@ -61,12 +53,7 @@ annotate entity ZC_CD_OpsException with
   Amount;
   @UI.identification: [ { position: 100 } ]
   Currency;
-  @Consumption.semanticObject: 'ZCDPaymentLot'
-  @UI.lineItem: [ { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'clarify',
-                    label: 'Payment lot (FPCPL)' } ]
-  @UI.identification: [ { position: 110 },
-                        { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'clarify',
-                          label: 'Payment lot (FPCPL)' } ]
+  @UI.identification: [ { position: 110 } ]
   Reference;
   @UI.identification: [ { position: 120 } ]
   RuleId;
