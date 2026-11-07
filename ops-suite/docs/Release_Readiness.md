@@ -42,13 +42,14 @@ Source: principal architecture review and the static repository audit (findings 
 
 ## 4. Configuration and exception control (production)
 
-- Configuration changes: new entries by transport from DV1, existing entries edited in production with SCU3 change log and `ZCD_OPS` authorisation (configuration apps); effective-set checks reject missing required rules (A03) and colliding map rows (A98).
+- Configuration changes: new entries by transport from DV1, existing entries edited in production with SCU3 change log and `ZCD_OPS` authorisation (configuration apps); runtime parameters in the framework app `ZUI_CA_PARAM` (definitions by transport only, values of released parameters in production, authorization object `ZCA_PARAM` per area, a refused value reported as `PARAM_INVALID`); effective-set checks reject missing required rules (A03) and colliding map rows (A98).
 - Exceptions: assign / resolve / waive with reason, four-eyes for waivers and HCK suppressions, history per action (operations apps); owner and response window per critical control are maintained in the alert rules.
 - Dynamic SQL: table / field allowlists enforced at the DAO execution boundary (FMON `ZCD_FMON_TABWL`, HCK whitelist re-validated at the SQL boundary); plug-in classes checked against their interface before instantiation (A62).
 
 ## 5. Open inputs
 
 - A100–A105 — **fixed** (code A100–A103, documentation A104–A105); remaining confirmations are `VERIFY` items: `cl_abap_message_digest` on 7.58 (A100), expected group values per check with Treasury / operations (A103), whether a file-size limit is needed (A104, QA case EBS-13a), CHECT layout and DPAYH-DOC1R length (A105, PAR-195).
+- **Parameters (ZCA_PARAM, 2026-11-07).** Inputs before gate 1: framework `ZCA_PARAM` installed and its own VERIFY items closed (`param-framework/docs/VERIFY.md`); the four areas registered and the 91 definitions of `config/param_definitions.csv` entered on a customizing request (manual entry in the app — the framework has no upload; VERIFY whether an upload is wanted); value rows of `config/param_values.csv` confirmed per landscape; **`ALERT_MORNING` / `ALERT_DEFAULT` recipient lists** (payment-engine RTB distribution list) still to be named; SLG0 subobject `ZCD_OPS` / `PARAM`; maintainer roles with `ZCA_PARAM` 01/02/03/06 for `CD_*` and production key-user roles 02/03. Field names (`EBS_RTRV_STATUS_FIELD`, `EBS_DFKKCR_BUKRS_FIELD`, `TRACE_BP_SOURCE_FIELD`, `EBS_FEB_POSTED_FIELDS`) are CHAR with an identifier pattern, not DDIC: the framework's DDIC type checks a type name, a field name is checked by the code against the table (VERIFY-DDIC as before). Gate 1 evidence: `D_PARAM_INVALID` green in DV1 and QA1 (cases PRM-01 … PRM-07). No migration report: ZCD_OPS_PARAM was never deployed.
 - Every other `VERIFY-DDIC` / `VERIFY-ADT` marker — gate 1.
 
 **Status:** code complete for audit findings A01–A105 (A02 closed by removing the pre-posting path, read-only scope); gates 1–4 require SAP and business evidence and are **not passed**. Production promotion stays on hold until gate 2 is signed.

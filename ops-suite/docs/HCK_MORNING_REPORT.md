@@ -69,6 +69,7 @@ It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and
 | **B** `STEP_FAILED` / `STEP_MISSED` / `STEP_STUCK` / `STEP_BLOCKED` | Cycle / step, job name | Cancelled job, Control-M did not trigger, predecessor failed | Control-M runbook: map Control-M name → SAP job → program + variant; fix predecessor first; rerun; list every downstream step to rerun |
 | **C** `THRESHOLD_*` on `OVERDUE` | Payment engine area with overdue items | Exceptions not worked, owner absent | Owner's lead reassigns; waive only with a reason (audited) |
 | **C** PPO backlog | Business process | Postprocessing not worked | Responsible team works the PPO queue |
+| **D** `PARAM_INVALID` | Area / parameter name, framework message | A parameter of `CD_OPS` / `CD_EBS` / `CD_FMON` / `CD_HCK` that ZCA_PARAM refuses (invalid value or default, unknown name, mandatory value missing, two rows for a single value, area missing / inactive); the run used the code default meanwhile | `Operations_Runbook.md` §5f: correct the value in the app *Parameter areas* (or the definition by transport); SLG1 object ZCD_OPS / PARAM shows when the runs met it |
 | **D** `CONFIG_DRIFT` | Table name, baseline taker | Direct change in production, transport not baselined | Find the change (table change logs / transport); if approved, take a new baseline; if not, revert and raise a security incident |
 | **D** `CONFIG_NO_BASELINE` | Table name | New table under control | Take the baseline after the next approved transport |
 | **E** `JOB_CANCELLED` / `JOB_LATE_START` / `JOB_LONG_RUNNING` | Job name / count | Cancelled step, missing Control-M trigger, runaway job | SM37 job log; Basis if system-related |
@@ -234,7 +235,8 @@ sequenceDiagram
 | `ZCD_JOB_STEP` | C | MANDT, CYCLE_ID, STEP_NO | Job name pattern (PCRE, §9a), program, variant, predecessor, day offset, start window, max runtime, skippable, critical |
 | `ZCD_HCK_METRIC` | A | MANDT, RUN_ID, CHECK_ID, METRIC, DIM1, DIM2 | Metric history for baselines, trends, dashboard. Index `HST` (CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT), `TIM` (MEASURED_AT) |
 | `ZCD_HCK_BASELINE` | A | MANDT, TABNAME | Golden baseline hash, row count, taken at / by (per system, never transported) |
-| Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` / `ZCD_OPS_PARAM` | A / A / C | — | Run header, findings / owned exceptions, parameters (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
+| Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` | A / A | — | Run header, findings / owned exceptions (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
+| Framework `ZCA_PARAM_AREA` / `_DEF` / `_VAL` | C | — | Parameters of areas `CD_HCK` / `CD_OPS` (read through `ZCL_CD_OPS_FACTORY=>GET_PARAMS`; the check `D_PARAM_INVALID` reads every definition of the four suite areas) |
 | Core `ZCD_OPS_ALLOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
 
 Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` = category, `GROUP2` = check id. Severity B/E/W → owned exception with SLA (`SLA_DAYS_HCK_<sev>`).
@@ -255,6 +257,7 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_JOB_CYCLE` | B | P1 cycle date offset (0), P2 cycle ids | `STEPS_NOT_OK`, `STEPS_COMPLETED` (cycle / date) + step board | `STEP_MISSED/FAILED/STUCK/OVERRUN/BLOCKED` |
 | `ZCL_CD_HCK_C_OVERDUE_EXC` | C | — | `OVERDUE`, `OLDEST_OVERDUE_DAYS` (payment engine area) | — |
 | `ZCL_CD_HCK_C_CONFIG_DRIFT` | D | rows in ZCD_HCK_DRIFT | `DRIFTED_TABLES` (*) | `CONFIG_DRIFT` (E), `CONFIG_NO_BASELINE` (W) |
+| `ZCL_CD_HCK_C_PARAM` | D | — (every definition of the four suite areas in ZCA_PARAM plus every delivered one) | `PARAM_INVALID` (*) | `PARAM_INVALID` (E), object key area/name |
 | `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
 | `ZCL_CD_HCK_C_TECH_SYS` | E | — | `SHORT_DUMPS`, `UPDATE_ERRORS`, `LOCK_ENTRIES`, `LOCK_MAX_AGE_MIN` (*) | — |
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
@@ -391,7 +394,7 @@ Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG pe
 | **New volume source / LOB** | `ZCD_HCK_TABWL` + `ZCD_HCK_AGG` row under `B_VOLUME` (DAY mode set by the check; group field = source/LOB) + optional threshold |
 | **New SLG1 object** | Extend `PARAM1` of `B_APPLOG` |
 | **New table under drift control** | `ZCD_HCK_DRIFT` row, then take a baseline |
-| **Watch another payment engine area** | `ZCD_OPS_PARAM` `HCK_WATCH_PE_AREAS`; its stale threshold in `ZCD_OPS_MONCFG` (app *Monitor freshness*; fallback `HCK_MAX_AGE_H_<pe_area>`) |
+| **Watch another payment engine area** | ZCA_PARAM `HCK_WATCH_PE_AREAS` (plus definitions `HCK_MAX_AGE_H_<area>` / `HCK_MAX_RUN_MIN_<area>` for the new area); its stale threshold in `ZCD_OPS_MONCFG` (app *Monitor freshness*; fallback `HCK_MAX_AGE_H_<pe_area>`) |
 | **Who is alerted** | Core `ZCD_OPS_ALRULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
 | New check *logic* (only when no existing class fits) | New class implementing `ZIF_CD_HCK_CHECK` (only SQL via a DAO method), then a `ZCD_HCK_DEF` row |
 

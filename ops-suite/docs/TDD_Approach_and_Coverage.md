@@ -54,16 +54,18 @@ Checks that keep the tests away from the real database (all portable, `tools/tes
 | `osql_doubles_complete` | A test include of a class with Open SQL creates `cl_osql_test_environment` / `cl_cds_test_environment`, and every table read or written by the methods its tests call (and the private helpers they call) is in a double list | Dynamic names (`FROM (lv_table)`) not resolved; SQL inside an injected TEST-SEAM is excluded; a table a test never reaches is declared with `" osql-not-reached: <TABLE>` |
 | `no_real_dao_in_tests` | A test include of a class without SQL injects doubles (`ZCL_CD_*_INJECTOR=>INJECT_*`) when the class gets a DAO / the store from a factory, and never creates a real DAO / store | Methods reached through another class are not followed |
 
-### Shared parameter fake (2026-11-07)
+### Parameters in tests — ZCA_PARAM (2026-11-07)
 
-Parameters are `ZIF_CD_OPS_PARAMS` (`get_param`, `get_range`, `refresh_params`), split from `ZIF_CD_OPS_STORE` (store keeps them through `INTERFACES` + `ALIASES`). Tests use **one** fake, `ZCL_CD_OPS_PARAMS_MEM` — a production-safe in-memory implementation (no database, no side effects), chosen over a global `FOR TESTING` class because abapGit / abaplint in this repository serialize and lint ordinary classes only. It mirrors `ZCL_CD_OPS_STORE=>GET_PARAM` exactly: exact name key, value kept as CHAR 255 and read condensed, missing **or blank** value = default, `get_range` = I / EQ rows of the comma / semicolon list. The same cases are asserted twice — `ZCL_CD_OPS_PARAMS_MEM` test include (domain) and `ZCL_CD_OPS_STORE` OSQL tests (`blank_param_gives_default`, `param_value_is_condensed`, `param_range_from_list`) — so fake and store cannot drift.
+Parameters are `ZIF_CD_OPS_PARAMS` (`get_param`, `get_range`, `refresh_params`, `get_errors`), implemented only by the adapter `ZCL_CD_OPS_PARAMS_CA` over the global framework `ZCA_PARAM` (2026-11-07; the store no longer serves parameters, the fake `ZCL_CD_OPS_PARAMS_MEM` is removed). Tests run the **real framework logic** (`ZCL_CA_PARAM` — no second implementation of the semantics):
 
-| Store double (test include) | Before | Now |
+| Test level | Parameters in the test | Proves |
 |---|---|---|
-| `ZCL_CD_EBS_RULE_BASE`, `ZCL_CD_EBS_SRC_FEB`, `ZCL_CD_EBS_FACTORY`, `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_OPS_TRACE_ENGINE` | hand-written `LTD_STORE` (raw value, blank kept) | class under test reads only parameters (`ZCL_CD_OPS_FACTORY=>GET_PARAMS`): `LTD_STORE` removed, `ZCL_CD_OPS_PARAMS_MEM` injected with `ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS` |
-| `ZCL_CD_EBS_ENGINE`, `ZCL_CD_HCK_ENGINE`, `ZCL_CD_OPS_ALERT_ROUTER`, `ZCL_CD_OPS_PURGE`, `ZCL_CD_FMON_ENGINE`, `ZCL_CD_FMON_PRISM_API`, `ZCL_CD_FMON_PRISM_PROC` | own `get_param` | `get_param` / `get_range` delegate to `ZCL_CD_OPS_PARAMS_MEM` (store parts — runs, findings, commits — stay in the double) |
+| Adapter `ZCL_CD_OPS_PARAMS_CA` | own definitions with `ZCL_CA_PARAM_BUILDER`, DAO injected with `ZCL_CA_PARAM_INJECTOR=>INJECT_DAO`, log channel double (`INJECT_PLUGIN`) | area by prefix, maintained value and definition default win over the caller default, BOOL blank row = off, caller default when nothing resolves, condensing, LIST / kind S as range, unknown name and invalid value logged once and listed, log failure does not stop, refresh = new snapshot |
+| Delivered definitions `ZCL_CD_OPS_PARAM_SEED` | the generated definitions over `ZCL_CA_PARAM` | every delivered default is valid for its definition (type, limits, pattern, class + interface), every name maps to its area |
+| Every class that reads parameters (engines, rules, DAOs, router, purge, store, trace, PRISM, HCK checks) | `NEW zcl_cd_ops_param_seed( )` (every delivered definition, in memory), `set( )` for a value row, `ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS( ->params( ) )` | the class with the delivered definitions and defaults; store doubles serve no parameters |
+| Configuration check `ZCL_CD_HCK_C_PARAM` | the seed's DAO injected into `ZCL_CA_PARAM_INJECTOR` and `ZCL_CD_HCK_INJECTOR=>INJECT_PARAM_DAO` | valid set, invalid value, invalid extra definition, missing definition, missing area |
 
-Found by the fake (behaviour unchanged, tests corrected): a blank value can never switch a flag off in production, because the store returns the default for a blank value. `r08_zero_flag_off_rows_apart` now sets `EBS_ZTNUM_IGNORE_ZEROS` = `N` (was blank). **Open item:** `FMON_PRISM_INSTANT` blank is documented as registry-only (`PRISM_Status_API.md`), but blank returns the default X and any non-blank value counts as on — registry-only mode is not reachable through ZCD_OPS_PARAM; the `ZCL_CD_FMON_PRISM_PROC` double keeps simulating it (marked VERIFY) until the switch is decided. `EBS_CAMT_BAI_FALLBACK` likewise switches off with a non-blank value other than X, not with blank (`Test_and_Validation_Document.md` EBS-08).
+Changed meaning, deliberately: a flag is switched off with a value row with blank value (`r08_zero_flag_off_rows_apart`, `registry_only_without_instant` — the open item of the blank `FMON_PRISM_INSTANT` is closed); a configured parser class without the parser interface is refused by the framework (`non_parser_value_not_used`), the factory's own RTTI check (A62) is proved with a reader double (`wrong_parser_class_refused`); the store's former parameter tests (blank, condensed, range) are adapter tests now; A64 (snapshot per run) is proved through `ZCL_CD_OPS_FACTORY=>GET_PARAMS`.
 
 | Payment engine area | Object | Test path | Methods | Covering include / partial exemption |
 |---|---|---|---|---|
@@ -90,7 +92,9 @@ Found by the fake (behaviour unchanged, tests corrected): a blank value can neve
 | Core | ZCL_CD_OPS_INJECTOR | covered | 0 | ZCL_CD_OPS_FACTORY |
 | Core | ZCL_CD_OPS_LOCK | own test include | 4 |  |
 | Core | ZCL_CD_OPS_OVW_CDS_TEST | own test include | 5 |  |
-| Core | ZCL_CD_OPS_PARAMS_MEM | own test include | 11 |  |
+| Core | ZCL_CD_OPS_PARAMS_CA | own test include | 13 |  |
+| Core | ZCL_CD_OPS_PARAM_SEED | own test include | 4 |  |
+| HCK | ZCL_CD_HCK_C_PARAM | own test include | 5 |  |
 | Core | ZCL_CD_OPS_PATTERN_CHECK | own test include | 19 |  |
 | Core | ZCL_CD_OPS_PATTERN_DAO | own test include | 7 |  |
 | Core | ZCL_CD_OPS_PLUGIN_PROBE | covered | 0 | ZCL_CD_OPS_FACTORY |

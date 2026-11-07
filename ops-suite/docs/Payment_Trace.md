@@ -81,7 +81,7 @@ Reversal evidence used: `DFKKOP-AUGRD` = `05` (constant `ZIF_CD_OPS_TRACE_TYPES=
 
 The trace DAO's own static reads: DFKKOP (by FIN, by AUGBL), DFKKKO, DFKKCR by DOC1R, FEBEP by CHECT + BUDAT, ZCD_FMON_FILE (BUSINESS_DATE window + FILE_REF), ZCD_FMON_EVENT, DFKKSUMC, BKPF, BSEG (by document key only), TFK042Z/T001, BUT000 by BPEXT. Every read is keyed and capped (`TRACE_MAX_ROWS`, default 50); no LIKE, no full scans by XREF2.
 
-## 5. Parameters (ZCD_OPS_PARAM)
+## 5. Parameters (framework `ZCA_PARAM`, area `CD_OPS` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`)
 
 | Parameter | Default | Meaning |
 |---|---|---|

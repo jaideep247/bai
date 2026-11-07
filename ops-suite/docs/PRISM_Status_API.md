@@ -27,7 +27,7 @@ The background unit it queues is suite-internal processing (FMON evaluation of o
 | CSRF | none — machine-to-machine call of a technical user; no session, no cookies |
 | Calls | **one event per call**; the body is one JSON object (an array is refused) |
 | Handler | `ZCL_CD_FMON_PRISM_HTTP` (IF_HTTP_EXTENSION) → `ZCL_CD_FMON_PRISM_API` |
-| Size limit | `ZCD_OPS_PARAM` `FMON_PRISM_MAX_BYTES`, default 16384 bytes (413 above) |
+| Size limit | ZCA_PARAM `FMON_PRISM_MAX_BYTES` (area `CD_FMON`), default 16384 bytes (413 above) |
 
 ## 3. Request
 
@@ -177,7 +177,7 @@ sequenceDiagram
    - takes **no run lock** (variant `PRISM` in the run history) so it never blocks, and is never blocked by, the 5-minute run; does **not** auto-resolve earlier exceptions (the store reconciles by object key, and a run with three checks must not close the others' exceptions) — the next 5-minute run resolves them;
    - marks the event `PROCESSED_AT`. Unprocessed stay: deferred, conflict, persist error, unmapped interface / status, malformed, engine error.
 3. **5-minute run** (`ZCD_FMON_MONITOR`, SM36): reads the PRISM source like any other, but only events with `PROCESSED_AT` initial received in its window — the safety net for units that did not run or did not finish. Re-applying is idempotent (unique event index, status model).
-4. `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` = blank switches the unit to registry-only (stage at once; findings and alerts from the 5-minute run). Use it if per-event alerts are too chatty; otherwise keep the default `X` — the 5-minute run treats an exception the unit already raised as carried forward and does not alert it again.
+4. ZCA_PARAM `FMON_PRISM_INSTANT` (BOOL) with a value row with blank value switches the unit to registry-only (stage at once; findings and alerts from the 5-minute run). Use it if per-event alerts are too chatty; otherwise keep the default `X` — the 5-minute run treats an exception the unit already raised as carried forward and does not alert it again.
 
 ## 7. Stage mapping
 
@@ -268,10 +268,10 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 
 | Item | Value |
 |---|---|
-| `ZCD_OPS_PARAM` `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
-| `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` | `X` (unit saves findings and alerts) / blank (registry only) — **open item 2026-11-07:** the store returns the default X for a blank value and the engine treats any non-blank value as on, so registry-only mode is not reachable through ZCD_OPS_PARAM today (`TDD_Approach_and_Coverage.md`, shared parameter fake); decision pending |
-| `ZCD_OPS_PARAM` `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
-| `ZCD_OPS_PARAM` `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `A` / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
+| ZCA_PARAM `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
+| ZCA_PARAM `FMON_PRISM_INSTANT` (BOOL) | `X` (unit saves findings and alerts, default) / a value row with blank value (registry only) — the 2026-11-07 open item (blank could not switch it off in ZCD_OPS_PARAM) is closed by the BOOL semantics of ZCA_PARAM; deliver the value row so production can switch it |
+| ZCA_PARAM `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
+| ZCA_PARAM `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `A` / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
 | Volumes | ≈ 2–3 events per file (RECEIVED, DELIVERED, sometimes FAILED); a few thousand rows a day, one bgPF unit and one run record (variant `PRISM`) each; the table grows ≈ 1 M rows per year |

@@ -138,8 +138,9 @@ operations suite, `ZIF_CD_OPS_PARAMS`) keeps its callers and adds one adapter cl
    raises 003. Value type from the reading code (integer helpers -> INT, flags -> BOOL,
    comma lists -> LIST, select-options -> kind S), the delivered default constant as
    DEFAULT_VALUE.
-3. The adapter maps `get_param` to `get_value` (BOOL: `X` / the consumer's explicit off
-   token, so that "blank = default" callers can see an off flag), `get_range` to
+3. The adapter maps `get_param` to `get_value` (BOOL: `get_bool` as `X` or blank - the
+   operations suite's callers compare with `X`, so an off flag reaches them as blank and the
+   caller's default never overrides a resolved value or a definition default), `get_range` to
    `get_range` (kind S) or to `get_list` turned into I EQ rows (LIST), `refresh_params`
    to `refresh( )`.
 4. An interface without `RAISING` cannot pass `ZCX_CA_PARAM` on: the adapter records the
