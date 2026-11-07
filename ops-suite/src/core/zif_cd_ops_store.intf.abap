@@ -1,8 +1,9 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_cd_ops_store.intf.abap
 *& Purpose:
-*& One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
-*& findings (ZCD_OPS_FINDING) and runtime parameters (ZCD_OPS_PARAM).
+*& One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN)
+*& and findings (ZCD_OPS_FINDING). Runtime parameters are not served here:
+*& ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZCA_PARAM).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | rollback( ) added (DEFAULT IGNORE).
@@ -10,10 +11,11 @@
 *& 2026-11-06 | get_stale_runs( ) for hung / dumped runs (audit A06, DEFAULT IGNORE).
 *& 2026-11-06 | refresh_params: parameter snapshot per run (audit A64).
 *& 2026-11-07 | Parameters split into ZIF_CD_OPS_PARAMS (INTERFACES + ALIASES, no caller changes).
+*& 2026-11-07 | ZIF_CD_OPS_PARAMS no longer included: parameters come from ZCA_PARAM via the factory.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - shared result store and parameters</p>
-"! One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN),
-"! findings (ZCD_OPS_FINDING) and runtime parameters (ZCD_OPS_PARAM).
+"! <p class="shorttext synchronized">Operations suite - shared result store</p>
+"! One auditable store for all payment engine areas: run headers (ZCD_OPS_RUN) and
+"! findings (ZCD_OPS_FINDING). start_run renews the parameter snapshot (A64).
 INTERFACE zif_cd_ops_store
   PUBLIC.
 
@@ -63,13 +65,6 @@ INTERFACE zif_cd_ops_store
   "! Undo this LUW's uncommitted changes (e.g. a registry saved only in part).
   "! Callers commit the run header first, so the run itself survives.
   METHODS rollback DEFAULT IGNORE.
-
-  "! Parameters (ZCD_OPS_PARAM) are ZIF_CD_OPS_PARAMS; the aliases keep every store caller
-  "! working. Callers that only read parameters use ZCL_CD_OPS_FACTORY=>GET_PARAMS.
-  INTERFACES zif_cd_ops_params.
-  ALIASES refresh_params FOR zif_cd_ops_params~refresh_params.
-  ALIASES get_param FOR zif_cd_ops_params~get_param.
-  ALIASES get_range FOR zif_cd_ops_params~get_range.
 
   "! Most recent completed run of a payment engine area (and variant, when given)
   METHODS get_last_run

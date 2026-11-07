@@ -5,7 +5,7 @@
    <VSEOINTERF>
     <CLSNAME>ZIF_CD_OPS_STORE</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - shared result store and parameters</DESCRIPT>
+    <DESCRIPT>Operations suite - shared result store</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>

@@ -15,6 +15,7 @@
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -60,7 +61,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
       END OF gc_test.
 
     DATA mo_dao TYPE REF TO ltd_feb.
-    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
@@ -100,7 +101,7 @@ CLASS ltc_src_feb IMPLEMENTATION.
     mo_dao = NEW #( ).
     mo_params = NEW #( ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_params( mo_params ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
   ENDMETHOD.
 
 

@@ -12,6 +12,8 @@
 *& 2026-11-06 | PCRE patterns: whole-value match, case ignored, invalid pattern, literal count.
 *& 2026-11-07 | param_int (shared integer parameter helper) over the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | Tests of the removed rag_from_value dropped.
+*& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, INT parameter without definition
+*&            | default): a value that is not a number is a logged parameter error and gives the default.
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -140,10 +142,10 @@ CLASS ltc_util IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: an integer parameter reads the maintained value (shared fake ZCL_CD_OPS_PARAMS_MEM)
+  " Rule: an integer parameter reads the maintained value (ZCA_PARAM over ZCL_CD_OPS_PARAM_SEED)
   METHOD int_param_reads_value.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
-    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = ` 25 ` ).
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_H_EBS'.
+    DATA(lo_params) = NEW zcl_cd_ops_param_seed( )->set( iv_name = lc_name iv_value = `25` )->params( ).
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
                                                                           iv_name    = lc_name
                                                                           iv_default = 20 )
@@ -152,9 +154,10 @@ CLASS ltc_util IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " Rule: a blank value (no definition default) gives the caller's default
   METHOD int_param_blank_is_default.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
-    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = ` ` ).
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_H_EBS'.
+    DATA(lo_params) = NEW zcl_cd_ops_param_seed( )->set( iv_name = lc_name iv_value = ` ` )->params( ).
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
                                                                           iv_name    = lc_name
                                                                           iv_default = 20 )
@@ -163,14 +166,17 @@ CLASS ltc_util IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " Rule: a value that is not a number is a parameter error (never silent) and gives the default
   METHOD int_param_text_is_default.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
-    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = `many` ).
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_H_EBS'.
+    DATA(lo_params) = NEW zcl_cd_ops_param_seed( )->set( iv_name = lc_name iv_value = `many` )->params( ).
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
                                                                           iv_name    = lc_name
                                                                           iv_default = 20 )
                                         exp = 20
                                         msg = 'A value that is not a number must give the default' ).
+    cl_abap_unit_assert=>assert_equals( act = lines( lo_params->get_errors( ) ) exp = 1
+                                        msg = 'The invalid value is reported' ).
   ENDMETHOD.
 
 

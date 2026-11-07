@@ -13,6 +13,7 @@
 *& 2026-11-06 | inject_trace_dao added (360 degree payment trace).
 *& 2026-11-06 | inject_pattern_dao added (PCRE patterns: pattern check and migration).
 *& 2026-11-07 | inject_params added (runtime parameters, ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | reset also drops the session parameter adapter (ZCA_PARAM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -29,7 +30,8 @@ CLASS zcl_cd_ops_injector DEFINITION
       IMPORTING
         io_store TYPE REF TO zif_cd_ops_store.
 
-    "! Parameters only (e.g. ZCL_CD_OPS_PARAMS_MEM); without it get_params returns the store
+    "! Parameters (e.g. ZCL_CD_OPS_PARAM_SEED->PARAMS( ): the adapter over the real framework logic
+    "! and in-memory definitions); without it get_params returns the adapter over ZCA_PARAM
     CLASS-METHODS inject_params
       IMPORTING
         io_params TYPE REF TO zif_cd_ops_params.
@@ -160,7 +162,8 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_trace_dao_double,
            zcl_cd_ops_factory=>go_pattern_dao_double,
            zcl_cd_ops_factory=>gt_plugin_double,
-           zcl_cd_ops_factory=>go_store.
+           zcl_cd_ops_factory=>go_store,
+           zcl_cd_ops_factory=>go_params.
   ENDMETHOD.
 
 ENDCLASS.

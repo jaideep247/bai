@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
 *& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of the store double.
 *&---------------------------------------------------------------------*
 CLASS ltd_prism_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -70,7 +71,6 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
     DATA mv_commits TYPE i.
     DATA mv_rollbacks TYPE i.
-    DATA mv_max_bytes TYPE string.
     "! Queued units in the LUW at commit time (the unit must be part of the committed LUW)
     DATA mo_queue TYPE REF TO ltd_queue.
     DATA mv_queued_at_commit TYPE i.
@@ -86,12 +86,6 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~rollback.
     mv_rollbacks += 1.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake: semantics of ZCL_CD_OPS_STORE (blank = default)
-    rv_value = NEW zcl_cd_ops_params_mem( )->set( iv_name  = zif_cd_fmon_prism_types=>gc_param_max_bytes
-                                                  iv_value = mv_max_bytes
-                 )->zif_cd_ops_params~get_param( iv_name = iv_name iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -146,6 +140,7 @@ CLASS ltc_api DEFINITION FINAL
     DATA mo_queue TYPE REF TO ltd_queue.
     DATA mo_auth TYPE REF TO ltd_auth.
     DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA ms_request TYPE zif_cd_fmon_prism_types=>ty_request.
 
     METHODS setup.
@@ -186,6 +181,8 @@ CLASS ltc_api IMPLEMENTATION.
     zcl_cd_fmon_injector=>inject_prism_queue( mo_queue ).
     zcl_cd_ops_injector=>inject_auth( mo_auth ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
@@ -210,7 +207,9 @@ CLASS ltc_api IMPLEMENTATION.
                                    ELSE zif_cd_fmon_prism_types=>gc_store_result-inserted ).
     mo_dao->mv_fail      = is_flags-store_fails.
     mo_queue->mv_fail    = is_flags-queue_fails.
-    mo_store->mv_max_bytes = is_flags-max_bytes.
+    IF is_flags-max_bytes IS NOT INITIAL.
+      mo_params->set( iv_name = zif_cd_fmon_prism_types=>gc_param_max_bytes iv_value = is_flags-max_bytes ).
+    ENDIF.
   ENDMETHOD.
 
 

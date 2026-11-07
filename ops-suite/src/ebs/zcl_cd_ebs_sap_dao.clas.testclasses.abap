@@ -13,6 +13,7 @@
 *& 2026-11-06 | ltc_sap_dao_reads: cheques, FI lines, lookup rows, retrieval field check (coverage gap closure).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -273,7 +274,7 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_ebs_sap_dao.
-    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -307,7 +308,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     mo_params = NEW #( ).
-    zcl_cd_ops_injector=>inject_params( mo_params ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
   ENDMETHOD.
 

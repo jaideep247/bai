@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | PCRE lists: items kept as PCRE patterns, blank list empty, invalid pattern raises E373.
 *& 2026-11-07 | Row caps: default, maintained value, ceiling, not positive (shared fake ZCL_CD_OPS_PARAMS_MEM).
+*& 2026-11-07 | Row caps over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): the definition default applies when unset.
 *&---------------------------------------------------------------------*
 CLASS ltc_param DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -89,11 +90,11 @@ CLASS ltc_param IMPLEMENTATION.
 
 
   METHOD given_job_rows.
-    DATA(lo_params) = NEW zcl_cd_ops_params_mem( ).
+    DATA(lo_params) = NEW zcl_cd_ops_param_seed( ).
     IF iv_value IS NOT INITIAL.
       lo_params->set( iv_name = zif_cd_hck_types=>gc_param-max_job_rows iv_value = iv_value ).
     ENDIF.
-    zcl_cd_ops_injector=>inject_params( lo_params ).
+    zcl_cd_ops_injector=>inject_params( lo_params->params( ) ).
   ENDMETHOD.
 
 

@@ -38,6 +38,7 @@
 *& 2026-11-07 | Read-only scope (user decision): pre-posting path (validate_for_posting, must_block,
 *&            | dispositions, release lookup), TVARVC kill switch read_mode and the blocks-posting
 *&            | flag (apply_blocking_flags) removed - the batch run ZCD_EBS_VALIDATE is the only entry.
+*& 2026-11-07 | EBS_EMPTY_FEED_OK read through ZCL_CD_OPS_FACTORY=>GET_PARAMS (the store serves no parameters).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -420,7 +421,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     " unless the feed is declared intentionally empty (EBS_EMPTY_FEED_OK = X)
     DATA(lv_no_data) = xsdbool( lv_statements = 0
                                 AND rs_result-run-status <> zif_cd_ops_types=>gc_run_status-aborted
-                                AND lo_store->get_param( zif_cd_ebs_types=>gc_param-empty_feed_ok ) <> abap_true ).
+                                AND zcl_cd_ops_factory=>get_params( )->get_param( zif_cd_ebs_types=>gc_param-empty_feed_ok ) <> abap_true ).
     IF lv_no_data = abap_true.
       DATA(ls_no_data) = VALUE zif_cd_ops_types=>ty_finding(
         object_type = zcl_cd_ebs_finding=>gc_object_type-run

@@ -14,11 +14,14 @@
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | moncfg_threshold_wins, no_moncfg_keeps_hours_rule (ZCD_OPS_MONCFG first, hours rule unchanged).
 *& 2026-11-07 | Failing check double raises generic message 000 (unused message 301 removed).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
+*&            | serves no parameters.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+    "! Parameters over ZCA_PARAM (delivered definitions, in memory)
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA mt_last_runs TYPE zif_cd_ops_types=>tt_run.
     DATA mt_saved TYPE zif_cd_ops_types=>tt_finding.
     DATA mv_save_calls TYPE i.
@@ -28,9 +31,13 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_group.
     "! Runs still in status R (get_stale_runs)
     DATA mt_running TYPE zif_cd_ops_types=>tt_run.
+    METHODS constructor.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
+  METHOD constructor.
+    mo_params = NEW #( ).
+  ENDMETHOD.
   METHOD zif_cd_ops_store~start_run.
     mv_start_calls = mv_start_calls + 1.
     rs_run-run_id    = '0123456789ABCDEF0123456789ABCDEF'.
@@ -58,14 +65,6 @@ CLASS ltd_store IMPLEMENTATION.
     INSERT LINES OF it_groups INTO TABLE mt_reconciled.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
-    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
-                                                                                     iv_default = iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_range.
-    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
-  ENDMETHOD.
 
   METHOD zif_cd_ops_store~get_last_run.
     READ TABLE mt_last_runs INTO rs_run WITH KEY pe_area = iv_pe_area.
@@ -332,6 +331,7 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_lock = NEW #( ).
     zcl_cd_ops_injector=>inject_lock( mo_lock ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_alert( mo_alert ).
     zcl_cd_ops_injector=>inject_clock( mo_clock ).
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
@@ -409,7 +409,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
 
     IF is_flags-include_pe_areas = abap_true.
-      INSERT VALUE #( name = 'HCK_WATCH_PE_AREAS' value = 'EBS,FMON' ) INTO TABLE mo_store->mt_params.
+      mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'EBS,FMON' ).
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
       ls_last_run-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-started_at = ltd_clock=>gc_base.
@@ -441,7 +441,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDIF.
     " the current HCK run (run ID of ltd_store=>start_run) seen as running
     IF is_flags-own_run_running = abap_true.
-      INSERT VALUE #( name = 'HCK_WATCH_PE_AREAS' value = 'HCK' ) INTO TABLE mo_store->mt_params.
+      mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'HCK' ).
       CLEAR ls_last_run.
       ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
       ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.

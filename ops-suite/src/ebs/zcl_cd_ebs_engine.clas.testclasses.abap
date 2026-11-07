@@ -27,6 +27,8 @@
 *& 2026-11-07 | Read-only scope: pre-posting decision, kill switch, blocked-line release and
 *&            | blocks-posting flag removed with their tests; configuration gap, map conflict,
 *&            | missing trailer and end-to-end tests assert the findings of VALIDATE_PACKAGE.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
+*&            | serves no parameters.
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -72,16 +74,21 @@ ENDCLASS.
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
-    DATA mt_params   TYPE zif_cd_ops_types=>tt_kv.
+    "! Parameters over ZCA_PARAM (delivered definitions, in memory)
+    DATA mo_params   TYPE REF TO zcl_cd_ops_param_seed.
     DATA mt_saved    TYPE zif_cd_ops_types=>tt_finding.
     DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     DATA mv_commits  TYPE i.
     DATA mv_starts   TYPE i.
     DATA mv_reconciles TYPE i.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
+    METHODS constructor.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
+  METHOD constructor.
+    mo_params = NEW #( ).
+  ENDMETHOD.
   METHOD zif_cd_ops_store~start_run.
     mv_starts += 1.
     rs_run-pe_area    = iv_pe_area.
@@ -104,16 +111,6 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~refresh_params.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
-    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
-                                                                                     iv_default = iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_range.
-    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.
@@ -319,6 +316,7 @@ CLASS ltc_engine IMPLEMENTATION.
     mo_lock   = NEW #( ).
     zcl_cd_ops_injector=>inject_lock( mo_lock ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_alert( mo_alert ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-fail_class io_instance = NEW ltd_failing_rule( ) ).
@@ -553,7 +551,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_flags-packages          = 5.
     ls_flags-lines_per_package = 2.
     configure_scenario( ls_flags ).
-    INSERT VALUE #( name = 'EBS_CB_MIN_LINES' value = '1' ) INTO TABLE mo_store->mt_params.
+    mo_store->mo_params->set( iv_name = 'EBS_CB_MIN_LINES' iv_value = '1' ).
 
     run_engine( ).
 
@@ -570,7 +568,7 @@ CLASS ltc_engine IMPLEMENTATION.
     ls_flags-line_code         = gc_test-code_unmap.
     ls_flags-lines_per_package = 3.
     configure_scenario( ls_flags ).
-    INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '1' ) INTO TABLE mo_store->mt_params.
+    mo_store->mo_params->set( iv_name = 'EBS_RESULT_MAX' iv_value = '1' ).
 
     run_engine( ).
 
@@ -759,7 +757,7 @@ CLASS ltc_engine IMPLEMENTATION.
                         severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE <ls_package>-findings.
         INSERT VALUE #( object_type = 'STMT' object_key = 'S0001' rule_id = 'S02' check_code = 'TEST_BLOCKER'
                         severity = zif_cd_ops_types=>gc_severity-block ) INTO TABLE <ls_package>-findings.
-        INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '1' ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = 'EBS_RESULT_MAX' iv_value = '1' ).
         run_engine( ).
         cl_abap_unit_assert=>assert_false(
           act = xsdbool( line_exists( ms_result-findings[ check_code = 'TEST_BLOCKER' ] ) )
@@ -780,7 +778,7 @@ CLASS ltc_engine IMPLEMENTATION.
         DATA(ls_flags) = default_flags( ).
         ls_flags-lines_per_package = 3.
         configure_scenario( ls_flags ).
-        INSERT VALUE #( name = 'EBS_RESULT_MAX' value = '2' ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = 'EBS_RESULT_MAX' iv_value = '2' ).
         run_engine( ).
         cl_abap_unit_assert=>assert_equals( act = lines( ms_result-lines ) exp = 2
                                             msg = 'Exactly EBS_RESULT_MAX lines may be retained' ).
@@ -818,7 +816,7 @@ CLASS ltc_engine IMPLEMENTATION.
         DATA(ls_flags) = default_flags( ).
         ls_flags-packages = 0.
         configure_scenario( ls_flags ).
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-empty_feed_ok value = abap_true ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-empty_feed_ok iv_value = abap_true ).
         run_engine( ).
         cl_abap_unit_assert=>assert_equals( act = ms_result-run-status exp = zif_cd_ops_types=>gc_run_status-success
                                             msg = 'An intentionally empty feed closes successfully' ).
@@ -1055,6 +1053,7 @@ CLASS ltc_posting_state IMPLEMENTATION.
     mo_stmt_rule = NEW #( ).
     zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-dep_class io_instance = mo_dep_rule ).
@@ -1443,6 +1442,7 @@ CLASS ltc_register_memo IMPLEMENTATION.
     mo_cfg = NEW #( ).
     mo_dao = NEW #( ).
     zcl_cd_ops_injector=>inject_store( NEW ltd_store( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
     zcl_cd_ebs_injector=>inject_sap_dao( mo_dao ).
@@ -1599,6 +1599,7 @@ CLASS ltc_pe_scope IMPLEMENTATION.
     mo_stmt_rule = NEW #( ).
     zcl_cd_ops_injector=>inject_lock( NEW ltd_lock( ) ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_alert( NEW ltd_alert( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-line_class io_instance = mo_line_rule ).

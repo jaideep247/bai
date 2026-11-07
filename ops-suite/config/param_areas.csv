@@ -1,0 +1,5 @@
+AREA,DESCRIPTION,OWNER_TEAM,PROD_EDITABLE,ACTIVE
+CD_OPS,Ops suite core: alerting / SLA / retention / trace,PE RTB,X,X
+CD_EBS,Ops suite EBS bank statement validation,PE RTB,X,X
+CD_FMON,Ops suite file monitoring and PRISM,PE RTB,X,X
+CD_HCK,Ops suite morning health check,PE RTB,X,X

@@ -11,7 +11,7 @@ ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,own test include,,43,90,,Not run in target SAP
-ZCL_CD_EBS_FACTORY,own test include,,4,90,,Not run in target SAP
+ZCL_CD_EBS_FACTORY,own test include,,5,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,own test include,,9,90,,Not run in target SAP
 ZCL_CD_EBS_FINDING,own test include,,5,90,,Not run in target SAP
 ZCL_CD_EBS_INJECTOR,covered,ZCL_CD_EBS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_EBS_FACTORY (test seam: every slot injected and reset in the factory test)
@@ -136,14 +136,15 @@ ZCL_CD_OPS_FACTORY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test seam: every slot injected and reset in the factory test)
 ZCL_CD_OPS_LOCK,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_OVW_CDS_TEST,own test include,,5,90,,Not run in target SAP
-ZCL_CD_OPS_PARAMS_MEM,own test include,,11,90,,Not run in target SAP
+ZCL_CD_OPS_PARAMS_CA,own test include,,13,90,,Not run in target SAP
+ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,own test include,,4,90,,Not run in target SAP
-ZCL_CD_OPS_STORE,own test include,,27,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
+ZCL_CD_OPS_STORE,own test include,,23,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own test include,,14,90,,"Not run in target SAP; partial exemption: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
 ZCL_CD_OPS_TRACE_ENGINE,own test include,,28,90,,Not run in target SAP
 ZCL_CD_OPS_UTIL,own test include,,22,90,,Not run in target SAP

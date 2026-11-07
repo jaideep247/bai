@@ -10,6 +10,7 @@
 *& 2026-11-06 | Step job name that is not valid PCRE: PATTERN_INVALID finding, step not evaluated
 *&              (bad_step_pattern_reported).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -96,7 +97,7 @@ ENDCLASS.
 CLASS ltc_job_cycle IMPLEMENTATION.
 
   METHOD setup.
-    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
   ENDMETHOD.
