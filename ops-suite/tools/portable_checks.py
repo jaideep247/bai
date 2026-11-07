@@ -146,6 +146,12 @@ check('no_cp_patterns', name_checks.cp_pattern_failures(ROOT),
       'Patterns are PCRE matched to the complete value (ZCL_CD_OPS_UTIL=>PCRE_MATCH): no CP / NP '
       "comparison and no option = 'CP' / 'NP' range row in code (comments and literal contents ignored).")
 
+# Facts CDS holds as literals agree with their single ABAP source (tools/cds_abap_parity.py)
+import cds_abap_parity  # noqa: E402
+check('cds_abap_parity', cds_abap_parity.failures(ROOT),
+      f'{len(cds_abap_parity.PAIRS)} CDS literal(s) / ABAP constant pairs agree (XBLNR rule, dashboard date '
+      'windows, credit indicator, reversal reason, completed run statuses, stale thresholds).')
+
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']
 if lint_bin:

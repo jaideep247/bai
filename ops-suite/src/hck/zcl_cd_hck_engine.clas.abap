@@ -23,6 +23,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Parameter HCK_WATCH_PE_AREAS (was HCK_WATCH_MODULES; matches the documentation).
+*& 2026-11-07 | HCK_MAX_AGE_HOURS default from ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT (was inline 26).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -645,7 +646,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA ls_status TYPE zif_cd_hck_types=>ty_pe_area_status.
 
     DATA(lv_now) = mo_clock->now( ).
-    DATA(lv_default_age) = param_int( iv_name = gc_param-max_age_hours iv_default = 26 ).
+    DATA(lv_default_age) = param_int( iv_name = gc_param-max_age_hours iv_default = zif_cd_hck_types=>gc_param_default-max_age_hours ).
     DATA(lv_default_run) = param_int( iv_name = gc_param-max_run_min iv_default = gc_default_max_run_min ).
     DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
       mo_store->get_param( iv_name = gc_param-watch_pe_areas iv_default = `EBS,FMON,HCK` ) ).

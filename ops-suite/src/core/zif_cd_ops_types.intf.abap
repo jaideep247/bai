@@ -17,6 +17,7 @@
 *& 2026-11-06 | Alert message carries intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Messages 742-747 (PCRE patterns: alert rule pattern invalid, pattern check and migration).
+*& 2026-11-07 | Transactions dashboard date windows GC_TRX_DASHBOARD (single source, cds_abap_parity).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -52,6 +53,17 @@ INTERFACE zif_cd_ops_types
       day_end   TYPE t VALUE '235959',
     END OF gc_time.
   CONSTANTS gc_time_zone_utc TYPE tznzone VALUE 'UTC'.
+
+  "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): open items posted in the last
+  "! ITEM_WINDOW_DAYS days (ZI_CD_TrxItem; cds/ZI_CD_TrxReqLog) and the evidence of later steps
+  "! (payment runs, bank lines, cheque encashment, ACK) of the last EVIDENCE_WINDOW_DAYS days.
+  "! CDS cannot read constants: the literals there are compared by the portable check
+  "! cds_abap_parity (tools/cds_abap_parity.py)
+  CONSTANTS:
+    BEGIN OF gc_trx_dashboard,
+      item_window_days     TYPE i VALUE 30,
+      evidence_window_days TYPE i VALUE 45,
+    END OF gc_trx_dashboard.
   "! SALV exception column values (traffic light)
   CONSTANTS:
     BEGIN OF gc_light,

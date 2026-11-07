@@ -32,6 +32,7 @@
 *&            | check code REASON_AMBIGUOUS, messages 543-545 (lot reasons DFKKRP-RLGRD / DFKKNRP-FLGRD).
 *& 2026-11-06 | Payment engine account scope (user decision): XBLNR / account types, derivation
 *&            | constants GC_PE_ACCOUNT (same literals as CDS ZI_CD_EbsLineAcct), message 546.
+*& 2026-11-07 | Dashboard date window GC_DASHBOARD-WINDOW_DAYS (single source, cds_abap_parity).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -71,6 +72,15 @@ INTERFACE zif_cd_ebs_types
       "! Characters of the account after the bank text
       length         TYPE i VALUE 10,
     END OF gc_pe_account.
+
+  "! EBS dashboard (CDS, docs/Dashboard_EBS_Validation.md): statements, lines, runs and findings
+  "! of the last WINDOW_DAYS days (dats_add_days -31 in ZI_CD_EbsStmtBase, ZI_CD_EbsLineAcct,
+  "! ZI_CD_EbsRunBase, ZI_CD_EbsFinding). CDS cannot read these constants: the literals there are
+  "! compared with them by the portable check cds_abap_parity (tools/cds_abap_parity.py)
+  CONSTANTS:
+    BEGIN OF gc_dashboard,
+      window_days TYPE i VALUE 31,
+    END OF gc_dashboard.
 
   CONSTANTS:
     BEGIN OF gc_format,

@@ -121,6 +121,7 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - **No technical value as a literal** outside declarations: check codes, parameter names and defaults, statuses, keywords, prefixes, patterns are named constants in the area's types interface (or class constants), parameters in ZCD_OPS_PARAM, or customizing. SAP-defined values use SAP constants (e.g. `cl_abap_typedescr=>typekind_*`).
 - Allowed exceptions are syntax or wire formats only, each listed with its reason in `tools/literal_allowlist.txt`.
 - Guarded by `tools/portable_checks.py` (`no_inline_texts`, `message_constants_exist`); inventory in `docs/Hardcoding_Inventory.md`.
+- **CDS literals have one ABAP source.** CDS cannot read ABAP constants or ZCD_OPS_PARAM, so a fact a CDS view must hold as a literal (XBLNR bank-text PCRE and account length, dashboard date windows `gc_dashboard-window_days` / `gc_trx_dashboard`, credit indicator, reversal reason `gc_reversal_augrd`, completed run statuses, stale-threshold fallbacks) is declared once as a named ABAP constant and compared by the portable check `cds_abap_parity` (`tools/cds_abap_parity.py`, one row per fact in `PAIRS`: CDS file, regex, ABAP file, constant). A new CDS literal of this kind adds a row; drift fails the check.
 
 ### DDIC
 Tables as ADT DDL source in `ddic/<pe_area>/<name>.tabl.ddl`. Delivery class C for customizing (SM30), A for application data. Note required secondary indexes in a comment.

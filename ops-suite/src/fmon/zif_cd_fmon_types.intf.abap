@@ -22,6 +22,7 @@
 *&              scope, throttle settings, queue entries in the check context, PRISM_QUEUE_LONG.
 *& 2026-11-06 | PRISM throttle queue per bank by default (scope C, user confirmation).
 *& 2026-11-06 | PCRE interface name patterns: check code PATTERN_INVALID, engine key IFC:, message 271.
+*& 2026-11-07 | Dashboard stale threshold GC_DASHBOARD-STALE_AFTER_MIN (single source, cds_abap_parity).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -771,6 +772,14 @@ INTERFACE zif_cd_fmon_types
       throttle_methods TYPE string VALUE `ACH,WIRE`,
       queue_max        TYPE i VALUE 30,
     END OF gc_param_default.
+
+  "! File monitoring dashboard (CDS, docs/Dashboard_File_Monitoring.md): the monitor is stale
+  "! STALE_AFTER_MIN minutes after the last completed full run (3 x the 5-minute cadence;
+  "! 900 s in ZR_CD_FmonAsOf, 15 in ZI_CD_OpsFreshU; compared by the portable check cds_abap_parity)
+  CONSTANTS:
+    BEGIN OF gc_dashboard,
+      stale_after_min TYPE i VALUE 15,
+    END OF gc_dashboard.
 
   "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
   CONSTANTS:

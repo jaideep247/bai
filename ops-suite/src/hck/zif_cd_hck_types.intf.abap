@@ -21,6 +21,8 @@
 *& 2026-11-06 | PCRE patterns: object / subobject / cycle / pattern ranges removed (patterns are lists of PCRE,
 *&              zif_cd_ops_types=>tt_pcre); PATTERN_INVALID, SUPPRESSION_PATTERN_INVALID, messages 371-373,
 *&              gc_max_job_names.
+*& 2026-11-07 | GC_PARAM_DEFAULT-MAX_AGE_HOURS (was inline in the engine), GC_DASHBOARD-WINDOW_DAYS
+*&            | (single source of the CDS literals, cds_abap_parity).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -640,6 +642,22 @@ INTERFACE zif_cd_hck_types
       max_age TYPE c LENGTH 14 VALUE 'HCK_MAX_AGE_H_',
       max_run TYPE c LENGTH 16 VALUE 'HCK_MAX_RUN_MIN_',
     END OF gc_param_prefix.
+
+  "! Delivered defaults of HCK parameters. MAX_AGE_HOURS (HCK_MAX_AGE_HOURS) is also the stale
+  "! threshold of the EBS and HCK dashboards (26 h = 1560 min = 93600 s in ZR_CD_EbsAsOf /
+  "! ZR_CD_HckAsOf; compared by the portable check cds_abap_parity)
+  CONSTANTS:
+    BEGIN OF gc_param_default,
+      max_age_hours TYPE i VALUE 26,
+    END OF gc_param_default.
+
+  "! Health check dashboard (CDS, docs/Dashboard_Health_Check.md): runs, findings and metrics of
+  "! the last WINDOW_DAYS days (dats_add_days -31 in ZR_CD_HckRun, ZI_CD_HckFinding,
+  "! ZI_CD_HckMetricBase; compared by the portable check cds_abap_parity)
+  CONSTANTS:
+    BEGIN OF gc_dashboard,
+      window_days TYPE i VALUE 31,
+    END OF gc_dashboard.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
