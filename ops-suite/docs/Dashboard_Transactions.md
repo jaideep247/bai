@@ -132,6 +132,7 @@ Area **CORE** with **company code**: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, AC
 | DFKKRP-RLGRD, DFKKNRP-FLGRD, DFKKRP key | Remove the reason element |
 | Two-field `pfcg_auth` (ZCD_PE_AREA, BUKRS) | Area-only grant + BUKRS restriction in the role |
 | `COUNT( DISTINCT )`, UNION, `$apply` on transactional_query | As the other dashboards |
+| VERIFY-ADT: `coalesce( … )` as key elements of `ZI_CD_TrxReqSap` (request not posted: blank company code / payment document / method) | Coalesce in `ZI_CD_TrxFinFlow`'s consumer one level up and declare the keys there |
 | Part B placeholders (§4) | Activate part B only after SE11 |
 
 ## 11. Tests
