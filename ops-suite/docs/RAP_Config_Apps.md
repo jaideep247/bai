@@ -11,7 +11,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar, FmonTableAllow (ZCD_FMON_*) | FMON |
-| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep (ZCD_HCK_*, ZCD_JOB_*) | HCK |
+| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole, HckSeqOutcome (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting & monitor freshness | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*) | CORE |
 
 **Runtime parameters are not maintained here** (2026-11-07): the OpsParam section (table ZCD_OPS_PARAM, draft table ZCD_D_PARAM, entities `ZR_/ZC_CD_OpsParam`) is retired. Parameters live in the global framework `ZCA_PARAM` and are maintained in its app *Parameter areas* (`ZUI_CA_PARAM_O4`, `param-framework/docs/ONBOARDING.md`), areas `CD_OPS`, `CD_EBS`, `CD_FMON`, `CD_HCK`; the framework has its own transport / production rules (definitions by transport only, values of released parameters adjustable in production).
@@ -88,6 +88,9 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
 | HCK | HckDriftTable, HckWhitelist | Table exists | 411 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
+| HCK | HckPmClass, HckPmBank, HckBtcRole | Flow D / C; ageing basis VALUE_DATE / ISSUE_DATE; scheme BAI2 / ISO / PRTRY (method class, role: open lists) | 413 |
+| HCK | HckClrRule | Flow, purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT), required (blank, X, C, N); **evidence class implements ZIF_CD_HCK_EVIDENCE** | 413, 410 |
+| HCK | HckSeqOutcome | Flow, expected returns lot items 0-9 or blank, severity; **sequence pattern is valid PCRE** (outcome: open list) | 413, 418 |
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |
 | CORE | AlertChannel | Class implements `ZIF_CD_OPS_ALERT_CHANNEL` | 410 |
 | CORE | MonitorCfg | Payment engine area EBS / FMON / HCK; stale-after minutes > 0 (`ZCD_OPS_MONCFG`, read by the dashboards' as-of views and the HCK self-check) | 413, 417 |

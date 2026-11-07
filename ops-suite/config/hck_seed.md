@@ -31,10 +31,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | HCK_QUEUE_ERR_STATES | `SYSFAIL,CPICERR` | qRFC / bgRFC states that are an error (`E_QUEUES`, finding E) |
 | HCK_QUEUE_HOLD_STATES | `STOP,WAITSTOP` | States that hold a queue (W) |
 | HCK_QUEUE_WAIT_STATES | `READY,RUNNING` | States that are STUCK (W) when older than PARAM3 minutes |
-| HCK_INFLIGHT_WIRE_METHODS | `<wire payment methods, confirm>` (no default) | Payment methods of class wire (`A_INFLIGHT`); blank = wire not monitored (listed as information) |
-| HCK_INFLIGHT_ACH_METHODS | `<ACH payment methods, confirm>` (no default) | Payment methods of class ACH; blank = not monitored |
-| HCK_INFLIGHT_CHQ_METHODS | `C` | Payment methods of class cheque (method C = cheque register DFKKCR); a method in two classes stops the check (message 385) |
-| HCK_INFLIGHT_MAX_ROWS | `5000` | Payments per window and bank lines per read (`A_INFLIGHT`); hard ceiling 50 000 |
+| HCK_INFLIGHT_MAX_ROWS | `5000` | Payments per window and rows of every evidence read (`A_INFLIGHT`); hard ceiling 50 000. Payment methods per class are configuration (`ZCD_HCK_PMCLASS`, §8), no longer parameters (HCK_INFLIGHT_WIRE_ / _ACH_ / _CHQ_METHODS retired 2026-11-07) |
 | ALERT_MORNING | `<payment-engine RTB distribution list>` | Recipients of the morning report (**confirm**) |
 | HCK_SCORE_GREEN_MIN | `90` | Score ≥ 90 → GREEN |
 | HCK_SCORE_AMBER_MIN | `70` | Score ≥ 70 → AMBER, below → RED |
@@ -78,11 +75,11 @@ uncapped count.
 | C_PRQ_NO_SPE | Payment request failed without SPE row (source never told) | C | ZCL_CD_HCK_C_PRQ_SPE | X | 72 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 request key›;STATUS=ZZ_STATUS;DATE=‹SE11 date›` | `FAIL=‹confirm failure values›;OK=SUCCESS;DAYS=3;MAX=200` | `TABLE=ZCD_SPE_EXCP_LOG;KEY=‹SE11 request key›;DATE=‹SE11 date›` | 120 |
 | C_CHQ_STATUS | Cheque status went backwards (ZECT_STATUS) | C | ZCL_CD_HCK_C_CHQ_STATUS | X | 74 | M | `TABLE=ZCD_CHECK_HIST;KEY=‹SE11 cheque›;SEQ=‹SE11 counter/time›;STATUS=‹SE11 status›;DATE=‹SE11 date›` | `TERMINAL=3,4,9;ALLOWED=10>9;DAYS=7;MAX=200` | | 120 |
 | C_PRQ_CANCEL | Paid payment request left CANCELLED (PCLM) | C | ZCL_CD_HCK_C_PRQ_CANCEL | X | 76 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 FIN number›;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=‹SE11 date›` | `CANCELLED=CANCELLED;SRC=PCLM;DAYS=7;MAX=200` | `TABLE=DFKKOP;KEY=ZZ_FIN_TRANS_NUM;PAID=AUGBL;DATE=AUGDT` | 300 |
-| A_INFLIGHT | Payments sent but not cleared on the bank statement | A | ZCL_CD_HCK_C_INFLIGHT | X | 25 | H | `<factory calendar of the payment engine, confirm>` | `10` (days, wire / ACH) | `120` (days, cheques) | 300 |
+| A_INFLIGHT | Payments sent but not cleared on the bank statement | A | ZCL_CD_HCK_C_INFLIGHT | X | 25 | H | `<factory calendar of the payment engine, confirm>` | `10` (days, VALUE_DATE classes) | `120` (days, ISSUE_DATE classes) | 300 |
 | E_NUMRANGE | Number ranges nearly exhausted (NRIV) | E | ZCL_CD_HCK_C_NUMRANGE | X | 105 | H | `<FI-CA document number object, VERIFY in SNRO (e.g. FKK_BELEG)>,<payment run / payment lot / returns lot objects, VERIFY in SNRO>` | | | 60 |
 | E_QUEUES | qRFC / bgRFC queues in error or stuck | E | ZCL_CD_HCK_C_QUEUES | X | 115 | H | `<payment engine queue patterns, e.g. ZCD_.*, confirm in SMQ1 / SMQ2>` (blank = all) | `<destination patterns, e.g. PRISM.*>` (blank = all) | `30` (stuck minutes) | 60 |
 
-`A_INFLIGHT` PARAM4 = payments listed per finding (blank = 10). Methods per class: parameters `HCK_INFLIGHT_*_METHODS` (§1). Flow D / C from TFK042Z-XEINZ; wire / ACH aged in business days of the PARAM1 calendar after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), cheques (disbursements only) in calendar days since the run date. Cleared = FEBEP-CHECT = AUGBL (collections also a cleared G/L line with ZUONR = AUGBL); cheque: DFKKCR encashment date or FEBEP-CHECT = ZTNUM; returned (DFKKRP-SELW1) and reversed payments are left out.
+`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars in `ZCD_HCK_PMCLASS` / `ZCD_HCK_PMBANK`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
 `E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
 `E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a ZCD_HCK_TABWL row for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
 
@@ -123,10 +120,11 @@ uncapped count.
 | E_QUEUES | Q_STUCK | * | 1 | 50 | X | NONE | | |
 | E_QUEUES | Q_OLDEST_MIN | * | 60 | 240 | X | NONE | | |
 | A_INFLIGHT | AGE_OLDEST | DWIR | 1 | 2 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | CWIR | 1 | 2 | X | NONE | | |
 | A_INFLIGHT | AGE_OLDEST | DACH | 2 | 3 | X | NONE | | |
 | A_INFLIGHT | AGE_OLDEST | CACH | 2 | 3 | X | NONE | | |
 | A_INFLIGHT | AGE_OLDEST | DCHQ | 61 | 91 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | CCRD | 2 | 3 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DACI | `‹confirm›` | `‹confirm›` | X | NONE | | |
 
 `A_INFLIGHT` AGE_OLDEST (**confirm**): the key (BUKRS column) is flow + method class; AMBER / RED = the age from which a payment is late (warning) / critical, because a limit is reached at value ≥ limit and 0 means *not set*. Wire: warning 0 / critical 1 business day after the value date → AMBER 1 / RED 2; ACH: warning 1 / critical 2 → 2 / 3; cheque: > 60 / > 90 calendar days uncashed → 61 / 91. The check classifies every payment with the same row (counts OVER_WARN_CNT / OVER_CRIT_CNT, amounts per currency) and the engine judges AGE_OLDEST with it - one source. A watched key without row is `LIMITS_NOT_CONFIGURED` (W), never green. `E_NUMRANGE` uses the `*` row (DIM1 object/subobject/interval/year is longer than 4 characters); `E_QUEUES` rows may be overridden per source (`QOUT`, `QIN`, `BGRF`).
 
@@ -174,7 +172,8 @@ Maintained in the health check configuration app (entity *Expected groups*), tab
 
 | TABNAME | DESCRIPTION | ACTIVE | APPROVED_BY |
 |---|---|---|---|
-| DFKKOP | payment engine open items (aging) | X | `<security reviewer>` |
+| DFKKOP | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
+| ZCD_STRP_POUT_LOG | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
 | DFKKRP | payment engine returns items | X | `<security reviewer>` |
 | FEBKO | Bank statement headers (volume) | X | `<security reviewer>` |
 | ZCD_PAYM_REQ_LOG | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
@@ -244,6 +243,117 @@ Repeating schedules (auto express checks every 5 min, hourly regular cycle) are 
 `DISB_DAY | 035 | LifeCo wire / ACH continuous (first run) | ZPAYM_REQ_REG2.* | RFKK_MA_SCHEDULER | 030 | 0 | 10:15 | 10:45 | 30 | | ` —
 the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no code, no transport of programs.
 
-## 8. Messages
+## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
+
+User rules 2026-11-07. All six tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Evidence settings*, *Bank transaction code roles*, *Role sequence outcomes*) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class**: a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+
+### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
+
+| FLOW | METHOD_CLASS | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|
+| D | WIR | `E` | VALUE_DATE | | Wire disbursements | X |
+| D | ACH | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
+| D | CHQ | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
+| C | ACH | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
+| C | CRD | `B` | VALUE_DATE | | Card collections (Stripe) | X |
+| D | ACI | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
+
+CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise).
+
+### 8b. `ZCD_HCK_PMBANK` — factory calendar per house bank (optional override)
+
+| FLOW | METHOD_CLASS | HBKID | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|
+| D | ACI | `‹Barclays house bank, confirm›` | `‹UK calendar›` | UK bank holidays | (blank) |
+| D | ACI | `‹Commerzbank house bank, confirm›` | `‹DE calendar›` | German bank holidays | (blank) |
+
+Resolution per payment: this row (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
+
+### 8c. `ZCD_HCK_CLRRULE` — clearing / return evidence rules
+
+REQUIRED: `X` must hold and indicates the purpose, `C` must hold (condition, never indicates on its own), `N` must not hold, blank = shown in the finding only. Purposes decide in the order VOIDED, RETURNED, PENDING, CLEARED, IN_FLIGHT: the first purpose with an `X` row that holds decides - all its `X` / `C` rows hold and no `N` row holds = excluded (counted in `PAY_EXCLUDED`; IN_FLIGHT = consistent, stays in flight and is aged), otherwise `CLEARING_INCONSISTENT` (VOIDED, PENDING, CLEARED, IN_FLIGHT) / `RETURN_INCONSISTENT` (RETURNED) naming what held, what is missing and what must not hold.
+
+| FLOW | METHOD_CLASS | PURPOSE | SEQ | EVIDENCE_CLASS | PARAM1 | PARAM2 | REQUIRED | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|---|---|
+| D | WIR | CLEARED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED` | | X | Rule 1: bank code lifecycle (495) | X |
+| D | WIR | CLEARED | 020 | ZCL_CD_HCK_EV_PAY_STATUS | `CLEARED` | | X | Rule 1: DPAYH-ZZ_PAYMENT_STATUS | X |
+| D | WIR | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED` | | X | Rule 4: 495 → 195 with one returns lot item | X |
+| D | ACH | CLEARED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED,RETRIEVAL_FAILED` | | X | Rule 1: 466 (retrieval failed = stays paid) | X |
+| D | ACH | CLEARED | 020 | ZCL_CD_HCK_EV_PAY_STATUS | `CLEARED` | | X | Rule 1: DPAYH-ZZ_PAYMENT_STATUS | X |
+| D | ACH | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED,RETRIEVED` | | X | Rule 4: 466 → 168 / retrieval 166 | X |
+| D | CHQ | VOIDED | 010 | ZCL_CD_HCK_EV_CHQ_STATUS | `V` | | X | Rule 2: DFKKCR-STATE V = voided | X |
+| D | CHQ | VOIDED | 020 | ZCL_CD_HCK_EV_STMT_CHEQUE | `13` | | N | Rule 2: no statement line for a voided cheque | X |
+| D | CHQ | CLEARED | 010 | ZCL_CD_HCK_EV_CHQ_STATUS | `B` | | X | Rule 2: DFKKCR-STATE B = cashed | X |
+| D | CHQ | CLEARED | 020 | ZCL_CD_HCK_EV_STMT_CHEQUE | `13` | | X | Rule 2: FEBEP-CHECT = last 13 of ZTNUM | X |
+| C | ACH | RETURNED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `RETURNED` | | X | Rule 4: 468, 468 with one returns lot item | X |
+| C | ACH | PENDING | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `REDEPOSIT_PENDING` | | X | Delayed redeposit (one 468, within 10 days) | X |
+| C | ACH | CLEARED | 010 | ZCL_CD_HCK_EV_BTC_SEQ | `CLEARED` | | X | 166 / 143 (also after a redeposit) | X |
+| C | ACH | CLEARED | 020 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by ZUONR) | X |
+| C | ACH | CLEARED | 030 | ZCL_CD_HCK_EV_GL_ZUONR | `EQUAL` | `‹clearing accounts›` | (blank) | ZUONR stays AUGBL (changed = anomaly) | X |
+| C | CRD | CLEARED | 010 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by descriptor) | X |
+| C | CRD | CLEARED | 020 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | C | Stripe payout log row of the payment intent | X |
+| C | CRD | IN_FLIGHT | 010 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | X | Payout processed ... | X |
+| C | CRD | IN_FLIGHT | 020 | ZCL_CD_HCK_EV_GL_ZUONR | `CHANGED` | `‹clearing accounts›` | X | ... and descriptor set (ZUONR no longer AUGBL) | X |
+
+What the card rows give: cleared G/L line without payout log row = `CLEARING_INCONSISTENT` (CLEARED, condition missing); payout log row but ZUONR still AUGBL = `CLEARING_INCONSISTENT` "payout processed but descriptor not set" (IN_FLIGHT); payout row + descriptor + line not yet cleared = in flight, aged - late after the `CCRD` limit ("F.13 not cleared"). While the Stripe settings (§8d) are not maintained the Stripe rows report "not configured" (information) and the BSEG XREF2 row alone decides. Planned, not delivered: a 195 deposit on the JPMC collection account ending 16650 for the descriptor's payout date (needs a payout-date evidence kind; account from `ZCD_EBS_ACCT`, never hard-coded) - **confirm**; the group balance of a descriptor (sum of charges and fees = the 195 amount) belongs to the planned transit balancing check.
+
+### 8d. `ZCD_HCK_EVSET` — evidence settings (set `STRIPE`, field names VERIFY-SE11)
+
+| SET_ID | NAME | VALUE | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|
+| STRIPE | TABLE | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_HCK_TABWL` row | (blank until SE11) |
+| STRIPE | INTENT_FIELD | `‹SE11 payment intent ID field›` | Payout log: payment intent ID | (blank) |
+| STRIPE | DFKKOP_INTENT_FIELD | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_HCK_TABWL`) | (blank) |
+| STRIPE | REQ_INTENT_FIELD | `‹SE11 ZCD_PAYM_REQ_LOG payment intent field›` | Reserved (not read: the chain DFKKOP → payout log does not need it) | (blank) |
+| STRIPE | TYPE_FIELD | `‹SE11 record type field›` | Optional: record type | (blank) |
+| STRIPE | PAYOUT_FIELD | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout | (blank) |
+| STRIPE | ACK_FIELD | `‹SE11 ACK status field›` | Optional: ACK status | (blank) |
+| STRIPE | CHARGE | `‹charge record type›` | Optional: record types that count (record types: payout, refund, fees, network cost, charge) | (blank) |
+| STRIPE | REFUND | `‹refund record type›` | Optional: refund = anomaly `CLEARING_INCONSISTENT` | (blank) |
+| STRIPE | ACK_FULL | `‹ACK full value›` | Optional: ACK values that count | (blank) |
+| STRIPE | ACK_PARTIAL | `‹ACK partial value›` | Optional: partial ACK = anomaly | (blank) |
+
+### 8e. `ZCD_HCK_BTCROLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
+
+| FLOW | METHOD_CLASS | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| D | WIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
+| D | WIR | BAI2 | 195 | RETURNED | X | Wire return | X |
+| D | ACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
+| D | ACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
+| D | ACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
+| D | ACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
+| C | ACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
+| C | ACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
+| C | ACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
+| C | ACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
+| C | ACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
+| C | CRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
+| D | ACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
+| D | ACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
+
+The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
+
+### 8f. `ZCD_HCK_SEQOUT` — outcomes of role sequences (first active pattern by SEQ matching the whole sequence)
+
+| FLOW | METHOD_CLASS | SEQ | SEQ_PATTERN | OUTCOME | EXPECTED_DFKKRP | MAX_AGE_DAYS | SEVERITY | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|---|---|
+| C | ACH | 010 | `COLLECTED` | CLEARED | 0 | | | 166 / 143 (confirm) | X |
+| C | ACH | 020 | `COLLECT_FAIL` | REDEPOSIT_PENDING | 0 | 10 | | Redeposit pending, 10 days (confirmed) | X |
+| C | ACH | 030 | `COLLECT_FAIL,COLLECTED` | CLEARED | 0 | | | Redeposit succeeded (confirm) | X |
+| C | ACH | 040 | `COLLECT_FAIL,COLLECT_FAIL` | RETURNED | 1 | | | Final failure with returns lot (confirm) | X |
+| D | ACH | 010 | `ORIGINAL` | CLEARED | 0 | | | 466 (confirm) | X |
+| D | ACH | 020 | `ORIGINAL,RETURNED` | RETURNED | 1 | | | 466 → 168 (confirmed) | X |
+| D | ACH | 030 | `ORIGINAL,RETRIEVED` | RETRIEVED | 0 | | | 466 → 166, no DFKKRP (confirmed) | X |
+| D | ACH | 040 | `ORIGINAL,RETRIEVE_FAIL` | RETRIEVAL_FAILED | 0 | | | 466 → 468, payment stays paid (confirm) | X |
+| D | ACH | 050 | `ORIGINAL,RETRIEVED,RETURNED,RETRIEVE_FAIL` | RETURNED | 1 | | | 466, 166, 168, 468: the original failed (confirmed) | X |
+| D | WIR | 010 | `ORIGINAL` | CLEARED | 0 | | | 495 (confirmed) | X |
+| D | WIR | 020 | `ORIGINAL,RETURNED` | RETURNED | 1 | | | 495 → 195 (confirmed) | X |
+| D | ACI | 010 | `ORIGINAL` | CLEARED | 0 | | | International ACH - **confirm** | (blank) |
+| D | ACI | 020 | `ORIGINAL,RETURNED` | RETURNED | 1 | | | International ACH return - **confirm** | (blank) |
+
+No REDEPOSIT_PENDING row for wires (no delayed redeposit). Any other sequence is `UNEXPECTED_SEQUENCE` (codes and dates in the detail). Longer retrieval sequences are not specified yet. OUTCOME values are an open list: an outcome counts only where a §8c row names it in PARAM1 (IN_FLIGHT or any unlisted outcome = in flight, aged).
+
+## 9. Messages
 
 HCK messages are numbers 300–399 and 650–699 of class `ZCD_OPS`, listed with every other message in `config/zcd_ops_messages.md`.
