@@ -2780,6 +2780,48 @@
      <MSGNR>749</MSGNR>
      <TEXT>Line &amp;1 fits &amp;2 cheques of account &amp;3 - not attributed:</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>750</MSGNR>
+     <TEXT>&amp;1 is in &amp;2 sources (&amp;3): outcome AMBIGUOUS, evaluated &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>751</MSGNR>
+     <TEXT>Payment outcome snapshot: source &amp;1 not judged -</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>752</MSGNR>
+     <TEXT>Source &amp;1: &amp;2 documents, &amp;3 evaluated, &amp;4 versions written</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>753</MSGNR>
+     <TEXT>Outcome &amp;1 of payment &amp;2 run &amp;3 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>754</MSGNR>
+     <TEXT>Payment &amp;1: method not in a watched method class - no outcome</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>755</MSGNR>
+     <TEXT>Outcome of payment &amp;1 could not be evaluated:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>756</MSGNR>
+     <TEXT>evidence &amp;1: &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

@@ -1,31 +1,32 @@
-// UI annotations: Transactions dashboard - KPI per day (funnel)
+// UI annotations: Transactions dashboard - KPI per day (funnel, canonical outcome now)
 // Overview-page cards: analytical card on chart Funnel, KPI card on data point Returned;
 // selection variant Today. VERIFY-ADT: card rendering.
+// 2026-11-07: measures from the canonical payment outcome (settled from bank lines removed).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Posting date', typeNamePlural: 'Posting dates',
                   title: { type: #STANDARD, value: 'PostingDate' } }
 @UI.chart: [ { qualifier: 'Funnel',
-               title: 'Funnel: posted, paid, settled, returned, open',
+               title: 'Funnel: posted, paid, cleared, returned, open',
                chartType: #COLUMN,
                dimensions: [ 'Direction' ],
-               measures: [ 'ItemCount', 'PaidReachedCount', 'SettledReachedCount', 'ReturnedCount', 'OpenCount' ],
+               measures: [ 'ItemCount', 'PaidReachedCount', 'ClearedCount', 'ReturnedCount', 'OpenCount' ],
                dimensionAttributes: [ { dimension: 'Direction', role: #CATEGORY } ],
                measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 },
                                     { measure: 'PaidReachedCount', role: #AXIS_1 },
-                                    { measure: 'SettledReachedCount', role: #AXIS_1 },
+                                    { measure: 'ClearedCount', role: #AXIS_1 },
                                     { measure: 'ReturnedCount', role: #AXIS_1 },
                                     { measure: 'OpenCount', role: #AXIS_1 } ] },
-             { qualifier: 'ByBucket',
-               title: 'Transactions by flow bucket per posting date',
+             { qualifier: 'ByOutcome',
+               title: 'Transactions by canonical outcome per posting date',
                chartType: #COLUMN_STACKED,
                dimensions: [ 'PostingDate' ],
-               measures: [ 'PostedBucketCount', 'ClearedBucketCount', 'PaidBucketCount', 'SettledBucketCount', 'ReturnedCount', 'ReversedCount' ],
+               measures: [ 'ClearedCount', 'InFlightCount', 'ReturnedCount', 'RetrievedCount', 'ProblemCount', 'ReversedCount' ],
                dimensionAttributes: [ { dimension: 'PostingDate', role: #CATEGORY } ],
-               measureAttributes: [ { measure: 'PostedBucketCount', role: #AXIS_1 },
-                                    { measure: 'ClearedBucketCount', role: #AXIS_1 },
-                                    { measure: 'PaidBucketCount', role: #AXIS_1 },
-                                    { measure: 'SettledBucketCount', role: #AXIS_1 },
+               measureAttributes: [ { measure: 'ClearedCount', role: #AXIS_1 },
+                                    { measure: 'InFlightCount', role: #AXIS_1 },
                                     { measure: 'ReturnedCount', role: #AXIS_1 },
+                                    { measure: 'RetrievedCount', role: #AXIS_1 },
+                                    { measure: 'ProblemCount', role: #AXIS_1 },
                                     { measure: 'ReversedCount', role: #AXIS_1 } ] } ]
 @UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
                              visualizations: [ { type: #AS_CHART, qualifier: 'Funnel' },
@@ -56,18 +57,30 @@ annotate entity ZC_CD_TrxKpi with
   @EndUserText.label: 'FIN numbers'
   @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
   FinCount;
-  @EndUserText.label: 'Paid (reached)'
+  @EndUserText.label: 'Paid (payment run or cheque)'
   @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Paid', title: 'Paid (reached)' }
+  @UI.dataPoint: { qualifier: 'Paid', title: 'Paid' }
   PaidReachedCount;
-  @EndUserText.label: 'Settled / encashed (reached)'
+  @EndUserText.label: 'Cleared (canonical outcome)'
   @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Settled', title: 'Settled / encashed (reached)' }
-  SettledReachedCount;
+  @UI.dataPoint: { qualifier: 'Cleared', title: 'Cleared' }
+  ClearedCount;
   @EndUserText.label: 'Returned'
   @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
   @UI.dataPoint: { qualifier: 'Returned', title: 'Returned', criticality: 'DayCriticality' }
   ReturnedCount;
+  @EndUserText.label: 'Retrieved (not a return)'
+  @UI.lineItem: [ { position: 85, importance: #MEDIUM } ]
+  RetrievedCount;
+  @EndUserText.label: 'Voided'
+  @UI.lineItem: [ { position: 87, importance: #LOW } ]
+  VoidedCount;
+  @EndUserText.label: 'In flight / pending'
+  @UI.lineItem: [ { position: 88, importance: #MEDIUM } ]
+  InFlightCount;
+  @EndUserText.label: 'Undetermined, inconsistent or ambiguous'
+  @UI.lineItem: [ { position: 89, importance: #MEDIUM } ]
+  ProblemCount;
   @EndUserText.label: 'Reversed'
   @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
   ReversedCount;
@@ -78,18 +91,9 @@ annotate entity ZC_CD_TrxKpi with
   @EndUserText.label: 'With NOC'
   @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
   NocItemCount;
-  @EndUserText.label: 'Bucket: posted'
-  @UI.lineItem: [ { position: 120, importance: #MEDIUM } ]
-  PostedBucketCount;
-  @EndUserText.label: 'Bucket: cleared (no payment evidence)'
-  @UI.lineItem: [ { position: 130, importance: #MEDIUM } ]
-  ClearedBucketCount;
-  @EndUserText.label: 'Bucket: paid'
-  @UI.lineItem: [ { position: 140, importance: #MEDIUM } ]
-  PaidBucketCount;
-  @EndUserText.label: 'Bucket: settled'
-  @UI.lineItem: [ { position: 150, importance: #MEDIUM } ]
-  SettledBucketCount;
+  @EndUserText.label: 'Paid, not evaluated'
+  @UI.lineItem: [ { position: 120, importance: #LOW } ]
+  NotEvaluatedCount;
   @UI.hidden: true
   DayCriticality;
 }

@@ -126,7 +126,7 @@ Cost: the distinct-name read scans the date window of TBTCO instead of a name pr
 | ZCD_ACH_RTRV_LOG | AUGBL | R07L |
 | DFKKNRP | INFOF — **not a key field**; the read is an IN list of the exact forms of the payment document / reference (bounded by the lines of a package) | R05 NOC reason (FLGRD), payment trace NOC evidence |
 | ZCD_OPS_FINDING | OBJ = (MANDT, PE_AREA, OBJECT_KEY) — **changed by fix 5** | carry-forward, reconcile, exception repository |
-| DFKKOP | BUDAT (with ZZ_FIN_TRANS_NUM) | transactions dashboard (`ZI_CD_TrxItem`: FIN items of the last 31 days) — on HANA the date predicate may be a column scan; record ST05 / PlanViz at peak (TXD-12) |
+| DFKKOP | BUDAT (with ZZ_FIN_TRANS_NUM) | transactions dashboard (`ZI_CD_TrxItem`: FIN items of the 400-day retention, the chosen day(s) by date kind) — on HANA the date predicate may be a column scan; record ST05 / PlanViz at peak (TXD-12) |
 | DPAYH | DOC1R (and XVORL) | transactions dashboard payment-run evidence |
 | DFKKCR | DOC1R | transactions dashboard cheque evidence |
 | FEBEP | CHECT | transactions dashboard bank settlement / encashment |
@@ -164,3 +164,34 @@ Every leg is **one set-based statement per run** (bank, G/L, subledger, payments
 **Why ACDOCA and not BSEG / BSIS / BSAS.** BSEG has no index by account (read by document key only, §8); BSIS / BSAS are compatibility views. The account-and-date reads go to ACDOCA (column store) - the "within BSEG" one-to-one of ACH collections is the assignment field ZUONR, read on ACDOCA (VERIFY-SE11 that ACDOCA-ZUONR equals BSEG-ZUONR after the payout processing changes it).
 
 **CDS for the bank leg.** The XBLNR account cannot be computed in ABAP SQL without a regular expression in the WHERE clause (not parsed by the offline lint, §6b); the view entity `ZI_CD_HckRcBankLine` holds the same derivation as `ZI_CD_EbsLineAcct` (one ABAP source, `cds_abap_parity`), so the bank lines are scoped exactly as EBS scopes them and aggregated where they are. It has no own date window: the DAO always passes one.
+## 10. Canonical payment outcome — 5-minute snapshot and history (2026-11-07)
+
+> **First principle:** the cost of a snapshot must follow the evidence that arrived, not the number of payments that exist.
+> **Analogy:** a post office sorts today's letters - it does not re-read every letter ever delivered to see whether something changed.
+
+**Work per run = new evidence, never the payment population.** Each evidence source keeps its own watermark (`ZCD_PAY_OUTWM`) and is read after it in key order, one package at a time (`PAYOUT_PACKAGE_SIZE`, default 5 000 payment documents, ceiling 50 000; at most `PAYOUT_MAX_PACKAGES` = 20 packages per source and run, the rest waits for the next 5-minute run):
+
+| Source | Read after the watermark (tuple order, package) | Index / access path (VERIFY-SE11) |
+|---|---|---|
+| DOCUMENTS - new payment runs and new / changed DFKKOP clearing | DFKKKO (CPUDT, CPUTM, OPBEL) > watermark, EXISTS DFKKOP AUGBL = OPBEL with FIN | DFKKKO by CPUDT (secondary index or HANA column scan); DFKKOP by AUGBL (standard) |
+| REVERSALS - a payment already judged reversed | DFKKKO of the reversal document (CPUDT, CPUTM, OPBEL) > watermark, joined to the original by STBEL | DFKKKO by CPUDT; DFKKKO by STBEL (VERIFY) |
+| STATEMENT - FEBEP lines | (KUKEY, ESNUM) > watermark, CHECT not blank - primary key range; references = payment documents (E G H I J K L) or cheque numbers (DFKKCR-ZTNUM = CHECT → DOC1R) | FEBEP primary key; first run: MIN( KUKEY ) of BUDAT ≥ start date |
+| RETURNS - DFKKRP lots | return document DFKKKO (CPUDT, CPUTM, OPBEL) > watermark, EXISTS DFKKRP; then DFKKRP-SELW1 by OPBEL (FOR ALL ENTRIES) | DFKKKO by CPUDT; DFKKRP by OPBEL (key) |
+| GL - BSEG clearing of XREF2 | BKPF (CPUDT, CPUTM, BUKRS, BELNR, GJAHR) > watermark; BSEG by BUKRS + AUGBL + AUGGJ with XREF2 (FOR ALL ENTRIES) | BKPF by CPUDT (VERIFY); BSEG by AUGBL (VERIFY - secondary index, else restrict to the clearing accounts) |
+| RECHECK - DPAYH-ZZ_PAYMENT_STATUS, DFKKCR-STATE (no change stamp) | current versions whose outcome is not final (IN_FLIGHT, PENDING, UNDETERMINED, INCONSISTENT, AMBIGUOUS), AUGBL > cursor, one package per run, cursor wraps | `ZCD_PAY_OUTCOME` index **OUT** (OUTCOME, VALID_TO) |
+
+The payment documents of a package are judged together by the shared evaluator: DPAYH by DOC1R (latest run per document), then one batch read per evidence kind (as A_INFLIGHT, capped by `HCK_INFLIGHT_MAX_ROWS`); FIN items by AUGBL (FOR ALL ENTRIES), request sources by FIN (one IN-list read of the configured request log), current versions by FIN (index **FIN**). **No SELECT runs per payment.** A capped evidence read fails the package closed: nothing is written, the watermark stays, `PAY_OUTCOME_FAILED` (E) - lower `PAYOUT_PACKAGE_SIZE`.
+
+**Volume reasoning.** Millions of payments exist, but per 5 minutes only the payments with new evidence are touched: at, say, 200 000 payments a day and about four evidence events per payment (payment run, statement line, status, clearing), a run sees about 2 800 documents (one package). The recheck adds at most one package of the payments still in flight (the population in flight is days of payments, not years). Writes: a version only when the outcome changes - about two to four versions per payment over its life (IN_FLIGHT → CLEARED, sometimes INCONSISTENT on the way); an unchanged evaluation writes nothing (not even an evaluation time), so the table grows with outcome changes, not with runs. 400 days at 200 000 payments a day ≈ 80 million payments → about 200-300 million narrow rows (keys + 20-character outcome + short reference); the purge target `PAY_OUTCOME` keeps it at that size; HANA partitioning by LAUFD only if gate 3 volumes require it (§6a). No amount, date, partner or method is copied: the dashboard joins DPAYH / DFKKOP / FEBEP / ZCD_PAYM_REQ_LOG by key.
+
+**Indexes of `ZCD_PAY_OUTCOME`** (key FIN_ID, SOURCE, BUKRS, AUGBL, LAUFD, LAUFI, VALID_FROM):
+
+| Index | Fields | Serves |
+|---|---|---|
+| DAT | MANDT, BUKRS, LAUFD | dashboard run-date filter per company code; purge of payment runs before the cutoff |
+| OUT | MANDT, OUTCOME, VALID_TO | current outcome cards (VALID_TO = 99991231235959), recheck of outcomes not final, purge of closed versions |
+| FIN | MANDT, FIN_ID, SOURCE | request side (FIN + source), snapshot read of the current versions of a package's FIN numbers (primary key prefix as well) |
+
+**Dashboard reads.** The "as of" version is a range predicate on VALID_FROM / VALID_TO joined by FIN + company code + payment document from the bounded item set (DFKKOP with FIN, BUDAT ≥ today − 400; the date kind narrows it to the chosen day(s)); KPI and problem cards read the current version (as of today 23:59:59) for 31 days. Aggregation is HANA's (CDS GROUP BY, OData `$apply`); the authorisation key (company code) is a pass-through GROUP BY key, so the DCL condition equals the condition on the base rows (`Dashboard_Transactions.md` §8). Record PlanViz for each date kind at peak (TXD-12).
+
+**VERIFY-SE11 (indexes):** DFKKKO-CPUDT / CPUTM / STBEL; BKPF-CPUDT / CPUTM; BSEG-AUGBL / AUGGJ; DPAYH-DOC1R (and the DPAYH key: LAUFD + LAUFI + DOC1R unique?); DPAYH-VALUT (value-date filter: column scan on HANA, acceptable for a day range); FEBKO-KUKEY assigned ascending (number range) so that (KUKEY, ESNUM) is an arrival order.

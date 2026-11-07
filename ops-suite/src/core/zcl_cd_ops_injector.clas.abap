@@ -15,6 +15,7 @@
 *& 2026-11-07 | inject_params added (runtime parameters, ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | inject_exc_dao / inject_pattern_dao removed: no test used them (lean scope).
 *& 2026-11-07 | reset also drops the session parameter adapter (ZCA_PARAM).
+*& 2026-11-07 | inject_pay_outcome / inject_pay_outcome_dao added (canonical payment outcome).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -64,6 +65,14 @@ CLASS zcl_cd_ops_injector DEFINITION
     CLASS-METHODS inject_trace_dao
       IMPORTING
         io_dao TYPE REF TO zif_cd_ops_trace_dao.
+
+    CLASS-METHODS inject_pay_outcome
+      IMPORTING
+        io_outcome TYPE REF TO zif_cd_ops_pay_outcome.
+
+    CLASS-METHODS inject_pay_outcome_dao
+      IMPORTING
+        io_dao TYPE REF TO zif_cd_ops_pay_outcome_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -123,6 +132,16 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_pay_outcome.
+    zcl_cd_ops_factory=>go_pay_outcome_double = io_outcome.
+  ENDMETHOD.
+
+
+  METHOD inject_pay_outcome_dao.
+    zcl_cd_ops_factory=>go_pay_outcome_dao_double = io_dao.
+  ENDMETHOD.
+
+
   METHOD inject_plugin.
     DATA(lv_name) = to_upper( condense( CONV string( iv_class_name ) ) ).
     DELETE zcl_cd_ops_factory=>gt_plugin_double
@@ -142,6 +161,8 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_lock_double,
            zcl_cd_ops_factory=>go_purge_dao_double,
            zcl_cd_ops_factory=>go_trace_dao_double,
+           zcl_cd_ops_factory=>go_pay_outcome_double,
+           zcl_cd_ops_factory=>go_pay_outcome_dao_double,
            zcl_cd_ops_factory=>gt_plugin_double,
            zcl_cd_ops_factory=>go_store,
            zcl_cd_ops_factory=>go_params.

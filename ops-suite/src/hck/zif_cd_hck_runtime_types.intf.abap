@@ -21,6 +21,7 @@
 *&            | house bank account (CHEQUE_LINK_AMBIGUOUS).
 *& 2026-11-07 | Code review of the cheque lifecycle: every anomaly of an evidence (TY_EVIDENCE-MORE),
 *&            | correction lines (compare C), voided state, register missing, outcome finding catalogue.
+*& 2026-11-07 | Purpose RETRIEVED after RETURNED (canonical payment outcome: a retrieval is not a return).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -267,6 +268,9 @@ INTERFACE zif_cd_hck_runtime_types
     BEGIN OF gc_purpose,
       voided   TYPE ty_purpose VALUE 'VOIDED',
       returned TYPE ty_purpose VALUE 'RETURNED',
+      "! Money recalled by a manual retrieval (ACH 466 -> 166): not a return (canonical outcome
+      "! RETRIEVED); decides after RETURNED, so a retrieval followed by a return is RETURNED
+      retrieved TYPE ty_purpose VALUE 'RETRIEVED',
       "! Outcome not final yet but expected (e.g. redeposit of a failed collection): not late
       pending   TYPE ty_purpose VALUE 'PENDING',
       cleared   TYPE ty_purpose VALUE 'CLEARED',

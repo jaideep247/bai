@@ -17,6 +17,8 @@
 *&            | BANCD; TY_BANK_LINE-VORGC / VGEXT (BAI / ISO code); TY_RETURN-AMOUNT (DFKKRP, VERIFY-DDIC).
 *& 2026-11-07 | TY_BANK_LINE-BUKRS / HBKID / HKTID (statement account, FEBKO) and message 749: cheque
 *&            | link by number and house bank account (design review, ZCL_CD_OPS_CHEQUE_LINK).
+*& 2026-11-07 | Stage OUTCOME (canonical payment outcome, ZIF_CD_OPS_PAY_OUTCOME), result outcome,
+*&            | TT_KEY_VALUE (keys of a set read of a configured source).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -42,6 +44,7 @@ INTERFACE zif_cd_ops_trace_types
   TYPES ty_tabname      TYPE c LENGTH 30.
   TYPES ty_fieldname    TYPE c LENGTH 30.
   TYPES ty_key_value    TYPE c LENGTH 70.
+  TYPES tt_key_value    TYPE SORTED TABLE OF ty_key_value WITH UNIQUE KEY table_line.
   TYPES ty_record_key   TYPE c LENGTH 120.
   TYPES ty_file_ref     TYPE c LENGTH 70.
   TYPES tt_file_ref     TYPE SORTED TABLE OF ty_file_ref WITH UNIQUE KEY table_line.
@@ -68,6 +71,9 @@ INTERFACE zif_cd_ops_trace_types
       noc        TYPE ty_stage VALUE 'NOC',
       fica       TYPE ty_stage VALUE 'FICA_CLEARING',
       gl         TYPE ty_stage VALUE 'GL',
+      "! Canonical outcome of the attempt's payment (ZIF_CD_OPS_PAY_OUTCOME, the same verdict as
+      "! the morning report check A_INFLIGHT and the transactions dashboard)
+      outcome    TYPE ty_stage VALUE 'OUTCOME',
     END OF gc_stage.
 
   "! Evidence status of a stage row. There is no PENDING: no deterministic SLA rule exists
@@ -125,6 +131,10 @@ INTERFACE zif_cd_ops_trace_types
       payment_run      TYPE ty_reason VALUE 'PAYMENT_RUN',
       cheque_issued    TYPE ty_reason VALUE 'CHEQUE_ISSUED',
       file_generated   TYPE ty_reason VALUE 'FILE_GENERATED',
+      "! Canonical payment outcome of the attempt (ZIF_CD_OPS_PAY_OUTCOME)
+      outcome          TYPE ty_reason VALUE 'CANONICAL_OUTCOME',
+      "! The payment method is in no watched method class: no canonical outcome
+      not_watched      TYPE ty_reason VALUE 'METHOD_NOT_WATCHED',
       sent_to_prism    TYPE ty_reason VALUE 'SENT_TO_PRISM',
     END OF gc_reason.
 
@@ -219,6 +229,8 @@ INTERFACE zif_cd_ops_trace_types
   CONSTANTS:
     BEGIN OF gc_table,
       dfkkop  TYPE ty_tabname VALUE 'DFKKOP',
+      "! Rules and evidence of the canonical payment outcome (ZCD_HCK_CLRRULE)
+      outcome TYPE ty_tabname VALUE 'ZCD_HCK_CLRRULE',
       dfkkko  TYPE ty_tabname VALUE 'DFKKKO',
       dpayh   TYPE ty_tabname VALUE 'DPAYH',
       dfkkcr  TYPE ty_tabname VALUE 'DFKKCR',
@@ -272,6 +284,9 @@ INTERFACE zif_cd_ops_trace_types
       first_gap_stage   TYPE ty_stage,
       first_gap_attempt TYPE i,
       attempts          TYPE i,
+      "! Canonical outcome of the current attempt(s) (blank: no payment evaluated; values of
+      "! ZIF_CD_OPS_PAYOUT_TYPES=>GC_OUTCOME, same length)
+      outcome           TYPE c LENGTH 20,
       rows              TYPE tt_trace_row,
     END OF ty_trace_result.
 

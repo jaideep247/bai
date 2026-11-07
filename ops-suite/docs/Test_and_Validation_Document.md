@@ -50,7 +50,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 
 ## 5. ABAP Unit tests (DV1)
 
-1095 methods in the 104 package test includes (every class of `src/` has a test path: 104 own includes, 46 covered by another include, 1 exempt - `Coverage_Run_Register.csv`) (plus 4 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
+1095 methods in the 104 package test includes (every class of `src/` has a test path: 104 own includes, 46 covered by another include, 1 exempt - `Coverage_Run_Register.csv`) (plus 8 in the cds/ class `ZCL_CD_TRX_REQ_CDS_TEST`, created in ADT after SE11), listed per object in `TDD_Approach_and_Coverage.md` §4 and `Coverage_Run_Register.csv`. Expected: all green, `RISK LEVEL HARMLESS`, statement coverage ≥ 90 % per object (record actual values in the register).
 
 | Run | Expected | Actual |
 |---|---|---|
@@ -113,7 +113,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | CORE-04 | Same EBS file validated twice with the same unmapped code | Exception assigned to a user after run 1 | Run 2 row: disposition A, same owner and due date, OCCURRENCES 2; run 1 row disposition S | pending |
 | CORE-05 | Fix the map row from CORE-04 and re-run | +1 ZCD_BTC_MAP row | Exception resolved "Passed on re-run"; open list on the morning report no longer shows it | pending |
 | CORE-06 | Waived exception raised again | Disposition W, WAIVER_UNTIL in the future | New row stays W | pending |
-| CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions | pending |
+| CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions; target PAY_OUTCOME listed (POC-11) | pending |
 | OPS-01 … OPS-08 | Operations apps: assign / resolve, waiver four-eyes, suppression (short / long), manual file status forward / backward, PRISM request handled manually | `RAP_Ops_Apps.md` §5 | As listed in `RAP_Ops_Apps.md` §5 | pending |
 | HCK-QA-15 | `C_PRQ_NO_SPE` with one failed request without SPE row and one with SUCCESS after the failure | `config/hck_seed.md` rows, SE11 names filled | One finding (the first request); the second is not failed | pending |
 | HCK-QA-16 | `C_CHQ_STATUS` with a cheque history 10 → 2 and one 10 → 9 | — | One finding (10 → 2); 10 → 9 allowed | pending |
@@ -231,7 +231,26 @@ ABAP Unit: `ZCL_CD_HCK_DASH_CDS_TEST` (6 CDS tests: status RED / AMBER / GREEN /
 
 ### 6.11 Transactions dashboard (`ZUI_CD_TRX_DASH_O4`; request side `ZUI_CD_TRX_REQ_O4` after SE11; `Dashboard_Transactions.md`)
 
-ABAP Unit: `ZCL_CD_TRX_DASH_CDS_TEST` (8 CDS tests: flow bucket per evidence, proposal runs ignored, 31-day window and FIN filter, direction from TFK042Z-XEINZ, KPI with distinct FIN numbers, errored / stuck list, return / NOC reasons from the lot items, no partner or member element). After SE11, in ADT: `ZCL_CD_TRX_REQ_CDS_TEST` (4 tests: **SUCCESS row rule** — a SUCCESS attempt wins over a later failed COUNTER —, errored, pending, member number not exposed). QA1: **TXD-01 … TXD-13** (doc §12), incl. the peak-volume ST05 / PlanViz run TXD-12.
+ABAP Unit: `ZCL_CD_TRX_DASH_CDS_TEST` (16 CDS tests: flow bucket = canonical outcome, a bank line alone never settled, proposal runs ignored, 400-day retention and FIN filter, direction from TFK042Z-XEINZ, KPI with distinct FIN numbers, KPI never mixes company codes, errored / stuck list, return / NOC reasons, no partner or member element; shared fixtures: retrieval not RETURNED, bank line without clearing INCONSISTENT, two DPAYH runs one row of the latest run, FIN in two sources one row AMBIGUOUS, "as of" between two versions, date kinds run / value date). After SE11, in ADT: `ZCL_CD_TRX_REQ_CDS_TEST` (8 tests: **SUCCESS row rule** — a SUCCESS attempt wins over a later failed COUNTER —, errored, pending, member number not exposed, SUCCESS older than the request date window still PROCESSED, retrieval RETRIEVED not RETURNED, FIN in two sources AMBIGUOUS, one row per company code). QA1: **TXD-01 … TXD-17** (doc §12), incl. the peak-volume ST05 / PlanViz run TXD-12.
+
+#### 6.11a Canonical payment outcome and the 5-minute snapshot (2026-11-07)
+
+ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (9 tests on the shared fixtures with the delivered evidence plug-ins: retrieval is not a return, line without clearing, latest run decides, FIN in two sources, old SUCCESS one source, every fixture as expected, reversed document, unwatched method no verdict, request source fails closed); `ZCL_CD_HCK_C_INFLIGHT` (every earlier test unchanged + `fixture_retrieval_not_return`, `fixture_line_not_cleared`, `fixture_two_runs_cleared`, `fixture_agrees_with_outcome`); `ZCL_CD_OPS_TRACE_ENGINE` (`ltc_outcome`, 5 tests); `ZCL_CD_OPS_PAY_SNAPSHOT` (7 tests: outcome change creates a version, no change writes nothing, watermark picks up only new evidence, newer run closes the older run's version, FIN in two sources AMBIGUOUS for both with findings, test mode writes nothing, capped read fails closed); `ZCL_CD_OPS_PAY_OUTCOME_DAO` (OSQL, 10 tests: each source after its watermark, package size, recheck only open not final, cheque of a statement reference, versions closed / inserted, watermark round trip); `ZCL_CD_HCK_RUNTIME_DAO` (`payments_by_document_all_runs`); `ZCL_CD_OPS_PURGE_DAO` (`old_outcome_version_deleted`).
+
+| ID | Scenario | Configuration | Expected | Result |
+|---|---|---|---|---|
+| POC-01 | Activate step 2 `ZCD_OPS_PAY_SNAPSHOT` in `ZCD_FMON_MONITOR_ALL`; first run | No `ZCD_PAY_OUTWM` row | Watermarks start `PAYOUT_INITIAL_DAYS` (10) days back; payments of those days get one version each; runtime recorded | pending |
+| POC-02 | Next run with no new evidence | — | No version written (SE16 count unchanged), watermarks' UPDATED_AT advanced | pending |
+| POC-03 | A wire's DPAYH status set to CLEARED after its 495 line was judged INCONSISTENT | — | Within the recheck round: version INCONSISTENT closed, CLEARED inserted; dashboard, trace and morning report agree | pending |
+| POC-04 | New 495 / 466 line on the statement import | — | Only the payments of the new lines are evaluated (ALV documents per source in test mode) | pending |
+| POC-05 | Re-run of a payment (second DPAYH run) | — | The older run's version closed, the latest run's inserted | pending |
+| POC-06 | FIN with SUCCESS in PCLM and ORCI | Request log rows | Two versions AMBIGUOUS, findings `PAY_SOURCE_AMBIGUOUS` | pending |
+| POC-07 | `PAYOUT_PACKAGE_SIZE` 100, 1 000 evidence documents | ZCA_PARAM value row | Ten packages, each committed with its watermark; a cancel in the middle loses nothing (rerun continues at the watermark) | pending |
+| POC-08 | Capped evidence read (`HCK_INFLIGHT_MAX_ROWS` 10) | ZCA_PARAM value row | `PAY_OUTCOME_FAILED`, nothing written for the package, watermark kept | pending |
+| POC-09 | Test mode | `P_TEST` = X | Counts per source, no version, no watermark, no commit | pending |
+| POC-10 | Overlapping start | Two starts | Second refused RUN_LOCKED | pending |
+| POC-11 | Purge PAY_OUTCOME on a QA1 copy, `RETENTION_DAYS_PAY_OUTCOME` 30 | — | Closed versions before the cutoff and runs before the cutoff date deleted; current versions of recent payments kept | pending |
+| POC-12 | Runtime at peak (gate 3) | Production-like volume | Step 2 well within 5 minutes; ST05: no SELECT per payment, indexes DAT / OUT / FIN used | pending |
 
 ### 6.12 Production-support overview page (`ZUI_CD_OPS_OVERVIEW_O4`, `Dashboard_Production_Support.md`)
 

@@ -26,6 +26,7 @@ Usage:    python3 tools/param_definitions.py           -> regenerate the seed cl
 Modification log:
 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
 2026-11-07 | Default and value rows checked against ALLOWED_PCRE (design review: queue scope C).
+2026-11-07 | RETENTION_DAYS_PAY_OUTCOME default from the purge target (canonical payment outcome).
 """
 import csv
 import io
@@ -109,6 +110,7 @@ DEFAULTS = {
     'RETENTION_DAYS_HCK_METRIC': ('regex', _PURGE, r'gc_target-hck_metric\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_FMON_PRISM': ('regex', _PURGE, r'gc_target-fmon_prism\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_HCK_RESULT': ('regex', _PURGE, r'gc_target-hck_result\s+default_days\s*=\s*(\d+)'),
+    'RETENTION_DAYS_PAY_OUTCOME': ('regex', _PURGE, r'gc_target-pay_outcome\s+default_days\s*=\s*(\d+)'),
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')

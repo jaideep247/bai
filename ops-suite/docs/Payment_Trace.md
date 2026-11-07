@@ -28,6 +28,7 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | 9 | NOC | `DFKKNRP` (NOC lot items; shared EBS read `GET_NOC_ITEMS`) | `INFOF` (CHAR 50, **not a key**) = the attempt's clearing document (AUGBL) or a payment reference of the attempt (FIN of its items, cheque number) — each read as stored and without leading zeros, matched after condensing / removing leading zeros of all-digit values; exact INFOF content VERIFY-SE11 | Lot KEYN1, item POSNA, **NOC reason `FLGRD`** and the INFOF value. **Informational** (account data change, not a return): VERIFIED when found, NOT_APPLICABLE (`NO_NOC_ITEM`) when not — never MISSING; several items with different FLGRD or the row cap = AMBIGUOUS (all listed). NOC rows never set the first gap and never change the verdict |
 | 10 | FICA_CLEARING | `DFKKOP` (current) / history source (historical); `BSEG` | item + AUGBL; BSEG by document key with `XREF2 = AUGBL` | Clearing date; clearing-account line of the G/L transfer document (not for method C) |
 | 11 | GL | `DFKKKO` → `DFKKSUMC` → `BKPF` | `DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY`, `AWTYP = TRACE_GL_AWTYP` (FKKSU), same BUKRS, `STBLG` blank | G/L document BUKRS / BELNR / GJAHR, entry date / time |
+| 12 | OUTCOME | canonical evaluator `ZIF_CD_OPS_PAY_OUTCOME` (rules `ZCD_HCK_CLRRULE`, evidence plug-ins `ZCL_CD_HCK_EV_*`; 2026-11-07) | current attempt's clearing reference = payment document; latest DPAYH run of it; FIN sources from the request log (SUCCESS rows first) | The **same verdict as the morning report check A_INFLIGHT and the transactions dashboard**: outcome (CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING / IN_FLIGHT / UNDETERMINED / INCONSISTENT / AMBIGUOUS / REVERSED), run date / ID, deciding evidence kind and reference, finding. Row status VERIFIED (outcome known), AMBIGUOUS (FIN in two sources - the input source does not pick one), FAILED (INCONSISTENT), UNAVAILABLE (UNDETERMINED, or configuration / request source not readable), NOT_APPLICABLE (method in no watched class). **Informational for the evidence verdict** (as NOC); the result carries `OUTCOME` when every current attempt has the same |
 
 ## 3. Statuses and verdict
 
@@ -40,7 +41,7 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | FAILED | Positive evidence of failure: NACK, return lot, retrieval, terminal cheque status |
 | NOT_APPLICABLE | Stage does not exist for this payment (e.g. no ACK for the method) — with reason |
 
-There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict; NOC rows are information only and are ignored by the verdict and the first gap. **Incomplete evidence can never produce COMPLETE.**
+There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict; NOC rows and OUTCOME rows are information only and are ignored by the verdict and the first gap (the evidence verdict and the payment's canonical outcome answer two different questions: "is the evidence chain complete?" and "what happened to the money?"). **Incomplete evidence can never produce COMPLETE.**
 
 ## 4. The two lookup paths (verified against the repository)
 
@@ -142,6 +143,7 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 | Dynamic WHERE `IN @LT_IN` against DATS key (REGUT LAUFD) | FMON reader with a date key column (VERIFY-ADT) |
 | Authorisations | ZCD_OPS 03 CORE + BUKRS; S_TABU_NAM 03 for every configured table |
 | Performance | Peak-volume run of 20 traces (FIN, clearing doc, cheque) in QA1 with ST05 |
+| OUTCOME stage | The trace outcome equals the dashboard bucket and A_INFLIGHT for the same payment (TXD-10, TRC-OUT-01); `TRACE_SRC_REQUEST` configured with KEY2 = SOURCE and STATUS (the source attribution needs both) |
 
 ## 10. Tests and QA cases
 
@@ -179,6 +181,18 @@ ABAP Unit (`ZCL_CD_OPS_TRACE_ENGINE` local test class `ltc_trace`, LTD read-repo
 | `no_noc_is_not_applicable` | No NOC item → NOT_APPLICABLE (`NO_NOC_ITEM`), never MISSING, no gap |
 | `noc_never_changes_verdict` | Two NOC items with different FLGRD → AMBIGUOUS rows, verdict still COMPLETE, no first gap |
 
+`ltc_trace` injects an evaluator without verdict (OUTCOME row NOT_APPLICABLE), so every evidence-chain test above is unchanged. `ltc_outcome` traces the **shared negative fixtures** (`ZCL_CD_OPS_PAY_FIXTURE`) with the real evaluator and the delivered evidence plug-ins:
+
+| Test | Proves |
+|---|---|
+| `retrieval_shown_not_returned` | 466 → 166 without returns lot: outcome RETRIEVED (row VERIFIED), never RETURNED |
+| `line_without_clearing_failed` | Wire line without DPAYH status CLEARED: INCONSISTENT, row FAILED |
+| `latest_run_shown` | Two DPAYH runs: CLEARED, the row names the latest run |
+| `two_sources_ambiguous` | FIN with SUCCESS in two sources: AMBIGUOUS (also when the input names one source) |
+| `outcome_never_changes_verdict` | The OUTCOME row is never the first gap |
+
 OSQL (`ZCL_CD_OPS_TRACE_DAO`, `ltc_trace_dao`): items by FIN and row cap, FEBEP by reference and date, DFKKCR by DOC1R, FMON file in the business-date window, BKPF by AWTYP/AWKEY, BSEG by key and XREF2, FOR ALL ENTRIES guard, NOC items by INFOF capped at the row cap + 1 (`noc_items_by_infof_capped`). The full-chain test now also lists the NOC row (NOT_APPLICABLE without a NOC).
+
+QA1 case TRC-OUT-01 (2026-11-07): for each of TXD-01, TXD-03, TXD-03a, TXD-14, TXD-15, TXD-16 the trace OUTCOME row shows the same outcome as the dashboard bucket and the A_INFLIGHT finding / exclusion of the morning report.
 
 QA1 cases (L1/L2 reproduce search → correlate → inspect → hand off): one PCLM claims ACH payment end to end; one cheque (mailed, encashed); one collection (file-level ACK); a reissued payment after a return; a reversed item with and without history; a FIN with two SUCCESS rows; a payment sent but not acknowledged; a user without the company code. For each, compare with SE16 / FPL9 / FEBAN and confirm that running the trace changed no business table, job, lock, file or interface (ST05 shows SELECT only).

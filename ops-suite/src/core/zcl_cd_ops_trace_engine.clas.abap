@@ -26,6 +26,9 @@
 *& 2026-11-07 | Cheque settlement lines through the shared link ZCL_CD_OPS_CHEQUE_LINK (cheque number
 *&            | AND statement house bank account = the cheque's; a line of another account is not the
 *&            | cheque's, a line fitting several cheques of the attempt is one AMBIGUOUS row).
+*& 2026-11-07 | Stage OUTCOME: the canonical outcome of each current attempt by the shared evaluator
+*&            | ZIF_CD_OPS_PAY_OUTCOME (the verdict of A_INFLIGHT and the transactions dashboard), FIN in
+*&            | two sources = AMBIGUOUS; informational for the evidence verdict (as NOC); result outcome.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -219,6 +222,20 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
         is_attempt TYPE ty_attempt
         it_checks  TYPE zif_cd_ops_trace_types=>tt_check.
 
+    "! Canonical outcome of every current attempt (one evaluation for all attempts): the same
+    "! evaluator as A_INFLIGHT and the 5-minute snapshot; informational for the evidence verdict
+    METHODS stage_outcome
+      CHANGING
+        cs_result TYPE zif_cd_ops_trace_types=>ty_trace_result.
+
+    "! Evidence status of an outcome row: VERIFIED (outcome known), AMBIGUOUS, FAILED
+    "! (inconsistent evidence), UNAVAILABLE (undetermined)
+    CLASS-METHODS outcome_status
+      IMPORTING
+        iv_outcome       TYPE zif_cd_ops_payout_types=>ty_outcome
+      RETURNING
+        VALUE(rv_status) TYPE zif_cd_ops_trace_types=>ty_status.
+
     "! Comparable form of a document number / reference: condensed, leading zeros of an
     "! all-digit value removed
     CLASS-METHODS canonical
@@ -328,6 +345,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       LOOP AT mt_attempts INTO DATA(ls_attempt).
         trace_attempt( ls_attempt ).
       ENDLOOP.
+      stage_outcome( CHANGING cs_result = rs_result ).
     ENDIF.
     finish( CHANGING cs_result = rs_result ).
   ENDMETHOD.
@@ -1438,6 +1456,98 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD stage_outcome.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    DATA lt_fin TYPE zif_cd_ops_payout_types=>tt_fin.
+    DATA lt_sources TYPE zif_cd_ops_payout_types=>tt_fin_source.
+    DATA lt_outcomes TYPE SORTED TABLE OF zif_cd_ops_payout_types=>ty_outcome WITH UNIQUE KEY table_line.
+    DATA ls_evaluation TYPE zif_cd_ops_payout_types=>ty_evaluation.
+
+    LOOP AT mt_attempts ASSIGNING FIELD-SYMBOL(<ls_attempt>)
+         WHERE kind = zif_cd_ops_trace_types=>gc_attempt-current AND ref IS NOT INITIAL.
+      INSERT <ls_attempt>-ref INTO TABLE lt_docno.
+    ENDLOOP.
+    IF lt_docno IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT mt_items ASSIGNING FIELD-SYMBOL(<ls_item>) WHERE fin IS NOT INITIAL.
+      INSERT <ls_item>-fin INTO TABLE lt_fin.
+    ENDLOOP.
+    DATA(lo_outcome) = zcl_cd_ops_factory=>get_pay_outcome( ).
+    DATA(lv_error) = ``.
+    TRY.
+        lo_outcome->load( iv_context  = zif_cd_ops_payout_types=>gc_context
+                          iv_max_rows = zcl_cd_ops_pay_outcome=>evidence_cap( ) ).
+        ls_evaluation = lo_outcome->evaluate_documents( lt_docno ).
+        lt_sources = lo_outcome->sources_of( lt_fin ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        lv_error = lx_error->get_text( ).
+    ENDTRY.
+
+    LOOP AT mt_attempts ASSIGNING <ls_attempt>
+         WHERE kind = zif_cd_ops_trace_types=>gc_attempt-current AND ref IS NOT INITIAL.
+      DATA(ls_row) = VALUE ty_row( stage        = zif_cd_ops_trace_types=>gc_stage-outcome
+                                   bukrs        = <ls_attempt>-bukrs
+                                   source_table = zif_cd_ops_trace_types=>gc_table-outcome
+                                   record_key   = <ls_attempt>-ref ).
+      IF lv_error IS NOT INITIAL.
+        ls_row-status = zif_cd_ops_trace_types=>gc_status-unavailable.
+        ls_row-reason = zif_cd_ops_trace_types=>gc_reason-not_readable.
+        ls_row-detail = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-trace_unavailable
+                                               iv_v1    = <ls_attempt>-ref
+                                               iv_tail  = lv_error ).
+        add_row( is_attempt = <ls_attempt> is_row = ls_row ).
+        CONTINUE.
+      ENDIF.
+      DATA(ls_verdict) = VALUE #( ls_evaluation-verdicts[ KEY by_doc doc1r = <ls_attempt>-ref ] OPTIONAL ).
+      IF ls_verdict IS INITIAL.
+        ls_row-status = zif_cd_ops_trace_types=>gc_status-not_applicable.
+        ls_row-reason = zif_cd_ops_trace_types=>gc_reason-not_watched.
+        ls_row-detail = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-trace_not_watched
+                                               iv_v1    = <ls_attempt>-ref ).
+        add_row( is_attempt = <ls_attempt> is_row = ls_row ).
+        CONTINUE.
+      ENDIF.
+      " Source attribution of the attempt's FIN numbers: two or more sources = AMBIGUOUS, never one
+      LOOP AT mt_items ASSIGNING <ls_item> WHERE augbl = <ls_attempt>-ref AND fin IS NOT INITIAL.
+        LOOP AT lt_sources ASSIGNING FIELD-SYMBOL(<ls_source>) WHERE fin = <ls_item>-fin AND sources > 1.
+          ls_verdict = lo_outcome->for_source( is_verdict = ls_verdict is_source = <ls_source> ).
+          EXIT.
+        ENDLOOP.
+      ENDLOOP.
+      ls_row-status        = outcome_status( ls_verdict-outcome ).
+      ls_row-reason        = zif_cd_ops_trace_types=>gc_reason-outcome.
+      ls_row-record_key    = key_text( iv_part1 = <ls_attempt>-ref iv_part2 = ls_verdict-laufd iv_part3 = ls_verdict-laufi ).
+      ls_row-evidence_date = ls_verdict-laufd.
+      ls_row-detail        = zcl_cd_ops_util=>text(
+                               iv_msgno = zif_cd_ops_payout_types=>gc_msg-trace_outcome
+                               iv_v1    = ls_verdict-outcome
+                               iv_v2    = <ls_attempt>-ref
+                               iv_v3    = |{ ls_verdict-laufd DATE = ISO }|
+                               iv_v4    = ls_verdict-laufi
+                               iv_tail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-evidence_text
+                                                                 iv_v1    = ls_verdict-evidence_kind
+                                                                 iv_v2    = ls_verdict-finding
+                                                                 iv_tail  = CONV string( ls_verdict-evidence_ref ) ) ).
+      add_row( is_attempt = <ls_attempt> is_row = ls_row ).
+      INSERT ls_verdict-outcome INTO TABLE lt_outcomes.
+    ENDLOOP.
+    " One outcome for the trace when every current attempt has the same; otherwise per row only
+    IF lines( lt_outcomes ) = 1.
+      cs_result-outcome = lt_outcomes[ 1 ].
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD outcome_status.
+    rv_status = SWITCH #( iv_outcome
+                          WHEN zif_cd_ops_payout_types=>gc_outcome-ambiguous    THEN zif_cd_ops_trace_types=>gc_status-ambiguous
+                          WHEN zif_cd_ops_payout_types=>gc_outcome-inconsistent THEN zif_cd_ops_trace_types=>gc_status-failed
+                          WHEN zif_cd_ops_payout_types=>gc_outcome-undetermined THEN zif_cd_ops_trace_types=>gc_status-unavailable
+                          ELSE zif_cd_ops_trace_types=>gc_status-verified ).
+  ENDMETHOD.
+
+
   METHOD canonical.
     rv_value = condense( CONV string( iv_value ) ).
     IF rv_value CO gc_digits.
@@ -1500,7 +1610,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     " NOC rows are informational (a notification of change is no failure of the payment)
     LOOP AT mt_rows ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE status <> zif_cd_ops_trace_types=>gc_status-verified
                                                       AND status <> zif_cd_ops_trace_types=>gc_status-not_applicable
-                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-noc.
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome.
       IF NOT line_exists( mt_rows[ attempt = <ls_row>-attempt first_gap = abap_true ] ).
         <ls_row>-first_gap = abap_true.
       ENDIF.
@@ -1508,8 +1619,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
     " The verdict looks at the request and the current attempts; historical attempts were
     " reversed or reset and are shown for evidence only
+    " The canonical outcome (OUTCOME rows) is shown and returned, but the verdict judges the evidence
     LOOP AT mt_rows INTO DATA(ls_row) WHERE attempt_kind <> zif_cd_ops_trace_types=>gc_attempt-historical
-                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-noc.
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome.
       CASE ls_row-status.
         WHEN zif_cd_ops_trace_types=>gc_status-failed.
           lv_failed = abap_true.
@@ -1557,7 +1670,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                        WHEN zif_cd_ops_trace_types=>gc_stage-settlement THEN 8
                        WHEN zif_cd_ops_trace_types=>gc_stage-noc        THEN 9
                        WHEN zif_cd_ops_trace_types=>gc_stage-fica       THEN 10
-                       WHEN zif_cd_ops_trace_types=>gc_stage-gl         THEN 11 ).
+                       WHEN zif_cd_ops_trace_types=>gc_stage-gl         THEN 11
+                       WHEN zif_cd_ops_trace_types=>gc_stage-outcome    THEN 12 ).
   ENDMETHOD.
 
 

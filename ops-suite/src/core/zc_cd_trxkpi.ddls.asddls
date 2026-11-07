@@ -1,8 +1,11 @@
 // Artifact: zc_cd_trxkpi.ddls.asddls
-// Purpose: Consumption view of the transactions KPI entity (tiles, overview-page cards, service ZUI_CD_TRX_DASH):
-//          funnel counts per posting date, company code and direction, live.
-//          Read access: DCL ZC_CD_TRXDASH (ZCD_OPS, ZCD_PE_AREA = CORE and BUKRS, ACTVT 03). Read-only.
+// Purpose: Consumption view of the KPI entity (TransactionKpi): per posting date, company code and
+//          direction - transactions, FIN numbers, paid and the canonical outcome now (cleared,
+//          returned, retrieved, voided, in flight, problems, reversed, open, NOC, not evaluated);
+//          tiles and overview-page cards. Read access: DCL ZC_CD_TRXDASH (company code = GROUP BY
+//          key of ZR_CD_TrxKpi, so the condition equals the one on the base rows). Read-only.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
+//                   2026-11-07 | Canonical outcome measures.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Transactions dashboard - KPI'
 @Metadata.allowExtensions: true
@@ -22,9 +25,17 @@ define root view entity ZC_CD_TrxKpi
       @Aggregation.default: #SUM
       PaidReachedCount,
       @Aggregation.default: #SUM
-      SettledReachedCount,
+      ClearedCount,
       @Aggregation.default: #SUM
       ReturnedCount,
+      @Aggregation.default: #SUM
+      RetrievedCount,
+      @Aggregation.default: #SUM
+      VoidedCount,
+      @Aggregation.default: #SUM
+      InFlightCount,
+      @Aggregation.default: #SUM
+      ProblemCount,
       @Aggregation.default: #SUM
       ReversedCount,
       @Aggregation.default: #SUM
@@ -32,12 +43,6 @@ define root view entity ZC_CD_TrxKpi
       @Aggregation.default: #SUM
       NocItemCount,
       @Aggregation.default: #SUM
-      PostedBucketCount,
-      @Aggregation.default: #SUM
-      ClearedBucketCount,
-      @Aggregation.default: #SUM
-      PaidBucketCount,
-      @Aggregation.default: #SUM
-      SettledBucketCount,
+      NotEvaluatedCount,
       DayCriticality
 }

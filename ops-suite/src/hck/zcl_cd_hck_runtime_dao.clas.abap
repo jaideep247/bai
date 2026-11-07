@@ -15,6 +15,8 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
 *& 2026-11-07 | BSAS assignment read replaced by BSEG XREF2; in-flight configuration reads.
+*& 2026-11-07 | get_issued_payments_by_doc: payment runs by payment document (canonical payment
+*&            | outcome, trace and 5-minute snapshot); one join for both reads.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -190,6 +192,32 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
       ORDER BY p~laufd, p~laufi, p~doc1r
       INTO CORRESPONDING FIELDS OF TABLE @rt_payments
       UP TO @iv_max_rows ROWS.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_runtime_dao~get_issued_payments_by_doc.
+    CHECK it_docno IS NOT INITIAL.
+    IF iv_max_rows <= 0.
+      RETURN.
+    ENDIF.
+    " The join of GET_ISSUED_PAYMENTS by payment document (DPAYH-DOC1R = DFKKOP-AUGBL, confirmed);
+    " DOC1R is not unique in DPAYH (re-runs): every run is returned, the caller picks the latest.
+    " VERIFY-DDIC as GET_ISSUED_PAYMENTS; index on DPAYH-DOC1R expected (Performance_Review.md)
+    SELECT p~doc1r, p~laufd, p~laufi, p~bukrs, p~pymet, p~hbkid, p~valut,
+           p~rwbtr AS amount, p~waers AS currency, z~xeinz
+      FROM dpayh AS p
+      INNER JOIN t001 AS t ON t~bukrs = p~bukrs
+      INNER JOIN tfk042z AS z ON  z~land1 = t~land1
+                              AND z~zlsch = p~pymet
+      FOR ALL ENTRIES IN @it_docno
+      WHERE p~doc1r = @it_docno-table_line
+        AND p~xvorl = @space
+      INTO CORRESPONDING FIELDS OF TABLE @rt_payments.
+    SORT rt_payments BY doc1r laufd DESCENDING laufi DESCENDING.
+    DATA(lv_first_over) = iv_max_rows + 1.
+    IF lines( rt_payments ) >= lv_first_over.
+      DELETE rt_payments FROM lv_first_over.
+    ENDIF.
   ENDMETHOD.
 
 

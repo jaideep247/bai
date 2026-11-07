@@ -19,6 +19,9 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | Bank lines carry their statement account; a cheque number on another house bank
 *&            | account is not the cheque's encashment (shared cheque link, design review).
+*& 2026-11-07 | Canonical outcome: the evidence-chain tests inject an evaluator without verdict;
+*&            | ltc_outcome traces the shared fixtures (ZCL_CD_OPS_PAY_FIXTURE) with the real
+*&            | evaluator - retrieval, bank line without clearing, two runs, FIN in two sources.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -57,6 +60,13 @@ CLASS ltd_dao IMPLEMENTATION.
         RETURN.
       ENDIF.
       INSERT ls_cfg-row INTO TABLE rt_rows.
+    ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_cd_ops_trace_dao~read_configured_set.
+    LOOP AT mt_cfg INTO DATA(ls_cfg) WHERE param = is_source-param.
+      IF line_exists( it_keys[ table_line = ls_cfg-row-key1 ] ).
+        INSERT ls_cfg-row INTO TABLE rt_rows.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_ops_trace_dao~get_partners.
@@ -173,6 +183,28 @@ CLASS ltd_auth IMPLEMENTATION.
     rv_allowed = xsdbool( NOT line_exists( mt_denied[ table_line = iv_bukrs ] ) ).
   ENDMETHOD.
 ENDCLASS.
+
+
+"! Evaluator double of the evidence-chain tests: no verdict (OUTCOME row NOT_APPLICABLE, verdict unchanged)
+CLASS ltd_no_outcome DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_pay_outcome PARTIALLY IMPLEMENTED.
+ENDCLASS.
+
+CLASS ltd_no_outcome IMPLEMENTATION.
+  METHOD zif_cd_ops_pay_outcome~load.
+    CLEAR rs_config.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome~evaluate_documents.
+    CLEAR rs_evaluation.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome~sources_of.
+    CLEAR rt_sources.
+  ENDMETHOD.
+ENDCLASS.
+
 
 
 CLASS ltc_trace DEFINITION FINAL FOR TESTING
@@ -332,6 +364,8 @@ CLASS ltc_trace IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_trace_dao( mo_dao ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_auth( mo_auth ).
+    " The canonical outcome is tested in ltc_outcome: no verdict here, the evidence chain unchanged
+    zcl_cd_ops_injector=>inject_pay_outcome( NEW ltd_no_outcome( ) ).
   ENDMETHOD.
 
 
@@ -1203,6 +1237,225 @@ CLASS ltc_trace IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
                                             msg = 'A NOC never changes the verdict' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-first_gap_stage msg = 'A NOC is never the first gap' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+"! Runtime DAO double of the outcome tests: configuration and DPAYH rows of the shared fixtures
+CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_hck_runtime_dao PARTIALLY IMPLEMENTED.
+    DATA mt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
+    DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
+    DATA mt_roles TYPE zif_cd_hck_runtime_types=>tt_btc_role.
+    DATA mt_outcomes TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
+ENDCLASS.
+
+CLASS ltd_runtime_dao IMPLEMENTATION.
+  METHOD zif_cd_hck_runtime_dao~get_issued_payments_by_doc.
+    LOOP AT mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      IF line_exists( it_docno[ table_line = <ls_payment>-doc1r ] ).
+        INSERT <ls_payment> INTO TABLE rt_payments.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_pm_classes.
+    rt_classes = mt_classes.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_pm_banks.
+    CLEAR rt_banks.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_clearing_rules.
+    rt_rules = mt_rules.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_btc_roles.
+    rt_roles = mt_roles.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_seq_outcomes.
+    rt_outcomes = mt_outcomes.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_evidence_settings.
+    CLEAR rt_settings.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_clock DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+    CONSTANTS gc_today TYPE d VALUE '20261111'.
+ENDCLASS.
+
+CLASS ltd_clock IMPLEMENTATION.
+  METHOD zif_cd_ops_clock~today.
+    rv_date = gc_today.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! The trace shows the canonical outcome of the shared fixtures (ZCL_CD_OPS_PAY_FIXTURE) - the same
+"! verdict as A_INFLIGHT and the transactions dashboard - with the real evaluator
+CLASS ltc_outcome DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_request_spec TYPE string VALUE `TABLE=ZCD_PAYM_REQ_LOG;KEY=ZZ_FIN_TRANS_NUM;KEY2=SOURCE;STATUS=ZZ_STATUS`.
+
+    DATA mo_fixture TYPE REF TO zcl_cd_ops_pay_fixture.
+    DATA mo_dao TYPE REF TO ltd_dao.
+    DATA mo_runtime TYPE REF TO ltd_runtime_dao.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
+
+    METHODS setup.
+    METHODS teardown.
+
+    METHODS retrieval_shown_not_returned FOR TESTING.
+    METHODS line_without_clearing_failed FOR TESTING.
+    METHODS latest_run_shown             FOR TESTING.
+    METHODS two_sources_ambiguous        FOR TESTING.
+    METHODS outcome_never_changes_verdict FOR TESTING.
+
+    METHODS trace
+      IMPORTING
+        iv_id            TYPE zcl_cd_ops_pay_fixture=>ty_scenario_id
+      RETURNING
+        VALUE(rs_result) TYPE zif_cd_ops_trace_types=>ty_trace_result.
+
+    METHODS outcome_row
+      IMPORTING
+        is_result     TYPE zif_cd_ops_trace_types=>ty_trace_result
+      RETURNING
+        VALUE(rs_row) TYPE zif_cd_ops_trace_types=>ty_trace_row.
+ENDCLASS.
+
+
+CLASS ltc_outcome IMPLEMENTATION.
+
+  METHOD setup.
+    mo_fixture = NEW #( ltd_clock=>gc_today ).
+    mo_dao = NEW #( ).
+    zcl_cd_ops_injector=>inject_trace_dao( mo_dao ).
+    mo_runtime = NEW #( ).
+    mo_runtime->mt_classes  = mo_fixture->classes( ).
+    mo_runtime->mt_rules    = mo_fixture->rules( ).
+    mo_runtime->mt_roles    = mo_fixture->roles( ).
+    mo_runtime->mt_outcomes = mo_fixture->outcomes( ).
+    zcl_cd_hck_injector=>inject_runtime_dao( mo_runtime ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+    mo_params = NEW #( ).
+    mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_request iv_value = gc_request_spec ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
+    CLEAR: mo_fixture, mo_dao, mo_runtime, mo_params.
+  ENDMETHOD.
+
+
+  METHOD trace.
+    DATA ls_cfg TYPE ltd_dao=>ty_cfg.
+    DATA(ls_scenario) = mo_fixture->scenario( iv_id ).
+    INSERT mo_fixture->item( ls_scenario ) INTO TABLE mo_dao->mt_items.
+    INSERT LINES OF mo_fixture->payment_runs( ls_scenario ) INTO TABLE mo_dao->mt_runs.
+    INSERT LINES OF ls_scenario-lines INTO TABLE mo_dao->mt_bank.
+    INSERT LINES OF ls_scenario-returns INTO TABLE mo_dao->mt_returns.
+    INSERT LINES OF mo_fixture->issued_payments( ls_scenario ) INTO TABLE mo_runtime->mt_payments.
+    LOOP AT ls_scenario-requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+      ls_cfg-param       = zif_cd_ops_trace_types=>gc_param-src_request.
+      ls_cfg-row-key1    = <ls_request>-fin.
+      ls_cfg-row-key2    = <ls_request>-source.
+      ls_cfg-row-ref     = <ls_request>-counter.
+      ls_cfg-row-status  = <ls_request>-status.
+      INSERT ls_cfg INTO TABLE mo_dao->mt_cfg.
+    ENDLOOP.
+    rs_result = NEW zcl_cd_ops_trace_engine( )->trace( VALUE #( fin    = ls_scenario-fin
+                                                                source = zcl_cd_ops_pay_fixture=>gc_source-pclm ) ).
+  ENDMETHOD.
+
+
+  METHOD outcome_row.
+    rs_row = VALUE #( is_result-rows[ stage = zif_cd_ops_trace_types=>gc_stage-outcome ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  " Same fixture as A_INFLIGHT and the dashboard: a retrieval is RETRIEVED, never RETURNED
+  METHOD retrieval_shown_not_returned.
+    TRY.
+        DATA(ls_result) = trace( zcl_cd_ops_pay_fixture=>gc_scenario-retrieval ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-outcome exp = zif_cd_ops_payout_types=>gc_outcome-retrieved
+                                            msg = 'Trace outcome RETRIEVED' ).
+        cl_abap_unit_assert=>assert_equals( act = outcome_row( ls_result )-status exp = zif_cd_ops_trace_types=>gc_status-verified
+                                            msg = 'Outcome row verified' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A bank line without clearing is INCONSISTENT (row FAILED), never settled
+  METHOD line_without_clearing_failed.
+    TRY.
+        DATA(ls_result) = trace( zcl_cd_ops_pay_fixture=>gc_scenario-bank_line ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-outcome exp = zif_cd_ops_payout_types=>gc_outcome-inconsistent
+                                            msg = 'Trace outcome INCONSISTENT' ).
+        cl_abap_unit_assert=>assert_equals( act = outcome_row( ls_result )-status exp = zif_cd_ops_trace_types=>gc_status-failed
+                                            msg = 'Outcome row FAILED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Two DPAYH runs: the row names the latest run
+  METHOD latest_run_shown.
+    TRY.
+        DATA(ls_scenario) = mo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-two_runs ).
+        DATA(ls_result) = trace( ls_scenario-id ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-outcome exp = ls_scenario-expected msg = 'CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = outcome_row( ls_result )-evidence_date exp = ls_scenario-expected_laufd
+                                            msg = 'Run date of the latest run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A FIN in two sources is AMBIGUOUS in the trace too (the input source does not pick one)
+  METHOD two_sources_ambiguous.
+    TRY.
+        DATA(ls_result) = trace( zcl_cd_ops_pay_fixture=>gc_scenario-two_sources ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-outcome exp = zif_cd_ops_payout_types=>gc_outcome-ambiguous
+                                            msg = 'Trace outcome AMBIGUOUS' ).
+        cl_abap_unit_assert=>assert_equals( act = outcome_row( ls_result )-status exp = zif_cd_ops_trace_types=>gc_status-ambiguous
+                                            msg = 'Outcome row AMBIGUOUS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The outcome is shown, the evidence verdict is judged without it (an INCONSISTENT outcome is
+  " not a FAILED trace by itself)
+  METHOD outcome_never_changes_verdict.
+    TRY.
+        DATA(ls_result) = trace( zcl_cd_ops_pay_fixture=>gc_scenario-bank_line ).
+        cl_abap_unit_assert=>assert_differs( act = ls_result-first_gap_stage exp = zif_cd_ops_trace_types=>gc_stage-outcome
+                                             msg = 'OUTCOME is never the first gap' ).
+        cl_abap_unit_assert=>assert_false( act = outcome_row( ls_result )-first_gap msg = 'No gap flag on the outcome row' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

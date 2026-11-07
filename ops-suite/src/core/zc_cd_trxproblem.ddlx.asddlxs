@@ -1,4 +1,5 @@
 // UI annotations: Transactions dashboard - errored / stuck transactions
+// 2026-11-07: problem types from the canonical payment outcome (outcome finding shown).
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Errored / stuck transactions',
                   title: { type: #STANDARD, value: 'FinId' },
@@ -53,8 +54,11 @@ annotate entity ZC_CD_TrxProblem with
   @EndUserText.label: 'Return reason (DFKKRP-RLGRD)'
   @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
   ReturnReason;
-  @EndUserText.label: 'Flow bucket'
+  @EndUserText.label: 'Flow bucket (canonical outcome)'
   FlowBucket;
+  @EndUserText.label: 'Outcome finding'
+  @UI.lineItem: [ { position: 95, importance: #MEDIUM } ]
+  OutcomeFinding;
   @EndUserText.label: 'Problem'
   @UI.lineItem: [ { position: 5, importance: #HIGH, criticality: 'ProblemCriticality' } ]
   @UI.selectionField: [ { position: 50 } ]

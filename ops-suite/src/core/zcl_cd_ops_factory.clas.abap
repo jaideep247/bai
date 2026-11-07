@@ -17,6 +17,7 @@
 *& 2026-11-07 | get_params: runtime parameters (ZIF_CD_OPS_PARAMS), default the store.
 *& 2026-11-07 | Exception and pattern DAO without test-double slot (injector seams removed, unused).
 *& 2026-11-07 | get_params: the session adapter ZCL_CD_OPS_PARAMS_CA over ZCA_PARAM (store serves no parameters).
+*& 2026-11-07 | get_pay_outcome (canonical payment outcome evaluator), get_pay_outcome_dao (snapshot SQL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -75,6 +76,16 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ops_trace_dao.
 
+    "! Canonical payment outcome evaluator (a new instance per call: one per run)
+    CLASS-METHODS get_pay_outcome
+      RETURNING
+        VALUE(ro_outcome) TYPE REF TO zif_cd_ops_pay_outcome.
+
+    "! Repository of the payment outcome snapshot (versions, watermarks, changed documents)
+    CLASS-METHODS get_pay_outcome_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_cd_ops_pay_outcome_dao.
+
     "! Repository of the pattern check and the pattern migration
     CLASS-METHODS get_pattern_dao
       RETURNING
@@ -114,6 +125,8 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_lock_double TYPE REF TO zif_cd_ops_lock.
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_cd_ops_purge_dao.
     CLASS-DATA go_trace_dao_double TYPE REF TO zif_cd_ops_trace_dao.
+    CLASS-DATA go_pay_outcome_double TYPE REF TO zif_cd_ops_pay_outcome.
+    CLASS-DATA go_pay_outcome_dao_double TYPE REF TO zif_cd_ops_pay_outcome_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
     CLASS-METHODS describe_interface
@@ -203,6 +216,18 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
   METHOD get_trace_dao.
     ro_dao = COND #( WHEN go_trace_dao_double IS BOUND THEN go_trace_dao_double
                      ELSE NEW zcl_cd_ops_trace_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_pay_outcome.
+    ro_outcome = COND #( WHEN go_pay_outcome_double IS BOUND THEN go_pay_outcome_double
+                         ELSE NEW zcl_cd_ops_pay_outcome( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_pay_outcome_dao.
+    ro_dao = COND #( WHEN go_pay_outcome_dao_double IS BOUND THEN go_pay_outcome_dao_double
+                     ELSE NEW zcl_cd_ops_pay_outcome_dao( ) ).
   ENDMETHOD.
 
 

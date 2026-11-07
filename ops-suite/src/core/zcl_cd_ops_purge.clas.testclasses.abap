@@ -13,6 +13,7 @@
 *&            | serves no parameters.
 *& 2026-11-07 | Comment: RETENTION_DAYS_RUN in ZCA_PARAM.
 *& 2026-11-07 | Six purge targets (HCK_RESULT added): one more empty-target commit.
+*& 2026-11-07 | Seven purge targets (PAY_OUTCOME added): one more empty-target commit.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -166,8 +167,8 @@ CLASS ltc_purge IMPLEMENTATION.
         DATA(ls_run) = run_result( NEW zcl_cd_ops_purge( )->run( abap_false ) ).
         cl_abap_unit_assert=>assert_equals( act = ls_run-rows exp = 5 msg = 'All packages must be counted' ).
         cl_abap_unit_assert=>assert_equals( act = ls_run-findings exp = 10 msg = 'Deleted findings must be counted' ).
-        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 8
-                                            msg = 'One commit per package of every target (3 + 5 empty targets)' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 9
+                                            msg = 'One commit per package of every target (3 + 6 empty targets)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

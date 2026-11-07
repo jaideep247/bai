@@ -2,8 +2,10 @@
 // Charts: transactions by flow bucket and payment method (default), funnel per posting
 // date, by direction and company code. Navigation: payment trace (proposed intent
 // ZCDPaymentTrace-display, Dashboard_Transactions.md section 6). VERIFY-ADT: rendering.
+// 2026-11-07: flow bucket = canonical payment outcome as of the chosen instant (history from
+// go-live only - the header text says so); funnel measures from the outcome, never from bank lines.
 @Metadata.layer: #CORE
-@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Transactions',
+@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Transactions (outcome history from go-live)',
                   title: { type: #STANDARD, value: 'FinId' },
                   description: { type: #STANDARD, value: 'DocumentNo' } }
 @UI.chart: [ { qualifier: 'ByBucket',
@@ -15,14 +17,14 @@
                                       { dimension: 'PaymentMethod', role: #SERIES } ],
                measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 } ] },
              { qualifier: 'Funnel',
-               title: 'Posted, paid, settled, returned per posting date',
+               title: 'Posted, paid, cleared, returned per posting date (canonical outcome)',
                chartType: #LINE,
                dimensions: [ 'PostingDate' ],
-               measures: [ 'ItemCount', 'PaidReachedCount', 'SettledReachedCount', 'ReturnedCount' ],
+               measures: [ 'ItemCount', 'PaidReachedCount', 'ClearedCount', 'ReturnedCount' ],
                dimensionAttributes: [ { dimension: 'PostingDate', role: #CATEGORY } ],
                measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 },
                                     { measure: 'PaidReachedCount', role: #AXIS_1 },
-                                    { measure: 'SettledReachedCount', role: #AXIS_1 },
+                                    { measure: 'ClearedCount', role: #AXIS_1 },
                                     { measure: 'ReturnedCount', role: #AXIS_1 } ] },
              { qualifier: 'ByCompany',
                title: 'Transactions by company code and direction',
@@ -136,6 +138,9 @@ annotate entity ZC_CD_TrxFlow with
   @EndUserText.label: 'Last payment run ID'
   @UI.fieldGroup: [ { qualifier: 'Evidence', position: 20 } ]
   LastRunId;
+  @EndUserText.label: 'Value date (latest run)'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 25 } ]
+  ValueDate;
   @EndUserText.label: 'Payment status (DPAYH)'
   @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
   @UI.fieldGroup: [ { qualifier: 'Evidence', position: 30 } ]
@@ -161,7 +166,26 @@ annotate entity ZC_CD_TrxFlow with
   @EndUserText.label: 'NOC reason (DFKKNRP-FLGRD)'
   @UI.fieldGroup: [ { qualifier: 'Evidence', position: 90 } ]
   NocReason;
-  @EndUserText.label: 'Flow bucket'
+  @EndUserText.label: 'Canonical outcome (ZCD_PAY_OUTCOME)'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 100 } ]
+  Outcome;
+  @EndUserText.label: 'Outcome finding'
+  @UI.lineItem: [ { position: 125, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 110 } ]
+  OutcomeFinding;
+  @EndUserText.label: 'Deciding evidence kind'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 120 } ]
+  OutcomeEvidenceKind;
+  @EndUserText.label: 'Deciding evidence'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 130 } ]
+  OutcomeEvidenceRef;
+  @EndUserText.label: 'Outcome valid from (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 140 } ]
+  OutcomeValidFrom;
+  @EndUserText.label: 'Sources of the FIN'
+  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 150 } ]
+  OutcomeSourceCount;
+  @EndUserText.label: 'Flow bucket (canonical outcome)'
   @UI.lineItem: [ { position: 120, importance: #HIGH, criticality: 'FlowCriticality' } ]
   @UI.identification: [ { position: 190, criticality: 'FlowCriticality' } ]
   @UI.selectionField: [ { position: 90 } ]
@@ -171,20 +195,34 @@ annotate entity ZC_CD_TrxFlow with
   FlowCriticality;
   @EndUserText.label: 'Transactions'
   ItemCount;
-  @EndUserText.label: 'Paid (reached)'
+  @EndUserText.label: 'Paid (payment run or cheque)'
   PaidReachedCount;
-  @EndUserText.label: 'Settled / encashed (reached)'
-  SettledReachedCount;
+  @EndUserText.label: 'Cleared'
+  ClearedCount;
   @EndUserText.label: 'Returned'
   ReturnedCount;
+  @EndUserText.label: 'Retrieved (not a return)'
+  RetrievedCount;
+  @EndUserText.label: 'Voided'
+  VoidedCount;
+  @EndUserText.label: 'Pending outcome'
+  PendingCount;
+  @EndUserText.label: 'In flight'
+  InFlightCount;
+  @EndUserText.label: 'Undetermined'
+  UndeterminedCount;
+  @EndUserText.label: 'Inconsistent'
+  InconsistentCount;
+  @EndUserText.label: 'Ambiguous source'
+  AmbiguousCount;
   @EndUserText.label: 'Reversed'
   ReversedCount;
+  @EndUserText.label: 'Paid, not evaluated'
+  NotEvaluatedCount;
   @EndUserText.label: 'Open (not cleared)'
   OpenCount;
   @EndUserText.label: 'With NOC'
   NocItemCount;
   @EndUserText.label: 'Paid by cheque'
   ChequeItemCount;
-  @EndUserText.label: 'Payment run rows'
-  PaymentRunCount;
 }

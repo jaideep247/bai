@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZI_CD_TRXITEMPAY</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Transactions - payment run per item</DDTEXT>
+    <DDTEXT>Transactions - latest payment run per item</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

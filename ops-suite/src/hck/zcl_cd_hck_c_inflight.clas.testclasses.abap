@@ -21,6 +21,9 @@
 *&            | informational rows skipped; Stripe rows as seeded (C) and the explicit switch (blank);
 *&            | test cheques and statement lines carry the house bank account (cheque link).
 *& 2026-11-07 | Code review: every anomaly of an evidence is listed (every_anomaly_listed).
+*& 2026-11-07 | Canonical payment outcome: the shared fixtures (ZCL_CD_OPS_PAY_FIXTURE) through the
+*&            | check - retrieval excluded as RETRIEVED (not RETURNED), bank line without clearing
+*&            | CLEARING_INCONSISTENT, two DPAYH runs cleared, every fixture as the evaluator says.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -39,6 +42,14 @@ CLASS ltd_runtime_dao IMPLEMENTATION.
     LOOP AT mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>)
          WHERE laufd BETWEEN iv_from AND iv_to.
       IF line_exists( it_methods[ table_line = <ls_payment>-pymet ] ).
+        INSERT <ls_payment> INTO TABLE rt_payments.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_issued_payments_by_doc.
+    LOOP AT mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      IF line_exists( it_docno[ table_line = <ls_payment>-doc1r ] ).
         INSERT <ls_payment> INTO TABLE rt_payments.
       ENDIF.
     ENDLOOP.
@@ -306,6 +317,16 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS rule4_ach_return_lot_missing FOR TESTING.
     METHODS stripe_unconfigured_no_clear FOR TESTING.
     METHODS stripe_info_switch_bseg_decide FOR TESTING.
+    " shared fixtures of the canonical payment outcome (same data as trace and dashboard tests)
+    METHODS fixture_retrieval_not_return FOR TESTING.
+    METHODS fixture_line_not_cleared     FOR TESTING.
+    METHODS fixture_two_runs_cleared     FOR TESTING.
+    METHODS fixture_agrees_with_outcome  FOR TESTING.
+
+    "! Configuration and data of the shared fixtures (all scenarios, delivered rules)
+    METHODS load_fixtures
+      RETURNING
+        VALUE(ro_fixture) TYPE REF TO zcl_cd_ops_pay_fixture.
 
     METHODS add_class
       IMPORTING
@@ -1457,6 +1478,120 @@ CLASS ltc_inflight IMPLEMENTATION.
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                                                           severity   = zif_cd_ops_types=>gc_severity-info ] ) )
           msg = 'Stripe evidence not configured: information' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD load_fixtures.
+    ro_fixture = NEW #( gc_today ).
+    mo_dao->mt_classes  = ro_fixture->classes( ).
+    mo_dao->mt_rules    = ro_fixture->rules( ).
+    mo_dao->mt_roles    = ro_fixture->roles( ).
+    mo_dao->mt_outcomes = ro_fixture->outcomes( ).
+    CLEAR: mo_dao->mt_payments, mo_trace->mt_lines, mo_trace->mt_runs, mo_trace->mt_returns.
+    LOOP AT ro_fixture->scenarios( ) ASSIGNING FIELD-SYMBOL(<ls_scenario>).
+      INSERT LINES OF ro_fixture->issued_payments( <ls_scenario> ) INTO TABLE mo_dao->mt_payments.
+      INSERT LINES OF ro_fixture->payment_runs( <ls_scenario> ) INTO TABLE mo_trace->mt_runs.
+      INSERT LINES OF <ls_scenario>-lines INTO TABLE mo_trace->mt_lines.
+      INSERT LINES OF <ls_scenario>-returns INTO TABLE mo_trace->mt_returns.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " Shared fixture: 466 -> 166 without returns lot is excluded as RETRIEVED, never as RETURNED
+  METHOD fixture_retrieval_not_return.
+    TRY.
+        load_fixtures( ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-d_ach
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-retrieved )
+                                            exp = 1 msg = 'Retrieval excluded as RETRIEVED' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-d_ach
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+                                            exp = 0 msg = 'Not counted as a return' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Shared fixture: the wire's statement line without DPAYH status CLEARED is CLEARING_INCONSISTENT
+  METHOD fixture_line_not_cleared.
+    TRY.
+        DATA(lo_fixture) = load_fixtures( ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result
+                                             iv_code   = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                             iv_key    = gc_key-d_wire )
+                       iv_doc     = lo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-bank_line )-augbl )
+          msg = 'Line without clearing listed as inconsistent' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Shared fixture: a wire paid in two DPAYH runs is cleared (both run rows of the window excluded)
+  METHOD fixture_two_runs_cleared.
+    TRY.
+        DATA(lo_fixture) = load_fixtures( ).
+        DATA(ls_result) = act( ).
+        DATA(lv_cleared) = 0.
+        LOOP AT lo_fixture->scenarios( ) ASSIGNING FIELD-SYMBOL(<ls_scenario>)
+             WHERE pymet = zcl_cd_ops_pay_fixture=>gc_wire AND evaluated = zif_cd_ops_payout_types=>gc_outcome-cleared.
+          lv_cleared = lv_cleared + lines( <ls_scenario>-runs ).
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = lv_cleared msg = 'Every cleared wire run row excluded' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'No wire in flight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Agreement: what the check excludes / lists per fixture is the evaluator's canonical outcome
+  METHOD fixture_agrees_with_outcome.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    TRY.
+        DATA(lo_fixture) = load_fixtures( ).
+        DATA(ls_result) = act( ).
+        LOOP AT lo_fixture->scenarios( ) ASSIGNING FIELD-SYMBOL(<ls_scenario>).
+          INSERT <ls_scenario>-augbl INTO TABLE lt_docno.
+        ENDLOOP.
+        DATA(lo_outcome) = zcl_cd_ops_factory=>get_pay_outcome( ).
+        lo_outcome->load( iv_context = gc_check iv_max_rows = 1000 ).
+        DATA(ls_evaluation) = lo_outcome->evaluate_documents( lt_docno ).
+        LOOP AT lo_fixture->scenarios( ) ASSIGNING <ls_scenario>.
+          DATA(ls_verdict) = ls_evaluation-verdicts[ KEY by_doc doc1r = <ls_scenario>-augbl ].
+          cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = <ls_scenario>-evaluated
+                                              msg = |{ <ls_scenario>-id }: evaluator outcome| ).
+          IF ls_verdict-status = zif_cd_ops_payout_types=>gc_status-inconsistent.
+            cl_abap_unit_assert=>assert_true(
+              act = lists( is_finding = finding( is_result = ls_result
+                                                 iv_code   = ls_verdict-finding
+                                                 iv_key    = |{ ls_verdict-flow }{ ls_verdict-class }| )
+                           iv_doc     = <ls_scenario>-augbl )
+              msg = |{ <ls_scenario>-id }: listed by the check| ).
+          ELSE.
+            cl_abap_unit_assert=>assert_true(
+              act = xsdbool( metric( is_result = ls_result
+                                     iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                     iv_key    = |{ ls_verdict-flow }{ ls_verdict-class }|
+                                     iv_dim2   = ls_verdict-purpose ) > 0 )
+              msg = |{ <ls_scenario>-id }: excluded by the check as { ls_verdict-purpose }| ).
+          ENDIF.
+        ENDLOOP.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

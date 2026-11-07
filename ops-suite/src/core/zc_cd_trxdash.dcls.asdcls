@@ -6,7 +6,14 @@
 //          trace checks each item per company code. Payment run rows (DPAYH) carry no company code
 //          here and are granted by area only (run date, run ID, payment document, status - no amount,
 //          no partner).
+//          Order of authorisation and aggregation (review 2026-11-07): the condition is on the
+//          company code of the base row - on ZC_CD_TrxFlow the open item itself, and HANA's $apply
+//          GROUP BY runs after this WHERE; on ZC_CD_TrxKpi the company code is a GROUP BY key passed
+//          through from the base rows (never an aggregated value), so filtering the KPI rows equals
+//          filtering the base rows before the SUM / COUNT DISTINCT: no amount or count of a company
+//          code the user may not see reaches a visible row.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
+//                   2026-11-07 | Canonical payment outcome; order of authorisation and aggregation checked.
 // VERIFY-ADT: aspect pfcg_auth with two mapped fields (ZCD_PE_AREA, BUKRS) on a projection (7.58).
 @EndUserText.label: 'Transactions dashboard - read access'
 @MappingRole: true

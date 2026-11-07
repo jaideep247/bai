@@ -10,6 +10,7 @@
 *& 2026-11-06 | Configured and EBS reads reuse the existing validated readers; files by date.
 *& 2026-11-06 | Return / NOC reasons: get_returns carries DFKKRP-RLGRD; get_noc_items (DFKKNRP by INFOF, capped).
 *& 2026-11-07 | Comment: source specifications from ZCA_PARAM (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | read_configured_set: one read for many keys (source attribution of the payment outcome).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -26,6 +27,19 @@ INTERFACE zif_cd_ops_trace_dao
       is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
       is_key         TYPE zif_cd_ops_trace_types=>ty_cfg_key
       iv_match_key2  TYPE abap_bool DEFAULT abap_true
+      iv_max_rows    TYPE i
+    RETURNING
+      VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row
+    RAISING
+      zcx_cd_ops_error.
+
+  "! Rows of a configured source for many keys in one read (KEY1 IN the values; KEY2 read,
+  "! not compared) - the source attribution of FIN numbers by the payment outcome evaluator
+  "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
+  METHODS read_configured_set
+    IMPORTING
+      is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
+      it_keys        TYPE zif_cd_ops_trace_types=>tt_key_value
       iv_max_rows    TYPE i
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row

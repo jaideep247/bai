@@ -14,6 +14,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
 *& 2026-11-07 | BSAS assignment test replaced; ltc_inflight_reads (user rules 1-5).
+*& 2026-11-07 | payments_by_document_all_runs: payment runs by payment document (canonical outcome).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -85,6 +86,7 @@ CLASS ltc_runtime_dao DEFINITION FINAL FOR TESTING
     METHODS intervals_internal_this_year FOR TESTING.
     METHODS no_objects_read_nothing      FOR TESTING.
     METHODS payments_window_and_flow     FOR TESTING.
+    METHODS payments_by_document_all_runs FOR TESTING.
     METHODS queue_grouped_per_day        FOR TESTING.
     METHODS unknown_field_raises         FOR TESTING.
     METHODS configured_needs_whitelist   FOR TESTING.
@@ -329,6 +331,24 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-currency exp = 'USD' msg = 'Currency read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-hbkid exp = 'JPMC1' msg = 'House bank read' ).
         cl_abap_unit_assert=>assert_true( act = lt_payments[ 2 ]-xeinz msg = 'Direct debit: collection' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the payment runs of payment documents (same join), every run of the document, latest
+  " first, proposal runs left out; no document = nothing read
+  METHOD payments_by_document_all_runs.
+    TRY.
+        DATA(lt_payments) = mo_cut->get_issued_payments_by_doc( it_docno    = VALUE #( ( gc_test-doc1 ) ( '000000300003' ) )
+                                                                iv_max_rows = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_payments ) exp = 1 msg = 'Proposal run left out' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-doc1r exp = gc_test-doc1 msg = 'The document' ).
+        cl_abap_unit_assert=>assert_false( act = lt_payments[ 1 ]-xeinz msg = 'Flow from TFK042Z' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = mo_cut->get_issued_payments_by_doc( it_docno = VALUE #( ) iv_max_rows = 100 )
+          msg = 'No document: nothing read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
