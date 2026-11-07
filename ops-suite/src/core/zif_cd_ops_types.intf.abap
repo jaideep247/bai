@@ -24,6 +24,7 @@
 *& 2026-11-07 | Alert message without INTENT_KEY / OCCURRED_AT (only the removed webhook read them; the claim keeps both).
 *& 2026-11-07 | Parameters in the framework ZCA_PARAM: areas GC_PARAM_AREA, name prefix -> area
 *&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CD_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
+*& 2026-11-07 | Transactions dashboard retention (400 days) and date kinds (canonical payment outcome).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -60,8 +61,8 @@ INTERFACE zif_cd_ops_types
     END OF gc_time.
   CONSTANTS gc_time_zone_utc TYPE tznzone VALUE 'UTC'.
 
-  "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): open items posted in the last
-  "! ITEM_WINDOW_DAYS days (ZI_CD_TrxItem; cds/ZI_CD_TrxReqLog) and the evidence of later steps
+  "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): KPI / problem cards of the last
+  "! ITEM_WINDOW_DAYS days (ZR_CD_TrxKpi / ZR_CD_TrxProblem) and the evidence of later steps
   "! (payment runs, bank lines, cheque encashment, ACK) of the last EVIDENCE_WINDOW_DAYS days.
   "! CDS cannot read constants: the literals there are compared by the portable check
   "! cds_abap_parity (tools/cds_abap_parity.py)
@@ -69,7 +70,19 @@ INTERFACE zif_cd_ops_types
     BEGIN OF gc_trx_dashboard,
       item_window_days     TYPE i VALUE 30,
       evidence_window_days TYPE i VALUE 45,
+      "! Any day of the payment outcome retention can be chosen (ZI_CD_TrxItem, cds/ZI_CD_TrxReqWin;
+      "! the default of RETENTION_DAYS_PAY_OUTCOME)
+      retention_days       TYPE i VALUE 400,
     END OF gc_trx_dashboard.
+
+  "! Date kinds of the transactions dashboard filter (ZR_CD_TrxFlow parameter P_DateKind): posting
+  "! date (DFKKOP-BUDAT), payment run date (latest DPAYH-LAUFD), value date (its DPAYH-VALUT)
+  CONSTANTS:
+    BEGIN OF gc_trx_date_kind,
+      posting TYPE c LENGTH 10 VALUE 'POSTING',
+      run     TYPE c LENGTH 10 VALUE 'RUN',
+      value   TYPE c LENGTH 10 VALUE 'VALUE',
+    END OF gc_trx_date_kind.
 
   "! Core parameters (area CD_OPS of ZCA_PARAM): alerting, purge, exception SLA
   CONSTANTS:
@@ -111,7 +124,7 @@ INTERFACE zif_cd_ops_types
     END OF gc_param_area.
 
   "! Name prefixes that decide the area of a parameter (ZCL_CD_OPS_PARAMS_CA=>AREA_OF):
-  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK
+  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ PAYOUT_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK
   CONSTANTS:
     BEGIN OF gc_param_area_prefix,
       alert     TYPE ty_param_name VALUE 'ALERT_',
@@ -119,6 +132,8 @@ INTERFACE zif_cd_ops_types
       retention TYPE ty_param_name VALUE 'RETENTION_',
       purge     TYPE ty_param_name VALUE 'PURGE_',
       trace     TYPE ty_param_name VALUE 'TRACE_',
+      "! Payment outcome snapshot (canonical payment outcome, 2026-11-07)
+      payout    TYPE ty_param_name VALUE 'PAYOUT_',
       ebs       TYPE ty_param_name VALUE 'EBS_',
       fmon      TYPE ty_param_name VALUE 'FMON_',
       hck       TYPE ty_param_name VALUE 'HCK_',

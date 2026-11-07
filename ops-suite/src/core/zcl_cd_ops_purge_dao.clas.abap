@@ -13,6 +13,8 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
 *& 2026-11-07 | Purge target HCK_RESULT: check verdicts by execution time (index TIM).
+*& 2026-11-07 | Purge target PAY_OUTCOME: versions closed before the cutoff (index OUT) and versions of
+*&            | payment runs before the cutoff date (index DAT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION
@@ -25,6 +27,13 @@ CLASS zcl_cd_ops_purge_dao DEFINITION
 
   PRIVATE SECTION.
     TYPES tt_run_range TYPE RANGE OF zcd_ops_run-run_id.
+
+    "! Date (UTC) of the cutoff time stamp
+    CLASS-METHODS cutoff_date
+      IMPORTING
+        iv_cutoff      TYPE timestampl
+      RETURNING
+        VALUE(rv_date) TYPE d.
 
     METHODS purgeable_runs
       IMPORTING
@@ -66,6 +75,12 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         SELECT COUNT(*) FROM zcd_fmon_prism WHERE received_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-hck_result.
         SELECT COUNT(*) FROM zcd_hck_result WHERE executed_at < @iv_cutoff INTO @rv_count.
+      WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
+        DATA(lv_cutoff_date) = cutoff_date( iv_cutoff ).
+        SELECT COUNT(*) FROM zcd_pay_outcome
+          WHERE valid_to < @iv_cutoff
+             OR laufd < @lv_cutoff_date
+          INTO @rv_count.
     ENDCASE.
   ENDMETHOD.
 
@@ -125,6 +140,21 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         DELETE zcd_hck_result FROM TABLE @lt_results.
         rv_count = sy-dbcnt.
 
+      WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
+        " Closed versions (VALID_TO before the cutoff) and every version of a payment run before the
+        " cutoff date: a payment older than the retention leaves no history behind
+        DATA(lv_run_cutoff) = cutoff_date( iv_cutoff ).
+        SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from
+          FROM zcd_pay_outcome
+          WHERE valid_to < @iv_cutoff
+             OR laufd < @lv_run_cutoff
+          ORDER BY fin_id, source, bukrs, augbl, laufd, laufi, valid_from
+          INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_versions)
+          UP TO @iv_max ROWS.
+        CHECK lt_versions IS NOT INITIAL.
+        DELETE zcd_pay_outcome FROM TABLE @lt_versions.
+        rv_count = sy-dbcnt.
+
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_prism.
         " By receipt time; FMON keeps its own events (ZCD_FMON_EVENT) for the file history
         SELECT event_id
@@ -137,6 +167,11 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         DELETE zcd_fmon_prism FROM TABLE @lt_prism.
         rv_count = sy-dbcnt.
     ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD cutoff_date.
+    CONVERT TIME STAMP iv_cutoff TIME ZONE zif_cd_ops_types=>gc_time_zone_utc INTO DATE rv_date.
   ENDMETHOD.
 
 

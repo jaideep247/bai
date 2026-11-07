@@ -14,6 +14,7 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved from ZCD_OPS_PARAM to ZCA_PARAM).
 *& 2026-11-07 | No SLG1 entry per run and parameter (SLG1 minimum); errors in get_errors( ) and PARAM_INVALID.
+*& 2026-11-07 | Prefix PAYOUT_ -> CD_OPS (payment outcome snapshot parameters).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CD_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -95,6 +96,7 @@ CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-retention area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-purge     area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-trace     area = zif_cd_ops_types=>gc_param_area-ops )
+                      ( prefix = zif_cd_ops_types=>gc_param_area_prefix-payout    area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-ebs       area = zif_cd_ops_types=>gc_param_area-ebs )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-fmon      area = zif_cd_ops_types=>gc_param_area-fmon )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-hck       area = zif_cd_ops_types=>gc_param_area-hck ) ).

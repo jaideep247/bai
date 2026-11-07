@@ -9,6 +9,8 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-07 | old_hck_result_is_deleted (purge target HCK_RESULT).
+*& 2026-11-07 | old_outcome_version_deleted (purge target PAY_OUTCOME: closed versions and runs before
+*&            | the cutoff; the current version of a recent payment stays).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -25,6 +27,8 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
         run_new   TYPE zif_cd_ops_types=>ty_run_id VALUE '000000000000000000000000000000A2',
         valid_end TYPE d VALUE '20261231',
         past_end  TYPE d VALUE '20260101',
+        old_run   TYPE d VALUE '20250101',
+        new_run   TYPE d VALUE '20261101',
       END OF gc.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -58,6 +62,7 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS old_fmon_event_is_deleted  FOR TESTING.
     METHODS old_prism_event_is_deleted FOR TESTING.
     METHODS old_hck_result_is_deleted  FOR TESTING.
+    METHODS old_outcome_version_deleted FOR TESTING.
 ENDCLASS.
 
 
@@ -67,7 +72,7 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' )
                                    ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ( 'ZCD_FMON_PRISM' )
-                                   ( 'ZCD_HCK_RESULT' ) ) ).
+                                   ( 'ZCD_HCK_RESULT' ) ( 'ZCD_PAY_OUTCOME' ) ) ).
   ENDMETHOD.
 
 
@@ -289,6 +294,57 @@ CLASS ltc_purge_dao IMPLEMENTATION.
           msg = 'Only the old PRISM event must be deleted' ).
         SELECT COUNT(*) FROM zcd_fmon_prism INTO @DATA(lv_left).
         cl_abap_unit_assert=>assert_equals( act = lv_left exp = 1 msg = 'The recent PRISM event stays' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: payment outcome versions closed before the cutoff and versions of payment runs before the
+  " cutoff date are purged; the current version of a recent payment and its recent history stay
+  METHOD old_outcome_version_deleted.
+    DATA lt_versions TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
+    DATA ls_version TYPE zcd_pay_outcome.
+    TRY.
+        ls_version-fin_id   = 'FIN0000009001'.
+        ls_version-source   = 'PCLM'.
+        ls_version-bukrs    = 'US01'.
+        ls_version-augbl    = '000000900001'.
+        " Old payment run: every version goes (also the current one)
+        ls_version-laufd      = gc-old_run.
+        ls_version-valid_from = '20250101070000'.
+        ls_version-valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open.
+        ls_version-outcome    = zif_cd_ops_payout_types=>gc_outcome-cleared.
+        INSERT ls_version INTO TABLE lt_versions.
+        " Recent payment run: a version closed before the cutoff goes, the current one stays
+        ls_version-augbl      = '000000900002'.
+        ls_version-laufd      = gc-new_run.
+        ls_version-valid_from = '20250101070000'.
+        ls_version-valid_to   = '20250201070000'.
+        ls_version-outcome    = zif_cd_ops_payout_types=>gc_outcome-in_flight.
+        INSERT ls_version INTO TABLE lt_versions.
+        ls_version-valid_from = '20250201070000'.
+        ls_version-valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open.
+        ls_version-outcome    = zif_cd_ops_payout_types=>gc_outcome-cleared.
+        INSERT ls_version INTO TABLE lt_versions.
+        go_env->insert_test_data( lt_versions ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->count_purgeable( iv_target = zif_cd_ops_purge_dao=>gc_target-pay_outcome
+                                         iv_cutoff = gc-cutoff
+                                         iv_today  = gc-today )
+          exp = 2
+          msg = 'Old run and closed old version are purgeable' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->delete_package( iv_target = zif_cd_ops_purge_dao=>gc_target-pay_outcome
+                                        iv_cutoff = gc-cutoff
+                                        iv_today  = gc-today
+                                        iv_max    = 100 )
+          exp = 2
+          msg = 'Two versions deleted' ).
+        SELECT outcome, valid_to FROM zcd_pay_outcome ORDER BY PRIMARY KEY INTO TABLE @DATA(lt_left).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'One version stays' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_left[ 1 ]-valid_to exp = zif_cd_ops_payout_types=>gc_valid_to_open
+                                            msg = 'The current version of the recent payment' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -14,6 +14,7 @@
 *& 2026-11-07 | get_cleared_assignments (BSAS) replaced by get_gl_lines_by_xref2 (BSEG); reads of
 *&            | ZCD_HCK_PMCLASS, _PMBANK, _EVSET, ZCD_HCK_CLRRULE, ZCD_HCK_BTCROLE, ZCD_HCK_SEQOUT (user rules
 *&            | 1-5); configured table by reference (Stripe payout log).
+*& 2026-11-07 | get_issued_payments_by_doc: payment runs of payment documents (canonical payment outcome).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -56,6 +57,16 @@ INTERFACE zif_cd_hck_runtime_dao
       it_methods         TYPE zif_cd_hck_runtime_types=>tt_pymet
       iv_from            TYPE d
       iv_to              TYPE d
+      iv_max_rows        TYPE i
+    RETURNING
+      VALUE(rt_payments) TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+
+  "! Payment runs (DPAYH: proposal runs excluded) of the payment documents with the collection
+  "! indicator of the method - the same join as GET_ISSUED_PAYMENTS, by DOC1R instead of the
+  "! run-date window (every run of a document; empty list = nothing read); at most iv_max_rows
+  METHODS get_issued_payments_by_doc
+    IMPORTING
+      it_docno           TYPE zif_cd_ops_trace_types=>tt_docno
       iv_max_rows        TYPE i
     RETURNING
       VALUE(rt_payments) TYPE zif_cd_hck_runtime_types=>tt_issued_payment.

@@ -1,115 +1,116 @@
 // Artifact: zr_cd_trxflow.ddls.asddls
 // Purpose: Root of the transactions dashboard (analytical list page, OData V4,
 //          docs/Dashboard_Transactions.md): one row per payment-engine open item with a payment
-//          request FIN number posted in the last 31 days (ZI_CD_TrxItem, live - no batch) with the
-//          evidence of each later step: payment run (DPAYH by DOC1R, live status), cheque (DFKKCR),
-//          bank settlement / cheque encashment (FEBEP-CHECT), return (DFKKRP-SELW1, reason RLGRD),
-//          NOC (DFKKNRP-INFOF, reason FLGRD). Flow bucket = where the item is now (terminal outcome
-//          first): RETURNED (returns lot item), REVERSED (clearing reason 05, the only reversal
-//          reason = ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD), SETTLED (bank line on the clearing document or the cheque), PAID (payment run
-//          or cheque, no bank line yet), CLEARED (clearing document without payment evidence in the
-//          window), POSTED (open). "Reached" measures count every step an item got to.
-//          Requested / errored requests, ACK and cheque status need unconfirmed fields of custom
-//          tables - they are in cds/ (ZR_CD_TrxReqFlow), never referenced from here.
-//          Drill-down: item -> payment runs, returns / NOC lot items; payment trace by FIN or
-//          clearing document. No member number, partner or bank account. Read-only.
+//          request FIN number and its canonical payment outcome (ZI_CD_TrxItemFlow: the verdict of
+//          the evaluator ZIF_CD_OPS_PAY_OUTCOME, the same as the morning report check A_INFLIGHT and
+//          the payment trace). Parameters:
+//            P_DateKind  POSTING (DFKKOP-BUDAT), RUN (latest DPAYH-LAUFD) or VALUE (DPAYH-VALUT)
+//            P_DateFrom / P_DateTo  the day (or days) chosen - any date within the 400-day
+//                        retention (ZI_CD_TrxItem); the outcome snapshot runs every 5 minutes, so a
+//                        day can be chosen at any time during the day
+//            P_AsOfDate / P_AsOfTime  the outcome version valid at that instant (system time zone;
+//                        default now). History exists from go-live only: before it every paid item
+//                        is NOT_EVALUATED.
+//          The request date is a filter of the request side (cds/ZR_CD_TrxReqFlow). Aggregation is
+//          done by HANA on the base rows ($apply on ZC_CD_TrxFlow, whose DCL restricts the base rows
+//          by company code before the GROUP BY). Drill-down: payment runs, returns / NOC lot items;
+//          payment trace by FIN or clearing document. No member number, partner or bank account.
+//          Read-only.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
+//                   2026-11-07 | Review defect: SETTLED from any bank / encashment line - the bucket is now
+//                   the canonical outcome (ZI_CD_TrxItemFlow); date kind and as-of parameters.
+// VERIFY-ADT: OR of parameter comparisons in WHERE is pruned by HANA per date kind (PlanViz, TXD-12).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Transactions dashboard - transaction'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #D, sizeCategory: #XL, dataClass: #MIXED }
 define root view entity ZR_CD_TrxFlow
-  as select from    ZI_CD_TrxItem     as Item
-    left outer join ZI_CD_TrxItemPay  as Pay  on  Pay.DocumentNo = Item.DocumentNo
-                                     and Pay.RepetitionItem = Item.RepetitionItem
-                                     and Pay.ItemNo = Item.ItemNo
-                                     and Pay.SubItem = Item.SubItem
-    left outer join ZI_CD_TrxItemChq  as Chq  on  Chq.DocumentNo = Item.DocumentNo
-                                     and Chq.RepetitionItem = Item.RepetitionItem
-                                     and Chq.ItemNo = Item.ItemNo
-                                     and Chq.SubItem = Item.SubItem
-    left outer join ZI_CD_TrxItemBank as Bank on  Bank.DocumentNo = Item.DocumentNo
-                                     and Bank.RepetitionItem = Item.RepetitionItem
-                                     and Bank.ItemNo = Item.ItemNo
-                                     and Bank.SubItem = Item.SubItem
-    left outer join ZI_CD_TrxItemEnc  as Enc  on  Enc.DocumentNo = Item.DocumentNo
-                                     and Enc.RepetitionItem = Item.RepetitionItem
-                                     and Enc.ItemNo = Item.ItemNo
-                                     and Enc.SubItem = Item.SubItem
-    left outer join ZI_CD_TrxItemRet  as Ret  on  Ret.DocumentNo = Item.DocumentNo
-                                     and Ret.RepetitionItem = Item.RepetitionItem
-                                     and Ret.ItemNo = Item.ItemNo
-                                     and Ret.SubItem = Item.SubItem
-    left outer join ZI_CD_TrxItemNoc  as Noc  on  Noc.DocumentNo = Item.DocumentNo
-                                     and Noc.RepetitionItem = Item.RepetitionItem
-                                     and Noc.ItemNo = Item.ItemNo
-                                     and Noc.SubItem = Item.SubItem
+  with parameters
+    @EndUserText.label: 'Date kind (POSTING, RUN, VALUE)'
+    P_DateKind : abap.char( 10 ),
+    @EndUserText.label: 'Date from'
+    @Environment.systemField: #SYSTEM_DATE
+    P_DateFrom : abap.dats,
+    @EndUserText.label: 'Date to'
+    @Environment.systemField: #SYSTEM_DATE
+    P_DateTo   : abap.dats,
+    @EndUserText.label: 'Outcome as of (date, from go-live)'
+    @Environment.systemField: #SYSTEM_DATE
+    P_AsOfDate : abap.dats,
+    @EndUserText.label: 'Outcome as of (time, system time zone)'
+    @Environment.systemField: #SYSTEM_TIME
+    P_AsOfTime : abap.tims
+  as select from ZI_CD_TrxItemFlow( P_AsOfDate : $parameters.P_AsOfDate,
+                                    P_AsOfTime : $parameters.P_AsOfTime ) as Flow
   association [0..*] to ZR_CD_TrxPayRun as _PaymentRuns on $projection.ClearingDoc = _PaymentRuns.PaymentDocument
   association [0..*] to ZR_CD_TrxRetNoc as _ReturnsNoc  on  $projection.DocumentNo     = _ReturnsNoc.DocumentNo
                                                         and $projection.RepetitionItem = _ReturnsNoc.RepetitionItem
                                                         and $projection.ItemNo         = _ReturnsNoc.ItemNo
                                                         and $projection.SubItem        = _ReturnsNoc.SubItem
 {
-  key Item.DocumentNo,
-  key Item.RepetitionItem,
-  key Item.ItemNo,
-  key Item.SubItem,
-      Item.PaymentEngineArea,
-      Item.FinId,
-      Item.BillPlanId,
-      Item.CompanyCode,
-      Item.PostingDate,
-      case when Item.PostingDate = $session.system_date
-           then cast( 'X' as abap_boolean )
-           else cast( ' ' as abap_boolean ) end             as IsToday,
-      Item.PaymentMethod,
-      Item.Direction,
-      Item.LocalCurrency,
+  key Flow.DocumentNo,
+  key Flow.RepetitionItem,
+  key Flow.ItemNo,
+  key Flow.SubItem,
+      Flow.PaymentEngineArea,
+      Flow.FinId,
+      Flow.BillPlanId,
+      Flow.CompanyCode,
+      Flow.PostingDate,
+      Flow.IsToday,
+      Flow.PaymentMethod,
+      Flow.Direction,
+      Flow.LocalCurrency,
       @Semantics.amount.currencyCode: 'LocalCurrency'
-      Item.AmountInLocalCurrency,
-      Item.Currency,
+      Flow.AmountInLocalCurrency,
+      Flow.Currency,
       @Semantics.amount.currencyCode: 'Currency'
-      Item.Amount,
-      Item.ClearingStatus,
-      Item.ClearingDoc,
-      Item.ClearingDate,
-      Item.ClearingReason,
-      Pay.LastRunDate,
-      Pay.LastRunId,
-      Pay.PaymentStatus,
-      Chq.ChequeNo,
-      Chq.ChequeHouseBank,
-      Bank.LastBookingDate                                  as SettlementDate,
-      Enc.EncashDate,
-      Ret.ReturnReason,
-      Noc.NocReason,
-      cast( case
-              when Ret.ReturnCount > 0                              then 'RETURNED'
-              when Item.ClearingReason = '05'                       then 'REVERSED'
-              when Bank.BankLineCount > 0 or Enc.EncashLineCount > 0 then 'SETTLED'
-              when Pay.PaymentRunCount > 0 or Chq.ChequeCount > 0   then 'PAID'
-              when Item.ClearingDoc <> ' '                          then 'CLEARED'
-              else 'POSTED' end as abap.char( 10 ) )        as FlowBucket,
-      // UI criticality: 1 red (returned, reversed), 3 green (settled), 0 in flight
-      cast( case
-              when Ret.ReturnCount > 0                              then 1
-              when Item.ClearingReason = '05'                       then 1
-              when Bank.BankLineCount > 0 or Enc.EncashLineCount > 0 then 3
-              else 0 end as abap.int1 )                     as FlowCriticality,
+      Flow.Amount,
+      Flow.ClearingStatus,
+      Flow.ClearingDoc,
+      Flow.ClearingDate,
+      Flow.ClearingReason,
+      Flow.LastRunDate,
+      Flow.LastRunId,
+      Flow.ValueDate,
+      Flow.PaymentStatus,
+      Flow.ChequeNo,
+      Flow.ChequeHouseBank,
+      Flow.SettlementDate,
+      Flow.EncashDate,
+      Flow.ReturnReason,
+      Flow.NocReason,
+      Flow.Outcome,
+      Flow.OutcomeFinding,
+      Flow.OutcomeEvidenceKind,
+      Flow.OutcomeEvidenceRef,
+      Flow.OutcomeValidFrom,
+      Flow.OutcomeSourceCount,
+      Flow.FlowBucket,
+      Flow.FlowCriticality,
       // ---------------------------------------------------------------- measures
-      cast( 1 as abap.int4 )                                as ItemCount,
-      cast( case when Ret.ReturnCount > 0 or Bank.BankLineCount > 0 or Enc.EncashLineCount > 0
-                   or Pay.PaymentRunCount > 0 or Chq.ChequeCount > 0
-                 then 1 else 0 end as abap.int4 )           as PaidReachedCount,
-      cast( case when Bank.BankLineCount > 0 or Enc.EncashLineCount > 0
-                 then 1 else 0 end as abap.int4 )           as SettledReachedCount,
-      cast( case when Ret.ReturnCount > 0 then 1 else 0 end as abap.int4 )          as ReturnedCount,
-      cast( case when Ret.ReturnCount > 0 then 0
-                 when Item.ClearingReason = '05' then 1 else 0 end as abap.int4 )   as ReversedCount,
-      cast( case when Item.ClearingDoc = ' ' then 1 else 0 end as abap.int4 )       as OpenCount,
-      cast( case when Noc.NocCount > 0 then 1 else 0 end as abap.int4 )             as NocItemCount,
-      cast( case when Chq.ChequeCount > 0 then 1 else 0 end as abap.int4 )          as ChequeItemCount,
-      cast( coalesce( Pay.PaymentRunCount, 0 ) as abap.int4 )                       as PaymentRunCount,
+      Flow.ItemCount,
+      Flow.PaidReachedCount,
+      Flow.ClearedCount,
+      Flow.ReturnedCount,
+      Flow.RetrievedCount,
+      Flow.VoidedCount,
+      Flow.PendingCount,
+      Flow.InFlightCount,
+      Flow.UndeterminedCount,
+      Flow.InconsistentCount,
+      Flow.AmbiguousCount,
+      Flow.ReversedCount,
+      Flow.NotEvaluatedCount,
+      Flow.OpenCount,
+      Flow.NocItemCount,
+      Flow.ChequeItemCount,
       _PaymentRuns,
       _ReturnsNoc
 }
+where ( $parameters.P_DateKind = 'POSTING'
+        and Flow.PostingDate between $parameters.P_DateFrom and $parameters.P_DateTo )
+   or ( $parameters.P_DateKind = 'RUN'
+        and Flow.LastRunDate between $parameters.P_DateFrom and $parameters.P_DateTo )
+   or ( $parameters.P_DateKind = 'VALUE'
+        and Flow.ValueDate between $parameters.P_DateFrom and $parameters.P_DateTo )

@@ -97,7 +97,7 @@ INTERFACE lif_c.
       hckcheckdef_category           TYPE string VALUE `A,B,C,D,E`,
       hckcheckdef_priority           TYPE string VALUE `H,M,L`,
       hckclrrule_flow                TYPE string VALUE `D,C`,
-      hckclrrule_purpose             TYPE string VALUE `CLEARED,RETURNED,VOIDED,PENDING,IN_FLIGHT`,
+      hckclrrule_purpose             TYPE string VALUE `CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT`,
       hckclrrule_required            TYPE string VALUE `,X,C,N`,
       hckpmbank_flow                 TYPE string VALUE `D,C`,
       hckpmclass_agebasis            TYPE string VALUE `VALUE_DATE,ISSUE_DATE`,

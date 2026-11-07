@@ -22,6 +22,7 @@
 *& 2026-11-07 | get_checks_by_doc reads DFKKCR-STATE (confirmed) instead of BANCD; bank lines with VORGC / VGEXT.
 *& 2026-11-07 | get_bank_lines with the statement account (FEBKO BUKRS / HBKID / HKTID, join by KUKEY) for the
 *&            | cheque link by number and house bank account (design review).
+*& 2026-11-07 | read_configured_set: configured source for many keys in one read (payment outcome).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -101,6 +102,32 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
                       ev_date = <ls_raw>-ev_date
                       ev_time = <ls_raw>-ev_time
                       info    = <ls_raw>-lot_key ) INTO TABLE rt_rows.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_trace_dao~read_configured_set.
+    DATA ls_query TYPE zif_cd_fmon_types=>ty_query.
+    CHECK it_keys IS NOT INITIAL.
+    ls_query-table_name = to_upper( condense( is_source-table_name ) ).
+    ls_query-in_field   = to_upper( condense( is_source-key_field ) ).
+    ls_query-max_rows   = iv_max_rows.
+    LOOP AT it_keys ASSIGNING FIELD-SYMBOL(<lv_key>).
+      INSERT CONV #( <lv_key> ) INTO TABLE ls_query-in_values.
+    ENDLOOP.
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-item_key
+                                            iv_field = is_source-key_field
+                                  CHANGING  cs_query = ls_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-source
+                                            iv_field = is_source-key2_field
+                                  CHANGING  cs_query = ls_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-status
+                                            iv_field = is_source-status_field
+                                  CHANGING  cs_query = ls_query ).
+    LOOP AT run_query( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_raw>).
+      INSERT VALUE #( key1   = <ls_raw>-item_key
+                      key2   = <ls_raw>-source
+                      status = <ls_raw>-status ) INTO TABLE rt_rows.
     ENDLOOP.
   ENDMETHOD.
 

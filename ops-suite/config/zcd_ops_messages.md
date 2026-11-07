@@ -453,3 +453,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 747 | Row cap &1 reached reading the values of &2 - list may be incomplete |
 | 748 | Configuration cannot be changed in this client - run the migration in DV1 |
 | 749 | Line &1 fits &2 cheques of account &3 - not attributed: |
+| 750 | &1 is in &2 sources (&3): outcome AMBIGUOUS, evaluated &4 |
+| 751 | Payment outcome snapshot: source &1 not judged - |
+| 752 | Source &1: &2 documents, &3 evaluated, &4 versions written |
+| 753 | Outcome &1 of payment &2 run &3 &4 |
+| 754 | Payment &1: method not in a watched method class - no outcome |
+| 755 | Outcome of payment &1 could not be evaluated: |
+| 756 | evidence &1: &2 |

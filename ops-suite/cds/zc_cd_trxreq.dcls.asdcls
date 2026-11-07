@@ -3,7 +3,13 @@
 //          ZUI_CD_TRX_REQ): ZCD_OPS with ZCD_PE_AREA = CORE, BUKRS of the posted item and ACTVT 03,
 //          as ZC_CD_TRXDASH. A request not posted yet has a blank company code: only users with
 //          BUKRS * see it. ADT only, after SE11 confirmation.
+//          Review 2026-11-07: before, the company code was MAX( CompanyCode ) over every item of a FIN
+//          (ZI_CD_TrxFinFlow grouped by FIN only), so a user of one company code saw counts of the
+//          other's items under it (authorisation after aggregation). Now the company code is part of
+//          the row's identity (FIN + source + company code + payment): the condition is on the base
+//          rows of each row.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard, request side).
+//                   2026-11-07 | Company code of the row identity (no authorisation after aggregation).
 // VERIFY-ADT: aspect pfcg_auth with two mapped fields on a projection (7.58).
 @EndUserText.label: 'Transactions request funnel - read access'
 @MappingRole: true

@@ -1,13 +1,18 @@
 // Artifact: zi_cd_trxreqlog.ddls.asddls
 // Purpose: Basic view of the payment request log ZCD_PAYM_REQ_LOG (requests from PRISM) for the
-//          request side of the transactions dashboard (docs/Dashboard_Transactions.md section 5):
-//          one row per request attempt of the last 31 days. Confirmed fields: SOURCE, COUNTER,
+//          request side of the transactions dashboard (docs/Dashboard_Transactions.md section 4):
+//          one row per request attempt - every attempt, no date window: the SUCCESS row rule
+//          (ZI_CD_TrxRequest) looks at all attempts of a request first, the date window is applied
+//          to the request afterwards (ZI_CD_TrxReqWin). Confirmed fields: SOURCE, COUNTER,
 //          ZZ_STATUS (SUCCESS = processed). The member number ZZ_MEMBER_NO is NOT selected.
 //          ADT only (cds/, outside the abapGit pull): activate after SE11 confirmation.
 //          VERIFY-SE11 placeholders - replace before activation:
 //            zz_fin_trans_num  -> the FIN number field of ZCD_PAYM_REQ_LOG (= DFKKOP-ZZ_FIN_TRANS_NUM)
 //            zz_created_on     -> the request date field (DATS)
 // Modification log: 2026-11-06 | Initial version (transactions dashboard, request side).
+//                   2026-11-07 | Review defect: the 30-day window on zz_created_on was applied before the
+//                   SUCCESS rule (an earlier SUCCESS attempt was dropped and the request shown ERRORED) -
+//                   window removed here, applied to the request after the rule (ZI_CD_TrxReqWin).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Payment request attempt (basic)'
@@ -36,5 +41,3 @@ define view entity ZI_CD_TrxReqLog
            then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsCancelled
 }
-// VERIFY-SE11: request date field
-where zz_created_on >= dats_add_days( $session.system_date, -30, 'INITIAL' )

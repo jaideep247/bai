@@ -137,7 +137,7 @@ SPEC = {
             ('zcd_hck_pmbank', 'HckPmBank', 'zcd_d_hckpmbnk', 'Bank calendar', 'Factory calendar per house bank',
              [], [('enum', 'flow', 'D,C')]),
             ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
-             [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,VOIDED,PENDING,IN_FLIGHT'),
+             [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
             ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
             ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role', 'Bank transaction code roles', [],
