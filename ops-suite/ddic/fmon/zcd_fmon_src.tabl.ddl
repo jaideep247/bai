@@ -32,6 +32,10 @@ define table zcd_fmon_src {
   adapter_class   : abap.char(30);
   active          : abap_boolean;
   description     : abap.char(60);
+  // Generation group (user 2026-11-07): comma list of at most 4 fields of TABLE_NAME naming the
+  // payment run of a file (e.g. LAUFD,LAUFI,HBKID of ZCDT_REGUT - VERIFY-SE11); a file regenerated
+  // with a new name for the same payments has the same group. Blank = no regeneration link
+  group_fields    : abap.char(100);
   // RAP configuration apps (design 5): set by the framework, ignored by engines
   last_changed_by       : abp_lastchange_user;
   last_changed_at       : abp_lastchange_tstmpl;

@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
 *& 2026-11-06 | read_event, read_unprocessed, mark_processed (instant bgPF processing).
+*& 2026-11-07 | read_failures: FAILED milestones with a duplicate-name error code (regenerated files).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - event repository (SQL)</p>
 "! Concurrency: two calls with the same event ID race on the primary key; the loser
@@ -78,6 +79,25 @@ CLASS zcl_cd_fmon_prism_dao IMPLEMENTATION.
       ORDER BY received_at, event_id
       INTO CORRESPONDING FIELDS OF TABLE @rt_rows
       UP TO @iv_max_rows ROWS.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_fmon_prism_dao~read_failures.
+    DATA lt_codes TYPE RANGE OF zif_cd_fmon_prism_types=>ty_error_code.
+    IF it_codes IS INITIAL.
+      RETURN.
+    ENDIF.
+    lt_codes = VALUE #( FOR lv_code IN it_codes ( sign = 'I' option = 'EQ' low = lv_code ) ).
+    " index BDT: MANDT, BUSINESS_DATE - failures are rare, the codes filter the few rows
+    SELECT event_id, file_ref, iface_id, direction, milestone, occurred_at, counterparty,
+           prism_ref, record_count, count_sent, control_total, currency, error_code,
+           error_text, business_date, received_at, received_by, processed_at
+      FROM zcd_fmon_prism
+      WHERE business_date >= @iv_since
+        AND milestone      = @zif_cd_fmon_prism_types=>gc_milestone-failed
+        AND error_code    IN @lt_codes
+      ORDER BY business_date, event_id
+      INTO CORRESPONDING FIELDS OF TABLE @rt_rows.
   ENDMETHOD.
 
 

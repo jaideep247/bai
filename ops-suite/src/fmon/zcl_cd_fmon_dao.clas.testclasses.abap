@@ -11,6 +11,8 @@
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *& 2026-11-06 | ltc_cfg_reads: interfaces, SLAs, calendars, sources, maps, lot configs, checks (coverage gap closure).
 *& 2026-11-07 | ltc_cfg_reads: SLA and calendar rows active only, stage deadlines (ZCD_FMON_DEADL).
+*& 2026-11-07 | Regenerated files: generations found by interface + generation group within the window
+*&            | (get_group_files, index GRP).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -111,6 +113,7 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS approved_table_is_read FOR TESTING.
     METHODS grouped_count_per_status FOR TESTING.
     METHODS grouped_count_needs_approval FOR TESTING.
+    METHODS generations_found_by_group FOR TESTING.
 
 ENDCLASS.
 
@@ -240,6 +243,34 @@ CLASS ltc_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->find_files_by_ref( lt_keys )
                                             exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_file ) ) )
                                             msg = 'Saved file must be found by reference' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (regenerated files): the generations of a payment run are found by interface + group key
+  " since the window start - another group and an older generation are not read.
+  METHOD generations_found_by_group.
+    CONSTANTS lc_group TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/RUN01/PNC1'.
+    CONSTANTS lc_other TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/RUN02/PNC1'.
+    TRY.
+        DATA(ls_first) = new_file( iv_id = 1 iv_date = gc_date ).
+        ls_first-gen_group = lc_group.
+        DATA(ls_second) = new_file( iv_id = 2 iv_date = '20261020' ).
+        ls_second-gen_group = lc_group.
+        DATA(ls_other) = new_file( iv_id = 3 iv_date = gc_date ).
+        ls_other-gen_group = lc_other.
+        DATA(ls_too_old) = new_file( iv_id = 4 iv_date = '20261001' ).
+        ls_too_old-gen_group = lc_group.
+        mo_cut->save_files( VALUE #( ( ls_first ) ( ls_second ) ( ls_other ) ( ls_too_old ) ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->get_group_files( it_keys  = VALUE #( ( iface_id = gc_iface gen_group = lc_group ) )
+                                         iv_since = '20261003' )
+          exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_first ) ) ( as_loaded( ls_second ) ) )
+          msg = 'Both generations of the run inside the window, nothing else' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx_error).

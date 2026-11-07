@@ -215,6 +215,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 277 | Bank &1, statement date &2: |
 | 278 | &1 &2: stage &4 not reached by &3 |
 | 279 | Posting state not read or statement read capped - not proven; |
+| 280 | &1: replaced by regenerated file &2 (generation &3) |
+| 281 | &1: PRISM failed &2 min ago, not regenerated yet (generation &3) |
+| 282 | &1: regenerated, but &2 did not fail (&3) - possible duplicate |
+| 283 | &1: PRISM already has this name (error &2) - regenerate, do not resend |
+| 284 | Source &1: at most &2 generation group fields (GROUP_FIELDS) |
 | 300 | Variant &1, categories &2, priorities &3, checks: |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |

@@ -40,6 +40,10 @@
 *&            | (evidence-only records are not applied), unprocessed count of a source record,
 *&            | stage deadlines (ZCD_FMON_DEADL) and time zone in the check context, interface-day
 *&            | keys of the expectations reconciled (a met deadline closes its exception).
+*& 2026-11-07 | Regenerated files (user 2026-11-07): generation group of a file taken from its source
+*&            | records (GEN_GROUP), the other generations of the groups loaded by index GRP (batch:
+*&            | evaluated and reconciled; instant unit: context only), regeneration settings and PRISM
+*&            | duplicate-name failures in the check context, ZCL_CD_FMON_CHK_REGEN in the instant unit.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -51,7 +55,7 @@
 "! run_event( ) applies the records of one PRISM event (instant unit, no run lock: overlap with
 "! the 5-minute run is safe through version-checked saves (A04) and the idempotent event insert):
 "! only files FMON already knows or inbound PRISM origins, no lots / calendar, only the checks
-"! the event can open or close (SLA, reject, PRISM file), no reconcile of earlier exceptions.
+"! the event can open or close (SLA, reject, PRISM file, regeneration), no reconcile of earlier exceptions.
 CLASS zcl_cd_fmon_engine DEFINITION
   PUBLIC
   FINAL
@@ -92,6 +96,8 @@ CLASS zcl_cd_fmon_engine DEFINITION
         sla        TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_SLA',
         reject     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REJECT',
         prism_file TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_PRISM_FILE',
+        "! Regenerated file while the earlier generation did not fail (duplicate risk: alert at once)
+        regen      TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_FMON_CHK_REGEN',
       END OF gc_event_check.
     "! Single-event mode (run_event): source and records given, no adapter read
     DATA mv_single TYPE abap_bool.
@@ -156,6 +162,8 @@ CLASS zcl_cd_fmon_engine DEFINITION
         unprocessed   TYPE i,
         "! Distinct payment identities of per-payment rows (audit A39)
         items         TYPE string_table,
+        "! Generation group key of the file (source with GROUP_FIELDS)
+        gen_group     TYPE zif_cd_fmon_types=>ty_file_ref,
       END OF ty_group.
     TYPES tt_group TYPE STANDARD TABLE OF ty_group WITH EMPTY KEY.
     "! Audit A49: the business date is part of the observation identity, so generations of
@@ -202,6 +210,8 @@ CLASS zcl_cd_fmon_engine DEFINITION
     "! Recorded events of the instances found by reference (prefetch) - the instance decision
     "! tells a re-read of an event from a new generation of the reference
     DATA mt_ref_events TYPE zif_cd_fmon_types=>tt_event.
+    "! Instant unit: other generations of the groups of the event's files (context only, not evaluated)
+    DATA mt_generations TYPE zif_cd_fmon_types=>tt_file.
     DATA mt_lots TYPE zif_cd_fmon_types=>tt_lot_status.
     DATA mt_expects TYPE zif_cd_fmon_types=>tt_expect.
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
@@ -286,6 +296,23 @@ CLASS zcl_cd_fmon_engine DEFINITION
         cs_file  TYPE zif_cd_fmon_types=>ty_file.
 
     METHODS load_registry.
+
+    "! Other generations of the generation groups of the files in memory (regenerated files): the
+    "! batch run evaluates them with the files (their exceptions are reconciled), the instant unit
+    "! only shows them to the checks
+    METHODS load_generations.
+
+    "! Earliest business date of the files under watch (lookback / open-file window)
+    METHODS watch_since
+      RETURNING
+        VALUE(rv_since) TYPE d.
+
+    "! PRISM failures whose error code is in FMON_PRISM_DUP_NAME_CODES (no read for an empty list)
+    METHODS prism_failures
+      IMPORTING
+        iv_codes           TYPE zif_cd_fmon_types=>ty_value_list
+      RETURNING
+        VALUE(rt_failures) TYPE zif_cd_fmon_types=>tt_prism_failure.
 
     METHODS derive_lot_outcomes.
 
@@ -506,7 +533,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mo_clock    = zcl_cd_ops_factory=>get_clock( ).
 
     CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_ref_events, mt_lots, mt_expects, mt_findings,
-           mt_statements.
+           mt_statements, mt_generations.
     mv_date      = iv_business_date.
     mv_iface     = iv_iface_id.
     mv_test_mode = iv_test_mode.
@@ -737,6 +764,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       IF <ls_group>-lob IS INITIAL.
         <ls_group>-lob = ls_record-lob.
       ENDIF.
+      IF <ls_group>-gen_group IS INITIAL.
+        <ls_group>-gen_group = ls_record-gen_group.
+      ENDIF.
     ENDLOOP.
 
     LOOP AT lt_malformed ASSIGNING FIELD-SYMBOL(<ls_malformed>).
@@ -766,15 +796,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
     " Instances of earlier days are needed only inside the evaluation / open-file window
-    DATA lv_since TYPE d.
-    lv_since = mv_date - nmax( val1 = zcl_cd_ops_util=>param_int( io_params  = mo_params
-                                                                  iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
-                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days )
-                               val2 = zcl_cd_ops_util=>param_int( io_params  = mo_params
-                                                                  iv_name    = zif_cd_fmon_types=>gc_param-open_days
-                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-open_days ) ).
     DATA(lt_found) = mo_dao->find_files_by_ref( it_keys  = lt_keys
-                                                iv_since = lv_since ).
+                                                iv_since = watch_since( ) ).
     LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_file>).
       INSERT <ls_file> INTO TABLE mt_files.
     ENDLOOP.
@@ -943,6 +966,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     IF cs_file-lob IS INITIAL.
       cs_file-lob = is_group-lob.
     ENDIF.
+    " Regenerated files: the generation group is the only link to the other generations (set once)
+    IF cs_file-gen_group IS INITIAL.
+      cs_file-gen_group = is_group-gen_group.
+    ENDIF.
 
     " Audit A40: the event records the stage as applied - for lot-controlled interfaces a
     " source FULLY / PARTIALLY is FILE_LOADED, the lot decides the outcome (raw status in INFO)
@@ -994,6 +1021,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         INSERT <ls_db> INTO TABLE mt_files.
       ENDIF.
     ENDLOOP.
+    load_generations( ).
 
     IF mt_files IS NOT INITIAL.
       mt_events = mo_dao->get_events( VALUE #( FOR ls_file IN mt_files ( ls_file-file_id ) ) ).
@@ -1006,6 +1034,60 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                      stage   = ls_event-stage ] ).
         INSERT ls_event INTO TABLE mt_events.
       ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD load_generations.
+    DATA lt_keys TYPE zif_cd_fmon_types=>tt_group_key.
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>) WHERE gen_group IS NOT INITIAL.
+      IF NOT line_exists( lt_keys[ iface_id = <ls_file>-iface_id gen_group = <ls_file>-gen_group ] ).
+        INSERT VALUE #( iface_id = <ls_file>-iface_id gen_group = <ls_file>-gen_group ) INTO TABLE lt_keys.
+      ENDIF.
+    ENDLOOP.
+    IF lt_keys IS INITIAL.
+      " No source has GROUP_FIELDS (or no grouped file in the run): no read, behaviour as before
+      RETURN.
+    ENDIF.
+    LOOP AT mo_dao->get_group_files( it_keys  = lt_keys
+                                     iv_since = watch_since( ) ) ASSIGNING FIELD-SYMBOL(<ls_peer>).
+      IF line_exists( mt_files[ file_id = <ls_peer>-file_id ] ).
+        CONTINUE.
+      ENDIF.
+      IF mv_single = abap_true.
+        INSERT <ls_peer> INTO TABLE mt_generations.
+      ELSE.
+        INSERT <ls_peer> INTO TABLE mt_files.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD watch_since.
+    rv_since = mv_date - nmax( val1 = zcl_cd_ops_util=>param_int( io_params  = mo_params
+                                                                  iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
+                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days )
+                               val2 = zcl_cd_ops_util=>param_int( io_params  = mo_params
+                                                                  iv_name    = zif_cd_fmon_types=>gc_param-open_days
+                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-open_days ) ).
+  ENDMETHOD.
+
+
+  METHOD prism_failures.
+    DATA lt_codes TYPE zif_cd_fmon_prism_types=>tt_error_code.
+    LOOP AT zcl_cd_ops_util=>split_list( iv_codes ) ASSIGNING FIELD-SYMBOL(<lv_code>).
+      INSERT CONV #( to_upper( <lv_code> ) ) INTO TABLE lt_codes.
+    ENDLOOP.
+    IF lt_codes IS INITIAL.
+      " FMON_PRISM_DUP_NAME_CODES blank (delivered default, codes to be confirmed with PRISM): no read
+      RETURN.
+    ENDIF.
+    LOOP AT zcl_cd_fmon_factory=>get_prism_dao( )->read_failures( it_codes = lt_codes
+                                                                  iv_since = watch_since( ) )
+         ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT VALUE #( file_ref    = zcl_cd_fmon_util=>normalize_ref( <ls_row>-file_ref )
+                      error_code  = <ls_row>-error_code
+                      occurred_at = <ls_row>-occurred_at ) INTO TABLE rt_failures.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1220,6 +1302,16 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-deadlines     = mt_deadlines.
     rs_ctx-time_zone     = mv_tz.
     rs_ctx-statements    = mt_statements.
+    " Regenerated files: every known generation of the groups, settings and PRISM duplicate names
+    LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_grouped>) WHERE gen_group IS NOT INITIAL.
+      INSERT <ls_grouped> INTO TABLE rs_ctx-generations.
+    ENDLOOP.
+    INSERT LINES OF mt_generations INTO TABLE rs_ctx-generations.
+    rs_ctx-regen-wait_min  = zcl_cd_ops_util=>param_int( io_params  = mo_params
+                                                         iv_name    = zif_cd_fmon_types=>gc_param-regen_wait_min
+                                                         iv_default = zif_cd_fmon_types=>gc_param_default-regen_wait_min ).
+    rs_ctx-regen-dup_codes = mo_params->get_param( zif_cd_fmon_types=>gc_param-dup_name_codes ).
+    rs_ctx-prism_failures  = prism_failures( rs_ctx-regen-dup_codes ).
 
     LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_named>).
       IF <ls_named>-file_name IS NOT INITIAL.
@@ -1324,7 +1416,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       IF mv_single = abap_true
          AND ls_check-class_name <> gc_event_check-sla
          AND ls_check-class_name <> gc_event_check-reject
-         AND ls_check-class_name <> gc_event_check-prism_file.
+         AND ls_check-class_name <> gc_event_check-prism_file
+         AND ls_check-class_name <> gc_event_check-regen.
         CONTINUE.
       ENDIF.
       TRY.

@@ -27,6 +27,7 @@ define view entity ZC_CD_FmonSource
       AdapterClass,
       Active,
       Description,
+      GroupFields,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

@@ -61,12 +61,14 @@ CD_FMON,FMON_LOOKBACK_DAYS,P,INT,0,,1,,,,,Days read back from legacy tables and 
 CD_FMON,FMON_MAX_ROWS,P,INT,1,,50000,,,,,Row cap per legacy table read,PE RTB
 CD_FMON,FMON_NOC_SLA_DAYS,P,INT,0,,6,,,,,NACHA NOC banking-day SLA when ZCD_FMON_LOTCFG has none,PE RTB
 CD_FMON,FMON_OPEN_DAYS,P,INT,0,,30,,,,,Open files kept under watch (days),PE RTB
+CD_FMON,FMON_PRISM_DUP_NAME_CODES,P,LIST,,,,,,,,PRISM error codes: file name already received (comma list),PE RTB
 CD_FMON,FMON_PRISM_INSTANT,P,BOOL,,,X,,,,,PRISM unit saves findings and alerts (blank = registry only),PE RTB
 CD_FMON,FMON_PRISM_MAX_BYTES,P,INT,1,,16384,,,,,Request body limit of the PRISM status API (bytes),PE RTB
 CD_FMON,FMON_PRISM_QUEUE_MAX,P,INT,1,,30,,,,,Throttle queue length covered by the allowance,PE RTB
 CD_FMON,FMON_PRISM_THROTTLE_METHODS,P,LIST,,,"ACH,WIRE",,,,,Payment methods PRISM throttles (comma list),PE RTB
 CD_FMON,FMON_PRISM_THROTTLE_MIN,P,INT,0,,2,,,,,Minutes PRISM waits per throttled file (0 = none),PE RTB
 CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,PRISM queue: C one per bank (confirmed) / A one for all,PE RTB
+CD_FMON,FMON_REGEN_WAIT_MIN,P,INT,0,,60,,,,,Minutes to regenerate a PRISM_FAILED file (0 = no check),PE RTB
 CD_FMON,FMON_RETURNS_WEEKDAYS,P,LIST,,,,[1-7],,,,Weekdays (1 = Monday) that are ACH returns cycle days,PE RTB
 CD_FMON,FMON_TIME_ZONE,P,CHAR,,,UTC,,,X,,Time zone of legacy date/time fields and calendars,PE RTB
 CD_HCK,HCK_BTC_INFO_BAI2,P,LIST,,,,,,,,BAI2 codes that never concern a payment (in-flight check),PE RTB

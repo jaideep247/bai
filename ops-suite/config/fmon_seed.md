@@ -26,6 +26,7 @@ pattern captures and the ones no pattern captures.
 | BAI_BOA_IN | I | STATEMENT | * | SAP | | * | ‹bank identifier as in the statement› (BOA) | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 | ACH_RET_PNC_IN | I | RETURNS | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 | NOC_PNC_IN | I | NOC | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| CHECK_PRINT_IRIS_OUT | O | OTHER | * | IRIS | CHECK | * | ‹bank› | `‹confirm PCRE›` | 1 | 0 | (blank — no bank ACK) | | ‹team› | X |
 
 **BANK_KEY (user decision 2026-11-07).** `BANK_KEY` is filled exactly as the bank identifies itself in its bank statement (the sender / bank identifier the statement carries — e.g. the BAI2 group-header originator identification, usually the ABA routing number, 9 characters; a BIC, 8 or 11 characters, for a CAMT statement — take it from an imported statement of that bank), **not** a short name such as JPMC / BOA (these stay only as a readable comment in brackets). The same value goes into `ZCD_EBS_ACCT-BANK_KEY` of every payment engine account of that bank, into the statement interface row (`BAI_JPMC_IN`, `BAI_BOA_IN`), into every other interface row of that bank (`WIRE_JPMC_OUT`: the PRISM queue per bank, `FMON_PRISM_THROTTLE_SCOPE` C, groups by it) and into bank-specific `ZCD_BTC_MAP` rows. The field is CHAR 15 on all three tables (`ZCD_EBS_ACCT`, `ZCD_FMON_IFACE`, `ZCD_BTC_MAP`): a routing number (9) or BIC (11) fits; a longer identifier would need a DDIC change. The FEB adapter finds the accounts of an interface by this value (condensed, upper case) — a different spelling in one table makes every account of the bank "not imported". PNC rows: same rule once PNC statements are monitored.
 
@@ -90,17 +91,19 @@ Every calendar row is delivered with `ACTIVE = X` (new rows by transport from DV
 
 ## ZCD_FMON_SRC (legacy source adapters — field names to be filled from SE11)
 
-| SRC_ID | IFACE_ID | TABLE_NAME | FILE_KEY_FIELD | FILE_NAME_FIELD | DATE_FIELD | TIME_FIELD | TS_FIELD | STATUS_FIELD | COUNT_FIELD | AMOUNT_FIELD | SIZE_FIELD | ITEM_KEY_FIELD | DEFAULT_STAGE | ADAPTER_CLASS |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| REGUT | (blank: by pattern) | ZCDT_REGUT | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 or blank› | ‹SE11› | ‹SE11› | ‹SE11› | | GENERATED_IN_SAP | (blank) |
-| ACHACK | ACH_PNC_DISB_OUT | ZCD_ACH_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 payment key, if one row per payment› | | (blank) |
-| WIREACK | WIRE_JPMC_OUT | ZCD_WIRE_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | ‹SE11› | | ‹SE11 wire reference› | | (blank) |
-| CHKHIST | CHECK_POSPAY_OUT | ZCD_CHECK_HIST | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | | | | | (blank) |
-| ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | | (blank) |
-| STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | | (blank) |
-| PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | | FILE_RECEIVED | (blank) |
-| FEB | (blank: every inbound STATEMENT interface with a bank key) | FEBKO | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_FEB |
-| PRISM | (blank: `interfaceId` or name pattern) | ZCD_FMON_PRISM | (blank) | FILE_REF | (blank) | (blank) | OCCURRED_AT | MILESTONE | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_PRISM |
+| SRC_ID | IFACE_ID | TABLE_NAME | FILE_KEY_FIELD | FILE_NAME_FIELD | DATE_FIELD | TIME_FIELD | TS_FIELD | STATUS_FIELD | COUNT_FIELD | AMOUNT_FIELD | SIZE_FIELD | ITEM_KEY_FIELD | DEFAULT_STAGE | ADAPTER_CLASS | GROUP_FIELDS |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| REGUT | (blank: by pattern) | ZCDT_REGUT | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 or blank› | ‹SE11› | ‹SE11› | ‹SE11› | | GENERATED_IN_SAP | (blank) | ‹SE11: payment run, e.g. LAUFD,LAUFI,HBKID› |
+| ACHACK | ACH_PNC_DISB_OUT | ZCD_ACH_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11 payment key, if one row per payment› | | (blank) | |
+| WIREACK | WIRE_JPMC_OUT | ZCD_WIRE_ACK | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | ‹SE11› | | ‹SE11 wire reference› | | (blank) | |
+| CHKHIST | CHECK_POSPAY_OUT | ZCD_CHECK_HIST | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | | | | | | (blank) | |
+| ACHRTRV | ACH_RET_PNC_IN | ZCD_ACH_RTRV_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | | | | | (blank) | |
+| STRPPOUT | STRIPE_PAYOUT_IN | ZCD_STRP_POUT_LOG | ‹SE11› | ‹SE11› | ‹SE11› | ‹SE11› | | ‹SE11› | ‹SE11› | ‹SE11› | | | | (blank) | |
+| PAYREQ | PAYREQ_PRISM_IN | ZCD_PAYM_REQ_LOG | ‹SE11 request key› | (blank) | ‹SE11 date› | ‹SE11 time› | | ZZ_STATUS | | ‹SE11 amount or blank› | | | FILE_RECEIVED | (blank) | |
+| FEB | (blank: every inbound STATEMENT interface with a bank key) | FEBKO | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_FEB | |
+| PRISM | (blank: `interfaceId` or name pattern) | ZCD_FMON_PRISM | (blank) | FILE_REF | (blank) | (blank) | OCCURRED_AT | MILESTONE | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_PRISM | |
+
+**Regenerated files (facts confirmed by the user 2026-11-07).** PRISM rejects a file name it has already received; a file PRISM could not deliver (to the bank, or the cheque print file to IRIS when the PRISM → IRIS call fails) is regenerated by SAP **under a new name for the same payments**. `GROUP_FIELDS` of the generating source (here `REGUT`) names the fields of the payment run that produced the file — comma list, at most 4, in a fixed order (e.g. `LAUFD,LAUFI,HBKID`; field names **VERIFY-SE11** on `ZCDT_REGUT`, validated against the DDIC at runtime; the fields must be approved in `ZCD_FMON_TABWL` like every other field). The values joined by `/` are the file's generation group (`ZCD_FMON_FILE-GEN_GROUP`, the only stored link); files of the same interface and group are generations of the same payments (`docs/FMON_FILE_MONITORING.md` §A2 rule 9). Include the house bank when one payment run produces one file per house bank — two different files of one group would be reported as `FILE_REGENERATED_NOT_FAILED`. Blank (every other row) = no link, behaviour unchanged.
 
 **Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_FMON_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (the bank identifier as in the statement — the same value as `ZCD_EBS_ACCT-BANK_KEY`) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (1: Monday's file carries Friday's statement — confirmed 2026-11-07) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
 
@@ -184,8 +187,9 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_PRFAIL | ZCL_CD_FMON_CHK_REJECT | E | OUTCOME=PRISM_FAILED |
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
 | F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - rows of ZCD_FMON_DEADL; row SEVERITY wins) |
+| F_REGEN | ZCL_CD_FMON_CHK_REGEN | B | (none) - FILE_REGENERATED_NOT_FAILED: regenerated file while the earlier generation did not fail (possible duplicate payment file) |
 
-`F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled). `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
+`F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled); for a file with a generation group it reports `FILE_REPLACED` (information) once a regenerated file exists, `REGENERATION_MISSING` (E) next to `PRISM_FAILED` after `FMON_REGEN_WAIT_MIN`, and `PRISM_DUPLICATE_NAME` (E) instead of `PRISM_FAILED` for an error code of `FMON_PRISM_DUP_NAME_CODES`. `F_REGEN` and `F_PRFAIL` also run in the instant PRISM unit. `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
 
 ## FMON parameters — framework `ZCA_PARAM`, area `CD_FMON`
 
@@ -208,6 +212,8 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_PRISM_THROTTLE_METHODS | ACH,WIRE | payment methods (`ZCD_FMON_IFACE-PAY_METHOD`) PRISM throttles; positive pay / stop pay are not throttled |
 | FMON_PRISM_QUEUE_MAX | 30 | longest PRISM queue (files incl. the file) the allowance covers; a longer one is `PRISM_QUEUE_LONG` (W) |
 | FMON_FEB_STMT_OFFSET | 1 | working days from the bank statement date (FEBKO-AZDAT) to the business date of the statement file (FEB adapter): 1 = prior-day statement (Monday file = Friday statement), 0 = same-day. **1 confirmed** (user 2026-11-07: the BAI statement date is the previous business day) |
+| FMON_REGEN_WAIT_MIN | 60 | minutes after PRISM_FAILED within which SAP regenerates the file; later `REGENERATION_MISSING` (only for files with a generation group); `0` = off ‹confirm with payment operations› |
+| FMON_PRISM_DUP_NAME_CODES | (empty) | PRISM error codes meaning "file name already received" (comma list, whole value, case ignored) — `PRISM_DUPLICATE_NAME` instead of `PRISM_FAILED`; **VERIFY with PRISM**, delivered empty (no read, no such finding) |
 | FMON_AGE_BASIS | A | NOC / returns age in working days: `A` counts from the first working day **after** receipt, `N` treats a receipt on a non-working day as received on the next working day (audit A41). If the factory calendar cannot convert the dates the age is unknown: no aging finding, warning 248 instead |
 
 ## Alerting

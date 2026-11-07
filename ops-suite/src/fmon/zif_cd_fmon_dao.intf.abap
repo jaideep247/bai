@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A04/A49: version-checked save returns conflicts; reference lookup bounded by date.
 *& 2026-11-06 | Performance fix 8: count_legacy - grouped COUNT(*) on the same validated read path (DEFAULT IGNORE).
 *& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL, DEFAULT IGNORE); SLA and calendar rows: active only.
+*& 2026-11-07 | get_group_files (regenerated files: generations of a payment run, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -60,6 +61,15 @@ INTERFACE zif_cd_fmon_dao
     IMPORTING
       it_keys         TYPE zif_cd_fmon_types=>tt_file_key
       iv_since        TYPE d OPTIONAL
+    RETURNING
+      VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
+
+  "! Every registered generation of the interface + generation group keys (ZCD_FMON_FILE-GEN_GROUP,
+  "! index GRP) since iv_since; rows come back with DB_EXISTS and DB_VERSION
+  METHODS get_group_files DEFAULT IGNORE
+    IMPORTING
+      it_keys         TYPE zif_cd_fmon_types=>tt_group_key
+      iv_since        TYPE d
     RETURNING
       VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
 

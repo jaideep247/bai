@@ -16,6 +16,10 @@
 *&            | FMON_PRISM_INSTANT simulation is marked (not reachable through the real store).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): FMON_PRISM_INSTANT is BOOL, registry-only
 *&            | mode is a value row with blank value - the simulation in the store double is gone.
+*& 2026-11-07 | Regenerated files (user 2026-11-07), instant path: a regenerated file whose earlier
+*&            | generation was delivered is FILE_REGENERATED_NOT_FAILED in the unit, a failure answered
+*&            | by a later generation is FILE_REPLACED, a duplicate-name rejection PRISM_DUPLICATE_NAME
+*&            | (DAO doubles serve the generations of the group and the PRISM failures).
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -33,10 +37,19 @@ CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
     DATA mv_eval_calls TYPE i.
     "! Every save finds a newer version (another process changed the file, audit A04)
     DATA mv_conflict_all TYPE abap_bool.
+    "! Other generations of the generation groups (ZCD_FMON_FILE index GRP)
+    DATA mt_group_files TYPE zif_cd_fmon_types=>tt_file.
 ENDCLASS.
 
 
 CLASS ltd_fmon_dao IMPLEMENTATION.
+  METHOD zif_cd_fmon_dao~get_group_files.
+    LOOP AT mt_group_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      IF line_exists( it_keys[ iface_id = <ls_file>-iface_id gen_group = <ls_file>-gen_group ] ).
+        INSERT <ls_file> INTO TABLE rt_files.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_ifaces.
     rt_ifaces = mt_ifaces.
   ENDMETHOD.
@@ -95,10 +108,19 @@ CLASS ltd_prism_dao DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_fmon_prism_dao PARTIALLY IMPLEMENTED.
     DATA ms_row TYPE zif_cd_fmon_prism_types=>ty_row.
     DATA mt_marked TYPE zif_cd_fmon_prism_types=>tt_event_id.
+    "! Stored FAILED milestones (ZCD_FMON_PRISM) for the duplicate-name read
+    DATA mt_failures TYPE zif_cd_fmon_prism_types=>tt_row.
 ENDCLASS.
 
 
 CLASS ltd_prism_dao IMPLEMENTATION.
+  METHOD zif_cd_fmon_prism_dao~read_failures.
+    LOOP AT mt_failures ASSIGNING FIELD-SYMBOL(<ls_row>).
+      IF line_exists( it_codes[ table_line = <ls_row>-error_code ] ) AND <ls_row>-business_date >= iv_since.
+        INSERT <ls_row> INTO TABLE rt_rows.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
   METHOD zif_cd_fmon_prism_dao~read_event.
     rs_row = COND #( WHEN iv_event_id = ms_row-event_id THEN ms_row ).
   ENDMETHOD.
@@ -195,7 +217,25 @@ CLASS ltc_proc DEFINITION FINAL
         throttle_off  TYPE abap_bool,
         "! FMON_PRISM_QUEUE_MAX maintained (0 = default)
         queue_max     TYPE i,
+        "! Regenerated files: another generation of the file's group - E earlier (delivered),
+        "! L later (regenerated after the file)
+        peer          TYPE c LENGTH 1,
+        "! PRISM's failure carries a duplicate-name code that FMON_PRISM_DUP_NAME_CODES lists
+        dup_name      TYPE abap_bool,
       END OF ty_flags.
+
+    "! Regenerated files: the payment run of the file and its other generation
+    CONSTANTS:
+      BEGIN OF gc_regen,
+        group     TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261106/RUN07/PNC1',
+        peer_name TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ACH_PNC_20261106_02',
+        peer_id   TYPE zif_cd_fmon_types=>ty_file_id VALUE '0000000000000000000000000000000B',
+        earlier   TYPE timestampl VALUE '20261106140000',
+        later     TYPE timestampl VALUE '20261106144000',
+        dup_code  TYPE zif_cd_fmon_prism_types=>ty_error_code VALUE 'FILE_EXISTS',
+        peer_e    TYPE c LENGTH 1 VALUE 'E',
+        peer_l    TYPE c LENGTH 1 VALUE 'L',
+      END OF gc_regen.
 
     CONSTANTS:
       BEGIN OF gc_test,
@@ -276,6 +316,14 @@ CLASS ltc_proc DEFINITION FINAL
     METHODS pospay_not_in_ach_queue FOR TESTING.
     METHODS unit_throttle_off_is_late FOR TESTING.
     METHODS unit_reports_long_queue FOR TESTING.
+    METHODS unit_flags_regen_not_failed FOR TESTING.
+    METHODS unit_failure_replaced_is_info FOR TESTING.
+    METHODS unit_dup_name_not_failed FOR TESTING.
+
+    "! The file belongs to a generation group; the other generation is served by index GRP
+    METHODS configure_regen
+      IMPORTING
+        is_flags TYPE ty_flags.
 
     "! Throttled scenario: interfaces, SLA, check, the file's receipt and the queued peers
     METHODS configure_queue
@@ -407,6 +455,9 @@ CLASS ltc_proc IMPLEMENTATION.
     IF is_flags-throttled = abap_true.
       configure_queue( is_flags ).
     ENDIF.
+    IF is_flags-peer IS NOT INITIAL OR is_flags-dup_name = abap_true.
+      configure_regen( is_flags ).
+    ENDIF.
 
     mo_dao->mv_conflict_all     = is_flags-conflict.
     IF is_flags-registry_only = abap_true.
@@ -429,6 +480,35 @@ CLASS ltc_proc IMPLEMENTATION.
 
   METHOD act.
     rs_outcome = NEW zcl_cd_fmon_prism_proc( )->process( gc_test-event_id ).
+  ENDMETHOD.
+
+
+  METHOD configure_regen.
+    DATA ls_failure TYPE zif_cd_fmon_prism_types=>ty_row.
+    add_check( iv_check_id = 'F_REGEN' iv_class = 'ZCL_CD_FMON_CHK_REGEN' ).
+    ASSIGN mo_dao->mt_existing[ 1 ] TO FIELD-SYMBOL(<ls_file>).
+    <ls_file>-gen_group = gc_regen-group.
+    IF is_flags-peer IS NOT INITIAL.
+      DATA(ls_peer) = <ls_file>.
+      ls_peer-file_id        = gc_regen-peer_id.
+      ls_peer-file_name      = gc_regen-peer_name.
+      ls_peer-file_ref       = zcl_cd_fmon_util=>normalize_ref( gc_regen-peer_name ).
+      ls_peer-stage          = COND #( WHEN is_flags-peer = gc_regen-peer_e THEN zif_cd_fmon_types=>gc_stage-prism_delivered
+                                       ELSE zif_cd_fmon_types=>gc_stage-generated ).
+      ls_peer-first_event_at = COND #( WHEN is_flags-peer = gc_regen-peer_e THEN gc_regen-earlier ELSE gc_regen-later ).
+      ls_peer-last_event_at  = ls_peer-first_event_at.
+      INSERT ls_peer INTO TABLE mo_dao->mt_group_files.
+    ENDIF.
+    IF is_flags-dup_name = abap_true.
+      mo_params->set( iv_name = zif_cd_fmon_types=>gc_param-dup_name_codes iv_value = CONV #( gc_regen-dup_code ) ).
+      ls_failure-event_id      = gc_test-event_id.
+      ls_failure-file_ref      = gc_test-file_name.
+      ls_failure-milestone     = zif_cd_fmon_prism_types=>gc_milestone-failed.
+      ls_failure-error_code    = gc_regen-dup_code.
+      ls_failure-occurred_at   = gc_test-on_time.
+      ls_failure-business_date = gc_test-date.
+      INSERT ls_failure INTO TABLE mo_prism->mt_failures.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -570,6 +650,61 @@ CLASS ltc_proc IMPLEMENTATION.
 
   " Rule: a FAILED event makes the file PRISM_FAILED and opens the PRISM_FAILED finding at once;
   " the receipt PRISM never confirmed is reported as inferred (A40, severity I).
+  " Rule (regenerated files, instant path): PRISM's receipt of a regenerated file whose earlier
+  " generation of the same payment run was delivered raises FILE_REGENERATED_NOT_FAILED in the unit
+  " (the earlier generation is read by index GRP) and alerts at once.
+  METHOD unit_flags_regen_not_failed.
+    TRY.
+        configure_scenario( VALUE #( peer = gc_regen-peer_e ) ).
+        DATA(ls_outcome) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_outcome-result-findings[
+                                        check_code = zif_cd_fmon_types=>gc_check_code-regen_not_failed
+                                        object_key = gc_test-file_name ] ) )
+          msg = 'Possible duplicate raised by the instant unit' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_alert->mt_dispatched[ check_code = zif_cd_fmon_types=>gc_check_code-regen_not_failed ] ) )
+          msg = 'Handed to the alert router at once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (a, instant path): PRISM's failure of a file SAP has already regenerated is answered -
+  " FILE_REPLACED (information), no PRISM_FAILED.
+  METHOD unit_failure_replaced_is_info.
+    TRY.
+        configure_scenario( VALUE #( milestone = zif_cd_fmon_prism_types=>gc_milestone-failed
+                                     peer      = gc_regen-peer_l ) ).
+        DATA(lt_codes) = codes( act( )-result-findings ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_codes[ table_line = `FILE_REPLACED` ] ) )
+                                          msg = 'The replaced failure is information' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_codes[ table_line = `PRISM_FAILED` ] ) )
+                                           msg = 'No PRISM_FAILED for a replaced file' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (d, instant path): PRISM rejected the name as already received (listed error code) -
+  " PRISM_DUPLICATE_NAME instead of PRISM_FAILED.
+  METHOD unit_dup_name_not_failed.
+    TRY.
+        configure_scenario( VALUE #( milestone = zif_cd_fmon_prism_types=>gc_milestone-failed
+                                     dup_name  = abap_true ) ).
+        DATA(lt_codes) = codes( act( )-result-findings ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_codes[ table_line = `PRISM_DUPLICATE_NAME` ] ) )
+                                          msg = 'The precise cause is reported' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_codes[ table_line = `PRISM_FAILED` ] ) )
+                                           msg = 'Not a second, generic PRISM_FAILED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD failed_event_opens_finding.
     TRY.
         configure_scenario( VALUE #( milestone = zif_cd_fmon_prism_types=>gc_milestone-failed ) ).

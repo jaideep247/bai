@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
 *& 2026-11-06 | read_event, read_unprocessed, mark_processed (instant bgPF processing).
+*& 2026-11-07 | read_failures: FAILED milestones with a duplicate-name error code (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - event repository</p>
 INTERFACE zif_cd_fmon_prism_dao
@@ -38,6 +39,15 @@ INTERFACE zif_cd_fmon_prism_dao
       iv_from        TYPE timestampl
       iv_to          TYPE timestampl
       iv_max_rows    TYPE i
+    RETURNING
+      VALUE(rt_rows) TYPE zif_cd_fmon_prism_types=>tt_row.
+
+  "! FAILED milestones with one of the error codes, business date iv_since or later (index BDT);
+  "! regenerated files: PRISM rejected a name it had already received. Empty list = no read
+  METHODS read_failures DEFAULT IGNORE
+    IMPORTING
+      it_codes       TYPE zif_cd_fmon_prism_types=>tt_error_code
+      iv_since       TYPE d
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_fmon_prism_types=>tt_row.
 

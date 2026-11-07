@@ -25,11 +25,11 @@ and the channel refuses the route before anything is sent if a list was deleted 
 
 | SO23 list (proposed — confirm) | Who | Used by |
 |---|---|---|
-| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA, FMON_BAIDL |
+| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA, FMON_BAIDL, FMON_REGEN |
 | ZCD_RETOPS | Returns / NOC operations | FMON_PART |
 | ZCD_COMPL | Compliance | NOC_AGING |
 | ZCD_RTBSUP | RTB support | HCK_RED, ALL_ABORT, RUN_LOCKED, morning report |
-| ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, HCK_RED |
+| ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, FMON_REGEN, HCK_RED |
 
 ## ZCD_OPS_ALRULE
 
@@ -46,9 +46,12 @@ configuration app refuses a pattern that does not compile (message 418); check w
 | FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
 | FMON_BAIDL | FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD |
 | NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
+| FMON_REGEN | FMON | E | | FILE_REGENERATED_NOT_FAILED\|PRISM_DUPLICATE_NAME\|REGENERATION_MISSING | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD |
 | HCK_RED | HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD |
 | ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — |
+
+**Regenerated files (facts confirmed by the user 2026-11-07).** `FMON_REGEN` sends `FILE_REGENERATED_NOT_FAILED` (B: a possible duplicate payment file to the bank / IRIS — also from the instant PRISM unit, within seconds), `PRISM_DUPLICATE_NAME` and `REGENERATION_MISSING` to payment operations at once (THROTTLE_MIN 0), escalation to `ZCD_RTBLEAD` after 2 runs. `FILE_REPLACED` is information (severity I) and alerts nobody. The CHECK_PATTERN is PCRE matched to the complete check code (`|` = or).
 
 **BAI processing deadline (user requirement 2026-11-07, "alert if BAI is not processed until 10 AM").**
 `FMON_BAIDL` additionally has GROUP1_PATTERN `BAI_(JPMC|BOA)_IN` (interfaces; PCRE, complete value) and
@@ -66,7 +69,7 @@ Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgemen
 
 | RULE_ID | Priority | Acknowledge within |
 |---|---|---|
-| EBS_BLOCK, ALL_ABORT | P1 | 15 min, 24×7 |
+| EBS_BLOCK, ALL_ABORT, FMON_REGEN | P1 | 15 min, 24×7 |
 | EBS_ERROR, FMON_PART, FMON_SLA, FMON_BAIDL, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
 | (warnings W) | P3 | Next business day — morning report and dashboards, no alert |
 

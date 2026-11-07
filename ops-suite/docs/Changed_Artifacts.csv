@@ -900,6 +900,9 @@ src/fmon/zcl_cd_fmon_chk_noc_aging.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_prism_file.clas.abap,ABAP,Plug-in check: PRISM evidence (PRISM status API) that SAP's own evidence
 src/fmon/zcl_cd_fmon_chk_prism_file.clas.testclasses.abap,ABAP,Pure unit tests of the check of PRISM evidence SAP does not confirm
 src/fmon/zcl_cd_fmon_chk_prism_file.clas.xml,abapGit,
+src/fmon/zcl_cd_fmon_chk_regen.clas.abap,ABAP,Plug-in check FILE_REGENERATED_NOT_FAILED: a file regenerated for the
+src/fmon/zcl_cd_fmon_chk_regen.clas.testclasses.abap,ABAP,"Pure unit tests of the regeneration check (context built field by field,"
+src/fmon/zcl_cd_fmon_chk_regen.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_chk_reject.clas.abap,ABAP,Plug-in check NACK (bank rejected the file or payments of it) and
 src/fmon/zcl_cd_fmon_chk_reject.clas.testclasses.abap,ABAP,Pure unit tests of the reject check: parameter OUTCOME=PRISM_FAILED reports
 src/fmon/zcl_cd_fmon_chk_reject.clas.xml,abapGit,

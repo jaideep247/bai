@@ -10,6 +10,8 @@
 *& 2026-11-06 | Audit A39/A52: payment key, malformed rows flagged (not counted), half-open range.
 *& 2026-11-06 | Rows without a usable file reference are quarantined (audit A100).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Regenerated files (user 2026-11-07): GROUP_FIELDS read as roles GROUP_1..4 (at most 4,
+*&            | message 284), the record's generation group key (ZCL_CD_FMON_RULES=>GENERATION_KEY).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - generic legacy source adapter</p>
 "! No field name of any legacy table is coded here: the structures of the
@@ -26,7 +28,8 @@ CLASS zcl_cd_fmon_adapter_generic DEFINITION
     INTERFACES zif_cd_fmon_adapter.
 
     "! Build the DDIC-checked query for a source (pure)
-    "! @raising zcx_cd_ops_error | 204 a required field role is not configured
+    "! @raising zcx_cd_ops_error | 204 a required field role is not configured, 284 more than
+    "!                             four generation group fields
     CLASS-METHODS build_query
       IMPORTING
         is_request      TYPE zif_cd_fmon_types=>ty_read_request
@@ -124,6 +127,22 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
       ( role = zif_cd_fmon_types=>gc_role-source    field = ls_src-source_field )
       ( role = zif_cd_fmon_types=>gc_role-lob       field = ls_src-lob_field )
       ( role = zif_cd_fmon_types=>gc_role-item_key  field = ls_src-item_key_field ) ).
+    " Generation group (regenerated files): the configured fields in their order, roles GROUP_1..4
+    DATA(lt_group) = zcl_cd_ops_util=>split_list( ls_src-group_fields ).
+    IF lines( lt_group ) > zif_cd_fmon_types=>gc_generation-max_fields.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e284(zcd_ops) WITH ls_src-src_id zif_cd_fmon_types=>gc_generation-max_fields.
+    ENDIF.
+    DATA(lt_group_roles) = VALUE string_table( ( CONV #( zif_cd_fmon_types=>gc_role-group_1 ) )
+                                               ( CONV #( zif_cd_fmon_types=>gc_role-group_2 ) )
+                                               ( CONV #( zif_cd_fmon_types=>gc_role-group_3 ) )
+                                               ( CONV #( zif_cd_fmon_types=>gc_role-group_4 ) ) ).
+    DATA(lv_position) = 0.
+    LOOP AT lt_group ASSIGNING FIELD-SYMBOL(<lv_group_field>).
+      lv_position += 1.
+      INSERT VALUE #( role  = lt_group_roles[ lv_position ]
+                      field = <lv_group_field> ) INTO TABLE lt_roles.
+    ENDLOOP.
     LOOP AT lt_roles INTO DATA(ls_role).
       zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = ls_role-role
                                               iv_field = ls_role-field
@@ -214,6 +233,10 @@ CLASS zcl_cd_fmon_adapter_generic IMPLEMENTATION.
       ELSE.
         mark_malformed( EXPORTING iv_role = zif_cd_fmon_types=>gc_role-size CHANGING cs_record = rs_record ).
       ENDIF.
+    ENDIF.
+    IF is_request-src-group_fields IS NOT INITIAL.
+      rs_record-gen_group = zcl_cd_fmon_rules=>generation_key(
+                              VALUE #( ( is_raw-group_1 ) ( is_raw-group_2 ) ( is_raw-group_3 ) ( is_raw-group_4 ) ) ).
     ENDIF.
     rs_record-item_key   = is_raw-item_key.
     rs_record-checksum   = is_raw-checksum.
