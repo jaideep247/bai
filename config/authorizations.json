@@ -1,0 +1,13 @@
+{
+  "_comment": "Authorization object class, fields and objects. tools/abapgit_serialize.py writes src/<name>.susc.xml, .auth.xml and .suso.xml from this file (VERIFY-ADT: first pull, SU21). Runtime reads need no authorization; only the maintenance app checks ZCA_PARAM.",
+  "object_classes": [
+    {"name": "ZCA", "text": "Cross-application objects (customer)"}
+  ],
+  "fields": [
+    {"name": "ZCA_PARAR", "data_element": "ZCA_PARAM_AREA_ID"}
+  ],
+  "objects": [
+    {"name": "ZCA_PARAM", "class": "ZCA", "text": "Parameter framework: maintenance per area",
+     "fields": ["ZCA_PARAR", "ACTVT"], "activities": ["01", "02", "03", "06"]}
+  ]
+}
