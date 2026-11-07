@@ -138,6 +138,13 @@ CLASS zcl_ca_param_validator DEFINITION
       RETURNING
         VALUE(rv_valid) TYPE abap_bool.
 
+    "! Converts to decfloat34 without error (no overflow)
+    METHODS is_decimal
+      IMPORTING
+        iv_value        TYPE zif_ca_param_types=>ty_value
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
     METHODS is_date
       IMPORTING
         iv_value        TYPE zif_ca_param_types=>ty_value
@@ -394,7 +401,8 @@ CLASS zcl_ca_param_validator IMPLEMENTATION.
       WHEN zif_ca_param_types=>gc_value_type-int.
         lv_valid = is_int( iv_value ).
       WHEN zif_ca_param_types=>gc_value_type-dec.
-        lv_valid = xsdbool( matches( val = lv_text pcre = zif_ca_param_types=>gc_pcre-dec ) ).
+        lv_valid = xsdbool( matches( val = lv_text pcre = zif_ca_param_types=>gc_pcre-dec )
+                            AND is_decimal( iv_value ) = abap_true ).
       WHEN zif_ca_param_types=>gc_value_type-bool.
         lv_valid = xsdbool( iv_value = zif_ca_param_types=>gc_true ).
       WHEN zif_ca_param_types=>gc_value_type-date.
@@ -605,6 +613,16 @@ CLASS zcl_ca_param_validator IMPLEMENTATION.
         DATA(lv_number) = to_decimal( iv_value ).
         rv_valid = xsdbool( lv_number >= zif_ca_param_types=>gc_int_min
                             AND lv_number <= zif_ca_param_types=>gc_int_max ).
+      CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
+        rv_valid = abap_false.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD is_decimal.
+    TRY.
+        to_decimal( iv_value ).
+        rv_valid = abap_true.
       CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
         rv_valid = abap_false.
     ENDTRY.

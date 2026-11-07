@@ -227,7 +227,7 @@ INTERFACE zif_ca_param_types
     BEGIN OF gc_pcre,
       identifier TYPE string VALUE `^[A-Z][A-Z0-9_]*$`,
       int        TYPE string VALUE `^[+-]?[0-9]+$`,
-      dec        TYPE string VALUE `^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$`,
+      dec        TYPE string VALUE `^[+-]?[0-9]+([.][0-9]+)?$`,
       date       TYPE string VALUE `^[0-9]{8}$`,
       time       TYPE string VALUE `^([01][0-9]|2[0-3])[0-5][0-9][0-5][0-9]$`,
       repository TYPE string VALUE `^(/[A-Z0-9_]+/)?[A-Z0-9_]+$`,

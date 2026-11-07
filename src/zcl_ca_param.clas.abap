@@ -92,6 +92,15 @@ CLASS zcl_ca_param DEFINITION
       RAISING
         zcx_ca_param.
 
+    "! Number of a validated INT / DEC value; a conversion error raises 006, never a dump
+    METHODS to_number
+      IMPORTING
+        is_resolved     TYPE ty_resolved
+      RETURNING
+        VALUE(rv_value) TYPE zif_ca_param_types=>ty_decimal
+      RAISING
+        zcx_ca_param.
+
     METHODS raise
       IMPORTING
         is_definition TYPE zif_ca_param_types=>ty_definition
@@ -127,21 +136,22 @@ CLASS zcl_ca_param IMPLEMENTATION.
 
 
   METHOD zif_ca_param~get_int.
-    rv_value = condense( CONV string( resolve_single( iv_area           = iv_area
-                                                      iv_name           = iv_name
-                                                      iv_read_as        = zif_ca_param_types=>gc_value_type-int
-                                                      iv_type_1         = zif_ca_param_types=>gc_value_type-int
-                                                      iv_value_required = abap_true )-value ) ).
+    " validated as INT within type i, so the conversion of the decimal cannot overflow
+    rv_value = to_number( resolve_single( iv_area           = iv_area
+                                          iv_name           = iv_name
+                                          iv_read_as        = zif_ca_param_types=>gc_value_type-int
+                                          iv_type_1         = zif_ca_param_types=>gc_value_type-int
+                                          iv_value_required = abap_true ) ).
   ENDMETHOD.
 
 
   METHOD zif_ca_param~get_dec.
-    rv_value = condense( CONV string( resolve_single( iv_area           = iv_area
-                                                      iv_name           = iv_name
-                                                      iv_read_as        = zif_ca_param_types=>gc_value_type-dec
-                                                      iv_type_1         = zif_ca_param_types=>gc_value_type-dec
-                                                      iv_type_2         = zif_ca_param_types=>gc_value_type-int
-                                                      iv_value_required = abap_true )-value ) ).
+    rv_value = to_number( resolve_single( iv_area           = iv_area
+                                          iv_name           = iv_name
+                                          iv_read_as        = zif_ca_param_types=>gc_value_type-dec
+                                          iv_type_1         = zif_ca_param_types=>gc_value_type-dec
+                                          iv_type_2         = zif_ca_param_types=>gc_value_type-int
+                                          iv_value_required = abap_true ) ).
   ENDMETHOD.
 
 
@@ -356,6 +366,18 @@ CLASS zcl_ca_param IMPLEMENTATION.
       raise( is_definition = ls_definition
              iv_msgno      = zif_ca_param_types=>gc_msg-no_value ).
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD to_number.
+    TRY.
+        rv_value = condense( CONV string( is_resolved-value ) ).
+      CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
+        raise( is_definition = is_resolved-definition
+               iv_msgno      = zif_ca_param_types=>gc_msg-type_invalid
+               iv_v3         = is_resolved-value
+               iv_v4         = is_resolved-definition-value_type ).
+    ENDTRY.
   ENDMETHOD.
 
 

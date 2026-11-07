@@ -102,7 +102,7 @@ typed getters (section 3).
 | Value type | Valid value | Min / max | Allowed PCRE |
 |---|---|---|---|
 | INT | `^[+-]?[0-9]+$`, within type `i` | numeric | whole value |
-| DEC | `^[+-]?([0-9]+([.][0-9]*)?\|[.][0-9]+)$` (decimal point) | numeric (decfloat34) | whole value |
+| DEC | `^[+-]?[0-9]+([.][0-9]+)?$` (decimal point) and convertible to decfloat34 | numeric (decfloat34) | whole value |
 | CHAR | anything (CHAR 255) | not allowed | whole value |
 | BOOL | X (or blank) | not allowed | not allowed |
 | DATE | 8 digits and a real date (YYYYMMDD) | text compare | whole value |
