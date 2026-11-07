@@ -43,7 +43,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 
 ## Step 1 — DDIC (SE11 / ADT)
 
-1. Core: `ZCD_OPS_PARAM`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING` (+ indexes ~OPN, ~OBJ; carry-forward fields FIRST_SEEN_AT, OCCURRENCES, SUPERSEDED_BY, WAIVER_UNTIL), `ZCD_OPS_ALRULE`, `ZCD_OPS_ALCHN`, `ZCD_OPS_ALLOG` (+ index ~RUL), `ZCD_OPS_LOCK` (delivery class L, never written — run-lock argument of `E_TABLE`).
+1. Core: `ZCD_OPS_PARAM`, `ZCD_OPS_RUN`, `ZCD_OPS_FINDING` (+ indexes ~OPN, ~OBJ; carry-forward fields FIRST_SEEN_AT, OCCURRENCES, SUPERSEDED_BY, WAIVER_UNTIL), `ZCD_OPS_ALRULE`, `ZCD_OPS_ALCHN`, `ZCD_OPS_ALLOG` (+ index ~RUL), `ZCD_OPS_LOCK` (delivery class L, never written — run-lock argument of `E_TABLE`), `ZCD_OPS_MONCFG` (monitor freshness per area, delivery class C; draft table `ZCD_D_MONCFG`; app entity *Monitor freshness*; seed rows FMON 15, EBS 1560, HCK 1560 — `config/alert_seed.md`; activate before the as-of CDS views, which LEFT OUTER JOIN it).
 2. EBS: `ZCD_EBS_RULE_DEF`, `ZCD_BTC_MAP`, `ZCD_BTC_RULE`, `ZCD_EBS_ACCT` (+ index ~ACC), `ZCD_EBS_FLOW_PAT`, `ZCD_EBS_RSN_MAP`, `ZCD_EBS_LOOKUP` (rule R21; draft table `ZCD_D_EBSLKP`).
 3. FMON: `ZCD_FMON_IFACE`, `_SLA`, `_CAL`, `_SRC`, `_SRCMAP`, `_LOTCFG`, `_CHK`, `ZCD_FMON_FILE` (+ unique index IFACE_ID/FILE_REF), `ZCD_FMON_EVENT` (+ unique index SRC_ID/SRC_KEY/STAGE).
 4. HCK: `ZCD_HCK_DEF`, `_THRESH`, `_AGG`, `_TABWL`, `_DRIFT`, `ZCD_JOB_CYCLE`, `ZCD_JOB_STEP`, `ZCD_HCK_METRIC`, `ZCD_HCK_BASELINE`.
@@ -142,7 +142,8 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 ## Step 3 — Customizing (transport, client-dependent)
 
-1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see payment engine area docs).
+1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see payment engine area docs; names and defaults in each area's `gc_param` / `gc_param_default`; HCK row caps `HCK_MAX_JOB_ROWS` / `_JOB_NAMES` / `_AGG_ROWS`).
+1. `ZCD_OPS_MONCFG` (app *Alerting and parameters* → *Monitor freshness*): FMON 15, EBS 1560, HCK 1560 minutes (`config/alert_seed.md`) — dashboards and morning report self-check read the same row.
 2. `ZCD_OPS_ALCHN` and `ZCD_OPS_ALRULE` from `config/alert_seed.md` (HTTP channel inactive until Basis creates the SM59 destination).
 3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (payment engine reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account with **ACCOUNT_NO = the 10-character payment engine bank account as it appears in FEBEP-XBLNR after the bank text** (e.g. XBLNR `JPMC8XX1174412334` → `8XX1174412`; upper case, no leading blank) and ACTIVE = X. Only statements whose every line carries an active ACCOUNT_NO are validated and shown on the EBS dashboard (`EBS_VALIDATION.md` §A0a) — collect the list of payment engine accounts per bank from Treasury and check it against a FEBEP sample (SE16, XBLNR of the last statement of each account) before the first productive run.
 4. FMON: `config/fmon_seed.md` once step 0.3 is done.

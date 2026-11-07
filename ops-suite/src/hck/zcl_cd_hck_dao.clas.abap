@@ -29,6 +29,7 @@
 *&              in ABAP. Cycle ids filtered in ABAP (customizing rows). Performance_Review.md.
 *& 2026-11-07 | Row caps from parameters HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS (ZCL_CD_HCK_PARAM, cut to the
 *&            | hard ceilings); cap reached fails as before.
+*& 2026-11-07 | get_monitor_cfg: ZCD_OPS_MONCFG (stale threshold per area, shared with the dashboards).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -737,6 +738,15 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     ENDTRY.
     rv_hash = lv_hash.
   ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~get_monitor_cfg.
+    SELECT pe_area, stale_after_min
+      FROM zcd_ops_moncfg
+      WHERE stale_after_min > 0
+      ORDER BY pe_area
+      INTO CORRESPONDING FIELDS OF TABLE @rt_cfg.
+  ENDMETHOD.
+
 
   METHOD zif_cd_hck_dao~get_suppressions.
     " index ZCD_HCK_SUPPRESS~ACT

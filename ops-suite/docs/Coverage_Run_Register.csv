@@ -10,7 +10,7 @@ ZBP_R_CD_OPSCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemp
 ZBP_R_CD_OPSEXCEPTION,exempt,,0,,,"Exempt: instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-10; every decision tested in ZCL_CD_OPS_EXC_POLICY"
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
-ZCL_CD_EBS_DASH_CDS_TEST,own test include,,21,90,,Not run in target SAP
+ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,own test include,,68,90,,Not run in target SAP
 ZCL_CD_EBS_FACTORY,own test include,,4,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,own test include,,9,90,,Not run in target SAP
@@ -70,7 +70,7 @@ ZCL_CD_FMON_DAO,own test include,,24,90,,"Not run in target SAP; partial exempti
 ZCL_CD_FMON_DDIC,own test include,,6,90,,Not run in target SAP
 ZCL_CD_FMON_ENGINE,own test include,,34,90,,Not run in target SAP
 ZCL_CD_FMON_FACTORY,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (construction only: every engine test resolves through it)
-ZCL_CD_FMON_FLOW_CDS_TEST,own test include,,19,90,,Not run in target SAP
+ZCL_CD_FMON_FLOW_CDS_TEST,own test include,,20,90,,Not run in target SAP
 ZCL_CD_FMON_INJECTOR,covered,ZCL_CD_FMON_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_FMON_ENGINE (test seam: injected and reset by every engine test)
 ZCL_CD_FMON_LOT_READER,own test include,,7,90,,Not run in target SAP
 ZCL_CD_FMON_OPS_POLICY,own test include,,5,90,,Not run in target SAP
@@ -103,10 +103,10 @@ ZCL_CD_HCK_C_PRQ_SPE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_JOBS,own test include,,9,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_SYS,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
-ZCL_CD_HCK_DAO,own test include,,27,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
-ZCL_CD_HCK_DASH_CDS_TEST,own test include,,6,90,,Not run in target SAP
+ZCL_CD_HCK_DAO,own test include,,28,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
+ZCL_CD_HCK_DASH_CDS_TEST,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
-ZCL_CD_HCK_ENGINE,own test include,,20,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,own test include,,22,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (construction only: every engine test resolves through it)
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (test seam: injected and reset by every engine test)

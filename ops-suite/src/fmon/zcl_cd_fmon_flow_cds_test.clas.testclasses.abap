@@ -14,6 +14,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (FMON file monitoring dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
+*& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of FMON (base dependency doubled).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -711,6 +712,7 @@ CLASS ltc_as_of DEFINITION FINAL
     METHODS as_of_skips_test_and_iface_run FOR TESTING.
     METHODS stale_when_no_completed_run FOR TESTING.
     METHODS stale_when_run_is_old FOR TESTING.
+    METHODS moncfg_threshold_applies FOR TESTING.
     METHODS fresh_run_is_not_stale FOR TESTING.
 
     METHODS add_run
@@ -838,6 +840,37 @@ CLASS ltc_as_of IMPLEMENTATION.
         cl_abap_unit_assert=>assert_number_between( lower = gc_stale_minutes upper = cl_abap_math=>max_int4
                                                     number = ls_row-ageminutes
                                                     msg = 'The age of an old run exceeds the threshold' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: ZCD_OPS_MONCFG decides (600 minutes): a run two hours old is not stale, although the
+  " delivered 15 minutes would make it stale
+  METHOD moncfg_threshold_applies.
+    CONSTANTS lc_minutes TYPE i VALUE 600.
+    CONSTANTS lc_two_hours TYPE i VALUE 7200.
+    DATA lt_cfg TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
+    DATA ls_cfg TYPE zcd_ops_moncfg.
+    TRY.
+        GET TIME STAMP FIELD DATA(lv_now).
+        add_run( iv_run_id   = gc_run-r1
+                 iv_status   = zif_cd_ops_types=>gc_run_status-success
+                 iv_ended_at = cl_abap_tstmp=>subtractsecs( tstmp = CONV timestampl( lv_now ) secs = lc_two_hours ) ).
+        persist( ).
+        ls_cfg-pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor.
+        ls_cfg-stale_after_min = lc_minutes.
+        INSERT ls_cfg INTO TABLE lt_cfg.
+        go_env->insert_test_data( i_data = lt_cfg ).
+
+        SELECT SINGLE isstale, staleafterminutes FROM zr_cd_fmonasof INTO @DATA(ls_row).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 msg = 'The row must exist' ).
+
+        cl_abap_unit_assert=>assert_equals( act = ls_row-isstale exp = abap_false
+                                            msg = 'Within the configured 600 minutes: not stale' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-staleafterminutes exp = lc_minutes
+                                            msg = 'The configured threshold is shown' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

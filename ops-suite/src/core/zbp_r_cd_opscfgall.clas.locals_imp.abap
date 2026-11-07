@@ -25,10 +25,12 @@ INTERFACE lif_c.
       quietfrom                      TYPE string VALUE `QUIETFROM`,
       quietto                        TYPE string VALUE `QUIETTO`,
       rulepattern                    TYPE string VALUE `RULEPATTERN`,
+      staleaftermin                  TYPE string VALUE `STALEAFTERMIN`,
     END OF gc_el,
     BEGIN OF gc_ent,
       alertchannel                   TYPE string VALUE `AlertChannel`,
       alertrule                      TYPE string VALUE `AlertRule`,
+      monitorcfg                     TYPE string VALUE `MonitorCfg`,
       opsparam                       TYPE string VALUE `OpsParam`,
     END OF gc_ent,
     BEGIN OF gc_if,
@@ -37,12 +39,14 @@ INTERFACE lif_c.
     BEGIN OF gc_tab,
       alertchannel                   TYPE string VALUE `ZCD_OPS_ALCHN`,
       alertrule                      TYPE string VALUE `ZCD_OPS_ALRULE`,
+      monitorcfg                     TYPE string VALUE `ZCD_OPS_MONCFG`,
       opsparam                       TYPE string VALUE `ZCD_OPS_PARAM`,
     END OF gc_tab,
     BEGIN OF gc_val,
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
       alertrule_minseverity          TYPE string VALUE `,B,E,W,I`,
       alertrule_paymentenginearea    TYPE string VALUE `,*,EBS,FMON,HCK`,
+      monitorcfg_paymentenginearea   TYPE string VALUE `EBS,FMON,HCK`,
     END OF gc_val.
 ENDINTERFACE.
 
@@ -90,6 +94,9 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_OpsParam = if_abap_behv=>mk-on.
       result-%assoc-_OpsParam = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_MonitorCfg = if_abap_behv=>mk-on.
+      result-%assoc-_MonitorCfg = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -384,6 +391,110 @@ CLASS lhc_opsparam IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_monitorcfg DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR MonitorCfg RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR MonitorCfg~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR MonitorCfg~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_monitorcfg IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_opscfgall IN LOCAL MODE
+      ENTITY MonitorCfg
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-monitorcfg.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-PaymentEngineArea )
+                                        iv_list  = lif_c=>gc_val-monitorcfg_paymentenginearea ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-PaymentEngineArea
+                        v2 = lif_c=>gc_el-paymentenginearea v3 = lif_c=>gc_val-monitorcfg_paymentenginearea
+                        element = lif_c=>gc_el-paymentenginearea ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-StaleAfterMin <= 0.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-staleaftermin
+                        element = lif_c=>gc_el-staleaftermin ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-monitorcfg.
+        INSERT INITIAL LINE INTO TABLE reported-monitorcfg ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-monitorcfg.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-monitorcfg.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-monitorcfg.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_cd_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -404,7 +515,8 @@ CLASS lsc_zr_cd_opscfgall IMPLEMENTATION.
           it_relations = VALUE #(
             ( entity = lif_c=>gc_ent-alertrule table = lif_c=>gc_tab-alertrule )
             ( entity = lif_c=>gc_ent-alertchannel table = lif_c=>gc_tab-alertchannel )
-            ( entity = lif_c=>gc_ent-opsparam table = lif_c=>gc_tab-opsparam ) )
+            ( entity = lif_c=>gc_ent-opsparam table = lif_c=>gc_tab-opsparam )
+            ( entity = lif_c=>gc_ent-monitorcfg table = lif_c=>gc_tab-monitorcfg ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

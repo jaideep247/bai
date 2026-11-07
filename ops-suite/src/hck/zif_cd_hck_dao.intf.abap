@@ -16,6 +16,7 @@
 *& 2026-11-06 | PCRE patterns: job names, application-log objects / subobjects and cycle ids are lists of
 *&              PCRE patterns (complete value, case ignored); job reads raise message 747 at the name cap.
 *& 2026-11-07 | GC_MAX_AGG_ROWS is the hard ceiling (50,000) of parameter HCK_MAX_AGG_ROWS (default 5,000).
+*& 2026-11-07 | get_monitor_cfg (ZCD_OPS_MONCFG, DEFAULT IGNORE for existing doubles).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -260,6 +261,12 @@ INTERFACE zif_cd_hck_dao
       VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
     RAISING
       zcx_cd_ops_error.
+
+  "! Monitor freshness per area (ZCD_OPS_MONCFG, rows with a positive threshold): the
+  "! self-check reads it first, so it agrees with the dashboards' "as of" views
+  METHODS get_monitor_cfg DEFAULT IGNORE
+    RETURNING
+      VALUE(rt_cfg) TYPE zif_cd_hck_types=>tt_monitor_cfg.
 
   "! Active suppressions (status A, today within the period) - design 6.3
   METHODS get_suppressions DEFAULT IGNORE

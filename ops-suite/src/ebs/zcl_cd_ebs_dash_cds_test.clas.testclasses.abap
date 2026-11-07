@@ -19,6 +19,7 @@
 *& 2026-11-06 | Payment engine account scope (user decision): lines carry FEBEP-XBLNR, the account is
 *&            | derived from it (ZCD_EBS_ACCT-ACCOUNT_NO); all-PE statement shown with PE account and
 *&            | G/L, mixed / blank XBLNR / inactive account / no line hidden, totals by BAI code + XBLNR.
+*& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of EBS (base dependency doubled).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -864,6 +865,7 @@ CLASS ltc_run DEFINITION FINAL
     METHODS as_of_skips_running_and_test FOR TESTING.
     METHODS stale_when_no_completed_run FOR TESTING.
     METHODS stale_after_26_hours FOR TESTING.
+    METHODS moncfg_threshold_applies FOR TESTING.
 
     METHODS counted_run
       IMPORTING
@@ -1039,6 +1041,36 @@ CLASS ltc_run IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial( act = ls_row-asofat msg = 'No completed run: no as-of time' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-isstale exp = abap_true
                                             msg = 'No completed run is stale, never clean statements' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: ZCD_OPS_MONCFG decides (60 minutes): a run two hours old is stale, although the
+  " delivered 26 hours would keep it fresh
+  METHOD moncfg_threshold_applies.
+    CONSTANTS lc_minutes TYPE i VALUE 60.
+    CONSTANTS lc_two_hours TYPE i VALUE 7200.
+    DATA lt_cfg TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
+    DATA ls_cfg TYPE zcd_ops_moncfg.
+    TRY.
+        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        INSERT counted_run( iv_run_id = gc_run-early iv_ended_at = ltd_rows=>seconds_ago( lc_two_hours ) )
+               INTO TABLE lt_runs.
+        go_env->insert_test_data( i_data = lt_runs ).
+        ls_cfg-pe_area         = zif_cd_ops_types=>gc_pe_area-ebs.
+        ls_cfg-stale_after_min = lc_minutes.
+        INSERT ls_cfg INTO TABLE lt_cfg.
+        go_env->insert_test_data( i_data = lt_cfg ).
+
+        SELECT SINGLE isstale, staleafterminutes FROM zr_cd_ebsasof INTO @DATA(ls_row).
+
+        cl_abap_unit_assert=>assert_subrc( exp = 0 msg = 'The as-of row must exist' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-isstale exp = abap_true
+                                            msg = 'Beyond the configured 60 minutes: stale' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-staleafterminutes exp = lc_minutes
+                                            msg = 'The configured threshold is shown' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

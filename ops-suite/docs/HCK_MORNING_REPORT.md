@@ -258,7 +258,7 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
 | `ZCL_CD_HCK_C_TECH_SYS` | E | — | `SHORT_DUMPS`, `UPDATE_ERRORS`, `LOCK_ENTRIES`, `LOCK_MAX_AGE_MIN` (*) | — |
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
-| built-in `HCK_SELF` | E | `HCK_WATCH_PE_AREAS`, `HCK_MAX_AGE_HOURS`, `HCK_MAX_AGE_H_<pe_area>` | — | `PE_AREA_STALE` (E) |
+| built-in `HCK_SELF` | E | `HCK_WATCH_PE_AREAS`; stale threshold: `ZCD_OPS_MONCFG` row of the area (minutes, the same row as the dashboards), else `HCK_MAX_AGE_H_<pe_area>`, else `HCK_MAX_AGE_HOURS` (hours) | — | `PE_AREA_STALE` (E) |
 
 Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BASELINE_OUTLIER` (W), `BASELINE_WARMUP` (I, A102), `TIMEOUT_OVERRUN` (W), `PLUGIN_ERROR` (E), `ALERT_FAILED` (W).
 
@@ -391,7 +391,7 @@ Output: SALV with a scorecard header (score, RAG, red/amber counts, mode, RAG pe
 | **New volume source / LOB** | `ZCD_HCK_TABWL` + `ZCD_HCK_AGG` row under `B_VOLUME` (DAY mode set by the check; group field = source/LOB) + optional threshold |
 | **New SLG1 object** | Extend `PARAM1` of `B_APPLOG` |
 | **New table under drift control** | `ZCD_HCK_DRIFT` row, then take a baseline |
-| **Watch another payment engine area** | `ZCD_OPS_PARAM` `HCK_WATCH_PE_AREAS`, optional `HCK_MAX_AGE_H_<pe_area>` |
+| **Watch another payment engine area** | `ZCD_OPS_PARAM` `HCK_WATCH_PE_AREAS`; its stale threshold in `ZCD_OPS_MONCFG` (app *Monitor freshness*; fallback `HCK_MAX_AGE_H_<pe_area>`) |
 | **Who is alerted** | Core `ZCD_OPS_ALRULE` (payment engine area HCK, severity, group/check pattern, channel) — not an HCK table |
 | New check *logic* (only when no existing class fits) | New class implementing `ZIF_CD_HCK_CHECK` (only SQL via a DAO method), then a `ZCD_HCK_DEF` row |
 

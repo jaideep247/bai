@@ -12,6 +12,7 @@
 *& 2026-11-06 | check_receives_time_budget (audit A18).
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
+*& 2026-11-07 | moncfg_threshold_wins, no_moncfg_keeps_hours_rule (ZCD_OPS_MONCFG first, hours rule unchanged).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -174,6 +175,7 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_thresholds TYPE zif_cd_hck_types=>tt_threshold.
     DATA mv_metric_saves TYPE i.
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
+    DATA mt_moncfg TYPE zif_cd_hck_types=>tt_monitor_cfg.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
@@ -195,6 +197,10 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_open_exceptions.
     CLEAR rt_exceptions.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~get_monitor_cfg.
+    rt_cfg = mt_moncfg.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~get_suppressions.
@@ -252,8 +258,13 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         fmon_hung       TYPE abap_bool,
         own_run_running TYPE abap_bool,
         warmup_metric   TYPE abap_bool,
+        "! FMON's last run started two hours before now
+        fmon_two_hours  TYPE abap_bool,
+        "! ZCD_OPS_MONCFG row of FMON (minutes; 0 = no row)
+        fmon_moncfg_min TYPE i,
       END OF ty_flags.
 
+    CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
     DATA mo_clock TYPE REF TO ltd_clock.
@@ -273,6 +284,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS real_run_persists_dispatches FOR TESTING.
     METHODS mail_goes_to_morning_route FOR TESTING.
     METHODS stale_area_fails_self FOR TESTING.
+    METHODS moncfg_threshold_wins FOR TESTING.
+    METHODS no_moncfg_keeps_hours_rule FOR TESTING.
     METHODS category_rag_and_score FOR TESTING.
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS held_lock_skips_run FOR TESTING.
@@ -399,8 +412,17 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
       ls_last_run-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-started_at = ltd_clock=>gc_base.
+      IF is_flags-fmon_two_hours = abap_true.
+        ls_last_run-started_at = cl_abap_tstmp=>subtractsecs( tstmp = ltd_clock=>gc_base
+                                                              secs  = gc_two_hours_sec ).
+      ENDIF.
       ls_last_run-rag        = gc_green.
       INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
+      ls_last_run-started_at = ltd_clock=>gc_base.
+      IF is_flags-fmon_moncfg_min > 0.
+        INSERT VALUE #( pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor
+                        stale_after_min = is_flags-fmon_moncfg_min ) INTO TABLE mo_dao->mt_moncfg.
+      ENDIF.
       IF is_flags-ebs_never_ran = abap_false.
         ls_last_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
         INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
@@ -580,6 +602,40 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-pe_areas[ pe_area = 'FMON' ]-stale
                                             exp = abap_false
                                             msg = 'FMON ran recently' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a ZCD_OPS_MONCFG row decides the self-check (same threshold as the dashboards):
+  " FMON two hours old is stale with 15 minutes, although HCK_MAX_AGE_HOURS (26 h) is not reached
+  METHOD moncfg_threshold_wins.
+    CONSTANTS lc_fmon_min TYPE i VALUE 15.
+    TRY.
+        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true
+                                     fmon_moncfg_min = lc_fmon_min ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_fmon) = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ].
+        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale exp = abap_true
+                                            msg = 'FMON must be stale after the configured 15 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale_after_min exp = lc_fmon_min
+                                            msg = 'The configured threshold must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: without a ZCD_OPS_MONCFG row the hours rule (HCK_MAX_AGE_HOURS, 26 h) is unchanged
+  METHOD no_moncfg_keeps_hours_rule.
+    TRY.
+        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true ) ).
+        DATA(ls_report) = act( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]-stale
+          exp = abap_false
+          msg = 'Two hours is within the default 26 hours' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

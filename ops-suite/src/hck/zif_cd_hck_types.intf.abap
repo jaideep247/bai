@@ -27,6 +27,7 @@
 *&            | watched areas, mail route, runtime limit); row caps as parameters HCK_MAX_JOB_ROWS (5,000) and
 *&            | HCK_MAX_JOB_NAMES (20,000); GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES are now the hard ceilings (50,000 /
 *&            | 200,000).
+*& 2026-11-07 | TY_MONITOR_CFG (ZCD_OPS_MONCFG); TY_PE_AREA_STATUS-STALE_AFTER_MIN / AGE_MIN.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -601,12 +602,23 @@ INTERFACE zif_cd_hck_types
       warning_count TYPE i,
       age_hours     TYPE i,
       max_age_hours TYPE i,
+      "! ZCD_OPS_MONCFG-STALE_AFTER_MIN of the area (0 = no row: hours rule HCK_MAX_AGE_H_*)
+      stale_after_min TYPE i,
+      age_min       TYPE i,
       stale         TYPE abap_bool,
       "! Runs still running past HCK_MAX_RUN_MIN_<area> (dump / hang) - audit A06
       hung_runs     TYPE i,
       max_run_min   TYPE i,
     END OF ty_pe_area_status.
   TYPES tt_pe_area_status TYPE STANDARD TABLE OF ty_pe_area_status WITH EMPTY KEY.
+
+  "! Monitor freshness per area (core table ZCD_OPS_MONCFG; the dashboards read the same row)
+  TYPES:
+    BEGIN OF ty_monitor_cfg,
+      pe_area         TYPE zif_cd_ops_types=>ty_pe_area,
+      stale_after_min TYPE i,
+    END OF ty_monitor_cfg.
+  TYPES tt_monitor_cfg TYPE SORTED TABLE OF ty_monitor_cfg WITH UNIQUE KEY pe_area.
 
   "! Selection of one engine run (morning report selection screen)
   TYPES:

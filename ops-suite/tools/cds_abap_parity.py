@@ -24,6 +24,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _WINDOW = r"dats_add_days\(\s*\$session\.system_date\s*,\s*-(\d+)\s*,"
 _RUN_STATUS = r"status\s*=\s*'(\w)'"
+_STALE_FALLBACK = r"coalesce\(\s*Cfg\.stale_after_min\s*,\s*(\d+)\s*\)"
 
 # (name, cds file(s), pattern, abap file, constant(s), mode, scale)
 PAIRS = [
@@ -67,18 +68,16 @@ PAIRS = [
      ['src/fmon/zi_cd_fmonrunlast.ddls.asddls', 'src/hck/zi_cd_hckrunlast.ddls.asddls'], _RUN_STATUS,
      'src/core/zif_cd_ops_types.intf.abap',
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error'], 'set', None),
-    # Stale thresholds of the monitor "as of" views
-    ('fmon_stale_seconds', 'src/fmon/zr_cd_fmonasof.ddls.asddls', r"'NULL'\s*\)\s*>\s*(\d+)",
-     'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', 60),
-    ('fmon_stale_minutes_overview', 'src/core/zi_cd_opsfreshu.ddls.asddls',
-     r"cast\(\s*(\d+)\s+as\s+abap\.int4\s*\)\s+as\s+StaleAfterMinutes",
+    # Stale thresholds: ZCD_OPS_MONCFG row, else the CDS fallback literal = the ABAP default;
+    # the delivered seed rows equal them (config/alert_seed.md)
+    ('fmon_stale_fallback_minutes', 'src/fmon/zr_cd_fmonasof.ddls.asddls', _STALE_FALLBACK,
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
-    ('ebs_hck_stale_minutes', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
-     r"cast\(\s*(\d+)\s+as\s+abap\.int4\s*\)\s+as\s+StaleAfterMinutes",
+    ('ebs_hck_stale_fallback_minutes', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
+     _STALE_FALLBACK, 'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
+    ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| FMON \| (\d+) \|",
+     'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
+    ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| (?:EBS|HCK) \| (\d+) \|",
      'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
-    ('ebs_hck_stale_seconds', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
-     r"'NULL'\s*\)\s*>\s*(\d+)",
-     'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 3600),
 ]
 
 
@@ -147,7 +146,7 @@ def pair_failures(root, pairs):
             if not os.path.exists(cds_path):
                 failures.append(f'{name}: CDS file {cds_file} missing')
                 continue
-            found = [_norm(v) for v in re.findall(pattern, open(cds_path, encoding='utf-8').read(), re.S)]
+            found = [_norm(v) for v in re.findall(pattern, open(cds_path, encoding='utf-8').read(), re.S | re.M)]
             if not found:
                 failures.append(f'{name}: pattern not found in {cds_file} (CDS changed - update the pair)')
             elif mode == 'set':

@@ -12,7 +12,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
 | Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep (ZCD_HCK_*, ZCD_JOB_*) | HCK |
-| Alerting & parameters | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), OpsParam (ZCD_OPS_PARAM) | CORE |
+| Alerting & parameters | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), OpsParam (ZCD_OPS_PARAM), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*) | CORE |
 
 Shape — SAP's business-configuration maintenance object (verified against `SAP-samples/abap-platform-refscen-flight`, branch `ABAP-platform-2023`, carrier singleton):
 
@@ -71,6 +71,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |
 | CORE | AlertChannel | Class implements `ZIF_CD_OPS_ALERT_CHANNEL` | 410 |
+| CORE | MonitorCfg | Payment engine area EBS / FMON / HCK; stale-after minutes > 0 (`ZCD_OPS_MONCFG`, read by the dashboards' as-of views and the HCK self-check) | 413, 417 |
 
 **Pattern fields (user decision 2026-11-06).** Generator check `('pcre', field)` in `tools/rap_generate.py` → `ZCL_CD_OPS_UTIL=>PCRE_VALID` (the one helper also used at runtime): the pattern must compile as PCRE (it is matched to the complete value, case ignored; blank allowed), else message 418 on the field. The suppression operations app checks its key pattern the same way (`ZCL_CD_HCK_SUPPRESSION=>CHECK_REQUEST`). Pattern lists inside ZCD_HCK_DEF parameters are not validated by the app (the same PARAM columns hold numbers for other checks) — the check raises E373 at runtime and `ZCD_OPS_PATTERN_CHECK` shows them. VERIFY-ADT: validation messages on the draft in Prepare / Activate (no offline RAP runtime; the generator fixture tests cover the template and the list of validated fields).
 

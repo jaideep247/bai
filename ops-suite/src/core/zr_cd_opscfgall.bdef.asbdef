@@ -18,6 +18,7 @@ authorization master ( global )
   association _AlertRule { create ( features : global ); with draft; }
   association _AlertChannel { create ( features : global ); with draft; }
   association _OpsParam { create ( features : global ); with draft; }
+  association _MonitorCfg { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -30,6 +31,8 @@ authorization master ( global )
     validation AlertChannel ~ validateFields;
     validation AlertChannel ~ validateTransport;
     validation OpsParam ~ validateTransport;
+    validation MonitorCfg ~ validateFields;
+    validation MonitorCfg ~ validateTransport;
   }
 }
 
@@ -131,6 +134,36 @@ etag master LocalLastChangedAt
   {
     ParamName = param_name;
     ParamValue = param_value;
+    Description = description;
+    ChangedBy = changed_by;
+    ChangedAt = changed_at;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_MonitorCfg alias MonitorCfg
+persistent table zcd_ops_moncfg
+with additional save
+draft table zcd_d_moncfg
+lock dependent by _OpsCfgAll
+authorization dependent by _OpsCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) PaymentEngineArea;
+  field ( mandatory : create ) PaymentEngineArea;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_moncfg
+  {
+    PaymentEngineArea = pe_area;
+    StaleAfterMin = stale_after_min;
     Description = description;
     ChangedBy = changed_by;
     ChangedAt = changed_at;

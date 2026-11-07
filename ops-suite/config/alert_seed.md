@@ -70,3 +70,15 @@ Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUT
 | PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package |
 
 Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`).
+
+## Monitor freshness — `ZCD_OPS_MONCFG` (configuration app *Alerting and parameters*, entity *Monitor freshness*)
+
+One row per payment engine area: minutes after the last completed run before the monitor counts as **stale**. The "as of" CDS views of the dashboards (`ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`, overview `ZI_CD_OpsFreshU`) and the morning report's self-check (`HCK_SELF`, `PE_AREA_STALE`) read the **same** row, so they cannot disagree. Without a row the dashboards use the delivered value below and the self-check falls back to `HCK_MAX_AGE_H_<area>`, then `HCK_MAX_AGE_HOURS`.
+
+| PE_AREA | STALE_AFTER_MIN | Why |
+|---|---|---|
+| FMON | 15 | Native SAP job every 5 minutes: 3 missed runs |
+| EBS | 1560 | Daily run + 2 h slack (26 h) |
+| HCK | 1560 | Daily morning report + 2 h slack (26 h) |
+
+The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable check `cds_abap_parity`. Time zone per area: not configurable (time stamps are UTC); future extension.

@@ -288,8 +288,8 @@ CLASS lhc_fmonsla IMPLEMENTATION.
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmonsla.
       IF ls_row-MaxMinutes <= 0.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-maxminutes element = lif_c=>gc_el-maxminutes )
-          INTO TABLE lt_msg.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-maxminutes
+                        element = lif_c=>gc_el-maxminutes ) INTO TABLE lt_msg.
       ENDIF.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
                                         iv_list  = lif_c=>gc_val-fmonsla_severity ) = abap_false.

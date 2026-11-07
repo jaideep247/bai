@@ -128,6 +128,9 @@ SPEC = {
             ('zcd_ops_alchn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
              [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL')]),
             ('zcd_ops_param', 'OpsParam', 'zcd_d_param', 'Parameter', 'Runtime parameters', [], []),
+            # Stale threshold per monitor: the dashboards and the HCK self-check read the same row
+            ('zcd_ops_moncfg', 'MonitorCfg', 'zcd_d_moncfg', 'Monitor freshness', 'Monitor freshness', [],
+             [('enum', 'pe_area', 'EBS,FMON,HCK'), ('positive', 'stale_after_min')]),
         ]),
 }
 
@@ -516,8 +519,8 @@ def abap_check(t, chk, root):
     if kind == 'positive':
         e = fmap[chk[1]]
         return [f"    IF ls_row-{e} <= 0.",
-                f"      INSERT VALUE #( number = {msg}not_positive v1 = {el(e)} element = {el(e)} )",
-                '        INTO TABLE lt_msg.',
+                f"      INSERT VALUE #( number = {msg}not_positive v1 = {el(e)}",
+                f"                      element = {el(e)} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'thresholds':
         return ["    IF zcl_cd_ops_cfg_checks=>thresholds_ordered( iv_amber           = CONV #( ls_row-Amber )",

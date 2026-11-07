@@ -13,7 +13,9 @@ annotate entity ZC_CD_OpsCfgAll with
     { id: 'AlertChannel', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Alert channels', position: 30, targetElement: '_AlertChannel' },
     { id: 'OpsParam', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Runtime parameters', position: 40, targetElement: '_OpsParam' }
+      label: 'Runtime parameters', position: 40, targetElement: '_OpsParam' },
+    { id: 'MonitorCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Monitor freshness', position: 50, targetElement: '_MonitorCfg' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

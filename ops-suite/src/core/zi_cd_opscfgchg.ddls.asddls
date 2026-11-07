@@ -17,3 +17,8 @@ union all
   {
     last_changed_at as LastChangedAt
   }
+union all
+  select from zcd_ops_moncfg
+  {
+    last_changed_at as LastChangedAt
+  }

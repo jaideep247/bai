@@ -14,6 +14,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (health check dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
+*& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of HCK (base dependency doubled).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -380,6 +381,7 @@ CLASS ltc_history DEFINITION FINAL
     METHODS setup.
 
     METHODS stale_without_completed_run FOR TESTING.
+    METHODS moncfg_threshold_applies FOR TESTING.
     METHODS history_keeps_dim2_series FOR TESTING.
 ENDCLASS.
 
@@ -400,6 +402,37 @@ CLASS ltc_history IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
+  ENDMETHOD.
+
+
+  " Rule: ZCD_OPS_MONCFG decides (60 minutes): a report two hours old is stale, although the
+  " delivered 26 hours would keep it fresh
+  METHOD moncfg_threshold_applies.
+    CONSTANTS lc_minutes TYPE i VALUE 60.
+    CONSTANTS lc_two_hours TYPE i VALUE 7200.
+    DATA lt_cfg TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
+    DATA ls_cfg TYPE zcd_ops_moncfg.
+    TRY.
+        DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+        INSERT ltd_rows=>run( iv_run_id   = gc_run
+                              iv_status   = zif_cd_ops_types=>gc_run_status-success
+                              iv_ended_at = ltd_rows=>seconds_ago( lc_two_hours ) ) INTO TABLE lt_runs.
+        go_env->insert_test_data( i_data = lt_runs ).
+        ls_cfg-pe_area         = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_cfg-stale_after_min = lc_minutes.
+        INSERT ls_cfg INTO TABLE lt_cfg.
+        go_env->insert_test_data( i_data = lt_cfg ).
+
+        SELECT SINGLE isstale, staleafterminutes FROM zr_cd_hckasof INTO @DATA(ls_row).
+
+        cl_abap_unit_assert=>assert_subrc( exp = 0 msg = 'The as-of row must exist' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-isstale exp = abap_true
+                                            msg = 'Beyond the configured 60 minutes: stale' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-staleafterminutes exp = lc_minutes
+                                            msg = 'The configured threshold is shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

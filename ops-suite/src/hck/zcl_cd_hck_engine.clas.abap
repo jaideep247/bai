@@ -26,6 +26,8 @@
 *& 2026-11-07 | HCK_MAX_AGE_HOURS default from ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT (was inline 26).
 *& 2026-11-07 | GC_PARAM and inline defaults (300 / 8 / 20, watched areas, mail route, runtime limit) moved to
 *&            | ZIF_CD_HCK_TYPES; integer parameters with ZCL_CD_OPS_UTIL=>PARAM_INT (private param_int removed).
+*& 2026-11-07 | Self-check stale threshold: ZCD_OPS_MONCFG first (minutes, same row as the dashboards), then
+*&            | HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS (hours rule unchanged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -195,6 +197,13 @@ CLASS zcl_cd_hck_engine DEFINITION
         iv_to           TYPE timestampl
       RETURNING
         VALUE(rv_hours) TYPE i.
+
+    METHODS minutes_between
+      IMPORTING
+        iv_from         TYPE timestampl
+        iv_to           TYPE timestampl
+      RETURNING
+        VALUE(rv_minutes) TYPE i.
 
     "! DIM1 as threshold key when it fits 4 characters (company code, source), else '*'
     METHODS threshold_key
@@ -634,6 +643,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_default_run) = zcl_cd_ops_util=>param_int( io_params  = mo_store
                                                        iv_name    = zif_cd_hck_types=>gc_param-max_run_min
                                                        iv_default = zif_cd_hck_types=>gc_param_default-max_run_min ).
+    " Stale threshold: ZCD_OPS_MONCFG first (the dashboards read the same row), then
+    " HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS
+    DATA(lt_moncfg) = mo_dao->get_monitor_cfg( ).
     DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
       mo_store->get_param( iv_name    = zif_cd_hck_types=>gc_param-watch_pe_areas
                            iv_default = zif_cd_hck_types=>gc_param_default-watch_pe_areas ) ).
@@ -669,7 +681,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_status-finding_count = ls_last-finding_count.
       ls_status-age_hours     = hours_between( iv_from = ls_last-started_at
                                                iv_to   = lv_now ).
-      ls_status-stale         = xsdbool( ls_status-age_hours > ls_status-max_age_hours ).
+      ls_status-age_min       = minutes_between( iv_from = ls_last-started_at
+                                                 iv_to   = lv_now ).
+      ls_status-stale_after_min = VALUE #( lt_moncfg[ pe_area = ls_status-pe_area ]-stale_after_min OPTIONAL ).
+      ls_status-stale         = COND #( WHEN ls_status-stale_after_min > 0
+                                        THEN xsdbool( ls_status-age_min > ls_status-stale_after_min )
+                                        ELSE xsdbool( ls_status-age_hours > ls_status-max_age_hours ) ).
       IF ls_status-hung_runs > 0.
         ls_status-rag = zif_cd_ops_types=>gc_rag-red.
       ENDIF.
@@ -866,6 +883,17 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                        iv_v3    = cs_report-high_count ).
   ENDMETHOD.
 
+
+
+  METHOD minutes_between.
+    TRY.
+        DATA(lv_seconds) = cl_abap_tstmp=>subtract( tstmp1 = iv_to
+                                                    tstmp2 = iv_from ).
+        rv_minutes = lv_seconds DIV gc_seconds_per_minute.
+      CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
+        rv_minutes = 0.
+    ENDTRY.
+  ENDMETHOD.
 
 
   METHOD hours_between.

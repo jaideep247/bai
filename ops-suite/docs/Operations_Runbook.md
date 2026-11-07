@@ -177,3 +177,18 @@ Sources per area: EBS_FLOW = FEBEP-XBLNR of the configured accounts (FEBKO-AZDAT
 | Returns, NOC, clarifications | Disbursement and collections operations |
 | Jobs, Control-M | SAP IT & Control-M team |
 | Suite configuration and code | Payment engine RTB |
+
+## Changing a stale threshold or a parameter safely (2026-11-07)
+
+**Stale threshold of a monitor** (dashboards *and* morning report self-check):
+1. Configuration app *Alerting and parameters* → *Monitor freshness* → row of the area (FMON, EBS, HCK) → `STALE_AFTER_MIN` in minutes (> 0; the app refuses 0 and unknown areas). Delivered: FMON 15, EBS 1560, HCK 1560 (`config/alert_seed.md`).
+2. Save in DV1, transport (the app records the change in a customizing request where the client allows it). Do not maintain thresholds in `ZCD_OPS_PARAM` any more: `HCK_MAX_AGE_H_<area>` / `HCK_MAX_AGE_HOURS` are only the fallback of the self-check when the area has no `ZCD_OPS_MONCFG` row.
+3. Check: the overview page (*Monitor freshness*) shows the new threshold in `StaleAfterMinutes`; the next morning report's self-check uses the same value (`PE_AREA_STALE`).
+4. Delete the row to return to the delivered value (dashboards: CDS fallback literal; self-check: hours parameters).
+
+**Runtime parameter (`ZCD_OPS_PARAM`)**:
+1. Find the name and its delivered default in the area's types interface (`gc_param` / `gc_param_default`) or the seed file (`config/*_seed.md`); names are exact (upper case) — a misspelt name is ignored and the default applies.
+2. A blank value means **the default**, never "off": switch a flag off with `N` (any non-blank value other than X).
+3. Numbers: a value that is not a number falls back to the default (`ZCL_CD_OPS_UTIL=>PARAM_INT`). Row caps (`HCK_MAX_JOB_ROWS`, `HCK_MAX_JOB_NAMES`, `HCK_MAX_AGG_ROWS`) are cut to their hard ceilings (`HCK_MORNING_REPORT.md` §8a).
+4. Parameters are read once per run (snapshot at `start_run`): a change takes effect with the next run.
+
