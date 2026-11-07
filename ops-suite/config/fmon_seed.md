@@ -165,9 +165,11 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 
 `F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled). `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
 
-## ZCD_OPS_PARAM (FMON parameters)
+## FMON parameters — framework `ZCA_PARAM`, area `CD_FMON`
 
-| PARAM_NAME | Example | Meaning |
+Definitions (value type, limits, delivered default) of every parameter: `config/param_definitions.csv`; example value rows to confirm per landscape: `config/param_values.csv` (format: `param-framework/docs/ONBOARDING.md` section 6a). Maintained in the framework app *Parameter areas* (`ZUI_CA_PARAM`), area `CD_FMON` - ZCD_OPS_PARAM is retired. Examples below differ from the delivered default only where marked ‹ ›.
+
+| Parameter | Example | Meaning |
 |---|---|---|
 | FMON_LOOKBACK_DAYS | 1 | days read back from legacy tables / files evaluated |
 | FMON_OPEN_DAYS | 30 | open or partially processed files kept under watch |
@@ -178,7 +180,7 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | FMON_NOC_SLA_DAYS | 6 | NACHA NOC limit in banking days |
 | FMON_MAX_ROWS | 50000 | row cap per legacy read; a lot scan reaching it is `LOT_SCAN_TRUNCATED` and derives no lot outcome (audit A38) |
 | FMON_PRISM_MAX_BYTES | 16384 | body limit of the PRISM status API (413 above) |
-| FMON_PRISM_INSTANT | X | X = the instant PRISM unit saves findings and alerts; blank = registry only, findings and alerts from the 5-minute run |
+| FMON_PRISM_INSTANT | X | BOOL: X = the instant PRISM unit saves findings and alerts; a value row with blank value = registry only, findings and alerts from the 5-minute run (row delivered so production can switch it) |
 | FMON_PRISM_THROTTLE_MIN | 2 | minutes PRISM waits per throttled file before sending it to the bank (user 2026-11-06); `0` = no queue allowance (behaviour before 2026-11-06) |
 | FMON_PRISM_THROTTLE_SCOPE | C | `A` = one PRISM queue for all throttled files; `C` = one queue per bank (`ZCD_FMON_IFACE-BANK_KEY`). **C is confirmed and the default** (one PRISM queue per bank, user 2026-11-06) |
 | FMON_PRISM_THROTTLE_METHODS | ACH,WIRE | payment methods (`ZCD_FMON_IFACE-PAY_METHOD`) PRISM throttles; positive pay / stop pay are not throttled |

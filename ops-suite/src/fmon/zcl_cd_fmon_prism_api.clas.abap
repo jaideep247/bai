@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
 *& 2026-11-06 | Instant processing: bgPF unit queued in the LUW of the stored event.
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Comment: FMON_PRISM_MAX_BYTES in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - request service</p>
 "! Order: 405 method -> 403 authority -> 415 media type -> 413 size -> 400 validation
@@ -38,7 +39,7 @@ CLASS zcl_cd_fmon_prism_api DEFINITION
 
   PRIVATE SECTION.
 
-    "! Request size limit: ZCD_OPS_PARAM FMON_PRISM_MAX_BYTES, else the delivered default
+    "! Request size limit: ZCA_PARAM FMON_PRISM_MAX_BYTES, else the delivered default
     METHODS max_bytes
       RETURNING
         VALUE(rv_bytes) TYPE i.

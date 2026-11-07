@@ -2,8 +2,9 @@
 *& Artifact: zcl_cd_ops_store.clas.testclasses.abap
 *& Purpose:
 *& OSQL tests of the shared store: test-mode runs write nothing, findings of
-*& severity B/E/W become open exceptions with an SLA due date, parameters fall
-*& back to defaults. Does not prove live SAP runtime behavior.
+*& severity B/E/W become open exceptions with an SLA due date (parameters
+*& over ZCA_PARAM through ZCL_CD_OPS_PARAM_SEED), every run renews the
+*& parameter snapshot (A64). Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
@@ -16,6 +17,9 @@
 *& 2026-11-06 | ltc_store_runs: finish, last run, runs since, findings read (coverage gap closure).
 *& 2026-11-07 | Parameter semantics pinned (blank = default, condensed, get_range) - the same cases
 *&            | as the shared fake ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, ZCD_OPS_PARAM no longer doubled); the
+*&            | read semantics (blank, condensed, range) moved to ZCL_CD_OPS_PARAMS_CA's tests; A64 proved
+*&            | through ZCL_CD_OPS_FACTORY=>GET_PARAMS.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -42,6 +46,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_ops_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -88,7 +93,6 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS error_becomes_open_exception FOR TESTING.
     METHODS info_is_not_an_exception     FOR TESTING.
     METHODS sla_param_sets_due_date      FOR TESTING.
-    METHODS missing_param_gives_default  FOR TESTING.
     METHODS repeat_keeps_owner_and_due   FOR TESTING.
     METHODS repeat_supersedes_old_row    FOR TESTING.
     METHODS first_occurrence_counts_one  FOR TESTING.
@@ -100,9 +104,6 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS stale_running_run_is_found   FOR TESTING.
     METHODS next_run_sees_changed_param  FOR TESTING.
     METHODS param_stable_within_run      FOR TESTING.
-    METHODS blank_param_gives_default    FOR TESTING.
-    METHODS param_value_is_condensed     FOR TESTING.
-    METHODS param_range_from_list        FOR TESTING.
     METHODS carry_other_type_untouched   FOR TESTING.
     METHODS carry_newest_prior_inherited FOR TESTING.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
@@ -112,7 +113,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
         iv_object_type TYPE zcd_ops_finding-object_type
         iv_owner       TYPE syuname
         iv_created_at  TYPE timestampl.
-    "! Replace the maintained parameters (test data)
+    "! Change a parameter in the data only (no buffer refresh: a run keeps its snapshot)
     METHODS set_param
       IMPORTING
         iv_name  TYPE zif_cd_ops_types=>ty_param_name
@@ -131,7 +132,7 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_PARAM' ) ) ).
+      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ) ).
   ENDMETHOD.
 
 
@@ -143,13 +144,15 @@ CLASS ltc_store IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_cut = NEW zcl_cd_ops_store( ).
   ENDMETHOD.
 
 
   METHOD teardown.
     zcl_cd_ops_injector=>reset( ).
-    CLEAR mo_cut.
+    CLEAR: mo_cut, mo_params.
   ENDMETHOD.
 
 
@@ -218,13 +221,8 @@ CLASS ltc_store IMPLEMENTATION.
 
   " SLA_DAYS_<payment engine area>_<severity> drives the due date
   METHOD sla_param_sets_due_date.
-    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
-    DATA ls_param TYPE zcd_ops_param.
     TRY.
-        ls_param-param_name  = 'SLA_DAYS_EBS_B'.
-        ls_param-param_value = '0'.
-        INSERT ls_param INTO TABLE lt_param.
-        go_env->insert_test_data( lt_param ).
+        mo_params->set( iv_name = 'SLA_DAYS_EBS_B' iv_value = '0' ).
         DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
         mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-block ) ) )
                                CHANGING  cs_run      = ls_run ).
@@ -235,14 +233,6 @@ CLASS ltc_store IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
-  ENDMETHOD.
-
-
-  " A parameter that is not maintained returns the caller's default
-  METHOD missing_param_gives_default.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = 'NOT_THERE' iv_default = `42` )
-                                        exp = `42`
-                                        msg = 'Missing parameter must return the default' ).
   ENDMETHOD.
 
 
@@ -545,73 +535,29 @@ CLASS ltc_store IMPLEMENTATION.
 
 
   METHOD set_param.
-    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
-    go_env->clear_doubles( ).
-    INSERT VALUE #( param_name = iv_name param_value = iv_value ) INTO TABLE lt_param.
-    go_env->insert_test_data( lt_param ).
-  ENDMETHOD.
-
-
-  " The parameter semantics the shared fake ZCL_CD_OPS_PARAMS_MEM mirrors (its own tests
-  " assert the same cases): a blank value is the default
-  METHOD blank_param_gives_default.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
-    TRY.
-        set_param( iv_name = lc_name iv_value = `   ` ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = lc_name iv_default = `8` )
-                                            exp = `8`
-                                            msg = 'A blank parameter must return the default' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " A maintained value is read condensed (leading blanks removed, inner blanks collapsed)
-  METHOD param_value_is_condensed.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS'.
-    TRY.
-        set_param( iv_name = lc_name iv_value = `  EBS,   FMON ` ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = lc_name iv_default = `X` )
-                                            exp = `EBS, FMON`
-                                            msg = 'The value must be condensed' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " get_range: one I / EQ row per list entry, blank entries dropped
-  METHOD param_range_from_list.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS'.
-    DATA lt_exp TYPE zif_cd_ops_types=>tt_param_range.
-    TRY.
-        set_param( iv_name = lc_name iv_value = `EBS;;FMON` ).
-        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
-                        low = zif_cd_ops_types=>gc_pe_area-ebs ) INTO TABLE lt_exp.
-        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
-                        low = zif_cd_ops_types=>gc_pe_area-file_monitor ) INTO TABLE lt_exp.
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_range( lc_name )
-                                            exp = lt_exp
-                                            msg = 'One I / EQ row per entry' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
+    DATA ls_value TYPE zif_ca_param_types=>ty_value_row.
+    ls_value-area = zcl_cd_ops_params_ca=>area_of( iv_name ).
+    ls_value-name = iv_name.
+    ls_value-numb = 1.
+    ls_value-sign = zif_ca_param_types=>gc_sign-include.
+    ls_value-opti = zif_ca_param_types=>gc_option-eq.
+    ls_value-low  = iv_value.
+    mo_params->dao( )->add_value( ls_value ).
   ENDMETHOD.
 
 
   " Audit A64: two runs in one internal session - the second run sees a parameter that
-  " was changed between the runs (the cache is not session-wide)
+  " was changed between the runs (start_run renews the snapshot of the parameter adapter)
   METHOD next_run_sees_changed_param.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS'.
     TRY.
         set_param( iv_name = lc_name iv_value = `8` ).
         mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `8`
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_params( )->get_param( lc_name ) exp = `8`
                                             msg = 'The first run reads the maintained value' ).
         set_param( iv_name = lc_name iv_value = `12` ).
         mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `12`
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_params( )->get_param( lc_name ) exp = `12`
                                             msg = 'The next run must see the changed parameter' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -619,18 +565,21 @@ CLASS ltc_store IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Audit A64: inside one run the parameters are a snapshot taken at start_run
+  " Audit A64: inside one run the parameters are a snapshot (ZCA_PARAM buffers an area from
+  " its first read after start_run until the next refresh)
   METHOD param_stable_within_run.
-    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS'.
     TRY.
         set_param( iv_name = lc_name iv_value = `8` ).
         mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs iv_test_mode = abap_true ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_params( )->get_param( lc_name ) exp = `8`
+                                            msg = 'The run reads the value valid at its start' ).
         set_param( iv_name = lc_name iv_value = `12` ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `8`
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_params( )->get_param( lc_name ) exp = `8`
                                             msg = 'A running run keeps its start snapshot' ).
-        mo_cut->refresh_params( ).
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( lc_name ) exp = `12`
-                                            msg = 'refresh_params reads the table again' ).
+        zcl_cd_ops_factory=>get_params( )->refresh_params( ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_factory=>get_params( )->get_param( lc_name ) exp = `12`
+                                            msg = 'refresh_params reads the parameters again' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -640,7 +589,7 @@ ENDCLASS.
 
 
 "! OSQL tests of the run header life cycle and the run / finding reads (ZCD_OPS_RUN,
-"! ZCD_OPS_FINDING and ZCD_OPS_PARAM doubled; clock double through ZCL_CD_OPS_INJECTOR).
+"! ZCD_OPS_FINDING doubled; clock and parameters (ZCL_CD_OPS_PARAM_SEED) through ZCL_CD_OPS_INJECTOR).
 "! COMMIT / ROLLBACK are one statement each and covered by the engine LUW tests (store double).
 CLASS ltc_store_runs DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -688,7 +637,7 @@ CLASS ltc_store_runs IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_PARAM' ) ) ).
+      i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ) ).
   ENDMETHOD.
 
 
@@ -700,6 +649,7 @@ CLASS ltc_store_runs IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     mo_cut = NEW zcl_cd_ops_store( ).
   ENDMETHOD.
 

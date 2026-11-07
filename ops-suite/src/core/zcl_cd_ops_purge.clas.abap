@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_ops_purge.clas.abap
 *& Purpose:
 *& Retention purge of the suite's own history: runs with their findings, alert
-*& log, FMON events, HCK metrics. Retention days per target in ZCD_OPS_PARAM
+*& log, FMON events, HCK metrics. Retention days per target in ZCA_PARAM
 *& (RETENTION_DAYS_<target>), never below 30 days. Test mode counts only;
 *& otherwise deletes package by package with a commit per package. Runs that
 *& still hold an open, assigned or validly waived exception are never purged
@@ -14,6 +14,7 @@
 *& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
 *& 2026-11-07 | PURGE_PACKAGE_SIZE / RETENTION_DAYS_ names and default from ZIF_CD_OPS_TYPES; one shared
 *&            | helper ZCL_CD_OPS_UTIL=>PARAM_INT over GET_PARAMS (private int_param removed).
+*& 2026-11-07 | Purpose: retention days in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION

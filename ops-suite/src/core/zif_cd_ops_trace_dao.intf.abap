@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (360 degree payment trace).
 *& 2026-11-06 | Configured and EBS reads reuse the existing validated readers; files by date.
 *& 2026-11-06 | Return / NOC reasons: get_returns carries DFKKRP-RLGRD; get_noc_items (DFKKNRP by INFOF, capped).
+*& 2026-11-07 | Comment: source specifications from ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -16,7 +17,7 @@ INTERFACE zif_cd_ops_trace_dao
 
   "! Rows of a configured source (request log, clearing-reset history, generated-file
   "! register, payment-level ACK, cheque history) for one key. Table and field names come
-  "! from ZCD_OPS_PARAM; the read goes through the file monitoring reader, which checks
+  "! from ZCA_PARAM; the read goes through the file monitoring reader, which checks
   "! them against the DDIC, the approved tables (ZCD_FMON_TABWL) and S_TABU_NAM first.
   "! @parameter iv_match_key2 | abap_false: KEY2 is read but not used as a condition
   "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised

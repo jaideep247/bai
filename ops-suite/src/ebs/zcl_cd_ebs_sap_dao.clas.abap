@@ -18,6 +18,7 @@
 *& 2026-11-06 | Return / NOC reason correction: DFKKRP-RLGRD in the returns lot read; get_noc_items (DFKKNRP by INFOF).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | EBS_GL_LEDGER and EBS_RTRV_STATUS_FIELD name / default from ZIF_CD_EBS_TYPES.
+*& 2026-11-07 | Comments: parameters in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -28,8 +29,8 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_cd_ebs_sap_dao.
 
-    "! Ledger for the bank G/L balance (ZCD_OPS_PARAM EBS_GL_LEDGER)
-    "! Status field of ZCD_ACH_RTRV_LOG (ZCD_OPS_PARAM EBS_RTRV_STATUS_FIELD)
+    "! Ledger for the bank G/L balance (ZCA_PARAM EBS_GL_LEDGER)
+    "! Status field of ZCD_ACH_RTRV_LOG (ZCA_PARAM EBS_RTRV_STATUS_FIELD)
     "! ACH retrieval log (legacy custom table, status field configurable - parity D5)
     CONSTANTS gc_rtrv_table TYPE string VALUE `ZCD_ACH_RTRV_LOG`.
 

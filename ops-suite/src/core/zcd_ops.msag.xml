@@ -2034,7 +2034,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>703</MSGNR>
-     <TEXT>Source not configured: parameter &amp;1 in ZCD_OPS_PARAM</TEXT>
+     <TEXT>Source not configured: parameter &amp;1 in ZCA_PARAM</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

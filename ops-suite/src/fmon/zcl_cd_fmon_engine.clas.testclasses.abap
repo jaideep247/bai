@@ -18,6 +18,8 @@
 *& 2026-11-06 | Interface name pattern seeds are PCRE.
 *& 2026-11-06 | Test invalid_name_pattern_reported (PCRE interface name pattern that does not compile).
 *& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
+*&            | serves no parameters.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -216,11 +218,6 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~rollback.
     mv_rollback_calls += 1.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake (nothing maintained): semantics of ZCL_CD_OPS_STORE
-    rv_value = NEW zcl_cd_ops_params_mem( )->zif_cd_ops_params~get_param( iv_name    = iv_name
-                                                                           iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -479,6 +476,7 @@ CLASS ltc_engine IMPLEMENTATION.
     zcl_cd_fmon_injector=>inject_lot_reader( mo_lots ).
     zcl_cd_fmon_injector=>inject_calendar( mo_calendar ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     zcl_cd_ops_injector=>inject_alert( mo_alert ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.

@@ -138,8 +138,9 @@ operations suite, `ZIF_CD_OPS_PARAMS`) keeps its callers and adds one adapter cl
    raises 003. Value type from the reading code (integer helpers -> INT, flags -> BOOL,
    comma lists -> LIST, select-options -> kind S), the delivered default constant as
    DEFAULT_VALUE.
-3. The adapter maps `get_param` to `get_value` (BOOL: `X` / the consumer's explicit off
-   token, so that "blank = default" callers can see an off flag), `get_range` to
+3. The adapter maps `get_param` to `get_value` (BOOL: `get_bool` as `X` or blank - the
+   operations suite's callers compare with `X`, so an off flag reaches them as blank and the
+   caller's default never overrides a resolved value or a definition default), `get_range` to
    `get_range` (kind S) or to `get_list` turned into I EQ rows (LIST), `refresh_params`
    to `refresh( )`.
 4. An interface without `RAISING` cannot pass `ZCX_CA_PARAM` on: the adapter records the
@@ -147,3 +148,27 @@ operations suite, `ZIF_CD_OPS_PARAMS`) keeps its callers and adds one adapter cl
    transition rule, to be removed when callers move to the typed getters.
 5. Tests: the consumer's in-memory parameter fake is replaced by `ZCL_CA_PARAM_DAO_MEM`
    behind the adapter, so the consumer's tests exercise the real semantics.
+
+### 6a. Seed files (delivered areas, definitions and example values)
+
+The framework itself delivers no data; a consumer delivers its areas and definitions as
+seed files next to its code (the operations suite: `ops-suite/config/param_areas.csv`,
+`param_definitions.csv`, `param_values.csv`) and enters them in the app in the customizing
+client on a customizing request (no SM30, no direct table load). Format - UTF-8 CSV, header
+row exactly as below, one row per table row, flags `X` or blank, a field with a comma in
+double quotes:
+
+| File | Columns (= fields of the table) |
+|---|---|
+| `param_areas.csv` (`ZCA_PARAM_AREA`) | `AREA,DESCRIPTION,OWNER_TEAM,PROD_EDITABLE,ACTIVE` |
+| `param_definitions.csv` (`ZCA_PARAM_DEF`) | `AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER` |
+| `param_values.csv` (`ZCA_PARAM_VAL`, optional) | `AREA,NAME,NUMB,SIGN,OPTI,LOW,HIGH` |
+
+Rules a consumer's check should apply before a row is entered (the app applies them again
+on save): area and name are identifiers (16 / 30 characters), description at most 60, owner
+at most 30 characters; the section 2 rules per value type; rows sorted by area and name;
+value rows only for defined names, kind P with one row `NUMB` 1, `I` / `EQ`. Values in
+`param_values.csv` are examples to confirm per landscape - production values are maintained
+in the app, never transported from a seed. The operations suite generates its in-memory test
+data (`ZCL_CD_OPS_PARAM_SEED`) from these files and checks them against its code
+(`tools/param_definitions.py`).

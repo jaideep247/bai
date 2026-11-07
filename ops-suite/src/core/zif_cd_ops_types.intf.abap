@@ -22,6 +22,8 @@
 *&            | TT_PARAM_RANGE and GC_RANGE for ZIF_CD_OPS_PARAMS=>GET_RANGE.
 *& 2026-11-07 | Channel HTTP removed with the webhook channel (read-only scope).
 *& 2026-11-07 | Alert message without INTENT_KEY / OCCURRED_AT (only the removed webhook read them; the claim keeps both).
+*& 2026-11-07 | Parameters in the framework ZCA_PARAM: areas GC_PARAM_AREA, name prefix -> area
+*&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CD_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -69,7 +71,7 @@ INTERFACE zif_cd_ops_types
       evidence_window_days TYPE i VALUE 45,
     END OF gc_trx_dashboard.
 
-  "! Core parameters (ZCD_OPS_PARAM): alerting, purge, exception SLA
+  "! Core parameters (area CD_OPS of ZCA_PARAM): alerting, purge, exception SLA
   CONSTANTS:
     BEGIN OF gc_param,
       "! Recipients when ALERT_<route> is blank
@@ -98,6 +100,29 @@ INTERFACE zif_cd_ops_types
       purge_package  TYPE i VALUE 1000,
       sla_days       TYPE i VALUE 1,
     END OF gc_param_default.
+
+  "! Parameter areas of the suite in the framework ZCA_PARAM (config/param_areas.csv)
+  CONSTANTS:
+    BEGIN OF gc_param_area,
+      ops  TYPE zif_ca_param_types=>ty_area VALUE 'CD_OPS',
+      ebs  TYPE zif_ca_param_types=>ty_area VALUE 'CD_EBS',
+      fmon TYPE zif_ca_param_types=>ty_area VALUE 'CD_FMON',
+      hck  TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+    END OF gc_param_area.
+
+  "! Name prefixes that decide the area of a parameter (ZCL_CD_OPS_PARAMS_CA=>AREA_OF):
+  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK
+  CONSTANTS:
+    BEGIN OF gc_param_area_prefix,
+      alert     TYPE ty_param_name VALUE 'ALERT_',
+      sla       TYPE ty_param_name VALUE 'SLA_',
+      retention TYPE ty_param_name VALUE 'RETENTION_',
+      purge     TYPE ty_param_name VALUE 'PURGE_',
+      trace     TYPE ty_param_name VALUE 'TRACE_',
+      ebs       TYPE ty_param_name VALUE 'EBS_',
+      fmon      TYPE ty_param_name VALUE 'FMON_',
+      hck       TYPE ty_param_name VALUE 'HCK_',
+    END OF gc_param_area_prefix.
   "! SALV exception column values (traffic light)
   CONSTANTS:
     BEGIN OF gc_light,
@@ -109,7 +134,7 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_msgno_free TYPE ty_msgno VALUE '000'.
   TYPES ty_action      TYPE c LENGTH 10.
   TYPES ty_param_name  TYPE c LENGTH 30.
-  "! Value of a parameter (ZCD_OPS_PARAM-PARAM_VALUE) and its select-option style view
+  "! Value of a parameter (ZCA_PARAM_VAL-LOW, CHAR 255) and its select-option style view
   TYPES ty_param_value TYPE c LENGTH 255.
   TYPES tt_param_range TYPE RANGE OF ty_param_value.
   "! Sign / option of a select-option style range row (ZIF_CD_OPS_PARAMS=>GET_RANGE)
@@ -234,12 +259,15 @@ INTERFACE zif_cd_ops_types
     END OF ty_run.
   TYPES tt_run TYPE STANDARD TABLE OF ty_run WITH EMPTY KEY.
 
+  "! A parameter that could not be read (ZCX_CA_PARAM): ZIF_CD_OPS_PARAMS=>GET_ERRORS
   TYPES:
-    BEGIN OF ty_kv,
+    BEGIN OF ty_param_error,
+      area  TYPE zif_ca_param_types=>ty_area,
       name  TYPE ty_param_name,
-      value TYPE ty_param_value,
-    END OF ty_kv.
-  TYPES tt_kv TYPE SORTED TABLE OF ty_kv WITH UNIQUE KEY name.
+      msgno TYPE symsgno,
+      text  TYPE string,
+    END OF ty_param_error.
+  TYPES tt_param_error TYPE SORTED TABLE OF ty_param_error WITH UNIQUE KEY area name.
 
   "! ---- Alert router (ZCD_OPS_ALRULE / _CHN / _LOG) ----
   TYPES ty_channel     TYPE c LENGTH 10.

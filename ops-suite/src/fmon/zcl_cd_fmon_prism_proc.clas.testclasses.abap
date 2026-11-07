@@ -14,6 +14,8 @@
 *& 2026-11-06 | Interface name pattern seeds are PCRE.
 *& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM; the blank
 *&            | FMON_PRISM_INSTANT simulation is marked (not reachable through the real store).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): FMON_PRISM_INSTANT is BOOL, registry-only
+*&            | mode is a value row with blank value - the simulation in the store double is gone.
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -113,16 +115,6 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_variant TYPE zif_cd_ops_types=>ty_variant.
     DATA mv_commits TYPE i.
     DATA mv_reconciles TYPE i.
-    "! FMON_PRISM_INSTANT as maintained (blank flag = default X)
-    DATA mv_registry_only TYPE abap_bool.
-    TYPES:
-      BEGIN OF ty_param,
-        name  TYPE zif_cd_ops_types=>ty_param_name,
-        value TYPE string,
-      END OF ty_param.
-    TYPES tt_param TYPE HASHED TABLE OF ty_param WITH UNIQUE KEY name.
-    "! Maintained ZCD_OPS_PARAM values (others: the caller's default)
-    DATA mt_params TYPE tt_param.
 ENDCLASS.
 
 
@@ -144,21 +136,6 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~reconcile.
     mv_reconciles += 1.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_param.
-    " VERIFY (open item, 2026-11-07): ZCL_CD_OPS_STORE returns the default X for a blank
-    " FMON_PRISM_INSTANT, so registry-only mode is not reachable through ZCD_OPS_PARAM today;
-    " this double keeps simulating the documented blank value until the switch is decided
-    IF iv_name = zif_cd_fmon_prism_types=>gc_param_instant AND mv_registry_only = abap_true
-       AND NOT line_exists( mt_params[ name = iv_name ] ).
-      RETURN.
-    ENDIF.
-    " Every other parameter: the shared fake, semantics of ZCL_CD_OPS_STORE
-    DATA(lo_params) = NEW zcl_cd_ops_params_mem( ).
-    LOOP AT mt_params ASSIGNING FIELD-SYMBOL(<ls_param>).
-      lo_params->set( iv_name = <ls_param>-name iv_value = <ls_param>-value ).
-    ENDLOOP.
-    rv_value = lo_params->zif_cd_ops_params~get_param( iv_name = iv_name iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -258,6 +235,7 @@ CLASS ltc_proc DEFINITION FINAL
     DATA mo_prism TYPE REF TO ltd_prism_dao.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
@@ -323,6 +301,8 @@ CLASS ltc_proc IMPLEMENTATION.
     zcl_cd_fmon_injector=>inject_dao( mo_dao ).
     zcl_cd_fmon_injector=>inject_prism_dao( mo_prism ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_alert( mo_alert ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
@@ -429,7 +409,10 @@ CLASS ltc_proc IMPLEMENTATION.
     ENDIF.
 
     mo_dao->mv_conflict_all     = is_flags-conflict.
-    mo_store->mv_registry_only  = is_flags-registry_only.
+    IF is_flags-registry_only = abap_true.
+      " BOOL off: a value row with blank value (no row = the default X)
+      mo_params->set( iv_name = zif_cd_fmon_prism_types=>gc_param_instant iv_value = space ).
+    ENDIF.
 
     mo_prism->ms_row-event_id     = gc_test-event_id.
     mo_prism->ms_row-file_ref     = COND #( WHEN is_flags-unknown_file = abap_true THEN gc_test-unknown
@@ -497,11 +480,10 @@ CLASS ltc_proc IMPLEMENTATION.
                                                 secs  = gc_queue-peers * gc_queue-peer_step ) ).
 
     IF is_flags-throttle_off = abap_true.
-      INSERT VALUE #( name = zif_cd_fmon_types=>gc_param-throttle_min value = `0` ) INTO TABLE mo_store->mt_params.
+      mo_params->set( iv_name = zif_cd_fmon_types=>gc_param-throttle_min iv_value = `0` ).
     ENDIF.
     IF is_flags-queue_max > 0.
-      INSERT VALUE #( name = zif_cd_fmon_types=>gc_param-queue_max value = |{ is_flags-queue_max }| )
-             INTO TABLE mo_store->mt_params.
+      mo_params->set( iv_name = zif_cd_fmon_types=>gc_param-queue_max iv_value = |{ is_flags-queue_max }| ).
     ENDIF.
   ENDMETHOD.
 

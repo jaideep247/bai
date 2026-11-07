@@ -15,6 +15,8 @@
 *& 2026-11-06 | Perf fix 1: DFKKCR read once per package (memo for R07C/R08/R12), rows canonicalised once (sorted index).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | EBS_ZTNUM_IGNORE_ZEROS is BOOL in ZCA_PARAM (blank value row = off); default from
+*&            | GC_PARAM_DEFAULT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -26,10 +28,10 @@ CLASS zcl_cd_ebs_rule_base DEFINITION
     INTERFACES zif_cd_ebs_rule
       ABSTRACT METHODS execute.
 
-    "! Default length of document-number keys (OPBEL/AUGBL/DOC1R): ZCD_OPS_PARAM EBS_KEYLEN_DOCNO
+    "! Default length of document-number keys (OPBEL/AUGBL/DOC1R): ZCA_PARAM EBS_KEYLEN_DOCNO
     CONSTANTS gc_default_docno_length TYPE i VALUE 12.
 
-    "! Default length of check-number keys: 0 = as delivered (ZCD_OPS_PARAM EBS_KEYLEN_ZTNUM)
+    "! Default length of check-number keys: 0 = as delivered (ZCA_PARAM EBS_KEYLEN_ZTNUM)
     CONSTANTS gc_default_ztnum_length TYPE i VALUE 0.
 
     "! In-flight grace in hours when EBS_INFLIGHT_HOURS is not maintained: off
@@ -499,7 +501,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
   METHOD ztnum_ignore_zeros.
     rv_ignore = xsdbool( param( iv_name    = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros
-                                iv_default = CONV #( abap_true ) ) = abap_true ).
+                                iv_default = zif_cd_ebs_types=>gc_param_default-ztnum_ignore_zeros ) = abap_true ).
   ENDMETHOD.
 
 

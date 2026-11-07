@@ -13,6 +13,8 @@
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | Delivered message no longer carries intent key / raise time (webhook fields removed).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
+*&            | serves no parameters.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -95,12 +97,17 @@ ENDCLASS.
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+    "! Parameters over ZCA_PARAM (delivered definitions, in memory)
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     "! Run history for consecutive escalation (get_runs_since)
     DATA mt_runs   TYPE zif_cd_ops_types=>tt_run.
+    METHODS constructor.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
+  METHOD constructor.
+    mo_params = NEW #( ).
+  ENDMETHOD.
   METHOD zif_cd_ops_store~start_run.
     rs_run-pe_area = iv_pe_area.
   ENDMETHOD.
@@ -110,14 +117,6 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~finish_run.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
-    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
-                                                                                     iv_default = iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_range.
-    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.
@@ -216,6 +215,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_alert_dao( mo_dao ).
     zcl_cd_ops_injector=>inject_clock( mo_clock ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-channel_cl
                                         io_instance   = mo_channel ).
     CLEAR ms_run.
@@ -482,7 +482,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
   METHOD send_uses_route_parameter.
     TRY.
         configure_scenario( default_flags( ) ).
-        INSERT VALUE #( name = 'ALERT_MORNING' value = gc_test-dest ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = 'ALERT_MORNING' iv_value = gc_test-dest ).
 
         zcl_cd_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
                                                iv_html = `<p>ok</p>` ).
@@ -611,7 +611,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     DATA(ls_flags) = default_flags( ).
     ls_flags-channel_inactive = abap_true.
     configure_scenario( ls_flags ).
-    INSERT VALUE #( name = 'ALERT_MORNING' value = gc_test-dest ) INTO TABLE mo_store->mt_params.
+    mo_store->mo_params->set( iv_name = 'ALERT_MORNING' iv_value = gc_test-dest ).
     TRY.
         zcl_cd_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
                                                iv_html = `<p>ok</p>` ).

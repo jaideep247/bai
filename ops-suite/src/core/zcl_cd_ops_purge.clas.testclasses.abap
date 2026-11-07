@@ -9,6 +9,9 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
+*&            | serves no parameters.
+*& 2026-11-07 | Comment: RETENTION_DAYS_RUN in ZCA_PARAM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -41,18 +44,15 @@ ENDCLASS.
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
+    "! Parameters over ZCA_PARAM (delivered definitions, in memory)
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA mv_commits TYPE i.
+    METHODS constructor.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_params~get_param.
-    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
-    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
-                                                                                     iv_default = iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_params~get_range.
-    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
+  METHOD constructor.
+    mo_params = NEW #( ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
@@ -110,6 +110,7 @@ CLASS ltc_purge IMPLEMENTATION.
     mo_store = NEW #( ).
     zcl_cd_ops_injector=>inject_purge_dao( mo_dao ).
     zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_store->mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
   ENDMETHOD.
 
@@ -159,7 +160,7 @@ CLASS ltc_purge IMPLEMENTATION.
   " Rule: deletion runs in packages with a commit per package until a short package
   METHOD deletes_in_packages.
     TRY.
-        INSERT VALUE #( name = 'PURGE_PACKAGE_SIZE' value = '2' ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = 'PURGE_PACKAGE_SIZE' iv_value = '2' ).
         mo_dao->mt_package_sizes = VALUE #( ( 2 ) ( 2 ) ( 1 ) ).
         DATA(ls_run) = run_result( NEW zcl_cd_ops_purge( )->run( abap_false ) ).
         cl_abap_unit_assert=>assert_equals( act = ls_run-rows exp = 5 msg = 'All packages must be counted' ).
@@ -172,10 +173,10 @@ CLASS ltc_purge IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: RETENTION_DAYS_RUN in ZCD_OPS_PARAM decides the cutoff, not code
+  " Rule: RETENTION_DAYS_RUN in ZCA_PARAM decides the cutoff, not code
   METHOD retention_param_is_used.
     TRY.
-        INSERT VALUE #( name = 'RETENTION_DAYS_RUN' value = '100' ) INTO TABLE mo_store->mt_params.
+        mo_store->mo_params->set( iv_name = 'RETENTION_DAYS_RUN' iv_value = '100' ).
         DATA(ls_run) = run_result( NEW zcl_cd_ops_purge( )->run( abap_true ) ).
         cl_abap_unit_assert=>assert_equals( act = ls_run-cutoff exp = '20260729'
                                             msg = 'The parameter must set the cutoff date' ).

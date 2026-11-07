@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """CDS <-> ABAP parity: facts that CDS has to hold as literals (CDS cannot read ABAP constants or
-ZCD_OPS_PARAM) are compared with the named ABAP constant that is their single documented source.
+ZCA_PARAM) are compared with the named ABAP constant that is their single documented source.
 
 Data-driven: one row of PAIRS per fact. A row names
   name       - what is compared (reported on drift)

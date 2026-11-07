@@ -54,7 +54,8 @@ for f in files:
         body = m.group(2)
         if re.search(r'FOR\s+ALL\s+ENTRIES', body, re.I) and not re.search(r'IS\s+(NOT\s+)?INITIAL|CHECK\s+\w', body, re.I):
             fae.append(f'{rel}: {m.group(1)}')
-    if re.search(r"'1000'", code) and 'testclasses' not in base:
+    # the generated parameter seed holds parameter values (e.g. PURGE_PACKAGE_SIZE 1000), not company codes
+    if re.search(r"'1000'", code) and 'testclasses' not in base and base != 'zcl_cd_ops_param_seed.clas.abap':
         bukrs.append(rel)
     if base.endswith('.clas.abap'):
         m = re.search(r'CLASS\s+\w+\s+DEFINITION(.*?)\.', code, re.S | re.I)
@@ -156,6 +157,17 @@ check('params_used', usage_checks.param_failures(ROOT),
 check('constants_used', usage_checks.constant_failures(ROOT),
       'Every types-interface constant is referenced by code, a test or CDS (documentation does not count); '
       'message numbers, check codes, parameter names and defaults one by one, other structures as value domains.')
+
+# Parameters in ZCA_PARAM: seed files, generated seed class and code agree (tools/param_definitions.py)
+import param_definitions  # noqa: E402
+_counts = param_definitions.counts(ROOT)
+check('param_definitions_complete', param_definitions.failures(ROOT),
+      f'{sum(sum(c.values()) for c in _counts.values())} delivered definitions in {len(_counts)} areas '
+      '(config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone '
+      'gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area '
+      'is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code '
+      'delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated '
+      'from the seed files.')
 
 # Facts CDS holds as literals agree with their single ABAP source (tools/cds_abap_parity.py)
 import cds_abap_parity  # noqa: E402

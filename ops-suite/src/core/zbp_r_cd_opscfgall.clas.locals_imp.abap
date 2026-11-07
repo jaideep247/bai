@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_cd_opscfgall.clas.locals_imp.abap
 *& Purpose:
-*& Handlers and saver of Alerting and parameters: ZCD_OPS authorisation, create /
+*& Handlers and saver of Alerting and monitor freshness: ZCD_OPS authorisation, create /
 *& delete per client policy (D-3), field checks, customizing request check
 *& and transport recording. Thin: every decision is made by the gate / checks.
 *& Modification log:
@@ -32,7 +32,6 @@ INTERFACE lif_c.
       alertchannel                   TYPE string VALUE `AlertChannel`,
       alertrule                      TYPE string VALUE `AlertRule`,
       monitorcfg                     TYPE string VALUE `MonitorCfg`,
-      opsparam                       TYPE string VALUE `OpsParam`,
     END OF gc_ent,
     BEGIN OF gc_if,
       zif_cd_ops_alert_channel       TYPE string VALUE `ZIF_CD_OPS_ALERT_CHANNEL`,
@@ -41,7 +40,6 @@ INTERFACE lif_c.
       alertchannel                   TYPE string VALUE `ZCD_OPS_ALCHN`,
       alertrule                      TYPE string VALUE `ZCD_OPS_ALRULE`,
       monitorcfg                     TYPE string VALUE `ZCD_OPS_MONCFG`,
-      opsparam                       TYPE string VALUE `ZCD_OPS_PARAM`,
     END OF gc_tab,
     BEGIN OF gc_val,
       alertrule_minrag               TYPE string VALUE `,R,A,G`,
@@ -92,9 +90,6 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_AlertChannel = if_abap_behv=>mk-on.
       result-%assoc-_AlertChannel = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_OpsParam = if_abap_behv=>mk-on.
-      result-%assoc-_OpsParam = lv_create.
     ENDIF.
     IF requested_features-%assoc-_MonitorCfg = if_abap_behv=>mk-on.
       result-%assoc-_MonitorCfg = lv_create.
@@ -351,61 +346,6 @@ CLASS lhc_alertchannel IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_opsparam DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR OpsParam RESULT result.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR OpsParam~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_opsparam IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_opscfgall IN LOCAL MODE
-      ENTITY OpsCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-opsparam.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-opsparam.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
-                                             opscfgall-SingletonID = 1 ) )
-        INTO TABLE reported-opsparam.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
 CLASS lhc_monitorcfg DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
@@ -530,7 +470,6 @@ CLASS lsc_zr_cd_opscfgall IMPLEMENTATION.
           it_relations = VALUE #(
             ( entity = lif_c=>gc_ent-alertrule table = lif_c=>gc_tab-alertrule )
             ( entity = lif_c=>gc_ent-alertchannel table = lif_c=>gc_tab-alertchannel )
-            ( entity = lif_c=>gc_ent-opsparam table = lif_c=>gc_tab-opsparam )
             ( entity = lif_c=>gc_ent-monitorcfg table = lif_c=>gc_tab-monitorcfg ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )

@@ -1,0 +1,92 @@
+AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFACE_NAME,MANDATORY,DEVELOPER_OWNED,DESCRIPTION,OWNER
+CD_OPS,ALERT_DEFAULT,P,LIST,,,,,,,,SO23 shared lists when ALERT_<route> is blank (comma list),PE RTB
+CD_OPS,ALERT_ESCALATION_WINDOW_H,P,INT,1,,24,,,,,Escalation look-back window of an alert rule (hours),PE RTB
+CD_OPS,ALERT_MORNING,P,LIST,,,,,,,,SO23 shared lists of route MORNING (morning report),PE RTB
+CD_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,PE RTB
+CD_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),PE RTB
+CD_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
+CD_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB
+CD_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
+CD_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),PE RTB
+CD_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,PE RTB
+CD_OPS,SLA_DAYS_EBS_B,P,INT,0,,,,,,,SLA days of EBS blocking exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_EBS_E,P,INT,0,,,,,,,SLA days of EBS error exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_EBS_W,P,INT,0,,,,,,,SLA days of EBS warning exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_FMON_B,P,INT,0,,,,,,,SLA days of FMON blocking exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_FMON_E,P,INT,0,,,,,,,SLA days of FMON error exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_FMON_W,P,INT,0,,,,,,,SLA days of FMON warning exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_HCK_B,P,INT,0,,,,,,,SLA days of HCK blocking exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_HCK_E,P,INT,0,,,,,,,SLA days of HCK error exceptions (blank = default),PE RTB
+CD_OPS,SLA_DAYS_HCK_W,P,INT,0,,,,,,,SLA days of HCK warning exceptions (blank = default),PE RTB
+CD_OPS,TRACE_ACK_NACK_VALUES,P,LIST,,,"NACK,REJECTED,R",,,,,Acknowledgement statuses that mean rejected (comma list),PE RTB
+CD_OPS,TRACE_BANK_LOOKBACK_DAYS,P,INT,0,,5,,,,,Days after the payment searched for bank evidence,PE RTB
+CD_OPS,TRACE_BP_SOURCE_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Field of the business partner source (blank = not read),PE RTB
+CD_OPS,TRACE_CHECK_METHODS,P,LIST,,,C,,,,,Payment methods that are cheques (comma list),PE RTB
+CD_OPS,TRACE_CHQ_FAILED,P,LIST,,,"3,4,9",,,,,Cheque statuses that are terminal failures (comma list),PE RTB
+CD_OPS,TRACE_GL_AWTYP,P,CHAR,,,FKKSU,"[A-Z0-9]{1,5}",,X,X,Reference procedure (BKPF-AWTYP) of the G/L transfer,PE RTB
+CD_OPS,TRACE_MAX_ROWS,P,INT,1,,50,,,,,Rows read per configured trace source,PE RTB
+CD_OPS,TRACE_NO_ACK_METHODS,P,LIST,,,,,,,,Payment methods without bank acknowledgement (comma list),PE RTB
+CD_OPS,TRACE_PRQ_SUCCESS,P,CHAR,,,SUCCESS,,,X,,Payment request status value meaning success,PE RTB
+CD_OPS,TRACE_SRC_ACK,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of bank acknowledgements,PE RTB
+CD_OPS,TRACE_SRC_CHQ_HIST,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of the cheque history,PE RTB
+CD_OPS,TRACE_SRC_HISTORY,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of the request history,PE RTB
+CD_OPS,TRACE_SRC_REGUT,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of the payment file registry,PE RTB
+CD_OPS,TRACE_SRC_REQUEST,P,CHAR,,,,,,,X,Source spec TABLE=..;KEY=.. of the payment request log,PE RTB
+CD_EBS,EBS_CAMT_BAI_FALLBACK,P,BOOL,,,X,,,,,CAMT proprietary BAI codes reuse the BAI2 map (blank = off),PE RTB
+CD_EBS,EBS_CB_FAIL_PCT,P,INT,0,100,50,,,,,Circuit breaker: failed-line percentage per package,PE RTB
+CD_EBS,EBS_CB_MIN_LINES,P,INT,1,,20,,,,,Circuit breaker: minimum lines of a package counted,PE RTB
+CD_EBS,EBS_CB_PACKAGES,P,INT,1,,3,,,,,Circuit breaker: consecutive failed packages,PE RTB
+CD_EBS,EBS_DFKKCR_BUKRS_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,DFKKCR field holding the company code (blank = not used),PE RTB
+CD_EBS,EBS_DUP_LOOKBACK_DAYS,P,INT,0,,5,,,,,R22 look-back days when the rule row has no window,PE RTB
+CD_EBS,EBS_EMPTY_FEED_OK,P,BOOL,,,,,,,,A run without statements is an intended empty feed,PE RTB
+CD_EBS,EBS_FEB_CREDIT_IND,P,CHAR,,,H,[A-Z],,X,X,FEBEP debit/credit indicator value of a credit,PE RTB
+CD_EBS,EBS_FEB_DEBIT_IND,P,CHAR,,,S,[A-Z],,X,X,FEBEP debit/credit indicator value of a debit,PE RTB
+CD_EBS,EBS_FEB_POSTED_FIELDS,P,LIST,,,"VB1OK,VB2OK",[A-Z][A-Z0-9_]*,,,X,FEBEP posting-area completion fields (NONE = not read),PE RTB
+CD_EBS,EBS_GL_LEDGER,P,CHAR,,,0L,[A-Z0-9]{2},,X,X,Ledger of the G/L balance reads (ACDOCA),PE RTB
+CD_EBS,EBS_INFLIGHT_HOURS,P,INT,0,,0,,,,,In-flight grace (hours) of not-found lookups (0 = off),PE RTB
+CD_EBS,EBS_KEYLEN_DOCNO,P,INT,,,12,,,,,Length of document-number keys (at most 12),PE RTB
+CD_EBS,EBS_KEYLEN_ZTNUM,P,INT,0,,0,,,,,Length of check-number keys (0 = as delivered),PE RTB
+CD_EBS,EBS_PARSER_BAI2,P,CLASS,,,ZCL_CD_EBS_PARSER_BAI2,,ZIF_CD_EBS_PARSER,X,X,Parser class of format BAI2,PE RTB
+CD_EBS,EBS_PARSER_CAMT053,P,CLASS,,,ZCL_CD_EBS_PARSER_CAMT,,ZIF_CD_EBS_PARSER,X,X,Parser class of format CAMT053,PE RTB
+CD_EBS,EBS_PARSER_CAMT054,P,CLASS,,,ZCL_CD_EBS_PARSER_CAMT,,ZIF_CD_EBS_PARSER,X,X,Parser class of format CAMT054,PE RTB
+CD_EBS,EBS_RESULT_MAX,P,INT,1,,100000,,,,,Findings kept per run (the rest summarised),PE RTB
+CD_EBS,EBS_RTRV_STATUS_FIELD,P,CHAR,,,ZZ_RTRV_STATUS,[A-Z][A-Z0-9_]*,,X,X,Status field of ZCD_ACH_RTRV_LOG,PE RTB
+CD_EBS,EBS_ZTNUM_IGNORE_ZEROS,P,BOOL,,,X,,,,,Leading zeros of check numbers not significant (blank=off),PE RTB
+CD_FMON,FMON_AGE_BASIS,P,CHAR,,,A,[AN],,,,Banking-day age basis: A after receipt / N next working day,PE RTB
+CD_FMON,FMON_DUP_DAYS,P,INT,0,,7,,,,,Duplicate-file history window (days),PE RTB
+CD_FMON,FMON_FACTORY_CAL,P,CHAR,,,US,[A-Z0-9]{2},,X,,Factory calendar when ZCD_FMON_CAL has none,PE RTB
+CD_FMON,FMON_LOOKBACK_DAYS,P,INT,0,,1,,,,,Days read back from legacy tables and files,PE RTB
+CD_FMON,FMON_MAX_ROWS,P,INT,1,,50000,,,,,Row cap per legacy table read,PE RTB
+CD_FMON,FMON_NOC_SLA_DAYS,P,INT,0,,6,,,,,NACHA NOC banking-day SLA when ZCD_FMON_LOTCFG has none,PE RTB
+CD_FMON,FMON_OPEN_DAYS,P,INT,0,,30,,,,,Open files kept under watch (days),PE RTB
+CD_FMON,FMON_PRISM_INSTANT,P,BOOL,,,X,,,,,PRISM unit saves findings and alerts (blank = registry only),PE RTB
+CD_FMON,FMON_PRISM_MAX_BYTES,P,INT,1,,16384,,,,,Request body limit of the PRISM status API (bytes),PE RTB
+CD_FMON,FMON_PRISM_QUEUE_MAX,P,INT,1,,30,,,,,Throttle queue length covered by the allowance,PE RTB
+CD_FMON,FMON_PRISM_THROTTLE_METHODS,P,LIST,,,"ACH,WIRE",,,,,Payment methods PRISM throttles (comma list),PE RTB
+CD_FMON,FMON_PRISM_THROTTLE_MIN,P,INT,0,,2,,,,,Minutes PRISM waits per throttled file (0 = none),PE RTB
+CD_FMON,FMON_PRISM_THROTTLE_SCOPE,P,CHAR,,,C,[AC],,,,Throttle queue: A one for all / C one per counterparty,PE RTB
+CD_FMON,FMON_RETURNS_WEEKDAYS,P,LIST,,,,[1-7],,,,Weekdays (1 = Monday) that are ACH returns cycle days,PE RTB
+CD_FMON,FMON_TIME_ZONE,P,CHAR,,,UTC,,,X,,Time zone of legacy date/time fields and calendars,PE RTB
+CD_HCK,HCK_FLAT_TOL_PCT,P,INT,0,,10,,,,,Flat history: adverse change beyond this % is an outlier,PE RTB
+CD_HCK,HCK_LOOKBACK_RUNS,P,INT,1,,8,,,,,Default baseline history points,PE RTB
+CD_HCK,HCK_MAIL_ROUTE,P,CHAR,,,MORNING,[A-Z][A-Z0-9_]*,,X,,Route of the morning report e-mail (needs ALERT_<route>),PE RTB
+CD_HCK,HCK_MAX_AGE_HOURS,P,INT,1,,26,,,,,Default max age of an area's last run (hours),PE RTB
+CD_HCK,HCK_MAX_AGE_H_EBS,P,INT,1,,,,,,,Max age of the last EBS run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGE_H_FMON,P,INT,1,,,,,,,Max age of the last FMON run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGE_H_HCK,P,INT,1,,,,,,,Max age of the last HCK run (hours; blank = default),PE RTB
+CD_HCK,HCK_MAX_AGG_ROWS,P,INT,,,5000,,,,,Groups of an aggregate check (ceiling 50000),PE RTB
+CD_HCK,HCK_MAX_JOB_NAMES,P,INT,,,20000,,,,,Distinct TBTCO job names per window (ceiling 200000),PE RTB
+CD_HCK,HCK_MAX_JOB_ROWS,P,INT,,,5000,,,,,TBTCO job runs per read (ceiling 50000),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN,P,INT,1,,120,,,,,Runtime of a run before it counts as hung (minutes),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_EBS,P,INT,1,,,,,,,Hung limit of EBS runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_FMON,P,INT,1,,,,,,,Hung limit of FMON runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_MAX_RUN_MIN_HCK,P,INT,1,,,,,,,Hung limit of HCK runs (minutes; blank = default),PE RTB
+CD_HCK,HCK_SCORE_AMBER_MIN,P,INT,0,100,70,,,,,Score from which the report is AMBER (below = RED),PE RTB
+CD_HCK,HCK_SCORE_GREEN_MIN,P,INT,0,100,90,,,,,Score from which the report is GREEN,PE RTB
+CD_HCK,HCK_SUPPRESS_MAX_DAYS,P,INT,1,,7,,,,,Longest suppression without a second user (days),PE RTB
+CD_HCK,HCK_TIMEOUT_SEC,P,INT,1,,300,,,,,Default check timeout (seconds),PE RTB
+CD_HCK,HCK_TOP_N,P,INT,0,,20,,,,,Open exceptions listed in the morning report,PE RTB
+CD_HCK,HCK_WATCH_PE_AREAS,P,LIST,,,"EBS,FMON,HCK",,,,,Areas whose last run is checked (comma list),PE RTB
+CD_HCK,HCK_WEIGHT_H,P,INT,0,,3,,,,,Score weight of priority H,PE RTB
+CD_HCK,HCK_WEIGHT_L,P,INT,0,,1,,,,,Score weight of priority L,PE RTB
+CD_HCK,HCK_WEIGHT_M,P,INT,0,,2,,,,,Score weight of priority M,PE RTB

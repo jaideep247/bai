@@ -49,7 +49,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 | Situation | Action | Effect |
 |---|---|---|
-| Alert storm | Deactivate the rule in the Alerting & parameters app or raise THROTTLE_MIN | Immediate, logged |
+| Alert storm | Deactivate the rule in the Alerting & monitor freshness app or raise THROTTLE_MIN | Immediate, logged |
 | Change a threshold / SLA / rule parameter in production | Configuration app of the area → Edit → change the existing row → Save | No transport; logged in SCU3. New rows only in DV1 and by transport |
 | A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. Deactivating the rule removes that check — get the rule owner's approval |
 | Remove the suite | Unschedule the three jobs | Back to previous behaviour in < 15 min |
@@ -107,7 +107,7 @@ PRISM reports every file / message it receives, delivers or cannot deliver (`PRI
 | PRISM receives 403 / 401 | The technical user lacks `Z_CD_OPS_PRISM` / S_ICF, or its certificate / password changed | SU53 / ST01 for the PRISM user; STRUST certificate mapping | Security / Basis |
 | PRISM receives 409 | PRISM reused an event ID for another payload | Nothing on SAP side — the first event stays; PRISM defect | PRISM |
 
-Switch off (emergency, e.g. a flood of calls): deactivate the SICF node `/sap/zcd_ops/prism_status` — PRISM then gets 403/404 and buffers; FMON keeps working from SAP's own evidence. Stopping only the instant units: `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` = blank (registry only) or lock the bgPF destination in SBGRFCCONF (the 5-minute run takes over).
+Switch off (emergency, e.g. a flood of calls): deactivate the SICF node `/sap/zcd_ops/prism_status` — PRISM then gets 403/404 and buffers; FMON keeps working from SAP's own evidence. Stopping only the instant units: ZCA_PARAM `FMON_PRISM_INSTANT` value row set to blank (BOOL off = registry only; app *Parameter areas*, area `CD_FMON`) or lock the bgPF destination in SBGRFCCONF (the 5-minute run takes over).
 
 ## 5. Re-running
 
@@ -193,14 +193,28 @@ SO23 lists are client-specific and not transported: keep members aligned in QA1 
 ## Changing a stale threshold or a parameter safely (2026-11-07)
 
 **Stale threshold of a monitor** (dashboards *and* morning report self-check):
-1. Configuration app *Alerting and parameters* → *Monitor freshness* → row of the area (FMON, EBS, HCK) → `STALE_AFTER_MIN` in minutes (> 0; the app refuses 0 and unknown areas). Delivered: FMON 15, EBS 1560, HCK 1560 (`config/alert_seed.md`).
-2. Save in DV1, transport (the app records the change in a customizing request where the client allows it). Do not maintain thresholds in `ZCD_OPS_PARAM` any more: `HCK_MAX_AGE_H_<area>` / `HCK_MAX_AGE_HOURS` are only the fallback of the self-check when the area has no `ZCD_OPS_MONCFG` row.
+1. Configuration app *Alerting and monitor freshness* → *Monitor freshness* → row of the area (FMON, EBS, HCK) → `STALE_AFTER_MIN` in minutes (> 0; the app refuses 0 and unknown areas). Delivered: FMON 15, EBS 1560, HCK 1560 (`config/alert_seed.md`).
+2. Save in DV1, transport (the app records the change in a customizing request where the client allows it). Do not maintain stale thresholds as parameters: `HCK_MAX_AGE_H_<area>` / `HCK_MAX_AGE_HOURS` are only the fallback of the self-check when the area has no `ZCD_OPS_MONCFG` row.
 3. Check: the overview page (*Monitor freshness*) shows the new threshold in `StaleAfterMinutes`; the next morning report's self-check uses the same value (`PE_AREA_STALE`).
 4. Delete the row to return to the delivered value (dashboards: CDS fallback literal; self-check: hours parameters).
 
-**Runtime parameter (`ZCD_OPS_PARAM`)**:
-1. Find the name and its delivered default in the area's types interface (`gc_param` / `gc_param_default`) or the seed file (`config/*_seed.md`); names are exact (upper case) — a misspelt name is ignored and the default applies.
-2. A blank value means **the default**, never "off": switch a flag off with `N` (any non-blank value other than X).
-3. Numbers: a value that is not a number falls back to the default (`ZCL_CD_OPS_UTIL=>PARAM_INT`). Row caps (`HCK_MAX_JOB_ROWS`, `HCK_MAX_JOB_NAMES`, `HCK_MAX_AGG_ROWS`) are cut to their hard ceilings (`HCK_MORNING_REPORT.md` §8a).
-4. Parameters are read once per run (snapshot at `start_run`): a change takes effect with the next run.
+**Runtime parameter (framework `ZCA_PARAM`, app *Parameter areas* `ZUI_CA_PARAM_O4`)**:
+1. Find the parameter: area by prefix (`ALERT_` `SLA_` `RETENTION_` `PURGE_` `TRACE_` → `CD_OPS`, `EBS_` → `CD_EBS`, `FMON_` → `CD_FMON`, `HCK_` → `CD_HCK`), definition (value type, min / max, allowed pattern, delivered default) in the app or `config/param_definitions.csv`.
+2. Who may change what: in QA1 / PS4 only the **value row** of a parameter that is not developer-owned can be changed (areas are production-editable) — no new rows, no definitions; field / class names, the trace sources, debit / credit indicators and the ledger are developer-owned and change by transport from DV1. A parameter without a value row runs on its definition default; to make it adjustable in production, deliver a value row by transport.
+3. Enter the value as the definition expects it: INT digits only (within min / max), LIST comma-separated, BOOL `X` = on and **blank = off** (a value row with blank value switches a flag off; deleting the row brings the default back). The app refuses a value the definition does not allow (same rules as the runtime).
+4. Effect: parameters are read once per run (snapshot at `start_run`) — the change applies from the next run; dialog apps read them at once.
+5. Afterwards: if a value nevertheless cannot be read (e.g. the definition changed by a later transport), the run falls back to the code default, writes the error to SLG1 (object `ZCD_OPS`, subobject `PARAM`, external ID = parameter name) and the next morning report shows `PARAM_INVALID` (§5f). Audit: table logging of `ZCA_PARAM_VAL` (SCU3) shows who changed what.
+
+## 5f. PARAM_INVALID — a parameter the framework refuses (morning report, check D_PARAM_INVALID)
+
+| Message (ZCA_PARAM) | Meaning | Fix |
+|---|---|---|
+| 001 / 002 area does not exist / not active | Areas of the suite not imported or deactivated | Register / activate the area (`config/param_areas.csv`) by transport — every parameter of the area runs on code defaults until then |
+| 003 not defined in area | The code reads a name the area does not define (definition missing in this client, e.g. a transport not imported) | Import the definition (row of `config/param_definitions.csv`) by transport |
+| 004 mandatory value missing | A mandatory parameter has a blank value row | Enter the value or delete the row (the default applies) |
+| 005 single value has several rows | Two value rows for one parameter | Delete the extra row |
+| 006-013 invalid value / default | Not a number, outside min / max, pattern mismatch, class / DDIC name unknown or without the interface | Correct the value (app) or the definition (transport) |
+
+Until fixed, each run uses the code default for that parameter and writes one SLG1 entry per parameter and run (`ZCD_OPS` / `PARAM`); nothing stops. The finding closes automatically when the next morning report reads the parameter without error.
+
 

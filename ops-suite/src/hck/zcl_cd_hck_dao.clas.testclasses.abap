@@ -17,6 +17,7 @@
 *&              job_pattern_is_whole_name, applog_pattern_is_whole_value.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *& 2026-11-07 | monitor_cfg_positive_only (ZCD_OPS_MONCFG doubled).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -104,7 +105,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
 
   METHOD setup.
-    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     go_env->clear_doubles( ).
     CLEAR: mt_metrics, mt_findings, mt_runs.
     mo_cut = zcl_cd_hck_factory=>get_dao( ).
@@ -719,7 +720,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
 
   METHOD setup.
-    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     go_env->clear_doubles( ).
     mo_cut = NEW zcl_cd_hck_dao( ).
   ENDMETHOD.

@@ -235,26 +235,26 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 
 **In-flight grace (FS-CD review).** With `EBS_INFLIGHT_HOURS` > 0 a not-found of R07, R07L, R07R or R21 for a statement younger than the window is AWAITING_LOT_TRANSFER (W, NOTIFY, original message in DETAILS). Age from the statement's creation date/time, else from the start of the statement date.
 
-### B5. Parameters (ZCD_OPS_PARAM)
+### B5. Parameters (framework `ZCA_PARAM`, area `CD_EBS` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`; flags are BOOL: a value row with blank value is off)
 
 | Parameter | Default | Meaning |
 |---|---|---|
 | EBS_KEYLEN_DOCNO | 12 | Length of OPBEL/AUGBL/DOC1R keys built from the bank reference; above the key width (12) = KEY_LENGTH_CONFIG |
 | EBS_KEYLEN_ZTNUM | 0 | 0 = check number as delivered (DFKKCR-ZTNUM = FEBEP-CHECT) |
-| EBS_ZTNUM_IGNORE_ZEROS | X | Leading zeros of all-digit check numbers are not significant |
+| EBS_ZTNUM_IGNORE_ZEROS | X (BOOL) | Leading zeros of all-digit check numbers are not significant; a value row with blank value = off (zeros significant) |
 | EBS_DFKKCR_BUKRS_FIELD | blank | DFKKCR field holding the company code (VERIFY-DDIC); blank = house bank only |
 | EBS_DUP_LOOKBACK_DAYS | 5 | R22 look-back when the rule row has no WINDOW_DAYS |
 | EBS_FEB_POSTED_FIELDS | VB1OK,VB2OK | FEBEP posting-area completion flags (comma list, at most 4; VERIFY-SE11); an entry is posted when every flag is X; a name not in FEBEP stops the run (message 051); `NONE` = posting state not read (rules as before). If posting area 2 is not used and its flag stays blank on posted items, set `VB1OK` |
-| EBS_EMPTY_FEED_OK | blank | X = a run without statements is an intentionally empty feed (green); blank = NO_DATA (grey) |
+| EBS_EMPTY_FEED_OK | blank (BOOL) | X = a run without statements is an intentionally empty feed (green); blank = NO_DATA (grey) |
 | EBS_INFLIGHT_HOURS | 0 | In-flight grace window in hours; 0 = off |
 | EBS_RTRV_STATUS_FIELD | ZZ_RTRV_STATUS | Status field of ZCD_ACH_RTRV_LOG (validated against DDIC) |
 | EBS_FEB_DEBIT_IND / EBS_FEB_CREDIT_IND | S / H | FEBKO/FEBEP debit/credit indicators |
-| EBS_CAMT_BAI_FALLBACK | X | CAMT proprietary BAI codes reuse BAI2 map rows |
+| EBS_CAMT_BAI_FALLBACK | X (BOOL) | CAMT proprietary BAI codes reuse BAI2 map rows; a value row with blank value = off |
 | EBS_GL_LEDGER | 0L | Ledger for R18 |
 | EBS_CB_FAIL_PCT / EBS_CB_PACKAGES / EBS_CB_MIN_LINES | 50 / 3 / 20 | Circuit breaker |
 | EBS_RESULT_MAX | 100000 | Findings / lines kept in memory for display (exact bound). Saving, counts, RAG and alerts always cover every finding (A67) |
-| EBS_PARSER_BAI2 / EBS_PARSER_CAMT053 / EBS_PARSER_CAMT054 | parser classes | Swap a parser by configuration |
-| SLA_DAYS_EBS_<severity> | 1 | Exception due date |
+| EBS_PARSER_BAI2 / EBS_PARSER_CAMT053 / EBS_PARSER_CAMT054 | parser classes (CLASS, interface ZIF_CD_EBS_PARSER, developer-owned) | Swap a parser by configuration (transport); a class without the interface is refused by ZCA_PARAM and the delivered parser is used |
+| SLA_DAYS_EBS_B / _E / _W | blank (= SLA_DAYS_DEFAULT, 1) | Exception due date |
 
 ### B6. Extension guide (configuration only)
 

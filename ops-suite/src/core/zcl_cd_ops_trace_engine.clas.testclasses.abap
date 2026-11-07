@@ -16,6 +16,7 @@
 *& 2026-11-06 | Modern-syntax sweep: string templates.
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -243,7 +244,7 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     CONSTANTS gc_file_id TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '00000000000000000000000000000001'.
 
     DATA mo_dao TYPE REF TO ltd_dao.
-    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA mo_auth TYPE REF TO ltd_auth.
 
     METHODS setup.
@@ -324,7 +325,7 @@ CLASS ltc_trace IMPLEMENTATION.
     mo_params = NEW #( ).
     mo_auth  = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_params( mo_params ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_auth( mo_auth ).
   ENDMETHOD.
 

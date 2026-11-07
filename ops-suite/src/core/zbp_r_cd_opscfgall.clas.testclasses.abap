@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_cd_opscfgall.clas.testclasses.abap
 *& Purpose:
-*& Permission tests of the Alerting and parameters behaviour pool through EML
+*& Permission tests of the Alerting and monitor freshness behaviour pool through EML
 *& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCD_OPS change for the payment
 *& engine area, gate doubles of ZCL_CD_OPS_CFG_INJECTOR). Global features,
 *& validations and the saver need GET PERMISSIONS ... FEATURES (not parsed by

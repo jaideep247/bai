@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_OPSCFGALL</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Alerting and parameters (all)</DDTEXT>
+    <DDTEXT>Alerting and monitor freshness (all)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

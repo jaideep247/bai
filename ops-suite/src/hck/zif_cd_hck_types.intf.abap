@@ -28,6 +28,7 @@
 *&            | HCK_MAX_JOB_NAMES (20,000); GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES are now the hard ceilings (50,000 /
 *&            | 200,000).
 *& 2026-11-07 | TY_MONITOR_CFG (ZCD_OPS_MONCFG); TY_PE_AREA_STATUS-STALE_AFTER_MIN / AGE_MIN.
+*& 2026-11-07 | Check code PARAM_INVALID (configuration check ZCL_CD_HCK_C_PARAM, parameters in ZCA_PARAM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -202,6 +203,8 @@ INTERFACE zif_cd_hck_types
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
       "! A suppression key pattern is not valid PCRE - suppression not applied
       suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
+      "! A parameter of the suite that ZCA_PARAM refuses (ZCL_CD_HCK_C_PARAM)
+      param_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
     END OF gc_code.
 
   CONSTANTS:
@@ -217,7 +220,7 @@ INTERFACE zif_cd_hck_types
       throttled TYPE ty_alert_status VALUE 'T',
     END OF gc_alert_status.
 
-  "! Score points per RAG and weights per priority (defaults; ZCD_OPS_PARAM overrides)
+  "! Score points per RAG and weights per priority (defaults; ZCA_PARAM overrides)
   TYPES:
     BEGIN OF ty_score_rules,
       points_green  TYPE i,
@@ -679,7 +682,7 @@ INTERFACE zif_cd_hck_types
       max_agg_rows   TYPE i VALUE 5000,
     END OF gc_param_default.
 
-  "! Parameters (ZCD_OPS_PARAM) of the health check engine and of its row caps
+  "! Parameters (ZCA_PARAM) of the health check engine and of its row caps
   CONSTANTS:
     BEGIN OF gc_param,
       watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',

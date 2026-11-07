@@ -13,6 +13,9 @@
 *& 2026-11-06 | ltc_sap_dao_reads: cheques, FI lines, lookup rows, retrieval field check (coverage gap closure).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | ZCD_OPS_PARAM retired: the lookup tests read ZCD_OPS_MONCFG as configured table; ltc_sap_dao
+*&            | injects the parameters (EBS_GL_LEDGER) and resets them.
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -35,6 +38,7 @@ CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
     METHODS setup.
+    METHODS teardown.
 
     METHODS return_item_found_by_selw1   FOR TESTING.
     METHODS empty_keys_read_nothing      FOR TESTING.
@@ -50,8 +54,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DFKKNRP' ) ( 'DPAYH' ) ( 'ACDOCA' )
-                                  ( 'ZCD_OPS_PARAM' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKRP' ) ( 'DFKKRK' ) ( 'DFKKNRP' ) ( 'DPAYH' ) ( 'ACDOCA' ) ) ).
   ENDMETHOD.
 
 
@@ -95,7 +98,13 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     ls_nrp-infof = gc_test-other_ref.
     INSERT ls_nrp INTO TABLE lt_nrp.
     go_env->insert_test_data( lt_nrp ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
   ENDMETHOD.
 
 
@@ -243,8 +252,8 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 ENDCLASS.
 
 
-"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_OPS_PARAM doubled;
-"! ZCD_OPS_PARAM also serves as the configured lookup table). get_retrievals is tested up to
+"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_OPS_MONCFG doubled;
+"! ZCD_OPS_MONCFG serves as the configured lookup table; parameters over ZCA_PARAM). get_retrievals is tested up to
 "! its DDIC field check, which raises before the SELECT on ZCD_ACH_RTRV_LOG
 "! (osql-not-reached: ZCD_ACH_RTRV_LOG).
 CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
@@ -262,10 +271,10 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
         belnr       TYPE c LENGTH 10 VALUE '0100000001',
         gjahr       TYPE n LENGTH 4 VALUE '2026',
         hkont       TYPE c LENGTH 10 VALUE '0011000100',
-        param       TYPE c LENGTH 30 VALUE 'EBS_LOOKUP_UNIT_TEST',
+        param       TYPE c LENGTH 30 VALUE 'TST1',
         param_text  TYPE c LENGTH 60 VALUE 'OPEN',
-        lookup_tab  TYPE c LENGTH 30 VALUE 'ZCD_OPS_PARAM',
-        lookup_key  TYPE c LENGTH 30 VALUE 'PARAM_NAME',
+        lookup_tab  TYPE c LENGTH 30 VALUE 'ZCD_OPS_MONCFG',
+        lookup_key  TYPE c LENGTH 30 VALUE 'PE_AREA',
         lookup_stat TYPE c LENGTH 30 VALUE 'DESCRIPTION',
         bad_field   TYPE c LENGTH 30 VALUE 'NO_SUCH_FIELD',
         msgno_field TYPE symsgno VALUE '051',
@@ -273,7 +282,7 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_ebs_sap_dao.
-    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -295,7 +304,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_OPS_PARAM' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_OPS_MONCFG' ) ) ).
   ENDMETHOD.
 
 
@@ -307,7 +316,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
   METHOD setup.
     go_env->clear_doubles( ).
     mo_params = NEW #( ).
-    zcl_cd_ops_injector=>inject_params( mo_params ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
   ENDMETHOD.
 
@@ -434,12 +443,12 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   " Rule (R21): configured table, key and status field are DDIC-checked, rows read by key
   METHOD lookup_rows_key_and_status.
-    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_param WITH EMPTY KEY.
-    DATA ls_param TYPE zcd_ops_param.
+    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
+    DATA ls_param TYPE zcd_ops_moncfg.
     DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
     TRY.
-        ls_param-param_name = gc_test-param.
+        ls_param-pe_area = gc_test-param.
         ls_param-description = gc_test-param_text.
         INSERT ls_param INTO TABLE lt_param.
         go_env->insert_test_data( lt_param ).

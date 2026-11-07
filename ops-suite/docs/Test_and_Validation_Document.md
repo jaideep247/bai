@@ -71,7 +71,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-06 | CAMT.053 with TxsSummry sum not matching entries | — | S06 CAMT_SUM_MISMATCH (B), S12 if counts differ | pending |
 | EBS-07 | CAMT.054 returns with RtrInf R01 and an unmapped R99 | ZCD_EBS_RSN_MAP R01 only | R05 REASON_UNMAPPED on the R99 line only | pending |
 | EBS-07a | Imported statement (FEB source, posted): a 168 return whose returns lot item has RLGRD = a configured reason, one with RLGRD blank, one with an unmapped RLGRD, one payment with two items of different RLGRD; a NOC (C01) whose DFKKNRP item carries the AUGBL in INFOF, one carrying the payment reference; one payment without lot | ZCD_EBS_RSN_MAP R01 → return reason, C01 → NOC reason; R05 NEEDS_POSTING = X | Pass; REASON_MISSING; REASON_UNMAPPED; REASON_AMBIGUOUS (once); both NOC lines pass with their FLGRD; no R05 finding for the payment without lot (R07R reports it); an unposted entry is not judged by R05 (S13) — VERIFY-SE11 RLGRD, FLGRD, INFOF content | pending |
-| EBS-08 | CAMT line with Prtry code 168 issuer BAI | `EBS_CAMT_BAI_FALLBACK` = X | Maps to BAI2 168 rules; with the parameter = N → R14 (a blank value is the default X, never off — store semantics) | pending |
+| EBS-08 | CAMT line with Prtry code 168 issuer BAI | `EBS_CAMT_BAI_FALLBACK` = X | Maps to BAI2 168 rules; with a value row with blank value (BOOL off in ZCA_PARAM) → R14; without a value row → the default X | pending |
 | EBS-09 | Imported statement (FEB source), 168 on disbursement account, payment not RETURNED in DPAYH | Seed group BAI168D | R07 PAYMENT_STATUS | pending |
 | EBS-10 | 581 checks paid with one register amount off by 1.00 | Seed group BAI581D | R08 CHECK_AMOUNT_MISMATCH on that check, R12 CODE_TOTAL_MISMATCH on the statement | pending |
 | EBS-11 | Same statement file delivered twice | — | S07 STMT_ALREADY_IMPORTED (B) | pending |
@@ -213,6 +213,18 @@ ABAP Unit: `ZCL_CD_OPS_OVW_CDS_TEST` (5 CDS tests: one freshness row per monitor
 | PAT-08 | Capped value read | Pattern check with P_MAX 10 | Message 747; list from 10 values | pending |
 
 ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, trailing blanks, invalid, blank, literal count), `ZCL_CD_OPS_PATTERN_CHECK` (matched / no match / unused / invalid / overlap, conversion rule: wildcards, metacharacters, escapes, blank; plan), `ZCL_CD_OPS_PATTERN_DAO` (OSQL), and the converted call sites (resolver, FMON rules / engine, alert policy / router, HCK param / DAO / job checks / cycle / suppression). Offline: `tools/tests/test_no_cp_patterns.py`, `test_pattern_dao_fields.py`, `test_rap_generate.py`.
+
+### 6.14 Parameters in the framework ZCA_PARAM (areas CD_OPS / CD_EBS / CD_FMON / CD_HCK)
+
+| ID | Scenario | Setup | Expected | Result |
+|---|---|---|---|---|
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 91 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
+| PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; SLG1 object ZCD_OPS / PARAM one entry (message ZCA_PARAM 006); next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
+| PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |
+| PRM-05 | Definition missing | Delete the definition `EBS_GL_LEDGER` in a sandbox | EBS run uses ledger 0L and logs ZCA_PARAM 003; `PARAM_INVALID` names `CD_EBS/EBS_GL_LEDGER` | pending |
+| PRM-06 | Production change | PS4 / QA1: change the value row of `HCK_SCORE_GREEN_MIN`; try to create a value row and to change `EBS_PARSER_BAI2` | Value change saved without request, visible in SCU3 (`ZCA_PARAM_VAL`); create refused; developer-owned change refused (ZCA_PARAM 045) | pending |
+| PRM-07 | Snapshot per run (A64) | Change `FMON_LOOKBACK_DAYS` while a 5-minute run is running | The running run keeps its value; the next run reads the new one | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

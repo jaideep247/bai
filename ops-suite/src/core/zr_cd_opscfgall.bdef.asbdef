@@ -2,7 +2,7 @@ managed implementation in class zbp_r_cd_opscfgall unique;
 strict ( 2 );
 with draft;
 
-// Alerting and parameters: singleton root (virtual, nothing persisted) - lock, total ETag,
+// Alerting and monitor freshness: singleton root (virtual, nothing persisted) - lock, total ETag,
 // draft and the customizing request; every customizing table is a child.
 define behavior for ZR_CD_OpsCfgAll alias OpsCfgAll
 with unmanaged save
@@ -17,7 +17,6 @@ authorization master ( global )
 
   association _AlertRule { create ( features : global ); with draft; }
   association _AlertChannel { create ( features : global ); with draft; }
-  association _OpsParam { create ( features : global ); with draft; }
   association _MonitorCfg { create ( features : global ); with draft; }
 
   draft action Edit;
@@ -30,7 +29,6 @@ authorization master ( global )
     validation AlertRule ~ validateTransport;
     validation AlertChannel ~ validateFields;
     validation AlertChannel ~ validateTransport;
-    validation OpsParam ~ validateTransport;
     validation MonitorCfg ~ validateFields;
     validation MonitorCfg ~ validateTransport;
   }
@@ -106,35 +104,6 @@ etag master LocalLastChangedAt
     ClassName = class_name;
     Destination = destination;
     Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_OpsParam alias OpsParam
-persistent table zcd_ops_param
-with additional save
-draft table zcd_d_param
-lock dependent by _OpsCfgAll
-authorization dependent by _OpsCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) ParamName;
-  field ( mandatory : create ) ParamName;
-  association _OpsCfgAll { with draft; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_ops_param
-  {
-    ParamName = param_name;
-    ParamValue = param_value;
-    Description = description;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;

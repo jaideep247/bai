@@ -4,6 +4,8 @@
 *& Repository for the shared result/exception store. The only class that
 *& writes ZCD_OPS_RUN and ZCD_OPS_FINDING. Findings of severity B/E/W are
 *& created as owned exceptions (status OPEN) with an SLA due date taken from
+*& the parameters SLA_DAYS_<area>_<severity> / SLA_DAYS_DEFAULT (ZCA_PARAM,
+*& read through ZCL_CD_OPS_FACTORY=>GET_PARAMS).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | rollback( ) added.
@@ -18,12 +20,14 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Implements ZIF_CD_OPS_PARAMS (via ZIF_CD_OPS_STORE): get_range (I / EQ rows of the list);
 *&            | SLA parameter names / default from ZIF_CD_OPS_TYPES.
+*& 2026-11-07 | Parameters moved to ZCA_PARAM: ZCD_OPS_PARAM reads removed; start_run renews the
+*&            | snapshot of ZCL_CD_OPS_FACTORY=>GET_PARAMS (A64), SLA days read there.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
+"! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
 "! writes ZCD_OPS_RUN and ZCD_OPS_FINDING. Findings of severity B/E/W are
 "! created as owned exceptions (status OPEN) with an SLA due date taken from
-"! ZCD_OPS_PARAM SLA_DAYS_<payment engine area>_<severity> (fallback SLA_DAYS_DEFAULT, 1).
+"! parameter SLA_DAYS_<payment engine area>_<severity> (fallback SLA_DAYS_DEFAULT, 1; ZCA_PARAM).
 CLASS zcl_cd_ops_store DEFINITION
   PUBLIC
   FINAL
@@ -44,13 +48,6 @@ CLASS zcl_cd_ops_store DEFINITION
     "! STRING, is neither read with FOR ALL ENTRIES nor overwritten)
     TYPES ty_db_update TYPE zcd_ops_finding WITH INDICATORS col_ind TYPE abap_bool.
     TYPES tt_db_update TYPE STANDARD TABLE OF ty_db_update WITH EMPTY KEY.
-    TYPES ty_param_cache TYPE SORTED TABLE OF zif_cd_ops_types=>ty_kv WITH UNIQUE KEY name.
-
-    DATA mt_param_cache TYPE ty_param_cache.
-    DATA mv_params_loaded TYPE abap_bool.
-
-    METHODS load_params.
-
     "! New exceptions inherit from the open / assigned / waived exception of an
     "! earlier run (same payment engine area, object type, object key, check code), which is
     "! superseded. Only rows with disposition O are candidates.
@@ -96,10 +93,9 @@ ENDCLASS.
 CLASS zcl_cd_ops_store IMPLEMENTATION.
 
   METHOD zif_cd_ops_store~start_run.
-    " A64: each run reads the parameters valid at its start (snapshot), never the cache
+    " A64: each run reads the parameters valid at its start (snapshot), never the buffer
     " of an earlier run in the same internal session
-    zif_cd_ops_params~refresh_params( ).
-    load_params( ).
+    zcl_cd_ops_factory=>get_params( )->refresh_params( ).
     DATA(lo_clock) = zcl_cd_ops_factory=>get_clock( ).
     TRY.
         rs_run-run_id = cl_system_uuid=>create_uuid_x16_static( ).
@@ -395,31 +391,6 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ops_params~refresh_params.
-    CLEAR: mt_param_cache, mv_params_loaded.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_ops_params~get_param.
-    load_params( ).
-    READ TABLE mt_param_cache INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
-    IF sy-subrc = 0 AND ls_param-value IS NOT INITIAL.
-      rv_value = condense( CONV string( ls_param-value ) ).
-    ELSE.
-      rv_value = iv_default.
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_ops_params~get_range.
-    LOOP AT zcl_cd_ops_util=>split_list( zif_cd_ops_params~get_param( iv_name ) ) ASSIGNING FIELD-SYMBOL(<lv_value>).
-      INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                      option = zif_cd_ops_types=>gc_range-option_equal
-                      low    = <lv_value> ) INTO TABLE rt_range.
-    ENDLOOP.
-  ENDMETHOD.
-
-
   METHOD zif_cd_ops_store~get_last_run.
     DATA lt_db TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
     IF iv_variant IS INITIAL.
@@ -499,22 +470,12 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD load_params.
-    IF mv_params_loaded = abap_true.
-      RETURN.
-    ENDIF.
-    SELECT param_name AS name, param_value AS value
-      FROM zcd_ops_param
-      INTO CORRESPONDING FIELDS OF TABLE @mt_param_cache.
-    mv_params_loaded = abap_true.
-  ENDMETHOD.
-
-
   METHOD sla_days.
-    DATA(lv_value) = zif_cd_ops_params~get_param(
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
+    DATA(lv_value) = lo_params->get_param(
       iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-sla_days }{ iv_pe_area }_{ iv_severity }| )
-      iv_default = zif_cd_ops_params~get_param( iv_name    = zif_cd_ops_types=>gc_param-sla_days_default
-                                               iv_default = |{ zif_cd_ops_types=>gc_param_default-sla_days }| ) ).
+      iv_default = lo_params->get_param( iv_name    = zif_cd_ops_types=>gc_param-sla_days_default
+                                         iv_default = |{ zif_cd_ops_types=>gc_param_default-sla_days }| ) ).
     rv_days = zcl_cd_ops_util=>to_decimal( iv_value = lv_value iv_default = zif_cd_ops_types=>gc_param_default-sla_days ).
   ENDMETHOD.
 

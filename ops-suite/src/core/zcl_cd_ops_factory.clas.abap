@@ -16,6 +16,7 @@
 *& 2026-11-06 | Pattern check / migration repository seam added (PCRE patterns).
 *& 2026-11-07 | get_params: runtime parameters (ZIF_CD_OPS_PARAMS), default the store.
 *& 2026-11-07 | Exception and pattern DAO without test-double slot (injector seams removed, unused).
+*& 2026-11-07 | get_params: the session adapter ZCL_CD_OPS_PARAMS_CA over ZCA_PARAM (store serves no parameters).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -34,7 +35,8 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_store) TYPE REF TO zif_cd_ops_store.
 
-    "! Runtime parameters: the injected double, else the store (ZCD_OPS_PARAM)
+    "! Runtime parameters: the injected double, else the session's adapter over ZCA_PARAM
+    "! (ZCL_CD_OPS_PARAMS_CA; one error list per session, cleared by refresh_params)
     CLASS-METHODS get_params
       RETURNING
         VALUE(ro_params) TYPE REF TO zif_cd_ops_params.
@@ -122,8 +124,10 @@ CLASS zcl_cd_ops_factory DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! Per-session store instance; its parameter snapshot is renewed by each start_run (A64)
+    "! Per-session store instance
     CLASS-DATA go_store TYPE REF TO zif_cd_ops_store.
+    "! Per-session parameter adapter; its snapshot is renewed by each start_run (A64)
+    CLASS-DATA go_params TYPE REF TO zif_cd_ops_params.
 
 ENDCLASS.
 
@@ -144,7 +148,14 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
 
 
   METHOD get_params.
-    ro_params = COND #( WHEN go_params_double IS BOUND THEN go_params_double ELSE get_store( ) ).
+    IF go_params_double IS BOUND.
+      ro_params = go_params_double.
+      RETURN.
+    ENDIF.
+    IF go_params IS NOT BOUND.
+      go_params = NEW zcl_cd_ops_params_ca( ).
+    ENDIF.
+    ro_params = go_params.
   ENDMETHOD.
 
 

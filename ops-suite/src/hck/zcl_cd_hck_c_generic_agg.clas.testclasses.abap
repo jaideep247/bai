@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -116,7 +117,7 @@ ENDCLASS.
 CLASS ltc_generic_agg IMPLEMENTATION.
 
   METHOD setup.
-    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     mo_dao = NEW #( ).
     CLEAR ms_context.
     ms_context-report_date = gc_today.

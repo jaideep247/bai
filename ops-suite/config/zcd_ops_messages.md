@@ -343,7 +343,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
-| 703 | Source not configured: parameter &1 in ZCD_OPS_PARAM |
+| 703 | Source not configured: parameter &1 in ZCA_PARAM |
 | 704 | Source &1 could not be read: |
 | 705 | Not authorised to display company code &1 (ZCD_OPS 03) |
 | 706 | Item &1 partner &2 company &3 amount &4 |

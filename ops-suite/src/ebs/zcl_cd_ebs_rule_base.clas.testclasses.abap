@@ -29,6 +29,8 @@
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *& 2026-11-07 | r08_zero_flag_off_rows_apart: off = N (a blank value is the default X in ZCL_CD_OPS_STORE).
+*& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): EBS_ZTNUM_IGNORE_ZEROS is BOOL, off = a
+*&            | value row with blank value (N would be an invalid value).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -202,8 +204,8 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
   DURATION SHORT.
 
   PROTECTED SECTION.
-    "! A flag parameter switched off: any non-blank value other than X (blank = the default)
-    CONSTANTS gc_flag_off TYPE string VALUE `N`.
+    "! A BOOL parameter switched off: a value row with blank value (no row = the default X)
+    CONSTANTS gc_flag_off TYPE string VALUE ``.
     CONSTANTS:
       BEGIN OF gc_test,
         stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001',
@@ -218,7 +220,7 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
         amount   TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
       END OF gc_test.
 
-    DATA mo_params    TYPE REF TO zcl_cd_ops_params_mem.
+    DATA mo_params    TYPE REF TO zcl_cd_ops_param_seed.
     DATA mo_sap_dao  TYPE REF TO ltd_sap_dao.
     DATA mo_feb_dao  TYPE REF TO ltd_feb_dao.
     DATA mo_cfg_dao  TYPE REF TO ltd_cfg_dao.
@@ -277,7 +279,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
     mo_sap_dao = NEW #( ).
     mo_feb_dao = NEW #( ).
     mo_cfg_dao = NEW #( ).
-    zcl_cd_ops_injector=>inject_params( mo_params ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ebs_injector=>inject_sap_dao( mo_sap_dao ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_feb_dao ).
@@ -1406,7 +1408,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
 
 
   " Fix 1 parity: EBS_ZTNUM_IGNORE_ZEROS off - 12345 and 012345 stay two checks in the index.
-  " Off is any value other than X: a blank value is the default X (ZCL_CD_OPS_STORE semantics)
+  " Off is a value row with blank value (BOOL in ZCA_PARAM); no row is the default X
   METHOD r08_zero_flag_off_rows_apart.
     TRY.
         mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros iv_value = gc_flag_off ).

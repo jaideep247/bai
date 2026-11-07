@@ -14,7 +14,6 @@ define behavior for ZC_CD_OpsCfgAll alias OpsCfgAll
 
   use association _AlertRule { create; with draft; }
   use association _AlertChannel { create; with draft; }
-  use association _OpsParam { create; with draft; }
   use association _MonitorCfg { create; with draft; }
 }
 
@@ -28,15 +27,6 @@ use etag
 }
 
 define behavior for ZC_CD_AlertChannel alias AlertChannel
-use etag
-{
-  use update;
-  use delete;
-
-  use association _OpsCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_OpsParam alias OpsParam
 use etag
 {
   use update;

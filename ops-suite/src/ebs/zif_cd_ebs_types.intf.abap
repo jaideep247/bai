@@ -37,6 +37,8 @@
 *& 2026-11-07 | GC_FINDING_CLASS (ZCD_EBS_RULE_DEF-FINDING_CLASS: DUPLICATE, POSTING).
 *& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
 *& 2026-11-07 | ty_line-map_action removed (read only by the removed posting disposition).
+*& 2026-11-07 | EBS_ZTNUM_IGNORE_ZEROS and EBS_CAMT_BAI_FALLBACK are BOOL in ZCA_PARAM (a blank value row is
+*&            | off); GC_PARAM_DEFAULT-ZTNUM_IGNORE_ZEROS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -436,7 +438,7 @@ INTERFACE zif_cd_ebs_types
       posting   TYPE ty_finding_class VALUE 'POSTING',
     END OF gc_finding_class.
 
-  "! Parameters (ZCD_OPS_PARAM) read by EBS and their delivered defaults
+  "! Parameters (ZCA_PARAM) read by EBS and their delivered defaults
   CONSTANTS:
     BEGIN OF gc_param,
       feb_debit_ind     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_DEBIT_IND',
@@ -444,8 +446,8 @@ INTERFACE zif_cd_ebs_types
       rtrv_status_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_RTRV_STATUS_FIELD',
       "! A07: DFKKCR field holding the company code (blank = not used; VERIFY-DDIC)
       dfkkcr_bukrs_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_DFKKCR_BUKRS_FIELD',
-      "! Leading zeros of check numbers are not significant (X, default) or are (any other
-      "! non-blank value, e.g. N - a blank value is the default X)
+      "! Leading zeros of check numbers are not significant (BOOL: X, default) or are
+      "! (a value row with blank value = off)
       ztnum_ignore_zeros TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_ZTNUM_IGNORE_ZEROS',
       keylen_ztnum       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_KEYLEN_ZTNUM',
       "! A65: length of document-number keys; must not exceed the DDIC key width (12)
@@ -465,7 +467,7 @@ INTERFACE zif_cd_ebs_types
       cb_min_lines       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CB_MIN_LINES',
       "! Findings kept per run (the rest summarised)
       result_max         TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_RESULT_MAX',
-      "! X: CAMT proprietary BAI codes reuse the BAI2 map rows (off: any other non-blank value)
+      "! BOOL: CAMT proprietary BAI codes reuse the BAI2 map rows (X, default; a blank value row = off)
       camt_bai_fallback  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CAMT_BAI_FALLBACK',
       "! Ledger of the G/L line reads (BSEG / ACDOCA)
       gl_ledger          TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_GL_LEDGER',
@@ -482,6 +484,7 @@ INTERFACE zif_cd_ebs_types
       cb_min_lines      TYPE i VALUE 20,
       result_max        TYPE i VALUE 100000,
       camt_bai_fallback TYPE string VALUE `X`,
+      ztnum_ignore_zeros TYPE string VALUE `X`,
       gl_ledger         TYPE string VALUE `0L`,
       "! VERIFY-DDIC: status field of ZCD_ACH_RTRV_LOG (v4 168; v4 468 uses ZZRETRIEVAL_STATUS)
       rtrv_status_field TYPE string VALUE `ZZ_RTRV_STATUS`,
