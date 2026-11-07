@@ -33,6 +33,8 @@
 *& 2026-11-07 | Design review: the verdict of every check is persisted per run (ZCD_HCK_RESULT) from the
 *&            | decision the report uses - status, completion, evidence, counts, baseline mode, run scope;
 *&            | active checks outside a filtered run's scope as SKIPPED. The dashboard reads these rows.
+*& 2026-11-07 | A check that reports evidence NONE (nothing to rate, e.g. A_RECON_3WAY without any leg) is
+*&            | grey, never an inherited GREEN.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -638,6 +640,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       cs_result-rag = zif_cd_ops_types=>gc_rag-grey.
     ELSE.
       cs_result-warmup = abap_false.
+    ENDIF.
+    " A check that read no evidence at all proves nothing: grey, never GREEN (status GREY)
+    IF cs_result-evidence = zif_cd_hck_types=>gc_evidence-none AND cs_result-rag = zif_cd_ops_types=>gc_rag-green.
+      cs_result-rag = zif_cd_ops_types=>gc_rag-grey.
     ENDIF.
 
     DATA(lv_worst) = zcl_cd_ops_util=>worst_severity( cs_result-findings ).

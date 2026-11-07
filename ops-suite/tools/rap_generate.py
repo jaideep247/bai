@@ -148,6 +148,14 @@ SPEC = {
               # Code review 2026-11-07: register state tokens and the outcome finding catalogue
               ('valid', 'reg_state', 'zcl_cd_hck_ev_support=>reg_state_valid', 'reg_state_invalid'),
               ('valid', 'finding', 'zcl_cd_hck_ev_support=>outcome_finding_valid', 'finding_invalid')]),
+            # Three-way reconciliation A_RECON_3WAY (2026-11-07): clearing account sets and the role of
+            # each bank code per set (leg, deposit, buckets); open lists of configuration
+            ('zcd_hck_rcset', 'HckReconSet', 'zcd_d_hckrcset', 'Reconciliation set',
+             'Reconciliation clearing account sets', [],
+             [('enum', 'kind', 'THREEWAY,ACH_ZUONR,STRIPE'), ('enum', 'side', 'C,D')]),
+            ('zcd_hck_rcbtc', 'HckReconBtc', 'zcd_d_hckrcbtc', 'Reconciliation bank code',
+             'Reconciliation bank code roles', [],
+             [('enum', 'role', 'LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE')]),
         ]),
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
@@ -195,7 +203,10 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'finding': 'Finding code of the outcome (blank = none)',
           'seq_pattern': 'Role sequence (PCRE, whole value)',
           'expected_dfkkrp': 'Returns lot items expected (blank = not checked)',
-          'max_age_days': 'Maximum age of a pending outcome (days)'}
+          'max_age_days': 'Maximum age of a pending outcome (days)',
+          # Three-way reconciliation (A_RECON_3WAY, 2026-11-07)
+          'invert_bank': 'Invert bank sign (leg mapping)', 'leg_bank': 'Compare bank with G/L',
+          'leg_fica': 'Compare G/L with payment engine control total'}
 ADMIN = ('last_changed_by', 'last_changed_at', 'local_last_changed_at')
 LEGACY_ADMIN = ('changed_by', 'changed_at')
 

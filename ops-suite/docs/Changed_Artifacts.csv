@@ -104,6 +104,8 @@ ddic/hck/zcd_d_hckdrift.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckevset.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckpmbnk.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckpmcls.tabl.ddl,DDIC,
+ddic/hck/zcd_d_hckrcbtc.tabl.ddl,DDIC,
+ddic/hck/zcd_d_hckrcset.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckseqo.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hcktabwl.tabl.ddl,DDIC,
 ddic/hck/zcd_d_hckthr.tabl.ddl,DDIC,
@@ -120,6 +122,8 @@ ddic/hck/zcd_hck_evset.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_metric.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_pmbank.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_pmclass.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_rcbtc.tabl.ddl,DDIC,
+ddic/hck/zcd_hck_rcset.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_result.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_seqout.tabl.ddl,DDIC,
 ddic/hck/zcd_hck_suppress.tabl.ddl,DDIC,
@@ -1117,6 +1121,14 @@ src/hck/zc_cd_hckpmclass.ddls.asddls,CDS,
 src/hck/zc_cd_hckpmclass.ddls.xml,abapGit,
 src/hck/zc_cd_hckpmclass.ddlx.asddlxs,CDS,
 src/hck/zc_cd_hckpmclass.ddlx.xml,abapGit,
+src/hck/zc_cd_hckreconbtc.ddls.asddls,CDS,
+src/hck/zc_cd_hckreconbtc.ddls.xml,abapGit,
+src/hck/zc_cd_hckreconbtc.ddlx.asddlxs,CDS,
+src/hck/zc_cd_hckreconbtc.ddlx.xml,abapGit,
+src/hck/zc_cd_hckreconset.ddls.asddls,CDS,
+src/hck/zc_cd_hckreconset.ddls.xml,abapGit,
+src/hck/zc_cd_hckreconset.ddlx.asddlxs,CDS,
+src/hck/zc_cd_hckreconset.ddlx.xml,abapGit,
 src/hck/zc_cd_hckred.ddls.asddls,CDS,
 src/hck/zc_cd_hckred.ddls.xml,abapGit,
 src/hck/zc_cd_hckred.ddlx.asddlxs,CDS,
@@ -1161,6 +1173,8 @@ src/hck/zcd_d_hckdrift.tabl.xml,abapGit,
 src/hck/zcd_d_hckevset.tabl.xml,abapGit,
 src/hck/zcd_d_hckpmbnk.tabl.xml,abapGit,
 src/hck/zcd_d_hckpmcls.tabl.xml,abapGit,
+src/hck/zcd_d_hckrcbtc.tabl.xml,abapGit,
+src/hck/zcd_d_hckrcset.tabl.xml,abapGit,
 src/hck/zcd_d_hckseqo.tabl.xml,abapGit,
 src/hck/zcd_d_hcktabwl.tabl.xml,abapGit,
 src/hck/zcd_d_hckthr.tabl.xml,abapGit,
@@ -1177,6 +1191,8 @@ src/hck/zcd_hck_evset.tabl.xml,abapGit,
 src/hck/zcd_hck_metric.tabl.xml,abapGit,
 src/hck/zcd_hck_pmbank.tabl.xml,abapGit,
 src/hck/zcd_hck_pmclass.tabl.xml,abapGit,
+src/hck/zcd_hck_rcbtc.tabl.xml,abapGit,
+src/hck/zcd_hck_rcset.tabl.xml,abapGit,
 src/hck/zcd_hck_result.tabl.xml,abapGit,
 src/hck/zcd_hck_seqout.tabl.xml,abapGit,
 src/hck/zcd_hck_suppress.tabl.xml,abapGit,
@@ -1237,6 +1253,9 @@ src/hck/zcl_cd_hck_c_prq_spe.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_queues.clas.abap,ABAP,Technical health: qRFC / bgRFC queues in error or stuck. Reads the
 src/hck/zcl_cd_hck_c_queues.clas.testclasses.abap,ABAP,Unit tests of the queue check: error / hold / stuck classification per
 src/hck/zcl_cd_hck_c_queues.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_recon3.clas.abap,ABAP,Financial integrity: three-way reconciliation bank <-> G/L transit /
+src/hck/zcl_cd_hck_c_recon3.clas.testclasses.abap,ABAP,Unit tests of the three-way reconciliation check through execute( ):
+src/hck/zcl_cd_hck_c_recon3.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_tech_jobs.clas.abap,ABAP,Technical health: background jobs of configured name patterns that were
 src/hck/zcl_cd_hck_c_tech_jobs.clas.testclasses.abap,ABAP,"Unit tests of the technical job check: cancelled, long-running and late"
 src/hck/zcl_cd_hck_c_tech_jobs.clas.xml,abapGit,
@@ -1307,6 +1326,15 @@ src/hck/zcl_cd_hck_param.clas.xml,abapGit,
 src/hck/zcl_cd_hck_payreq_rules.clas.abap,ABAP,"Known-table rules of the payment engine (USAA reference), pure:"
 src/hck/zcl_cd_hck_payreq_rules.clas.testclasses.abap,ABAP,Pure tests of the known-table rules (USAA payment engine reference):
 src/hck/zcl_cd_hck_payreq_rules.clas.xml,abapGit,
+src/hck/zcl_cd_hck_recon_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the three-way reconciliation views
+src/hck/zcl_cd_hck_recon_cds_test.clas.testclasses.abap,ABAP,CDS tests of the three-way reconciliation views on cl_cds_test_environment
+src/hck/zcl_cd_hck_recon_cds_test.clas.xml,abapGit,
+src/hck/zcl_cd_hck_recon_dao.clas.abap,ABAP,Reads of the three-way reconciliation check A_RECON_3WAY. Every leg is
+src/hck/zcl_cd_hck_recon_dao.clas.testclasses.abap,ABAP,OSQL tests of the three-way reconciliation reads on doubles of
+src/hck/zcl_cd_hck_recon_dao.clas.xml,abapGit,
+src/hck/zcl_cd_hck_recon_eval.clas.abap,ABAP,"Pure rules of the three-way reconciliation (no SQL, no parameters):"
+src/hck/zcl_cd_hck_recon_eval.clas.testclasses.abap,ABAP,"Unit tests of the pure three-way reconciliation rules: balanced day,"
+src/hck/zcl_cd_hck_recon_eval.clas.xml,abapGit,
 src/hck/zcl_cd_hck_report_html.clas.abap,ABAP,Pure renderer of the morning report: mobile-friendly HTML e-mail with
 src/hck/zcl_cd_hck_report_html.clas.testclasses.abap,ABAP,"Unit tests of the morning report renderer: HTML escaping, RAG chips,"
 src/hck/zcl_cd_hck_report_html.clas.xml,abapGit,
@@ -1338,6 +1366,10 @@ src/hck/zi_cd_hckmetricbase.ddls.asddls,CDS,
 src/hck/zi_cd_hckmetricbase.ddls.xml,abapGit,
 src/hck/zi_cd_hckopensum.ddls.asddls,CDS,
 src/hck/zi_cd_hckopensum.ddls.xml,abapGit,
+src/hck/zi_cd_hckrcbankline.ddls.asddls,CDS,
+src/hck/zi_cd_hckrcbankline.ddls.xml,abapGit,
+src/hck/zi_cd_hckrecon.ddls.asddls,CDS,
+src/hck/zi_cd_hckrecon.ddls.xml,abapGit,
 src/hck/zi_cd_hckresult.ddls.asddls,CDS,
 src/hck/zi_cd_hckresult.ddls.xml,abapGit,
 src/hck/zi_cd_hckrunlast.ddls.asddls,CDS,
@@ -1350,6 +1382,10 @@ src/hck/zif_cd_hck_evidence.intf.abap,ABAP,One kind of clearing / return evidenc
 src/hck/zif_cd_hck_evidence.intf.xml,abapGit,
 src/hck/zif_cd_hck_file.intf.abap,ABAP,"Application-server file access used by the morning-report export, behind an"
 src/hck/zif_cd_hck_file.intf.xml,abapGit,
+src/hck/zif_cd_hck_recon_dao.intf.abap,ABAP,Reads of the three-way reconciliation check A_RECON_3WAY: the active
+src/hck/zif_cd_hck_recon_dao.intf.xml,abapGit,
+src/hck/zif_cd_hck_recon_types.intf.abap,ABAP,Types and constants of the three-way reconciliation check A_RECON_3WAY
+src/hck/zif_cd_hck_recon_types.intf.xml,abapGit,
 src/hck/zif_cd_hck_runtime_dao.intf.abap,ABAP,Reads of the runtime checks of the morning report: number range
 src/hck/zif_cd_hck_runtime_dao.intf.xml,abapGit,
 src/hck/zif_cd_hck_runtime_types.intf.abap,ABAP,Types and constants of the read-only runtime checks of the morning
@@ -1394,6 +1430,10 @@ src/hck/zr_cd_hckpmbank.ddls.asddls,CDS,
 src/hck/zr_cd_hckpmbank.ddls.xml,abapGit,
 src/hck/zr_cd_hckpmclass.ddls.asddls,CDS,
 src/hck/zr_cd_hckpmclass.ddls.xml,abapGit,
+src/hck/zr_cd_hckreconbtc.ddls.asddls,CDS,
+src/hck/zr_cd_hckreconbtc.ddls.xml,abapGit,
+src/hck/zr_cd_hckreconset.ddls.asddls,CDS,
+src/hck/zr_cd_hckreconset.ddls.xml,abapGit,
 src/hck/zr_cd_hckred.ddls.asddls,CDS,
 src/hck/zr_cd_hckred.ddls.xml,abapGit,
 src/hck/zr_cd_hckrun.ddls.asddls,CDS,

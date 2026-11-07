@@ -2423,6 +2423,66 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>690</MSGNR>
+     <TEXT>&amp;1 &amp;2: bank vs G/L differs by &amp;3, unexplained &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>691</MSGNR>
+     <TEXT>&amp;1 &amp;2: G/L &amp;3 vs payment engine control total &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>692</MSGNR>
+     <TEXT>Stripe group &amp;1: charges &amp;2, fees &amp;3 vs deposit &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>693</MSGNR>
+     <TEXT>&amp;1 &amp;2: difference &amp;3 is timing (&amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>694</MSGNR>
+     <TEXT>&amp;1 &amp;2: difference &amp;3 explained by variance bucket &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>695</MSGNR>
+     <TEXT>&amp;1: &amp;2 ACH assignment group(s) of &amp;3 unmatched, amount &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>696</MSGNR>
+     <TEXT>&amp;1: no bank, G/L or payment engine evidence from &amp;2 to &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>697</MSGNR>
+     <TEXT>&amp;1: bank code(s) without reconciliation role: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>698</MSGNR>
+     <TEXT>Reconciliation: &amp;1 group day(s), &amp;2 break(s), &amp;3 timing, &amp;4 variance</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>699</MSGNR>
+     <TEXT>Reconciliation set &amp;1 not evaluated (&amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>

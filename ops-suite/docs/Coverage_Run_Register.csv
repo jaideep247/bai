@@ -104,13 +104,14 @@ ZCL_CD_HCK_C_PARAM,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_CANCEL,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_SPE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_QUEUES,own test include,,10,90,,Not run in target SAP
+ZCL_CD_HCK_C_RECON3,own test include,,15,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_JOBS,own test include,,9,90,,Not run in target SAP
 ZCL_CD_HCK_C_TECH_SYS,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_VOLUME,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_DAO,own test include,,29,90,,"Not run in target SAP; partial exemption: technical reads SNAP / VBHDR / ENQUEUE_READ (COUNT_SHORT_DUMPS, COUNT_UPDATE_ERRORS, READ_LOCK_STATS), IS_WORKING_DAY (calendar FM) and the success path of dynamic AGGREGATE / SELECT_VALUES / COMPUTE_TABLE_HASH on landscape tables - QA1"
 ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
-ZCL_CD_HCK_ENGINE,own test include,,26,90,,Not run in target SAP
+ZCL_CD_HCK_ENGINE,own test include,,27,90,,Not run in target SAP
 ZCL_CD_HCK_EV_BTC_SEQ,own test include,,31,90,,Not run in target SAP
 ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_XREF2,own test include,,3,90,,Not run in target SAP
@@ -126,6 +127,9 @@ ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measur
 ZCL_CD_HCK_INJECTOR,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (test seam: injected and reset by every engine test)
 ZCL_CD_HCK_PARAM,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_PAYREQ_RULES,own test include,,8,90,,Not run in target SAP
+ZCL_CD_HCK_RECON_CDS_TEST,own test include,,3,90,,Not run in target SAP
+ZCL_CD_HCK_RECON_DAO,own test include,,13,90,,Not run in target SAP
+ZCL_CD_HCK_RECON_EVAL,own test include,,22,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_RUNTIME_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP

@@ -36,14 +36,17 @@ INTERFACE lif_c.
       flow                           TYPE string VALUE `FLOW`,
       groupfield                     TYPE string VALUE `GROUPFIELD`,
       jobname                        TYPE string VALUE `JOBNAME`,
+      kind                           TYPE string VALUE `KIND`,
       priority                       TYPE string VALUE `PRIORITY`,
       purpose                        TYPE string VALUE `PURPOSE`,
       red                            TYPE string VALUE `RED`,
       regstate                       TYPE string VALUE `REGSTATE`,
       required                       TYPE string VALUE `REQUIRED`,
+      role                           TYPE string VALUE `ROLE`,
       scheme                         TYPE string VALUE `SCHEME`,
       seqpattern                     TYPE string VALUE `SEQPATTERN`,
       severity                       TYPE string VALUE `SEVERITY`,
+      side                           TYPE string VALUE `SIDE`,
       sumfield                       TYPE string VALUE `SUMFIELD`,
       tabname                        TYPE string VALUE `TABNAME`,
       windowfrom                     TYPE string VALUE `WINDOWFROM`,
@@ -59,6 +62,8 @@ INTERFACE lif_c.
       hckevidenceset                 TYPE string VALUE `HckEvidenceSet`,
       hckpmbank                      TYPE string VALUE `HckPmBank`,
       hckpmclass                     TYPE string VALUE `HckPmClass`,
+      hckreconbtc                    TYPE string VALUE `HckReconBtc`,
+      hckreconset                    TYPE string VALUE `HckReconSet`,
       hckseqoutcome                  TYPE string VALUE `HckSeqOutcome`,
       hckthreshold                   TYPE string VALUE `HckThreshold`,
       hckwhitelist                   TYPE string VALUE `HckWhitelist`,
@@ -79,6 +84,8 @@ INTERFACE lif_c.
       hckevidenceset                 TYPE string VALUE `ZCD_HCK_EVSET`,
       hckpmbank                      TYPE string VALUE `ZCD_HCK_PMBANK`,
       hckpmclass                     TYPE string VALUE `ZCD_HCK_PMCLASS`,
+      hckreconbtc                    TYPE string VALUE `ZCD_HCK_RCBTC`,
+      hckreconset                    TYPE string VALUE `ZCD_HCK_RCSET`,
       hckseqoutcome                  TYPE string VALUE `ZCD_HCK_SEQOUT`,
       hckthreshold                   TYPE string VALUE `ZCD_HCK_THRESH`,
       hckwhitelist                   TYPE string VALUE `ZCD_HCK_TABWL`,
@@ -102,6 +109,9 @@ INTERFACE lif_c.
       hckpmbank_flow                 TYPE string VALUE `D,C`,
       hckpmclass_agebasis            TYPE string VALUE `VALUE_DATE,ISSUE_DATE`,
       hckpmclass_flow                TYPE string VALUE `D,C`,
+      hckreconbtc_role               TYPE string VALUE `LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE`,
+      hckreconset_kind               TYPE string VALUE `THREEWAY,ACH_ZUONR,STRIPE`,
+      hckreconset_side               TYPE string VALUE `C,D`,
       hckseqoutcome_expecteddfkkrp   TYPE string VALUE `,0,1,2,3,4,5,6,7,8,9`,
       hckseqoutcome_flow             TYPE string VALUE `D,C`,
       hckseqoutcome_severity         TYPE string VALUE `,B,E,W,I`,
@@ -186,6 +196,12 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckSeqOutcome = if_abap_behv=>mk-on.
       result-%assoc-_HckSeqOutcome = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_HckReconSet = if_abap_behv=>mk-on.
+      result-%assoc-_HckReconSet = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_HckReconBtc = if_abap_behv=>mk-on.
+      result-%assoc-_HckReconBtc = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -1602,6 +1618,212 @@ CLASS lhc_hckseqoutcome IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_hckreconset DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR HckReconSet RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR HckReconSet~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR HckReconSet~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_hckreconset IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
+      ENTITY HckReconSet
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckreconset.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
+                                        iv_list  = lif_c=>gc_val-hckreconset_kind ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Kind
+                        v2 = lif_c=>gc_el-kind v3 = lif_c=>gc_val-hckreconset_kind
+                        element = lif_c=>gc_el-kind ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Side )
+                                        iv_list  = lif_c=>gc_val-hckreconset_side ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Side
+                        v2 = lif_c=>gc_el-side v3 = lif_c=>gc_val-hckreconset_side
+                        element = lif_c=>gc_el-side ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckreconset.
+        INSERT INITIAL LINE INTO TABLE reported-hckreconset ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-hckcfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
+      ENTITY HckCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckreconset.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckreconset.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
+                                             hckcfgall-SingletonID = 1 ) )
+        INTO TABLE reported-hckreconset.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_hckreconbtc DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR HckReconBtc RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR HckReconBtc~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR HckReconBtc~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_hckreconbtc IMPLEMENTATION.
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
+      ENTITY HckReconBtc
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckreconbtc.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
+                                        iv_list  = lif_c=>gc_val-hckreconbtc_role ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Role
+                        v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-hckreconbtc_role
+                        element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckreconbtc.
+        INSERT INITIAL LINE INTO TABLE reported-hckreconbtc ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-hckcfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
+      ENTITY HckCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckreconbtc.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckreconbtc.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
+                                             hckcfgall-SingletonID = 1 ) )
+        INTO TABLE reported-hckreconbtc.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_cd_hckcfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -1633,7 +1855,9 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckclrrule table = lif_c=>gc_tab-hckclrrule )
             ( entity = lif_c=>gc_ent-hckevidenceset table = lif_c=>gc_tab-hckevidenceset )
             ( entity = lif_c=>gc_ent-hckbtcrole table = lif_c=>gc_tab-hckbtcrole )
-            ( entity = lif_c=>gc_ent-hckseqoutcome table = lif_c=>gc_tab-hckseqoutcome ) )
+            ( entity = lif_c=>gc_ent-hckseqoutcome table = lif_c=>gc_tab-hckseqoutcome )
+            ( entity = lif_c=>gc_ent-hckreconset table = lif_c=>gc_tab-hckreconset )
+            ( entity = lif_c=>gc_ent-hckreconbtc table = lif_c=>gc_tab-hckreconbtc ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

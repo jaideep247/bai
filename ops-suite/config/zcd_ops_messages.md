@@ -408,6 +408,16 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 679 | - lifecycle &1: monetary line without role |
 | 680 | - cheque &1 (state &2), not the deciding cheque: |
 | 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |
+| 690 | &1 &2: bank vs G/L differs by &3, unexplained &4 |
+| 691 | &1 &2: G/L &3 vs payment engine control total &4 |
+| 692 | Stripe group &1: charges &2, fees &3 vs deposit &4 |
+| 693 | &1 &2: difference &3 is timing (&4) |
+| 694 | &1 &2: difference &3 explained by variance bucket &4 |
+| 695 | &1: &2 ACH assignment group(s) of &3 unmatched, amount &4 |
+| 696 | &1: no bank, G/L or payment engine evidence from &2 to &3 |
+| 697 | &1: bank code(s) without reconciliation role: &2 |
+| 698 | Reconciliation: &1 group day(s), &2 break(s), &3 timing, &4 variance |
+| 699 | Reconciliation set &1 not evaluated (&2) |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
