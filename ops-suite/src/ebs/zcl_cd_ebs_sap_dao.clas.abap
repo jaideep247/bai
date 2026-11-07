@@ -17,6 +17,7 @@
 *& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
 *& 2026-11-06 | Return / NOC reason correction: DFKKRP-RLGRD in the returns lot read; get_noc_items (DFKKNRP by INFOF).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | EBS_GL_LEDGER and EBS_RTRV_STATUS_FIELD name / default from ZIF_CD_EBS_TYPES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -28,9 +29,7 @@ CLASS zcl_cd_ebs_sap_dao DEFINITION
     INTERFACES zif_cd_ebs_sap_dao.
 
     "! Ledger for the bank G/L balance (ZCD_OPS_PARAM EBS_GL_LEDGER)
-    CONSTANTS gc_default_ledger TYPE c LENGTH 2 VALUE '0L'.
     "! Status field of ZCD_ACH_RTRV_LOG (ZCD_OPS_PARAM EBS_RTRV_STATUS_FIELD)
-    CONSTANTS gc_default_rtrv_field TYPE string VALUE `ZZ_RTRV_STATUS`.
     "! ACH retrieval log (legacy custom table, status field configurable - parity D5)
     CONSTANTS gc_rtrv_table TYPE string VALUE `ZCD_ACH_RTRV_LOG`.
 
@@ -141,7 +140,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " validated against the DDIC before use - never concatenated unchecked.
     DATA(lv_field) = to_upper( zcl_cd_ops_factory=>get_params( )->get_param(
                                  iv_name    = zif_cd_ebs_types=>gc_param-rtrv_status_field
-                                 iv_default = gc_default_rtrv_field ) ).
+                                 iv_default = zif_cd_ebs_types=>gc_param_default-rtrv_status_field ) ).
     IF field_exists( iv_table = gc_rtrv_table iv_field = lv_field ) = abap_false.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e051(zcd_ops) WITH lv_field zif_cd_ebs_types=>gc_param-rtrv_status_field.
@@ -190,8 +189,9 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_sap_dao~get_gl_balances.
     CHECK it_requests IS NOT INITIAL.
-    DATA(lv_ledger) = zcl_cd_ops_factory=>get_params( )->get_param( iv_name    = 'EBS_GL_LEDGER'
-                                                                  iv_default = CONV #( gc_default_ledger ) ).
+    DATA(lv_ledger) = zcl_cd_ops_factory=>get_params( )->get_param(
+                        iv_name    = zif_cd_ebs_types=>gc_param-gl_ledger
+                        iv_default = zif_cd_ebs_types=>gc_param_default-gl_ledger ).
     " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance.
     " Fix 6: the requests are an internal table joined on the database (HANA), one SUM per
     " request (same filters as the former per-statement SUM: ledger, company code, account,

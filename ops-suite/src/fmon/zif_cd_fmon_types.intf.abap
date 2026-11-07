@@ -23,6 +23,8 @@
 *& 2026-11-06 | PRISM throttle queue per bank by default (scope C, user confirmation).
 *& 2026-11-06 | PCRE interface name patterns: check code PATTERN_INVALID, engine key IFC:, message 271.
 *& 2026-11-07 | Dashboard stale threshold GC_DASHBOARD-STALE_AFTER_MIN (single source, cds_abap_parity).
+*& 2026-11-07 | Delivered defaults of FMON_LOOKBACK_DAYS, _OPEN_DAYS, _DUP_DAYS, _NOC_SLA_DAYS, _MAX_ROWS;
+*&            | check parameter GRACE_MIN (GC_CHECK_PARAM / GC_CHECK_PARAM_DEFAULT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -766,6 +768,11 @@ INTERFACE zif_cd_fmon_types
   CONSTANTS:
     BEGIN OF gc_param_default,
       factory_cal TYPE string VALUE `US`,
+      lookback_days    TYPE i VALUE 1,
+      open_days        TYPE i VALUE 30,
+      dup_days         TYPE i VALUE 7,
+      noc_sla_days     TYPE i VALUE 6,
+      max_rows         TYPE i VALUE 50000,
       "! PRISM throttle (user 2026-11-06): 2 minutes per ACH / wire file, one queue per bank
       throttle_min     TYPE i VALUE 2,
       throttle_scope   TYPE ty_queue_scope VALUE 'C',
@@ -780,6 +787,17 @@ INTERFACE zif_cd_fmon_types
     BEGIN OF gc_dashboard,
       stale_after_min TYPE i VALUE 15,
     END OF gc_dashboard.
+
+  "! Keyword of a check parameter (ZCD_FMON_CHK-PARAMS) and its delivered default:
+  "! grace minutes of the expectation / late / PRISM file checks
+  CONSTANTS:
+    BEGIN OF gc_check_param,
+      grace_min TYPE string VALUE `GRACE_MIN`,
+    END OF gc_check_param.
+  CONSTANTS:
+    BEGIN OF gc_check_param_default,
+      grace_min TYPE i VALUE 60,
+    END OF gc_check_param_default.
 
   "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
   CONSTANTS:

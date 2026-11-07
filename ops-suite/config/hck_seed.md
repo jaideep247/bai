@@ -22,6 +22,9 @@
 | HCK_FLAT_TOL_PCT | `10` | Flat history (standard deviation 0): adverse change beyond this % of the mean is an outlier (A58) |
 | HCK_TOP_N | `20` | Open exceptions listed in the report |
 | HCK_MAIL_ROUTE | `MORNING` | Route of the morning report e-mail |
+| HCK_MAX_JOB_ROWS | `5000` | TBTCO job runs per read (technical jobs, job cycle, job runtime); hard ceiling 50 000 |
+| HCK_MAX_JOB_NAMES | `20000` | Distinct TBTCO job names per window; reaching it fails the check (747); hard ceiling 200 000 |
+| HCK_MAX_AGG_ROWS | `5000` | Groups of a generic aggregate / volume check; hard ceiling 50 000 |
 | ALERT_MORNING | `<payment-engine RTB distribution list>` | Recipients of the morning report (**confirm**) |
 | HCK_SCORE_GREEN_MIN | `90` | Score ≥ 90 → GREEN |
 | HCK_SCORE_AMBER_MIN | `70` | Score ≥ 70 → AMBER, below → RED |

@@ -11,6 +11,7 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PARAM1 job names are PCRE (complete name, case ignored); an invalid pattern raises E373.
+*& 2026-11-07 | Cap reached against the effective cap ZCL_CD_HCK_PARAM=>JOB_ROWS_CAP (parameter HCK_MAX_JOB_ROWS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - cancelled / long-running / late jobs</p>
 "! PARAM1 = job name patterns, PARAM2 = long-running minutes (default 120),
@@ -72,14 +73,14 @@ CLASS zcl_cd_hck_c_tech_jobs IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
     " A44: a read that reached its cap is reported - the counts below may be incomplete
-    IF lines( lt_runs ) >= zif_cd_hck_types=>gc_max_job_rows
-       OR lines( lt_unresolved ) >= zif_cd_hck_types=>gc_max_job_rows.
+    IF lines( lt_runs ) >= zcl_cd_hck_param=>job_rows_cap( )
+       OR lines( lt_unresolved ) >= zcl_cd_hck_param=>job_rows_cap( ).
       INSERT VALUE #( object_key = is_def-check_id
                       check_code = zif_cd_hck_types=>gc_code-job_read_capped
                       severity   = zif_cd_ops_types=>gc_severity-warning
                       action     = zif_cd_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-job_read_capped
-                                                          iv_v1    = zif_cd_hck_types=>gc_max_job_rows
+                                                          iv_v1    = zcl_cd_hck_param=>job_rows_cap( )
                                                           iv_v2    = is_def-check_id ) )
         INTO TABLE rs_result-findings.
     ENDIF.

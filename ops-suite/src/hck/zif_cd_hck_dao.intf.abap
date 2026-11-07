@@ -15,6 +15,7 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | PCRE patterns: job names, application-log objects / subobjects and cycle ids are lists of
 *&              PCRE patterns (complete value, case ignored); job reads raise message 747 at the name cap.
+*& 2026-11-07 | GC_MAX_AGG_ROWS is the hard ceiling (50,000) of parameter HCK_MAX_AGG_ROWS (default 5,000).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -24,7 +25,7 @@ INTERFACE zif_cd_hck_dao
 
   "! Groups returned by one grouped aggregate at most; a result of this size may be cut
   "! off, so missing expected groups are not filled with zero then (A103)
-  CONSTANTS gc_max_agg_rows TYPE i VALUE 5000.
+  CONSTANTS gc_max_agg_rows TYPE i VALUE 50000.
 
   "! Active checks (ZCD_HCK_DEF) matching the selection, ordered by SEQ
   METHODS get_check_defs

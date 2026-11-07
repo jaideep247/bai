@@ -8,6 +8,7 @@
 *& (SAP's own evidence is read every 5 minutes). Pure.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API: unknown files never vanish).
+*& 2026-11-07 | Check parameter GRACE_MIN and its default from ZIF_CD_FMON_TYPES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - PRISM evidence not confirmed by SAP</p>
 "! Params: GRACE_MIN=60 - minutes after the first PRISM event (outbound) / PRISM_DELIVERED
@@ -23,9 +24,6 @@ CLASS zcl_cd_fmon_chk_prism_file DEFINITION
     INTERFACES zif_cd_fmon_check.
 
   PRIVATE SECTION.
-    "! Name and default of the check parameter (ZCD_FMON_CHK-PARAMS)
-    CONSTANTS gc_param_grace TYPE string VALUE `GRACE_MIN`.
-    CONSTANTS gc_default_grace TYPE i VALUE 60.
 
     "! What the events of one file show
     TYPES:
@@ -58,8 +56,8 @@ CLASS zcl_cd_fmon_chk_prism_file IMPLEMENTATION.
 
   METHOD zif_cd_fmon_check~execute.
     DATA(lv_grace) = zcl_cd_fmon_util=>param_int( iv_params  = is_check-params
-                                                  iv_name    = gc_param_grace
-                                                  iv_default = gc_default_grace ).
+                                                  iv_name    = zif_cd_fmon_types=>gc_check_param-grace_min
+                                                  iv_default = zif_cd_fmon_types=>gc_check_param_default-grace_min ).
     DATA(lt_evidence) = collect( is_ctx-events ).
     DATA(lv_received_rank) = zcl_cd_fmon_status=>rank( iv_stage     = zif_cd_fmon_types=>gc_stage-received
                                                        iv_direction = zif_cd_fmon_types=>gc_direction-inbound ).

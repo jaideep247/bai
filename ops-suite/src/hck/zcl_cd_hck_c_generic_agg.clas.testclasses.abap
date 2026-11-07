@@ -7,6 +7,7 @@
 *& are test doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -115,6 +116,7 @@ ENDCLASS.
 CLASS ltc_generic_agg IMPLEMENTATION.
 
   METHOD setup.
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
     mo_dao = NEW #( ).
     CLEAR ms_context.
     ms_context-report_date = gc_today.

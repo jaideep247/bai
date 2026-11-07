@@ -27,6 +27,8 @@
 *&              cannot use an index). Job names: distinct names of the window / open statuses, PCRE filter
 *&              in ABAP, then the runs of the matched names (FOR ALL ENTRIES). BALHDR counters grouped per day, filtered
 *&              in ABAP. Cycle ids filtered in ABAP (customizing rows). Performance_Review.md.
+*& 2026-11-07 | Row caps from parameters HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS (ZCL_CD_HCK_PARAM, cut to the
+*&            | hard ceilings); cap reached fails as before.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -203,6 +205,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA(lv_where) = ls_query-where_clause.
     DATA(lv_group) = CONV string( ls_query-group_field ).
 
+    DATA(lv_max_rows) = zcl_cd_hck_param=>agg_rows_cap( ).
     TRY.
         IF lv_group IS INITIAL.
           " Aggregate without GROUP BY returns exactly one row: order is irrelevant
@@ -217,7 +220,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             GROUP BY (lv_group)
             ORDER BY (lv_group)
             INTO CORRESPONDING FIELDS OF TABLE @rt_rows
-            UP TO @zif_cd_hck_dao=>gc_max_agg_rows ROWS.
+            UP TO @lv_max_rows ROWS.
         ENDIF.
       CATCH cx_sy_dynamic_osql_error INTO DATA(lx_sql).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
@@ -451,13 +454,14 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       RETURN.
     ENDIF.
     " PCRE on the job name: distinct names of the window first, matched in ABAP
+    DATA(lv_max_names) = zcl_cd_hck_param=>job_names_cap( ).
     SELECT DISTINCT jobname
       FROM tbtco
       WHERE sdlstrtdt BETWEEN @iv_from AND @iv_to
          OR strtdate  BETWEEN @iv_from AND @iv_to
       ORDER BY jobname
       INTO TABLE @lt_names
-      UP TO @zif_cd_hck_types=>gc_max_job_names ROWS.
+      UP TO @lv_max_names ROWS.
     DATA(lt_matched) = matched_jobnames( it_names = lt_names it_patterns = it_jobnames ).
     IF lt_matched IS INITIAL.
       RETURN.
@@ -473,7 +477,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
            OR strtdate  BETWEEN @iv_from AND @iv_to )
       INTO CORRESPONDING FIELDS OF TABLE @rt_runs.
     SORT rt_runs BY jobname jobcount.
-    DELETE rt_runs FROM zif_cd_hck_types=>gc_max_job_rows + 1.
+    DELETE rt_runs FROM zcl_cd_hck_param=>job_rows_cap( ) + 1.
     add_step_program( CHANGING ct_runs = rt_runs ).
   ENDMETHOD.
 
@@ -484,6 +488,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       RETURN.
     ENDIF.
     " PCRE on the job name: distinct names of the open statuses first, matched in ABAP
+    DATA(lv_max_names) = zcl_cd_hck_param=>job_names_cap( ).
     SELECT DISTINCT jobname
       FROM tbtco
       WHERE status IN ( @zif_cd_hck_types=>gc_job_status-running,
@@ -492,7 +497,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
                         @zif_cd_hck_types=>gc_job_status-released )
       ORDER BY jobname
       INTO TABLE @lt_names
-      UP TO @zif_cd_hck_types=>gc_max_job_names ROWS.
+      UP TO @lv_max_names ROWS.
     DATA(lt_matched) = matched_jobnames( it_names = lt_names it_patterns = it_jobnames ).
     IF lt_matched IS INITIAL.
       RETURN.
@@ -509,15 +514,16 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       INTO CORRESPONDING FIELDS OF TABLE @rt_runs.
     " oldest planned start first, capped (A44)
     SORT rt_runs BY sdlstrtdt sdlstrttm jobname jobcount.
-    DELETE rt_runs FROM zif_cd_hck_types=>gc_max_job_rows + 1.
+    DELETE rt_runs FROM zcl_cd_hck_param=>job_rows_cap( ) + 1.
     add_step_program( CHANGING ct_runs = rt_runs ).
   ENDMETHOD.
 
 
   METHOD matched_jobnames.
-    IF lines( it_names ) >= zif_cd_hck_types=>gc_max_job_names.
+    DATA(lv_max_names) = zcl_cd_hck_param=>job_names_cap( ).
+    IF lines( it_names ) >= lv_max_names.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e747(zcd_ops) WITH zif_cd_hck_types=>gc_max_job_names gc_table_tbtco.
+        MESSAGE e747(zcd_ops) WITH lv_max_names gc_table_tbtco.
     ENDIF.
     LOOP AT it_names ASSIGNING FIELD-SYMBOL(<lv_name>).
       IF zcl_cd_ops_util=>pcre_match_any( iv_value = <lv_name> it_patterns = it_patterns ) = abap_true.

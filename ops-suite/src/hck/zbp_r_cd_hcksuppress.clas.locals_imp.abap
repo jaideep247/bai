@@ -14,7 +14,6 @@
 *&---------------------------------------------------------------------*
 CLASS lhc_suppression DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
-    CONSTANTS gc_param_max_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SUPPRESS_MAX_DAYS'.
 
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR Suppression RESULT result.
@@ -84,7 +83,7 @@ CLASS lhc_suppression IMPLEMENTATION.
       RESULT DATA(lt_rows).
     DATA(lv_max_days) = zcl_cd_hck_param=>int(
                           iv_value   = zcl_cd_ops_factory=>get_params( )->get_param(
-                                         iv_name    = gc_param_max_days
+                                         iv_name    = zif_cd_hck_suppress_types=>gc_param_max_days
                                          iv_default = |{ zif_cd_hck_suppress_types=>gc_default_max_days }| )
                           iv_default = zif_cd_hck_suppress_types=>gc_default_max_days ).
     DATA(lv_now) = zcl_cd_ops_factory=>get_clock( )->now( ).

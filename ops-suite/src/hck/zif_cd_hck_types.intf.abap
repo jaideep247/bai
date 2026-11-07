@@ -23,6 +23,10 @@
 *&              gc_max_job_names.
 *& 2026-11-07 | GC_PARAM_DEFAULT-MAX_AGE_HOURS (was inline in the engine), GC_DASHBOARD-WINDOW_DAYS
 *&            | (single source of the CDS literals, cds_abap_parity).
+*& 2026-11-07 | GC_PARAM moved here from ZCL_CD_HCK_ENGINE; GC_PARAM_DEFAULT complete (inline 300 / 8 / 20,
+*&            | watched areas, mail route, runtime limit); row caps as parameters HCK_MAX_JOB_ROWS (5,000) and
+*&            | HCK_MAX_JOB_NAMES (20,000); GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES are now the hard ceilings (50,000 /
+*&            | 200,000).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -233,10 +237,10 @@ INTERFACE zif_cd_hck_types
   "! Plug-in interface every configured check class implements (factory check, A62)
   CONSTANTS gc_check_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_CHECK'.
   "! Row cap of one job read (TBTCO); a read that reaches it is reported (audit A44)
-  CONSTANTS gc_max_job_rows TYPE i VALUE 5000.
+  CONSTANTS gc_max_job_rows TYPE i VALUE 50000.
   "! Cap of the distinct job names read for the PCRE filter (TBTCO, date window or open
   "! status); reaching it raises message 747 - the check fails loudly, never partly
-  CONSTANTS gc_max_job_names TYPE i VALUE 20000.
+  CONSTANTS gc_max_job_names TYPE i VALUE 200000.
 
   "! ZCD_HCK_DEF
   TYPES:
@@ -649,7 +653,40 @@ INTERFACE zif_cd_hck_types
   CONSTANTS:
     BEGIN OF gc_param_default,
       max_age_hours TYPE i VALUE 26,
+      "! A06: runtime limit of a run before it counts as hung
+      max_run_min    TYPE i VALUE 120,
+      timeout_sec    TYPE i VALUE 300,
+      lookback       TYPE i VALUE 8,
+      top_n          TYPE i VALUE 20,
+      watch_pe_areas TYPE string VALUE `EBS,FMON,HCK`,
+      mail_route     TYPE zif_cd_ops_types=>ty_param_name VALUE 'MORNING',
+      "! Row caps (HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS); a larger value is cut to the
+      "! hard ceiling GC_MAX_JOB_ROWS / GC_MAX_JOB_NAMES / ZIF_CD_HCK_DAO=>GC_MAX_AGG_ROWS
+      max_job_rows   TYPE i VALUE 5000,
+      max_job_names  TYPE i VALUE 20000,
+      max_agg_rows   TYPE i VALUE 5000,
     END OF gc_param_default.
+
+  "! Parameters (ZCD_OPS_PARAM) of the health check engine and of its row caps
+  CONSTANTS:
+    BEGIN OF gc_param,
+      watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',
+      max_age_hours  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
+      timeout_sec    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
+      lookback       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
+      top_n          TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
+      mail_route     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAIL_ROUTE',
+      green_min      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_GREEN_MIN',
+      amber_min      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_AMBER_MIN',
+      weight_high    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
+      weight_medium  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_M',
+      weight_low     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_L',
+      max_run_min    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_RUN_MIN',
+      flat_tol_pct   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_FLAT_TOL_PCT',
+      max_job_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_ROWS',
+      max_job_names  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_JOB_NAMES',
+      max_agg_rows   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGG_ROWS',
+    END OF gc_param.
 
   "! Health check dashboard (CDS, docs/Dashboard_Health_Check.md): runs, findings and metrics of
   "! the last WINDOW_DAYS days (dats_add_days -31 in ZR_CD_HckRun, ZI_CD_HckFinding,

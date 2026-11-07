@@ -8,6 +8,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Check parameter GRACE_MIN and its default from ZIF_CD_FMON_TYPES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - file late</p>
 "! Rules: ZCL_CD_FMON_RULES=>ARRIVED_LATE / EXPECTATION_CODE. Params: GRACE_MIN=60
@@ -27,8 +28,8 @@ CLASS zcl_cd_fmon_chk_late IMPLEMENTATION.
 
   METHOD zif_cd_fmon_check~execute.
     DATA(lv_grace) = zcl_cd_fmon_util=>param_int( iv_params  = is_check-params
-                                                  iv_name    = 'GRACE_MIN'
-                                                  iv_default = 60 ).
+                                                  iv_name    = zif_cd_fmon_types=>gc_check_param-grace_min
+                                                  iv_default = zif_cd_fmon_types=>gc_check_param_default-grace_min ).
     LOOP AT is_ctx-expects ASSIGNING FIELD-SYMBOL(<ls_expect>).
       DATA(lv_received) = 0.
       LOOP AT is_ctx-files ASSIGNING FIELD-SYMBOL(<ls_file>) USING KEY by_iface

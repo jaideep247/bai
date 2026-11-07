@@ -39,6 +39,8 @@
 *&            | FEBEP-XBLNR, ZCL_CD_EBS_PE_SCOPE) are removed with their lines - no rule, no finding, no
 *&            | reconciliation - and counted (result OUT_OF_SCOPE, run message 546).
 *& 2026-11-06 | Run with every statement out of scope is NO_DATA (grey), not green; count in the message.
+*& 2026-11-07 | Parameter names / defaults from ZIF_CD_OPS_TYPES / ZIF_CD_EBS_TYPES; integer parameters with
+*&            | ZCL_CD_OPS_UTIL=>PARAM_INT (private int_param removed); parameters through GET_PARAMS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -361,12 +363,6 @@ CLASS zcl_cd_ebs_engine DEFINITION
       RETURNING
         VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding.
 
-    METHODS int_param
-      IMPORTING
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
-        iv_default      TYPE i
-      RETURNING
-        VALUE(rv_value) TYPE i.
 
 ENDCLASS.
 
@@ -450,10 +446,19 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       lo_store->commit( ).
     ENDIF.
 
-    DATA(lv_cb_percent)  = int_param( iv_name = 'EBS_CB_FAIL_PCT'  iv_default = 50 ).
-    DATA(lv_cb_packages) = int_param( iv_name = 'EBS_CB_PACKAGES'  iv_default = 3 ).
-    DATA(lv_cb_min)      = int_param( iv_name = 'EBS_CB_MIN_LINES' iv_default = 20 ).
-    DATA(lv_keep_max)    = int_param( iv_name = 'EBS_RESULT_MAX'   iv_default = 100000 ).
+    DATA(lo_params)      = zcl_cd_ops_factory=>get_params( ).
+    DATA(lv_cb_percent)  = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_fail_pct
+                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_fail_pct ).
+    DATA(lv_cb_packages) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_packages
+                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_packages ).
+    DATA(lv_cb_min)      = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_min_lines
+                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_min_lines ).
+    DATA(lv_keep_max)    = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                       iv_name    = zif_cd_ebs_types=>gc_param-result_max
+                                                       iv_default = zif_cd_ebs_types=>gc_param_default-result_max ).
 
     DO.
       DATA(ls_package) = io_source->next_package( ).
@@ -876,8 +881,9 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lo_cfg) = zcl_cd_ebs_factory=>get_cfg_dao( ).
-    DATA(lv_fallback) = zcl_cd_ops_factory=>get_params( )->get_param( iv_name    = 'EBS_CAMT_BAI_FALLBACK'
-                                                                    iv_default = `X` ).
+    DATA(lv_fallback) = zcl_cd_ops_factory=>get_params( )->get_param(
+                          iv_name    = zif_cd_ebs_types=>gc_param-camt_bai_fallback
+                          iv_default = zif_cd_ebs_types=>gc_param_default-camt_bai_fallback ).
     DATA(lt_accounts) = lo_cfg->get_accounts( ).
     mo_resolver = NEW #( it_map          = lo_cfg->get_btc_map( )
                          it_patterns     = lo_cfg->get_flow_patterns( )
@@ -1161,11 +1167,5 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-
-  METHOD int_param.
-    rv_value = zcl_cd_ops_util=>to_decimal(
-      iv_value   = zcl_cd_ops_factory=>get_params( )->get_param( iv_name = iv_name iv_default = |{ iv_default }| )
-      iv_default = iv_default ).
-  ENDMETHOD.
 
 ENDCLASS.

@@ -94,7 +94,7 @@ Configured patterns are PCRE matched to the complete value, case ignored. ABAP S
 
 | Read | Before (CP range in SQL) | After |
 |---|---|---|
-| TBTCO job runs (job cycle, technical jobs, job runtime) | `jobname IN @range` + date window, UP TO 5 000 | `SELECT DISTINCT jobname` of the date window (UP TO 20 000 names; at the cap message 747, the check fails loudly), PCRE in ABAP, runs of the matched names by FOR ALL ENTRIES + date window, sorted and capped at 5 000 as before |
+| TBTCO job runs (job cycle, technical jobs, job runtime) | `jobname IN @range` + date window, UP TO 5 000 | `SELECT DISTINCT jobname` of the date window (UP TO `HCK_MAX_JOB_NAMES` names, default 20 000, ceiling 200 000; at the cap message 747, the check fails loudly), PCRE in ABAP, runs of the matched names by FOR ALL ENTRIES + date window, sorted and capped at `HCK_MAX_JOB_ROWS` (default 5 000, ceiling 50 000) |
 | TBTCO unresolved jobs | `jobname IN @range` + open statuses | distinct names of the open statuses, then as above (oldest first) |
 | BALHDR counters | `object IN @range` + day | grouped per object / subobject for the day (one row per pair), PCRE in ABAP |
 | Job cycles | `cycle_id IN @range` | active cycles (customizing rows), PCRE in ABAP |

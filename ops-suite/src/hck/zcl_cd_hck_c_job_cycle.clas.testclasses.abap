@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-06 | Step job name that is not valid PCRE: PATTERN_INVALID finding, step not evaluated
 *&              (bad_step_pattern_reported).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -95,6 +96,7 @@ ENDCLASS.
 CLASS ltc_job_cycle IMPLEMENTATION.
 
   METHOD setup.
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
   ENDMETHOD.
@@ -102,6 +104,7 @@ CLASS ltc_job_cycle IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
     CLEAR mo_dao.
   ENDMETHOD.
 
@@ -138,7 +141,7 @@ CLASS ltc_job_cycle IMPLEMENTATION.
       " the cap reached by planned (not started) instances of another job
       ls_run-jobname = gc_job_2.
       ls_run-status  = zif_cd_hck_types=>gc_job_status-scheduled.
-      DO zif_cd_hck_types=>gc_max_job_rows TIMES.
+      DO zif_cd_hck_types=>gc_param_default-max_job_rows TIMES.
         ls_run-jobcount = sy-index.
         INSERT ls_run INTO TABLE mo_dao->mt_runs.
       ENDDO.

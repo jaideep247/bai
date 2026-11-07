@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-06 | PARAM1 job names as PCRE; an invalid pattern raises message 373 (bad_pattern_raises).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -103,6 +104,7 @@ ENDCLASS.
 CLASS ltc_tech_jobs IMPLEMENTATION.
 
   METHOD setup.
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
     mo_dao = NEW #( ).
     CLEAR ms_def.
     ms_def-check_id = gc_check.
@@ -112,6 +114,7 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
     CLEAR mo_dao.
   ENDMETHOD.
 
@@ -160,7 +163,7 @@ CLASS ltc_tech_jobs IMPLEMENTATION.
                   iv_date = gc_today iv_time = gc_early ) INTO TABLE mo_dao->mt_unresolved.
     ENDIF.
     IF is_flags-capped = abap_true.
-      DO zif_cd_hck_types=>gc_max_job_rows TIMES.
+      DO zif_cd_hck_types=>gc_param_default-max_job_rows TIMES.
         INSERT run( iv_count = CONV #( sy-index ) iv_status = zif_cd_hck_types=>gc_job_status-finished
                     iv_date = gc_today iv_time = gc_early ) INTO TABLE mo_dao->mt_runs.
       ENDDO.

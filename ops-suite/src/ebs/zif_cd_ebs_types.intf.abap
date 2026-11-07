@@ -33,6 +33,8 @@
 *& 2026-11-06 | Payment engine account scope (user decision): XBLNR / account types, derivation
 *&            | constants GC_PE_ACCOUNT (same literals as CDS ZI_CD_EbsLineAcct), message 546.
 *& 2026-11-07 | Dashboard date window GC_DASHBOARD-WINDOW_DAYS (single source, cds_abap_parity).
+*& 2026-11-07 | Parameter names / defaults moved from code: EBS_CB_*, EBS_RESULT_MAX, EBS_CAMT_BAI_FALLBACK,
+*&            | EBS_GL_LEDGER, EBS_RTRV_STATUS_FIELD default, parser classes, prefix EBS_PARSER_.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -458,6 +460,16 @@ INTERFACE zif_cd_ebs_types
       "! Operating model 2026-11-06: FEBEP posting-area completion fields (comma list); an
       "! entry is posted when every field holds X; NONE = posting state not read (unknown)
       feb_posted_fields  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_POSTED_FIELDS',
+      "! Circuit breaker: failed-line percentage, consecutive packages, minimum lines per package
+      cb_fail_pct        TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CB_FAIL_PCT',
+      cb_packages        TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CB_PACKAGES',
+      cb_min_lines       TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CB_MIN_LINES',
+      "! Findings kept per run (the rest summarised)
+      result_max         TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_RESULT_MAX',
+      "! X: CAMT proprietary BAI codes reuse the BAI2 map rows (off: any other non-blank value)
+      camt_bai_fallback  TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_CAMT_BAI_FALLBACK',
+      "! Ledger of the G/L line reads (BSEG / ACDOCA)
+      gl_ledger          TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_GL_LEDGER',
     END OF gc_param,
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
@@ -466,7 +478,23 @@ INTERFACE zif_cd_ebs_types
       feb_posted_fields TYPE string VALUE `VB1OK,VB2OK`,
       "! EBS_FEB_POSTED_FIELDS value that switches the posting-state read off
       feb_posted_off    TYPE string VALUE `NONE`,
+      cb_fail_pct       TYPE i VALUE 50,
+      cb_packages       TYPE i VALUE 3,
+      cb_min_lines      TYPE i VALUE 20,
+      result_max        TYPE i VALUE 100000,
+      camt_bai_fallback TYPE string VALUE `X`,
+      gl_ledger         TYPE string VALUE `0L`,
+      "! VERIFY-DDIC: status field of ZCD_ACH_RTRV_LOG (v4 168; v4 468 uses ZZRETRIEVAL_STATUS)
+      rtrv_status_field TYPE string VALUE `ZZ_RTRV_STATUS`,
+      parser_bai2       TYPE string VALUE `ZCL_CD_EBS_PARSER_BAI2`,
+      parser_camt       TYPE string VALUE `ZCL_CD_EBS_PARSER_CAMT`,
     END OF gc_param_default.
+
+  "! Parameter-name prefixes completed at run time: EBS_PARSER_<format> = parser class
+  CONSTANTS:
+    BEGIN OF gc_param_prefix,
+      parser TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_PARSER_',
+    END OF gc_param_prefix.
 
   "! Keywords of rule parameters in ZCD_BTC_RULE (PARAM1..PARAM3)
   CONSTANTS:

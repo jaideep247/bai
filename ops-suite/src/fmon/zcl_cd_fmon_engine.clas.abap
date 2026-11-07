@@ -29,6 +29,8 @@
 *&              context for the batch run and run_event alike (same rule, no copy).
 *& 2026-11-06 | Configuration load: an interface name pattern that is not valid PCRE is a PATTERN_INVALID
 *&              finding (never a silent no-match).
+*& 2026-11-07 | Integer parameters with ZCL_CD_OPS_UTIL=>PARAM_INT and defaults from ZIF_CD_FMON_TYPES
+*&            | (private int_param and inline defaults removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -341,12 +343,6 @@ CLASS zcl_cd_fmon_engine DEFINITION
         iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
         iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error.
 
-    METHODS int_param
-      IMPORTING
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
-        iv_default      TYPE i
-      RETURNING
-        VALUE(rv_value) TYPE i.
 
     METHODS mark_changed
       IMPORTING
@@ -520,12 +516,14 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_records TYPE zif_cd_fmon_types=>tt_src_record.
     DATA lt_groups TYPE tt_group.
 
-    ls_request-date_from = mv_date - int_param( iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
-                                                iv_default = 1 ).
+    ls_request-date_from = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                                 iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
+                                                                 iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
     ls_request-date_to   = mv_date.
     ls_request-time_zone = mv_tz.
-    ls_request-max_rows  = int_param( iv_name    = zif_cd_fmon_types=>gc_param-max_rows
-                                      iv_default = 50000 ).
+    ls_request-max_rows  = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                       iv_name    = zif_cd_fmon_types=>gc_param-max_rows
+                                                       iv_default = zif_cd_fmon_types=>gc_param_default-max_rows ).
 
     IF mv_single = abap_true.
       lt_groups = aggregate( is_src     = ms_single_src
@@ -733,8 +731,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     ENDIF.
     " Instances of earlier days are needed only inside the evaluation / open-file window
     DATA lv_since TYPE d.
-    lv_since = mv_date - nmax( val1 = int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 )
-                               val2 = int_param( iv_name = zif_cd_fmon_types=>gc_param-open_days iv_default = 30 ) ).
+    lv_since = mv_date - nmax( val1 = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                                  iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
+                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days )
+                               val2 = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                                  iv_name    = zif_cd_fmon_types=>gc_param-open_days
+                                                                  iv_default = zif_cd_fmon_types=>gc_param_default-open_days ) ).
     DATA(lt_found) = mo_dao->find_files_by_ref( it_keys  = lt_keys
                                                 iv_since = lv_since ).
     LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_file>).
@@ -929,8 +931,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
   METHOD load_registry.
     DATA lv_from TYPE d.
     DATA lv_open_since TYPE d.
-    lv_from       = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 ).
-    lv_open_since = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-open_days iv_default = 30 ).
+    lv_from       = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                          iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
+                                                          iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
+    lv_open_since = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                          iv_name    = zif_cd_fmon_types=>gc_param-open_days
+                                                          iv_default = zif_cd_fmon_types=>gc_param_default-open_days ).
     DATA lt_db TYPE zif_cd_fmon_types=>tt_file.
     " Single-event mode: only the files of the event (prefetched by reference)
     IF mv_single = abap_false.
@@ -964,8 +970,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lt_batch TYPE zif_cd_fmon_types=>tt_file.
     DATA lt_status TYPE zif_cd_fmon_types=>tt_lot_status.
 
-    DATA(lv_default_sla) = int_param( iv_name = zif_cd_fmon_types=>gc_param-noc_sla_days iv_default = 6 ).
-    DATA(lv_max_rows) = int_param( iv_name = zif_cd_fmon_types=>gc_param-max_rows iv_default = 50000 ).
+    DATA(lv_default_sla) = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                       iv_name    = zif_cd_fmon_types=>gc_param-noc_sla_days
+                                                       iv_default = zif_cd_fmon_types=>gc_param_default-noc_sla_days ).
+    DATA(lv_max_rows) = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                    iv_name    = zif_cd_fmon_types=>gc_param-max_rows
+                                                    iv_default = zif_cd_fmon_types=>gc_param_default-max_rows ).
 
     LOOP AT mt_lotcfgs INTO DATA(ls_cfg) WHERE active = abap_true.
       CLEAR lt_batch.
@@ -1177,7 +1187,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     SORT lt_checksums BY table_line.
     DELETE ADJACENT DUPLICATES FROM lt_checksums COMPARING table_line.
     DATA lv_since TYPE d.
-    lv_since = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-dup_days iv_default = 7 ).
+    lv_since = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                     iv_name    = zif_cd_fmon_types=>gc_param-dup_days
+                                                     iv_default = zif_cd_fmon_types=>gc_param_default-dup_days ).
     rs_ctx-history = mo_dao->get_history( it_names     = lt_names
                                           it_checksums = lt_checksums
                                           iv_since     = lv_since ).
@@ -1185,15 +1197,17 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD throttle_settings.
-    rs_throttle-minutes   = int_param( iv_name    = zif_cd_fmon_types=>gc_param-throttle_min
-                                       iv_default = zif_cd_fmon_types=>gc_param_default-throttle_min ).
+    rs_throttle-minutes   = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                        iv_name    = zif_cd_fmon_types=>gc_param-throttle_min
+                                                        iv_default = zif_cd_fmon_types=>gc_param_default-throttle_min ).
     rs_throttle-scope     = to_upper( mo_store->get_param(
                               iv_name    = zif_cd_fmon_types=>gc_param-throttle_scope
                               iv_default = CONV #( zif_cd_fmon_types=>gc_param_default-throttle_scope ) ) ).
     rs_throttle-methods   = mo_store->get_param( iv_name    = zif_cd_fmon_types=>gc_param-throttle_methods
                                                  iv_default = zif_cd_fmon_types=>gc_param_default-throttle_methods ).
-    rs_throttle-queue_max = int_param( iv_name    = zif_cd_fmon_types=>gc_param-queue_max
-                                       iv_default = zif_cd_fmon_types=>gc_param_default-queue_max ).
+    rs_throttle-queue_max = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                        iv_name    = zif_cd_fmon_types=>gc_param-queue_max
+                                                        iv_default = zif_cd_fmon_types=>gc_param_default-queue_max ).
   ENDMETHOD.
 
 
@@ -1222,7 +1236,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
     " The full batch run holds every file of its lookback window in memory
     IF mv_single = abap_false AND mv_iface IS INITIAL.
-      lv_covered_from = mv_date - int_param( iv_name = zif_cd_fmon_types=>gc_param-lookback_days iv_default = 1 ).
+      lv_covered_from = mv_date - zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                              iv_name    = zif_cd_fmon_types=>gc_param-lookback_days
+                                                              iv_default = zif_cd_fmon_types=>gc_param_default-lookback_days ).
     ENDIF.
     LOOP AT lt_dates ASSIGNING FIELD-SYMBOL(<lv_date>).
       IF lv_covered_from IS NOT INITIAL AND <lv_date> BETWEEN lv_covered_from AND mv_date.
@@ -1499,12 +1515,6 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     INSERT ls_finding INTO TABLE mt_findings.
   ENDMETHOD.
 
-
-  METHOD int_param.
-    rv_value = zcl_cd_ops_util=>to_decimal( iv_value   = mo_store->get_param( iv_name    = iv_name
-                                                                              iv_default = |{ iv_default }| )
-                                            iv_default = iv_default ).
-  ENDMETHOD.
 
 
   METHOD mark_changed.

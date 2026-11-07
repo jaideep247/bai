@@ -558,7 +558,7 @@ CLASS ltc_engine IMPLEMENTATION.
         act( ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_send_calls exp = 1 msg = 'One report mail' ).
         cl_abap_unit_assert=>assert_equals( act = mo_alert->mv_last_route
-                                            exp = zcl_cd_hck_engine=>gc_default_route
+                                            exp = zif_cd_hck_types=>gc_param_default-mail_route
                                             msg = 'Report mail goes to route MORNING' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

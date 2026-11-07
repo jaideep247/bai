@@ -24,6 +24,8 @@
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Parameter HCK_WATCH_PE_AREAS (was HCK_WATCH_MODULES; matches the documentation).
 *& 2026-11-07 | HCK_MAX_AGE_HOURS default from ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT (was inline 26).
+*& 2026-11-07 | GC_PARAM and inline defaults (300 / 8 / 20, watched areas, mail route, runtime limit) moved to
+*&            | ZIF_CD_HCK_TYPES; integer parameters with ZCL_CD_OPS_UTIL=>PARAM_INT (private param_int removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -41,24 +43,7 @@ CLASS zcl_cd_hck_engine DEFINITION
 
   PUBLIC SECTION.
 
-    CONSTANTS:
-      BEGIN OF gc_param,
-        watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',
-        max_age_hours TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_AGE_HOURS',
-        timeout_sec   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TIMEOUT_SEC',
-        lookback      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK_RUNS',
-        top_n         TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N',
-        mail_route    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAIL_ROUTE',
-        green_min     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_GREEN_MIN',
-        amber_min     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SCORE_AMBER_MIN',
-        weight_high   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_H',
-        weight_medium TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_M',
-        weight_low    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WEIGHT_L',
-        max_run_min   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_RUN_MIN',
-        flat_tol_pct  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_FLAT_TOL_PCT',
-      END OF gc_param.
 
-    CONSTANTS gc_default_route TYPE zif_cd_ops_types=>ty_param_name VALUE 'MORNING'.
 
     "! Run the selected checks and build the morning report
     "! @raising zcx_cd_ops_error | store errors (start/save/finish run)
@@ -85,8 +70,6 @@ CLASS zcl_cd_hck_engine DEFINITION
     "! S_TABU_NAM check before a configuration baseline is written
     CONSTANTS gc_actvt_change TYPE activ_auth VALUE '02'.
     CONSTANTS gc_baseline_table TYPE tabname VALUE 'ZCD_HCK_BASELINE'.
-    "! A06: default runtime limit of a run before it counts as hung (HCK_MAX_RUN_MIN)
-    CONSTANTS gc_default_max_run_min TYPE i VALUE 120.
     CONSTANTS gc_seconds_per_minute TYPE i VALUE 60.
     CONSTANTS gc_end_of_day TYPE t VALUE '235959'.
 
@@ -205,12 +188,6 @@ CLASS zcl_cd_hck_engine DEFINITION
       CHANGING
         cs_report TYPE zif_cd_hck_types=>ty_report.
 
-    METHODS param_int
-      IMPORTING
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
-        iv_default      TYPE i
-      RETURNING
-        VALUE(rv_value) TYPE i.
 
     METHODS hours_between
       IMPORTING
@@ -317,8 +294,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     mv_as_of = history_as_of( iv_report_date = rs_report-report_date
                               iv_today       = lv_today
                               iv_started_at  = rs_report-run-started_at ).
-    mv_flat_tol_pct = param_int( iv_name    = gc_param-flat_tol_pct
-                                 iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
+    mv_flat_tol_pct = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                  iv_name    = zif_cd_hck_types=>gc_param-flat_tol_pct
+                                                  iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
     mt_suppressions = mo_dao->get_suppressions( lv_today ).
 
     DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
@@ -425,7 +403,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_started) = mo_clock->now( ).
     DATA(lt_thresholds) = mo_dao->get_thresholds( is_def-check_id ).
     DATA(lv_timeout_sec) = COND i( WHEN is_def-timeout_sec > 0 THEN is_def-timeout_sec
-                                   ELSE param_int( iv_name = gc_param-timeout_sec iv_default = 300 ) ).
+                                   ELSE zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                                    iv_name    = zif_cd_hck_types=>gc_param-timeout_sec
+                                                                    iv_default = zif_cd_hck_types=>gc_param_default-timeout_sec ) ).
     " A18: the check gets its budget as a deadline; item-wise checks stop when it passes.
     " A synchronous call cannot be interrupted - the overrun below stays the backstop.
     DATA(ls_context) = is_context.
@@ -495,7 +475,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD evaluate_metrics.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
-    DATA(lv_default_lookback) = param_int( iv_name = gc_param-lookback iv_default = 8 ).
+    DATA(lv_default_lookback) = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                            iv_name    = zif_cd_hck_types=>gc_param-lookback
+                                                            iv_default = zif_cd_hck_types=>gc_param_default-lookback ).
 
     LOOP AT cs_result-metrics ASSIGNING FIELD-SYMBOL(<ls_metric>).
       DATA(ls_threshold) = zcl_cd_hck_threshold=>resolve( it_thresholds = it_thresholds
@@ -646,20 +628,29 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA ls_status TYPE zif_cd_hck_types=>ty_pe_area_status.
 
     DATA(lv_now) = mo_clock->now( ).
-    DATA(lv_default_age) = param_int( iv_name = gc_param-max_age_hours iv_default = zif_cd_hck_types=>gc_param_default-max_age_hours ).
-    DATA(lv_default_run) = param_int( iv_name = gc_param-max_run_min iv_default = gc_default_max_run_min ).
+    DATA(lv_default_age) = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                       iv_name    = zif_cd_hck_types=>gc_param-max_age_hours
+                                                       iv_default = zif_cd_hck_types=>gc_param_default-max_age_hours ).
+    DATA(lv_default_run) = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                       iv_name    = zif_cd_hck_types=>gc_param-max_run_min
+                                                       iv_default = zif_cd_hck_types=>gc_param_default-max_run_min ).
     DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
-      mo_store->get_param( iv_name = gc_param-watch_pe_areas iv_default = `EBS,FMON,HCK` ) ).
+      mo_store->get_param( iv_name    = zif_cd_hck_types=>gc_param-watch_pe_areas
+                           iv_default = zif_cd_hck_types=>gc_param_default-watch_pe_areas ) ).
 
     LOOP AT lt_pe_areas ASSIGNING FIELD-SYMBOL(<lv_pe_area>).
       CLEAR ls_status.
       ls_status-pe_area        = to_upper( <lv_pe_area> ).
-      ls_status-max_age_hours = param_int( iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_age && ls_status-pe_area )
-                                           iv_default = lv_default_age ).
+      ls_status-max_age_hours = zcl_cd_ops_util=>param_int(
+                                  io_params  = mo_store
+                                  iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_age && ls_status-pe_area )
+                                  iv_default = lv_default_age ).
       " A06: runs still in status R past the area's runtime limit are evaluated on their own,
       " independently of how fresh the last completed run is; the current run is excluded
-      ls_status-max_run_min = param_int( iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_run && ls_status-pe_area )
-                                         iv_default = lv_default_run ).
+      ls_status-max_run_min = zcl_cd_ops_util=>param_int(
+                                io_params  = mo_store
+                                iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_run && ls_status-pe_area )
+                                iv_default = lv_default_run ).
       ls_status-hung_runs = lines( mo_store->get_stale_runs(
         iv_pe_area        = ls_status-pe_area
         iv_started_before = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
@@ -757,7 +748,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
   METHOD open_exceptions.
     DATA lv_created TYPE d.
     DATA lv_time TYPE t.
-    rt_exceptions = mo_dao->get_open_exceptions( param_int( iv_name = gc_param-top_n iv_default = 20 ) ).
+    rt_exceptions = mo_dao->get_open_exceptions( zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                                             iv_name    = zif_cd_hck_types=>gc_param-top_n
+                                                                             iv_default = zif_cd_hck_types=>gc_param_default-top_n ) ).
     LOOP AT rt_exceptions ASSIGNING FIELD-SYMBOL(<ls_exception>).
       IF <ls_exception>-created_at IS NOT INITIAL.
         CONVERT TIME STAMP <ls_exception>-created_at TIME ZONE sy-zonlo INTO DATE lv_created TIME lv_time.
@@ -772,11 +765,21 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD score_rules.
     rs_rules = zcl_cd_hck_score=>default_rules( ).
-    rs_rules-green_min     = param_int( iv_name = gc_param-green_min     iv_default = rs_rules-green_min ).
-    rs_rules-amber_min     = param_int( iv_name = gc_param-amber_min     iv_default = rs_rules-amber_min ).
-    rs_rules-weight_high   = param_int( iv_name = gc_param-weight_high   iv_default = rs_rules-weight_high ).
-    rs_rules-weight_medium = param_int( iv_name = gc_param-weight_medium iv_default = rs_rules-weight_medium ).
-    rs_rules-weight_low    = param_int( iv_name = gc_param-weight_low    iv_default = rs_rules-weight_low ).
+    rs_rules-green_min     = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                         iv_name    = zif_cd_hck_types=>gc_param-green_min
+                                                         iv_default = rs_rules-green_min ).
+    rs_rules-amber_min     = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                         iv_name    = zif_cd_hck_types=>gc_param-amber_min
+                                                         iv_default = rs_rules-amber_min ).
+    rs_rules-weight_high   = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                         iv_name    = zif_cd_hck_types=>gc_param-weight_high
+                                                         iv_default = rs_rules-weight_high ).
+    rs_rules-weight_medium = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                         iv_name    = zif_cd_hck_types=>gc_param-weight_medium
+                                                         iv_default = rs_rules-weight_medium ).
+    rs_rules-weight_low    = zcl_cd_ops_util=>param_int( io_params  = mo_store
+                                                         iv_name    = zif_cd_hck_types=>gc_param-weight_low
+                                                         iv_default = rs_rules-weight_low ).
   ENDMETHOD.
 
 
@@ -807,13 +810,13 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     " the morning report e-mail is a report, not an alert: deliberate send to one route
     IF is_selection-send_mail = abap_true.
       TRY.
-          lo_alert->send( iv_route   = CONV #( mo_store->get_param( iv_name    = gc_param-mail_route
-                                                                    iv_default = CONV #( gc_default_route ) ) )
+          lo_alert->send( iv_route   = CONV #( mo_store->get_param( iv_name    = zif_cd_hck_types=>gc_param-mail_route
+                                                                    iv_default = CONV #( zif_cd_hck_types=>gc_param_default-mail_route ) ) )
                           iv_subject = zcl_cd_hck_report_html=>subject( cs_report )
                           iv_html    = zcl_cd_hck_report_html=>render( cs_report ) ).
         CATCH zcx_cd_ops_error INTO DATA(lx_send).
           INSERT VALUE #( object_type = zif_cd_hck_types=>gc_object_type
-                          object_key  = gc_default_route
+                          object_key  = zif_cd_hck_types=>gc_param_default-mail_route
                           group1      = zif_cd_hck_types=>gc_category-technical
                           group2      = zif_cd_hck_types=>gc_self_check
                           check_code  = zif_cd_hck_types=>gc_code-alert_failed
@@ -863,11 +866,6 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                        iv_v3    = cs_report-high_count ).
   ENDMETHOD.
 
-
-  METHOD param_int.
-    rv_value = zcl_cd_ops_util=>to_decimal( iv_value   = mo_store->get_param( iv_name = iv_name )
-                                            iv_default = iv_default ).
-  ENDMETHOD.
 
 
   METHOD hours_between.

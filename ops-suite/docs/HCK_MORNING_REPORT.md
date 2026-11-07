@@ -286,6 +286,16 @@ Known findings can be suppressed per check, object pattern and company code for 
 - Baseline warm-up (A102): fewer than 3 history runs of the series → finding `BASELINE_WARMUP` (information). A static RED / AMBER still stands and a static GREEN stays GREEN; a baseline-only metric (no static limit) leaves the check **grey WARM-UP**, never GREEN. Warm-up checks are counted per category and in the scorecard line, not scored, and are neither passed nor failed in the run counters.
 - Statistics are sample statistics (n−1), percentiles interpolate linearly (`ZCL_CD_HCK_STATS`).
 
+### 8a. Row caps (parameters, 2026-11-07)
+
+| Parameter | Default | Hard ceiling (constant) | Cap reached |
+|---|---|---|---|
+| `HCK_MAX_JOB_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_TYPES=>GC_MAX_JOB_ROWS`) | technical-jobs / job-cycle check reports the cap (possibly incomplete) |
+| `HCK_MAX_JOB_NAMES` | 20 000 | 200 000 (`ZIF_CD_HCK_TYPES=>GC_MAX_JOB_NAMES`) | message 747, the check fails loudly |
+| `HCK_MAX_AGG_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_DAO=>GC_MAX_AGG_ROWS`) | groups not returned are unknown, never zero |
+
+Effective cap = parameter (default when not maintained, blank, not a number or not positive), cut to the ceiling (`ZCL_CD_HCK_PARAM=>ROW_CAP`). Raise a cap only after checking the runtime of the read in QA1; the ceilings bound memory and runtime of one check.
+
 ## 9. Job cycle monitor (Control-M fallback, monitoring only)
 
 > **First principle:** a chain is healthy only when every link ran, in order, inside its window.
@@ -309,7 +319,7 @@ Findings: MISSED → E if critical, I if skippable, else W; FAILED → E if crit
 
 Job names of `ZCD_JOB_STEP`, the job-name lists (PARAM1 of `ZCL_CD_HCK_C_TECH_JOBS` / `_JOB_RUNTIME`), the log object / subobject lists (PARAM1 / PARAM2 of `_APPLOG`), the cycle ids (PARAM2 of `_JOB_CYCLE`) and suppression key patterns are PCRE matched to the **complete value**, case ignored: `ZCD_PAYM_WIRE_.*` captures every job starting with ZCD_PAYM_WIRE_, `ZCD_POST_GL` only that job. List items are separated by `,` or `;`. Invalid patterns are configuration errors, never an empty selection: a parameter list raises E373 (PLUGIN_ERROR of the check), a step job name gives `PATTERN_INVALID` for the step (E, counted not OK, not MISSED, message 371), a suppression key pattern is not applied and gives `SUPPRESSION_PATTERN_INVALID` (W, message 372); the job-step app and the suppression app refuse them on save (418).
 
-TBTCO / BALHDR are not read with a pattern in SQL (`Performance_Review.md` §6b): the DAO reads the distinct job names of the date window (or of the open statuses), capped at `GC_MAX_JOB_NAMES` = 20 000 (reaching it raises message 747 — the check fails loudly, never partly), matches them in ABAP and reads the runs of the matched names (FOR ALL ENTRIES, then ordered and capped at 5 000 as before); BALHDR counters are grouped per object / subobject for the day and filtered in ABAP. Check a job-name pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area HCK_JOB (job names of TBTCO in the window against step and list patterns); suppression keys: area HCK_SUPPR.
+TBTCO / BALHDR are not read with a pattern in SQL (`Performance_Review.md` §6b): the DAO reads the distinct job names of the date window (or of the open statuses), capped at parameter `HCK_MAX_JOB_NAMES` (default 20 000, hard ceiling `GC_MAX_JOB_NAMES` = 200 000; reaching it raises message 747 — the check fails loudly, never partly), matches them in ABAP and reads the runs of the matched names (FOR ALL ENTRIES, then ordered and capped at parameter `HCK_MAX_JOB_ROWS`, default 5 000, ceiling `GC_MAX_JOB_ROWS` = 50 000; a check that reaches it reports the cap as before); BALHDR counters are grouped per object / subobject for the day and filtered in ABAP. Check a job-name pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area HCK_JOB (job names of TBTCO in the window against step and list patterns); suppression keys: area HCK_SUPPR.
 
 ## 10. Generic aggregate security
 

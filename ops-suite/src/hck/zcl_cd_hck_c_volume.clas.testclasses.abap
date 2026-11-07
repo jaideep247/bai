@@ -6,6 +6,7 @@
 *& the DAO is a test double, so live SQL is not proven here.
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A103).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -75,6 +76,7 @@ ENDCLASS.
 CLASS ltc_volume IMPLEMENTATION.
 
   METHOD setup.
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_params_mem( ) ).
     mo_dao = NEW #( ).
     INSERT VALUE #( check_id    = gc_check
                     agg_id      = gc_agg
@@ -90,6 +92,7 @@ CLASS ltc_volume IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
   ENDMETHOD.
 
 

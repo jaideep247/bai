@@ -11,6 +11,7 @@
 *& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Cap reached against the effective cap ZCL_CD_HCK_PARAM=>AGG_ROWS_CAP (parameter HCK_MAX_AGG_ROWS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
@@ -262,7 +263,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     rt_metrics = to_metrics( is_def      = is_def
                              it_rows     = lt_rows
                              iv_ref_date = iv_ref_date
-                             it_expected = COND #( WHEN lines( lt_rows ) < zif_cd_hck_dao=>gc_max_agg_rows
+                             it_expected = COND #( WHEN lines( lt_rows ) < zcl_cd_hck_param=>agg_rows_cap( )
                                                    THEN it_expected ) ).
   ENDMETHOD.
 

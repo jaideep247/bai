@@ -87,10 +87,10 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lv_default) = COND string( WHEN iv_format = zif_cd_ebs_types=>gc_format-bai2
-                                    THEN `ZCL_CD_EBS_PARSER_BAI2`
-                                    ELSE `ZCL_CD_EBS_PARSER_CAMT` ).
+                                    THEN zif_cd_ebs_types=>gc_param_default-parser_bai2
+                                    ELSE zif_cd_ebs_types=>gc_param_default-parser_camt ).
     DATA(lv_class) = zcl_cd_ops_factory=>get_params( )->get_param(
-      iv_name    = CONV #( |EBS_PARSER_{ iv_format }| )
+      iv_name    = CONV #( |{ zif_cd_ebs_types=>gc_param_prefix-parser }{ iv_format }| )
       iv_default = lv_default ).
     TRY.
         ro_parser = CAST zif_cd_ebs_parser( zcl_cd_ops_factory=>get_plugin(
