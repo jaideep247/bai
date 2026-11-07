@@ -83,7 +83,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-15 | POSTING_INCOMPLETE (operating model 2026-11-06): import a statement with a 466 (BAI466D, R19) and a 275 sweep line; run `ZCD_EBS_VALIDATE` (FEB source) **before** FEBP; then run FEBP and the clearing job and re-run the same variant | SE11 check of FEBEP-VB1OK / VB2OK done; `EBS_FEB_POSTED_FIELDS` default; seed S13 / NEEDS_POSTING | Run 1: one POSTING_INCOMPLETE (S13, W) on the statement counting the 466 line only (the 275 NOT_POSTED line is not counted); no R19 / R18 / S10 finding; run message "1 entries not evaluated (posting not complete)"; RAG amber, not green. Run 2: no POSTING_INCOMPLETE, R19 / R18 / S10 evaluated, the POSTING_INCOMPLETE exception resolved "Passed on re-run"; nothing posted, cleared or changed by either run (ST05 / table compare) | pending |
 
 ### 6.2 File monitoring
-Fourteen cases FMON-01 … FMON-14 (outbound ACH end to end, re-run idempotency, no PRISM handoff, wire ack beyond 30 min, NACK, ack count mismatch, BAI statement missing/late, holiday calendar, **returns file partially processed then completed — acceptance 8**, wrong field name in customizing, NOC aging day 6 vs day 7, test mode, **new source and LOB by customizing — acceptance 2**, duplicate file). Configuration and expected results: `FMON_FILE_MONITORING.md` §B5.
+Nineteen cases FMON-01 … FMON-19 (FMON-15 … 19 added 2026-11-07: BAI processing deadline at 10:00 — not received, received but not imported (some accounts), imported but not posted, processed in time, holiday; outbound ACH end to end, re-run idempotency, no PRISM handoff, wire ack beyond 30 min, NACK, ack count mismatch, BAI statement missing/late, holiday calendar, **returns file partially processed then completed — acceptance 8**, wrong field name in customizing, NOC aging day 6 vs day 7, test mode, **new source and LOB by customizing — acceptance 2**, duplicate file). Configuration and expected results: `FMON_FILE_MONITORING.md` §B5.
 
 ### 6.3 Health checks and morning report
 Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by company code — acceptance 1**, customizing-only threshold change, **new job-cycle step — acceptance 5**, each job-cycle state, config drift and baseline, plug-in failure, stale payment engine area (health of health), e-mail, background run with export, dashboard). Configuration and expected results: `HCK_MORNING_REPORT.md` §14.
@@ -100,6 +100,8 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | ALR-05a | Save an alert rule with DESTINATION `ZCD_NOLIST` (no such shared list) or a name longer than 12 | Configuration app | Refused with 419 naming the list | pending |
 | ALR-05b | Add a user to SO23 list `ZCD_RTBSUP`, trigger ALL_ABORT (test run stopped on the circuit breaker) | No rule change | The new member receives the e-mail (SOST shows the list expanded) | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
+| ALR-08 | BAI deadline alert, no repeat spam (2026-11-07) | Rule FMON_BAIDL, deadline BAI_JPMC_IN 10:00, statement not imported | 10:00–10:05 one e-mail to ZCD_PAYOPS (log S); runs 10:05 … 10:25 log R, no mail; 10:30 escalation to ZCD_RTBLEAD; after import and posting the exception is resolved | pending |
+| ALR-09 | Deadline alert created in PS4 (production-maintainable) | QA1 (production-like client, no changes): key user creates a ZCD_FMON_DEADL row and an alert rule in the apps; tries to delete a row and to create a ZCD_FMON_SRC row | Create saved without a request, visible in SCU3 with the user; delete and the ZCD_FMON_SRC create are greyed out; a user without ZCD_OPS 02 FMON cannot create; next morning report CONFIG_CHANGED_IN_PROD (I) for a drift-controlled table | pending |
 
 ### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)
 
@@ -218,7 +220,7 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 
 | ID | Scenario | Setup | Expected | Result |
 |---|---|---|---|---|
-| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 91 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 92 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
 | PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |

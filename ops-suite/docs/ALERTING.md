@@ -75,7 +75,12 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 | Send NOC aging to compliance daily | Rule: PE_AREA FMON, CHECK_PATTERN `NOC_AGING*`, THROTTLE_MIN 1440 |
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = SO23 lead list (`ZCD_RTBLEAD`) |
+| Alert when a file is not processed by a clock time (e.g. BAI by 10:00, 2026-11-07) | Deadline row in ZCD_FMON_DEADL (`FMON_FILE_MONITORING.md` §A3b) + rule: PE_AREA FMON, MIN_SEVERITY E, CHECK_PATTERN `STAGE_DEADLINE_MISSED`, GROUP1_PATTERN = interface(s), EMAIL to an SO23 list, ESCALATE_AFTER in 5-minute runs — seed `FMON_BAIDL`. Both tables are production-maintainable: created directly in PS4 (`Operations_Runbook.md` §5h). GROUP2 of the finding = `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED` (a second rule may send one condition to another list) |
 | Add a new channel type (later phase) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALCHN row |
+
+### Deadline alerts and repeat suppression (2026-11-07)
+
+A deadline finding (`STAGE_DEADLINE_MISSED`) has the stable object key `<interface>/<business date>`: the 5-minute FMON runs after the due time raise the same key and check code, the store carries the open exception forward (same owner, due date, occurrences + 1) and the router logs such a carried-forward finding as **R (repeat)** without sending — one e-mail per interface and day, not one every 5 minutes. The rule's `ESCALATE_AFTER` (consecutive alerting runs) still sends the escalation to `ESCALATION_DEST`; `THROTTLE_MIN` 0 so the first raise is never held back. When the stage is reached the engine reconciles the key and the exception is resolved. No application-log rule is delivered for deadlines (SLG1 kept to a minimum, user rule 2026-11-07): findings are in ZCD_OPS_FINDING, mail goes to SO23 lists.
 
 ### Delivery guarantees (Phase 6 audit)
 

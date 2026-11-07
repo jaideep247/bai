@@ -10,6 +10,7 @@
 *& 2026-11-06 | Performance fix 8: grouped count of a configured table (COUNT(*) per value combination).
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *& 2026-11-06 | ltc_cfg_reads: interfaces, SLAs, calendars, sources, maps, lot configs, checks (coverage gap closure).
+*& 2026-11-07 | ltc_cfg_reads: SLA and calendar rows active only, stage deadlines (ZCD_FMON_DEADL).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -566,6 +567,9 @@ CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
         stage_ack TYPE c LENGTH 20 VALUE 'ACK',
         stage_snt TYPE c LENGTH 20 VALUE 'SENT',
         day_work  TYPE c LENGTH 12 VALUE 'WORKDAY',
+        day_off   TYPE c LENGTH 12 VALUE 'HOLIDAY',
+        stage_off TYPE c LENGTH 20 VALUE 'FORWARDED',
+        due_time  TYPE t VALUE '100000',
         src_on    TYPE c LENGTH 10 VALUE 'PRISM',
         src_off   TYPE c LENGTH 10 VALUE 'LEGACY',
         status_ok TYPE c LENGTH 40 VALUE 'DELIVERED',
@@ -584,8 +588,9 @@ CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
     METHODS setup.
 
     METHODS ifaces_only_active FOR TESTING.
-    METHODS slas_all_rows FOR TESTING.
-    METHODS calendars_all_rows FOR TESTING.
+    METHODS slas_only_active FOR TESTING.
+    METHODS calendars_only_active FOR TESTING.
+    METHODS deadlines_only_active FOR TESTING.
     METHODS sources_only_active FOR TESTING.
     METHODS source_maps_all_rows FOR TESTING.
     METHODS lot_configs_only_active FOR TESTING.
@@ -599,7 +604,7 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_FMON_IFACE' ) ( 'ZCD_FMON_SLA' ) ( 'ZCD_FMON_CAL' )
                                    ( 'ZCD_FMON_SRC' ) ( 'ZCD_FMON_SRCMAP' ) ( 'ZCD_FMON_LOTCFG' )
-                                   ( 'ZCD_FMON_CHK' ) ) ).
+                                   ( 'ZCD_FMON_CHK' ) ( 'ZCD_FMON_DEADL' ) ) ).
   ENDMETHOD.
 
 
@@ -636,38 +641,72 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: every SLA row is read (an SLA has no active flag)
-  METHOD slas_all_rows.
+  " Rule: only active SLA rows are read (production switches a row off, never deletes it)
+  METHOD slas_only_active.
     DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_sla WITH EMPTY KEY.
     DATA ls_row TYPE zcd_fmon_sla.
     TRY.
         ls_row-iface_id = gc_test-iface_on.
         ls_row-stage    = gc_test-stage_snt.
+        ls_row-active   = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-stage    = gc_test-stage_ack.
         INSERT ls_row INTO TABLE lt_rows.
+        ls_row-stage    = gc_test-stage_off.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_slas( ) ) exp = 2 msg = 'Both SLA stages' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_slas( ) ) exp = 2
+                                            msg = 'Both active SLA stages, not the switched-off one' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: every calendar row is read; boundary: none configured - empty
-  METHOD calendars_all_rows.
+  " Rule: only active calendar rows are read; boundary: none configured - empty
+  METHOD calendars_only_active.
     DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_cal WITH EMPTY KEY.
     DATA ls_row TYPE zcd_fmon_cal.
     TRY.
         cl_abap_unit_assert=>assert_initial( act = mo_cut->get_calendars( ) msg = 'No calendar configured' ).
         ls_row-iface_id = gc_test-iface_on.
         ls_row-day_type = gc_test-day_work.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-day_type = gc_test-day_off.
+        ls_row-active   = abap_false.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_cals) = mo_cut->get_calendars( ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_cals ) exp = 1 msg = 'One calendar row' ).
         cl_abap_unit_assert=>assert_equals( act = lt_cals[ 1 ]-day_type exp = gc_test-day_work
                                             msg = 'Day type returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: only active stage deadlines are read (production switches a row off, never deletes it)
+  METHOD deadlines_only_active.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_deadl WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_deadl.
+    TRY.
+        ls_row-iface_id = gc_test-iface_on.
+        ls_row-stage    = gc_test-stage_snt.
+        ls_row-day_type = gc_test-day_work.
+        ls_row-due_time = gc_test-due_time.
+        ls_row-active   = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-stage    = gc_test-stage_ack.
+        ls_row-active   = abap_false.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_deadlines) = mo_cut->get_deadlines( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_deadlines ) exp = 1 msg = 'Only the active deadline' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_deadlines[ 1 ]-due_time exp = gc_test-due_time
+                                            msg = 'Due time returned' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

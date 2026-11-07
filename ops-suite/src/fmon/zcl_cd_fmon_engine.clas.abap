@@ -33,6 +33,10 @@
 *&            | (private int_param and inline defaults removed).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZCA_PARAM) instead of the store;
 *&            | FMON_PRISM_INSTANT is BOOL (blank value row = registry only).
+*& 2026-11-07 | BAI processing deadline: statement evidence of the FEB adapter kept for the checks
+*&            | (evidence-only records are not applied), unprocessed count of a source record,
+*&            | stage deadlines (ZCD_FMON_DEADL) and time zone in the check context, interface-day
+*&            | keys of the expectations reconciled (a met deadline closes its exception).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -145,6 +149,8 @@ CLASS zcl_cd_fmon_engine DEFINITION
         checksum      TYPE zif_cd_fmon_types=>ty_checksum,
         source_sys    TYPE zif_cd_fmon_types=>ty_system,
         lob           TYPE zif_cd_fmon_types=>ty_lob,
+        "! Unprocessed items reported with the stage (PARTIALLY_PROCESSED, FEB adapter)
+        unprocessed   TYPE i,
         "! Distinct payment identities of per-payment rows (audit A39)
         items         TYPE string_table,
       END OF ty_group.
@@ -182,6 +188,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_maps TYPE zif_cd_fmon_types=>tt_srcmap.
     DATA mt_lotcfgs TYPE zif_cd_fmon_types=>tt_lotcfg.
     DATA mt_checks TYPE zif_cd_fmon_types=>tt_chk.
+    DATA mt_deadlines TYPE zif_cd_fmon_types=>tt_deadline.
+    "! Statement evidence read by this run (FEB adapter), for the deadline check
+    DATA mt_statements TYPE zif_cd_fmon_types=>tt_stmt_evidence.
 
     DATA mt_files TYPE tt_file_map.
     DATA mt_changed TYPE tt_id_set.
@@ -416,6 +425,12 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                                 THEN ls_file-file_name
                                                                 ELSE ls_file-file_ref ) ) INTO TABLE lt_scope.
     ENDLOOP.
+    " Interface-day findings (expected files, stage deadlines) of the evaluated expectations:
+    " same key as ZCL_CD_FMON_CHK_MISSING / _DEADLINE - closed when not raised again
+    LOOP AT mt_expects ASSIGNING FIELD-SYMBOL(<ls_expect>).
+      INSERT zcl_cd_fmon_util=>iface_day_key( iv_iface_id = <ls_expect>-iface_id
+                                              iv_date     = mv_date ) INTO TABLE lt_scope.
+    ENDLOOP.
     mo_store->reconcile( is_run         = is_run
                          it_object_keys = lt_scope ).
   ENDMETHOD.
@@ -483,7 +498,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mo_params   = zcl_cd_ops_factory=>get_params( ).
     mo_clock    = zcl_cd_ops_factory=>get_clock( ).
 
-    CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_lots, mt_expects, mt_findings.
+    CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_lots, mt_expects, mt_findings, mt_statements.
     mv_date      = iv_business_date.
     mv_iface     = iv_iface_id.
     mv_test_mode = iv_test_mode.
@@ -512,6 +527,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mt_maps    = mo_dao->get_source_maps( ).
     mt_lotcfgs = mo_dao->get_lot_configs( ).
     mt_checks  = mo_dao->get_checks( ).
+    mt_deadlines = mo_dao->get_deadlines( ).
   ENDMETHOD.
 
 
@@ -563,6 +579,13 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           CONTINUE.
       ENDTRY.
 
+      " Statement evidence (FEB adapter) is kept for the checks; an evidence-only record has no stage
+      LOOP AT lt_records ASSIGNING FIELD-SYMBOL(<ls_evidence>) WHERE evidence-iface_id IS NOT INITIAL.
+        DELETE mt_statements WHERE iface_id      = <ls_evidence>-evidence-iface_id
+                               AND business_date = <ls_evidence>-evidence-business_date.
+        INSERT <ls_evidence>-evidence INTO TABLE mt_statements.
+      ENDLOOP.
+      DELETE lt_records WHERE evidence_only = abap_true.
       DATA(lt_src_groups) = aggregate( is_src     = ls_src
                                        it_records = lt_records ).
       INSERT LINES OF lt_src_groups INTO TABLE lt_groups.
@@ -671,6 +694,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       ENDIF.
       <ls_group>-rows += 1.
       <ls_group>-amount += ls_record-amount.
+      <ls_group>-unprocessed += ls_record-unprocessed.
       IF ls_record-item_key IS NOT INITIAL
          AND NOT line_exists( <ls_group>-items[ table_line = ls_record-item_key ] ).
         INSERT CONV string( ls_record-item_key ) INTO TABLE <ls_group>-items.
@@ -926,9 +950,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     " For lot-controlled interfaces the lot, not the source, decides the outcome
     zcl_cd_fmon_status=>apply(
       EXPORTING
-        iv_stage = lv_stage
+        iv_stage       = lv_stage
+        iv_unprocessed = is_group-unprocessed
       CHANGING
-        cs_file  = cs_file ).
+        cs_file        = cs_file ).
   ENDMETHOD.
 
 
@@ -1177,6 +1202,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-lots          = mt_lots.
     rs_ctx-throttle      = throttle_settings( ).
     rs_ctx-queue         = build_queue( rs_ctx-throttle ).
+    rs_ctx-deadlines     = mt_deadlines.
+    rs_ctx-time_zone     = mv_tz.
+    rs_ctx-statements    = mt_statements.
 
     LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_named>).
       IF <ls_named>-file_name IS NOT INITIAL.

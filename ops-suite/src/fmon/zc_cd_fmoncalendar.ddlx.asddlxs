@@ -32,6 +32,10 @@ annotate entity ZC_CD_FmonCalendar with
   @UI.identification: [{ position: 60 }]
   FcalId;
 
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  Active;
+
   @UI.hidden: true
   LastChangedBy;
 

@@ -25,11 +25,11 @@ and the channel refuses the route before anything is sent if a list was deleted 
 
 | SO23 list (proposed — confirm) | Who | Used by |
 |---|---|---|
-| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA |
+| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA, FMON_BAIDL |
 | ZCD_RETOPS | Returns / NOC operations | FMON_PART |
 | ZCD_COMPL | Compliance | NOC_AGING |
 | ZCD_RTBSUP | RTB support | HCK_RED, ALL_ABORT, RUN_LOCKED, morning report |
-| ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, HCK_RED |
+| ZCD_RTBLEAD | RTB lead (escalation) | ESCALATION_DEST of EBS_BLOCK, FMON_PART, FMON_SLA, FMON_BAIDL, HCK_RED |
 
 ## ZCD_OPS_ALRULE
 
@@ -44,17 +44,29 @@ configuration app refuses a pattern that does not compile (message 418); check w
 | EBS_ERROR | EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — |
 | FMON_PART | FMON | E | | .*PARTIAL.* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
 | FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
+| FMON_BAIDL | FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD |
 | NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
 | HCK_RED | HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD |
 | ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — |
+
+**BAI processing deadline (user requirement 2026-11-07, "alert if BAI is not processed until 10 AM").**
+`FMON_BAIDL` additionally has GROUP1_PATTERN `BAI_(JPMC|BOA)_IN` (interfaces; PCRE, complete value) and
+GROUP2_PATTERN blank (every condition - GROUP2 carries `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED`, so a
+second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_DEADL`, `config/fmon_seed.md`)
+make the finding due at 10:00 in `FMON_TIME_ZONE`; the 5-minute FMON job raises it in the first run after
+10:00 (10:00-10:05). Later runs carry the open exception forward and are **not alerted again** (status R in
+ZCD_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.
+THROTTLE_MIN 0: the first raise is never held back; there is no quiet window. No APPLOG rule is seeded for
+it (SLG1 kept to a minimum - findings in ZCD_OPS_FINDING, e-mail to SO23 lists only). The rule table is
+production-maintainable: support adds such a rule directly in PS4 (`Operations_Runbook.md` §5h).
 
 Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgement targets proposed, confirm with RTB operations):
 
 | RULE_ID | Priority | Acknowledge within |
 |---|---|---|
 | EBS_BLOCK, ALL_ABORT | P1 | 15 min, 24×7 |
-| EBS_ERROR, FMON_PART, FMON_SLA, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
+| EBS_ERROR, FMON_PART, FMON_SLA, FMON_BAIDL, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
 | (warnings W) | P3 | Next business day — morning report and dashboards, no alert |
 
 ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on

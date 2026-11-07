@@ -26,6 +26,9 @@
 *& 2026-11-07 | Delivered defaults of FMON_LOOKBACK_DAYS, _OPEN_DAYS, _DUP_DAYS, _NOC_SLA_DAYS, _MAX_ROWS;
 *&            | check parameter GRACE_MIN (GC_CHECK_PARAM / GC_CHECK_PARAM_DEFAULT).
 *& 2026-11-07 | Comments: parameters in ZCA_PARAM, area CD_FMON (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | BAI processing deadline: statement evidence (FEB adapter), stage deadlines
+*&            | (ZCD_FMON_DEADL), check code STAGE_DEADLINE_MISSED, messages 272-279,
+*&            | parameter FMON_FEB_STMT_OFFSET, unprocessed count of a source record.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -255,6 +258,8 @@ INTERFACE zif_cd_fmon_types
       prism_queue_long TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
       "! ZCD_FMON_IFACE-NAME_PATTERN does not compile as PCRE (configuration; never 'no match')
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
+      "! A stage of ZCD_FMON_DEADL not reached by its clock time on a business day
+      deadline_missed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'STAGE_DEADLINE_MISSED',
     END OF gc_check_code.
 
   "! Runtime parameters in ZCA_PARAM (defaults in brackets)
@@ -286,6 +291,9 @@ INTERFACE zif_cd_fmon_types
       throttle_methods TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_THROTTLE_METHODS',
       "! Queue length (files incl. the file itself) covered by the allowance; longer = PRISM_QUEUE_LONG [30]
       queue_max     TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_QUEUE_MAX',
+      "! Working days from the bank statement date (FEBKO-AZDAT) to the business date of the
+      "! statement file (FEB adapter): 1 = prior-day statement, 0 = same-day statement [1]
+      feb_stmt_offset TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_FEB_STMT_OFFSET',
     END OF gc_param.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
@@ -359,6 +367,20 @@ INTERFACE zif_cd_fmon_types
       fcal_id        TYPE ty_fcal_id,
     END OF ty_cal.
   TYPES tt_cal TYPE SORTED TABLE OF ty_cal WITH UNIQUE KEY iface_id day_type.
+
+  "! ZCD_FMON_DEADL: a stage must be reached by a clock time (FMON_TIME_ZONE) of a business
+  "! day; DAY_TYPE NORMAL / MONTH_END / RETURNS_DAY or '*' (any business day)
+  TYPES:
+    BEGIN OF ty_deadline,
+      iface_id    TYPE ty_iface_id,
+      stage       TYPE ty_stage,
+      day_type    TYPE ty_day_type,
+      due_time    TYPE t,
+      severity    TYPE zif_cd_ops_types=>ty_severity,
+      active      TYPE abap_bool,
+      description TYPE ty_text60,
+    END OF ty_deadline.
+  TYPES tt_deadline TYPE SORTED TABLE OF ty_deadline WITH UNIQUE KEY iface_id stage day_type.
 
   TYPES:
     BEGIN OF ty_src,
@@ -581,6 +603,24 @@ INTERFACE zif_cd_fmon_types
       max_rows  TYPE i,
     END OF ty_read_request.
 
+  "! Statement evidence of an inbound statement interface and business date (FEB adapter,
+  "! ZIF_CD_EBS_STMT_EVIDENCE): payment engine accounts expected / imported, in-scope entries
+  "! and entries not posted. Not stored: built by the run that read the source.
+  TYPES:
+    BEGIN OF ty_stmt_evidence,
+      iface_id          TYPE ty_iface_id,
+      business_date     TYPE d,
+      bank_key          TYPE ty_bank_key,
+      stmt_date         TYPE d,
+      accounts_expected TYPE i,
+      accounts_imported TYPE i,
+      lines_total       TYPE i,
+      lines_open        TYPE i,
+      posting_known     TYPE abap_bool,
+      truncated         TYPE abap_bool,
+    END OF ty_stmt_evidence.
+  TYPES tt_stmt_evidence TYPE SORTED TABLE OF ty_stmt_evidence WITH UNIQUE KEY iface_id business_date.
+
   "! One legacy row translated to the file status model
   TYPES:
     BEGIN OF ty_src_record,
@@ -606,6 +646,11 @@ INTERFACE zif_cd_fmon_types
       "! Row failed conversion of a required or numeric field: quarantined, never counted (audit A52)
       malformed     TYPE abap_bool,
       malformed_role TYPE ty_role,
+      "! Unprocessed items of a PARTIALLY_PROCESSED record (FEB adapter: entries not posted)
+      unprocessed   TYPE i,
+      "! Statement evidence (FEB adapter); EVIDENCE_ONLY = no stage, evidence for the checks only
+      evidence      TYPE ty_stmt_evidence,
+      evidence_only TYPE abap_bool,
     END OF ty_src_record.
   TYPES tt_src_record TYPE STANDARD TABLE OF ty_src_record WITH EMPTY KEY.
 
@@ -704,6 +749,11 @@ INTERFACE zif_cd_fmon_types
       throttle      TYPE ty_throttle,
       "! Throttled outbound files with PRISM receipt evidence (same business dates as the files)
       queue         TYPE tt_queue,
+      "! Stage deadlines (ZCD_FMON_DEADL, active rows) and the time zone of their clock times
+      deadlines     TYPE tt_deadline,
+      time_zone     TYPE ty_time_zone,
+      "! Statement evidence read by this run (FEB adapter)
+      statements    TYPE tt_stmt_evidence,
     END OF ty_check_ctx.
 
   "! SLA verdict: ' ' = met or not yet due, M = stage not reached and overdue,
@@ -779,6 +829,7 @@ INTERFACE zif_cd_fmon_types
       throttle_scope   TYPE ty_queue_scope VALUE 'C',
       throttle_methods TYPE string VALUE `ACH,WIRE`,
       queue_max        TYPE i VALUE 30,
+      feb_stmt_offset  TYPE i VALUE 1,
     END OF gc_param_default.
 
   "! File monitoring dashboard (CDS, docs/Dashboard_File_Monitoring.md): the monitor is stale
@@ -799,6 +850,29 @@ INTERFACE zif_cd_fmon_types
     BEGIN OF gc_check_param_default,
       grace_min TYPE i VALUE 60,
     END OF gc_check_param_default.
+
+  "! FEB adapter (ZCL_CD_FMON_ADAPTER_FEB): evidence state of a statement file (raw status of
+  "! the record, event info) and the prefix of its own file reference FEB/<bank>/<statement date>
+  CONSTANTS:
+    BEGIN OF gc_feb_status,
+      import_partial TYPE ty_status_value VALUE 'IMPORT_PARTIAL',
+      imported       TYPE ty_status_value VALUE 'IMPORTED',
+      posting_open   TYPE ty_status_value VALUE 'POSTING_OPEN',
+      posted         TYPE ty_status_value VALUE 'POSTED',
+    END OF gc_feb_status.
+  CONSTANTS gc_feb_ref_prefix TYPE c LENGTH 4 VALUE 'FEB/'.
+  "! Condition of a missed stage deadline (finding GROUP2: alert rules may route by it) - the
+  "! earliest missing step: file not received / received, not imported (statements of all
+  "! payment engine accounts) / imported, not processed (entries not posted) / other stage
+  CONSTANTS:
+    BEGIN OF gc_deadline_cond,
+      not_received TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_RECEIVED',
+      not_imported TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_IMPORTED',
+      not_posted   TYPE zif_cd_ops_types=>ty_group VALUE 'NOT_POSTED',
+      not_reached  TYPE zif_cd_ops_types=>ty_group VALUE 'STAGE_NOT_REACHED',
+    END OF gc_deadline_cond.
+  "! Calendar days searched back for the statement date of a business date (FEB adapter)
+  CONSTANTS gc_feb_max_back_days TYPE i VALUE 10.
 
   "! Object-key prefixes of engine findings (what failed: source, lot, calendar, check)
   CONSTANTS:
@@ -862,6 +936,14 @@ INTERFACE zif_cd_fmon_types
       prism_queue_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '269',
       after_min_sla_queue_min     TYPE zif_cd_ops_types=>ty_msgno VALUE '270',
       pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '271',
+      deadline_not_received       TYPE zif_cd_ops_types=>ty_msgno VALUE '272',
+      deadline_not_imported       TYPE zif_cd_ops_types=>ty_msgno VALUE '273',
+      deadline_not_posted         TYPE zif_cd_ops_types=>ty_msgno VALUE '274',
+      deadline_accounts           TYPE zif_cd_ops_types=>ty_msgno VALUE '275',
+      deadline_lines_open         TYPE zif_cd_ops_types=>ty_msgno VALUE '276',
+      deadline_statement          TYPE zif_cd_ops_types=>ty_msgno VALUE '277',
+      deadline_stage              TYPE zif_cd_ops_types=>ty_msgno VALUE '278',
+      deadline_not_proven         TYPE zif_cd_ops_types=>ty_msgno VALUE '279',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -9,6 +9,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Check parameter GRACE_MIN and its default from ZIF_CD_FMON_TYPES.
+*& 2026-11-07 | Object key from ZCL_CD_FMON_UTIL=>IFACE_DAY_KEY (reconciled by the engine).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - expected file missing</p>
 "! Rules: ZCL_CD_FMON_RULES=>EXPECTATION_CODE. Params: GRACE_MIN=60
@@ -43,7 +44,8 @@ CLASS zcl_cd_fmon_chk_missing IMPLEMENTATION.
         WHEN zif_cd_fmon_types=>gc_check_code-file_missing.
           INSERT zcl_cd_fmon_util=>new_key_finding(
                    iv_iface_id   = <ls_expect>-iface_id
-                   iv_object_key = |{ <ls_expect>-iface_id }/{ is_ctx-business_date }|
+                   iv_object_key = zcl_cd_fmon_util=>iface_day_key( iv_iface_id = <ls_expect>-iface_id
+                                                                   iv_date     = is_ctx-business_date )
                    is_check      = is_check
                    iv_code       = lv_code
                    iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-of_expected_file_s_received
@@ -54,7 +56,8 @@ CLASS zcl_cd_fmon_chk_missing IMPLEMENTATION.
         WHEN zif_cd_fmon_types=>gc_check_code-unexpected_file.
           INSERT zcl_cd_fmon_util=>new_key_finding(
                    iv_iface_id   = <ls_expect>-iface_id
-                   iv_object_key = |{ <ls_expect>-iface_id }/{ is_ctx-business_date }|
+                   iv_object_key = zcl_cd_fmon_util=>iface_day_key( iv_iface_id = <ls_expect>-iface_id
+                                                                   iv_date     = is_ctx-business_date )
                    is_check      = is_check
                    iv_code       = lv_code
                    iv_severity   = zif_cd_ops_types=>gc_severity-warning

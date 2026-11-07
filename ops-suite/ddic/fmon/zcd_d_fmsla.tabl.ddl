@@ -11,6 +11,7 @@ define table zcd_d_fmsla {
   maxminutes : abap.int4;
   basis : abap.char(1);
   severity : abap.char(1);
+  active : abap_boolean;
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

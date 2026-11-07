@@ -10,7 +10,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 | App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
-| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
+| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar, FmonTableAllow (ZCD_FMON_*) | FMON |
 | Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting & monitor freshness | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*) | CORE |
 
@@ -38,9 +38,30 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | No changes allowed (`2`) / no transports (`3`) — QA1 | **no** | **yes**, direct, change-logged | **no** | none |
 | Role production (`CCCATEGORY = P`) — PS4, whatever the change option | **no** | **yes**, direct, change-logged | **no** | none |
 
+### Production-maintainable tables (per-table policy, user requirement 2026-11-07)
+
+"Any similar alerts should be configurable directly in production." A table flagged **production-maintainable** also allows **create** wherever existing entries may be edited — in PS4 (and QA1) directly, change-logged, without a transport. **Delete stays DV1-only** for every table: production switches a row off with its `ACTIVE` flag, which every reader honours.
+
+| Table | App / entity | Why production-maintainable | ACTIVE (readers) |
+|---|---|---|---|
+| ZCD_FMON_DEADL | File monitoring / FmonDeadline | A new clock-time deadline ("BAI processed by 10:00") is operational tuning of an alert, not a code or flow change | `ZCL_CD_FMON_DAO->GET_DEADLINES` |
+| ZCD_FMON_SLA | File monitoring / FmonSla | Duration SLA of a stage, same nature as a deadline | `GET_SLAS` (new field 2026-11-07) |
+| ZCD_FMON_CAL | File monitoring / FmonCalendar | Expected files and windows per day type (a deadline is evaluated only on days the calendar expects a file) | `GET_CALENDARS` (new field 2026-11-07) |
+| ZCD_OPS_ALRULE | Alerting / AlertRule | Who is told, by which SO23 list, with which throttle / escalation | `ZCL_CD_OPS_ALERT_DAO->GET_RULES` (field existed) |
+
+| Client | Create on a production-maintainable table | Create on any other table | Delete (any table) |
+|---|---|---|---|
+| DV1 (automatic recording) | yes, on the customizing request | yes, on the customizing request | yes, on the customizing request |
+| QA1 / PS4 | **yes**, direct, change-logged (SCU3, `LAST_CHANGED_BY` / `_AT`) | no | no — switch `ACTIVE` off |
+
+- Implementation: `ZIF_CD_OPS_CFG_TYPES=>GC_PROD_MAINTAINABLE` (the one list), `ZCL_CD_OPS_CFG_POLICY=>IS_PROD_MAINTAINABLE` / `CREATE_ALLOWED( is_decision iv_table )`, `ZCL_CD_OPS_CFG_GATE->CREATE_ALLOWED( iv_table )`; generator spec option `prod_create` (`tools/rap_generate.py`, `PROD`) makes the root's global feature ask the gate **per association** with the table name; the unit test `ProductionMaintainableTest` (`tools/tests/test_rap_generate.py`) fails when spec and ABAP list differ.
+- Authorisation unchanged: `ZCD_OPS` ACTVT 02 for the app's payment engine area (FMON for deadlines / SLAs / calendar, CORE for alert rules) — who may create in PS4 is decided by role, not by a transport.
+- Health check drift (`ZCD_HCK_DRIFT`): a production-maintainable table under drift control that changed since its baseline is reported as **information** `CONFIG_CHANGED_IN_PROD` (message 374), not as `CONFIG_DRIFT` (E), and not counted in `DRIFTED_TABLES` — the change is expected, but visible every morning until the baseline is taken again (`config/hck_seed.md` §6).
+- Back-port: a row created in PS4 is entered in DV1 on a customizing request and transported to QA1 / PS4 (same key: the import overwrites the PS4 row with identical values), so the landscapes do not diverge (`Operations_Runbook.md` §5h).
+
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 22 tables; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 23 customizing tables, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -62,6 +83,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
 | FMON | FmonIface | Direction I/O; **name pattern is valid PCRE** | 413, 418 |
 | FMON | FmonSla | Maximum minutes > 0; severity | 417, 413 |
+| FMON | FmonDeadline | Stage FILE_RECEIVED / FILE_LOADED / FULLY_PROCESSED / GENERATED_IN_SAP / ACK_RECEIVED; day type NORMAL / MONTH_END / RETURNS_DAY / `*`; severity | 413 |
 | FMON | FmonSource | Table exists; each of the 12 field-name columns exists in that table; adapter class implements `ZIF_CD_FMON_ADAPTER` | 411, 412, 410 |
 | FMON | FmonCheck | Class implements `ZIF_CD_FMON_CHECK`; severity | 410, 413 |
 | FMON | FmonLotCfg | Header / item tables exist; their lot, link, key, status fields exist; link by N/R | 411, 412, 413 |

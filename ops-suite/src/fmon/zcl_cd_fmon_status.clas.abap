@@ -9,6 +9,7 @@
 *& 2026-11-06 | manual_allowed( ) for the manual-status app (design 6.4).
 *& 2026-11-06 | PRISM status API: rank per direction (PRISM_* stages in both directions),
 *&              fits_direction( ), is_origin( ), PRISM_FAILED superseded by later progress.
+*& 2026-11-07 | reaches( ): has the file reached a stage (stage deadline check).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - file status state machine</p>
 "! Rules (also in FMON_FILE_MONITORING.md):
@@ -79,6 +80,17 @@ CLASS zcl_cd_fmon_status DEFINITION
         cs_file          TYPE zif_cd_fmon_types=>ty_file
       RETURNING
         VALUE(rv_result) TYPE zif_cd_fmon_types=>ty_transition.
+
+    "! The file has reached the stage (stage deadline): an inbound outcome (FULLY / PARTIALLY /
+    "! FAILED) needs an outcome of at least that quality - PARTIALLY_PROCESSED does not reach
+    "! FULLY_PROCESSED; any other stage a current stage of at least its rank (a later stage
+    "! includes the earlier ones); PRISM_FAILED does not reach the delivery it failed
+    CLASS-METHODS reaches
+      IMPORTING
+        is_file           TYPE zif_cd_fmon_types=>ty_file
+        iv_stage          TYPE zif_cd_fmon_types=>ty_stage
+      RETURNING
+        VALUE(rv_reached) TYPE abap_bool.
 
     "! Manual status (design 6.4): allowed only where APPLY would advance or update
     "! the file. Works on a copy - the file passed in is not changed.
@@ -253,6 +265,24 @@ CLASS zcl_cd_fmon_status IMPLEMENTATION.
                          iv_unprocessed = iv_unprocessed
                CHANGING  cs_file        = cs_file ).
     rv_result = zif_cd_fmon_types=>gc_transition-advanced.
+  ENDMETHOD.
+
+
+  METHOD reaches.
+    DATA(lv_target) = rank( iv_stage = iv_stage iv_direction = is_file-direction ).
+    IF lv_target = 0.
+      RETURN.
+    ENDIF.
+    IF quality( iv_stage ) > 0.
+      rv_reached = xsdbool( quality( is_file-outcome ) >= quality( iv_stage ) ).
+      RETURN.
+    ENDIF.
+    DATA(lv_rank) = rank( iv_stage = is_file-stage iv_direction = is_file-direction ).
+    IF is_file-outcome = zif_cd_fmon_types=>gc_stage-prism_failed AND iv_stage <> zif_cd_fmon_types=>gc_stage-prism_failed.
+      rv_reached = xsdbool( lv_rank > lv_target ).
+      RETURN.
+    ENDIF.
+    rv_reached = xsdbool( lv_rank >= lv_target ).
   ENDMETHOD.
 
 

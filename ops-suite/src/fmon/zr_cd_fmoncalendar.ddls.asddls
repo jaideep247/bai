@@ -18,6 +18,8 @@ define view entity ZR_CD_FmonCalendar
       window_to as WindowTo,
       @EndUserText.label: 'Factory calendar ID'
       fcal_id as FcalId,
+      @EndUserText.label: 'Active'
+      active as Active,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

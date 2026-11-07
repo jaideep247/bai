@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Message 418: a pattern field is not valid PCRE.
+*& 2026-11-07 | GC_PROD_MAINTAINABLE: tables whose new rows production may create (D-3 per table).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -95,6 +96,14 @@ INTERFACE zif_cd_ops_cfg_types
 
   "! T000-CCCATEGORY
   CONSTANTS gc_role_production TYPE ty_client_role VALUE 'P'.
+
+  "! Production-maintainable tables (RAP_Config_Apps.md 2, user requirement 2026-11-07: similar
+  "! alerts configurable directly in production): new rows may be created wherever existing rows
+  "! may be edited - production directly, change-logged (table logging, LAST_CHANGED_*); delete
+  "! stays where the client records changes (DV1), production switches a row off (ACTIVE).
+  "! Comma list of table names; the generator spec flag prod_create (tools/rap_generate.py) must
+  "! name the same tables (tools/tests/test_rap_generate.py).
+  CONSTANTS gc_prod_maintainable TYPE ty_value_list VALUE `ZCD_FMON_DEADL,ZCD_FMON_SLA,ZCD_FMON_CAL,ZCD_OPS_ALRULE`.
 
   "! Authorisation object ZCD_OPS, field ACTVT
   CONSTANTS:

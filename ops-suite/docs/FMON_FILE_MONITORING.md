@@ -118,6 +118,32 @@ Example (seed SLA `PRISM_DELIVERED` 5 P): five ACH files received by PRISM at 17
 
 **Where it runs.** The engine (`ZCL_CD_FMON_ENGINE->BUILD_CONTEXT`) reads the four parameters and builds the queue for the business dates of the throttled files in the run; a date the run did not load completely (instant unit, run for one interface, open file of an older date) is read from the register (`GET_EVAL_FILES` / `GET_EVENTS` — no new SQL). `ZCL_CD_FMON_CHK_SLA` asks `QUEUE_POSITION` per file and passes the allowance to `SLA_VERDICT`. The instant PRISM unit (`run_event`) and the 5-minute run go through the same context and check — one rule, no copy.
 
+## A3b. Stage deadlines by clock time — "BAI processed by 10:00" (user requirement 2026-11-07)
+
+> **First principle:** a duration SLA asks "how long after the previous step"; a business deadline asks "is it done by 10 o'clock" — both are configuration, and the deadline is the one operations promised.
+> **Analogy:** a newspaper on the doorstep by 7 — it does not matter when the printing started; at 7 the reader either has the paper or calls, and the call says whether the van never came, came without the paper, or brought only half of it.
+
+**Requirement.** "Alert if BAI is not processed until 10 AM" — JPMC and BOA, 10:00 in `FMON_TIME_ZONE`, normal business days; similar alerts configurable directly in production.
+
+**Deadline basis (`ZCD_FMON_DEADL`, key IFACE_ID + STAGE + DAY_TYPE).** A stage must be reached by `DUE_TIME` (clock time of the business date in `FMON_TIME_ZONE`). `DAY_TYPE` NORMAL / MONTH_END / RETURNS_DAY or `*` (any business day); MONTH_END / RETURNS_DAY fall back to NORMAL, then `*` (same fallback as the calendar). Severity from the row (blank = the check row's, else E). `ACTIVE` switches a row off (production-maintainable, never deleted in PS4). Stages a deadline may name: FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED.
+
+**Why a separate table, not basis `T` on ZCD_FMON_SLA.** (1) The SLA key is IFACE_ID + STAGE: a stage could carry either a duration or a clock time, never both — BAI keeps its 30-minute FILE_RECEIVED SLA after PRISM's delivery and gets a 10:00 FULLY_PROCESSED deadline; a returns file may need 480 G *and* "processed by 16:00". (2) The deadline varies by calendar day type (month end later than a normal day): DAY_TYPE must be a key field, which would change the key of a live table and every SLA reader / check. (3) The SLA check (`ZCL_CD_FMON_CHK_SLA`, `F_SLA` with `STAGE=FULLY_PROCESSED`) keeps its exact semantics; nothing configured today changes.
+
+**Check `ZCL_CD_FMON_CHK_DEADLINE` (row `F_DEADLINE`), code `STAGE_DEADLINE_MISSED`.** In every batch run (not in the instant PRISM unit), per interface with an expectation of the business date (`ZCD_FMON_CAL`):
+
+| Situation at or after DUE_TIME | Finding (GROUP2) | Message |
+|---|---|---|
+| Holiday, or the calendar expects 0 files, or before DUE_TIME, or no interface calendar row | none | — |
+| Stage reached by any file instance of the interface and day (`ZCL_CD_FMON_STATUS=>REACHES`: FULLY_PROCESSED needs the outcome FULLY; PARTIALLY never counts) | none — an open finding of the day is **reconciled** (closed) | — |
+| (1) No file received, no statement imported | `NOT_RECEIVED` | 272 |
+| (2) Received (PRISM delivery, load log, or some statements in SAP) but the statements of **not every** payment engine account of the bank are imported — none or some (x of y) | `NOT_IMPORTED` | 273 + 275 |
+| (3) Every account imported, n of m in-scope FEBEP lines not posted | `NOT_POSTED` | 274 + 276 / 279 + 275 |
+| A non-inbound stage (GENERATED_IN_SAP, ACK_RECEIVED) | `STAGE_NOT_REACHED` | 278 |
+
+The message names the bank and statement date (277). **One finding per interface and business date** (object key `<iface>/<date>`, `ZCL_CD_FMON_UTIL=>IFACE_DAY_KEY`): several missed stages are one finding with the latest due time and the worst severity. **No repeat spam:** the next 5-minute runs raise the same object key + check code; the core store carries the open exception forward (occurrences + 1, same owner / due date) and the alert router does **not** alert a carried-forward finding again (status R in ZCD_OPS_ALLOG) — only the rule's escalation (`ESCALATE_AFTER`) re-sends; when the stage is met the engine reconciles the interface-day key and the exception is resolved ("passed on rerun"). The engine reconciles the interface-day keys of every expectation of the run, so a FILE_MISSING of the day is closed the same way once the file is there.
+
+**Timing.** The 5-minute job (`ZCD_FMON_MONITOR_ALL`) evaluates the deadline in the first run at or after 10:00: the alert leaves between 10:00 and 10:05 (alert rule `FMON_BAIDL`, SO23 list `ZCD_PAYOPS`, escalation `ZCD_RTBLEAD`; `config/alert_seed.md`).
+
 ## A4. NOC and returns completeness
 
 > **First principle:** a returns or NOC file is processed only when zero transactions are unaccounted for.
@@ -152,6 +178,7 @@ Example (seed SLA `PRISM_DELIVERED` 5 P): five ACH files received by PRISM at 17
 | PRISM_QUEUE_LONG | A | More ACH / wire files were queued in PRISM ahead of the file than `FMON_PRISM_QUEUE_MAX` covers (PRISM releases one every 2 minutes) | Check PRISM, not SAP: is PRISM's bank queue moving, is a bank connection down? (Runbook §4c) |
 | PRISM_UNKNOWN_FILE / PRISM_NOT_LOADED | A | PRISM reported a file SAP has no generation of / delivered a file SAP has not received (after GRACE_MIN) | Compare the reference with SAP's file name / key; inbound: check the load job and directory |
 | PLUGIN_ERROR / PERSIST_ERROR / ALERT_FAILED | R | The monitor itself could not check something | IT: fix the configuration named in the message; the rest of the run is valid |
+| STAGE_DEADLINE_MISSED | R (row severity) | A stage of ZCD_FMON_DEADL was not reached by its clock time (BAI not processed by 10:00); GROUP2 names the missing step | NOT_RECEIVED: check PRISM / the bank delivery and the Control-M statement job; NOT_IMPORTED: FF.5 / FEBAN import log for the accounts not imported; NOT_POSTED: FEBAN / FEBP for the open lines (EBS dashboard `POSTING_INCOMPLETE`) — Runbook §4d |
 | FILE_LATE, *_LATE (e.g. PRISM_HANDOFF_LATE) | A | Arrived or moved later than the window/SLA | Note for SLA reporting; watch the next cycle |
 | SIZE_OUT_OF_BOUNDS | A | Size outside the usual range | Compare volume with the source system |
 | NOC_DUE_TODAY, LOT_NOT_FOUND, UNEXPECTED_FILE | A | Deadline today / lot not yet created / file on a no-file day | Act within the day |
@@ -180,8 +207,9 @@ Customizing (delivery class C, SM30) — `ddic/fmon/*.tabl.ddl`:
 | Table | Key | Purpose |
 |---|---|---|
 | ZCD_FMON_IFACE | IFACE_ID | Interface: direction, file type, source/target, payment method, LOB, bank, name pattern (PCRE, complete file name, case ignored — §B1a), min/max bytes, ack expected, ack level (FILE/PAYMENT), owner, active. Blank/`*` source and LOB = default row |
-| ZCD_FMON_SLA | IFACE_ID, STAGE | Max minutes to reach a stage; BASIS P (from previous stage) or G (from generation / first event); severity |
-| ZCD_FMON_CAL | IFACE_ID, DAY_TYPE | Expected file count and window per NORMAL / MONTH_END / HOLIDAY / RETURNS_DAY; factory calendar ID |
+| ZCD_FMON_SLA | IFACE_ID, STAGE | Max minutes to reach a stage; BASIS P (from previous stage) or G (from generation / first event); severity; ACTIVE (2026-11-07). Production-maintainable |
+| ZCD_FMON_DEADL | IFACE_ID, STAGE, DAY_TYPE | Stage deadline by clock time (2026-11-07, §A3b): DUE_TIME in FMON_TIME_ZONE, severity, ACTIVE; day type NORMAL / MONTH_END / RETURNS_DAY / `*`. Production-maintainable |
+| ZCD_FMON_CAL | IFACE_ID, DAY_TYPE | Expected file count and window per NORMAL / MONTH_END / HOLIDAY / RETURNS_DAY; factory calendar ID; ACTIVE (2026-11-07). Production-maintainable |
 | ZCD_FMON_SRC | SRC_ID | Legacy source adapter: table name and the field names for file key, file name, date, time or timestamp, status, count, amount, size, checksum, source, LOB; default stage; adapter class (blank = generic) |
 | ZCD_FMON_SRCMAP | SRC_ID, STATUS_VALUE | Legacy status value (or `*`) → stage |
 | ZCD_FMON_LOTCFG | IFACE_ID, LOT_TYPE | Returns/NOC lot completeness: header table/lot/link fields, item table/lot/key/status/link fields, link by name or reference, done values, NOC banking-day SLA |
@@ -195,11 +223,37 @@ Application data (delivery class A):
 | ZCD_FMON_EVENT | FILE_ID, EVENT_NO | Audit trail of every reported stage (also capped or ignored ones). Unique index SRC: FILE_ID, SRC_ID, SRC_KEY, STAGE → idempotent re-runs per file instance |
 | ZCD_FMON_PRISM | EVENT_ID | PRISM status API events (one row per call, PRISM's ID as key): reference, interface, direction, milestone, occurredAt (UTC), counterparty, PRISM reference, count, total, error code / masked text, business date, receipt, PROCESSED_AT. Indexes UNP (PROCESSED_AT, RECEIVED_AT), REF, BDT. Read by `ZCL_CD_FMON_ADAPTER_PRISM` (`PRISM_Status_API.md`) |
 
-Runtime parameters (framework `ZCA_PARAM`, area `CD_FMON` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT, FMON_PRISM_THROTTLE_MIN, FMON_PRISM_THROTTLE_SCOPE, FMON_PRISM_THROTTLE_METHODS, FMON_PRISM_QUEUE_MAX (§A3a). Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
+Runtime parameters (framework `ZCA_PARAM`, area `CD_FMON` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`): FMON_LOOKBACK_DAYS, FMON_OPEN_DAYS, FMON_DUP_DAYS, FMON_TIME_ZONE, FMON_FACTORY_CAL, FMON_RETURNS_WEEKDAYS, FMON_NOC_SLA_DAYS, FMON_MAX_ROWS, FMON_AGE_BASIS, FMON_PRISM_MAX_BYTES, FMON_PRISM_INSTANT, FMON_PRISM_THROTTLE_MIN, FMON_PRISM_THROTTLE_SCOPE, FMON_PRISM_THROTTLE_METHODS, FMON_PRISM_QUEUE_MAX (§A3a), FMON_FEB_STMT_OFFSET (§B1b). Customizing ZCD_FMON_TABWL lists the tables (and fields, or `*`) the dynamic reader may read. Indexes are declared in the DDL as `// @index <ID> [UNIQUE]: F1, F2` and serialized to abapGit by `tools/abapgit_serialize.py`. Example rows: `config/fmon_seed.md`.
 
 ## B1a. Interface name patterns (PCRE, user decision 2026-11-06)
 
 `ZCD_FMON_IFACE-NAME_PATTERN` is PCRE matched to the **complete file name**, case ignored (`ACH_PNC_.*` — every file starting with ACH_PNC_; `ACH_PNC_[0-9]{8}_.*\.txt` — a literal dot escaped). Blank = the interface is not resolved by name. Several matching rows: the one with the most literal characters wins (`ZCL_CD_OPS_UTIL=>PCRE_LITERALS`), then exact source, then LOB. The FMON configuration app refuses a pattern that does not compile (message 418); one already stored is reported every run as `PATTERN_INVALID` (object key `IFC:<interface>`, message 271) and resolves no file. Check a pattern before saving it: `ZCD_OPS_PATTERN_CHECK`, area FMON_FILE (file names of ZCD_FMON_FILE in the window, the interface patterns capturing each, names no pattern captures).
+
+## B1b. Statement evidence of BAI files — FEB adapter (2026-11-07)
+
+> **First principle:** a statement file is processed only when the bank's statements are in SAP for every payment engine account and every line that should post has posted — the same definition EBS uses, read the same way.
+> **Analogy:** a delivery note signed at the warehouse (received), every carton on the shelf (imported), every item booked into stock (posted).
+
+`ZCL_CD_FMON_ADAPTER_FEB` (ZCD_FMON_SRC row `FEB`, `ADAPTER_CLASS = ZCL_CD_FMON_ADAPTER_FEB`, IFACE_ID blank = every active inbound STATEMENT interface with a bank key) reports per interface and **working** business date of the window, from the EBS statement evidence `ZIF_CD_EBS_STMT_EVIDENCE` (one FEBKO and one FEBEP read for all banks and dates, row cap FMON_MAX_ROWS statements):
+
+| Evidence (bank, statement date) | Record |
+|---|---|
+| Bank without active payment engine accounts (ZCD_EBS_ACCT with that BANK_KEY) | none (nothing to prove) |
+| No account imported | evidence only (no stage) — the deadline check reads it |
+| Some accounts imported (x of y) | `FILE_RECEIVED` (statements in SAP prove the file arrived), raw status `IMPORT_PARTIAL` |
+| All imported, posting state not read (`EBS_FEB_POSTED_FIELDS` OFF) or the read capped | `FILE_LOADED` (`IMPORTED`) — processing not proven, never FULLY |
+| All imported, n in-scope lines not posted | `PARTIALLY_PROCESSED` (`POSTING_OPEN`), unprocessed count n, record count m |
+| All imported, every in-scope line posted | `FULLY_PROCESSED` (`POSTED`) |
+
+**Mapping statement ↔ file instance (decision; VERIFY items in Release_Readiness).**
+- *Bank:* `ZCD_FMON_IFACE-BANK_KEY` = `ZCD_EBS_ACCT-BANK_KEY` (condensed, upper case): the payment engine accounts of the interface are the active house bank accounts (BUKRS / HBKID / HKTID) of that bank. An account counts as imported when FEBKO holds a statement of the date for it. **VERIFY:** every payment engine account receives a statement every business day (also without activity); otherwise an inactive account would keep the file "not imported".
+- *Date:* business date B (a working day of the interface's factory calendar, `ZCD_FMON_CAL-FCAL_ID`, else `FMON_FACTORY_CAL`); statement date FEBKO-AZDAT = the `FMON_FEB_STMT_OFFSET`-th working day before B (default 1: prior-day BAI — Monday's file carries Friday's statement; 0 = same-day statement). Weekend / holiday business dates are not reported. **VERIFY with Treasury** that FEBKO-AZDAT of the JPMC / BOA prior-day BAI is the previous business day and that the bank calendar equals the factory calendar.
+- *Instance:* when another source (PRISM delivery, a load log) registered **exactly one** instance of the interface and B, the statement evidence attaches to it (one board row); otherwise the adapter's own reference `FEB/<bank>/<statement date>` (several instances: no guess). The deadline check reads every instance of the interface and day, so two instances never hide a missing step.
+- *Event time:* the run's clock (FMON's first observation, at most 5 minutes after the import). **VERIFY-DDIC:** an import timestamp of FEBKO could replace it later.
+- *Scope:* only payment engine accounts count, exactly the EBS scope — a statement whose every line carries an active ZCD_EBS_ACCT account (`ZCL_CD_EBS_PE_SCOPE`); an out-of-scope (mixed) statement is imported (its account counts) but its lines do not.
+- *Posted:* the EBS definition `ZCL_CD_EBS_STMT_EVIDENCE=>IS_POSTING_OPEN` (FEBEP posting-area flags of `EBS_FEB_POSTED_FIELDS`, VERIFY-SE11 VB1OK / VB2OK; map disposition NOT_POSTED never expected to post), used by the EBS engine for POSTING_INCOMPLETE too. **Deliberate difference:** FMON counts a *blocked* (unmapped code) unposted line as not posted — EBS reports it separately (UNMAPPED_BTC, B) and leaves it out of POSTING_INCOMPLETE; for the file it is still not processed.
+
+**Dependency direction.** FMON → EBS only: the adapter calls `ZCL_CD_EBS_FACTORY=>GET_STMT_EVIDENCE( )` (interface `ZIF_CD_EBS_STMT_EVIDENCE`, implementation built from `ZCL_CD_EBS_SRC_FEB`, `ZCL_CD_EBS_PE_SCOPE`, `ZCL_CD_EBS_BTC_RESOLVER` and `ZIF_CD_EBS_FEB_DAO` — no second FEBKO / FEBEP read, no copy of the posting rule). EBS never references FMON. Activation: EBS before FMON (`Implementation_Order.md` step 2.4 → 2.5). The adapter has no SQL of its own, needs no ZCD_FMON_TABWL row and writes no application log.
 
 ## B2. Class model
 
@@ -249,6 +303,9 @@ classDiagram
     ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_NOC_AGING
     ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_PRISM_FILE
     ZIF_CD_FMON_ADAPTER <|.. ZCL_CD_FMON_ADAPTER_PRISM
+    ZIF_CD_FMON_ADAPTER <|.. ZCL_CD_FMON_ADAPTER_FEB
+    ZCL_CD_FMON_ADAPTER_FEB ..> ZIF_CD_EBS_STMT_EVIDENCE : EBS statement evidence
+    ZIF_CD_FMON_CHECK <|.. ZCL_CD_FMON_CHK_DEADLINE
     class ZCL_CD_FMON_PRISM_PROC { +process(event_id) }
     ZCL_CD_FMON_PRISM_PROC --> ZCL_CD_FMON_ENGINE : run_event()
     ZCL_CD_FMON_INJECTOR ..> ZCL_CD_FMON_FACTORY : friend
@@ -310,8 +367,16 @@ Generic adapter safety: `ZCL_CD_FMON_DDIC` describes the table with `CL_ABAP_TYP
 | 267 | &1: delivered by PRISM &2 min ago, not yet received in SAP |
 | 269 | &1: PRISM queue of &2 file(s) exceeds the maximum of &3 - check PRISM |
 | 270 | &1: &2 after &3 min (SLA &4 min incl. PRISM queue allowance) |
+| 272 | &1 &2: file not received by &3 (&4 due) |
+| 273 | &1 &2: received, not imported by &3 (&4 due) |
+| 274 | &1 &2: imported, not fully posted by &3 (&4 due) |
+| 275 | &1 of &2 payment engine account(s) imported. |
+| 276 | &1 of &2 in-scope line(s) not posted; |
+| 277 | Bank &1, statement date &2: |
+| 278 | &1 &2: stage &4 not reached by &3 |
+| 279 | Posting state not read or statement read capped - not proven; |
 
-Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class), 032 (class does not implement interface). 207, 210, 212–219, 221–299 are free. These rows still have to be added to `config/zcd_ops_messages.md` (shared file, not edited by FMON).
+Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class), 032 (class does not implement interface). 226, 231 and 280–299 are free. These rows still have to be added to `config/zcd_ops_messages.md` (shared file, not edited by FMON).
 
 ## B5. Tests
 
@@ -336,6 +401,11 @@ Reused core messages: 010 (insert failed, registry save), 030/031 (plug-in class
 | ZCL_CD_FMON_RULES / ltc_throttle (PRISM throttle, 2026-11-06) | pure, no doubles | single_file_gets_base_sla, fifth_file_on_time_at_9_min, fifth_file_late_after_13_min, scope_c_queues_per_bank, pospay_not_throttled, queue_over_max_is_long, ack_from_generation_shifted, ack_after_delivery_not_shifted, zero_throttle_keeps_today, no_receipt_keeps_today, delivered_file_is_not_ahead |
 | ZCL_CD_FMON_ADAPTER_PRISM / ltc_adapter_prism | LTD PRISM DAO | rows_become_prism_stages, interface_id_wins, batch_reads_unprocessed, unknown_field_is_refused |
 | ZCL_CD_FMON_CHK_PRISM_FILE / ltc_prism_file, ZCL_CD_FMON_CHK_REJECT / ltc_reject | pure | grace period, outbound unknown / known, inbound not loaded / received; OUTCOME=PRISM_FAILED, default unchanged |
+| ZCL_CD_FMON_CHK_DEADLINE / ltc_deadline (2026-11-07) | pure, context field by field | not_received_is_condition_1, no_import_is_condition_2, some_accounts_is_condition_2, not_posted_is_condition_3, processed_raises_nothing, holiday_raises_nothing, no_file_day_raises_nothing, before_due_raises_nothing, month_end_uses_normal_row, one_finding_per_day, message_names_counts, registry_only_names_step |
+| ZCL_CD_FMON_ADAPTER_FEB / ltc_adapter_feb (2026-11-07) | LTD FMON DAO, calendar, EBS evidence, clock | all_posted_is_fully, open_entries_are_partial, some_accounts_is_received, nothing_imported_is_evidence, posting_off_is_loaded, monday_reads_friday, prism_instance_is_used, bank_without_accounts_skip |
+| ZCL_CD_EBS_STMT_EVIDENCE / ltc_evidence (EBS, 2026-11-07) | LTD FEB DAO, configuration DAO | all_posted_is_complete, missing_account_counted, nothing_imported_reported, unposted_entry_is_open, not_posted_code_not_open, blocked_entry_is_open, other_bank_not_counted, mixed_statement_out_scope, one_item_read_for_all, ebs_open_excludes_blocked |
+| ZCL_CD_FMON_STATUS / ltc_status (deadline) | pure | partial_not_fully_reached, later_stage_reaches_earlier, prism_failed_not_delivered |
+| ZCL_CD_FMON_ENGINE / ltc_engine (deadline) | LTD doubles | feb_evidence_drives_deadline (evidence-only record not applied, NOT_RECEIVED, interface-day key reconciled), feb_partial_sets_unprocessed |
 | ZCL_CD_FMON_DAO / ltc_dao | cl_osql_test_environment (ZCD_FMON_FILE, ZCD_FMON_EVENT, ZCD_FMON_TABWL), LTD DDIC | same_event_is_stored_once, repeat_insert_reports_false, events_numbered_per_file, saved_file_found_by_ref, open_old_file_is_evaluated, history_found_by_checksum, later_open_file_not_evaluated, newer_registry_not_overwritten, unchanged_registry_is_saved, event_belongs_to_its_instance, older_instances_not_prefetched, unapproved_table_is_refused, read_without_auth_is_refused, approved_table_is_read |
 
 Deliberately not unit tested:
@@ -369,6 +439,11 @@ Recommended QA1 functional test cases (Test & Validation document):
 | FMON-QA-12 | Report and test mode | ZCD_FMON_MONITOR, test mode on | Board shown; nothing in ZCD_FMON_FILE/EVENT/ZCD_OPS_RUN; no alert |
 | FMON-QA-13 | New source and LOB (acceptance test 2) | Records with SOURCE/LOB values not configured; `*` interface row | Files registered under the default interface; no code change |
 | FMON-QA-14 | Duplicate file | Same file name/checksum twice | DUPLICATE_FILE (E) on the later file |
+| FMON-QA-15 | BAI deadline: not received | DEADL BAI_JPMC_IN FULLY_PROCESSED 10:00; no file, no FEBKO for the statement date | Run 10:00–10:05: STAGE_DEADLINE_MISSED (E), GROUP2 NOT_RECEIVED, alert to ZCD_PAYOPS; 10:05 run: no second mail (ALLOG R) |
+| FMON-QA-16 | BAI deadline: received, not imported | PRISM delivered the file; FEBKO for 1 of 2 JPMC accounts | NOT_IMPORTED, message "1 of 2 payment engine account(s) imported" |
+| FMON-QA-17 | BAI deadline: imported, not posted | Both accounts imported, 3 FEBEP lines with VB1OK/VB2OK open | NOT_POSTED, "3 of n in-scope line(s) not posted"; after FEBP and the next run the exception is resolved |
+| FMON-QA-18 | BAI deadline: processed | All lines posted before 10:00 | Board FULLY_PROCESSED, no finding |
+| FMON-QA-19 | BAI deadline: holiday | Factory-calendar holiday | No STAGE_DEADLINE_MISSED |
 
 ## B6. Verification status and VERIFY-DDIC markers
 
@@ -381,6 +456,7 @@ Recommended QA1 functional test cases (Test & Validation document):
   1. `SCAL-FACDATE` as the factory-date type.
   2. Parameter names of `DATE_CONVERT_TO_FACTORYDATE` (CORRECT_OPTION, DATE, FACTORY_CALENDAR_ID, FACTORYDATE, WORKINGDAY_INDICATOR).
   3. Parameter names of `FACTORYDATE_CONVERT_TO_DATE` (FACTORYDATE, FACTORY_CALENDAR_ID, DATE).
+- **BAI deadline (2026-11-07), VERIFY:** FEBKO-AZDAT of the prior-day BAI = previous business day (`FMON_FEB_STMT_OFFSET` 1); bank and factory calendar agree; every payment engine account gets a statement every business day; `ZCD_EBS_ACCT-BANK_KEY` filled with the same value as `ZCD_FMON_IFACE-BANK_KEY` (JPMC / BOA); VERIFY-SE11 FEBEP-VB1OK / VB2OK (EBS); VERIFY-DDIC an import time field of FEBKO for the event time.
 - Open ADT verifications from the 2026-11-06 audit fixes (see `docs/history/Audit_History.md`): `SELECT SINGLE FOR UPDATE` inside cl_osql_test_environment, redirect of the dynamic `FROM (table)` read of a test-double table (approved_table_is_read), and that abapGit creates the serialized secondary indexes (SE11 → Indexes).
 
 ## B7. Design decisions (changes to the original brief)
@@ -401,4 +477,5 @@ Recommended QA1 functional test cases (Test & Validation document):
 11. **New warnings for "no silent suspense"**: UNMAPPED_FILE, UNMAPPED_STATUS, LOT_NOT_FOUND; since 2026-11-06 FILE_REF_AMBIGUOUS, MALFORMED_SOURCE_ROW, LOT_SCAN_TRUNCATED, PERSIST_CONFLICT. FILE_REF_REUSED is retired: a reused reference on another business date is a new file instance.
 12. **Run lock (2026-11-06):** one monitor run at a time for the whole payment engine area (core message 040, RUN_LOCKED alert); the unique registry index still protects against double registration. Checksum-mismatch and archive-failure checks from the requirements baseline are possible as further `ZIF_CD_FMON_CHECK` rows once a source delivers those fields.
 13. **Audit hardening (2026-11-06, `docs/history/Audit_History.md`):** version-checked registry save (A04), SQL errors handled at the LUW owner (A05), file instance = reference + business date (A49), SLA met only by admissible evidence — the stage itself or a NACK for an ACK SLA, a later stage alone is `*_INFERRED` (A40), ACK counts deduplicated per payment and cumulative, unknown ≠ zero (A39), truncated lot scans derive nothing (A38), age basis and calendar failure explicit (A41), open-file window bounded by the run date (A50), approved tables + S_TABU_NAM at the read boundary (A51), malformed rows quarantined and half-open timestamp range (A52).
+15. **Stage deadlines and the FEB adapter (2026-11-07, user requirement):** a separate table ZCD_FMON_DEADL instead of basis `T` on ZCD_FMON_SLA (§A3b: duration and clock time on the same stage, day type as key, SLA semantics unchanged); FEB adapter emits the stages of the interface's file instance from the EBS statement evidence (§B1b); partial import = not imported (user clarification 2026-11-07); interface-day keys reconciled so a met deadline closes its exception. No application log is written by the adapter, the check or the policy (SLG1 kept to a minimum, user rule 2026-11-07).
 14. **PRISM throttle (2026-11-06, user fact):** the delivery SLA of ACH / wire files includes 2 min × files ahead in PRISM's queue (§A3a). Decided from `PAY_METHOD` (configurable list), not from `FILE_TYPE` or `BANK_KEY`, because positive pay and stop pay go to the same banks but are not throttled. Default queue scope `A` (one queue) is the conservative reading of "2 min per file" — it can only make the allowance larger than per-bank queues would; to confirm with the PRISM team. A capped allowance plus `PRISM_QUEUE_LONG` keeps a stuck queue visible.

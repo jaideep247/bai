@@ -17,6 +17,7 @@ authorization master ( global )
 
   association _FmonIface { create ( features : global ); with draft; }
   association _FmonSla { create ( features : global ); with draft; }
+  association _FmonDeadline { create ( features : global ); with draft; }
   association _FmonSource { create ( features : global ); with draft; }
   association _FmonSourceMap { create ( features : global ); with draft; }
   association _FmonCheck { create ( features : global ); with draft; }
@@ -34,6 +35,8 @@ authorization master ( global )
     validation FmonIface ~ validateTransport;
     validation FmonSla ~ validateFields;
     validation FmonSla ~ validateTransport;
+    validation FmonDeadline ~ validateFields;
+    validation FmonDeadline ~ validateTransport;
     validation FmonSource ~ validateFields;
     validation FmonSource ~ validateTransport;
     validation FmonSourceMap ~ validateTransport;
@@ -113,6 +116,39 @@ etag master LocalLastChangedAt
     MaxMinutes = max_minutes;
     Basis = basis;
     Severity = severity;
+    Active = active;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_FmonDeadline alias FmonDeadline
+persistent table zcd_fmon_deadl
+with additional save
+draft table zcd_d_fmdeadl
+lock dependent by _FmonCfgAll
+authorization dependent by _FmonCfgAll
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) IfaceId, Stage, DayType;
+  field ( mandatory : create ) IfaceId, Stage, DayType;
+  association _FmonCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_fmon_deadl
+  {
+    IfaceId = iface_id;
+    Stage = stage;
+    DayType = day_type;
+    DueTime = due_time;
+    Severity = severity;
+    Active = active;
+    Description = description;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;
@@ -287,6 +323,7 @@ etag master LocalLastChangedAt
     WindowFrom = window_from;
     WindowTo = window_to;
     FcalId = fcal_id;
+    Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

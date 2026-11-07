@@ -12,18 +12,20 @@ annotate entity ZC_CD_FmonCfgAll with
       label: 'Interfaces', position: 20, targetElement: '_FmonIface' },
     { id: 'FmonSla', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Stage SLAs', position: 30, targetElement: '_FmonSla' },
+    { id: 'FmonDeadline', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Stage deadlines (clock time)', position: 40, targetElement: '_FmonDeadline' },
     { id: 'FmonSource', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Source adapters', position: 40, targetElement: '_FmonSource' },
+      label: 'Source adapters', position: 50, targetElement: '_FmonSource' },
     { id: 'FmonSourceMap', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Status mappings', position: 50, targetElement: '_FmonSourceMap' },
+      label: 'Status mappings', position: 60, targetElement: '_FmonSourceMap' },
     { id: 'FmonCheck', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Checks', position: 60, targetElement: '_FmonCheck' },
+      label: 'Checks', position: 70, targetElement: '_FmonCheck' },
     { id: 'FmonLotCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Returns / NOC lots', position: 70, targetElement: '_FmonLotCfg' },
+      label: 'Returns / NOC lots', position: 80, targetElement: '_FmonLotCfg' },
     { id: 'FmonCalendar', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Expected files per day type', position: 80, targetElement: '_FmonCalendar' },
+      label: 'Expected files per day type', position: 90, targetElement: '_FmonCalendar' },
     { id: 'FmonTableAllow', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Approved tables', position: 90, targetElement: '_FmonTableAllow' }
+      label: 'Approved tables', position: 100, targetElement: '_FmonTableAllow' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

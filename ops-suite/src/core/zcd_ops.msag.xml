@@ -1217,6 +1217,54 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>272</MSGNR>
+     <TEXT>&amp;1 &amp;2: file not received by &amp;3 (&amp;4 due)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>273</MSGNR>
+     <TEXT>&amp;1 &amp;2: received, not imported by &amp;3 (&amp;4 due)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>274</MSGNR>
+     <TEXT>&amp;1 &amp;2: imported, not fully posted by &amp;3 (&amp;4 due)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>275</MSGNR>
+     <TEXT>&amp;1 of &amp;2 payment engine account(s) imported.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>276</MSGNR>
+     <TEXT>&amp;1 of &amp;2 in-scope line(s) not posted;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>277</MSGNR>
+     <TEXT>Bank &amp;1, statement date &amp;2:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>278</MSGNR>
+     <TEXT>&amp;1 &amp;2: stage &amp;4 not reached by &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>279</MSGNR>
+     <TEXT>Posting state not read or statement read capped - not proven;</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>
@@ -1633,6 +1681,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>373</MSGNR>
      <TEXT>Check &amp;1: pattern &amp;2 in the parameters is not valid PCRE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>374</MSGNR>
+     <TEXT>Table &amp;1 is maintained in production: changed since baseline of &amp;2 (rows </TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

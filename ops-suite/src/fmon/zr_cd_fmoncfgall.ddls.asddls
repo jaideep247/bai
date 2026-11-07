@@ -5,6 +5,7 @@ define root view entity ZR_CD_FmonCfgAll
     left outer join ZI_CD_FmonCfgChg as Chg on 0 = 0
   composition [0..*] of ZR_CD_FmonIface as _FmonIface
   composition [0..*] of ZR_CD_FmonSla as _FmonSla
+  composition [0..*] of ZR_CD_FmonDeadline as _FmonDeadline
   composition [0..*] of ZR_CD_FmonSource as _FmonSource
   composition [0..*] of ZR_CD_FmonSourceMap as _FmonSourceMap
   composition [0..*] of ZR_CD_FmonCheck as _FmonCheck
@@ -18,6 +19,7 @@ define root view entity ZR_CD_FmonCfgAll
       cast( '' as trkorr ) as TransportRequestID,
       _FmonIface,
       _FmonSla,
+      _FmonDeadline,
       _FmonSource,
       _FmonSourceMap,
       _FmonCheck,

@@ -13,6 +13,7 @@ define view entity ZC_CD_FmonCalendar
       WindowFrom,
       WindowTo,
       FcalId,
+      Active,
       LastChangedBy,
       LastChangedAt,
       LocalLastChangedAt,

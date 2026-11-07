@@ -10,6 +10,7 @@
 *& 2026-11-06 | PRISM status API: PRISM_* stage order per direction, recoverable PRISM_FAILED,
 *&              direction fit and file-instance origin.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
+*& 2026-11-07 | reaches( ) for the stage deadline check.
 *&---------------------------------------------------------------------*
 CLASS ltc_status DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -60,6 +61,9 @@ CLASS ltc_status DEFINITION FINAL
     METHODS prism_failed_superseded FOR TESTING.
     METHODS prism_stage_fits_both FOR TESTING.
     METHODS origin_rules_per_direction FOR TESTING.
+    METHODS partial_not_fully_reached FOR TESTING.
+    METHODS later_stage_reaches_earlier FOR TESTING.
+    METHODS prism_failed_not_delivered FOR TESTING.
 
 ENDCLASS.
 
@@ -493,6 +497,65 @@ CLASS ltc_status IMPLEMENTATION.
           exp = VALUE string_table( ( |{ abap_true }| ) ( |{ abap_false }| ) ( |{ abap_true }| )
                                     ( |{ abap_true }| ) ( |{ abap_false }| ) )
           msg = 'Origin: GENERATED outbound; PRISM_* and FILE_RECEIVED inbound' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (deadline): PARTIALLY_PROCESSED never counts as FULLY_PROCESSED; FULLY does
+  METHOD partial_not_fully_reached.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true
+                                     stage   = zif_cd_fmon_types=>gc_stage-partially
+                                     outcome = zif_cd_fmon_types=>gc_stage-partially ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_status=>reaches( is_file  = ms_file
+                                                                              iv_stage = zif_cd_fmon_types=>gc_stage-fully )
+                                            exp = abap_false
+                                            msg = 'Partially processed is not fully processed' ).
+        configure_scenario( VALUE #( inbound = abap_true
+                                     stage   = zif_cd_fmon_types=>gc_stage-fully
+                                     outcome = zif_cd_fmon_types=>gc_stage-fully ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_status=>reaches( is_file  = ms_file
+                                                                              iv_stage = zif_cd_fmon_types=>gc_stage-fully )
+                                            exp = abap_true
+                                            msg = 'Fully processed reaches fully processed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (deadline): a later stage includes the earlier ones; an earlier stage does not
+  METHOD later_stage_reaches_earlier.
+    TRY.
+        configure_scenario( VALUE #( inbound = abap_true
+                                     stage   = zif_cd_fmon_types=>gc_stage-partially
+                                     outcome = zif_cd_fmon_types=>gc_stage-partially ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_status=>reaches( is_file  = ms_file
+                                                                              iv_stage = zif_cd_fmon_types=>gc_stage-loaded )
+                                            exp = abap_true
+                                            msg = 'Partially processed was loaded' ).
+        configure_scenario( VALUE #( inbound = abap_true stage = zif_cd_fmon_types=>gc_stage-received ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_status=>reaches( is_file  = ms_file
+                                                                              iv_stage = zif_cd_fmon_types=>gc_stage-loaded )
+                                            exp = abap_false
+                                            msg = 'Received is not loaded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (deadline): PRISM_FAILED has the rank of the delivery but did not deliver
+  METHOD prism_failed_not_delivered.
+    TRY.
+        configure_scenario( VALUE #( stage   = zif_cd_fmon_types=>gc_stage-prism_failed
+                                     outcome = zif_cd_fmon_types=>gc_stage-prism_failed ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_status=>reaches( is_file  = ms_file
+                                                                              iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered )
+                                            exp = abap_false
+                                            msg = 'A PRISM failure is no delivery' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

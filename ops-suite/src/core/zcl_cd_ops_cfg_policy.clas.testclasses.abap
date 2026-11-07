@@ -7,6 +7,7 @@
 *& not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
+*& 2026-11-07 | Production-maintainable tables: create in production, never delete; other tables unchanged.
 *&---------------------------------------------------------------------*
 CLASS ltc_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -14,6 +15,8 @@ CLASS ltc_policy DEFINITION FINAL FOR TESTING
 
   PRIVATE SECTION.
     CONSTANTS gc_request TYPE zif_cd_ops_cfg_types=>ty_request VALUE 'DV1K900123'.
+    CONSTANTS gc_deadline_table TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'zcd_fmon_deadl'.
+    CONSTANTS gc_other_table TYPE zif_cd_ops_cfg_types=>ty_name VALUE 'ZCD_FMON_SRC'.
 
     METHODS dv1_allows_all_with_transport FOR TESTING.
     METHODS production_updates_only       FOR TESTING.
@@ -26,6 +29,10 @@ CLASS ltc_policy DEFINITION FINAL FOR TESTING
     METHODS released_request_rejected     FOR TESTING.
     METHODS open_cust_task_is_accepted    FOR TESTING.
     METHODS no_check_where_not_recorded   FOR TESTING.
+    METHODS prod_table_created_in_prod    FOR TESTING.
+    METHODS other_table_not_in_prod       FOR TESTING.
+    METHODS prod_table_never_deleted      FOR TESTING.
+    METHODS every_listed_table_is_known   FOR TESTING.
 
     METHODS client
       IMPORTING
@@ -246,6 +253,79 @@ CLASS ltc_policy IMPLEMENTATION.
                   iv_request  = space
                   is_info     = VALUE #( ) )
           msg = 'No request needed where changes are not recorded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-07): a production-maintainable table takes new entries in production (case ignored)
+  METHOD prod_table_created_in_prod.
+    TRY.
+        DATA(ls_decision) = zcl_cd_ops_cfg_policy=>decide(
+                              client( iv_option = zif_cd_ops_cfg_types=>gc_change_option-no_changes
+                                      iv_role   = zif_cd_ops_cfg_types=>gc_role_production ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_cfg_policy=>create_allowed( is_decision = ls_decision
+                                                                                        iv_table    = gc_deadline_table )
+                                            exp = abap_true
+                                            msg = 'Production: a new deadline row may be created' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: any other table keeps D-3 - no new entries in production; without a table the client decides
+  METHOD other_table_not_in_prod.
+    TRY.
+        DATA(ls_decision) = zcl_cd_ops_cfg_policy=>decide(
+                              client( iv_option = zif_cd_ops_cfg_types=>gc_change_option-no_changes
+                                      iv_role   = zif_cd_ops_cfg_types=>gc_role_production ) ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_cfg_policy=>create_allowed( is_decision = ls_decision
+                                                                                        iv_table    = gc_other_table )
+                                            exp = abap_false
+                                            msg = 'Production: a new source row needs DV1 and a transport' ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_cfg_policy=>create_allowed( ls_decision )
+                                            exp = abap_false
+                                            msg = 'Production without a table: no create' ).
+        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_cfg_policy=>create_allowed( dv1_decision( ) )
+                                            exp = abap_true
+                                            msg = 'DV1: create for every table' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: delete stays DV1-only for every table - production switches a row off (ACTIVE)
+  METHOD prod_table_never_deleted.
+    TRY.
+        DATA(ls_decision) = zcl_cd_ops_cfg_policy=>decide(
+                              client( iv_option = zif_cd_ops_cfg_types=>gc_change_option-no_changes
+                                      iv_role   = zif_cd_ops_cfg_types=>gc_role_production ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_decision-delete_allowed exp = abap_false
+                                            msg = 'Production: no delete, also not for production-maintainable tables' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_decision-transport_required exp = abap_false
+                                            msg = 'Production: no transport for a direct create' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the four delivered production-maintainable tables are recognised
+  METHOD every_listed_table_is_known.
+    TRY.
+        DATA(lt_act) = VALUE string_table( ( |{ zcl_cd_ops_cfg_policy=>is_prod_maintainable( 'ZCD_FMON_DEADL' ) }| )
+                                           ( |{ zcl_cd_ops_cfg_policy=>is_prod_maintainable( 'ZCD_FMON_SLA' ) }| )
+                                           ( |{ zcl_cd_ops_cfg_policy=>is_prod_maintainable( 'ZCD_FMON_CAL' ) }| )
+                                           ( |{ zcl_cd_ops_cfg_policy=>is_prod_maintainable( 'ZCD_OPS_ALRULE' ) }| )
+                                           ( |{ zcl_cd_ops_cfg_policy=>is_prod_maintainable( space ) }| ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_act
+          exp = VALUE string_table( ( |{ abap_true }| ) ( |{ abap_true }| ) ( |{ abap_true }| ) ( |{ abap_true }| )
+                                    ( |{ abap_false }| ) )
+          msg = 'Deadline, SLA, calendar and alert rule tables; blank is none' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
