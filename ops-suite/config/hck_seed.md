@@ -27,6 +27,14 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | HCK_MAX_JOB_ROWS | `5000` | TBTCO job runs per read (technical jobs, job cycle, job runtime); hard ceiling 50 000 |
 | HCK_MAX_JOB_NAMES | `20000` | Distinct TBTCO job names per window; reaching it fails the check (747); hard ceiling 200 000 |
 | HCK_MAX_AGG_ROWS | `5000` | Groups of a generic aggregate / volume check; hard ceiling 50 000 |
+| HCK_MAX_TECH_ROWS | `5000` | NRIV intervals / queue groups per read (`E_NUMRANGE`, `E_QUEUES`); hard ceiling 50 000 |
+| HCK_QUEUE_ERR_STATES | `SYSFAIL,CPICERR` | qRFC / bgRFC states that are an error (`E_QUEUES`, finding E) |
+| HCK_QUEUE_HOLD_STATES | `STOP,WAITSTOP` | States that hold a queue (W) |
+| HCK_QUEUE_WAIT_STATES | `READY,RUNNING` | States that are STUCK (W) when older than PARAM3 minutes |
+| HCK_INFLIGHT_WIRE_METHODS | `<wire payment methods, confirm>` (no default) | Payment methods of class wire (`A_INFLIGHT`); blank = wire not monitored (listed as information) |
+| HCK_INFLIGHT_ACH_METHODS | `<ACH payment methods, confirm>` (no default) | Payment methods of class ACH; blank = not monitored |
+| HCK_INFLIGHT_CHQ_METHODS | `C` | Payment methods of class cheque (method C = cheque register DFKKCR); a method in two classes stops the check (message 385) |
+| HCK_INFLIGHT_MAX_ROWS | `5000` | Payments per window and bank lines per read (`A_INFLIGHT`); hard ceiling 50 000 |
 | ALERT_MORNING | `<payment-engine RTB distribution list>` | Recipients of the morning report (**confirm**) |
 | HCK_SCORE_GREEN_MIN | `90` | Score ≥ 90 → GREEN |
 | HCK_SCORE_AMBER_MIN | `70` | Score ≥ 70 → AMBER, below → RED |
@@ -70,6 +78,13 @@ uncapped count.
 | C_PRQ_NO_SPE | Payment request failed without SPE row (source never told) | C | ZCL_CD_HCK_C_PRQ_SPE | X | 72 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 request key›;STATUS=ZZ_STATUS;DATE=‹SE11 date›` | `FAIL=‹confirm failure values›;OK=SUCCESS;DAYS=3;MAX=200` | `TABLE=ZCD_SPE_EXCP_LOG;KEY=‹SE11 request key›;DATE=‹SE11 date›` | 120 |
 | C_CHQ_STATUS | Cheque status went backwards (ZECT_STATUS) | C | ZCL_CD_HCK_C_CHQ_STATUS | X | 74 | M | `TABLE=ZCD_CHECK_HIST;KEY=‹SE11 cheque›;SEQ=‹SE11 counter/time›;STATUS=‹SE11 status›;DATE=‹SE11 date›` | `TERMINAL=3,4,9;ALLOWED=10>9;DAYS=7;MAX=200` | | 120 |
 | C_PRQ_CANCEL | Paid payment request left CANCELLED (PCLM) | C | ZCL_CD_HCK_C_PRQ_CANCEL | X | 76 | H | `TABLE=ZCD_PAYM_REQ_LOG;KEY=‹SE11 FIN number›;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=‹SE11 date›` | `CANCELLED=CANCELLED;SRC=PCLM;DAYS=7;MAX=200` | `TABLE=DFKKOP;KEY=ZZ_FIN_TRANS_NUM;PAID=AUGBL;DATE=AUGDT` | 300 |
+| A_INFLIGHT | Payments sent but not cleared on the bank statement | A | ZCL_CD_HCK_C_INFLIGHT | X | 25 | H | `<factory calendar of the payment engine, confirm>` | `10` (days, wire / ACH) | `120` (days, cheques) | 300 |
+| E_NUMRANGE | Number ranges nearly exhausted (NRIV) | E | ZCL_CD_HCK_C_NUMRANGE | X | 105 | H | `<FI-CA document number object, VERIFY in SNRO (e.g. FKK_BELEG)>,<payment run / payment lot / returns lot objects, VERIFY in SNRO>` | | | 60 |
+| E_QUEUES | qRFC / bgRFC queues in error or stuck | E | ZCL_CD_HCK_C_QUEUES | X | 115 | H | `<payment engine queue patterns, e.g. ZCD_.*, confirm in SMQ1 / SMQ2>` (blank = all) | `<destination patterns, e.g. PRISM.*>` (blank = all) | `30` (stuck minutes) | 60 |
+
+`A_INFLIGHT` PARAM4 = payments listed per finding (blank = 10). Methods per class: parameters `HCK_INFLIGHT_*_METHODS` (§1). Flow D / C from TFK042Z-XEINZ; wire / ACH aged in business days of the PARAM1 calendar after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), cheques (disbursements only) in calendar days since the run date. Cleared = FEBEP-CHECT = AUGBL (collections also a cleared G/L line with ZUONR = AUGBL); cheque: DFKKCR encashment date or FEBEP-CHECT = ZTNUM; returned (DFKKRP-SELW1) and reversed payments are left out.
+`E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
+`E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a ZCD_HCK_TABWL row for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
 
 `HCK_SELF` (health of the health check) is built in — no row needed.
 
@@ -102,6 +117,18 @@ uncapped count.
 | E_SYSTEM | LOCK_MAX_AGE_MIN | * | 60 | 240 | X | NONE | | |
 | E_ALERT_DELIVERY | ALERT_FAILED | * | 1 | 5 | X | NONE | | |
 | D_PARAM_INVALID | PARAM_INVALID | * | 1 | 1 | X | NONE | | |
+| E_NUMRANGE | NR_USED_PCT | * | 85 | 95 | X | NONE | | |
+| E_QUEUES | Q_ERROR | * | 1 | 10 | X | NONE | | |
+| E_QUEUES | Q_HOLD | * | 1 | 5 | X | NONE | | |
+| E_QUEUES | Q_STUCK | * | 1 | 50 | X | NONE | | |
+| E_QUEUES | Q_OLDEST_MIN | * | 60 | 240 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DWIR | 1 | 2 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | CWIR | 1 | 2 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DACH | 2 | 3 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | CACH | 2 | 3 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DCHQ | 61 | 91 | X | NONE | | |
+
+`A_INFLIGHT` AGE_OLDEST (**confirm**): the key (BUKRS column) is flow + method class; AMBER / RED = the age from which a payment is late (warning) / critical, because a limit is reached at value ≥ limit and 0 means *not set*. Wire: warning 0 / critical 1 business day after the value date → AMBER 1 / RED 2; ACH: warning 1 / critical 2 → 2 / 3; cheque: > 60 / > 90 calendar days uncashed → 61 / 91. The check classifies every payment with the same row (counts OVER_WARN_CNT / OVER_CRIT_CNT, amounts per currency) and the engine judges AGE_OLDEST with it - one source. A watched key without row is `LIMITS_NOT_CONFIGURED` (W), never green. `E_NUMRANGE` uses the `*` row (DIM1 object/subobject/interval/year is longer than 4 characters); `E_QUEUES` rows may be overridden per source (`QOUT`, `QIN`, `BGRF`).
 
 Rules: higher-is-worse → a zero limit means *not set*; lower-is-worse (`' '`) → both limits apply
 (`PAY_REQ` red 0 = no payment requests yesterday is RED); amber = red = 0 → static limits off.
@@ -154,6 +181,7 @@ Maintained in the health check configuration app (entity *Expected groups*), tab
 | ZCD_SPE_EXCP_LOG | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
 | ZCD_CHECK_HIST | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
 | /SAPPO/ORDER_HDR | Postprocessing orders (backlog) | X | `<security reviewer>` |
+| `<bgRFC unit / error table, VERIFY>` | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the
 security boundary; every new row needs a reviewer.

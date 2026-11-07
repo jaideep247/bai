@@ -244,3 +244,38 @@ Example — "alert if the PNC ACH returns file is not fully processed by 16:00":
 Until fixed, each run uses the code default for that parameter; nothing stops and nothing is written to SLG1 (one report a day, in the morning report). The finding closes automatically when the next morning report reads the parameter without error.
 
 
+
+## 5i. E_NUMRANGE — number range nearly exhausted (morning report, check E_NUMRANGE)
+
+**What it means.** An internal interval of a configured number range object (PARAM1, SNRO names) has used at least the amber share (seed 85 %) of its numbers; red (seed 95 %) is an e-mail through `HCK_RED`. At 100 % every posting that draws a number from the object stops with a number range error — payment runs, returns, document postings of the payment engine.
+
+| Finding | Where to look | Who acts | What to do |
+|---|---|---|---|
+| `NR_USAGE_HIGH` W / E (object, interval, usage %, numbers left) | SNRO → object → *Intervals* (status = current level); the metric trend `NR_USED_PCT` on the health check dashboard shows how fast it fills | Payment engine support with the functional owner of the object; Basis for the transport | Plan an extension: a new interval (or the next year's interval for a year-dependent object) in DV1 and transport it DV1 → QA1 → PS4 before red. Never change NRLEVEL or an interval directly in production, never from the suite (it is read-only). |
+| `NR_NO_INTERVAL` W | SNRO for the object and year | Payment engine support | Wrong object name in PARAM1 → correct the ZCD_HCK_DEF row by transport. Year-dependent object without an interval for this / next year → create it before 1 January (transport). Only external intervals → remove the object from PARAM1 (external numbers are not counted). |
+| `NR_NOT_NUMERIC` W | SNRO interval limits | Payment engine support | Limits or level are not plain digits; the interval is not measured. Confirm the interval is internal; otherwise drop it from the list. |
+| `LIMITS_NOT_CONFIGURED` / `TECH_READ_CAPPED` W | ZCD_HCK_THRESH `E_NUMRANGE / NR_USED_PCT / *`; parameter `HCK_MAX_TECH_ROWS` | Payment engine support | Add the threshold row by transport; raise the cap only after a QA1 runtime check. |
+
+## 5j. E_QUEUES — qRFC / bgRFC queues in error or stuck (morning report, check E_QUEUES)
+
+**What it means.** Entries of an outbound (QOUT, SMQ1) or inbound (QIN, SMQ2) qRFC queue, or of the configured bgRFC table (BGRF, SBGRFCMON), are in an error state (`HCK_QUEUE_ERR_STATES`, seed SYSFAIL, CPICERR → E), held (`HCK_QUEUE_HOLD_STATES`, seed STOP, WAITSTOP → W) or waiting longer than PARAM3 minutes (`HCK_QUEUE_WAIT_STATES`, seed READY, RUNNING → STUCK, W). The finding names source, queue, destination, state, entries, the oldest age and the transaction. Data behind a stuck queue has not reached its receiver (e.g. a status update to PRISM).
+
+| Finding | Where to look | Who acts | What to do |
+|---|---|---|---|
+| `QUEUE_ERROR` E | The transaction in the finding (SMQ1 / SMQ2 / SBGRFCMON), queue name → error text of the first entry; SM59 for the destination | Basis / middleware support; the owning application team for a data error | Find the cause first (receiver down, authorisation, data error). Restart, unlock or delete only by the team that owns the queue, after the cause is fixed and documented — never from the suite. |
+| `QUEUE_HOLD` W | SMQ1 / SMQ2: who stopped the queue and when | Basis | A stop during a release or an outage is expected; otherwise ask the owner before the queue is unlocked. |
+| `QUEUE_STUCK` W | SMQ1 / SMQ2 / SBGRFCMON; QIN scheduler (SMQR) / QOUT scheduler (SMQS) | Basis | Scheduler not registered or no free work processes; the receiver is slow. Check the scheduler status; re-check on the next run. |
+| `QUEUE_CONFIG_INVALID` W / `QUEUE_NOT_MONITORED` I | Message text (field / table name) | Developer | A delivered qRFC name does not exist on this release (VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`) → code change by transport; the bgRFC table is not on ZCD_HCK_TABWL or PARAM4 is blank → configure by transport. Until then the source measures nothing (never zero). |
+
+## 5k. A_INFLIGHT — payments sent but not cleared on the bank statement (morning report, check A_INFLIGHT)
+
+**What it means.** Payments of payment runs (DPAYH) whose bank statement evidence is missing past the limit, per flow (**D** disbursement / **C** collection, TFK042Z-XEINZ) and method class (wire WIR, ACH, cheque CHQ - mapping in `HCK_INFLIGHT_*_METHODS`). Wire / ACH are aged in business days (factory calendar PARAM1) after the value date: seed (confirm) wire late 1 / critical 2, ACH late 2 / critical 3 business days after the value date. Cheques (disbursements only) are aged in calendar days since the run date: late from 61 / critical from 91 days (> 60 / > 90). Returned and reversed payments are not listed. The finding detail lists the oldest late payments (payment document, method, run date, aged-from date, age, amount).
+
+| Finding | Where to look | Who acts | What to do |
+|---|---|---|---|
+| `PAYMENT_NOT_CLEARED` W / E, flow D wire / ACH | Payment trace (`ZCD_OPS_PAYMENT_TRACE`, §4a) with the payment document: file sent? ACK? bank line? FEBAN for the statement of the value date; EBS validation findings R07 / R14 for the account | Disbursement ops; Treasury when the bank has no record | Statement not loaded → FMON / EBS triage; line present but not matched (CHECT not the payment document, unmapped BAI code) → clarify in FEBAN; payment rejected by the bank → returns processing. The suite never clears or posts. |
+| `PAYMENT_NOT_CLEARED`, flow C | Payment trace; clearing account line with assignment (ZUONR) = payment document; returns lot | Collections team | Collection not credited by the bank or credited cumulated (143 / 165 / 166) and not yet cleared on the clearing account → clarify with Treasury; returned debit not processed → returns lot (FP09). |
+| `PAYMENT_NOT_CLEARED`, DCHQ | Cheque register (DFKKCR) for the payment document: cheque number, encashment date; cheque history (ZCD_CHECK_HIST) | Disbursement ops | Uncashed > 60 days: contact the payee / source; > 90 days: stale-cheque process (stop / reissue per policy, never from the suite). Cashed at the bank but no encashment date and no bank line → check the cheque-paid statement (BAI 475) and EBS rule R07C. |
+| `VALUE_DATE_MISSING` I | Detail line "(no value date: run date used)" | Payment engine support | DPAYH carries no value date for these payments; ages are from the run date (earlier, so stricter). Confirm with the functional team whether the field is filled for that method. |
+| `INFLIGHT_CONFIG` W / I, `LIMITS_NOT_CONFIGURED` W | Message: calendar (PARAM1) or method class / parameter; threshold key | Payment engine support | Maintain the factory calendar in PARAM1 (without it every day counts), the payment methods of the class in the app *Parameter areas* (area CD_HCK), the `AGE_OLDEST` row of the flow + class in ZCD_HCK_THRESH (by transport). A method mapped to two classes stops the check (PLUGIN_ERROR, message 385). |
+| `TECH_READ_CAPPED` W | Parameter `HCK_INFLIGHT_MAX_ROWS` | Payment engine support | More payments in the window than the cap: counts may be incomplete. Raise the cap after a QA1 runtime check or shorten PARAM2 / PARAM3. |

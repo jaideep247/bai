@@ -63,6 +63,8 @@ It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and
 |---|---|---|---|
 | **A** `THRESHOLD_*` on `RET_AGED` | Drill-down → company code with the count | Returns lot not processed, return reason not mapped, clarification backlog | Collections team: process returns (FP09 / clarification); confirm the returns file was fully loaded (FMON) |
 | **A** `GL_TRANSFER_GAP` | Reconciliation key in the finding | Key not closed / transfer job not run / transfer error | Run or rerun the GL transfer for the key; check job `ZPOST_GL*` in the RECON_EOD cycle; Finance if month-end |
+| **A** `PAYMENT_NOT_CLEARED` (`A_INFLIGHT`) | Flow + method class (`DWIR`, `DACH`, `DCHQ`, `CWIR`, `CACH`) and the oldest payments in the finding detail (payment document, method, run date, date it is aged from, age, amount) | Wire / ACH: the bank statement line of the payment is missing (statement not loaded, BAI code unmapped, reference not in CHECT), or the payment was rejected / returned and the return is not processed; collections: clearing-account line not cleared. Cheque: not cashed for > 60 / > 90 days (stale cheque, lost in mail) | Disbursement ops (flow D) / collections team (flow C): look the document up in the payment trace (`ZCD_OPS_PAYMENT_TRACE`), the statement in FEBAN, the cheque in the cheque register (DFKKCR); Treasury when the bank has not reported it. The suite clears nothing (`Operations_Runbook.md` §5k) |
+| **A** `VALUE_DATE_MISSING` / `INFLIGHT_CONFIG` (I / W) | Count of payments / missing calendar or method class | DPAYH value date empty (aged from the run date); PARAM1 calendar blank (every day counts); a method class has no payment methods | Payment engine support: check the payment run data; maintain PARAM1 / `HCK_INFLIGHT_*_METHODS` (`Operations_Runbook.md` §5k) |
 | **B** `BASELINE_OUTLIER` on `DURATION_MIN` | Job name, mean vs today | Volume spike, lock waits, DB contention, wrong variant | Compare volumes (B_VOLUME); check locks (E_SYSTEM); if the job is SLA-bound escalate to Basis |
 | **B** `THRESHOLD_*` on `ERR_RATE_PCT` | Log object / subobject | Master-data errors in a mass run, interface errors | SLG1 for object/subobject and date; fix data; rerun the affected interval |
 | **B** volume `BASELINE_OUTLIER` / `THRESHOLD_RED` (low) | Source / LOB, day | Missing inbound file, PRISM hold, source outage | FMON file status; confirm with the source system; do **not** start payment runs on partial input |
@@ -75,6 +77,11 @@ It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and
 | **E** `JOB_CANCELLED` / `JOB_LATE_START` / `JOB_LONG_RUNNING` | Job name / count | Cancelled step, missing Control-M trigger, runaway job | SM37 job log; Basis if system-related |
 | **E** `SHORT_DUMPS` / `UPDATE_ERRORS` / `LOCK_MAX_AGE_MIN` | Count / age | Program error, failed update task, orphan lock | ST22 / SM13 / SM12; Basis; never delete a lock held by an active payment run |
 | **E** `ALERT_FAILED` | Channel | Mail server down or application log not written | Alerts are not reaching people — treat as RED for operations |
+| **E** `NR_USAGE_HIGH` (`E_NUMRANGE`) | Object, interval (subobject / number / year), usage %, numbers left | A number range object is running out; at 100 % postings of that object stop with a number range error | Payment engine support + Basis: look in SNRO (interval status); plan a new interval or year by transport **before** red; never reset NRLEVEL (`Operations_Runbook.md` §5i) |
+| **E** `NR_NO_INTERVAL` / `NR_NOT_NUMERIC` (W) | Object / interval | Object name wrong in PARAM1, only external intervals, no interval for this / next year (create it before 1 January), alphanumeric limits | Correct PARAM1 or create the interval in DV1 (transport); external intervals are not measured |
+| **E** `QUEUE_ERROR` / `QUEUE_HOLD` / `QUEUE_STUCK` (`E_QUEUES`) | Source (QOUT / QIN / BGRF), queue, destination, state, entries, oldest age and the transaction in the finding | SYSFAIL / CPICERR: receiver error or connection down; STOP: queue stopped (often deliberately during a release); READY / RUNNING too long: scheduler not running, receiver slow | Basis / middleware support: SMQ1 (outbound), SMQ2 (inbound), SBGRFCMON (bgRFC) - read the error text there; restart / unlock only after the cause is known and by the owning team, never from the suite (`Operations_Runbook.md` §5j) |
+| **E** `QUEUE_CONFIG_INVALID` / `QUEUE_NOT_MONITORED` | Source and message | A delivered qRFC field name does not exist (VERIFY-DDIC), the bgRFC table is not whitelisted or not configured | Developer: correct the delivered name or PARAM4; until then the source measures nothing (never zero) |
+| `TECH_READ_CAPPED` / `LIMITS_NOT_CONFIGURED` (W) | Parameter or metric named in the message | A read reached `HCK_MAX_TECH_ROWS` / `HCK_INFLIGHT_MAX_ROWS`; no `ZCD_HCK_THRESH` row for a metric the check classifies by | Raise the cap after a QA1 runtime check / maintain the threshold row by transport; until then the result may be incomplete or not judged |
 | `HCK_SELF` `PE_AREA_STALE` | Payment engine area | Monitoring job (EBS, FMON or HCK) did not run | Restart the monitoring job; until then, nobody is watching that area |
 | `PLUGIN_ERROR` / `AGG_CONFIG_INVALID` | Message text | Configuration error (unknown field, table not whitelisted) or program error | Fix the customizing row; the rest of the report is still valid |
 | `TIMEOUT_OVERRUN` | Runtime vs budget | Check too slow for the volume | Performance review of the check (index, narrower window) |
@@ -261,6 +268,9 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_TECH_JOBS` | E | P1 job patterns, P2 long-running min (120), P3 grace min (30) | `CANCELLED`, `LONG_RUNNING`, `LATE_START` (*) | `JOB_CANCELLED` (E), `JOB_LONG_RUNNING`, `JOB_LATE_START` (W) |
 | `ZCL_CD_HCK_C_TECH_SYS` | E | — | `SHORT_DUMPS`, `UPDATE_ERRORS`, `LOCK_ENTRIES`, `LOCK_MAX_AGE_MIN` (*) | — |
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
+| `ZCL_CD_HCK_C_NUMRANGE` | E | P1 number range objects (exact SNRO names, comma list; required) | `NR_USED_PCT` (object/subobject/interval/year; level) | `NR_USAGE_HIGH` (W at amber, E at red), `NR_NO_INTERVAL`, `NR_NOT_NUMERIC`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` (W) |
+| `ZCL_CD_HCK_C_QUEUES` | E | P1 queue name PCRE list, P2 destination PCRE list (blank = all), P3 stuck minutes (30), P4 bgRFC source `TABLE=…;NAME=…;DEST=…;STATE=…;DATE=…;TIME=…`; `HCK_QUEUE_ERR_STATES` / `_HOLD_STATES` / `_WAIT_STATES` | `Q_ERROR`, `Q_HOLD`, `Q_STUCK` (entries), `Q_OLDEST_MIN` (level) per source `QOUT` / `QIN` / `BGRF` | `QUEUE_ERROR` (E), `QUEUE_HOLD`, `QUEUE_STUCK`, `QUEUE_CONFIG_INVALID` (W), `QUEUE_NOT_MONITORED` (I) |
+| `ZCL_CD_HCK_C_INFLIGHT` | A | P1 factory calendar, P2 look-back days wire / ACH (10), P3 look-back days cheques (120), P4 payments listed (10); `HCK_INFLIGHT_WIRE_` / `_ACH_` / `_CHQ_METHODS` | `PAY_OPEN`, `AGE_OLDEST` (level), `OVER_WARN_CNT`, `OVER_CRIT_CNT` per flow + class (`DWIR` …); `OVER_WARN_AMT`, `OVER_CRIT_AMT` (DIM2 currency) | `PAYMENT_NOT_CLEARED` (W / E, detail = top N), `VALUE_DATE_MISSING` (I), `INFLIGHT_CONFIG`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` |
 | built-in `HCK_SELF` | E | `HCK_WATCH_PE_AREAS`; stale threshold: `ZCD_OPS_MONCFG` row of the area (minutes, the same row as the dashboards), else `HCK_MAX_AGE_H_<pe_area>`, else `HCK_MAX_AGE_HOURS` (hours) | — | `PE_AREA_STALE` (E) |
 
 Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BASELINE_OUTLIER` (W), `BASELINE_WARMUP` (I, A102), `TIMEOUT_OVERRUN` (W), `PLUGIN_ERROR` (E), `ALERT_FAILED` (W).
@@ -274,7 +284,15 @@ Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BA
 
 Table and field names come from PARAM1–3 (`NAME=VALUE;…`, `config/hck_seed.md`), are checked against the DDIC and the whitelist, and every query is limited by its date field (`ZCL_CD_HCK_VALUE_QUERY`).
 
-### 7b. Suppressions (operations app)
+### 7b. Number ranges, queues, payments in flight (2026-11-07)
+
+All three are read-only: they never change an interval, never restart, unlock or delete a queue entry, never post or clear. Their reads are in `ZCL_CD_HCK_RUNTIME_DAO` (factory `GET_RUNTIME_DAO`); bank lines, cheques, document headers and returns come from the payment trace repository (`ZIF_CD_OPS_TRACE_DAO`, core factory) - one definition of each join path. Alerts: the existing rule `HCK_RED` (severity E of a red check, e-mail to the SO23 list) - no new channel, no application-log rule.
+
+- **`E_NUMRANGE`** - NRIV intervals with `EXTERNIND` blank of the PARAM1 objects, not year-dependent (`TOYEAR` 0000) or valid this / next year. Usage = (NRLEVEL − FROMNUMBER) / (TONUMBER − FROMNUMBER) × 100, rounded to 2 decimals, level capped at TONUMBER; NRLEVEL below FROMNUMBER (initial) = 0 %. Limits and level are converted only when they are digits (PCRE constant `GC_PCRE_DIGITS`), else `NR_NOT_NUMERIC`. Limits: `ZCD_HCK_THRESH` `NR_USED_PCT` row `*` (DIM1 is longer than 4 characters), seed amber 85 / red 95. A configured object without interval is a warning - nothing measured is never green.
+- **`E_QUEUES`** - sources `QOUT` (TRFCQOUT, SMQ1), `QIN` (TRFCQIN, SMQ2) with delivered field names (VERIFY-DDIC, constants `GC_TRFCQOUT` / `GC_TRFCQIN` of `ZIF_CD_HCK_RUNTIME_TYPES`) and, when PARAM4 names it, a bgRFC table (`BGRF`, SBGRFCMON; must be on `ZCD_HCK_TABWL`). Every name is checked against the runtime DDIC before the read (date field DATS, time field TIMS); a source that fails is `QUEUE_CONFIG_INVALID` and measures nothing. Entries are read grouped per queue / destination / state / day (oldest time of the day; a day group counts as stuck when its oldest entry passes the age limit). State in `HCK_QUEUE_ERR_STATES` → ERROR, in `_HOLD_STATES` → HOLD, in `_WAIT_STATES` and older than PARAM3 minutes → STUCK; a bgRFC source without STATE lists errors only. Queue and destination filters are PCRE on the complete value (case ignored), applied in ABAP; a source without destination is not filtered by PARAM2. Empty queues measure 0 (evidence of health).
+- **`A_INFLIGHT`** - payments of payment runs (DPAYH, DOC1R filled, proposal runs excluded) in the look-back window whose method is mapped to a class; flow from `TFK042Z-XEINZ` (country of the company code): **D** disbursement, **C** collection. Cheques are watched for disbursements only. Left out: reversed (DFKKKO-STBEL filled), returned (DFKKRP-SELW1 = AUGBL) and cleared payments. *Cleared* = wire / ACH: a bank line with `FEBEP-CHECT` = AUGBL (stored form or without leading zeros); collections in addition a cleared G/L line (BSAS) with `ZUONR` = AUGBL (BSEG-ZUONR carries AUGBL for ACH and card); cheque: DFKKCR encashment date (BANCD) or a bank line with CHECT = ZTNUM. *Age* = wire / ACH: business days of the PARAM1 factory calendar after the **value date** (DPAYH-VALUT; run date when empty, said in the detail and in `VALUE_DATE_MISSING`); cheque: calendar days since the run date. Limits: `ZCD_HCK_THRESH` `AGE_OLDEST` per flow + class (DIM1 = threshold key): AMBER = age from which the payment is late (warning), RED = critical; seed (confirm) wire 1 / 2 and ACH 2 / 3 business days after the value date (grace 0 / 1 and 1 / 2), cheque 61 / 91 calendar days (> 60 / > 90). The finding detail lists the PARAM4 oldest late payments: payment document, method, run date, aged-from date, age, amount - no bank account data, so nothing needs masking. No payment in flight measures 0 for every watched flow + class.
+
+### 7c. Suppressions (operations app)
 Known findings can be suppressed per check, object pattern and company code for a period (`ZUI_CD_HCK_SUP_O4`; more than `HCK_SUPPRESS_MAX_DAYS` = 7 days needs a second user). A suppressed finding stays on the report as information "Suppressed until … by …", is not alerted and does not make the check red or amber.
 
 ## 8. Thresholds and baselines
@@ -296,6 +314,8 @@ Known findings can be suppressed per check, object pattern and company code for 
 | `HCK_MAX_JOB_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_TYPES=>GC_MAX_JOB_ROWS`) | technical-jobs / job-cycle check reports the cap (possibly incomplete) |
 | `HCK_MAX_JOB_NAMES` | 20 000 | 200 000 (`ZIF_CD_HCK_TYPES=>GC_MAX_JOB_NAMES`) | message 747, the check fails loudly |
 | `HCK_MAX_AGG_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_DAO=>GC_MAX_AGG_ROWS`) | groups not returned are unknown, never zero |
+| `HCK_MAX_TECH_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_RUNTIME_TYPES=>GC_MAX_TECH_ROWS`) | NRIV intervals / queue groups of one read: `TECH_READ_CAPPED` (W) |
+| `HCK_INFLIGHT_MAX_ROWS` | 5 000 | 50 000 (`ZIF_CD_HCK_RUNTIME_TYPES=>GC_MAX_INFLIGHT_ROWS`) | payments of one window / bank lines of one read: `TECH_READ_CAPPED` (W) |
 
 Effective cap = parameter (default when not maintained, blank, not a number or not positive), cut to the ceiling (`ZCL_CD_HCK_PARAM=>ROW_CAP`). Raise a cap only after checking the runtime of the read in QA1; the ceilings bound memory and runtime of one check.
 
@@ -450,6 +470,9 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-12 | Mail and alerts | ALERT_MORNING maintained; P_MAIL = X; one red finding | One HTML mail (renders on phone and desktop, RAG chips); core `dispatch` logs to ZCD_OPS_ALLOG per alert rule; test mode sends nothing |
 | HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_MODULE = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
 | HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `PE_AREA_STALE` for EBS |
+| HCK-QA-18 | Number range nearly exhausted | QA1 test object (SNRO) with an interval of 100 numbers, NRLEVEL 86 / 96; PARAM1 = the object | `E_NUMRANGE` AMBER / RED with `NR_USAGE_HIGH` naming object, interval, 85 % / 95 %, numbers left; object without interval → `NR_NO_INTERVAL` |
+| HCK-QA-19 | Queue in error / stuck | Outbound queue to an unreachable test destination (SYSFAIL / CPICERR); a stopped test queue; PARAM1 = its name pattern | `E_QUEUES` `QUEUE_ERROR` (E) naming SMQ1, `QUEUE_HOLD`; metrics `Q_ERROR` / `Q_HOLD` QOUT; queue left untouched |
+| HCK-QA-20 | Payments in flight | Payment run with one wire, one ACH (value date one / three business days back), one cheque older than 61 days, no statement line; one collection; one returned payment | `A_INFLIGHT` `PAYMENT_NOT_CLEARED` per flow + class with the oldest payments in the detail; the returned payment is not listed; after the statement line is loaded the payment drops out |
 
 ### Phase 6 audit changes (operations notes)
 
@@ -483,6 +506,15 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 7. `SEQG3`-GTDATE / GTTIME (`read_lock_stats`)
 8. `TBTCP`-PROGNAME / VARIANT, step 1 (`get_job_runs`, A42)
 9. `BKPF`-AWTYP `FKKSU`, BUKRS, STBLG (`get_fikeys_without_gl`, A43)
+
+`ZCL_CD_HCK_RUNTIME_DAO` / `ZIF_CD_HCK_RUNTIME_TYPES` (2026-11-07):
+
+10. `NRIV`-OBJECT, SUBOBJECT, NRRANGENR, TOYEAR, FROMNUMBER, TONUMBER, NRLEVEL, EXTERNIND (`get_number_ranges`; character limits CHAR 20)
+11. `TRFCQOUT`-QNAME, DEST, QSTATE, QRFCDATUM, QRFCUZEIT and `TRFCQIN`-QNAME, QSTATE, QRFCDATUM, QRFCUZEIT (constants `GC_TRFCQOUT` / `GC_TRFCQIN`, validated at run time; also whether the queue state shown in SMQ1 / SMQ2 is held in these tables or in TRFCQSTATE)
+12. bgRFC unit / error table and its fields (PARAM4 of `E_QUEUES`; SBGRFCMON tables on 7.58)
+13. `DPAYH`-XVORL, BUKRS, PYMET, VALUT, RWBTR, WAERS; `TFK042Z` key LAND1 / ZLSCH via `T001`-LAND1 (`get_issued_payments`)
+14. `BSAS`-ZUONR (compatibility view; read by BUKRS + ZUONR without HKONT - performance in QA1) (`get_cleared_assignments`)
+15. `DFKKCR`-BANCD (encashment date, `ZCL_CD_OPS_TRACE_DAO=>GET_CHECKS_BY_DOC`); `FEBEP`-CHECT form of AUGBL / ZTNUM (with or without leading zeros - both are read)
 
 Seed-only (customizing, validated at runtime against the DDIC): DFKKOP-FAEDN/AUGST/HVORG/BUKRS/BETRH, FEBKO-AZDAT and format field, ZCD_PAYM_REQ_LOG date/source fields, /SAPPO/ORDER_HDR fields, return-debit main transactions, log objects, factory calendars, real SAP job names behind the wiki placeholders.
 

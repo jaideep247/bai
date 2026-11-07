@@ -81,6 +81,8 @@ Reversal evidence used: `DFKKOP-AUGRD` = `05` (constant `ZIF_CD_OPS_TRACE_TYPES=
 
 The trace DAO's own static reads: DFKKOP (by FIN, by AUGBL), DFKKKO, DFKKCR by DOC1R, FEBEP by CHECT + BUDAT, ZCD_FMON_FILE (BUSINESS_DATE window + FILE_REF), ZCD_FMON_EVENT, DFKKSUMC, BKPF, BSEG (by document key only), TFK042Z/T001, BUT000 by BPEXT. Every read is keyed and capped (`TRACE_MAX_ROWS`, default 50); no LIKE, no full scans by XREF2.
 
+Shared with the morning report (2026-11-07): the in-flight check `A_INFLIGHT` (`HCK_MORNING_REPORT.md` §7b) reads document headers (reversal STBEL), returns, cheques by DOC1R and bank lines by CHECT through this repository (`ZCL_CD_OPS_FACTORY=>GET_TRACE_DAO`) instead of its own SQL; `GET_CHECKS_BY_DOC` therefore also reads the encashment date `DFKKCR-BANCD` (VERIFY-DDIC).
+
 ## 5. Parameters (framework `ZCA_PARAM`, area `CD_OPS` — maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`); definitions and delivered defaults: `config/param_definitions.csv`)
 
 | Parameter | Default | Meaning |
@@ -134,7 +136,7 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 | `ZCD_CHECK_HIST` | Cheque number, status, date / time fields |
 | `DFKKRP-RLGRD` | Return reason field and length (3); a text table for the reason code (not read — code only) |
 | `DFKKNRP-INFOF`, `FLGRD`; INFOF index | INFOF holds AUGBL (with leading zeros?) or which payment reference (FIN, cheque number, other); FLGRD length; a secondary index on INFOF for volume |
-| `DFKKCR-RWBTR`, `CRSTATUS`; `FEBEP-KWBTR`, CHECT index | As EBS (VERIFY-DDIC); FEBEP read by CHECT needs an index (performance) |
+| `DFKKCR-RWBTR`, `CRSTATUS`, `BANCD`; `FEBEP-KWBTR`, CHECT index | As EBS (VERIFY-DDIC); BANCD = encashment date (morning report check `A_INFLIGHT`); FEBEP read by CHECT needs an index (performance) |
 | `TFK042Z` key LAND1 / ZLSCH via `T001-LAND1` | Collection vs disbursement for the ACK level |
 | `BKPF-CPUDT/CPUTM/STBLG`, `DFKKSUMC-BUKRS` | As HCK (VERIFY-DDIC) |
 | Dynamic WHERE `IN @LT_IN` against DATS key (REGUT LAUFD) | FMON reader with a date key column (VERIFY-ADT) |
