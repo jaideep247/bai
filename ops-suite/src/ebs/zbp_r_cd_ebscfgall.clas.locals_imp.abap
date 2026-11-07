@@ -9,7 +9,7 @@
 *& 2026-11-06 | Values in local constants interface lif_c, message class constant (phase 5).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
-*& 2026-11-07 | Create per table: production-maintainable tables ask the gate with the table.
+*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals

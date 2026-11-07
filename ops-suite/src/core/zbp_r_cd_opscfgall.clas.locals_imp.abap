@@ -9,7 +9,7 @@
 *& 2026-11-06 | Values in local constants interface lif_c, message class constant (phase 5).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
-*& 2026-11-07 | Create per table: production-maintainable tables ask the gate with the table.
+*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -87,12 +87,7 @@ CLASS lhc_opscfgall IMPLEMENTATION.
                               THEN if_abap_behv=>fc-o-enabled
                               ELSE if_abap_behv=>fc-o-disabled ).
     IF requested_features-%assoc-_AlertRule = if_abap_behv=>mk-on.
-      " Production-maintainable: new rows also in production (change-logged, no transport)
-      result-%assoc-_AlertRule = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed(
-                                                   iv_table = lif_c=>gc_tab-alertrule )
-                                                 = abap_true
-                                            THEN if_abap_behv=>fc-o-enabled
-                                            ELSE if_abap_behv=>fc-o-disabled ).
+      result-%assoc-_AlertRule = lv_create.
     ENDIF.
     IF requested_features-%assoc-_AlertChannel = if_abap_behv=>mk-on.
       result-%assoc-_AlertChannel = lv_create.

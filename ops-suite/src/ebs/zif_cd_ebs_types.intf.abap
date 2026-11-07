@@ -39,6 +39,7 @@
 *& 2026-11-07 | ty_line-map_action removed (read only by the removed posting disposition).
 *& 2026-11-07 | EBS_ZTNUM_IGNORE_ZEROS and EBS_CAMT_BAI_FALLBACK are BOOL in ZCA_PARAM (a blank value row is
 *&            | off); GC_PARAM_DEFAULT-ZTNUM_IGNORE_ZEROS.
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -475,7 +476,7 @@ INTERFACE zif_cd_ebs_types
     BEGIN OF gc_param_default,
       feb_debit_ind  TYPE string VALUE `S`,
       feb_credit_ind TYPE string VALUE `H`,
-      "! VERIFY-SE11: FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed)
+      "! FEBEP-VB1OK / VB2OK: posting area 1 / 2 posted (confirmed 2026-11-07)
       feb_posted_fields TYPE string VALUE `VB1OK,VB2OK`,
       "! EBS_FEB_POSTED_FIELDS value that switches the posting-state read off
       feb_posted_off    TYPE string VALUE `NONE`,

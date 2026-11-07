@@ -15,7 +15,7 @@ define table zcd_fmon_deadl {
   due_time     : abap.tims;
   // Severity of STAGE_DEADLINE_MISSED (blank = severity of the check row)
   severity     : abap.char(1);
-  // Production-maintainable (RAP_Config_Apps.md 2): a row is switched off, never deleted
+  // Production edits an existing row (switched off here, never deleted); new rows by transport
   active       : abap_boolean;
   description  : abap.char(60);
   // RAP configuration apps (design 5): set by the framework, ignored by engines

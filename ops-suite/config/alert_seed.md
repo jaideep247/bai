@@ -54,12 +54,13 @@ configuration app refuses a pattern that does not compile (message 418); check w
 `FMON_BAIDL` additionally has GROUP1_PATTERN `BAI_(JPMC|BOA)_IN` (interfaces; PCRE, complete value) and
 GROUP2_PATTERN blank (every condition - GROUP2 carries `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED`, so a
 second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_DEADL`, `config/fmon_seed.md`)
-make the finding due at 10:00 in `FMON_TIME_ZONE`; the 5-minute FMON job raises it in the first run after
+make the finding due at 10:00 US Central (`FMON_TIME_ZONE` = CST); the 5-minute FMON job raises it in the first run after
 10:00 (10:00-10:05). Later runs carry the open exception forward and are **not alerted again** (status R in
 ZCD_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.
 THROTTLE_MIN 0: the first raise is never held back; there is no quiet window. No APPLOG rule is seeded for
-it (SLG1 kept to a minimum - findings in ZCD_OPS_FINDING, e-mail to SO23 lists only). The rule table is
-production-maintainable: support adds such a rule directly in PS4 (`Operations_Runbook.md` §5h).
+it (SLG1 kept to a minimum - findings in ZCD_OPS_FINDING, e-mail to SO23 lists only). A new rule of this kind
+is created in DV1 on a customizing request and transported; in PS4 support only edits existing rules
+(SO23 list, severity, ACTIVE; `Operations_Runbook.md` §5h).
 
 Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgement targets proposed, confirm with RTB operations):
 

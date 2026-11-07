@@ -1685,12 +1685,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>374</MSGNR>
-     <TEXT>Table &amp;1 is maintained in production: changed since baseline of &amp;2 (rows </TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

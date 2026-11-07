@@ -19,6 +19,7 @@
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | posted_fields( ): one reading of EBS_FEB_POSTED_FIELDS, shared with the statement
 *&            | evidence of file monitoring (ZCL_CD_EBS_STMT_EVIDENCE).
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -42,7 +43,7 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! FEBEP posting-area flags of EBS_FEB_POSTED_FIELDS (VERIFY-SE11 VB1OK / VB2OK); empty when
+    "! FEBEP posting-area flags of EBS_FEB_POSTED_FIELDS (VB1OK / VB2OK, confirmed); empty when
     "! the parameter is OFF (posting state not read). One definition for EBS and file monitoring.
     CLASS-METHODS posted_fields
       RETURNING
@@ -135,7 +136,7 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
     ENDIF.
 
     " Fix 3: one FEBEP read - items and, operating model 2026-11-06 (post-posting control), the
-    " posting-area flags (VERIFY-SE11 FEBEP-VB1OK / VB2OK): posted = every posting-area flag
+    " posting-area flags (FEBEP-VB1OK / VB2OK, confirmed 2026-11-07): posted = every flag
     " complete. FEBEP carries no return reason: R05 reads it from the returns lot (DFKKRP-RLGRD)
     DATA(lt_items) = zcl_cd_ebs_factory=>get_feb_dao( )->get_items(
                        it_kukey  = lt_kukey

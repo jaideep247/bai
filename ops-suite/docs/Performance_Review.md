@@ -107,7 +107,7 @@ Cost: the distinct-name read scans the date window of TBTCO instead of a name pr
 - Fix 6: internal table as JOIN source (`INNER JOIN @it_requests`) — on HANA since 7.52; also inside `cl_osql_test_environment` with the ACDOCA double.
 - Fix 7: window function in a CTE (`ROW_NUMBER( ) OVER( PARTITION BY … )`) inside `cl_osql_test_environment`.
 - Fix 8: dynamic `GROUP BY (fields)` / `ORDER BY (fields)` with `COUNT(*) AS ROW_COUNT` into an RTTI-created table, on the doubles of the configured tables.
-- Fix 3: dynamic FEBEP field list with `AS reason` / `AS flag<n>` into `INTO CORRESPONDING FIELDS` (FEBEP double); VERIFY-SE11 VB1OK / VB2OK.
+- Fix 3: dynamic FEBEP field list with `AS reason` / `AS flag<n>` into `INTO CORRESPONDING FIELDS` (FEBEP double); VB1OK / VB2OK confirmed 2026-11-07.
 
 ## 8. VERIFY-SE11 — indexes the access paths rely on
 

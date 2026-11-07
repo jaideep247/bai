@@ -16,16 +16,18 @@ pattern captures and the ones no pattern captures.
 | IFACE_ID | DIR | FILE_TYPE | SOURCE_SYS | TARGET_SYS | PAY_METHOD | LOB | BANK_KEY | NAME_PATTERN | MIN_BYTES | MAX_BYTES | ACK_EXPECTED | ACK_LEVEL | OWNER | ACTIVE |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | ACH_PNC_DISB_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | X | PAYMENT | ‹team› | X |
-| WIRE_JPMC_OUT | O | PAYMENT | * | PRISM | WIRE | * | JPMC | `‹confirm PCRE›` | 1 | 0 | X | PAYMENT | ‹team› | X |
+| WIRE_JPMC_OUT | O | PAYMENT | * | PRISM | WIRE | * | ‹bank identifier as in the statement› (JPMC) | `‹confirm PCRE›` | 1 | 0 | X | PAYMENT | ‹team› | X |
 | PAYREQ_PRISM_IN | I | API | PRISM | SAP | * | * | * | (blank: API calls, no file name) | 0 | 0 | | | ‹payment engine RTB› | X |
 | CHECK_POSPAY_OUT | O | POSPAY | * | PRISM | CHECK | * | ‹bank› | `‹confirm PCRE›` | 1 | 0 | ‹confirm› | FILE | ‹team› | X |
 | ACH_COLL_OUT | O | PAYMENT | * | PRISM | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | X | FILE | ‹team› | X |
 | BLACKLINE_OUT | O | OTHER | * | BLACKLINE | | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
 | STRIPE_PAYOUT_IN | I | OTHER | * | SAP | CARD | * | | `‹confirm PCRE›` | 1 | 0 | (blank — no ACK) | | ‹team› | X |
-| BAI_JPMC_IN | I | STATEMENT | * | SAP | | * | JPMC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
-| BAI_BOA_IN | I | STATEMENT | * | SAP | | * | BOA | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| BAI_JPMC_IN | I | STATEMENT | * | SAP | | * | ‹bank identifier as in the statement› (JPMC) | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+| BAI_BOA_IN | I | STATEMENT | * | SAP | | * | ‹bank identifier as in the statement› (BOA) | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 | ACH_RET_PNC_IN | I | RETURNS | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
 | NOC_PNC_IN | I | NOC | * | SAP | ACH | * | PNC | `‹confirm PCRE›` | 1 | 0 | | | ‹team› | X |
+
+**BANK_KEY (user decision 2026-11-07).** `BANK_KEY` is filled exactly as the bank identifies itself in its bank statement (the sender / bank identifier the statement carries — e.g. the BAI2 group-header originator identification, usually the ABA routing number, 9 characters; a BIC, 8 or 11 characters, for a CAMT statement — take it from an imported statement of that bank), **not** a short name such as JPMC / BOA (these stay only as a readable comment in brackets). The same value goes into `ZCD_EBS_ACCT-BANK_KEY` of every payment engine account of that bank, into the statement interface row (`BAI_JPMC_IN`, `BAI_BOA_IN`), into every other interface row of that bank (`WIRE_JPMC_OUT`: the PRISM queue per bank, `FMON_PRISM_THROTTLE_SCOPE` C, groups by it) and into bank-specific `ZCD_BTC_MAP` rows. The field is CHAR 15 on all three tables (`ZCD_EBS_ACCT`, `ZCD_FMON_IFACE`, `ZCD_BTC_MAP`): a routing number (9) or BIC (11) fits; a longer identifier would need a DDIC change. The FEB adapter finds the accounts of an interface by this value (condensed, upper case) — a different spelling in one table makes every account of the bank "not imported". PNC rows: same rule once PNC statements are monitored.
 
 Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL = PAYMENT`), collections per file (`FILE`); Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK (`ACK_EXPECTED` blank). A source-specific row (e.g. `SOURCE_SYS = PCLM`) is only needed when that source differs (other SLA, pattern or owner); otherwise the `*` row serves every source and LOB.
 
@@ -46,11 +48,11 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 | WIRE_JPMC_OUT | PRISM_DELIVERED | 5 | P | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
 | BAI_JPMC_IN | FILE_RECEIVED | 30 | P | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
 
-Every SLA row is delivered with `ACTIVE = X`. The table is production-maintainable (RAP_Config_Apps.md §2): support may add a row directly in PS4; a row is switched off with `ACTIVE` blank, never deleted there.
+Every SLA row is delivered with `ACTIVE = X`. New rows only by customizing transport from DV1 (`RAP_Config_Apps.md` §2, user decision 2026-11-07); in PS4 support may edit an existing row and switch it off with `ACTIVE` blank — never create or delete there.
 
 ## ZCD_FMON_DEADL (stage reached by a clock time of a business day — user requirement 2026-11-07)
 
-"Alert if BAI is not processed until 10 AM" (JPMC and BOA, 10:00 in `FMON_TIME_ZONE`, normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*`). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. Production-maintainable: a similar alert is a new row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created directly in PS4 (`Operations_Runbook.md` §5h).
+"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*`). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
 
 | IFACE_ID | STAGE | DAY_TYPE | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
 |---|---|---|---|---|---|---|
@@ -72,7 +74,7 @@ SLA rows for the other PRISM-routed flows (`docs/PRISM_Status_API.md` §8) are *
 
 Throttled = outbound interface with `PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS`: `ACH_PNC_DISB_OUT`, `ACH_COLL_OUT` (ACH), `WIRE_JPMC_OUT` (WIRE). `CHECK_POSPAY_OUT` (`CHECK`), `BLACKLINE_OUT`, inbound rows: not throttled. A future stop pay row must not use `ACH` / `WIRE` as payment method.
 
-## ZCD_FMON_CAL (expected files; times in `FMON_TIME_ZONE`)
+## ZCD_FMON_CAL (expected files; times in `FMON_TIME_ZONE` = US Central)
 
 | IFACE_ID | DAY_TYPE | EXPECTED_COUNT | WINDOW_FROM | WINDOW_TO | FCAL_ID | Source of the example |
 |---|---|---|---|---|---|---|
@@ -84,7 +86,7 @@ Throttled = outbound interface with `PAY_METHOD` in `FMON_PRISM_THROTTLE_METHODS
 | ACH_PNC_DISB_OUT | NORMAL | 3 | 17:00 | 19:30 | ‹US› | wiki: ACH PNC & PUB evening 5/6/7 pm |
 | ACH_PNC_DISB_OUT | MONTH_END | 4 | 17:00 | 21:00 | ‹US› | example only |
 
-Every calendar row is delivered with `ACTIVE = X` (production-maintainable; switched off, never deleted in PS4).
+Every calendar row is delivered with `ACTIVE = X` (new rows by transport from DV1; in PS4 an existing row is edited or switched off, never created or deleted).
 
 ## ZCD_FMON_SRC (legacy source adapters — field names to be filled from SE11)
 
@@ -100,7 +102,7 @@ Every calendar row is delivered with `ACTIVE = X` (production-maintainable; swit
 | FEB | (blank: every inbound STATEMENT interface with a bank key) | FEBKO | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_FEB |
 | PRISM | (blank: `interfaceId` or name pattern) | ZCD_FMON_PRISM | (blank) | FILE_REF | (blank) | (blank) | OCCURRED_AT | MILESTONE | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_PRISM |
 
-**Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_FMON_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (JPMC, BOA) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (default 1: Monday's file carries Friday's statement ‹VERIFY with Treasury›) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
+**Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_FMON_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (the bank identifier as in the statement — the same value as `ZCD_EBS_ACCT-BANK_KEY`) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (1: Monday's file carries Friday's statement — confirmed 2026-11-07) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
 
 **PRISM status API (`docs/PRISM_Status_API.md`).** The row above is confirmed (the suite's own table, `ddic/fmon/zcd_fmon_prism.tabl.ddl`). `ADAPTER_CLASS` must be `ZCL_CD_FMON_ADAPTER_PRISM`: the 5-minute run then reads only events no instant unit processed (`PROCESSED_AT` initial, window on `RECEIVED_AT`) and the instant unit finds its source by this class. `FILE_NAME_FIELD = FILE_REF` gives the generic key rules (upper-case canonical name, A100 digest for long names, business date from `OCCURRED_AT` in `FMON_TIME_ZONE`, A49). `COUNT_FIELD` / `AMOUNT_FIELD` stay blank on purpose: PRISM's counts are evidence in `ZCD_FMON_PRISM`, not the file's control figures. An `interfaceId` sent by PRISM selects the interface; otherwise the name pattern decides; no match = `UNMAPPED_FILE`. For correlation the SAP-side source of the same flow must key the file by its name (`FILE_KEY_FIELD` blank or the name field), or PRISM must send the SAP file key.
 
@@ -194,7 +196,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_LOOKBACK_DAYS | 1 | days read back from legacy tables / files evaluated |
 | FMON_OPEN_DAYS | 30 | open or partially processed files kept under watch |
 | FMON_DUP_DAYS | 7 | duplicate-file history |
-| FMON_TIME_ZONE | ‹EST› | time zone of legacy date/time fields and calendar windows |
+| FMON_TIME_ZONE | CST | **business times are US Central** (user decision 2026-11-07; value row in `config/param_values.csv`, definition default stays UTC): calendar windows, deadlines (`ZCD_FMON_DEADL-DUE_TIME`), business date of timestamps and PRISM events, and the interpretation of legacy date/time fields (`FMON_FILE_MONITORING.md` §A3b — time zone) |
 | FMON_FACTORY_CAL | ‹US› | factory calendar when ZCD_FMON_CAL has none |
 | FMON_RETURNS_WEEKDAYS | ‹1,2,3,4,5› | weekdays that are ACH returns cycle days |
 | FMON_NOC_SLA_DAYS | 6 | NACHA NOC limit in banking days |
@@ -205,7 +207,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_PRISM_THROTTLE_SCOPE | C | `A` = one PRISM queue for all throttled files; `C` = one queue per bank (`ZCD_FMON_IFACE-BANK_KEY`). **C is confirmed and the default** (one PRISM queue per bank, user 2026-11-06) |
 | FMON_PRISM_THROTTLE_METHODS | ACH,WIRE | payment methods (`ZCD_FMON_IFACE-PAY_METHOD`) PRISM throttles; positive pay / stop pay are not throttled |
 | FMON_PRISM_QUEUE_MAX | 30 | longest PRISM queue (files incl. the file) the allowance covers; a longer one is `PRISM_QUEUE_LONG` (W) |
-| FMON_FEB_STMT_OFFSET | 1 | working days from the bank statement date (FEBKO-AZDAT) to the business date of the statement file (FEB adapter): 1 = prior-day statement (Monday file = Friday statement), 0 = same-day ‹VERIFY with Treasury› |
+| FMON_FEB_STMT_OFFSET | 1 | working days from the bank statement date (FEBKO-AZDAT) to the business date of the statement file (FEB adapter): 1 = prior-day statement (Monday file = Friday statement), 0 = same-day. **1 confirmed** (user 2026-11-07: the BAI statement date is the previous business day) |
 | FMON_AGE_BASIS | A | NOC / returns age in working days: `A` counts from the first working day **after** receipt, `N` treats a receipt on a non-working day as received on the next working day (audit A41). If the factory calendar cannot convert the dates the age is unknown: no aging finding, warning 248 instead |
 
 ## Alerting

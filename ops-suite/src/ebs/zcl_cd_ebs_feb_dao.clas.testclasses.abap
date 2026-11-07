@@ -10,6 +10,7 @@
 *& 2026-11-06 | Performance fix 2: recent items carry the statement date FEBKO-AZDAT.
 *& 2026-11-06 | Performance fix 3: one item read with reason field and posting flags (tests moved from the SAP DAO).
 *& 2026-11-06 | Return reason correction: FEBEP carries no return reason - reason-field tests removed.
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 CLASS ltc_feb_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -145,7 +146,7 @@ CLASS ltc_feb_dao IMPLEMENTATION.
 
 
   " Fix 3: one FEBEP read returns the items with their posting state (posted only when every
-  " flag is X). VERIFY-SE11 FEBEP-VB1OK / VB2OK
+  " flag is X). FEBEP-VB1OK / VB2OK confirmed 2026-11-07
   METHOD items_with_posting_flags.
     DATA lt_febep TYPE STANDARD TABLE OF febep WITH EMPTY KEY.
     DATA ls_febep TYPE febep.

@@ -285,7 +285,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
 | 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
 | 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
-| 374 | Table &1 is maintained in production: changed since baseline of &2 (rows &3) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

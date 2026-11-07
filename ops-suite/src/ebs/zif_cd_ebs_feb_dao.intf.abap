@@ -11,6 +11,7 @@
 *&            | in the same FEBEP pass (was get_febep_reasons / get_febep_posting of the SAP DAO).
 *& 2026-11-06 | Return reason correction: FEBEP carries no return reason - reason field removed
 *&            | (the reason comes from the returns lot item DFKKRP-RLGRD, ZIF_CD_EBS_SAP_DAO).
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - imported bank statements (FEBKO/FEBEP)</p>
 "! Raw reads only; conversion to the format-neutral model happens in
@@ -73,7 +74,7 @@ INTERFACE zif_cd_ebs_feb_dao
       "! look-back window per statement in ABAP); initial from get_items
       azdat TYPE d,
       "! Operating model: X when every configured posting-area flag (is_extras-posted_fields,
-      "! VERIFY-SE11 VB1OK / VB2OK) holds X; only meaningful when posted_fields were given
+      "! VB1OK / VB2OK, confirmed 2026-11-07) holds X; only meaningful when posted_fields were given
       posted TYPE abap_bool,
     END OF ty_item.
   TYPES tt_item TYPE STANDARD TABLE OF ty_item WITH EMPTY KEY.

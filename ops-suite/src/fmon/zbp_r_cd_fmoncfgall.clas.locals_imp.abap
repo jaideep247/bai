@@ -9,7 +9,7 @@
 *& 2026-11-06 | Values in local constants interface lif_c, message class constant (phase 5).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
-*& 2026-11-07 | Create per table: production-maintainable tables ask the gate with the table.
+*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -126,20 +126,10 @@ CLASS lhc_fmoncfgall IMPLEMENTATION.
       result-%assoc-_FmonIface = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonSla = if_abap_behv=>mk-on.
-      " Production-maintainable: new rows also in production (change-logged, no transport)
-      result-%assoc-_FmonSla = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed(
-                                                   iv_table = lif_c=>gc_tab-fmonsla )
-                                                 = abap_true
-                                            THEN if_abap_behv=>fc-o-enabled
-                                            ELSE if_abap_behv=>fc-o-disabled ).
+      result-%assoc-_FmonSla = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonDeadline = if_abap_behv=>mk-on.
-      " Production-maintainable: new rows also in production (change-logged, no transport)
-      result-%assoc-_FmonDeadline = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed(
-                                                   iv_table = lif_c=>gc_tab-fmondeadline )
-                                                 = abap_true
-                                            THEN if_abap_behv=>fc-o-enabled
-                                            ELSE if_abap_behv=>fc-o-disabled ).
+      result-%assoc-_FmonDeadline = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonSource = if_abap_behv=>mk-on.
       result-%assoc-_FmonSource = lv_create.
@@ -154,12 +144,7 @@ CLASS lhc_fmoncfgall IMPLEMENTATION.
       result-%assoc-_FmonLotCfg = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonCalendar = if_abap_behv=>mk-on.
-      " Production-maintainable: new rows also in production (change-logged, no transport)
-      result-%assoc-_FmonCalendar = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed(
-                                                   iv_table = lif_c=>gc_tab-fmoncalendar )
-                                                 = abap_true
-                                            THEN if_abap_behv=>fc-o-enabled
-                                            ELSE if_abap_behv=>fc-o-disabled ).
+      result-%assoc-_FmonCalendar = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonTableAllow = if_abap_behv=>mk-on.
       result-%assoc-_FmonTableAllow = lv_create.

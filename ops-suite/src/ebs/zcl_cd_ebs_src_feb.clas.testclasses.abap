@@ -16,6 +16,7 @@
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -310,7 +311,7 @@ CLASS ltc_src_feb IMPLEMENTATION.
   ENDMETHOD.
 
   " Operating model 2026-11-06: an imported entry is posted when every FEBEP posting-area flag
-  " (EBS_FEB_POSTED_FIELDS, default VB1OK / VB2OK - VERIFY-SE11) is complete, else open.
+  " (EBS_FEB_POSTED_FIELDS, default VB1OK / VB2OK - confirmed 2026-11-07) is complete, else open.
   " Fix 3: the flags come with the item (same FEBEP read), so every item read has a state
   METHOD posting_state_from_febep.
     TRY.

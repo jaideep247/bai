@@ -10,6 +10,7 @@
 *& Dependency direction: FMON -> EBS (this interface); EBS never uses FMON.
 *& Modification log:
 *& 2026-11-07 | Initial version (BAI processing deadline, statement evidence for FMON).
+*& 2026-11-07 | BANK_KEY = bank identifier as in the statement (user decision 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - statement evidence per bank and statement date</p>
 "! Implementation ZCL_CD_EBS_STMT_EVIDENCE (factory ZCL_CD_EBS_FACTORY=>GET_STMT_EVIDENCE).
@@ -21,7 +22,7 @@ INTERFACE zif_cd_ebs_stmt_evidence
 
   TYPES:
     BEGIN OF ty_request,
-      "! Bank keys of ZCD_EBS_ACCT (JPMC, BOA ...), compared condensed and in upper case
+      "! Bank keys of ZCD_EBS_ACCT (bank identifier as in the statement), condensed, upper case
       bank_keys  TYPE tt_bank_key,
       "! Statement dates (FEBKO-AZDAT) to report
       stmt_dates TYPE tt_date,

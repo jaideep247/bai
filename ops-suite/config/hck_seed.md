@@ -169,12 +169,12 @@ security boundary; every new row needs a reviewer.
 | ZCD_HCK_AGG | Generic aggregates | X |
 | ZCD_HCK_AGGGRP | Expected groups of aggregates (A103) | X |
 | ZCD_JOB_STEP | Job cycle steps | X |
-| ZCD_FMON_DEADL | FMON stage deadlines (production-maintainable: a change is information CONFIG_CHANGED_IN_PROD, not drift) | X |
-| ZCD_FMON_SLA | FMON stage SLAs (production-maintainable) | X |
-| ZCD_FMON_CAL | FMON expected files (production-maintainable) | X |
-| ZCD_OPS_ALRULE | Alert rules (production-maintainable) | X |
+| ZCD_FMON_DEADL | FMON stage deadlines | X |
+| ZCD_FMON_SLA | FMON stage SLAs | X |
+| ZCD_FMON_CAL | FMON expected files | X |
+| ZCD_OPS_ALRULE | Alert rules | X |
 
-Production-maintainable tables (`RAP_Config_Apps.md` §2, 2026-11-07) are listed on purpose: rows created or edited directly in PS4 are expected there, so a changed hash is reported as **information** `CONFIG_CHANGED_IN_PROD` (message 374, not counted in DRIFTED_TABLES, no exception) every morning until the baseline is taken again after the back-port transport — production changes stay visible without raising false drift.
+Deadlines, SLAs, calendar and alert rules are listed on purpose (user decision 2026-11-07): new rows come only by transport from DV1, but support may edit existing rows in PS4 (due time, severity, ACTIVE, SO23 list; `Operations_Runbook.md` §5h). Such a production edit is exactly what drift control should show: the table is reported as `CONFIG_DRIFT` until the same change is transported from DV1 and the baseline is taken again.
 
 Parameters (ZCA_PARAM) are not under drift control: their changes are logged by the framework (table logging, customizing requests) and checked every morning by `D_PARAM_INVALID`.
 

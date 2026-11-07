@@ -13,6 +13,7 @@
 *&            | (names DDIC-validated as before in the SAP DAO).
 *& 2026-11-06 | Return reason correction: no FEBEP reason field (FEBEP carries no return reason).
 *& 2026-11-06 | Modern-syntax sweep: unchained TYPES.
+*& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - FEBKO/FEBEP repository</p>
 CLASS zcl_cd_ebs_feb_dao DEFINITION
@@ -122,7 +123,7 @@ CLASS zcl_cd_ebs_feb_dao IMPLEMENTATION.
 
   METHOD item_select.
     rv_select = gc_item_fields.
-    " Operating model: VERIFY-SE11 FEBEP-VB1OK / VB2OK (posting area 1 / 2 completed) are the
+    " Operating model: FEBEP-VB1OK / VB2OK (posting area 1 / 2 posted, confirmed 2026-11-07) are the
     " delivered default of EBS_FEB_POSTED_FIELDS. Every name is checked before it reaches the statement.
     IF lines( is_extras-posted_fields ) > gc_max_posting_flags.
       RAISE EXCEPTION TYPE zcx_cd_ops_error

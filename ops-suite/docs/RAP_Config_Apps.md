@@ -38,26 +38,21 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 | No changes allowed (`2`) / no transports (`3`) — QA1 | **no** | **yes**, direct, change-logged | **no** | none |
 | Role production (`CCCATEGORY = P`) — PS4, whatever the change option | **no** | **yes**, direct, change-logged | **no** | none |
 
-### Production-maintainable tables (per-table policy, user requirement 2026-11-07)
+### One policy for every table (user decision 2026-11-07)
 
-"Any similar alerts should be configurable directly in production." A table flagged **production-maintainable** also allows **create** wherever existing entries may be edited — in PS4 (and QA1) directly, change-logged, without a transport. **Delete stays DV1-only** for every table: production switches a row off with its `ACTIVE` flag, which every reader honours.
+**New configuration rows reach production only by customizing transport from DV1** — also deadlines, SLAs, calendar rows and alert rules; there is no per-table exception and no direct create in production. In QA1 / PS4 support may only **edit existing rows** (direct, change-logged: SCU3, `LAST_CHANGED_BY` / `_AT`), never create or delete.
 
-| Table | App / entity | Why production-maintainable | ACTIVE (readers) |
-|---|---|---|---|
-| ZCD_FMON_DEADL | File monitoring / FmonDeadline | A new clock-time deadline ("BAI processed by 10:00") is operational tuning of an alert, not a code or flow change | `ZCL_CD_FMON_DAO->GET_DEADLINES` |
-| ZCD_FMON_SLA | File monitoring / FmonSla | Duration SLA of a stage, same nature as a deadline | `GET_SLAS` (new field 2026-11-07) |
-| ZCD_FMON_CAL | File monitoring / FmonCalendar | Expected files and windows per day type (a deadline is evaluated only on days the calendar expects a file) | `GET_CALENDARS` (new field 2026-11-07) |
-| ZCD_OPS_ALRULE | Alerting / AlertRule | Who is told, by which SO23 list, with which throttle / escalation | `ZCL_CD_OPS_ALERT_DAO->GET_RULES` (field existed) |
+Tables with an `ACTIVE` flag — production can switch a row off by editing it (no delete needed), and every reader honours the flag:
 
-| Client | Create on a production-maintainable table | Create on any other table | Delete (any table) |
-|---|---|---|---|
-| DV1 (automatic recording) | yes, on the customizing request | yes, on the customizing request | yes, on the customizing request |
-| QA1 / PS4 | **yes**, direct, change-logged (SCU3, `LAST_CHANGED_BY` / `_AT`) | no | no — switch `ACTIVE` off |
+| Table | App / entity | Reader filtering `ACTIVE` |
+|---|---|---|
+| ZCD_FMON_DEADL | File monitoring / FmonDeadline | `ZCL_CD_FMON_DAO->GET_DEADLINES` |
+| ZCD_FMON_SLA | File monitoring / FmonSla | `GET_SLAS` (field 2026-11-07) |
+| ZCD_FMON_CAL | File monitoring / FmonCalendar | `GET_CALENDARS` (field 2026-11-07) |
+| ZCD_OPS_ALRULE | Alerting / AlertRule | `ZCL_CD_OPS_ALERT_DAO->GET_RULES` (field existed) |
 
-- Implementation: `ZIF_CD_OPS_CFG_TYPES=>GC_PROD_MAINTAINABLE` (the one list), `ZCL_CD_OPS_CFG_POLICY=>IS_PROD_MAINTAINABLE` / `CREATE_ALLOWED( is_decision iv_table )`, `ZCL_CD_OPS_CFG_GATE->CREATE_ALLOWED( iv_table )`; generator spec option `prod_create` (`tools/rap_generate.py`, `PROD`) makes the root's global feature ask the gate **per association** with the table name; the unit test `ProductionMaintainableTest` (`tools/tests/test_rap_generate.py`) fails when spec and ABAP list differ.
-- Authorisation unchanged: `ZCD_OPS` ACTVT 02 for the app's payment engine area (FMON for deadlines / SLAs / calendar, CORE for alert rules) — who may create in PS4 is decided by role, not by a transport.
-- Health check drift (`ZCD_HCK_DRIFT`): a production-maintainable table under drift control that changed since its baseline is reported as **information** `CONFIG_CHANGED_IN_PROD` (message 374), not as `CONFIG_DRIFT` (E), and not counted in `DRIFTED_TABLES` — the change is expected, but visible every morning until the baseline is taken again (`config/hck_seed.md` §6).
-- Back-port: a row created in PS4 is entered in DV1 on a customizing request and transported to QA1 / PS4 (same key: the import overwrites the PS4 row with identical values), so the landscapes do not diverge (`Operations_Runbook.md` §5h).
+- Health check drift (`ZCD_HCK_DRIFT`): these four tables are under drift control (`config/hck_seed.md` §6) — a production edit of an existing row (due time, severity, `ACTIVE`, SO23 list) is reported as `CONFIG_DRIFT` like any other table until the change is back-ported to DV1 and the baseline is taken again; that is exactly what drift control should show.
+- A new deadline or similar alert: `Operations_Runbook.md` §5h (DV1 → QA1 → PS4).
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
