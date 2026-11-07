@@ -14,6 +14,10 @@
     {
       "folder": "/lint_stubs",
       "files": "/**/*.*"
+    },
+    {
+      "folder": "/../param-framework/src",
+      "files": "/**/*.*"
     }
   ],
   "syntax": {

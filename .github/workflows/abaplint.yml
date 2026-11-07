@@ -2,9 +2,9 @@ name: abaplint
 
 on:
   push:
-    paths: ['ops-suite/**', '.github/workflows/abaplint.yml']
+    paths: ['ops-suite/**', 'param-framework/src/**', '.github/workflows/abaplint.yml']
   pull_request:
-    paths: ['ops-suite/**']
+    paths: ['ops-suite/**', 'param-framework/src/**']
 
 jobs:
   lint:
