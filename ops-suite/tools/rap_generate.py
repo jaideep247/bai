@@ -37,6 +37,9 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         ('thresholds',) ('positive', field) ('rulegroups',)
 #         ('pcre', field): a pattern field must compile as PCRE (ZCL_CD_OPS_UTIL=>PCRE_VALID;
 #         matched at runtime to the complete value, case ignored; blank allowed) - message 418
+#         ('dest', ('channel'|'class', field), dest_field, ...): the alert channel plug-in checks
+#         the destination(s) it would deliver to (ZCL_CD_OPS_CFG_CHECKS=>INVALID_DESTINATION;
+#         e-mail = shared SO23 distribution lists) - message 419
 # ---------------------------------------------------------------------------
 SEV = 'B,E,W,I'
 ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
@@ -124,9 +127,9 @@ SPEC = {
              [('enum', 'pe_area', ',*,EBS,FMON,HCK'), ('enum', 'min_severity', ',' + SEV),
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
               ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
-              ('pcre', 'group2_pattern')]),
+              ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
             ('zcd_ops_alchn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
-             [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL')]),
+             [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination')]),
             ('zcd_ops_param', 'OpsParam', 'zcd_d_param', 'Parameter', 'Runtime parameters', [], []),
             # Stale threshold per monitor: the dashboards and the HCK self-check read the same row
             ('zcd_ops_moncfg', 'MonitorCfg', 'zcd_d_moncfg', 'Monitor freshness', 'Monitor freshness', [],
@@ -515,6 +518,19 @@ def abap_check(t, chk, root):
         return [f"    IF zcl_cd_ops_util=>pcre_valid( ls_row-{e} ) = abap_false.",
                 f"      INSERT VALUE #( number = {msg}pattern_invalid v1 = ls_row-{e}",
                 f"                      element = {el(e)} ) INTO TABLE lt_msg.",
+                '    ENDIF.']
+    if kind == 'dest':
+        src_kind, src = chk[1][0], fmap[chk[1][1]]
+        dests = [fmap[d] for d in chk[2:]]
+        cls = (f"zcl_cd_ops_cfg_checks=>channel_class( ls_row-{src} )" if src_kind == 'channel'
+               else f"CONV #( ls_row-{src} )")
+        joined = ','.join('{ ls_row-' + d + ' }' for d in dests)
+        return ["    DATA(lv_dest_invalid) = zcl_cd_ops_cfg_checks=>invalid_destination(",
+                f"                              iv_class       = {cls}",
+                f"                              iv_destination = CONV #( |{joined}| ) ).",
+                "    IF lv_dest_invalid IS NOT INITIAL.",
+                f"      INSERT VALUE #( number = {msg}dest_invalid v1 = ls_row-{src} v2 = lv_dest_invalid",
+                f"                      element = {el(dests[0])} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
     if kind == 'positive':
         e = fmap[chk[1]]

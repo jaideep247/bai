@@ -120,7 +120,7 @@ ZCL_CD_OPS_ALERT_POLICY,own test include,,20,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_ROUTER,own test include,,15,90,,Not run in target SAP
 ZCL_CD_OPS_AUTH,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_AUTH,own test include,,2,90,,Not run in target SAP
-ZCL_CD_OPS_CFG_CHECKS,own test include,,17,90,,Not run in target SAP
+ZCL_CD_OPS_CFG_CHECKS,own test include,,22,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CLIENT,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_CFG_GATE (construction only: the gate test resolves through it)
 ZCL_CD_OPS_CFG_GATE,own test include,,7,90,,Not run in target SAP
@@ -128,7 +128,7 @@ ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP;
 ZCL_CD_OPS_CFG_POLICY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_TRANSPORT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_CHN_APPLOG,own test include,,5,90,,Not run in target SAP
-ZCL_CD_OPS_CHN_EMAIL,own test include,,4,90,,Not run in target SAP
+ZCL_CD_OPS_CHN_EMAIL,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_CLOCK,own test include,,3,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_DAO,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_EXC_POLICY,own test include,,9,90,,Not run in target SAP

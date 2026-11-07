@@ -1,12 +1,15 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ops_chn_email.clas.testclasses.abap
 *& Purpose:
-*& Unit tests of the e-mail alert channel through test seams BCS_SEND and
-*& BCS_COMMIT: no recipient raises 021, a sent mail returns, a refused send
-*& raises 026 (A45), a BCS exception becomes 020. Nothing is sent and
-*& nothing is committed; does not prove live SAP runtime behavior.
+*& Unit tests of the e-mail alert channel through test seams DLI_READ, BCS_SEND
+*& and BCS_COMMIT: no recipient raises 021, a name that is not a shared SO23
+*& list raises 027 before anything is sent, a sent mail returns, a refused send
+*& raises 026 (A45), a BCS exception becomes 020; CHECK_DESTINATION lists the
+*& unknown and over-long names. Nothing is read from SAPoffice, sent or
+*& committed; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Recipients are SO23 shared lists: seam DLI_READ, 027 and CHECK_DESTINATION tests.
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -14,8 +17,14 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
 
   PRIVATE SECTION.
     CONSTANTS gc_rule TYPE zif_cd_ops_types=>ty_rule_id VALUE 'EBS_BLOCK'.
-    CONSTANTS gc_recipients TYPE zif_cd_ops_types=>ty_alert_dest VALUE 'ops@example.com; treasury@example.com'.
+    "! Two shared SO23 lists, semicolon and blank tolerated, any case
+    CONSTANTS gc_recipients TYPE zif_cd_ops_types=>ty_alert_dest VALUE 'ZCD_RTBSUP; zcd_rtblead'.
+    "! The only name the injected SAPoffice lookup does not know
+    CONSTANTS gc_unknown_list TYPE string VALUE `ZCD_NOLIST`.
+    "! Longer than SO_OBJ_NAM: must never resolve to a truncated list
+    CONSTANTS gc_long_list TYPE string VALUE `ZCD_RTB_SUPPORT_LIST`.
     CONSTANTS gc_msgno_no_recipient TYPE symsgno VALUE '021'.
+    CONSTANTS gc_msgno_unknown_list TYPE symsgno VALUE '027'.
     CONSTANTS gc_msgno_refused TYPE symsgno VALUE '026'.
     CONSTANTS gc_msgno_bcs_error TYPE symsgno VALUE '020'.
 
@@ -24,6 +33,7 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
         no_recipient TYPE abap_bool,
         refused      TYPE abap_bool,
         bcs_error    TYPE abap_bool,
+        unknown_list TYPE abap_bool,
       END OF ty_flags.
 
     DATA mo_cut TYPE REF TO zif_cd_ops_alert_channel.
@@ -35,6 +45,9 @@ CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
     METHODS no_recipient_raises_021 FOR TESTING.
     METHODS refused_send_raises_026 FOR TESTING.
     METHODS bcs_error_raises_020 FOR TESTING.
+    METHODS unknown_list_raises_027 FOR TESTING.
+    METHODS known_lists_are_valid FOR TESTING.
+    METHODS unknown_and_long_listed FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -65,6 +78,13 @@ CLASS ltc_chn_email IMPLEMENTATION.
     IF is_flags-no_recipient = abap_true.
       CLEAR ms_message-destination.
     ENDIF.
+    IF is_flags-unknown_list = abap_true.
+      ms_message-destination = |{ gc_recipients },{ gc_unknown_list }|.
+    ENDIF.
+    " SAPoffice: every list is shared except the one unknown name
+    TEST-INJECTION dli_read.
+      lv_found = xsdbool( lv_dli <> 'ZCD_NOLIST' ).
+    END-TEST-INJECTION.
     IF is_flags-refused = abap_true.
       TEST-INJECTION bcs_send.
         lv_sent = abap_false.
@@ -126,6 +146,30 @@ CLASS ltc_chn_email IMPLEMENTATION.
   METHOD bcs_error_raises_020.
     configure_scenario( VALUE #( bcs_error = abap_true ) ).
     assert_raises( gc_msgno_bcs_error ).
+  ENDMETHOD.
+
+  " Rule: a name that is not a shared SO23 list stops the route before BCS (027)
+  METHOD unknown_list_raises_027.
+    configure_scenario( VALUE #( unknown_list = abap_true ) ).
+    assert_raises( gc_msgno_unknown_list ).
+  ENDMETHOD.
+
+
+  " Rule: shared lists are deliverable - nothing reported
+  METHOD known_lists_are_valid.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_initial( act = mo_cut->check_destination( gc_recipients )
+                                         msg = 'Shared SO23 lists are valid' ).
+  ENDMETHOD.
+
+
+  " Rule: unknown and over-long names are listed as given, known ones are not
+  METHOD unknown_and_long_listed.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_equals(
+      act = mo_cut->check_destination( CONV #( |{ gc_recipients },{ gc_unknown_list },{ gc_long_list }| ) )
+      exp = |{ gc_unknown_list },{ gc_long_list }|
+      msg = 'Unknown and over-long list names reported' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -23,6 +23,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 022 | Application log &1/&2 could not be written |
 | 025 | Application log &1/&2 written only in part (&3 of &4 lines) |
 | 026 | E-mail for &1 was not accepted by SAPconnect (BCS send result) |
+| 027 | Alert route &1: &2 is not a shared SO23 distribution list |
 | 030 | Class &1 does not exist |
 | 031 | Class &1 cannot be instantiated as a plug-in |
 | 032 | Class &1 does not implement interface &2 |
@@ -291,6 +292,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 416 | Rule group &1 has no active rule in ZCD_BTC_RULE |
 | 417 | &1 must be greater than zero |
 | 418 | &1 is not a valid PCRE pattern (matched to the whole value, any case) |
+| 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |

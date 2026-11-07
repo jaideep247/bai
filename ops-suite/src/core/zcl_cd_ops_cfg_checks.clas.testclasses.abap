@@ -5,9 +5,58 @@
 *& names, plug-in classes, allowed values, time windows, thresholds, rule
 *& groups. RTTI reads dictionary metadata only (T000, existing suite
 *& classes); does not prove live SAP runtime behavior.
+*& ltc_destination: alert destinations are checked by the channel plug-in found
+*& through the alert DAO (doubles injected by ZCL_CD_OPS_INJECTOR, no DB read).
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
+*& 2026-11-07 | ltc_destination: CHANNEL_CLASS / INVALID_DESTINATION (SO23 lists).
 *&---------------------------------------------------------------------*
+"! Alert configuration from memory: only the channels are read by the checks
+CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_alert_dao.
+    DATA mt_channels TYPE zif_cd_ops_types=>tt_alert_channel.
+    DATA mt_inserted TYPE zif_cd_ops_types=>tt_alert_log.
+ENDCLASS.
+
+CLASS ltd_alert_dao IMPLEMENTATION.
+  METHOD zif_cd_ops_alert_dao~get_rules.
+    CLEAR rt_rules.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~get_channels.
+    rt_channels = mt_channels.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~get_log.
+    CLEAR rt_log.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_dao~insert_log.
+    INSERT LINES OF it_log INTO TABLE mt_inserted.
+  ENDMETHOD.
+ENDCLASS.
+
+"! Channel that knows one list only: every other name is reported back
+CLASS ltd_channel DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_alert_channel.
+    CONSTANTS gc_known TYPE string VALUE `ZCD_RTBSUP`.
+    DATA mv_delivered TYPE abap_bool.
+ENDCLASS.
+
+CLASS ltd_channel IMPLEMENTATION.
+  METHOD zif_cd_ops_alert_channel~deliver.
+    mv_delivered = abap_true.
+  ENDMETHOD.
+  METHOD zif_cd_ops_alert_channel~check_destination.
+    DATA lt_invalid TYPE string_table.
+    LOOP AT zcl_cd_ops_util=>split_list( iv_destination ) ASSIGNING FIELD-SYMBOL(<lv_name>).
+      IF <lv_name> <> gc_known.
+        INSERT <lv_name> INTO TABLE lt_invalid.
+      ENDIF.
+    ENDLOOP.
+    rv_invalid = concat_lines_of( table = lt_invalid sep = `,` ).
+  ENDMETHOD.
+ENDCLASS.
+
 CLASS ltc_checks DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -258,6 +307,92 @@ CLASS ltc_checks IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_destination DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        channel   TYPE zif_cd_ops_types=>ty_channel VALUE 'EMAIL',
+        class     TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_TEST_CHANNEL',
+        no_class  TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_NOT_THERE',
+        known     TYPE zif_cd_ops_types=>ty_alert_dest VALUE 'ZCD_RTBSUP',
+        unknown   TYPE string VALUE `ZCD_NOLIST`,
+      END OF gc_test.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS channel_class_found          FOR TESTING.
+    METHODS unknown_channel_blank        FOR TESTING.
+    METHODS known_destination_accepted   FOR TESTING.
+    METHODS unknown_destination_listed   FOR TESTING.
+    METHODS no_channel_class_not_checked FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_destination IMPLEMENTATION.
+
+  METHOD setup.
+    DATA(lo_dao) = NEW ltd_alert_dao( ).
+    lo_dao->mt_channels = VALUE #( ( channel = gc_test-channel class_name = gc_test-class active = abap_true ) ).
+    zcl_cd_ops_injector=>inject_alert_dao( lo_dao ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_test-class
+                                        io_instance   = NEW ltd_channel( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  " Rule: an alert rule's channel ID leads to the plug-in class configured for it (any case)
+  METHOD channel_class_found.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_cfg_checks=>channel_class( to_lower( gc_test-channel ) )
+                                        exp = gc_test-class
+                                        msg = 'Class of the configured channel' ).
+  ENDMETHOD.
+
+
+  " Rule: an unknown channel has no class - nothing to check the destination with
+  METHOD unknown_channel_blank.
+    cl_abap_unit_assert=>assert_initial( act = zcl_cd_ops_cfg_checks=>channel_class( 'NONE' )
+                                         msg = 'Unknown channel gives no class' ).
+  ENDMETHOD.
+
+
+  " Rule: a destination the channel can deliver to passes
+  METHOD known_destination_accepted.
+    cl_abap_unit_assert=>assert_initial(
+      act = zcl_cd_ops_cfg_checks=>invalid_destination( iv_class       = gc_test-class
+                                                        iv_destination = gc_test-known )
+      msg = 'Known SO23 list accepted' ).
+  ENDMETHOD.
+
+
+  " Rule: names the channel cannot deliver to are returned for message 419
+  METHOD unknown_destination_listed.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_cd_ops_cfg_checks=>invalid_destination(
+              iv_class       = gc_test-class
+              iv_destination = CONV #( |{ gc_test-known },{ gc_test-unknown }| ) )
+      exp = gc_test-unknown
+      msg = 'Unknown list reported' ).
+  ENDMETHOD.
+
+
+  " Rule: a missing or wrong class is the class check's finding, not a destination finding
+  METHOD no_channel_class_not_checked.
+    cl_abap_unit_assert=>assert_initial(
+      act = zcl_cd_ops_cfg_checks=>invalid_destination( iv_class       = gc_test-no_class
+                                                        iv_destination = CONV #( gc_test-unknown ) )
+      msg = 'No class, no destination finding' ).
   ENDMETHOD.
 
 ENDCLASS.

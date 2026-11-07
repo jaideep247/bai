@@ -48,6 +48,7 @@ Source: principal architecture review and the static repository audit (findings 
 
 ## 5. Open inputs
 
+- **Alert recipients (SO23):** confirm the shared distribution list names (proposed `ZCD_PAYOPS`, `ZCD_RETOPS`, `ZCD_COMPL`, `ZCD_RTBSUP`, `ZCD_RTBLEAD`, `config/alert_seed.md`) and their owners; create them in SO23 in each client before the alert rules are loaded. `ALL_ABORT` goes to `ZCD_RTBSUP` (decision 2026-11-07).
 - A100–A105 — **fixed** (code A100–A103, documentation A104–A105); remaining confirmations are `VERIFY` items: `cl_abap_message_digest` on 7.58 (A100), expected group values per check with Treasury / operations (A103), whether a file-size limit is needed (A104, QA case EBS-13a), CHECT layout and DPAYH-DOC1R length (A105, PAR-195).
 - Every other `VERIFY-DDIC` / `VERIFY-ADT` marker — gate 1.
 

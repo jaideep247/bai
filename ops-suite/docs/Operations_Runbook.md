@@ -165,6 +165,21 @@ Sources per area: EBS_FLOW = FEBEP-XBLNR of the configured accounts (FEBKO-AZDAT
 
 **Migration of existing rows (once, after the pull):** run **`ZCD_OPS_PATTERN_MIGRATE`** in **test mode** (default) in DV1: every pattern row with old → new and a status — CONVERT (CP wildcard → PCRE: metacharacters escaped, `*` → `.*`, `+` → `.`, `#x` → literal x), UNCHANGED (same in both), ALREADY_PCRE (left as it is — review it), INVALID / TOO_LONG (never written; shorten or rewrite the pattern in the app). Then run it in **update mode** with the customizing request: only CONVERT rows are written (change stamps set, customizing rows recorded on the request, one commit), the list shows WRITTEN. Transport the request to QA1 / PS4. ZCD_HCK_SUPPRESS (application data, not transported) is converted by running update mode in each system (ZCD_OPS change for HCK; the client must allow changes). Run `ZCD_OPS_PATTERN_CHECK` per area afterwards.
 
+## 5f. Who receives alert e-mails — SO23 distribution lists (L1 / L2)
+
+E-mail alerts go to **SAPoffice shared distribution lists** (transaction SO23), never to addresses kept in
+the suite. The alert rule names the list (`config/alert_seed.md`: `ZCD_PAYOPS`, `ZCD_RETOPS`, `ZCD_COMPL`,
+`ZCD_RTBSUP`, `ZCD_RTBLEAD`).
+
+| Task | How |
+|---|---|
+| Add / remove a person | SO23 → shared distribution list → maintain contents (internet address or SAP user with an e-mail address in SU01). Takes effect with the next alert — no transport, no rule change |
+| Check who would receive an alert | SO23 → display the list named in the rule's DESTINATION / ESCALATION_DEST |
+| Alert logged F with message 027 | The list named in the rule no longer exists or is not shared — recreate it in SO23 (or correct the rule in the configuration app, which refuses an unknown list, 419) |
+| Alert logged S but nobody received it | SOST for the send request: list empty, member without e-mail address, or SAPconnect (SCOT) queue not running |
+
+SO23 lists are client-specific and not transported: keep members aligned in QA1 and PS4 by hand.
+
 ## 6. Who to call
 
 | Topic | Team |

@@ -17,6 +17,7 @@ INTERFACE lif_c.
     BEGIN OF gc_el,
       checkpattern                   TYPE string VALUE `CHECKPATTERN`,
       classname                      TYPE string VALUE `CLASSNAME`,
+      destination                    TYPE string VALUE `DESTINATION`,
       group1pattern                  TYPE string VALUE `GROUP1PATTERN`,
       group2pattern                  TYPE string VALUE `GROUP2PATTERN`,
       minrag                         TYPE string VALUE `MINRAG`,
@@ -182,6 +183,13 @@ CLASS lhc_alertrule IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-Group2Pattern
                         element = lif_c=>gc_el-group2pattern ) INTO TABLE lt_msg.
       ENDIF.
+      DATA(lv_dest_invalid) = zcl_cd_ops_cfg_checks=>invalid_destination(
+                                iv_class       = zcl_cd_ops_cfg_checks=>channel_class( ls_row-Channel )
+                                iv_destination = CONV #( |{ ls_row-Destination },{ ls_row-EscalationDest }| ) ).
+      IF lv_dest_invalid IS NOT INITIAL.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-dest_invalid v1 = ls_row-Channel v2 = lv_dest_invalid
+                        element = lif_c=>gc_el-destination ) INTO TABLE lt_msg.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-alertrule.
@@ -281,6 +289,13 @@ CLASS lhc_alertchannel IMPLEMENTATION.
                                                 iv_interface = CONV #( lif_c=>gc_if-zif_cd_ops_alert_channel ) ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-class_invalid v1 = ls_row-ClassName v2 = lif_c=>gc_if-zif_cd_ops_alert_channel
                         element = lif_c=>gc_el-classname ) INTO TABLE lt_msg.
+      ENDIF.
+      DATA(lv_dest_invalid) = zcl_cd_ops_cfg_checks=>invalid_destination(
+                                iv_class       = CONV #( ls_row-ClassName )
+                                iv_destination = CONV #( |{ ls_row-Destination }| ) ).
+      IF lv_dest_invalid IS NOT INITIAL.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-dest_invalid v1 = ls_row-ClassName v2 = lv_dest_invalid
+                        element = lif_c=>gc_el-destination ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

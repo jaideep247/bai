@@ -10,7 +10,7 @@
    - does any finding reach the rule's minimum severity and match its patterns (rule, check, grouping)?
    - or did the run as a whole end red/amber, or stop on the circuit breaker?
 3. It then applies the rule's **quiet hours** (a *blocked* item — money that must not move — always alerts, even at night), **throttling** (no repeat within N minutes) and **escalation** (after N consecutive alerting runs the escalation list is added).
-4. It delivers through the rule's **channel**: e-mail or the application log (SLG1). The suite makes no outbound call to another system (read-only scope, 2026-11-07).
+4. It delivers through the rule's **channel**: e-mail to SAPoffice shared distribution lists (SO23) or the application log (SLG1). The suite makes no outbound call to another system (read-only scope, 2026-11-07).
 5. Every decision — sent, failed, throttled, held for quiet hours — is written to the **alert log**. Nothing is silently dropped; the morning report shows failed deliveries.
 
 The morning report itself is sent as a report (route `MORNING`), not as an alert.
@@ -70,10 +70,11 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 
 | Change | Customizing |
 |---|---|
-| Mail the on-call list for any blocked bank line | Rule: PE_AREA EBS, MIN_SEVERITY B, CHANNEL EMAIL, DESTINATION = on-call DL |
+| Mail the on-call list for any blocked bank line | Rule: PE_AREA EBS, MIN_SEVERITY B, CHANNEL EMAIL, DESTINATION = SO23 list name (e.g. `ZCD_PAYOPS`) |
+| Add or remove a person who receives alerts | SO23 only: maintain the shared distribution list — no rule change, no transport |
 | Send NOC aging to compliance daily | Rule: PE_AREA FMON, CHECK_PATTERN `NOC_AGING*`, THROTTLE_MIN 1440 |
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
-| Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = lead DL |
+| Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = SO23 lead list (`ZCD_RTBLEAD`) |
 | Add a new channel type (later phase) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALCHN row |
 
 ### Delivery guarantees (Phase 6 audit)
@@ -83,6 +84,7 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 | One alert per intent, even with two dispatchers | Claim row (status C, SHA-1 intent key, unique index INT) committed before the send, completed after | A17 |
 | A carried-forward exception is not re-alerted every run | Findings with occurrences > 1 are filtered (log R) unless the rule escalates | A17 |
 | No silent success | No recipient / inactive channel raise; BCS send result checked; partly written SLG1 log = P | A45 |
+| Recipients maintained once | E-mail destinations are SO23 shared lists; the configuration app refuses a name that is not one (419), the channel refuses the route before sending if the list is gone (027) | User decision 2026-11-07 |
 | Escalation means "N runs in a row" | Counted over the area's run history; ESC_OVERRIDE passes the throttle | A46 |
 | A blocker is never cut by the cap | Severity-ordered cap, digest severity from the full selection, held-back count shown | A63 |
 | A misconfigured channel class never runs | Factory checks ZIF_CD_OPS_ALERT_CHANNEL by RTTI before CREATE OBJECT | A62 |

@@ -113,6 +113,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>027</MSGNR>
+     <TEXT>Alert route &amp;1: &amp;2 is not a shared SO23 distribution list</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>030</MSGNR>
      <TEXT>Class &amp;1 does not exist</TEXT>
     </T100>
@@ -1717,6 +1723,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>418</MSGNR>
      <TEXT>&amp;1 is not a valid PCRE pattern (matched to the whole value, any case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>419</MSGNR>
+     <TEXT>Channel &amp;1 cannot deliver to &amp;2 (e-mail: shared SO23 list name)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

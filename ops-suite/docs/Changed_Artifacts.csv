@@ -293,8 +293,8 @@ src/core/zcl_cd_ops_cfg_transport.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
 src/core/zcl_cd_ops_chn_applog.clas.testclasses.abap,ABAP,Unit tests of the application log alert channel through its test seams:
 src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,
-src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the comma/semicolon
-src/core/zcl_cd_ops_chn_email.clas.testclasses.abap,ABAP,Unit tests of the e-mail alert channel through test seams BCS_SEND and
+src/core/zcl_cd_ops_chn_email.clas.abap,ABAP,Alert channel EMAIL: sends the HTML body through BCS to the SAPoffice shared
+src/core/zcl_cd_ops_chn_email.clas.testclasses.abap,ABAP,"Unit tests of the e-mail alert channel through test seams DLI_READ, BCS_SEND"
 src/core/zcl_cd_ops_chn_email.clas.xml,abapGit,
 src/core/zcl_cd_ops_clock.clas.abap,ABAP,Operations suite - system clock
 src/core/zcl_cd_ops_clock.clas.testclasses.abap,ABAP,"Unit tests of the system clock: today and time are the system fields,"

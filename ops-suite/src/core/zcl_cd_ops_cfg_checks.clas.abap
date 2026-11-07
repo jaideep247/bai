@@ -4,13 +4,16 @@
 *& Field checks of the configuration apps, shared by all four behaviour
 *& pools: DDIC name syntax, table / field existence (RTTI), plug-in class
 *& implements its payment engine area interface, allowed values, time windows,
-*& threshold order, rule groups without active rules. No SQL; RTTI reads
-*& dictionary metadata only. Messages are chosen by the caller.
+*& threshold order, rule groups without active rules, alert destinations the
+*& channel cannot deliver to (the channel plug-in decides; e-mail = shared SO23
+*& lists). No own SQL: RTTI reads dictionary metadata, channels come from the
+*& alert DAO of ZCL_CD_OPS_FACTORY. Messages are chosen by the caller.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
+*& 2026-11-07 | CHANNEL_CLASS / INVALID_DESTINATION: alert destinations checked by their channel (SO23 lists).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: field checks</p>
 CLASS zcl_cd_ops_cfg_checks DEFINITION
@@ -81,6 +84,23 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
         it_available      TYPE zif_cd_ops_cfg_types=>ty_names
       RETURNING
         VALUE(rt_missing) TYPE zif_cd_ops_cfg_types=>ty_names.
+
+    "! Plug-in class of an alert channel (active configuration); blank = unknown channel
+    CLASS-METHODS channel_class
+      IMPORTING
+        iv_channel      TYPE zif_cd_ops_types=>ty_channel
+      RETURNING
+        VALUE(rv_class) TYPE zif_cd_ops_types=>ty_class_name.
+
+    "! Entries of iv_destination the channel class cannot deliver to (blank = fine).
+    "! Not checked here (blank): no class or a class that is not a channel - the
+    "! class check of the channel row reports those.
+    CLASS-METHODS invalid_destination
+      IMPORTING
+        iv_class          TYPE zif_cd_ops_types=>ty_class_name
+        iv_destination    TYPE zif_cd_ops_types=>ty_alert_dest
+      RETURNING
+        VALUE(rv_invalid) TYPE string.
 
   PRIVATE SECTION.
     "! DDIC / class name: letters, digits, underscore, namespace slashes, max 30
@@ -202,6 +222,33 @@ CLASS zcl_cd_ops_cfg_checks IMPLEMENTATION.
         INSERT <lv_name> INTO TABLE rt_missing.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+
+  METHOD channel_class.
+    DATA(lt_channels) = zcl_cd_ops_factory=>get_alert_dao( )->get_channels( ).
+    READ TABLE lt_channels ASSIGNING FIELD-SYMBOL(<ls_channel>)
+      WITH KEY channel = to_upper( condense( iv_channel ) ).
+    IF sy-subrc = 0.
+      rv_class = <ls_channel>-class_name.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD invalid_destination.
+    DATA lo_channel TYPE REF TO zif_cd_ops_alert_channel.
+    IF iv_class IS INITIAL OR iv_destination IS INITIAL.
+      RETURN.
+    ENDIF.
+    TRY.
+        lo_channel = CAST zif_cd_ops_alert_channel(
+          zcl_cd_ops_factory=>get_plugin( iv_class_name = iv_class
+                                          iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ).
+      CATCH zcx_cd_ops_error.
+        RETURN.
+    ENDTRY.
+    rv_invalid = lo_channel->check_destination( iv_destination ).
   ENDMETHOD.
 
 ENDCLASS.

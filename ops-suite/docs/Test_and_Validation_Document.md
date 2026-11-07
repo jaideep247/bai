@@ -96,7 +96,9 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | ALR-02 | EBS run with E findings at 23:00 | Rule EBS_ERROR with quiet hours | Not delivered, log Q | pending |
 | ALR-03 | Two runs 10 minutes apart | THROTTLE_MIN 30 | Second run logged T | pending |
 | ALR-04 | Third consecutive alerting run | ESCALATE_AFTER 3 | Escalation list added | pending |
-| ALR-05 | E-mail channel with invalid address | — | Log F; morning report alert-delivery check amber/red; run itself unaffected | pending |
+| ALR-05 | E-mail rule naming an SO23 list deleted after the rule was saved | — | Log F with 027, nothing sent; morning report alert-delivery check amber/red; run itself unaffected | pending |
+| ALR-05a | Save an alert rule with DESTINATION `ZCD_NOLIST` (no such shared list) or a name longer than 12 | Configuration app | Refused with 419 naming the list | pending |
+| ALR-05b | Add a user to SO23 list `ZCD_RTBSUP`, trigger ALL_ABORT (test run stopped on the circuit breaker) | No rule change | The new member receives the e-mail (SOST shows the list expanded) | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
 
 ### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)

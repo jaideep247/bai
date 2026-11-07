@@ -141,6 +141,7 @@ INTERFACE zif_cd_ops_cfg_types
       rule_group_empty   TYPE ty_msg_number VALUE '416',
       not_positive       TYPE ty_msg_number VALUE '417',
       pattern_invalid    TYPE ty_msg_number VALUE '418',
+      dest_invalid       TYPE ty_msg_number VALUE '419',
     END OF gc_msg.
 
 ENDINTERFACE.
