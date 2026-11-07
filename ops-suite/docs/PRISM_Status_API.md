@@ -269,7 +269,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | Item | Value |
 |---|---|
 | `ZCD_OPS_PARAM` `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
-| `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` | `X` (unit saves findings and alerts) / blank (registry only) |
+| `ZCD_OPS_PARAM` `FMON_PRISM_INSTANT` | `X` (unit saves findings and alerts) / blank (registry only) — **open item 2026-11-07:** the store returns the default X for a blank value and the engine treats any non-blank value as on, so registry-only mode is not reachable through ZCD_OPS_PARAM today (`TDD_Approach_and_Coverage.md`, shared parameter fake); decision pending |
 | `ZCD_OPS_PARAM` `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
 | `ZCD_OPS_PARAM` `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `A` / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
