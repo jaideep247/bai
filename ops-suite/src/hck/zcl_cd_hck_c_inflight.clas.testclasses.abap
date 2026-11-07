@@ -1264,6 +1264,11 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
                                                           iv_key    = gc_key-d_ach )
                                             exp = 0 msg = 'Listed, not aged' ).
+        " The lifecycle kind serves CLEARED and RETURNED rows: the anomaly is listed once
+        SPLIT finding( is_result = ls_result
+                       iv_code   = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+                       iv_key    = gc_key-d_ach )-details AT cl_abap_char_utilities=>newline INTO TABLE DATA(lt_lines).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'Listed once' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

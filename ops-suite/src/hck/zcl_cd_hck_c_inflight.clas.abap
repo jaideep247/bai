@@ -511,20 +511,22 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     DATA lt_missing TYPE string_table.
     DATA lt_forbidden TYPE string_table.
     DATA lt_info TYPE string_table.
-    DATA lt_seen TYPE SORTED TABLE OF zif_cd_ops_types=>ty_class_name WITH UNIQUE KEY table_line.
+    DATA lt_seen TYPE SORTED TABLE OF string WITH UNIQUE KEY table_line.
     DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ is_payment-flow }{ is_payment-class }| ).
     rv_status = gc_status-open.
 
     " Anomalies of any evidence of the payment's rules are listed under their own code
     LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>) WHERE flow = is_payment-flow AND method_class = is_payment-class.
       DATA(ls_group) = group_of( <ls_rule> ).
-      INSERT CONV #( |{ ls_group-evidence_class }{ ls_group-param1 }{ ls_group-param2 }{ ls_group-param3 }| )
+      INSERT |{ ls_group-evidence_class }/{ ls_group-param1 }/{ ls_group-param2 }/{ ls_group-param3 }|
         INTO TABLE lt_seen.
       IF sy-subrc <> 0 OR ls_group-invalid = abap_true OR ls_group-unconfigured = abap_true.
         CONTINUE.
       ENDIF.
       DATA(ls_evidence) = VALUE #( ls_group-evidence[ doc1r = is_payment-doc1r ] OPTIONAL ).
-      IF ls_evidence-anomaly IS NOT INITIAL.
+      " One kind used by several purposes reports its anomaly once per payment and code
+      IF ls_evidence-anomaly IS NOT INITIAL
+         AND NOT line_exists( mt_listed[ doc1r = is_payment-doc1r code = ls_evidence-anomaly ] ).
         INSERT VALUE #( key      = lv_key
                         code     = ls_evidence-anomaly
                         severity = ls_evidence-severity
