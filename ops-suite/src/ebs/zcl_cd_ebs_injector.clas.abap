@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Performance fix 1: inject_sap_dao( ) and reset( ) clear the rule-base check-register memo.
 *& 2026-11-07 | inject_release_dao removed with the blocked-line release (read-only scope).
+*& 2026-11-07 | inject_stmt_evidence (statement evidence double for the FMON FEB adapter tests).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - test injector</p>
 CLASS zcl_cd_ebs_injector DEFINITION
@@ -30,6 +31,10 @@ CLASS zcl_cd_ebs_injector DEFINITION
     CLASS-METHODS inject_parser
       IMPORTING
         io_parser TYPE REF TO zif_cd_ebs_parser.
+
+    CLASS-METHODS inject_stmt_evidence
+      IMPORTING
+        io_evidence TYPE REF TO zif_cd_ebs_stmt_evidence.
 
 
     CLASS-METHODS reset.
@@ -62,8 +67,14 @@ CLASS zcl_cd_ebs_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_stmt_evidence.
+    zcl_cd_ebs_factory=>go_evidence_double = io_evidence.
+  ENDMETHOD.
+
+
   METHOD reset.
-    CLEAR: zcl_cd_ebs_factory=>go_cfg_dao_double,
+    CLEAR: zcl_cd_ebs_factory=>go_evidence_double,
+           zcl_cd_ebs_factory=>go_cfg_dao_double,
            zcl_cd_ebs_factory=>go_feb_dao_double,
            zcl_cd_ebs_factory=>go_sap_dao_double,
            zcl_cd_ebs_factory=>go_parser_double.

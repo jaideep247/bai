@@ -39,6 +39,7 @@
 *&            | dispositions, release lookup), TVARVC kill switch read_mode and the blocks-posting
 *&            | flag (apply_blocking_flags) removed - the batch run ZCD_EBS_VALIDATE is the only entry.
 *& 2026-11-07 | EBS_EMPTY_FEED_OK read through ZCL_CD_OPS_FACTORY=>GET_PARAMS (the store serves no parameters).
+*& 2026-11-07 | Posting-open definition in ZCL_CD_EBS_STMT_EVIDENCE=>IS_POSTING_OPEN (shared with file monitoring).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -744,9 +745,8 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD mark_posting_open.
     LOOP AT ct_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
-      <ls_line>-posting_open = xsdbool( <ls_line>-posting_state = zif_cd_ebs_types=>gc_posting_state-open
-                                        AND <ls_line>-not_posted = abap_false
-                                        AND <ls_line>-blocked = abap_false ).
+      " One definition of 'expected to post but not posted' (shared with file monitoring)
+      <ls_line>-posting_open = zcl_cd_ebs_stmt_evidence=>is_posting_open( <ls_line> ).
     ENDLOOP.
   ENDMETHOD.
 

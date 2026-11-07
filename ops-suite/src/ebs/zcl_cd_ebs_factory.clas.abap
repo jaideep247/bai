@@ -9,6 +9,7 @@
 *& 2026-11-07 | Parser parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | Release repository seam removed with the blocked-line release (read-only scope).
 *& 2026-11-07 | Comment: parser class from ZCA_PARAM (CLASS with interface ZIF_CD_EBS_PARSER).
+*& 2026-11-07 | get_stmt_evidence: statement evidence shared with file monitoring (FEB adapter).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -30,6 +31,11 @@ CLASS zcl_cd_ebs_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ebs_sap_dao.
 
+    "! Statement evidence per bank and statement date (read by the FMON FEB adapter)
+    CLASS-METHODS get_stmt_evidence
+      RETURNING
+        VALUE(ro_evidence) TYPE REF TO zif_cd_ebs_stmt_evidence.
+
 
     "! Parser for a file format. Class from ZCA_PARAM EBS_PARSER_<format>,
     "! default ZCL_CD_EBS_PARSER_BAI2 / ZCL_CD_EBS_PARSER_CAMT.
@@ -46,6 +52,7 @@ CLASS zcl_cd_ebs_factory DEFINITION
     CLASS-DATA go_feb_dao_double TYPE REF TO zif_cd_ebs_feb_dao.
     CLASS-DATA go_sap_dao_double TYPE REF TO zif_cd_ebs_sap_dao.
     CLASS-DATA go_parser_double  TYPE REF TO zif_cd_ebs_parser.
+    CLASS-DATA go_evidence_double TYPE REF TO zif_cd_ebs_stmt_evidence.
 
 ENDCLASS.
 
@@ -56,6 +63,12 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
   METHOD get_cfg_dao.
     ro_dao = COND #( WHEN go_cfg_dao_double IS BOUND THEN go_cfg_dao_double
                      ELSE NEW zcl_cd_ebs_cfg_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_stmt_evidence.
+    ro_evidence = COND #( WHEN go_evidence_double IS BOUND THEN go_evidence_double
+                          ELSE NEW zcl_cd_ebs_stmt_evidence( ) ).
   ENDMETHOD.
 
 

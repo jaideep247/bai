@@ -50,6 +50,7 @@ ZCL_CD_EBS_R_S13_POSTED,covered,ZCL_CD_EBS_RULE_BASE,0,90,,Not run in target SAP
 ZCL_CD_EBS_SAP_DAO,own test include,,15,90,,Not run in target SAP; partial exemption: GET_RETRIEVALS select on ZCD_ACH_RTRV_LOG (VERIFY-DDIC status field) - QA1; its field check is unit tested
 ZCL_CD_EBS_SRC_FEB,own test include,,11,90,,Not run in target SAP
 ZCL_CD_EBS_SRC_FILE,own test include,,4,90,,Not run in target SAP
+ZCL_CD_EBS_STMT_EVIDENCE,own test include,,10,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_GENERIC,own test include,,10,90,,Not run in target SAP
 ZCL_CD_FMON_ADAPTER_PRISM,own test include,,4,90,,Not run in target SAP
 ZCL_CD_FMON_CALENDAR,own test include,,9,90,,Not run in target SAP
