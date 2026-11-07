@@ -39,4 +39,4 @@ define table zcd_hck_rcset {
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Read by ZCL_CD_HCK_RECON_DAO (check A_RECON_3WAY, ZCL_CD_HCK_C_RECON3); new rows only on a
-// customizing request in DV1 (D-3). Example rows: config/hck_seed.md section 8h.
+// customizing request in DV1 (D-3). Example rows: config/hck_seed.md section 10.
