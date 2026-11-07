@@ -39,7 +39,6 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 | Situation | App | What you do | Second person? |
 |---|---|---|---|
-| A bank line is blocked (e.g. R14 unmapped code) and must be posted today | **Blocked line releases** | Create a release for the line and check code with reason and evidence; the approver approves; then post (FEBAN/FPB7). Fix the mapping afterwards so it does not recur | Yes (ZCD_OPS 85) |
 | A known health-check finding for a planned outage or a known issue | **Health check suppressions** | Create with check, pattern / company code, period, reason; *End now* when fixed | Only for more than 7 days |
 | PRISM / ACK / bank confirmed a file stage that SAP never recorded | **Monitored files — manual status** | *Set status manually* with stage, reason and evidence; only forward moves are possible | No |
 | A PRISM payment request was handled outside SAP | **PRISM requests handled manually** | Record request, handling reference and reason; the exception closes. SAP re-sends nothing | No |
@@ -50,11 +49,10 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 | Situation | Action | Effect |
 |---|---|---|
-| EBS validation blocks postings wrongly | TVARVC `ZCD_EBS_VALIDATION_MODE` = `M` (or `O`) | Monitor only / off — no transport needed |
 | Alert storm | Deactivate the rule in the Alerting & parameters app or raise THROTTLE_MIN | Immediate, logged |
 | Change a threshold / SLA / rule parameter in production | Configuration app of the area → Edit → change the existing row → Save | No transport; logged in SCU3. New rows only in DV1 and by transport |
-| A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. **EBS in enforce mode:** a failing rule blocks posting of its packages (fail closed). Deactivating the rule removes that check — get the rule owner's approval, or switch to `M` for the affected period |
-| Remove the suite | Unschedule the three jobs, set the switch to `O` | Back to previous behaviour in < 15 min |
+| A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. Deactivating the rule removes that check — get the rule owner's approval |
+| Remove the suite | Unschedule the three jobs | Back to previous behaviour in < 15 min |
 | Job refused with RUN_LOCKED (message 040) | Check SM37 for the run named in the message; wait for it, or — only if that job is gone — delete the lock in SM12 (table ZCD_OPS_LOCK, argument client + payment engine area + variant) | One run per payment engine area + variant (FMON: one per system); the refusal is alerted (rule RUN_LOCKED) |
 
 ## 4a. Payment trace — "where is this payment?" (L1 / L2)
@@ -146,7 +144,6 @@ Since 2026-11-06 (user decision) `ZCD_EBS_VALIDATE` validates, and the EBS dashb
 | EBS run message | *n statements out of scope* | Imported statements whose lines are not all payment engine accounts (XBLNR) were skipped — no finding, not on the dashboard | §5d: expected, or maintain / activate the account in the EBS configuration app |
 | EBS statement | POSTING_INCOMPLETE (S13, warning) | Entries expected to post were not posted when the run read FEBEP; their posting-dependent checks were not evaluated | §5c: check the predecessor jobs, re-run `ZCD_EBS_VALIDATE` |
 | EBS line | AWAITING_LOT_TRANSFER (warning) | Lookup not found while the statement is younger than `EBS_INFLIGHT_HOURS` — FPB7 / FP09 may still be running | None if it clears on the next run; otherwise investigate the lot transfer |
-| EBS line | Disposition NOT_POSTED / ON_ACCOUNT / EXCEPTION / BLOCK | What the posting caller must do with the line | Follow the disposition; BLOCK lines need a release (EBS release app) or a fix |
 | FMON file | PERSIST_CONFLICT | Another run (or a manual status) changed the file first; the newer state was kept | None unless it repeats |
 | FMON file | LOT_SCAN_TRUNCATED / FILE_REF_AMBIGUOUS / MALFORMED_SOURCE_ROW | Completeness or identity could not be proven | Investigate the lot / source rows; nothing is marked complete meanwhile |
 | Alert log | C older than its run | Delivery was interrupted (dump) | Re-send, then set to F |

@@ -71,7 +71,7 @@ Service binding `ZUI_CD_EBS_DASH_O4` (`/sap/opu/odata4/sap/zui_cd_ebs_dash_o4/sr
 
 ## 6. Drill-down path
 
-`EbsRun` → findings of the run; `EbsStatement` (FEBKO) → **lines** (FEBEP) → line **findings** and **returns / NOC lot items**; the statement's open findings directly. A run stores no list of the statements it validated — statements without findings leave no trace in a run, so "run → statement" goes through the run's findings (`StmtObjectKey`, `ObjectKey` columns). Keys: statement `FEB<KUKEY>`, line `FEB<KUKEY>/<ESNUM without leading zeros>` (`ZCL_CD_EBS_FINDING=>LINE_KEY`). Bank-file statements validated before import (keys `S0001`…) appear only in `EbsFinding` (source FILE). Reprocessing (FEBAN) stays outside the dashboard (read-only scope; `ZCDBankStatement-reprocess` not created, `Implementation_Order.md` 1c.7).
+`EbsRun` → findings of the run; `EbsStatement` (FEBKO) → **lines** (FEBEP) → line **findings** and **returns / NOC lot items**; the statement's open findings directly. A run stores no list of the statements it validated — statements without findings leave no trace in a run, so "run → statement" goes through the run's findings (`StmtObjectKey`, `ObjectKey` columns). Keys: statement `FEB<KUKEY>`, line `FEB<KUKEY>/<ESNUM without leading zeros>` (`ZCL_CD_EBS_FINDING=>LINE_KEY`). Bank-file statements validated before import (keys `S0001`…) appear only in `EbsFinding` (source FILE). Reprocessing (FEBAN) stays outside the suite (read-only scope).
 
 ## 7. Limits and sensitive data
 

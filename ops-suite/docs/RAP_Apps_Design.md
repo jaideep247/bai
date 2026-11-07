@@ -10,7 +10,7 @@ Decisions taken with the business owner (2026-11-06):
 | D-1 | `ops-suite` is the final product: EBS validation, file monitoring, morning report. Legacy and `jaideep247/src` are references only |
 | D-2 | **One configuration app per payment engine area** (EBS, FMON, HCK, Alerting) |
 | D-3 | **New configuration entries via transport** (created in DV1, recorded on a customizing request); **existing entries editable directly in production** (no transport; change-logged, authorised) |
-| D-4 | Operations apps: exception disposition, EBS blocked-line release, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
+| D-4 | Operations apps: exception disposition, HCK check suppression, FMON manual file status, PRISM payment-request API handling (**record "handled manually with reference" only — no reprocessing**) |
 | D-5 | Also in this build: retention purge (G1), authorisation object `ZCD_OPS` (G3), run lock, exception carry-forward |
 | D-6 | **Wording: "payment engine", never "module" or FI-CA / FS-CD.** EBS validation, file monitoring and the morning report are **payment engine areas**. Applied everywhere: business text and app titles ("Payment engine – file monitoring"), and technical names — column `MODULE` → `PE_AREA`, authorisation field `ZCD_MODULE` → `ZCD_PE_AREA` (data element `ZCD_PE_AREA`, "Payment engine area"), constants `gc_module` → `gc_pe_area`, parameters `iv_module` → `iv_pe_area`. **Done 2026-11-06 (phase 4)** as one mechanical rename after phases 1–3, verified by lint and tests; CDS element `PaymentEngineArea`, label "Payment engine area" |
 
@@ -20,7 +20,7 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 
 | Field | Data element | Values |
 |---|---|---|
-| `ACTVT` | standard | 03 display, 02 change, 01 create, 06 delete, 16 execute (run reports / purge), 43 release (EBS line release), 85 approve / waive (second person) |
+| `ACTVT` | standard | 03 display, 02 change, 01 create, 06 delete, 16 execute (run reports / purge), 85 approve / waive (second person) |
 | `ZCD_PE_AREA` (was `ZCD_MODULE`, D-6) | `ZCD_PE_AREA` (CHAR 4), "Payment engine area" | `EBS`, `FMON`, `HCK`, `CORE` (alerting, parameters, purge) |
 | `BUKRS` | standard | Company code; `*` for payment engine area-wide objects |
 
@@ -46,7 +46,7 @@ Platform: S/4HANA 2023 on-premise (SAP_BASIS 7.58), classic track for engines; *
 
 - Report `ZCD_OPS_PURGE` (test mode default ON, counts per table), class `ZCL_CD_OPS_PURGE` + DAO.
 - Parameters `RETENTION_DAYS_<TABLE>` in `ZCD_OPS_PARAM` (defaults: runs/findings 400, alert log 180, FMON events 400, HCK metrics 400).
-- **Never purged:** open exceptions (O, A), waivers still valid, findings of a run that has open exceptions, release / suppression / manual-status records younger than their retention (audit evidence).
+- **Never purged:** open exceptions (O, A), waivers still valid, findings of a run that has open exceptions, suppression / manual-status records younger than their retention (audit evidence).
 - Deletes in packages with commit per package; scheduled monthly by Control-M.
 
 ## 5. Configuration apps (D-2, D-3)
@@ -73,15 +73,11 @@ Pattern: SAP **business-configuration maintenance** shape — a **singleton root
 
 ## 6. Operations apps (D-4)
 
-All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every action with a mandatory reason and a history row.
+All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every action with a mandatory reason and a history row. They write only suite records (read-only towards FS-CD / FI data, user decision 2026-11-07); the blocked-line release of the first design (6.2) is not part of the suite.
 
 ### 6.1 Exceptions — `ZUI_CD_OPS_EXC_O4` (root `ZR_CD_OpsException` on ZCD_OPS_FINDING, rank ≥ 2, not superseded)
 - Actions: **Assign** (owner) → A; **Resolve** (reason) → R; **Request waiver** (reason, valid to) → pending; **Approve waiver** — different user than the requester (four-eyes), `ZCD_OPS` 85 → W.
 - Child `ZCD_OPS_EXC_HIST` (finding key, seq, action, from/to disposition, reason, user, timestamp) written for every action.
-
-### 6.2 EBS blocked-line release — `ZUI_CD_EBS_REL_O4` (root on new `ZCD_EBS_RELEASE`)
-- Key: statement key + line no + check code. Request (reason, evidence) → Approve by a second user (`ZCD_OPS` 43 + 85) → status A. Valid only for the check code released: a new, different block finding on the same line still blocks.
-- Engine: `validate_for_posting` drops BLOCK findings whose line + check code has an approved release; the dropped finding is kept as severity I with the release reference (test first).
 
 ### 6.3 HCK suppression — `ZUI_CD_HCK_SUP_O4` (root on new `ZCD_HCK_SUPPRESS`)
 - Check ID + object-key pattern + company code, valid from / to, reason, approver (four-eyes for > 7 days).
@@ -97,16 +93,15 @@ All transactional (delivery class A), no transport, `ZCD_OPS` authorised, every 
 - Still needed for the monitoring side: the SE11 structure of `ZCD_PAYM_REQ_LOG` (request reference, status and timestamp fields) to configure the FMON API interface; until then the reference is entered by hand from PRISM.
 
 ### 6.6 Status — built (phase 3, 2026-11-06)
-All five apps built as designed (`RAP_Ops_Apps.md`). Deviations:
+All four apps built as designed (`RAP_Ops_Apps.md`). Deviations:
 - **No draft** for any operations BO — every action is one complete change; draft would add a second, unaudited state.
-- **Release key** is the finding's object key (`<statement>/<line>`) plus check code, copied from the exception — not separate statement-key / line-number columns (no format drift between finding and release).
 - **Suppression company code** is matched inside the finding's object key (HCK object keys carry the company code as dimension); a separate column on the finding does not exist.
 - **Manual status** only for files already in the registry; an expected file that never arrived is worked as an exception.
-- **History of releases / PRISM handling** is written by `ZCL_CD_OPS_EXC_DAO` in the other BO's saver (EML of a second BO is not allowed in the save sequence).
+- **History of PRISM handling** is written by `ZCL_CD_OPS_EXC_DAO` in the other BO's saver (EML of a second BO is not allowed in the save sequence).
 - **Read authorisation** per area: CDS views `#NOT_REQUIRED`, actions instance- / globally authorised; a DCL is a DV1 decision (`RAP_Ops_Apps.md` §4 step 5).
 
 ## 7. Delivery and verification
 
 - RAP sources in abapGit format under `src/<pe_area>/` (DDLS, DDLX, BDEF, SRVD, draft TABL, behaviour pools); service bindings created and published in ADT after import (`Implementation_Order.md`).
-- Pure classes (policy, release / suppression matching, carry-forward, purge selection) test first; RAP handlers thin; DAO SQL with `cl_osql_test_environment`.
+- Pure classes (policy, suppression matching, carry-forward, purge selection) test first; RAP handlers thin; DAO SQL with `cl_osql_test_environment`.
 - abaplint + ATC-equivalent + portable checks green before each commit; nothing here is executed in SAP until DV1.

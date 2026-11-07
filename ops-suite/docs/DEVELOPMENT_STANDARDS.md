@@ -108,7 +108,8 @@ interfaces (types) → domain (engines, rules, checks: no SQL) → repositories 
 - Registry lookups fall back to a blank/`*` default row (a new source/bank/LOB costs configuration only).
 - Configuration is maintained only through the four RAP configuration apps (`RAP_Config_Apps.md`); SM30 maintenance views are not delivered. New customizing table → add it to the spec in `tools/rap_generate.py`, add the three admin fields, regenerate.
 - A failing plug-in never aborts a run: catch `zcx_cd_ops_error` and `cx_root` per plug-in and record a finding (`check_code = 'PLUGIN_ERROR'`, severity E).
-- **Fail closed where a check gates money:** an EBS rule that fails carries action BLOCK, so posting is blocked in enforce mode; `validate_for_posting` never raises (VALIDATION_ERROR, action BLOCK).
+- **Fail closed:** an EBS rule that raises is a PLUGIN_ERROR finding with action BLOCK and its lines count as unevaluated, never passed; a missing or unusable required rule is a configuration finding (A03).
+- **Read-only towards production (user decision 2026-11-07):** the suite reads FS-CD / FI data and writes only its own tables (runs, findings, exception history, suppressions, file registry, PRISM evidence). No posting gate, line release, reprocessing navigation or outbound call; such a capability is a later phase with its own design.
 - **Durable before notified:** commit the run header at start; commit results and run end before any alert or mail (a channel may `COMMIT WORK` itself); never commit a half-written save — `store->rollback( )`.
 
 ### Message class ZCD_OPS ranges

@@ -19,7 +19,7 @@ Approvals, production execution and post-implementation verification are covered
 
 In scope: ABAP Unit tests; EBS validation of imported statements and of bank files before import; BTC mapping and zero-suspense blocking; file registry, event chain, SLA, returns/NOC completeness; health checks, job-cycle monitoring, morning report; configurable alerting; parity with the legacy validators; performance at production volume.
 
-Out of scope: transport import, activation, syntax and ATC (build hygiene); the BAdI FIEB_CHANGE_BS_DATA implementation (not delivered — signature from SE18 first); job retrigger (next phase); PRISM and bank internals beyond the file and ack tables.
+Out of scope: transport import, activation, syntax and ATC (build hygiene); posting enforcement and job retrigger (later phases — the suite is read-only towards production); PRISM and bank internals beyond the file and ack tables.
 
 ## 2. What is being compared
 
@@ -44,7 +44,6 @@ Two real inputs instead of the population: one configured case (positive) and an
 | House bank accounts | One disbursement (JPMC), one collection (BOA) in `ZCD_EBS_ACCT`, each with ACCOUNT_NO = its 10-character payment engine account from FEBEP-XBLNR, plus one inactive row |
 | Statements | One BAI2 file per bank (`config/samples/bai2_sample.txt` as layout reference), one CAMT.053 and one CAMT.054 returns file |
 | Customizing | `config/*.csv`, `config/*_seed.md` loaded per `Implementation_Order.md` step 3 |
-| Kill switch | TVARVC `ZCD_EBS_VALIDATION_MODE` = M unless a case says otherwise |
 | Reset | Delete test runs from ZCD_OPS_RUN / _FINDING / ZCD_OPS_ALLOG by RUN_ID after each case |
 
 Production data never leaves the system; extracts for evidence are anonymised.
@@ -65,7 +64,7 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | ID | Scenario | Configuration | Expected result | Actual / status |
 |---|---|---|---|---|
 | EBS-01 | BAI2 file before import, all codes mapped, balances consistent | Seed map | Run S, no B/E findings | pending |
-| EBS-02 | Same file with one detail record changed to an unmapped type code | Seed map | Line blocked, R14 UNMAPPED_BTC (B), S09 BTC_COVERAGE on the statement, no posting in enforce mode | pending |
+| EBS-02 | Same file with one detail record changed to an unmapped type code | Seed map | Line blocked, R14 UNMAPPED_BTC (B), S09 BTC_COVERAGE on the statement | pending |
 | EBS-03 | Acceptance 3: add a ZCD_BTC_MAP row for the code from EBS-02 + ZCD_BTC_RULE R01/R04 | +1 map row, +2 rule rows | Line validated by R01/R04, no R14 | pending |
 | EBS-04 | Acceptance 4: opening differs from prior closing by 0.02 | ZCD_BTC_RULE `*`/S01 TOLERANCE 0.01, SEVERITY B, ACTION BLOCK | S01 OPENING_NE_PRIOR_CLOSING (B); with deviation 0.01 no finding | pending |
 | EBS-05 | BAI2 file with wrong 49 account control total | — | Parser S06 BAI2_ACCT_CTRL_TOTAL (B) | pending |
@@ -76,7 +75,6 @@ Production data never leaves the system; extracts for evidence are anonymised.
 | EBS-09 | Imported statement (FEB source), 168 on disbursement account, payment not RETURNED in DPAYH | Seed group BAI168D | R07 PAYMENT_STATUS | pending |
 | EBS-10 | 581 checks paid with one register amount off by 1.00 | Seed group BAI581D | R08 CHECK_AMOUNT_MISMATCH on that check, R12 CODE_TOTAL_MISMATCH on the statement | pending |
 | EBS-11 | Same statement file delivered twice | — | S07 STMT_ALREADY_IMPORTED (B) | pending |
-| EBS-12 | Kill switch E / M / O on a file with one unmapped code (pre-posting entry) | TVARVC row | **Out of scope for this release:** the pre-posting path (`VALIDATE_FOR_POSTING` / BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, blocked-line release) stays switched off; case moves with A02 to the future enforcement phase | not in this release |
 | EBS-13 | Circuit breaker (A104): **FEB source** (`P_FEB`) over ≥ 3 imported statements, each a controlled package, every package > 50 % of its lines unmapped (the statements were imported, posted and cleared before the run — post-posting detective control) | `P_PACK` = 1 (one statement per package); `EBS_CB_MIN_LINES` = 1, `EBS_CB_FAIL_PCT` = 50, `EBS_CB_PACKAGES` = 3; ≥ 3 test statements selected by `S_KUKEY` / date range | Package 3 trips the breaker: run status A (aborted), one CIRCUIT_BREAKER finding (rule CB, E), no further package read, alert per the ON_ABORT rule; with only 2 bad packages followed by a good one: no breaker (counter resets) | pending |
 | EBS-13a | Oversized or invalid single file through the **file source** (`P_FILE`) — one file is always one package, so the breaker cannot trip | (a) file not UTF-8; (b) BAI2 file cut off before the 98/99 trailers; (c) production-size file (largest observed day, `<line count, VERIFY with operations>`) | (a) read rejected, message 012, no run results (A69); (b) structural findings S00 / S06 TRAILER missing (B), lines not reported as validated (A86/A95); (c) one package, run completes or fails visibly; record runtime and memory — no size limit exists in code (`VERIFY` in QA1 whether one is needed) | pending |
 | EBS-14 | Test mode | P_TEST = X | Findings shown; ZCD_OPS_RUN / ZCD_OPS_FINDING / ZCD_OPS_ALLOG unchanged | pending |
@@ -99,7 +97,6 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | ALR-03 | Two runs 10 minutes apart | THROTTLE_MIN 30 | Second run logged T | pending |
 | ALR-04 | Third consecutive alerting run | ESCALATE_AFTER 3 | Escalation list added | pending |
 | ALR-05 | E-mail channel with invalid address | — | Log F; morning report alert-delivery check amber/red; run itself unaffected | pending |
-| ALR-06 | HTTP channel to SM59 test endpoint | Destination by Basis | JSON body received, log S; non-2xx → log F | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
 
 ### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)
@@ -113,7 +110,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 (**return debits aging > 10 days by compa
 | CORE-05 | Fix the map row from CORE-04 and re-run | +1 ZCD_BTC_MAP row | Exception resolved "Passed on re-run"; open list on the morning report no longer shows it | pending |
 | CORE-06 | Waived exception raised again | Disposition W, WAIVER_UNTIL in the future | New row stays W | pending |
 | CORE-07 | `ZCD_OPS_PURGE` test mode, then productive with RETENTION_DAYS_RUN 30 on a copy of QA1 data | — | Test mode counts only; productive deletes old closed runs with findings, keeps runs with open / assigned / validly waived exceptions | pending |
-| OPS-01 … OPS-10 | Operations apps: assign / resolve, waiver four-eyes, blocked-line release and posting gate, suppression (short / long), manual file status forward / backward, PRISM request handled manually | `RAP_Ops_Apps.md` §5 | As listed in `RAP_Ops_Apps.md` §5 | pending |
+| OPS-01 … OPS-08 | Operations apps: assign / resolve, waiver four-eyes, suppression (short / long), manual file status forward / backward, PRISM request handled manually | `RAP_Ops_Apps.md` §5 | As listed in `RAP_Ops_Apps.md` §5 | pending |
 | HCK-QA-15 | `C_PRQ_NO_SPE` with one failed request without SPE row and one with SUCCESS after the failure | `config/hck_seed.md` rows, SE11 names filled | One finding (the first request); the second is not failed | pending |
 | HCK-QA-16 | `C_CHQ_STATUS` with a cheque history 10 → 2 and one 10 → 9 | — | One finding (10 → 2); 10 → 9 allowed | pending |
 | HCK-QA-17 | `C_PRQ_CANCEL` with a PCLM request CANCELLED whose open item is cleared | — | One finding PRQ_PAID_CANCELLED | pending |
@@ -225,7 +222,7 @@ Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–
 | **PAR-195** (A105): 195 D, three lines of one payment run — existing payment, same LAUFD / LAUFI with a missing DOC1R, unknown run | COMPLETE 4 (run-level LAUFD / LAUFI): fails only the unknown run | R07 `PAYMENT_NOT_FOUND` on the missing payment **and** the unknown run (payment-level DOC1R, as v4) | Deliberate: run-level vs payment-level match (`Legacy_Parity_Comparison.md` §3 and §4 PAR-195) | pending |
 
 ## 8. Integration (QA1)
-PRISM file hand-off and ack tables populated by the real interfaces; registry events derived from them in the right order (FMON-01, FMON-05). BCS, SLG1 and SM59 channels (ALR-05 … 07).
+PRISM file hand-off and ack tables populated by the real interfaces; registry events derived from them in the right order (FMON-01, FMON-05). BCS and SLG1 channels (ALR-05, ALR-07).
 
 ## 9. Transaction and crash boundaries (QA1)
 Cancel `ZCD_EBS_VALIDATE` (SM50) between packages: findings of committed packages remain, run stays status R, the morning report's health-of-health check flags it. Re-run produces a new run; no duplicate events in ZCD_FMON_EVENT (unique index).

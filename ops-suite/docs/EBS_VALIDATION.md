@@ -18,7 +18,7 @@
 bank statement import (FF_5 / FEBKO, FEBEP)  →  posting job (FEBP)  →  payment clearing job  →  ZCD_EBS_VALIDATE
 ```
 
-It **reports findings and never stops a posting**: by the time it runs every line is already posted (or deliberately left unposted). It changes no business data, starts no job and takes no lock on a standard table. The pre-posting path (`validate_for_posting`, BAdI `FIEB_CHANGE_BS_DATA`, enforce mode, per-line dispositions, blocked-line release app) stays in the code but is dormant and not part of this release (§B7, audit A02).
+It **reports findings and never stops a posting**: by the time it runs every line is already posted (or deliberately left unposted). It changes no business data, starts no job and takes no lock on a standard table. The suite is read-only towards production: it has no pre-posting entry, no posting gate and no release of lines; enforcement is a later phase with its own design.
 
 **What a finding means for a posted line, and who corrects it.** The suite does none of the corrections below; an authorised operator does them under the operations runbook with the standard transaction.
 
@@ -79,15 +79,13 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 
 **Bank file source (BAI2 / CAMT before import).** XBLNR is not a field of the bank file — SAP fills FEBEP-XBLNR during the import (bank-specific interpretation), and neither the BAI2 16 record (bank / customer reference) nor CAMT (`EndToEndId`, `AcctSvcrRef`, …) carries a confirmed equivalent. File-source runs are therefore **scoped by the account configuration as before** (S04 on the file's account, matched by house bank or by ACCOUNT_NO = the account of the 03 record / `Acct/Id`); the XBLNR rule applies to the FEB source and the dashboard. VERIFY with a sample file of each bank whether the 03 / `Acct/Id` account equals the 10-character payment engine account; if not, file-source S04 needs its own account column.
 
-**Pre-posting path (dormant, §B7).** `validate_for_posting` is not scoped; a future BAdI phase decides whether it applies the same rule before posting.
-
 ### A1. What it does
 1. **Receives** a bank statement either as a file before import (BAI2 from JPMC/BOA, CAMT.053 statements, CAMT.054 notifications) or after FF_5/FEBP import (FEBKO/FEBEP).
 2. **Checks the statement** as a whole (S-checks): balances chain from the previous statement, the statement adds up, numbers have no gaps, the account is known, nothing is a re-delivery, bank control totals agree.
 3. **Classifies every line** by its bank transaction code (BAI2 type code or CAMT Domain-Family-Sub-family) into a business category (C01 ACH collection … X01 unmapped).
 4. **Validates each line** with the rules configured for its category: right direction, right currency, reference present, matches the payment run / check register / returns lot / ACH retrieval, amounts agree, not a duplicate.
 5. **Records** every problem as an owned exception with a due date, and **alerts** according to the alert rules.
-6. **Would block** (pre-posting enforce mode — dormant, §B7) any line that must not post: unmapped codes, NOC entries, failed integrity checks. In this release the batch run after posting only reports (§A0).
+6. **Marks as blocked** any line that must not post — unmapped codes, NOC entries, failed integrity checks (severity B or action BLOCK) — so the operator corrects it; the run reports and never stops a posting (§A0).
 
 ### A2. Category reference (requirements baseline matrix)
 
@@ -121,28 +119,19 @@ Production codes used today (legacy validators, disbursement accounts) keep thei
 | **R08 / R12** | Check amounts or totals differ from the register | Compare register and bank; possible reissue or bank error | Disbursement ops |
 | **S10 ENTRIES_NOT_ACCOUNTED** (W) | Imported entries neither posted nor blocked | Work the FEBAN/FPB7 post-processing queue | Payment engine support |
 | **CIRCUIT_BREAKER** | Run stopped: too many failures, or three packages in a row where a rule could not run | Look for a systemic cause (wrong file, configuration change, broken rule class) before re-running | Payment engine support |
-| **PLUGIN_ERROR** + "entries not evaluated" in the run message | A rule raised; the lines of its group are **unevaluated** (counted as failed, never passed) and posting is blocked | Fix the rule or its configuration; re-run | Payment engine support |
+| **PLUGIN_ERROR** + "entries not evaluated" in the run message | A rule raised; the lines of its group are **unevaluated** (counted as failed, never passed) | Fix the rule or its configuration; re-run | Payment engine support |
 | **POSTING_INCOMPLETE** (S13, W) + "entries not evaluated (posting not complete)" in the run message | Entries expected to post are not posted: the statement import, FEBP or the clearing job had not finished, or lines were left unposted. Posting-dependent rules were not evaluated for them; run never green | Runbook §5c: check the predecessor jobs in Control-M / SM37, re-run `ZCD_EBS_VALIDATE` after they finished (idempotent); still open afterwards → FEBAN post-processing | Payment engine support |
 | **NO_DATA** (run status N, RAG grey) | The run selected no statement — nothing was evaluated | Check the selection (company code, house bank, dates) and whether the bank delivered; maintain `EBS_EMPTY_FEED_OK` = X only for feeds that are intentionally empty | Payment engine support |
-| **RULE_GROUP_EMPTY / RULE_UNUSABLE / KEY_LENGTH_CONFIG** (BLOCK) | Configuration gap: a mapped group without a usable rule, a rule without active definition, or a key length above the key width | Fix the configuration (never released line by line) | Payment engine support |
+| **RULE_GROUP_EMPTY / RULE_UNUSABLE / KEY_LENGTH_CONFIG** (BLOCK) | Configuration gap: a mapped group without a usable rule, a rule without active definition, or a key length above the key width | Fix the configuration | Payment engine support |
 | **TRAILER_FIELD_MISSING** (S06 B / S12) | A 49 / 98 / 99 trailer of the file has an empty total or count | Request a resend; a missing declaration is never replaced by the computed value | Treasury |
 | **REF_TOO_LONG / REF_FORMAT** | The bank reference cannot be a document number (longer than the key, or not alphanumeric) | Look the entry up manually; it is never matched on a truncated key | Disbursement ops |
 | **DUPLICATE_HISTORY** (R22) | The entry is already in an earlier statement of the account (look-back window) | Check FEBEP for the earlier statement before posting | Treasury |
-| **AWAITING_LOT_TRANSFER** (W) | Payment / returns lot not found yet, statement inside the in-flight window (`EBS_INFLIGHT_HOURS`) | None while inside the window; the line is held as EXCEPTION, never auto-posted | Disbursement ops |
-| **MISSING_TRAILER / FUNDS_LAYOUT** (B, BAI2) | A 49 / 98 / 99 record is missing, or a detail's funds-type block cannot be read | Request a resend; nothing of the file is posted | Treasury |
+| **AWAITING_LOT_TRANSFER** (W) | Payment / returns lot not found yet, statement inside the in-flight window (`EBS_INFLIGHT_HOURS`) | None while inside the window; a run after the window reports the original finding | Disbursement ops |
+| **MISSING_TRAILER / FUNDS_LAYOUT** (B, BAI2) | A 49 / 98 / 99 record is missing, or a detail's funds-type block cannot be read | Request a resend | Treasury |
 | **CAMT_DOCUMENT / INVALID_AMOUNT / INVALID_COUNT** (B, CAMT) | Namespace / version not approved, second message body, wrong statement element, or a value that is not a number | Request a corrected file; a new CAMT version is a parser change (§B6a) | Payment engine support |
 | **ENTRY_NOT_BOOKED** (W, CAMT) | Entry with status PDNG / INFO (or none) — quarantined, not posted | Wait for the booked entry in a later statement | Treasury |
 | **CAMT_BATCH_MISMATCH** (B) / **CAMT_DETAIL_AMOUNT_MISSING** (E) | Transaction details do not add up to their entry, or a detail has no amount | Post the entry manually from the bank advice; the detail lines are not emitted | Payment engine support |
-| **MAP_CONFLICT** (B) | ZCD_BTC_MAP has a blank-flow row and a `*` row for the same code that contradict each other | Delete one row (the app stores `*`); never released | Payment engine support |
-| **KILL_SWITCH_FALLBACK** (W) | TVARVC `ZCD_EBS_VALIDATION_MODE` missing, invalid or unreadable — MONITOR used | Maintain the switch (E / M / O) | Payment engine support |
-
-### A4. Modes (kill switch)
-TVARVC `ZCD_EBS_VALIDATION_MODE` (type P, NUMB 0000): **E** enforce (pre-posting hook blocks B findings), **M** monitor (record only — also the value used when the row is missing, holds another value or cannot be read; `read_mode` then returns a KILL_SWITCH_FALLBACK diagnostic, A91), **O** off. The scheduled report never reads the switch and never blocks; only the dormant pre-posting hook (§B7) would use the mode. Rollout value: **O**.
-
----
-
-### Blocked-line release (operations app — dormant, not in this release)
-Part of the pre-posting path (§B7); the app is not pulled by abapGit in this release. A blocked line can be released for posting only through the **Blocked line releases** app: one user requests (line, check code, reason, evidence), a second user approves. In enforce mode `validate_for_posting` then treats exactly that block as information; any other block on the line still blocks, and a rule that could not run (PLUGIN_ERROR / VALIDATION_ERROR) is never releasable. The approval resolves the exception (history action RELEASE). Details: `RAP_Ops_Apps.md` §2.2.
+| **MAP_CONFLICT** (B) | ZCD_BTC_MAP has a blank-flow row and a `*` row for the same code that contradict each other | Delete one row (the app stores `*`) | Payment engine support |
 
 ## Part B — Technical
 
@@ -163,7 +152,6 @@ flowchart LR
   E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
   ST -->|reconcile package scope, commit per package| CB{Circuit breaker}
   CB -->|end of run| AL[Alert router ZCD_OPS_ALRULE]
-  E3 -.->|validate_for_posting, mode E/M/O| BADI[BAdI FIEB_CHANGE_BS_DATA]
 ```
 
 Before anything runs the engine takes the **run lock** for its variant (`ZCD_OPS_LOCK` via `E_TABLE`, kept across the package commits, released at the end); a second run of the same variant is refused with RUN_LOCKED. After saving each package's findings the engine **reconciles** the package's lines and statements: open exceptions of earlier runs for these objects that were not raised again are resolved; an exception raised again keeps owner, due date and first-seen time (`ZCL_CD_OPS_STORE`). A package with a PLUGIN_ERROR resolves nothing.
@@ -186,8 +174,8 @@ Points of no return: the commit after each package (findings durable) and the al
 | Table | Key | Holds |
 |---|---|---|
 | ZCD_BTC_MAP | SCHEME, BTC_CODE, BANK_KEY, FLOW_TYPE | Category, rule group, expected direction, payment method, posting rule, action, **disposition** (blank = posted as usual, NOT_POSTED = never posted, A26) |
-| ZCD_EBS_RULE_DEF | RULE_ID | Rule registry: level S/L, class, default severity/action, **BLOCKS_POSTING** default (A27), **NEEDS_POSTING** (rule reads posting evidence — not evaluated for a line expected to post but not posted, §A0), **FINDING_CLASS** (dashboard class of the rule's findings: DUPLICATE — seed S07, R09, R22; POSTING — seed S13; blank = neither; read by `ZI_CD_EbsFinding`) |
-| ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window, **BLOCKS_POSTING** override (blank = registry default, Y, N). RULE_ID **NONE** marks a group that intentionally has no code-specific rule (A03) |
+| ZCD_EBS_RULE_DEF | RULE_ID | Rule registry: level S/L, class, default severity/action, **NEEDS_POSTING** (rule reads posting evidence — not evaluated for a line expected to post but not posted, §A0), **FINDING_CLASS** (dashboard class of the rule's findings: DUPLICATE — seed S07, R09, R22; POSTING — seed S13; blank = neither; read by `ZI_CD_EbsFinding`) |
+| ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window. RULE_ID **NONE** marks a group that intentionally has no code-specific rule (A03) |
 | ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | **ACCOUNT_NO = 10-character payment engine account as derived from FEBEP-XBLNR** (§A0a; upper case, no leading blank — the active rows are the scope of validation and dashboard), bank key, format, default flow, currency, bank G/L, ACTIVE |
 | ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG); PATTERN is PCRE, matched to the **complete value** (`matches( )` — never a partial `find`), **case ignored** (as the former CP wildcards), blank keeps its meaning at each place — see §B3a |
 | ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → payment engine return reason |
@@ -213,7 +201,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 | S08 | FMON | file registry | File expected and registered — file monitoring payment engine area |
 | S09 | S | ZCL_CD_EBS_R_S09_COVERAGE | Unmapped entries per statement |
 | S10 | S | ZCL_CD_EBS_R_S10_COMPLETE | Entries neither posted nor blocked |
-| S12 (imported) | S | ZCL_CD_EBS_R_S12_COUNT | FEBKO-ANZES vs entries. Blocks posting (seed ON) — also for the parser's S12 findings |
+| S12 (imported) | S | ZCL_CD_EBS_R_S12_COUNT | FEBKO-ANZES vs entries — also for the parser's S12 findings |
 | S13 | S | ZCL_CD_EBS_R_S13_POSTED | Imported statements: entries expected to post (posting state O, not NOT_POSTED, not blocked) are posted — else one POSTING_INCOMPLETE per statement with count and total (§A0) |
 | R01 | L | …_R01_SIGN | Direction vs map |
 | R02 | L | …_R02_BOUNDS | Min/max (also R11 fee tolerance) |
@@ -239,7 +227,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 
 **Keys (A65).** A bank reference becomes a document-number key only when it fits: the width comes from the key type (12 for OPBEL / AUGBL / DOC1R, VERIFY-DDIC), `EBS_KEYLEN_DOCNO` above it is KEY_LENGTH_CONFIG, a longer reference REF_TOO_LONG and characters outside 0–9 / A–Z REF_FORMAT. Nothing is truncated. Check numbers compare without leading zeros (`EBS_ZTNUM_IGNORE_ZEROS`) and within the company code and house bank account (A07).
 
-**Blocking flag (A27) and configuration gaps (A03).** A failed check of a rule whose blocks-posting flag is on carries action BLOCK (blocks in enforce mode, releasable per line); a rule with the flag off records its finding with the configured action. Seeded ON: S02, S04, S07, S12, R07, R07C, R07L, R07R, R08, R12, R19, R21. A mapped rule group without usable rule, or an assignment whose definition is missing or inactive, is a configuration gap (BLOCK, never released).
+**Configuration gaps (A03).** A finding carries the severity and action of its rule assignment (registry default when blank). A mapped rule group without usable rule, or an assignment whose definition is missing or inactive, is a configuration gap (action BLOCK).
 
 **R05 — return / NOC reason (correction 2026-11-06).** FEBEP carries **no** return or NOC reason. *Bank file before import* (BAI2 / CAMT): the NACHA code delivered in the file (R01–R85, C01–C07) must be mapped in ZCD_EBS_RSN_MAP — unchanged (A28: placeholder = REASON_MAP_INCOMPLETE, NOC vs return = REASON_KIND, PARAM1 REQUIRED, format check without mapping). *Imported statement (FEB source)*: the reason is read from the lot the return / NOC processing created — returns: **DFKKRP-RLGRD** of the returns lot items with SELW1 = payment document (FEBEP-CHECT, methods E G H I J K L; the same read as R07R); NOC: **DFKKNRP-FLGRD** of the NOC lot items whose **INFOF** (CHAR 50) holds the payment document (AUGBL) or the payment reference — read with every form the reference can take (as delivered, without leading zeros, as 12-digit document key) and matched after condensing and removing leading zeros of all-digit values (`EBS_ZTNUM_IGNORE_ZEROS`); exact INFOF content VERIFY-SE11. The reason must be filled (else REASON_MISSING), one and the same for all items of the payment (else REASON_AMBIGUOUS, listing the reasons) and a configured payment engine reason of its kind — FICA_REASON of a ZCD_EBS_RSN_MAP return row for RLGRD, of a NOC row (C01–C07) for FLGRD, never a placeholder (else REASON_UNMAPPED). PARAM2 RETURN reads only the returns lot, NOC only the NOC lot, blank both. A payment without lot item is **not evaluated** by R05 (R07R / S13 own a missing lot — no second failure). R05 is seeded **NEEDS_POSTING**: the lots exist only after return / NOC processing, so an entry that is not posted yet is never judged.
 
@@ -297,26 +285,10 @@ All steps in the **EBS configuration app** (`ZUI_CD_EBS_CFG_O4`). New rows are c
 5. **Only if nothing above can express the check** — a new rule class (one class, test-first, ZCD_EBS_RULE_DEF row).
 6. Test in DV1 with a statement containing the code (test mode), transport, re-run in QA1, record in `Legacy_Parity_Comparison.md` if it replaces a legacy validator.
 
-**Configuration only, or a parser change? (A97)** Configuration is enough when the parser already emits the entry as a monetary line: BAI2 detail codes 100–399 (credit) and 400–699 (debit) with a supported funds type (blank, 0, 1, 2, Z, V, S, D), and every booked CAMT entry (`Sts` BOOK) with an ISO or proprietary code. A **parser change** is needed when the bank profile differs in layout: BAI2 informational codes 700–999 (dropped as INFO_CODE_SKIPPED — a map row alone never posts them), a new funds-type layout or field position (else FUNDS_LAYOUT), a CAMT namespace / version outside camt.053 / camt.054 .001.02–08 (else CAMT_DOCUMENT), camt.052 reports, or an entry status other than BOOK that the business wants posted. Proof: `e2e_config_only_code_posts` (file text → parser → engine, configuration only) and `e2e_info_code_not_posted`.
+**Configuration only, or a parser change? (A97)** Configuration is enough when the parser already emits the entry as a monetary line: BAI2 detail codes 100–399 (credit) and 400–699 (debit) with a supported funds type (blank, 0, 1, 2, Z, V, S, D), and every booked CAMT entry (`Sts` BOOK) with an ISO or proprietary code. A **parser change** is needed when the bank profile differs in layout: BAI2 informational codes 700–999 (dropped as INFO_CODE_SKIPPED — a map row alone never posts them), a new funds-type layout or field position (else FUNDS_LAYOUT), a CAMT namespace / version outside camt.053 / camt.054 .001.02–08 (else CAMT_DOCUMENT), camt.052 reports, or an entry status other than BOOK that the business wants posted. Proof: `e2e_config_only_code_routed` (file text → parser → engine, configuration only) and `e2e_info_code_no_line`.
 
-### B7. Pre-posting hook (dormant — future enforcement phase, A02)
-**Not part of this release.** The batch run validates after posting (§A0) and never reads the kill switch. The pre-posting path below stays in `ZCL_CD_EBS_ENGINE` unchanged and switched off: no BAdI implementation exists, TVARVC `ZCD_EBS_VALIDATION_MODE` = `O`, the blocked-line release app is not pulled by abapGit. It is described here only so a future phase can switch it on after its own review (A02).
-
-Design (future): the engine exposes `validate_for_posting( iv_mode = zcl_cd_ebs_engine=>read_mode( ) is_package = … )`. A BAdI implementation of `FIEB_CHANGE_BS_DATA` would map the BAdI's statement structures to `ZIF_CD_EBS_TYPES=>TY_PACKAGE` and, when `block = abap_true`, prevent posting of the affected items. Lines handed over by such a caller carry no posting state, so the posting-dependent rules behave there as for the file source.
-
-**Posting disposition (A85, dormant).** The decision also returns one disposition per line (`dispositions`, keyed by line key), which a BAdI would act on:
-
-| Precedence | Disposition | Comes from |
-|---|---|---|
-| 1 | BLOCK | A finding with severity B or action BLOCK on the line, its statement or the package (the A27 flag sets action BLOCK; releases turn exactly their block into information) |
-| 2 | NOT_POSTED | Map row disposition NOT_POSTED (sweeps 275 / 575) |
-| 3 | EXCEPTION | A finding with action EXCEPTION, or blank action and severity E; map action EXCEPTION; AWAITING_LOT_TRANSFER; a line whose block was released but that has no usable mapping |
-| 4 | ON_ACCOUNT | Map action ON_ACCOUNT, or a finding with action ON_ACCOUNT |
-| 5 | AUTO_POST | Otherwise |
-
-NOTIFY findings and warnings do not change the disposition. In mode M a BLOCK is returned as EXCEPTION (monitor never blocks); in mode O no disposition is returned.
-
-**Run status (A66, A68).** Statements out of the payment engine scope (§A0a) are counted in the run message, never a finding. A run that selected no statement ends with status **N** (NO_DATA) and RAG grey plus a NO_DATA finding, unless `EBS_EMPTY_FEED_OK` = X. Lines of a rule group whose rule raised (PLUGIN_ERROR) are unevaluated: counted as failed, reported in the run message and in the result; such a package counts for the circuit breaker. An inverted FEB date range is rejected. A server file that is not valid UTF-8, or that cannot be read to its end, is rejected (A69). **The BAdI method signature must be copied from SE18 before the implementation is written** (house rule: never guess a signature); it is therefore not part of this delivery.
+### B7. Run status
+**Run status (A66, A68).** Statements out of the payment engine scope (§A0a) are counted in the run message, never a finding. A run that selected no statement ends with status **N** (NO_DATA) and RAG grey plus a NO_DATA finding, unless `EBS_EMPTY_FEED_OK` = X. Lines of a rule group whose rule raised (PLUGIN_ERROR) are unevaluated: counted as failed, reported in the run message and in the result; such a package counts for the circuit breaker. An inverted FEB date range is rejected. A server file that is not valid UTF-8, or that cannot be read to its end, is rejected (A69).
 
 ### B8. Not verified
-Syntax and typing checked offline with abaplint (v758 rules, SAP stub library). Not activated in SAP; ABAP Unit not executed; DDIC fields marked `VERIFY-DDIC` in `ZCL_CD_EBS_FEB_DAO` and `ZCL_CD_EBS_SAP_DAO` must be confirmed in SE11 before activation. Also to confirm (phase 6): **VERIFY-SE11 FEBEP-VB1OK / VB2OK** (posting area 1 / 2 completed — names, CHAR 1 with X when complete, and whether VB2OK is set for items without an area-2 posting; parameter `EBS_FEB_POSTED_FIELDS`); the 12-character width of OPBEL / AUGBL / DOC1R; the DFKKCR company-code field (`EBS_DFKKCR_BUKRS_FIELD`) and the FEBEP reason field (`EBS_FEB_REASON_FIELD`); READ DATASET return code 4 on an unterminated last line; the time zone of statement creation times (in-flight grace); **the XBLNR layout** (bank text + 10-character account + counter) on a production sample of each bank and that the payment engine accounts in `ZCD_EBS_ACCT-ACCOUNT_NO` are maintained in upper case; `REPLACE_REGEXPR` in the CDS view (`Dashboard_EBS_Validation.md` §9). Per-finding status: `Audit_Response_EBS.md`.
+Syntax and typing checked offline with abaplint (v758 rules, SAP stub library). Not activated in SAP; ABAP Unit not executed; DDIC fields marked `VERIFY-DDIC` in `ZCL_CD_EBS_FEB_DAO` and `ZCL_CD_EBS_SAP_DAO` must be confirmed in SE11 before activation. Also to confirm (phase 6): **VERIFY-SE11 FEBEP-VB1OK / VB2OK** (posting area 1 / 2 completed — names, CHAR 1 with X when complete, and whether VB2OK is set for items without an area-2 posting; parameter `EBS_FEB_POSTED_FIELDS`); the 12-character width of OPBEL / AUGBL / DOC1R; the DFKKCR company-code field (`EBS_DFKKCR_BUKRS_FIELD`) and the FEBEP reason field (`EBS_FEB_REASON_FIELD`); READ DATASET return code 4 on an unterminated last line; the time zone of statement creation times (in-flight grace); **the XBLNR layout** (bank text + 10-character account + counter) on a production sample of each bank and that the payment engine accounts in `ZCD_EBS_ACCT-ACCOUNT_NO` are maintained in upper case; `REPLACE_REGEXPR` in the CDS view (`Dashboard_EBS_Validation.md` §9). Per-finding status: `history/Audit_History.md`.

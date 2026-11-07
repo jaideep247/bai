@@ -2,10 +2,11 @@
 *& Artifact: zif_cd_ops_exc_dao.intf.abap
 *& Purpose:
 *& Repository for closing exceptions outside the exceptions business object
-*& (EBS release approval, PRISM payment request handled manually): find the
+*& (PRISM payment request handled manually): find the
 *& open exception of an object and close it with a history row.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-07 | Purpose: the EBS release approval is no longer a caller (read-only scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception repository</p>
 INTERFACE zif_cd_ops_exc_dao

@@ -3,13 +3,14 @@
 *& Purpose:
 *& Exception repository: finds the open exceptions of an object and closes
 *& them as resolved with one ZCD_OPS_EXC_HIST row each. Used where an
-*& exception is closed by another app's save (EBS release approval, PRISM
+*& exception is closed by another app's save (PRISM
 *& payment request handled manually). No commit - caller's LUW.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Performance fix 5: index OBJ is (MANDT, PE_AREA, OBJECT_KEY) - the object type is not known here.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Purpose: the EBS release approval is no longer a caller (read-only scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception repository</p>
 CLASS zcl_cd_ops_exc_dao DEFINITION

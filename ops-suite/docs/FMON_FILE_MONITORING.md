@@ -168,7 +168,7 @@ Every R/A finding is an owned exception in `ZCD_OPS_FINDING` with a due date (`S
 ## A6. Operations apps — manual status and PRISM requests
 - **Manual status** (`ZUI_CD_FMON_MAN_O4`): sets a stage by hand with reason and evidence where the state machine itself would move the file; writes an event with source `MANUAL`. The next run reconciles the file's exceptions.
 - **PRISM payment requests** arrive as API calls logged in `ZCD_PAYM_REQ_LOG`; monitored as interface `PAYREQ_PRISM_IN` (status `ZZ_STATUS`, `SUCCESS` = FULLY_PROCESSED, a later failed attempt never downgrades — `config/fmon_seed.md`). A request handled outside SAP is recorded in `ZUI_CD_FMON_PRQ_O4` (record only); its exception closes.
-Details: `RAP_Ops_Apps.md` §2.4, §2.5.
+Details: `RAP_Ops_Apps.md` §2.3, §2.4.
 
 ## B1. Tables
 

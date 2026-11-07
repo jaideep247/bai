@@ -5,7 +5,7 @@
 
 Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_CORE`, `ZCD_OPS_EBS`, `ZCD_OPS_FMON`, `ZCD_OPS_HCK`.
 
-**abapGit import (recommended).** The repository carries `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and full abapGit metadata: packages, classes, interfaces, programs with text pools, **all 68 tables** (incl. draft tables and their secondary indexes), CDS / BDEF / DDLX / service definitions of the RAP apps and the message class `ZCD_OPS`. Create the transportable package `ZCD_OPS` in DV1 with the landscape's transport layer, link the repository in abapGit (online: `https://github.com/jaideep247/bai.git`, or offline: `git archive --format=zip -o bai-ops-suite.zip <commit>` → Import ZIP), pull and assign a Workbench request. abapGit activates in dependency order, which replaces most of Steps 1–2 below; use them as the manual fallback and as the checklist for what must be active. Metadata is regenerated with `python3 tools/abapgit_serialize.py`.
+**abapGit import (recommended).** The repository carries `/.abapgit.xml` (starting folder `/ops-suite/src/`, folder logic PREFIX) and full abapGit metadata: packages, classes, interfaces, programs with text pools, **all 70 tables** (incl. draft tables and their secondary indexes), CDS / BDEF / DDLX / service definitions of the RAP apps and the message class `ZCD_OPS`. Create the transportable package `ZCD_OPS` in DV1 with the landscape's transport layer, link the repository in abapGit (online: `https://github.com/jaideep247/bai.git`, or offline: `git archive --format=zip -o bai-ops-suite.zip <commit>` → Import ZIP), pull and assign a Workbench request. abapGit activates in dependency order, which replaces most of Steps 1–2 below; use them as the manual fallback and as the checklist for what must be active. Metadata is regenerated with `python3 tools/abapgit_serialize.py`.
 
 **Pin the revision.** Pull one reviewed commit and record its SHA in the transport description; SAP can only pull what is pushed to the remote (use the offline ZIP otherwise).
 
@@ -21,11 +21,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | Job variants and Control-M jobs | SE38 / Control-M | 4 |
 | SICF node `/sap/zcd_ops/prism_status` (inactive), PRISM technical user and role `Z_CD_OPS_PRISM`, bgPF / bgRFC inbound destination | SICF / SU01 / PFCG / SBGRFCCONF | 1e |
 
-**Read-only rollout scope.** This release observes and reports: EBS shadow validation after statement import, posting and payment clearing; FMON; HCK; the payment trace. Kept outside the transport:
-- the *Blocked line releases* app (`ZR_/ZC_CD_EBSRELEASE`, behaviour pool `ZBP_R_CD_EBSRELEASE`, service definition `ZUI_CD_EBS_REL`) — listed in the `IGNORE` section of `/.abapgit.xml`, so abapGit does not pull it; no other object references it;
-- the reprocessing / clarification navigation targets (step 1c.7) — not created;
-- posting enforcement: the pre-posting path inside `ZCL_CD_EBS_ENGINE` (and its release table / DAO, which the engine needs to activate) is transported but dormant — no BAdI implementation exists and `ZCD_EBS_VALIDATION_MODE` = `O`;
-- integration changes: the HTTP alert channel class is transported but inactive (no SM59 destination, no active channel row);
+**Read-only rollout scope.** The suite observes and reports: EBS validation after statement import, posting and payment clearing; FMON; HCK; the payment trace. It never writes FS-CD / FI data and has no posting gate, line release, reprocessing navigation or outbound webhook (removed 2026-11-07; enforcement is a later phase with its own design). Its only writes are its own records — runs, findings, exception history, suppressions, file registry, PRISM evidence. Kept outside the switch-on:
 - the **PRISM status API** (step 1e): its table and classes are transported, the SICF node is created **inactive** and the PRISM technical user gets no role — a new callback is outside the read-only rollout and is switched on only as its own CAB-approved change (switch **S-PRISM**).
 
 ## Step 0 — Pre-checks (blocking)
@@ -35,11 +31,10 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 | 0.1 | Every `VERIFY-DDIC` marker confirmed or the field adjusted | SE11 — `ZCL_CD_EBS_FEB_DAO`, `ZCL_CD_EBS_SAP_DAO`, `ZCL_CD_FMON_CALENDAR`, `ZCL_CD_HCK_DAO` | Each marker answered in the review record |
 | 0.2 | ZCD_ACH_RTRV_LOG status field name (ZZ_RTRV_STATUS / ZZRETRIEVAL_STATUS / ZZ_RTRVL_STATUS — see parity C4) | SE11 | `EBS_RTRV_STATUS_FIELD` value decided |
 | 0.3 | Structures of ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_STRP_POUT_LOG | SE11 export | ZCD_FMON_SRC / _SRCMAP rows filled (no `‹SE11›` left in `config/fmon_seed.md`) |
-| 0.4 | BAdI FIEB_CHANGE_BS_DATA method signature | SE18 | Copied into the BAdI design (not delivered here) |
-| 0.5 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
-| 0.6 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
-| 0.7 | Domain `CCCORACTIV` fixed values confirmed (configuration-app client policy) | SE11 | Values match `ZCL_CD_OPS_CFG_CLIENT` |
-| 0.8 | Authorisation object `ZCD_OPS` (field `ZCD_PE_AREA`, data element / domain `ZCD_PE_AREA`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
+| 0.4 | Each bank's BAI2 / CAMT transaction code sheet | Treasury | ZCD_BTC_MAP bank rows reviewed against `config/zcd_btc_map.csv` |
+| 0.5 | Table change logging active (the 23 customizing tables carry the log flag) | Basis: profile parameter `rec/client` in DV1, QA1, PS4 | SCU3 shows a test change to ZCD_OPS_PARAM in QA1 |
+| 0.6 | Domain `CCCORACTIV` fixed values confirmed (configuration-app client policy) | SE11 | Values match `ZCL_CD_OPS_CFG_CLIENT` |
+| 0.7 | Authorisation object `ZCD_OPS` (field `ZCD_PE_AREA`, data element / domain `ZCD_PE_AREA`) and roles | SE11, SU20, SU21, PFCG — `config/auth_zcd_ops.md` | Batch user holds 16 for EBS, FMON, HCK, CORE; operators and approvers per the role table |
 
 ## Step 1 — DDIC (SE11 / ADT)
 
@@ -65,14 +60,13 @@ Follow `RAP_Ops_Apps.md` §4: confirm the VERIFY-ADT items (`internal create` on
 
 | # | Item | Done when |
 |---|---|---|
-| 1c.1 | SE11 → Indexes on the 12 indexed tables (18 indexes, generated in the abapGit TABL XML from `// @index` markers; verify each after the pull): ZCD_FMON_FILE REF (unique)/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALLOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_EBS_RELEASE OBJ, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
+| 1c.1 | SE11 → Indexes on the 11 indexed tables (20 indexes, generated in the abapGit TABL XML from `// @index` markers; verify each after the pull): ZCD_FMON_FILE REF (unique)/BDT/OUT/NAM/CHK, ZCD_FMON_EVENT SRC (unique), ZCD_FMON_PRISM UNP/REF/BDT, ZCD_FMON_PRQ_WA REF, ZCD_OPS_FINDING OPN/OBJ, ZCD_OPS_EXC_HIST FND, ZCD_OPS_ALLOG RUL and INT (unique), ZCD_OPS_RUN MOD, ZCD_EBS_ACCT ACC, ZCD_HCK_METRIC HST/TIM, ZCD_HCK_SUPPRESS ACT | Every index active after the first pull |
 | 1c.2 | `ZCD_FMON_TABWL` maintained for every table in ZCD_FMON_SRC / ZCD_FMON_LOTCFG (seed list `config/fmon_seed.md`) | Without it every legacy read is refused (PLUGIN_ERROR, message 244) |
 | 1c.3 | Role with `S_TABU_NAM` ACTVT 03 for those tables: batch user and online monitor users | No message 245 in a test run |
 | 1c.4 | Parameters in ZCD_OPS_PARAM: `FMON_AGE_BASIS` (default A), `EBS_ZTNUM_IGNORE_ZEROS`, `EBS_DFKKCR_BUKRS_FIELD`, `EBS_DUP_LOOKBACK_DAYS`, `EBS_FEB_POSTED_FIELDS` (default VB1OK,VB2OK — VERIFY-SE11), `EBS_EMPTY_FEED_OK`, `EBS_INFLIGHT_HOURS` (`config/alert_seed.md`, `Audit_Response_EBS.md`) | Values confirmed with the process owner; VERIFY-DDIC field names checked in SE11 |
-| 1c.5 | Seeds: ZCD_EBS_RULE_DEF (BLOCKS_POSTING, NEEDS_POSTING incl. R05, R21, R22, S13; FINDING_CLASS S07 / R09 / R22 = DUPLICATE, S13 = POSTING — the EBS dashboard counts from it), ZCD_BTC_RULE `*` / S13, ZCD_BTC_RULE (BLOCKS_POSTING overrides, 166D retrieval-log chain, `*` R22), ZCD_BTC_MAP (DISPOSITION, one canonical wildcard) | Resolver load shows no configuration findings |
+| 1c.5 | Seeds: ZCD_EBS_RULE_DEF (NEEDS_POSTING incl. R05, R21, R22, S13; FINDING_CLASS S07 / R09 / R22 = DUPLICATE, S13 = POSTING — the EBS dashboard counts from it), ZCD_BTC_RULE `*` / S13, ZCD_BTC_RULE (166D retrieval-log chain, `*` R22), ZCD_BTC_MAP (DISPOSITION, one canonical wildcard) | Resolver load shows no configuration findings |
 | 1c.6 | HCK baselines retaken once after transport (drift hash version 2) | No drift finding caused by the version change |
-| 1c.7 | **Not in this rollout (read-only scope).** Launchpad target mappings `ZCDBankStatement-reprocess` → FEBAN and `ZCDPaymentLot-clarify` → FPCPL stay uncreated; operators use the runbook transactions directly | The navigation buttons stay hidden (no target mapping) |
-| 1c.8 | Payment trace (`Payment_Trace.md` §5, §9): SE11 check of every VERIFY-SE11 field (DFKKRAPT, ZCDT_REGUT, ZCD_PAYM_REQ_LOG, ACK tables, ZCD_CHECK_HIST, DFKKOP-AUGRD/PYMET, DFKKKO-STBEL); parameters `TRACE_SRC_REQUEST`, `TRACE_SRC_HISTORY`, `TRACE_SRC_REGUT`, `TRACE_SRC_ACK`, `TRACE_SRC_CHQ_HIST`, `TRACE_BP_SOURCE_FIELD`, `TRACE_MAX_ROWS`, `TRACE_GL_AWTYP`, `TRACE_CHECK_METHODS`, `TRACE_NO_ACK_METHODS`, `TRACE_ACK_NACK_VALUES`, `TRACE_CHQ_FAILED`, `TRACE_BANK_LOOKBACK_DAYS`; `ZCD_FMON_TABWL` rows for DFKKRAPT, BUT000 (if a source field is configured) and every other configured table not yet approved; role with ZCD_OPS 03 (CORE + company codes) and S_TABU_NAM 03 for those tables | A QA1 trace of one ACH, one cheque and one reissued payment shows no SOURCE_NOT_CONFIGURED / SOURCE_NOT_READABLE row |
+| 1c.7 | Payment trace (`Payment_Trace.md` §5, §9): SE11 check of every VERIFY-SE11 field (DFKKRAPT, ZCDT_REGUT, ZCD_PAYM_REQ_LOG, ACK tables, ZCD_CHECK_HIST, DFKKOP-AUGRD/PYMET, DFKKKO-STBEL); parameters `TRACE_SRC_REQUEST`, `TRACE_SRC_HISTORY`, `TRACE_SRC_REGUT`, `TRACE_SRC_ACK`, `TRACE_SRC_CHQ_HIST`, `TRACE_BP_SOURCE_FIELD`, `TRACE_MAX_ROWS`, `TRACE_GL_AWTYP`, `TRACE_CHECK_METHODS`, `TRACE_NO_ACK_METHODS`, `TRACE_ACK_NACK_VALUES`, `TRACE_CHQ_FAILED`, `TRACE_BANK_LOOKBACK_DAYS`; `ZCD_FMON_TABWL` rows for DFKKRAPT, BUT000 (if a source field is configured) and every other configured table not yet approved; role with ZCD_OPS 03 (CORE + company codes) and S_TABU_NAM 03 for those tables | A QA1 trace of one ACH, one cheque and one reissued payment shows no SOURCE_NOT_CONFIGURED / SOURCE_NOT_READABLE row |
 
 ## Step 1d — File monitoring dashboard (read-only, `Dashboard_File_Monitoring.md`)
 
@@ -144,12 +138,11 @@ Run each class's ABAP Unit include immediately after activation (Ctrl+Shift+F10)
 
 1. `ZCD_OPS_PARAM`: SLA days, alert recipients (`ALERT_DEFAULT`, `ALERT_MORNING`), EBS/FMON/HCK parameters (see payment engine area docs; names and defaults in each area's `gc_param` / `gc_param_default`; HCK row caps `HCK_MAX_JOB_ROWS` / `_JOB_NAMES` / `_AGG_ROWS`).
 1. `ZCD_OPS_MONCFG` (app *Alerting and parameters* → *Monitor freshness*): FMON 15, EBS 1560, HCK 1560 minutes (`config/alert_seed.md`) — dashboards and morning report self-check read the same row.
-2. `ZCD_OPS_ALCHN` and `ZCD_OPS_ALRULE` from `config/alert_seed.md` (HTTP channel inactive until Basis creates the SM59 destination).
+2. `ZCD_OPS_ALCHN` and `ZCD_OPS_ALRULE` from `config/alert_seed.md` (e-mail and application-log channels).
 3. EBS: load `config/zcd_ebs_rule_def.csv`, `zcd_btc_map.csv`, `zcd_btc_rule.csv`, `zcd_ebs_rsn_map.csv` (payment engine reasons filled by the returns team); `ZCD_EBS_ACCT` per house bank account with **ACCOUNT_NO = the 10-character payment engine bank account as it appears in FEBEP-XBLNR after the bank text** (e.g. XBLNR `JPMC8XX1174412334` → `8XX1174412`; upper case, no leading blank) and ACTIVE = X. Only statements whose every line carries an active ACCOUNT_NO are validated and shown on the EBS dashboard (`EBS_VALIDATION.md` §A0a) — collect the list of payment engine accounts per bank from Treasury and check it against a FEBEP sample (SE16, XBLNR of the last statement of each account) before the first productive run.
 4. FMON: `config/fmon_seed.md` once step 0.3 is done.
 5. HCK: `config/hck_seed.md` (job names from the Control-M export, not the wiki placeholders).
 6. **Patterns to PCRE (once, after the pull, before scheduling the monitors in step 4).** Run `ZCD_OPS_PATTERN_MIGRATE` in test mode, review INVALID / TOO_LONG / ALREADY_PCRE rows, then update mode with the customizing request (`Operations_Runbook.md` §5e); seeds of `config/*_seed.md` are already PCRE. Check each area with `ZCD_OPS_PATTERN_CHECK`. In QA1 / PS4 run update mode once more for ZCD_HCK_SUPPRESS only (application data). Until then a remaining CP wildcard such as `ZCD_*` is invalid PCRE and is reported (PATTERN_INVALID / E373 / FLOW_PATTERN_INVALID / alert rule logged failed), not silently ignored.
-7. TVARVC `ZCD_EBS_VALIDATION_MODE` = `O` (off). The batch run `ZCD_EBS_VALIDATE` never reads it; it governs only the dormant pre-posting path, which has no caller in this release.
 
 ## Step 4 — Jobs (native SAP jobs; EBS chained in Control-M)
 
@@ -178,4 +171,4 @@ The predecessors are parsed from free-text comments in the schedule export — a
 
 ## Step 5 — Rollback
 
-Deactivate the jobs (SM36 periodic jobs and the Control-M EBS job) and set `ZCD_EBS_VALIDATION_MODE` = `O`. No standard object is modified and the BAdI is not part of this delivery, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.
+Deactivate the jobs (SM36 periodic jobs and the Control-M EBS job). No standard object is modified and the suite writes only its own tables, so removing the jobs returns the system to its previous behaviour. Duration: under 15 minutes.

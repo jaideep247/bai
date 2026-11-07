@@ -73,7 +73,7 @@ It is sent by e-mail (mobile-friendly HTML) to the morning distribution list and
 | **D** `CONFIG_NO_BASELINE` | Table name | New table under control | Take the baseline after the next approved transport |
 | **E** `JOB_CANCELLED` / `JOB_LATE_START` / `JOB_LONG_RUNNING` | Job name / count | Cancelled step, missing Control-M trigger, runaway job | SM37 job log; Basis if system-related |
 | **E** `SHORT_DUMPS` / `UPDATE_ERRORS` / `LOCK_MAX_AGE_MIN` | Count / age | Program error, failed update task, orphan lock | ST22 / SM13 / SM12; Basis; never delete a lock held by an active payment run |
-| **E** `ALERT_FAILED` | Channel | Mail server / webhook down | Alerts are not reaching people — treat as RED for operations |
+| **E** `ALERT_FAILED` | Channel | Mail server down or application log not written | Alerts are not reaching people — treat as RED for operations |
 | `HCK_SELF` `PE_AREA_STALE` | Payment engine area | Monitoring job (EBS, FMON or HCK) did not run | Restart the monitoring job; until then, nobody is watching that area |
 | `PLUGIN_ERROR` / `AGG_CONFIG_INVALID` | Message text | Configuration error (unknown field, table not whitelisted) or program error | Fix the customizing row; the rest of the report is still valid |
 | `TIMEOUT_OVERRUN` | Runtime vs budget | Check too slow for the volume | Performance review of the check (index, narrower window) |
