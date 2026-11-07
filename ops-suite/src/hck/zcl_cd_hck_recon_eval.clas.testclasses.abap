@@ -11,6 +11,7 @@
 *& Structures built field by field; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-07 | stripe_deposit_without_descr (clearing line without assignment).
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_eval DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -105,6 +106,7 @@ CLASS ltc_recon_eval DEFINITION FINAL FOR TESTING
     METHODS stripe_group_off_by_fees    FOR TESTING.
     METHODS stripe_deposit_not_posted   FOR TESTING.
     METHODS stripe_deposit_not_cleared  FOR TESTING.
+    METHODS stripe_deposit_without_descr FOR TESTING.
     METHODS ach_unmatched_old_and_new   FOR TESTING.
 ENDCLASS.
 
@@ -625,6 +627,42 @@ CLASS ltc_recon_eval IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-belnr exp = gc_test-belnr msg = 'Names the document' ).
         cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-status exp = zif_cd_hck_recon_types=>gc_status-break
                                             msg = 'Not on the clearing account' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a deposit whose clearing line carries no assignment has no descriptor group - break, never
+  " merged with another deposit
+  METHOD stripe_deposit_without_descr.
+    DATA lt_deposits TYPE zif_cd_hck_recon_types=>tt_deposit.
+    DATA ls_deposit TYPE zif_cd_hck_recon_types=>ty_deposit.
+    DATA lt_assign TYPE zif_cd_hck_recon_types=>tt_doc_assign.
+    DATA ls_assign TYPE zif_cd_hck_recon_types=>ty_doc_assign.
+    TRY.
+        ls_deposit-currency = gc_test-waers.
+        ls_deposit-bukrs    = gc_test-bukrs.
+        ls_deposit-belnr    = gc_test-belnr.
+        ls_deposit-gjahr    = gc_test-gjahr.
+        ls_deposit-cdi      = gc_test-credit.
+        ls_deposit-amount   = 970.
+        ls_deposit-day      = gc_test-day5.
+        INSERT ls_deposit INTO TABLE lt_deposits.
+        ls_assign-bukrs  = gc_test-bukrs.
+        ls_assign-belnr  = gc_test-belnr.
+        ls_assign-gjahr  = gc_test-gjahr.
+        ls_assign-cdi    = gc_test-credit.
+        ls_assign-amount = -970.
+        INSERT ls_assign INTO TABLE lt_assign.
+        DATA(lt_groups) = mo_cut->evaluate_stripe( is_input      = ms_input
+                                                   it_deposits   = lt_deposits
+                                                   it_doc_assign = lt_assign
+                                                   it_group_sums = VALUE #( ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_groups ) exp = 1 msg = 'One group' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-belnr exp = gc_test-belnr msg = 'Document named' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-status exp = zif_cd_hck_recon_types=>gc_status-break
+                                            msg = 'No descriptor: break' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -12,6 +12,7 @@
 *& line is matched to another.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-07 | Self-review: a deposit clearing line without assignment is no descriptor group.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation rules (pure)</p>
 "! Called by ZCL_CD_HCK_C_RECON3 with the grouped reads of ZIF_CD_HCK_RECON_DAO.
@@ -400,7 +401,7 @@ CLASS zcl_cd_hck_recon_eval IMPLEMENTATION.
     LOOP AT lt_docs ASSIGNING <ls_doc>.
       DATA(lt_doc_lines) = VALUE zif_cd_hck_recon_types=>tt_doc_assign(
         FOR ls_line IN it_doc_assign WHERE ( bukrs = <ls_doc>-bukrs AND belnr = <ls_doc>-belnr
-                                             AND gjahr = <ls_doc>-gjahr )
+                                             AND gjahr = <ls_doc>-gjahr AND zuonr IS NOT INITIAL )
         ( ls_line ) ).
       IF lt_doc_lines IS INITIAL.
         " Posted, but not on the clearing account with a descriptor: F.13 can never clear it

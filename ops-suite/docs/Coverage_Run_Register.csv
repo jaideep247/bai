@@ -129,7 +129,7 @@ ZCL_CD_HCK_PARAM,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_PAYREQ_RULES,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_CDS_TEST,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_DAO,own test include,,13,90,,Not run in target SAP
-ZCL_CD_HCK_RECON_EVAL,own test include,,22,90,,Not run in target SAP
+ZCL_CD_HCK_RECON_EVAL,own test include,,23,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_RUNTIME_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP
