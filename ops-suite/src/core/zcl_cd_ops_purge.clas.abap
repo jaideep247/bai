@@ -15,6 +15,7 @@
 *& 2026-11-07 | PURGE_PACKAGE_SIZE / RETENTION_DAYS_ names and default from ZIF_CD_OPS_TYPES; one shared
 *&            | helper ZCL_CD_OPS_UTIL=>PARAM_INT over GET_PARAMS (private int_param removed).
 *& 2026-11-07 | Purpose: retention days in ZCA_PARAM (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | Purge target HCK_RESULT (check verdicts per run, 400 days, RETENTION_DAYS_HCK_RESULT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -131,7 +132,8 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
                           ( target = zif_cd_ops_purge_dao=>gc_target-alert_log  default_days = 180 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-fmon_event default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-hck_metric default_days = 400 )
-                          ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 ) ).
+                          ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 )
+                          ( target = zif_cd_ops_purge_dao=>gc_target-hck_result default_days = 400 ) ).
   ENDMETHOD.
 
 

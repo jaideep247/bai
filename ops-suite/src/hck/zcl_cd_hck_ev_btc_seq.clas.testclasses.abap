@@ -7,13 +7,20 @@
 *& 195), redeposit pending inside and outside its maximum age, unexpected
 *& sequence, returns lot count and amount mismatches, lot without return
 *& line, ordering by statement date / line, one code with different
-*& meanings per flow, ISO code of a CAMT line, codes without role ignored,
-*& invalid pattern, one read per kind. Runtime DAO, payment trace
+*& meanings per flow, ISO code of a CAMT line, unmapped monetary codes
+*& (INDETERMINATE, BTC_ROLE_MISSING) and the approved informational
+*& exclusions / lines without amount, invalid pattern, one read per kind. Runtime DAO, payment trace
 *& repository and clock are doubles; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction of rule 4: BAI lifecycle per payment).
 *& 2026-11-07 | ltc_ev_btc_seq_chq: cheque lifecycle 581 / 255 / corrections (link by cheque number,
 *&            | register state, clarification, manual clearing, register amount).
+*& 2026-11-07 | Design review: unknown monetary code = INDETERMINATE + BTC_ROLE_MISSING; exclusion
+*&            | list HCK_BTC_INFO_BAI2 and zero-amount lines ignored; parameters injected; cheque lines
+*&            | with the house bank account, a line of two cheques of one account = CHEQUE_LINK_AMBIGUOUS.
+*& 2026-11-07 | Code review: correction stops the amount comparison, live cheque of a reissue decides,
+*&            | every anomaly of a finding outcome, REG_STATE without register = CHEQUE_REGISTER_MISSING,
+*&            | one read of lines / lots / cheques per link and run shared with the cheque status.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -41,6 +48,7 @@ CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
     DATA mt_checks TYPE zif_cd_ops_trace_types=>tt_check.
     DATA mv_line_reads TYPE i.
     DATA mv_lot_reads TYPE i.
+    DATA mv_check_reads TYPE i.
 ENDCLASS.
 
 CLASS ltd_trace_dao IMPLEMENTATION.
@@ -59,6 +67,7 @@ CLASS ltd_trace_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
+    mv_check_reads = mv_check_reads + 1.
     rt_checks = mt_checks.
   ENDMETHOD.
 ENDCLASS.
@@ -106,6 +115,7 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
     DATA mo_trace TYPE REF TO ltd_trace_dao.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
@@ -160,9 +170,13 @@ CLASS ltc_ev_btc_seq DEFINITION FINAL FOR TESTING
     METHODS ordered_by_date_and_line   FOR TESTING.
     METHODS code_468_differs_by_flow   FOR TESTING.
     METHODS iso_code_of_camt_line      FOR TESTING.
-    METHODS code_without_role_ignored  FOR TESTING.
+    METHODS unknown_monetary_indeterminate FOR TESTING.
+    METHODS unknown_excluded_code_ignored FOR TESTING.
+    METHODS unknown_zero_amount_ignored FOR TESTING.
     METHODS invalid_pattern_raises     FOR TESTING.
     METHODS one_read_per_kind          FOR TESTING.
+    METHODS one_evaluation_per_link    FOR TESTING.
+    METHODS reg_state_needs_register   FOR TESTING.
 ENDCLASS.
 
 
@@ -174,6 +188,8 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     " Seed (config/hck_seed.md): collections ACH
     role( iv_flow = gc_c iv_class = gc_ach iv_code = '166' iv_role = 'COLLECTED' ).
     role( iv_flow = gc_c iv_class = gc_ach iv_code = '143' iv_role = 'COLLECTED' ).
@@ -215,7 +231,7 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_trace.
+    CLEAR: mo_dao, mo_trace, mo_params.
   ENDMETHOD.
 
 
@@ -248,6 +264,8 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
     DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
     DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
     CLEAR: mo_trace->mt_lines, mo_trace->mt_returns.
+    " New data: a new collection (the lifecycle memo of the run is dropped)
+    zcl_cd_hck_ev_support=>start_collection( ).
     SPLIT iv_codes AT ',' INTO TABLE DATA(lt_codes).
     LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
       CLEAR ls_line.
@@ -455,12 +473,59 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a code without a role of the flow / class is ignored (listed nowhere)
-  METHOD code_without_role_ignored.
+  " Acceptance (design review 1): ORIGINAL then a monetary code without a role of the flow / class
+  " = lifecycle INDETERMINATE (never CLEARED) and BTC_ROLE_MISSING naming code, date, amount, class
+  METHOD unknown_monetary_indeterminate.
     TRY.
+        DATA(ls_evidence) = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Never CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-btc_role_missing
+                                            msg = 'Role missing' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Error' ).
         cl_abap_unit_assert=>assert_true(
-          act = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` )-found
-          msg = 'Unmapped code ignored' ).
+          act = xsdbool( find( val = ls_evidence-detail sub = zif_cd_hck_runtime_types=>gc_outcome-indeterminate ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_bai } 999| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ CONV d( gc_first + 1 ) DATE = ISO }| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_amount STYLE = SIMPLE }| ) >= 0
+                         AND find( val = ls_evidence-detail sub = |{ gc_d }{ gc_ach }| ) >= 0 )
+          msg = 'Detail names INDETERMINATE, scheme / code, date, amount, flow / class' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 1): an unknown code on the approved exclusion list of its scheme
+  " (HCK_BTC_INFO_BAI2) is ignored - the lifecycle decides as without the line
+  METHOD unknown_excluded_code_ignored.
+    TRY.
+        mo_params->set( iv_name  = CONV #( |{ zif_cd_hck_runtime_types=>gc_param_prefix-btc_info }{ gc_bai }| )
+                        iv_value = `998,999` ).
+        DATA(ls_evidence) = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,999` iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Excluded code ignored: CLEARED' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No anomaly' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a line without amount (non-monetary) and without role is not part of the lifecycle
+  METHOD unknown_zero_amount_ignored.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    TRY.
+        evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466` iv_target = `CLEARED` ).
+        ls_line-kukey = '00000101'.
+        ls_line-esnum = 9.
+        ls_line-chect = gc_ref.
+        ls_line-vorgc = '999'.
+        ls_line-budat = gc_first.
+        INSERT ls_line INTO TABLE mo_trace->mt_lines.
+        DATA(ls_evidence) = collect( iv_flow = gc_d iv_class = gc_ach iv_target = `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Zero-amount line ignored' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No anomaly' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -475,6 +540,46 @@ CLASS ltc_ev_btc_seq IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'Invalid pattern must raise' ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Raised' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 10: rows that differ only in PARAM1 (same link) evaluate the lifecycle once per run -
+  " one line read and one lot read; found is derived per PARAM1
+  METHOD one_evaluation_per_link.
+    TRY.
+        cl_abap_unit_assert=>assert_true(
+          act = evaluate( iv_flow = gc_d iv_class = gc_ach iv_codes = `466,168` iv_lots = 1 iv_target = `RETURNED` )-found
+          msg = 'Returned for PARAM1 RETURNED' ).
+        cl_abap_unit_assert=>assert_false( act = collect( iv_flow = gc_d iv_class = gc_ach iv_target = `CLEARED` )-found
+                                           msg = 'Not found for PARAM1 CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_line_reads exp = 1 msg = 'One line read per link' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_lot_reads exp = 1 msg = 'One lot read per link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 5: a row with a register state cannot decide without a register row (document link):
+  " CHEQUE_REGISTER_MISSING instead of UNEXPECTED_SEQUENCE
+  METHOD reg_state_needs_register.
+    DATA ls_outcome TYPE zif_cd_hck_runtime_types=>ty_seq_outcome.
+    TRY.
+        ls_outcome-flow         = gc_d.
+        ls_outcome-method_class = gc_wire.
+        ls_outcome-seq          = '005'.
+        ls_outcome-seq_pattern  = 'ORIGINAL,RETURNED'.
+        ls_outcome-outcome      = 'RETURNED'.
+        ls_outcome-reg_state    = 'BLANK'.
+        INSERT ls_outcome INTO TABLE mo_dao->mt_outcomes.
+        DATA(ls_evidence) = evaluate( iv_flow = gc_d iv_class = gc_wire iv_codes = `495,195` iv_lots = 1 iv_target = `RETURNED` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-register_missing
+                                            msg = 'Register missing, not unexpected' ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not concluded' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -503,6 +608,15 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       "! 20 characters; the statement carries the last 13
       gc_ztnum  TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0011234567890123',
       gc_chect  TYPE zif_cd_ops_trace_types=>ty_ref VALUE '1234567890123',
+      "! Second cheque of the same account with the same last 13 characters
+      gc_twin_doc   TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300009',
+      gc_twin_ztnum TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0091234567890123',
+      "! Cheque voided before the reissue gc_ztnum (older number, own suffix)
+      gc_old_ztnum  TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0001111111111111',
+      gc_old_chect  TYPE zif_cd_ops_trace_types=>ty_ref VALUE '1111111111111',
+      gc_bukrs  TYPE zif_cd_ops_trace_types=>ty_bukrs VALUE 'US01',
+      gc_hbkid  TYPE c LENGTH 5 VALUE 'JPMC1',
+      gc_hktid  TYPE c LENGTH 5 VALUE 'CHK01',
       gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
       gc_d      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'D',
       gc_chq    TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
@@ -537,6 +651,8 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
         iv_payment_amount  TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount
         iv_target          TYPE clike
         iv_chect           TYPE zif_cd_ops_trace_types=>ty_ref DEFAULT gc_chect
+        "! A second cheque of the same account with the same last 13 characters
+        iv_twin            TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
@@ -551,6 +667,19 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
     METHODS cheque_amount_mismatch    FOR TESTING.
     METHODS link_by_suffix_13         FOR TESTING.
     METHODS unexpected_cheque_order   FOR TESTING.
+    METHODS ambiguous_line_not_evaluated FOR TESTING.
+    METHODS correction_skips_amount   FOR TESTING.
+    METHODS reissue_live_cheque_decides FOR TESTING.
+    METHODS finding_keeps_every_anomaly FOR TESTING.
+    METHODS cheque_read_shared        FOR TESTING.
+    "! Collect of the cheque lifecycle on the data in the doubles (no new collection)
+    METHODS collect_chq
+      IMPORTING
+        iv_target          TYPE clike
+      RETURNING
+        VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
+      RAISING
+        zcx_cd_ops_error.
 ENDCLASS.
 
 
@@ -562,11 +691,12 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     " Seed (config/hck_seed.md section 8e / 8f): disbursement cheques
     role( iv_code = '581' iv_role = 'CASHED' iv_compare = zif_cd_hck_runtime_types=>gc_compare-register ).
     role( iv_code = '255' iv_role = 'RETURNED' ).
-    role( iv_code = '399' iv_role = 'CORRECTION' ).
-    role( iv_code = '699' iv_role = 'CORRECTION' ).
+    role( iv_code = '399' iv_role = 'CORRECTION' iv_compare = zif_cd_hck_runtime_types=>gc_compare-correction ).
+    role( iv_code = '699' iv_role = 'CORRECTION' iv_compare = zif_cd_hck_runtime_types=>gc_compare-correction ).
     outcome( iv_seq = '001' iv_pattern = '.*CORRECTION.*' iv_outcome = 'CLEARED_MANUAL' iv_reg_state = 'B' ).
     outcome( iv_seq = '002' iv_pattern = '.*CORRECTION.*' iv_outcome = 'MANUAL_CLEARING'
              iv_finding = gc_manual iv_text = gc_fpchr ).
@@ -621,10 +751,18 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
     DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
     CLEAR: mo_trace->mt_lines, mo_trace->mt_checks.
+    zcl_cd_hck_ev_support=>start_collection( ).
     ls_check-doc1r  = gc_doc.
     ls_check-ztnum  = gc_ztnum.
     ls_check-state  = iv_state.
+    ls_check-hbkid  = gc_hbkid.
+    ls_check-hktid  = gc_hktid.
     INSERT ls_check INTO TABLE mo_trace->mt_checks.
+    IF iv_twin = abap_true.
+      ls_check-doc1r = gc_twin_doc.
+      ls_check-ztnum = gc_twin_ztnum.
+      INSERT ls_check INTO TABLE mo_trace->mt_checks.
+    ENDIF.
     SPLIT iv_codes AT ',' INTO TABLE DATA(lt_codes).
     LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
       CLEAR ls_line.
@@ -634,10 +772,19 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
       ls_line-vorgc = <lv_code>.
       ls_line-budat = CONV d( '20261001' ) + sy-tabix.
       ls_line-kwbtr = gc_amount.
+      ls_line-bukrs = gc_bukrs.
+      ls_line-hbkid = gc_hbkid.
+      ls_line-hktid = gc_hktid.
       INSERT ls_line INTO TABLE mo_trace->mt_lines.
     ENDLOOP.
-    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount )
+    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount
+                    bukrs = gc_bukrs )
       INTO TABLE lt_payments.
+    IF iv_twin = abap_true.
+      INSERT VALUE #( doc1r = gc_twin_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount
+                      bukrs = gc_bukrs )
+        INTO TABLE lt_payments.
+    ENDIF.
     DATA(ls_result) = NEW zcl_cd_hck_ev_btc_seq( )->zif_cd_hck_evidence~collect(
                         it_payments = lt_payments
                         is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ' param1 = iv_target
@@ -762,6 +909,127 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial(
           act = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` iv_chect = '300001' )
           msg = 'The payment document is no cheque link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (design review 3): a 581 that fits two cheques of the same account is attributed to neither;
+  " the lifecycle is not evaluated (never CLEARED) and the payment carries CHEQUE_LINK_AMBIGUOUS
+  METHOD ambiguous_line_not_evaluated.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` iv_twin = abap_true ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not cleared' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-cheque_ambiguous
+                                            msg = 'Ambiguous cheque line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD collect_chq.
+    DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - gc_amount bukrs = gc_bukrs )
+      INTO TABLE lt_payments.
+    DATA(ls_result) = NEW zcl_cd_hck_ev_btc_seq( )->zif_cd_hck_evidence~collect(
+                        it_payments = lt_payments
+                        is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ' param1 = iv_target
+                                               param2 = zif_cd_hck_runtime_types=>gc_link_cheque param3 = '13' )
+                        iv_max_rows = 100 ).
+    rs_evidence = VALUE #( ls_result-evidence[ doc1r = gc_doc ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  " Code review 1: 581 for 250.00 against a payment of 1000.00, corrected by 399 and cleared in
+  " FPCHR (state B) = CLEARED_MANUAL - the superseded 581 amount is not compared
+  METHOD correction_skips_amount.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,399` iv_state = 'B' iv_payment_amount = '1000.00'
+                                      iv_target = `CLEARED,CLEARED_MANUAL` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'Cleared manually' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'No CHEQUE_AMOUNT_MISMATCH after a correction' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 2: a voided cheque (returned, V) and its reissue (581, B) on one payment - the live
+  " cheque decides (CLEARED), the voided one keeps its own outcome in the detail
+  METHOD reissue_live_cheque_decides.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    TRY.
+        evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` ).
+        zcl_cd_hck_ev_support=>start_collection( ).
+        ls_check-doc1r = gc_doc.
+        ls_check-ztnum = gc_old_ztnum.
+        ls_check-state = 'V'.
+        ls_check-hbkid = gc_hbkid.
+        ls_check-hktid = gc_hktid.
+        INSERT ls_check INTO TABLE mo_trace->mt_checks.
+        ls_line-kukey = '00000202'.
+        ls_line-esnum = 1.
+        ls_line-chect = gc_old_chect.
+        ls_line-vorgc = '255'.
+        ls_line-budat = '20260925'.
+        ls_line-kwbtr = gc_amount.
+        ls_line-bukrs = gc_bukrs.
+        ls_line-hbkid = gc_hbkid.
+        ls_line-hktid = gc_hktid.
+        INSERT ls_line INTO TABLE mo_trace->mt_lines.
+        DATA(ls_evidence) = collect_chq( `CLEARED` ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'The reissued cheque decides: cleared' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'Both lifecycles consistent' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = CONV string( gc_old_ztnum ) ) >= 0 )
+                                          msg = 'The voided cheque is shown with its own outcome' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = `RETURNED_VOIDED` ) >= 0 )
+                                          msg = 'Its outcome: returned, voided' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 4: an outcome that is itself a finding (correction, MANUAL_CLEARING_REQUIRED) also
+  " reports the returns lot that should not exist - primary finding first, the other one after it
+  METHOD finding_keeps_every_anomaly.
+    DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
+    TRY.
+        CLEAR mo_trace->mt_returns.
+        ls_return-selw1  = gc_doc.
+        ls_return-amount = gc_amount.
+        INSERT ls_return INTO TABLE mo_trace->mt_returns.
+        DATA(ls_evidence) = evaluate( iv_codes = `581,399` iv_target = `CLEARED,CLEARED_MANUAL` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly exp = gc_manual msg = 'Primary: manual clearing' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_evidence-more[ code = zif_cd_hck_runtime_types=>gc_code-return_inconsist ] ) )
+          msg = 'The returns lot is reported too' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 10: two lifecycle rows of one link (PARAM1 differs) and the cheque status share one
+  " DFKKCR read, one statement-line read and one returns-lot read per run
+  METHOD cheque_read_shared.
+    DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    TRY.
+        evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED,CLEARED_MANUAL` ).
+        cl_abap_unit_assert=>assert_false( act = collect_chq( `RETURNED` )-found msg = 'Not returned' ).
+        INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq bukrs = gc_bukrs ) INTO TABLE lt_payments.
+        DATA(ls_status) = NEW zcl_cd_hck_ev_chq_status( )->zif_cd_hck_evidence~collect(
+                            it_payments = lt_payments
+                            is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_CHQ_STATUS' param1 = 'B' )
+                            iv_max_rows = 100 ).
+        cl_abap_unit_assert=>assert_true( act = ls_status-evidence[ doc1r = gc_doc ]-found msg = 'Cheque status B' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_check_reads exp = 1 msg = 'One DFKKCR read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_line_reads exp = 1 msg = 'One statement-line read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_lot_reads exp = 1 msg = 'One returns-lot read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
+*& 2026-11-07 | Purge target HCK_RESULT: verdicts of the morning report checks (RETENTION_DAYS_HCK_RESULT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge repository</p>
 INTERFACE zif_cd_ops_purge_dao
@@ -23,6 +24,8 @@ INTERFACE zif_cd_ops_purge_dao
       hck_metric TYPE ty_target VALUE 'HCK_METRIC',
       "! ZCD_FMON_PRISM: PRISM status API events, by receipt time
       fmon_prism TYPE ty_target VALUE 'FMON_PRISM',
+      "! ZCD_HCK_RESULT: verdict of each check per run, by execution time
+      hck_result TYPE ty_target VALUE 'HCK_RESULT',
     END OF gc_target.
 
   "! Rows of the target older than iv_cutoff that may be purged

@@ -67,6 +67,8 @@ RUNTIME = {
         ('list', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_default-watch_pe_areas'),
     (os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_param_prefix-parser'):
         ('struct', os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_format', None),
+    (os.path.join('src', 'hck', 'zif_cd_hck_runtime_types.intf.abap'), 'gc_param_prefix-btc_info'):
+        ('struct', os.path.join('src', 'ebs', 'zif_cd_ebs_types.intf.abap'), 'gc_scheme', None),
 }
 
 _RULE_BASE = os.path.join('src', 'ebs', 'zcl_cd_ebs_rule_base.clas.abap')
@@ -106,6 +108,7 @@ DEFAULTS = {
     'RETENTION_DAYS_FMON_EVENT': ('regex', _PURGE, r'gc_target-fmon_event\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_HCK_METRIC': ('regex', _PURGE, r'gc_target-hck_metric\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_FMON_PRISM': ('regex', _PURGE, r'gc_target-fmon_prism\s+default_days\s*=\s*(\d+)'),
+    'RETENTION_DAYS_HCK_RESULT': ('regex', _PURGE, r'gc_target-hck_result\s+default_days\s*=\s*(\d+)'),
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')

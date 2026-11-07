@@ -30,6 +30,7 @@
 *& 2026-11-07 | Row caps from parameters HCK_MAX_JOB_ROWS / _JOB_NAMES / _AGG_ROWS (ZCL_CD_HCK_PARAM, cut to the
 *&            | hard ceilings); cap reached fails as before.
 *& 2026-11-07 | get_monitor_cfg: ZCD_OPS_MONCFG (stale threshold per area, shared with the dashboards).
+*& 2026-11-07 | save_results: verdict of each check per run (ZCD_HCK_RESULT, design review).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -264,6 +265,20 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     LOOP AT lt_points ASSIGNING FIELD-SYMBOL(<ls_point>).
       INSERT <ls_point>-value INTO TABLE rt_values.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_hck_dao~save_results.
+    DATA lt_db TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
+    IF it_results IS INITIAL.
+      RETURN.
+    ENDIF.
+    lt_db = CORRESPONDING #( it_results ).
+    MODIFY zcd_hck_result FROM TABLE @lt_db.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e010(zcd_ops) WITH 'ZCD_HCK_RESULT'.
+    ENDIF.
   ENDMETHOD.
 
 

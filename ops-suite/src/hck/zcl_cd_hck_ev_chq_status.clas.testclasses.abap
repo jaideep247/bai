@@ -8,6 +8,8 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (user rule 2: B cashed, V voided, blank open).
 *& 2026-11-07 | Token BLANK.
+*& 2026-11-07 | Code review: a voided cheque and its reissue - the live cheque decides; one shared read
+*&            | per collection (start_collection before each collect).
 *&---------------------------------------------------------------------*
 CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -49,6 +51,7 @@ CLASS ltc_ev_chq_status DEFINITION FINAL FOR TESTING
     METHODS voided_holds_for_v     FOR TESTING.
     METHODS blank_never_holds      FOR TESTING.
     METHODS blank_param1_raises    FOR TESTING.
+    METHODS reissue_voided_not_decisive FOR TESTING.
 ENDCLASS.
 
 
@@ -78,6 +81,7 @@ CLASS ltc_ev_chq_status IMPLEMENTATION.
 
   METHOD collect.
     DATA lt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    zcl_cd_hck_ev_support=>start_collection( ).
     INSERT VALUE #( doc1r = gc_cashed ) INTO TABLE lt_payments.
     INSERT VALUE #( doc1r = gc_voided ) INTO TABLE lt_payments.
     INSERT VALUE #( doc1r = gc_open ) INTO TABLE lt_payments.
@@ -123,6 +127,27 @@ CLASS ltc_ev_chq_status IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = ls_result-evidence[ doc1r = gc_open ]-found msg = 'Open does not hold' ).
         ls_result = collect( |V,{ zif_cd_hck_runtime_types=>gc_state_blank }| ).
         cl_abap_unit_assert=>assert_true( act = ls_result-evidence[ doc1r = gc_open ]-found msg = 'Token BLANK holds for blank' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Code review 2: the voided cheque of a payment that was reissued (newer cheque, state B) does not
+  " make the payment voided - the live cheque decides
+  METHOD reissue_voided_not_decisive.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    TRY.
+        ls_check-doc1r = gc_voided.
+        ls_check-ztnum = '0000000002'.
+        ls_check-state = 'B'.
+        INSERT ls_check INTO TABLE mo_trace->mt_checks.
+        DATA(ls_result) = collect( 'V' ).
+        cl_abap_unit_assert=>assert_false( act = ls_result-evidence[ doc1r = gc_voided ]-found
+                                           msg = 'Voided cheque not decisive' ).
+        ls_result = collect( 'B' ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-evidence[ doc1r = gc_voided ]-found
+                                          msg = 'The reissue decides' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

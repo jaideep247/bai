@@ -1265,6 +1265,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>300</MSGNR>
+     <TEXT>Variant &amp;1, categories &amp;2, priorities &amp;3, checks:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>
@@ -1931,6 +1937,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>420</MSGNR>
+     <TEXT>&amp;1: each token must be BLANK or one register state character</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>421</MSGNR>
+     <TEXT>&amp;1 is not a finding code of the in-flight check (upper case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>
@@ -2357,6 +2375,54 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>674</MSGNR>
+     <TEXT>Evidence &amp;1 (&amp;2) not configured - mandatory: purpose not determinable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>675</MSGNR>
+     <TEXT>- not determinable (mandatory evidence unavailable):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>676</MSGNR>
+     <TEXT>&amp;1 not configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>677</MSGNR>
+     <TEXT>&amp;1 not usable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>678</MSGNR>
+     <TEXT>no role for code &amp;1 posted &amp;2 amount &amp;3 (&amp;4) - add ZCD_HCK_BTCROLE row</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>679</MSGNR>
+     <TEXT>- lifecycle &amp;1: monetary line without role</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>680</MSGNR>
+     <TEXT>- cheque &amp;1 (state &amp;2), not the deciding cheque:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>681</MSGNR>
+     <TEXT>- outcome row &amp;1 needs the cheque register state: no DFKKCR row</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>
@@ -2617,6 +2683,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>748</MSGNR>
      <TEXT>Configuration cannot be changed in this client - run the migration in DV1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>749</MSGNR>
+     <TEXT>Line &amp;1 fits &amp;2 cheques of account &amp;3 - not attributed:</TEXT>
     </T100>
    </T100>
   </asx:values>

@@ -2,9 +2,11 @@
 *& Artifact: zcl_cd_hck_dash_cds_test.clas.testclasses.abap
 *& Purpose:
 *& CDS tests of the health check dashboard on cl_cds_test_environment
-*& doubles of the base tables (ZCD_HCK_DEF, ZCD_HCK_METRIC, ZCD_OPS_FINDING,
-*& ZCD_OPS_RUN): status of every check in the last completed run (RED, AMBER,
-*& WARMUP, GREEN, NO_RESULT), findings of older runs do not change the status
+*& doubles of the base tables (ZCD_HCK_DEF, ZCD_HCK_RESULT, ZCD_HCK_METRIC,
+*& ZCD_OPS_FINDING, ZCD_OPS_RUN): status of every check in the last
+*& completed run as the engine persisted it (RED, AMBER, WARMUP, GREEN,
+*& FAILED, SKIPPED; NO_RESULT without a row), green without metric, scope
+*& of a filtered run, warm-up next to a fixed limit = report, findings of older runs do not change the status
 *& but count as open, category status = worst check, KPI counts, as-of / stale
 *& and the 31-day metric history with its DIM2 series; does not prove live
 *& SAP runtime behavior.
@@ -15,6 +17,7 @@
 *& 2026-11-06 | Initial version (health check dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
 *& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of HCK (base dependency doubled).
+*& 2026-11-07 | Verdict from ZCD_HCK_RESULT (design review): ltc_verdict with the four acceptance cases.
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -70,6 +73,17 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
         iv_test_mode  TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rs_run) TYPE zcd_ops_run.
+
+    "! Persisted verdict of a check in a run (ZCD_HCK_RESULT)
+    CLASS-METHODS result
+      IMPORTING
+        iv_run_id        TYPE zif_cd_ops_types=>ty_run_id
+        iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
+        iv_status        TYPE zif_cd_hck_types=>ty_check_status
+        iv_completion    TYPE zif_cd_hck_types=>ty_completion DEFAULT zif_cd_hck_types=>gc_completion-complete
+        iv_metric_count  TYPE i DEFAULT 0
+      RETURNING
+        VALUE(rs_result) TYPE zcd_hck_result.
 ENDCLASS.
 
 
@@ -126,6 +140,16 @@ CLASS ltd_rows IMPLEMENTATION.
     rs_run-status     = iv_status.
     rs_run-ended_at   = iv_ended_at.
     rs_run-started_at = iv_ended_at.
+  ENDMETHOD.
+
+
+  METHOD result.
+    rs_result-run_id       = iv_run_id.
+    rs_result-check_id     = iv_check_id.
+    rs_result-check_status = iv_status.
+    rs_result-completion   = iv_completion.
+    rs_result-metric_count = iv_metric_count.
+    rs_result-executed_at  = now( ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -203,6 +227,7 @@ CLASS ltc_check IMPLEMENTATION.
     DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
     DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
     DATA lt_metrics TYPE STANDARD TABLE OF zcd_hck_metric WITH EMPTY KEY.
+    DATA lt_results TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
 
     go_env->clear_doubles( ).
     INSERT ltd_rows=>check( iv_check_id = gc_check-red iv_category = zif_cd_hck_types=>gc_category-financial )
@@ -256,10 +281,21 @@ CLASS ltc_check IMPLEMENTATION.
     INSERT ltd_rows=>metric( iv_run_id = gc_run-last iv_check_id = gc_check-green iv_dim1 = gc_dim1
                              iv_measured_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_metrics.
 
+    " The verdicts the engine stored for the last run (no row for the check that did not run)
+    INSERT ltd_rows=>result( iv_run_id = gc_run-last iv_check_id = gc_check-red
+                             iv_status = zif_cd_hck_types=>gc_check_status-red ) INTO TABLE lt_results.
+    INSERT ltd_rows=>result( iv_run_id = gc_run-last iv_check_id = gc_check-amber
+                             iv_status = zif_cd_hck_types=>gc_check_status-amber ) INTO TABLE lt_results.
+    INSERT ltd_rows=>result( iv_run_id = gc_run-last iv_check_id = gc_check-green iv_metric_count = 1
+                             iv_status = zif_cd_hck_types=>gc_check_status-green ) INTO TABLE lt_results.
+    INSERT ltd_rows=>result( iv_run_id = gc_run-last iv_check_id = gc_check-warmup
+                             iv_status = zif_cd_hck_types=>gc_check_status-warmup ) INTO TABLE lt_results.
+
     go_env->insert_test_data( i_data = lt_defs ).
     go_env->insert_test_data( i_data = lt_runs ).
     go_env->insert_test_data( i_data = lt_findings ).
     go_env->insert_test_data( i_data = lt_metrics ).
+    go_env->insert_test_data( i_data = lt_results ).
   ENDMETHOD.
 
 
@@ -277,11 +313,11 @@ CLASS ltc_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = status_of( gc_check-amber ) exp = gc_status-amber
                                             msg = 'A W finding of the last run makes the check AMBER' ).
         cl_abap_unit_assert=>assert_equals( act = status_of( gc_check-green ) exp = gc_status-green
-                                            msg = 'Metric rows and no B / E / W finding: GREEN' ).
+                                            msg = 'Stored verdict GREEN: GREEN' ).
         cl_abap_unit_assert=>assert_equals( act = status_of( gc_check-warmup ) exp = gc_status-warmup
-                                            msg = 'Only BASELINE_WARMUP information: WARMUP, never GREEN' ).
+                                            msg = 'Stored verdict WARMUP: WARMUP, never GREEN' ).
         cl_abap_unit_assert=>assert_equals( act = status_of( gc_check-none ) exp = gc_status-no_result
-                                            msg = 'No metric and no finding in the run: NO_RESULT' ).
+                                            msg = 'No verdict row in the run: NO_RESULT' ).
         SELECT COUNT(*) FROM zr_cd_hckcheck WHERE checkid = @gc_check-inactive INTO @DATA(lv_inactive).
         cl_abap_unit_assert=>assert_equals( act = lv_inactive exp = 0 msg = 'Inactive checks are not listed' ).
         SELECT SINGLE asofrunid FROM zr_cd_hckcheck WHERE checkid = @gc_check-red INTO @DATA(lv_run).
@@ -352,6 +388,178 @@ CLASS ltc_check IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-openredcount exp = 2 msg = 'Two open red exceptions' ).
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-openambercount exp = 1 msg = 'One open amber exception' ).
         cl_abap_unit_assert=>assert_equals( act = ls_kpi-isstale exp = abap_false msg = 'A fresh run is not stale' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZR_CD_HCKCHECK: the persisted verdict decides (design review 4: dashboard = report)
+CLASS ltc_verdict DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_run TYPE zif_cd_ops_types=>ty_run_id VALUE 'D0000000000000000000000000000021'.
+    CONSTANTS:
+      BEGIN OF gc_check,
+        no_metric TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_NO_METRIC',
+        warm_lim  TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_WARM_FIXED',
+        failed    TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_FAILED',
+        skipped   TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_SKIPPED',
+      END OF gc_check.
+    CONSTANTS gc_scope TYPE zif_cd_ops_types=>ty_message VALUE 'Variant MORNING_A, categories I EQ A, priorities *, checks: *'.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS green_without_metric_green FOR TESTING.
+    METHODS filtered_run_shows_scope   FOR TESTING.
+    METHODS warmup_fixed_limit_report  FOR TESTING.
+    METHODS failed_check_never_green   FOR TESTING.
+
+    METHODS row_of
+      IMPORTING
+        iv_check_id   TYPE zif_cd_hck_types=>ty_check_id
+      RETURNING
+        VALUE(rs_row) TYPE zr_cd_hckcheck.
+ENDCLASS.
+
+
+CLASS ltc_verdict IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_CD_HCKCHECK' i_select_base_dependencies = abap_true ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_defs TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
+    DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
+    DATA lt_results TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    INSERT ltd_rows=>check( iv_check_id = gc_check-no_metric iv_category = zif_cd_hck_types=>gc_category-financial )
+           INTO TABLE lt_defs.
+    INSERT ltd_rows=>check( iv_check_id = gc_check-warm_lim iv_category = zif_cd_hck_types=>gc_category-mass_run )
+           INTO TABLE lt_defs.
+    INSERT ltd_rows=>check( iv_check_id = gc_check-failed iv_category = zif_cd_hck_types=>gc_category-exceptions )
+           INTO TABLE lt_defs.
+    INSERT ltd_rows=>check( iv_check_id = gc_check-skipped iv_category = zif_cd_hck_types=>gc_category-config )
+           INTO TABLE lt_defs.
+    INSERT ltd_rows=>run( iv_run_id   = gc_run
+                          iv_status   = zif_cd_ops_types=>gc_run_status-error
+                          iv_ended_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_runs.
+    DATA(ls_result) = ltd_rows=>result( iv_run_id = gc_run iv_check_id = gc_check-no_metric
+                                        iv_status = zif_cd_hck_types=>gc_check_status-green ).
+    ls_result-run_scope = gc_scope.
+    INSERT ls_result INTO TABLE lt_results.
+    ls_result = ltd_rows=>result( iv_run_id = gc_run iv_check_id = gc_check-warm_lim iv_metric_count = 1
+                                  iv_status = zif_cd_hck_types=>gc_check_status-green ).
+    ls_result-baseline_mode = zif_cd_hck_types=>gc_baseline-zscore.
+    ls_result-run_scope     = gc_scope.
+    INSERT ls_result INTO TABLE lt_results.
+    ls_result = ltd_rows=>result( iv_run_id     = gc_run iv_check_id = gc_check-failed
+                                  iv_status     = zif_cd_hck_types=>gc_check_status-failed
+                                  iv_completion = zif_cd_hck_types=>gc_completion-failed ).
+    ls_result-run_scope = gc_scope.
+    INSERT ls_result INTO TABLE lt_results.
+    ls_result = ltd_rows=>result( iv_run_id     = gc_run iv_check_id = gc_check-skipped
+                                  iv_status     = zif_cd_hck_types=>gc_check_status-skipped
+                                  iv_completion = zif_cd_hck_types=>gc_completion-skipped ).
+    ls_result-run_scope = gc_scope.
+    INSERT ls_result INTO TABLE lt_results.
+    " The warm-up information next to the fixed limit (the former inference made this WARMUP)
+    INSERT ltd_rows=>finding( iv_run_id      = gc_run iv_finding_no = 1
+                              iv_check_id    = gc_check-warm_lim iv_category = zif_cd_hck_types=>gc_category-mass_run
+                              iv_code        = zif_cd_hck_types=>gc_code-baseline_warmup
+                              iv_severity    = zif_cd_ops_types=>gc_severity-info
+                              iv_disposition = zif_cd_ops_types=>gc_disposition-information ) INTO TABLE lt_findings.
+    " The plug-in error of the failed check
+    INSERT ltd_rows=>finding( iv_run_id   = gc_run iv_finding_no = 2
+                              iv_check_id = gc_check-failed iv_category = zif_cd_hck_types=>gc_category-exceptions
+                              iv_code     = zif_cd_hck_types=>gc_code-plugin_error
+                              iv_severity = zif_cd_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+    go_env->insert_test_data( i_data = lt_defs ).
+    go_env->insert_test_data( i_data = lt_runs ).
+    go_env->insert_test_data( i_data = lt_results ).
+    go_env->insert_test_data( i_data = lt_findings ).
+  ENDMETHOD.
+
+
+  METHOD row_of.
+    SELECT SINGLE checkid, checkstatus, statuscriticality, checkcompletion, runscope, baselinemode,
+                  metriccount, greencheckcount, failedcheckcount
+      FROM zr_cd_hckcheck
+      WHERE checkid = @iv_check_id
+      INTO CORRESPONDING FIELDS OF @rs_row.
+    cl_abap_unit_assert=>assert_subrc( exp = 0 msg = |Check { iv_check_id } must be on the dashboard| ).
+  ENDMETHOD.
+
+
+  " Acceptance: a check that ran green without any metric row is GREEN, not grey / no result
+  METHOD green_without_metric_green.
+    TRY.
+        DATA(ls_row) = row_of( gc_check-no_metric ).
+        cl_abap_unit_assert=>assert_equals( act = condense( ls_row-checkstatus ) exp = zif_cd_hck_types=>gc_check_status-green
+                                            msg = 'GREEN without metric' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-metriccount exp = 0 msg = 'No metric row' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-greencheckcount exp = 1 msg = 'Counted green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance: a filtered run shows its scope; the check it left out is SKIPPED
+  METHOD filtered_run_shows_scope.
+    TRY.
+        DATA(ls_row) = row_of( gc_check-skipped ).
+        cl_abap_unit_assert=>assert_equals( act = condense( ls_row-checkstatus )
+                                            exp = zif_cd_hck_types=>gc_check_status-skipped
+                                            msg = 'Left out by the scope: SKIPPED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-runscope exp = gc_scope msg = 'Scope shown' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-greencheckcount exp = 0 msg = 'Not green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance: a warm-up next to a fixed limit is GREEN on the dashboard as in the report
+  METHOD warmup_fixed_limit_report.
+    TRY.
+        DATA(ls_row) = row_of( gc_check-warm_lim ).
+        cl_abap_unit_assert=>assert_equals( act = condense( ls_row-checkstatus ) exp = zif_cd_hck_types=>gc_check_status-green
+                                            msg = 'Dashboard = report: GREEN' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-baselinemode exp = zif_cd_hck_types=>gc_baseline-zscore
+                                            msg = 'Baseline mode used is shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance: a failed check is FAILED (red), never green
+  METHOD failed_check_never_green.
+    TRY.
+        DATA(ls_row) = row_of( gc_check-failed ).
+        cl_abap_unit_assert=>assert_equals( act = condense( ls_row-checkstatus ) exp = zif_cd_hck_types=>gc_check_status-failed
+                                            msg = 'FAILED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-checkcompletion exp = zif_cd_hck_types=>gc_completion-failed
+                                            msg = 'Completion FAILED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-statuscriticality exp = 1 msg = 'Red criticality' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-greencheckcount exp = 0 msg = 'Never green' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-failedcheckcount exp = 1 msg = 'Counted failed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

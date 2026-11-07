@@ -30,6 +30,9 @@
 *&            | HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS (hours rule unchanged).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZCA_PARAM, MO_PARAMS) instead of the store;
 *&            | take_baseline refreshes that snapshot.
+*& 2026-11-07 | Design review: the verdict of every check is persisted per run (ZCD_HCK_RESULT) from the
+*&            | decision the report uses - status, completion, evidence, counts, baseline mode, run scope;
+*&            | active checks outside a filtered run's scope as SKIPPED. The dashboard reads these rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -142,10 +145,37 @@ CLASS zcl_cd_hck_engine DEFINITION
     METHODS persist_result
       IMPORTING
         is_result TYPE zif_cd_hck_types=>ty_check_result
+        iv_scope  TYPE string
       CHANGING
         cs_run    TYPE zif_cd_ops_types=>ty_run
       RAISING
         zcx_cd_ops_error.
+
+    "! The persisted verdict of a check (ZCD_HCK_RESULT) - the same decision the report shows
+    METHODS result_row
+      IMPORTING
+        is_result     TYPE zif_cd_hck_types=>ty_check_result
+        iv_run_id     TYPE zif_cd_ops_types=>ty_run_id
+        iv_scope      TYPE string
+      RETURNING
+        VALUE(rs_row) TYPE zif_cd_hck_types=>ty_result_row.
+
+    "! Active checks the run's scope left out (filtered run): one SKIPPED row each
+    METHODS skipped_rows
+      IMPORTING
+        is_selection   TYPE zif_cd_hck_types=>ty_selection
+        it_defs        TYPE zif_cd_hck_types=>tt_check_def
+        is_run         TYPE zif_cd_ops_types=>ty_run
+        iv_scope       TYPE string
+      RETURNING
+        VALUE(rt_rows) TYPE zif_cd_hck_types=>tt_result_row.
+
+    "! Variant and selection ranges of the run as one text (message 300)
+    CLASS-METHODS scope_text
+      IMPORTING
+        is_selection   TYPE zif_cd_hck_types=>ty_selection
+      RETURNING
+        VALUE(rv_text) TYPE string.
 
     METHODS pe_area_status
       RETURNING
@@ -312,6 +342,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                   iv_default = CONV #( zcl_cd_hck_threshold=>gc_default_flat_tol_pct ) ).
     mt_suppressions = mo_dao->get_suppressions( lv_today ).
 
+    DATA(lv_scope) = scope_text( is_selection ).
     DATA(lt_defs) = mo_dao->get_check_defs( it_categories = is_selection-categories
                                             it_priorities = is_selection-priorities
                                             it_check_ids  = is_selection-check_ids ).
@@ -320,6 +351,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                        is_context = ls_context ).
       IF is_selection-test_mode = abap_false.
         persist_result( EXPORTING is_result = ls_result
+                                  iv_scope  = lv_scope
                         CHANGING  cs_run    = rs_report-run ).
       ENDIF.
       INSERT ls_result INTO TABLE rs_report-results.
@@ -335,6 +367,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_result = config_result( ).
       IF is_selection-test_mode = abap_false.
         persist_result( EXPORTING is_result = ls_result
+                                  iv_scope  = lv_scope
                         CHANGING  cs_run    = rs_report-run ).
       ENDIF.
       INSERT ls_result INTO TABLE rs_report-results.
@@ -345,9 +378,21 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_result = self_check( rs_report-pe_areas ).
       IF is_selection-test_mode = abap_false.
         persist_result( EXPORTING is_result = ls_result
+                                  iv_scope  = lv_scope
                         CHANGING  cs_run    = rs_report-run ).
       ENDIF.
       INSERT ls_result INTO TABLE rs_report-results.
+    ENDIF.
+    " A filtered run says which active checks it left out (never 'no result' by omission)
+    IF is_selection-test_mode = abap_false.
+      DATA(lt_skipped) = skipped_rows( is_selection = is_selection
+                                       it_defs      = lt_defs
+                                       is_run       = rs_report-run
+                                       iv_scope     = lv_scope ).
+      IF lt_skipped IS NOT INITIAL.
+        mo_dao->save_results( lt_skipped ).
+        mo_store->commit( ).
+      ENDIF.
     ENDIF.
 
     DATA(ls_summary) = zcl_cd_hck_score=>summarize( it_results = rs_report-results
@@ -453,6 +498,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     rs_result-description = is_def-description.
     rs_result-category    = is_def-category.
     rs_result-priority    = is_def-priority.
+    rs_result-executed_at = lv_started.
     rs_result-runtime_ms  = zcl_cd_ops_util=>elapsed_ms( iv_from = lv_started
                                                          iv_to   = mo_clock->now( ) ).
 
@@ -489,6 +535,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD evaluate_metrics.
     DATA lt_history TYPE zif_cd_hck_types=>tt_value.
+    DATA lt_modes TYPE SORTED TABLE OF zif_cd_hck_types=>ty_baseline_mode WITH UNIQUE KEY table_line.
     DATA(lv_default_lookback) = zcl_cd_ops_util=>param_int( io_params  = mo_params
                                                             iv_name    = zif_cd_hck_types=>gc_param-lookback
                                                             iv_default = zif_cd_hck_types=>gc_param_default-lookback ).
@@ -500,6 +547,12 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       IF ls_threshold IS INITIAL.
         CONTINUE.
       ENDIF.
+      " Baseline mode used (stored with the verdict: a warm-up next to a fixed limit is visible)
+      INSERT COND zif_cd_hck_types=>ty_baseline_mode( WHEN ls_threshold-baseline_mode IS INITIAL
+                                                      THEN zif_cd_hck_types=>gc_baseline-none
+                                                      ELSE ls_threshold-baseline_mode ) INTO TABLE lt_modes.
+      cs_result-baseline_mode = COND #( WHEN lines( lt_modes ) > 1 THEN zif_cd_hck_types=>gc_baseline_mixed
+                                        ELSE lt_modes[ 1 ] ).
       CLEAR lt_history.
       IF ls_threshold-baseline_mode IS NOT INITIAL AND ls_threshold-baseline_mode <> zif_cd_hck_types=>gc_baseline-none.
         lt_history = mo_dao->get_metric_history(
@@ -633,8 +686,118 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     IF lt_history IS NOT INITIAL.
       mo_dao->save_metrics( lt_history ).
     ENDIF.
+    " The verdict as the report decided it (the dashboard reads this row, never re-derives it)
+    mo_dao->save_results( VALUE #( ( result_row( is_result = is_result
+                                                 iv_run_id = cs_run-run_id
+                                                 iv_scope  = iv_scope ) ) ) ).
     " one commit per check: results survive a later abort of the run
     mo_store->commit( ).
+  ENDMETHOD.
+
+
+  METHOD result_row.
+    rs_row-run_id        = iv_run_id.
+    rs_row-check_id      = is_result-check_id.
+    rs_row-executed_at   = COND #( WHEN is_result-executed_at IS INITIAL THEN mo_clock->now( )
+                                   ELSE is_result-executed_at ).
+    rs_row-category      = is_result-category.
+    rs_row-priority      = is_result-priority.
+    rs_row-verdict       = is_result-rag.
+    rs_row-run_scope     = iv_scope.
+    rs_row-metric_count  = lines( is_result-metrics ).
+    rs_row-finding_count = lines( is_result-findings ).
+    LOOP AT is_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      CASE zcl_cd_ops_util=>severity_rank( <ls_finding>-severity ).
+        WHEN 3 OR 4.
+          rs_row-error_count = rs_row-error_count + 1.
+        WHEN 2.
+          rs_row-warning_count = rs_row-warning_count + 1.
+      ENDCASE.
+    ENDLOOP.
+    rs_row-baseline_mode = is_result-baseline_mode.
+    rs_row-warmup        = is_result-warmup.
+    rs_row-runtime_ms    = is_result-runtime_ms.
+    rs_row-message       = is_result-summary.
+    " How far the check ran: a failed plug-in has no verdict about the business (never green)
+    rs_row-completion = COND #(
+      WHEN is_result-plugin_error = abap_true
+        THEN zif_cd_hck_types=>gc_completion-failed
+      WHEN is_result-completion IS NOT INITIAL
+        THEN is_result-completion
+      WHEN is_result-timed_out = abap_true
+           OR line_exists( is_result-findings[ check_code = zif_cd_hck_types=>gc_code-budget_exhausted ] )
+        THEN zif_cd_hck_types=>gc_completion-partial
+      ELSE zif_cd_hck_types=>gc_completion-complete ).
+    rs_row-evidence = COND #(
+      WHEN is_result-plugin_error = abap_true
+        THEN zif_cd_hck_types=>gc_evidence-none
+      WHEN is_result-evidence IS NOT INITIAL
+        THEN is_result-evidence
+      WHEN rs_row-completion = zif_cd_hck_types=>gc_completion-partial
+        THEN zif_cd_hck_types=>gc_evidence-partial
+      ELSE zif_cd_hck_types=>gc_evidence-all ).
+    " The status the report shows (finalize_result decided RAG and warm-up)
+    rs_row-check_status = COND #(
+      WHEN is_result-plugin_error = abap_true THEN zif_cd_hck_types=>gc_check_status-failed
+      WHEN is_result-warmup = abap_true       THEN zif_cd_hck_types=>gc_check_status-warmup
+      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-red   THEN zif_cd_hck_types=>gc_check_status-red
+      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-amber THEN zif_cd_hck_types=>gc_check_status-amber
+      WHEN is_result-rag = zif_cd_ops_types=>gc_rag-green THEN zif_cd_hck_types=>gc_check_status-green
+      ELSE zif_cd_hck_types=>gc_check_status-grey ).
+  ENDMETHOD.
+
+
+  METHOD skipped_rows.
+    IF is_selection-categories IS INITIAL AND is_selection-priorities IS INITIAL AND is_selection-check_ids IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lv_now) = mo_clock->now( ).
+    LOOP AT mo_dao->get_check_defs( it_categories = VALUE #( )
+                                    it_priorities = VALUE #( )
+                                    it_check_ids  = VALUE #( ) ) ASSIGNING FIELD-SYMBOL(<ls_def>).
+      IF line_exists( it_defs[ check_id = <ls_def>-check_id ] ).
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( run_id       = is_run-run_id
+                      check_id     = <ls_def>-check_id
+                      executed_at  = lv_now
+                      category     = <ls_def>-category
+                      priority     = <ls_def>-priority
+                      verdict      = zif_cd_ops_types=>gc_rag-grey
+                      check_status = zif_cd_hck_types=>gc_check_status-skipped
+                      completion   = zif_cd_hck_types=>gc_completion-skipped
+                      evidence     = zif_cd_hck_types=>gc_evidence-none
+                      run_scope    = iv_scope ) INTO TABLE rt_rows.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD scope_text.
+    DATA lt_categories TYPE string_table.
+    DATA lt_priorities TYPE string_table.
+    DATA lt_checks TYPE string_table.
+    LOOP AT is_selection-categories ASSIGNING FIELD-SYMBOL(<ls_category>).
+      INSERT condense( |{ <ls_category>-sign } { <ls_category>-option } { <ls_category>-low } { <ls_category>-high }| )
+        INTO TABLE lt_categories.
+    ENDLOOP.
+    LOOP AT is_selection-priorities ASSIGNING FIELD-SYMBOL(<ls_priority>).
+      INSERT condense( |{ <ls_priority>-sign } { <ls_priority>-option } { <ls_priority>-low } { <ls_priority>-high }| )
+        INTO TABLE lt_priorities.
+    ENDLOOP.
+    LOOP AT is_selection-check_ids ASSIGNING FIELD-SYMBOL(<ls_check>).
+      INSERT condense( |{ <ls_check>-sign } { <ls_check>-option } { <ls_check>-low } { <ls_check>-high }| )
+        INTO TABLE lt_checks.
+    ENDLOOP.
+    rv_text = zcl_cd_ops_util=>text(
+                iv_msgno = zif_cd_hck_types=>gc_msg-run_scope
+                iv_v1    = COND string( WHEN is_selection-variant IS INITIAL THEN zif_cd_hck_types=>gc_scope_all
+                                        ELSE is_selection-variant )
+                iv_v2    = COND string( WHEN lt_categories IS INITIAL THEN zif_cd_hck_types=>gc_scope_all
+                                        ELSE concat_lines_of( table = lt_categories sep = zif_cd_hck_types=>gc_scope_sep ) )
+                iv_v3    = COND string( WHEN lt_priorities IS INITIAL THEN zif_cd_hck_types=>gc_scope_all
+                                        ELSE concat_lines_of( table = lt_priorities sep = zif_cd_hck_types=>gc_scope_sep ) )
+                iv_tail  = COND string( WHEN lt_checks IS INITIAL THEN zif_cd_hck_types=>gc_scope_all
+                                        ELSE concat_lines_of( table = lt_checks sep = zif_cd_hck_types=>gc_scope_sep ) ) ).
   ENDMETHOD.
 
 

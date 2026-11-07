@@ -5,6 +5,7 @@
 //          findings of the check. UI annotations in the metadata extension ZC_CD_HCKCHECK.
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCD_PE_AREA = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-07 | Persisted verdict: completion, evidence, scope, baseline mode, summary, failed count.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard'
 @Metadata.allowExtensions: true
@@ -24,6 +25,12 @@ define root view entity ZC_CD_HckCheck
       CheckStatus,
       StatusCriticality,
       StatusOrder,
+      CheckCompletion,
+      EvidenceAvailability,
+      RunScope,
+      BaselineMode,
+      ResultMessage,
+      ExecutedAt,
       OldestDueDate,
       AsOfRunId,
       AsOfRunRag,
@@ -35,6 +42,8 @@ define root view entity ZC_CD_HckCheck
       CheckCount,
       @Aggregation.default: #SUM
       RedCheckCount,
+      @Aggregation.default: #SUM
+      FailedCheckCount,
       @Aggregation.default: #SUM
       AmberCheckCount,
       @Aggregation.default: #SUM

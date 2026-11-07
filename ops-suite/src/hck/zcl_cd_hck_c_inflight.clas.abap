@@ -9,10 +9,13 @@
 *& (ZCD_HCK_CLRRULE): per flow + class and purpose (VOIDED, RETURNED,
 *& PENDING, CLEARED, IN_FLIGHT - the first purpose with evidence decides)
 *& the rows name evidence plug-ins (ZIF_CD_HCK_EVIDENCE) that must hold
-*& (X, indicates the purpose; C, condition only) or must not hold (N).
-*& All rows hold = excluded (counted per purpose; IN_FLIGHT: stays in
-*& flight); some but not all = CLEARING_INCONSISTENT / RETURN_INCONSISTENT
-*& naming what held; an anomaly of an evidence (unexpected bank code sequence, returns
+*& (X mandatory, indicates the purpose; C mandatory corroboration) or must
+*& not hold (N, mandatory); blank rows are informational. All rows hold =
+*& excluded (counted per purpose; IN_FLIGHT: stays in flight); some but not
+*& all = CLEARING_INCONSISTENT / RETURN_INCONSISTENT naming what held; a
+*& mandatory row whose kind is not configured or not usable leaves the
+*& purpose undetermined (CLEARING_UNDETERMINED, no later purpose decides,
+*& the payment stays in flight); an anomaly of an evidence (unexpected bank code sequence, returns
 *& lot mismatch, pending outcome overdue, Stripe refund) is its own
 *& finding. Payments without a decision are aged: VALUE_DATE classes in
 *& business days after the value date (run date when missing), ISSUE_DATE
@@ -24,6 +27,13 @@
 *& 2026-11-07 | Clearing / return evidence by rules and plug-ins (user rules 1-5); method classes, ageing
 *&            | basis and calendars (class, house bank) from configuration; inconsistency / anomaly
 *&            | findings; DFKKRP and BSAS reads moved into evidence plug-ins.
+*& 2026-11-07 | Design review: REQUIRED X / C / N mandatory - a mandatory kind not configured,
+*&            | invalid or unreadable makes the purpose undetermined (CLEARING_UNDETERMINED,
+*&            | PAY_UNDETERMINED, configuration finding W); only informational rows are skipped.
+*& 2026-11-07 | Code review: every anomaly of an evidence is listed (TY_EVIDENCE-MORE); the shared
+*&            | reads of the evidence kinds start per run (ZCL_CD_HCK_EV_SUPPORT=>START_COLLECTION).
+*& 2026-11-07 | Persisted verdict: completion PARTIAL after a capped read, evidence PARTIAL when an evidence
+*&            | kind of a mandatory row could not be used (ZCD_HCK_RESULT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -51,6 +61,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         crit_amount  TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVER_CRIT_AMT',
         excluded     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_EXCLUDED',
         inconsistent TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_INCONSISTENT',
+        "! Payments whose clearing cannot be determined (mandatory evidence unavailable): in flight
+        undetermined TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_UNDETERMINED',
       END OF gc_metric.
 
   PRIVATE SECTION.
@@ -73,7 +85,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         param3         TYPE zif_cd_hck_runtime_types=>ty_rule_param,
         "! The kind could not be used (class, parameters, read): its purposes are not judged
         invalid        TYPE abap_bool,
-        "! The kind's settings are not maintained: its rows are ignored
+        "! The kind's settings are not maintained: informational rows are skipped, mandatory rows
+        "! leave their purpose undetermined
         unconfigured   TYPE abap_bool,
         evidence       TYPE zif_cd_hck_runtime_types=>tt_evidence,
       END OF ty_group.
@@ -227,6 +240,20 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         iv_message  TYPE string
         is_def      TYPE zif_cd_hck_types=>ty_check_def.
 
+    "! A rule row of the group is mandatory (REQUIRED X / C / N)
+    METHODS mandatory_use
+      IMPORTING
+        is_group      TYPE ty_group
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
+
+    "! REQUIRED X, C or N: the row must be evaluable; blank (or any other value) = informational
+    CLASS-METHODS is_mandatory
+      IMPORTING
+        iv_required   TYPE zif_cd_hck_runtime_types=>ty_required
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
+
     "! Label of a rule row in a finding: SEQ and description (or class)
     CLASS-METHODS label
       IMPORTING
@@ -256,6 +283,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
     CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_groups, mt_watched, mt_working, mt_listed,
            mt_excluded, mt_findings.
+    " The evidence kinds share their reads (cheques, statement lines, lifecycles) within this run only
+    zcl_cd_hck_ev_support=>start_collection( ).
     mv_calendar = to_upper( condense( is_def-param1 ) ).
     load_configuration( EXPORTING is_def    = is_def
                         CHANGING  cs_result = rs_result ).
@@ -336,6 +365,16 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     report_listed( EXPORTING is_def    = is_def
                              iv_top_n  = lv_top_n
                    CHANGING  cs_result = rs_result ).
+    " What the persisted verdict says about the run of this check (ZCD_HCK_RESULT)
+    IF line_exists( rs_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ] ).
+      rs_result-completion = zif_cd_hck_types=>gc_completion-partial.
+    ENDIF.
+    LOOP AT mt_groups ASSIGNING FIELD-SYMBOL(<ls_group>)
+         WHERE invalid = abap_true OR unconfigured = abap_true.
+      IF <ls_group>-invalid = abap_true OR mandatory_use( <ls_group> ) = abap_true.
+        rs_result-evidence = zif_cd_hck_types=>gc_evidence-partial.
+      ENDIF.
+    ENDLOOP.
     IF lv_no_valut > 0.
       INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-value_date_missing }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-value_date_missing
@@ -484,11 +523,21 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
           ENDIF.
           IF ls_result-unconfigured = abap_true.
             <ls_group>-unconfigured = abap_true.
-            config_finding( iv_object  = |{ <ls_group>-evidence_class }/{ <ls_group>-param1 }|
-                            iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_unconfig
-                                                                iv_v1    = <ls_group>-evidence_class
-                                                                iv_v2    = <ls_group>-param1 )
-                            is_def     = is_def ).
+            " Mandatory rows: the purpose cannot be determined (warning); informational rows: skipped
+            IF mandatory_use( <ls_group> ) = abap_true.
+              config_finding( iv_object   = |{ <ls_group>-evidence_class }/{ <ls_group>-param1 }|
+                              iv_severity = zif_cd_ops_types=>gc_severity-warning
+                              iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_mandatory
+                                                                   iv_v1    = <ls_group>-evidence_class
+                                                                   iv_v2    = <ls_group>-param1 )
+                              is_def      = is_def ).
+            ELSE.
+              config_finding( iv_object  = |{ <ls_group>-evidence_class }/{ <ls_group>-param1 }|
+                              iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_unconfig
+                                                                  iv_v1    = <ls_group>-evidence_class
+                                                                  iv_v2    = <ls_group>-param1 )
+                              is_def     = is_def ).
+            ENDIF.
           ENDIF.
         CATCH cx_root INTO DATA(lx_error).
           " Fail closed: the purposes of these rows are not judged (a payment stays in flight)
@@ -511,6 +560,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     DATA lt_missing TYPE string_table.
     DATA lt_forbidden TYPE string_table.
     DATA lt_info TYPE string_table.
+    DATA lt_unusable TYPE string_table.
     DATA lt_seen TYPE SORTED TABLE OF string WITH UNIQUE KEY table_line.
     DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ is_payment-flow }{ is_payment-class }| ).
     rv_status = gc_status-open.
@@ -524,22 +574,31 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       DATA(ls_evidence) = VALUE #( ls_group-evidence[ doc1r = is_payment-doc1r ] OPTIONAL ).
-      " One kind used by several purposes reports its anomaly once per payment and code
-      IF ls_evidence-anomaly IS NOT INITIAL
-         AND NOT line_exists( mt_listed[ doc1r = is_payment-doc1r code = ls_evidence-anomaly ] ).
+      IF ls_evidence-anomaly IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      " Every anomaly of the evidence, the primary one first; one kind used by several purposes
+      " reports each anomaly once per payment and code
+      DATA(lt_anomalies) = VALUE zif_cd_hck_runtime_types=>tt_anomaly(
+                             ( code = ls_evidence-anomaly severity = ls_evidence-severity detail = ls_evidence-detail ) ).
+      INSERT LINES OF ls_evidence-more INTO TABLE lt_anomalies.
+      LOOP AT lt_anomalies ASSIGNING FIELD-SYMBOL(<ls_anomaly>).
+        IF line_exists( mt_listed[ doc1r = is_payment-doc1r code = <ls_anomaly>-code ] ).
+          CONTINUE.
+        ENDIF.
         INSERT VALUE #( key      = lv_key
-                        code     = ls_evidence-anomaly
-                        severity = ls_evidence-severity
+                        code     = <ls_anomaly>-code
+                        severity = <ls_anomaly>-severity
                         laufd    = is_payment-laufd
                         doc1r    = is_payment-doc1r
                         line     = payment_line( is_payment = is_payment
-                                                 iv_what    = ls_evidence-anomaly
+                                                 iv_what    = <ls_anomaly>-code
                                                  iv_tail    = zcl_cd_ops_util=>text(
                                                                 iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_anomaly
                                                                 iv_v1    = label( <ls_rule> )
-                                                                iv_tail  = ls_evidence-detail ) ) ) INTO TABLE mt_listed.
-        rv_status = gc_status-inconsistent.
-      ENDIF.
+                                                                iv_tail  = <ls_anomaly>-detail ) ) ) INTO TABLE mt_listed.
+      ENDLOOP.
+      rv_status = gc_status-inconsistent.
     ENDLOOP.
 
     " Purposes in order: the first one with evidence decides
@@ -549,18 +608,25 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                             ( CONV #( zif_cd_hck_runtime_types=>gc_purpose-cleared ) )
                                             ( CONV #( zif_cd_hck_runtime_types=>gc_purpose-in_flight ) ) ).
     LOOP AT lt_purposes ASSIGNING FIELD-SYMBOL(<lv_purpose>).
-      CLEAR: lt_held, lt_missing, lt_forbidden, lt_info.
+      CLEAR: lt_held, lt_missing, lt_forbidden, lt_info, lt_unusable.
       DATA(lv_indicated) = abap_false.
       DATA(lv_rows) = 0.
-      DATA(lv_unusable) = abap_false.
+      DATA(lv_indicator_unusable) = abap_false.
       LOOP AT mt_rules ASSIGNING <ls_rule>
            WHERE flow = is_payment-flow AND method_class = is_payment-class AND purpose = <lv_purpose>.
         ls_group = group_of( <ls_rule> ).
-        IF ls_group-unconfigured = abap_true.
-          CONTINUE.
-        ENDIF.
-        IF ls_group-invalid = abap_true.
-          lv_unusable = abap_true.
+        IF ls_group-unconfigured = abap_true OR ls_group-invalid = abap_true.
+          " Only an informational row may be skipped; a mandatory one cannot be evaluated
+          IF is_mandatory( <ls_rule>-required ) = abap_false.
+            CONTINUE.
+          ENDIF.
+          INSERT zcl_cd_ops_util=>text( iv_msgno = COND #( WHEN ls_group-invalid = abap_true
+                                                           THEN zif_cd_hck_runtime_types=>gc_msg-unusable_invalid
+                                                           ELSE zif_cd_hck_runtime_types=>gc_msg-unusable_unconfig )
+                                        iv_v1    = label( <ls_rule> ) ) INTO TABLE lt_unusable.
+          IF <ls_rule>-required = zif_cd_hck_runtime_types=>gc_required-must_hold.
+            lv_indicator_unusable = abap_true.
+          ENDIF.
           CONTINUE.
         ENDIF.
         lv_rows = lv_rows + 1.
@@ -592,8 +658,25 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
             ENDIF.
         ENDCASE.
       ENDLOOP.
-      " Fail closed: a purpose with an unusable row is not judged; no evidence = next purpose
-      IF lv_unusable = abap_true OR lv_rows = 0 OR lv_indicated = abap_false.
+      " Fail closed: an indicator that cannot be read, or an indicated purpose whose mandatory
+      " corroboration / exclusion cannot be read, is undetermined - no positive conclusion, no later
+      " purpose decides, the payment stays in flight (aged) and is listed
+      IF lv_indicator_unusable = abap_true OR ( lv_indicated = abap_true AND lt_unusable IS NOT INITIAL ).
+        INSERT VALUE #( key      = lv_key
+                        code     = zif_cd_hck_runtime_types=>gc_code-undetermined
+                        severity = zif_cd_ops_types=>gc_severity-warning
+                        laufd    = is_payment-laufd
+                        doc1r    = is_payment-doc1r
+                        line     = payment_line( is_payment = is_payment
+                                                 iv_what    = <lv_purpose>
+                                                 iv_tail    = zcl_cd_ops_util=>text(
+                                                                iv_msgno = zif_cd_hck_runtime_types=>gc_msg-undetermined
+                                                                iv_tail  = concat_lines_of( table = lt_unusable sep = ` | ` ) ) ) )
+               INTO TABLE mt_listed.
+        RETURN.
+      ENDIF.
+      " No evidence = next purpose
+      IF lv_rows = 0 OR lv_indicated = abap_false.
         CONTINUE.
       ENDIF.
       IF lt_missing IS INITIAL AND lt_forbidden IS INITIAL.
@@ -693,6 +776,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
   METHOD report.
     DATA lt_sorted TYPE tt_open.
     DATA lt_inconsistent TYPE tt_key.
+    DATA lt_undetermined TYPE tt_key.
     DATA lt_details TYPE string_table.
     DATA(lv_top_n) = nmax( val1 = 1
                            val2 = zcl_cd_hck_param=>int( iv_value   = is_def-param4
@@ -747,11 +831,18 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                       kind   = zif_cd_hck_types=>gc_metric_kind-level ) INTO TABLE cs_result-metrics.
       INSERT VALUE #( metric = gc_metric-warn_count dim1 = <lv_key> value = lv_warn ) INTO TABLE cs_result-metrics.
       INSERT VALUE #( metric = gc_metric-crit_count dim1 = <lv_key> value = lv_crit ) INTO TABLE cs_result-metrics.
-      CLEAR lt_inconsistent.
+      CLEAR: lt_inconsistent, lt_undetermined.
       LOOP AT mt_listed ASSIGNING FIELD-SYMBOL(<ls_inconsistent>) WHERE key = <lv_key>.
-        INSERT CONV string( <ls_inconsistent>-doc1r ) INTO TABLE lt_inconsistent.
+        " Undetermined payments stay in flight (aged): counted apart, not as inconsistent
+        IF <ls_inconsistent>-code = zif_cd_hck_runtime_types=>gc_code-undetermined.
+          INSERT CONV string( <ls_inconsistent>-doc1r ) INTO TABLE lt_undetermined.
+        ELSE.
+          INSERT CONV string( <ls_inconsistent>-doc1r ) INTO TABLE lt_inconsistent.
+        ENDIF.
       ENDLOOP.
       INSERT VALUE #( metric = gc_metric-inconsistent dim1 = <lv_key> value = lines( lt_inconsistent ) )
+             INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-undetermined dim1 = <lv_key> value = lines( lt_undetermined ) )
              INTO TABLE cs_result-metrics.
       LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
            WHERE flow = <lv_key>(1) AND method_class = <lv_key>+1(3)
@@ -869,6 +960,25 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                     severity   = iv_severity
                     action     = zif_cd_ops_types=>gc_action-notify
                     message    = iv_message ) INTO TABLE mt_findings.
+  ENDMETHOD.
+
+
+  METHOD mandatory_use.
+    LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
+         WHERE param1 = is_group-param1 AND param2 = is_group-param2 AND param3 = is_group-param3.
+      IF to_upper( condense( <ls_rule>-evidence_class ) ) = is_group-evidence_class
+         AND is_mandatory( <ls_rule>-required ) = abap_true.
+        rv_yes = abap_true.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD is_mandatory.
+    rv_yes = xsdbool( iv_required = zif_cd_hck_runtime_types=>gc_required-must_hold
+                      OR iv_required = zif_cd_hck_runtime_types=>gc_required-condition
+                      OR iv_required = zif_cd_hck_runtime_types=>gc_required-must_not_hold ).
   ENDMETHOD.
 
 

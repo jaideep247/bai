@@ -84,6 +84,26 @@ annotate entity ZC_CD_HckCheck with
   StatusCriticality;
   @UI.hidden: true
   StatusOrder;
+  @EndUserText.label: 'Completion (COMPLETE, PARTIAL, FAILED, SKIPPED)'
+  @UI.lineItem: [ { position: 55, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 72 } ]
+  CheckCompletion;
+  @EndUserText.label: 'Evidence read (ALL, PARTIAL, NONE)'
+  @UI.lineItem: [ { position: 57, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 74 } ]
+  EvidenceAvailability;
+  @EndUserText.label: 'Scope of the run'
+  @UI.identification: [ { position: 76 } ]
+  RunScope;
+  @EndUserText.label: 'Baseline mode used'
+  @UI.identification: [ { position: 77 } ]
+  BaselineMode;
+  @EndUserText.label: 'Summary in the report'
+  @UI.identification: [ { position: 78 } ]
+  ResultMessage;
+  @EndUserText.label: 'Executed at'
+  @UI.identification: [ { position: 79 } ]
+  ExecutedAt;
   @EndUserText.label: 'Oldest due date (open)'
   @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
   @UI.identification: [ { position: 80 } ]
@@ -109,8 +129,10 @@ annotate entity ZC_CD_HckCheck with
   @EndUserText.label: 'Checks'
   @UI.fieldGroup: [ { qualifier: 'Measures', position: 10 } ]
   CheckCount;
-  @EndUserText.label: 'Red checks'
+  @EndUserText.label: 'Red checks (incl. failed)'
   RedCheckCount;
+  @EndUserText.label: 'Failed checks'
+  FailedCheckCount;
   @EndUserText.label: 'Amber checks'
   AmberCheckCount;
   @EndUserText.label: 'Green checks'

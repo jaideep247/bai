@@ -16,6 +16,8 @@
 *& 2026-11-07 | Failing check double raises generic message 000 (unused message 301 removed).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
+*& 2026-11-07 | Persisted verdicts (ZCD_HCK_RESULT, design review): green without metric, filtered run with
+*&            | scope and SKIPPED rows, warm-up next to a fixed limit = report, failed check never green.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -176,11 +178,20 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mv_metric_saves TYPE i.
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
     DATA mt_moncfg TYPE zif_cd_hck_types=>tt_monitor_cfg.
+    "! Verdict rows saved (ZCD_HCK_RESULT)
+    DATA mt_results TYPE zif_cd_hck_types=>tt_result_row.
 ENDCLASS.
 
 CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_check_defs.
-    rt_defs = mt_defs.
+    " The check-id filter of the selection (the other ranges are not used by these tests)
+    LOOP AT mt_defs ASSIGNING FIELD-SYMBOL(<ls_def>) WHERE check_id IN it_check_ids.
+      INSERT <ls_def> INTO TABLE rt_defs.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_dao~save_results.
+    INSERT LINES OF it_results INTO TABLE mt_results.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~get_thresholds.
@@ -262,6 +273,10 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         fmon_two_hours  TYPE abap_bool,
         "! ZCD_OPS_MONCFG row of FMON (minutes; 0 = no row)
         fmon_moncfg_min TYPE i,
+        "! Warm-up baseline next to a fixed (static) limit that the value passes
+        warmup_fixed    TYPE abap_bool,
+        "! The run selects only the red check (check-id filter)
+        filter_red      TYPE abap_bool,
       END OF ty_flags.
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
@@ -297,6 +312,10 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS self_check_alone_not_green FOR TESTING.
     METHODS check_receives_time_budget FOR TESTING.
     METHODS warmup_check_is_not_green FOR TESTING.
+    METHODS result_green_without_metric FOR TESTING.
+    METHODS result_filtered_run_scope FOR TESTING.
+    METHODS result_warmup_fixed_limit FOR TESTING.
+    METHODS result_failed_never_green FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -408,6 +427,21 @@ CLASS ltc_engine IMPLEMENTATION.
       INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
     ENDIF.
 
+    IF is_flags-warmup_fixed = abap_true.
+      DATA(lo_fixed) = add_check( iv_check_id = gc_warm_check iv_category = 'D' iv_priority = 'H' ).
+      lo_fixed->ms_result-rag = gc_green.
+      INSERT VALUE #( metric = gc_metric dim1 = gc_dim value = 7 ) INTO TABLE lo_fixed->ms_result-metrics.
+      CLEAR ls_threshold.
+      ls_threshold-check_id        = gc_warm_check.
+      ls_threshold-metric          = gc_metric.
+      ls_threshold-bukrs           = zif_cd_hck_types=>gc_default_key.
+      ls_threshold-amber           = 50.
+      ls_threshold-red             = 100.
+      ls_threshold-higher_is_worse = abap_true.
+      ls_threshold-baseline_mode   = zif_cd_hck_types=>gc_baseline-zscore.
+      INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
+    ENDIF.
+
     IF is_flags-include_pe_areas = abap_true.
       mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'EBS,FMON' ).
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
@@ -458,10 +492,12 @@ CLASS ltc_engine IMPLEMENTATION.
 
   METHOD act.
     rs_report = zcl_cd_hck_factory=>get_engine( )->run(
-      VALUE #( report_date     = ltd_clock=>gc_today
-               test_mode       = ms_flags-test_mode
-               send_mail       = ms_flags-send_mail
-               include_pe_areas = ms_flags-include_pe_areas ) ).
+      VALUE #( report_date      = ltd_clock=>gc_today
+               test_mode        = ms_flags-test_mode
+               send_mail        = ms_flags-send_mail
+               include_pe_areas = ms_flags-include_pe_areas
+               check_ids        = COND #( WHEN ms_flags-filter_red = abap_true
+                                          THEN VALUE #( ( sign = 'I' option = 'EQ' low = gc_red_check ) ) ) ) ).
   ENDMETHOD.
 
 
@@ -683,6 +719,92 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_report-score exp = 100 msg = 'Warm-up is not scored' ).
         cl_abap_unit_assert=>assert_equals( act = ls_report-categories[ category = 'D' ]-warmup_count exp = 1
                                             msg = 'Category shows the warm-up' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 4): a check that ran without a metric and without a finding is GREEN in
+  " the persisted verdict (as in the report), not grey / no result
+  METHOD result_green_without_metric.
+    TRY.
+        configure_scenario( VALUE #( green_checks = 1 ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_row) = mo_dao->mt_results[ check_id = 'GREEN1' ].
+        cl_abap_unit_assert=>assert_equals( act = ls_row-check_status exp = zif_cd_hck_types=>gc_check_status-green
+                                            msg = 'Green without metric' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-verdict exp = ls_report-results[ check_id = 'GREEN1' ]-rag
+                                            msg = 'Same verdict as the report' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-metric_count exp = 0 msg = 'No metric' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-completion exp = zif_cd_hck_types=>gc_completion-complete
+                                            msg = 'Complete' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-evidence exp = zif_cd_hck_types=>gc_evidence-all
+                                            msg = 'All evidence' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-run_id exp = ls_report-run-run_id msg = 'Row of the run' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 4): a filtered run stores its scope with every verdict and an active check
+  " outside the scope as SKIPPED - never 'no result' by omission
+  METHOD result_filtered_run_scope.
+    TRY.
+        configure_scenario( VALUE #( green_checks = 1 red_metric = abap_true filter_red = abap_true ) ).
+        act( ).
+        DATA(ls_red) = mo_dao->mt_results[ check_id = gc_red_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_red-check_status exp = zif_cd_hck_types=>gc_check_status-red
+                                            msg = 'The selected check ran red' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = CONV string( ls_red-run_scope )
+                                                               sub = CONV string( gc_red_check ) ) >= 0 )
+                                          msg = 'The scope names the check filter' ).
+        DATA(ls_skipped) = mo_dao->mt_results[ check_id = 'GREEN1' ].
+        cl_abap_unit_assert=>assert_equals( act = ls_skipped-check_status exp = zif_cd_hck_types=>gc_check_status-skipped
+                                            msg = 'The other active check is SKIPPED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_skipped-completion exp = zif_cd_hck_types=>gc_completion-skipped
+                                            msg = 'Completion SKIPPED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_skipped-run_scope exp = ls_red-run_scope msg = 'Same scope' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 4): a baseline still warming up next to a fixed limit the value passes is
+  " GREEN in the report - the persisted verdict is the same (baseline mode ZSCORE kept)
+  METHOD result_warmup_fixed_limit.
+    TRY.
+        configure_scenario( VALUE #( warmup_fixed = abap_true ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_result) = ls_report-results[ check_id = gc_warm_check ].
+        DATA(ls_row) = mo_dao->mt_results[ check_id = gc_warm_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_row-verdict exp = ls_result-rag msg = 'Dashboard = report' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-check_status exp = zif_cd_hck_types=>gc_check_status-green
+                                            msg = 'Fixed limit decides: GREEN' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-baseline_mode exp = zif_cd_hck_types=>gc_baseline-zscore
+                                            msg = 'Baseline mode used' ).
+        cl_abap_unit_assert=>assert_false( act = ls_row-warmup msg = 'Not a warm-up verdict' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 4): a failed check is FAILED (completion FAILED, no evidence), never green
+  METHOD result_failed_never_green.
+    TRY.
+        configure_scenario( VALUE #( failing_plugin = abap_true ) ).
+        act( ).
+        DATA(ls_row) = mo_dao->mt_results[ check_id = gc_fail_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_row-check_status exp = zif_cd_hck_types=>gc_check_status-failed
+                                            msg = 'FAILED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-completion exp = zif_cd_hck_types=>gc_completion-failed
+                                            msg = 'Completion FAILED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-evidence exp = zif_cd_hck_types=>gc_evidence-none
+                                            msg = 'No evidence' ).
+        cl_abap_unit_assert=>assert_differs( act = ls_row-verdict exp = gc_green msg = 'Never green' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

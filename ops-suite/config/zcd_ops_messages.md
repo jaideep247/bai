@@ -215,6 +215,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 277 | Bank &1, statement date &2: |
 | 278 | &1 &2: stage &4 not reached by &3 |
 | 279 | Posting state not read or statement read capped - not proven; |
+| 300 | Variant &1, categories &2, priorities &3, checks: |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
@@ -326,6 +327,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 417 | &1 must be greater than zero |
 | 418 | &1 is not a valid PCRE pattern (matched to the whole value, any case) |
 | 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
+| 420 | &1: each token must be BLANK or one register state character |
+| 421 | &1 is not a finding code of the in-flight check (upper case) |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
@@ -397,6 +400,14 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 671 | Evidence &1: expectation &2 invalid (EQUAL or CHANGED) |
 | 672 | - cheque &1, register state &2 |
 | 673 | - statement amount &1, payment amount &2 - clear manually in FPCHR |
+| 674 | Evidence &1 (&2) not configured - mandatory: purpose not determinable |
+| 675 | - not determinable (mandatory evidence unavailable): |
+| 676 | &1 not configured |
+| 677 | &1 not usable |
+| 678 | no role for code &1 posted &2 amount &3 (&4) - add ZCD_HCK_BTCROLE row |
+| 679 | - lifecycle &1: monetary line without role |
+| 680 | - cheque &1 (state &2), not the deciding cheque: |
+| 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |
@@ -441,3 +452,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 746 | &1 value(s) read, &2 matched by no pattern, &3 pattern(s) match nothing |
 | 747 | Row cap &1 reached reading the values of &2 - list may be incomplete |
 | 748 | Configuration cannot be changed in this client - run the migration in DV1 |
+| 749 | Line &1 fits &2 cheques of account &3 - not attributed: |

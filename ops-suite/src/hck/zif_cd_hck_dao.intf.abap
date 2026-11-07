@@ -107,6 +107,14 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
+  "! Verdict of checks of a run (ZCD_HCK_RESULT, one row per run and check; a repeated row of the
+  "! same run and check replaces the earlier one)
+  METHODS save_results
+    IMPORTING
+      it_results TYPE zif_cd_hck_types=>tt_result_row
+    RAISING
+      zcx_cd_ops_error.
+
   "! Tables under configuration-drift control (ZCD_HCK_DRIFT)
   METHODS get_drift_tables
     RETURNING

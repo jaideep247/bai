@@ -23,6 +23,9 @@
 *& 2026-11-07 | Reversal = clearing reason ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD (05, the only
 *&            | reversal reason); parameter TRACE_REVERSAL_AUGRD removed.
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | Cheque settlement lines through the shared link ZCL_CD_OPS_CHEQUE_LINK (cheque number
+*&            | AND statement house bank account = the cheque's; a line of another account is not the
+*&            | cheque's, a line fitting several cheques of the attempt is one AMBIGUOUS row).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -1176,7 +1179,36 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       lv_from = lv_from - ms_cfg-lookback.
     ENDIF.
     DATA(lt_lines) = mo_dao->get_bank_lines( it_ref = lt_ref iv_from = lv_from iv_max_rows = ms_cfg-max_rows ).
-    candidate_status( EXPORTING iv_count  = lines( lt_lines )
+    DATA(lv_read) = lines( lt_lines ).
+    IF iv_cheque = abap_true.
+      " Shared cheque link (as the morning report): FEBEP-CHECT = cheque number AND the line's statement
+      " account (FEBKO) = the cheque's paying house bank account (company code of the attempt); a line of
+      " another account is not this cheque's, a line fitting several cheques is attributed to none
+      DATA(lt_owned) = it_checks.
+      LOOP AT lt_owned ASSIGNING FIELD-SYMBOL(<ls_owned>) WHERE bukrs IS INITIAL.
+        <ls_owned>-bukrs = is_attempt-bukrs.
+      ENDLOOP.
+      DATA(lt_read) = lt_lines.
+      CLEAR lt_lines.
+      LOOP AT zcl_cd_ops_cheque_link=>link( it_checks = lt_owned
+                                            it_lines  = lt_read
+                                            iv_length = 0 ) ASSIGNING FIELD-SYMBOL(<ls_link>).
+        IF <ls_link>-candidates = 1.
+          INSERT <ls_link>-line INTO TABLE lt_lines.
+          CONTINUE.
+        ENDIF.
+        add_row( is_attempt = is_attempt
+                 is_row     = VALUE #( BASE ls_base status = zif_cd_ops_trace_types=>gc_status-ambiguous
+                                       reason        = zif_cd_ops_trace_types=>gc_reason-multiple
+                                       record_key    = key_text( iv_part1 = <ls_link>-line-kukey
+                                                                 iv_part2 = <ls_link>-line-esnum
+                                                                 iv_part3 = <ls_link>-line-chect )
+                                       evidence_date = <ls_link>-line-budat
+                                       detail        = <ls_link>-detail ) ).
+      ENDLOOP.
+    ENDIF.
+    " A capped read stays visible as AMBIGUOUS even when the link keeps fewer lines
+    candidate_status( EXPORTING iv_count  = COND #( WHEN lv_read >= ms_cfg-max_rows THEN lv_read ELSE lines( lt_lines ) )
                       IMPORTING ev_status = ls_base-status
                                 ev_reason = ls_base-reason ).
     IF lt_lines IS INITIAL.
