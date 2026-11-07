@@ -397,6 +397,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 671 | Evidence &1: expectation &2 invalid (EQUAL or CHANGED) |
 | 672 | - cheque &1, register state &2 |
 | 673 | - statement amount &1, payment amount &2 - clear manually in FPCHR |
+| 674 | Evidence &1 (&2) not configured - mandatory: purpose not determinable |
+| 675 | - not determinable (mandatory evidence unavailable): |
+| 676 | &1 not configured |
+| 677 | &1 not usable |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

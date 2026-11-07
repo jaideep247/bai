@@ -16,6 +16,9 @@
 *& Modification log:
 *& 2026-11-07 | Initial version (payments in flight, both flows, value date).
 *& 2026-11-07 | Rules and evidence plug-ins, configured classes and calendars (user rules 1-5).
+*& 2026-11-07 | Design review: mandatory rows (X / C / N) not configured or not usable leave the
+*&            | purpose undetermined (no CLEARED on the indicator alone, no later purpose);
+*&            | informational rows skipped; Stripe rows as seeded (C) and the explicit switch (blank).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -277,7 +280,9 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS partial_return_return_code  FOR TESTING.
     METHODS anomaly_listed_not_aged     FOR TESTING.
     METHODS unusable_kind_fails_closed  FOR TESTING.
-    METHODS unconfigured_kind_ignored   FOR TESTING.
+    METHODS info_row_unconfigured_skipped FOR TESTING.
+    METHODS mandatory_unconfig_no_clear FOR TESTING.
+    METHODS invalid_indicator_blocks_later FOR TESTING.
     METHODS one_collect_per_kind        FOR TESTING.
     METHODS class_without_rule_unwatched FOR TESTING.
     METHODS new_class_by_configuration  FOR TESTING.
@@ -287,7 +292,8 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS rule3_collection_xref2      FOR TESTING.
     METHODS rule4_ach_return_with_lot   FOR TESTING.
     METHODS rule4_ach_return_lot_missing FOR TESTING.
-    METHODS stripe_unconfigured_bseg    FOR TESTING.
+    METHODS stripe_unconfigured_no_clear FOR TESTING.
+    METHODS stripe_info_switch_bseg_decide FOR TESTING.
 
     METHODS add_class
       IMPORTING
@@ -466,9 +472,13 @@ CLASS ltc_inflight IMPLEMENTATION.
     " Rule 3: collection ACH cleared = lifecycle CLEARED AND BSEG XREF2 cleared
     add_rule( iv_key = gc_key-c_ach iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_BTC_SEQ' iv_param1 = 'CLEARED' ).
     add_rule( iv_key = gc_key-c_ach iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_GL_XREF2' ).
-    " Card: Stripe payout (settings not maintained in the test) AND BSEG XREF2 cleared
-    add_rule( iv_key = gc_key-c_card iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_STRIPE' iv_param1 = 'STRIPE' ).
-    add_rule( iv_key = gc_key-c_card iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_GL_XREF2' ).
+    " Card (seed): BSEG XREF2 cleared (X) AND Stripe payout row (C, settings not maintained in the test)
+    add_rule( iv_key = gc_key-c_card iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_GL_XREF2' ).
+    add_rule( iv_key      = gc_key-c_card
+              iv_seq      = '020'
+              iv_class    = 'ZCL_CD_HCK_EV_STRIPE'
+              iv_param1   = 'STRIPE'
+              iv_required = zif_cd_hck_runtime_types=>gc_required-condition ).
     " Roles and outcomes (subset of the seed)
     ls_role-flow = zif_cd_hck_runtime_types=>gc_flow-disbursement.
     ls_role-method_class = gc_class-ach.
@@ -1011,11 +1021,14 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a kind whose settings are not maintained is listed (information) and ignored: the other
-  " rows decide
-  METHOD unconfigured_kind_ignored.
+  " Rule: an informational row (REQUIRED blank) whose kind is not configured is listed
+  " (information) and skipped: the mandatory rows decide
+  METHOD info_row_unconfigured_skipped.
     TRY.
-        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        add_rule( iv_key      = gc_key-d_wire
+                  iv_seq      = '020'
+                  iv_class    = gc_ev_b
+                  iv_required = zif_cd_hck_runtime_types=>gc_required-info ).
         mo_ev_b->mv_unconfigured = abap_true.
         add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
         INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
@@ -1028,6 +1041,75 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
                                                           iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Kind A alone decides' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review 2): a valid clearing indicator whose mandatory corroborating source
+  " (C) is not configured gives no CLEARED - the purpose is undetermined, the payment stays in
+  " flight and is aged, CLEARING_UNDETERMINED lists it, the kind is a configuration warning
+  METHOD mandatory_unconfig_no_clear.
+    TRY.
+        add_rule( iv_key      = gc_key-d_wire
+                  iv_seq      = '020'
+                  iv_class    = gc_ev_b
+                  iv_required = zif_cd_hck_runtime_types=>gc_required-condition ).
+        mo_ev_b->mv_unconfigured = abap_true.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_monday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 0 msg = 'Never CLEARED on the indicator alone' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 1 msg = 'Stays in flight' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-undetermined )
+                                            exp = 1 msg = 'Counted as undetermined' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-inconsistent )
+                                            exp = 0 msg = 'Not an inconsistency' ).
+        DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-undetermined ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc1 )
+                                          msg = 'Undetermined payment listed' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Undetermined: warning' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config ]-severity OPTIONAL )
+          exp = zif_cd_ops_types=>gc_severity-warning
+          msg = 'Mandatory kind not configured: configuration warning' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an indicator (X) of an earlier purpose that cannot be read leaves the payment undetermined:
+  " a later purpose (CLEARED) gives no positive conclusion either
+  METHOD invalid_indicator_blocks_later.
+    TRY.
+        add_rule( iv_key     = gc_key-d_wire
+                  iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned
+                  iv_seq     = '010'
+                  iv_class   = gc_ev_b ).
+        mo_ev_b->mv_fail = abap_true.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 0 msg = 'No CLEARED while RETURNED is undetermined' ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-undetermined )
+                       iv_doc     = gc_doc1 )
+          msg = 'Listed as undetermined' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid ] ) )
+          msg = 'The unusable kind is reported' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -1275,8 +1357,9 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Card: while the Stripe settings are not maintained, the BSEG XREF2 rule alone decides
-  METHOD stripe_unconfigured_bseg.
+  " Card (seed rows, REQUIRED C on the Stripe row): while the Stripe settings are not maintained the
+  " payment is not cleared on BSEG alone - clearing not determinable, in flight
+  METHOD stripe_unconfigured_no_clear.
     DATA ls_gl TYPE zif_cd_hck_runtime_types=>ty_gl_xref2_line.
     TRY.
         seed_rules( ).
@@ -1290,7 +1373,47 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
                                                           iv_key    = gc_key-c_card
                                                           iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
-                                            exp = 1 msg = 'BSEG decides' ).
+                                            exp = 0 msg = 'Not cleared on BSEG alone' ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result
+                                             iv_code   = zif_cd_hck_runtime_types=>gc_code-undetermined
+                                             iv_key    = gc_key-c_card )
+                       iv_doc     = gc_doc1 )
+          msg = 'Clearing not determinable: Stripe evidence not configured' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                                          severity   = zif_cd_ops_types=>gc_severity-warning ] ) )
+          msg = 'Stripe evidence not configured: warning' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Card, explicit configuration choice: Stripe rows informational (REQUIRED blank) while the fields
+  " are not maintained - the BSEG XREF2 row alone decides (documented trade-off)
+  METHOD stripe_info_switch_bseg_decide.
+    DATA ls_gl TYPE zif_cd_hck_runtime_types=>ty_gl_xref2_line.
+    TRY.
+        seed_rules( ).
+        DELETE mo_dao->mt_rules WHERE flow = zif_cd_hck_runtime_types=>gc_flow-collection
+                                  AND method_class = gc_class-card AND seq = '020'.
+        add_rule( iv_key      = gc_key-c_card
+                  iv_seq      = '020'
+                  iv_class    = 'ZCL_CD_HCK_EV_STRIPE'
+                  iv_param1   = 'STRIPE'
+                  iv_required = zif_cd_hck_runtime_types=>gc_required-info ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_card iv_valut = gc_friday iv_collection = abap_true ).
+        ls_gl-bukrs = gc_bukrs.
+        ls_gl-xref2 = gc_doc1.
+        ls_gl-augbl = '0200000001'.
+        INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-c_card
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'BSEG decides by configuration choice' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                                                           severity   = zif_cd_ops_types=>gc_severity-info ] ) )

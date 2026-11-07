@@ -15,6 +15,10 @@
 *&            | correction of rule 4), UNEXPECTED_SEQUENCE, PENDING_OUTCOME_MISSING.
 *& 2026-11-07 | Cheque lifecycle (581 / 255 / corrections): statement link by cheque number, outcome
 *&            | rows with register state and own finding, amount compared with the register.
+*& 2026-11-07 | Design review: REQUIRED X / C / N mandatory (an unusable mandatory kind leaves the
+*&            | purpose undetermined, CLEARING_UNDETERMINED), unmapped monetary bank codes
+*&            | (BTC_ROLE_MISSING, exclusions HCK_BTC_INFO_<scheme>), cheque link by suffix and
+*&            | house bank account (CHEQUE_LINK_AMBIGUOUS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -246,8 +250,11 @@ INTERFACE zif_cd_hck_runtime_types
   " ------------------------------------------------------------ clearing / return rules
   "! Purpose of a rule row (ZCD_HCK_CLRRULE-PURPOSE)
   TYPES ty_purpose TYPE c LENGTH 10.
-  "! X = must hold and indicates the purpose, C = must hold but does not indicate it on its own
-  "! (condition), N = must not hold, blank = shown in the detail only (never decides)
+  "! X = mandatory, must hold and indicates the purpose; C = mandatory corroboration, must hold
+  "! but never indicates the purpose on its own; N = mandatory, must not hold; blank =
+  "! informational, shown in the detail only (never decides). A mandatory row whose kind is
+  "! not configured or not usable leaves the purpose undetermined (no positive conclusion);
+  "! only an informational row may be skipped
   TYPES ty_required TYPE c LENGTH 1.
   TYPES ty_rule_seq TYPE n LENGTH 3.
   TYPES ty_rule_param TYPE c LENGTH 40.
@@ -377,6 +384,9 @@ INTERFACE zif_cd_hck_runtime_types
       retrieved        TYPE ty_outcome VALUE 'RETRIEVED',
       retrieval_failed TYPE ty_outcome VALUE 'RETRIEVAL_FAILED',
       redeposit        TYPE ty_outcome VALUE 'REDEPOSIT_PENDING',
+      "! A monetary line on the payment reference has no role and is not an approved exclusion:
+      "! the lifecycle is not known (never CLEARED / RETURNED)
+      indeterminate    TYPE ty_outcome VALUE 'INDETERMINATE',
     END OF gc_outcome.
 
   " ------------------------------------------------------------ evidence settings / configured source
@@ -463,7 +473,8 @@ INTERFACE zif_cd_hck_runtime_types
       capped   TYPE abap_bool,
       "! Table of the capped read (named in TECH_READ_CAPPED)
       source   TYPE zif_cd_hck_types=>ty_tabname,
-      "! The kind's settings are not maintained: its rows are ignored (information finding)
+      "! The kind's settings are not maintained: informational rows are skipped, a mandatory row
+      "! leaves its purpose undetermined (configuration finding)
       unconfigured TYPE abap_bool,
     END OF ty_evidence_result.
 
@@ -505,6 +516,15 @@ INTERFACE zif_cd_hck_runtime_types
       pending_overdue    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PENDING_OUTCOME_MISSING',
       "! Amount of the cheque-paid line differs from the payment amount (manual clearing in FPCHR)
       cheque_amount      TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_AMOUNT_MISMATCH',
+      "! A mandatory evidence row (REQUIRED X / C / N) is not configured or not usable: no
+      "! positive conclusion for the payment, it stays in flight (design review 2026-11-07)
+      undetermined       TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_UNDETERMINED',
+      "! A monetary statement line of the payment has no role in ZCD_HCK_BTCROLE and is not an
+      "! approved exclusion (HCK_BTC_INFO_<scheme>): lifecycle INDETERMINATE
+      btc_role_missing   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BTC_ROLE_MISSING',
+      "! A statement line fits several cheques of the same house bank account (cheque number
+      "! suffix): no cashing evidence is inherited
+      cheque_ambiguous   TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_LINK_AMBIGUOUS',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -596,6 +616,10 @@ INTERFACE zif_cd_hck_runtime_types
       ev_zuonr_changed    TYPE zif_cd_ops_types=>ty_msgno VALUE '670',
       ev_cheque           TYPE zif_cd_ops_types=>ty_msgno VALUE '672',
       ev_cheque_amount    TYPE zif_cd_ops_types=>ty_msgno VALUE '673',
+      evidence_mandatory  TYPE zif_cd_ops_types=>ty_msgno VALUE '674',
+      undetermined        TYPE zif_cd_ops_types=>ty_msgno VALUE '675',
+      unusable_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '676',
+      unusable_invalid    TYPE zif_cd_ops_types=>ty_msgno VALUE '677',
     END OF gc_msg.
 
 ENDINTERFACE.

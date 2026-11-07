@@ -2357,6 +2357,30 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>674</MSGNR>
+     <TEXT>Evidence &amp;1 (&amp;2) not configured - mandatory: purpose not determinable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>675</MSGNR>
+     <TEXT>- not determinable (mandatory evidence unavailable):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>676</MSGNR>
+     <TEXT>&amp;1 not configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>677</MSGNR>
+     <TEXT>&amp;1 not usable</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>700</MSGNR>
      <TEXT>Payment trace &amp;1: verdict &amp;2, first gap &amp;3 (attempt &amp;4)</TEXT>
     </T100>
