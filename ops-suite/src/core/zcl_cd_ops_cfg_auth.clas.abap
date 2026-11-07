@@ -3,11 +3,12 @@
 *& Purpose:
 *& Authorisation check of the configuration apps on object ZCD_OPS (design
 *& 1): ACTVT and ZCD_MODULE, company code not restricted (payment engine area-wide
-*& customizing). Temporary seam - replaced by ZCL_CD_OPS_AUTH of the core
-*& build at merge. The object is created in SU21 by security (design 1).
+*& customizing). Delegates to ZCL_CD_OPS_AUTH (core). The object is created
+*& in SU21 by security (design 1).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Delegates to ZCL_CD_OPS_AUTH (core) - no own AUTHORITY-CHECK.
+*& 2026-11-07 | Purpose: merge note removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: ZCD_OPS check</p>
 CLASS zcl_cd_ops_cfg_auth DEFINITION

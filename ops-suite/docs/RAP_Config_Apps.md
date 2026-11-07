@@ -48,7 +48,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 
 ## 3. Authorisation
 
-`authorization master ( global )` on each root: `ZCD_OPS` with `ACTVT 02` and `ZCD_PE_AREA` = the app's payment engine area covers update, Edit and create-by-association of every child. Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the temporary seam `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH` — **switched to `ZCL_CD_OPS_AUTH` (design §1) at merge**.
+`authorization master ( global )` on each root: `ZCD_OPS` with `ACTVT 02` and `ZCD_PE_AREA` = the app's payment engine area covers update, Edit and create-by-association of every child. Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the adapter `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH`, which delegates to `ZCL_CD_OPS_AUTH` (design §1).
 
 ## 4. Field validations (on save and in Prepare)
 
@@ -110,21 +110,6 @@ Static checks: abaplint now also runs `cds_parser_error` and `bdef_parser_error`
 |---|---|---|
 | Transport API `mbc_cp_api` | Same, isolated in one class, `VERIFY-ADT`; fallback named (`TR_OBJECTS_CHECK` / `TR_OBJECTS_INSERT`, `VERIFY-SE37`) | Signature not verifiable offline |
 | Total ETag = max of the children's `LAST_CHANGED_AT` | Via a UNION ALL change-stamp view per app | A join of all tables to the root would multiply rows (cartesian); the union stays one row per table row |
-| Authorisation through `ZCL_CD_OPS_AUTH` | Temporary seam `ZCL_CD_OPS_CFG_AUTH` (same object and fields) | Phase 1 builds `ZCL_CD_OPS_AUTH` in parallel; switched at merge |
+| Authorisation through `ZCL_CD_OPS_AUTH` | Adapter `ZCL_CD_OPS_CFG_AUTH` (same object and fields) delegating to `ZCL_CD_OPS_AUTH` | The configuration apps keep their own injectable seam |
 | Validation "rule group has at least one active rule" | Implemented across the drafts of the same edit session | — |
 | "Quiet-hours window valid", "cron-free" | Window both-or-neither (crossing midnight allowed); there are no schedule fields to check | — |
-
-## Merge notes for shared docs
-
-Text for the shared documents (owned by the main checkout), to apply at merge:
-
-- **README.md** (docs table): `| RAP_Config_Apps.md | Configuration owners, RTB — the four configuration apps, client policy, validations, DV1 steps |`.
-- **Implementation_Order.md**: new step after Step 1 (DDIC): "Step 1a — RAP configuration apps: follow `RAP_Config_Apps.md` §6 (VERIFY-ADT items, activation order, service bindings `ZUI_CD_*_CFG_O4`, FLP, `rec/client`)"; Step 0 add "0.7 Domain CCCORACTIV fixed values confirmed (SE11)".
-- **TDD_Approach_and_Coverage.md** §4 rows: `| Core | ZCL_CD_OPS_CFG_POLICY | 11 | Domain |`, `| Core | ZCL_CD_OPS_CFG_CHECKS | 17 | Domain |`, `| Core | ZCL_CD_OPS_CFG_GATE | 7 | Application |`; headline count **+35**; §2 test-first table: these three, red observed in abaplint; §5 untested: "Behaviour pools `ZBP_R_CD_*CFGALL`, CDS, BDEF, SRVD of the configuration apps — generated, thin; covered by gate / checks tests + DV1 cases (`RAP_Config_Apps.md` §6)"; `ZCL_CD_OPS_CFG_CLIENT` (two SELECT SINGLE on T000 / E070), `ZCL_CD_OPS_CFG_TRANSPORT` (SAP API wrapper), `ZCL_CD_OPS_CFG_AUTH` (AUTHORITY-CHECK) — thin wrappers, covered through gate doubles + DV1.
-- **Test_and_Validation_Document.md**: test-count totals +35; new cases CFG-01 … CFG-07 = the cases in `RAP_Config_Apps.md` §6 step 7.
-- **ATC_Validation.md** §4 exemptions, new row: "`ZBP_R_CD_*` behaviour pools — `check_abstract` (ABAP mandates `ABSTRACT FINAL … FOR BEHAVIOR OF`) and `unused_methods` (handlers are called by the RAP framework). Excluded by file pattern in `abaplint.atc.json`; real ATC does not report these." §2: abaplint now also runs `cds_parser_error`, `bdef_parser_error` in `abaplint.json`.
-- **Class_Purpose_and_Modification_Log.md**: rows for `ZIF_CD_OPS_CFG_TYPES`, `ZIF_CD_OPS_CFG_CLIENT`, `ZIF_CD_OPS_CFG_TRANSPORT`, `ZIF_CD_OPS_CFG_AUTH`, `ZCL_CD_OPS_CFG_POLICY`, `ZCL_CD_OPS_CFG_CHECKS`, `ZCL_CD_OPS_CFG_GATE`, `ZCL_CD_OPS_CFG_CLIENT`, `ZCL_CD_OPS_CFG_TRANSPORT`, `ZCL_CD_OPS_CFG_AUTH`, `ZCL_CD_OPS_CFG_FACTORY`, `ZCL_CD_OPS_CFG_INJECTOR`, `ZBP_R_CD_EBSCFGALL` / `FMONCFGALL` / `HCKCFGALL` / `OPSCFGALL` (purpose = header text of each).
-- **DEVELOPMENT_STANDARDS.md** §3: "Configuration is maintained only through the four RAP configuration apps (`RAP_Config_Apps.md`); SM30 maintenance views are not delivered. New customizing table → add it to the spec in `tools/rap_generate.py`, add the three admin fields, regenerate."
-- **Operations_Runbook.md** §4: "Change a threshold / SLA / rule parameter in production: open the payment engine area's configuration app, Edit, change the existing row, Save (no transport; logged in SCU3). New rows only via DV1 and transport."
-- **Message class ZCD_OPS**: range 400–449 added in `config/zcd_ops_messages.md` (401–408, 410–417) — already in this branch.
-- **At merge, switch authorisation**: replace `zcl_cd_ops_cfg_factory=>get_auth( )` / `ZIF_CD_OPS_CFG_AUTH` by `ZCL_CD_OPS_AUTH` (design §1) and delete the seam + `LTD_AUTH`, or keep the seam as an adapter to `ZCL_CD_OPS_AUTH`.
