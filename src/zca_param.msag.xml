@@ -180,7 +180,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
      <MSGNR>043</MSGNR>
-     <TEXT>Request &amp;1 is released or protected and cannot take changes</TEXT>
+     <TEXT>Request &amp;1 is not modifiable (released or locked)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

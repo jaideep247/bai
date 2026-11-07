@@ -45,7 +45,7 @@ Placeholders: `&1` area, `&2` parameter name, `&3` value / row / field,
 | 040 | request_missing | Enter an open customizing request for the changes to area &1 |
 | 041 | request_unknown | Request &1 does not exist |
 | 042 | request_not_cust | Request &1 is not a customizing request or task |
-| 043 | request_released | Request &1 is released or protected and cannot take changes |
+| 043 | request_released | Request &1 is not modifiable (released or locked) |
 | 044 | config_not_allowed | Area &1: areas and definitions are maintained only by transport |
 | 045 | value_not_editable | Values of parameter &1 / &2 cannot be changed in this client |
 | 046 | not_authorized | No authorization for activity &2 in parameter area &1 |
