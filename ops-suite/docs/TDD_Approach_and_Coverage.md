@@ -155,7 +155,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | FMON | ZBP_R_CD_FMONFILE | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
 | FMON | ZBP_R_CD_FMONPRQWA | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | own test include | 10 |  |
-| FMON | ZCL_CD_FMON_ADAPTER_PRISM | own test include | 4 |  |
+| FMON | ZCL_CD_FMON_ADAPTER_PRISM | own test include | 5 |  |
 | FMON | ZCL_CD_FMON_CALENDAR | own test include | 9 |  |
 | FMON | ZCL_CD_FMON_CHK_ACK_MATCH | covered | 0 | ZCL_CD_FMON_ENGINE |
 | FMON | ZCL_CD_FMON_CHK_DUPLICATE | covered | 0 | ZCL_CD_FMON_ENGINE |
@@ -169,7 +169,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | FMON | ZCL_CD_FMON_CHK_SLA | covered | 0 | ZCL_CD_FMON_ENGINE |
 | FMON | ZCL_CD_FMON_DAO | own test include | 24 | partial: READ_LEGACY / SELECT_LEGACY dynamic reads of legacy structures and the EVENT_NO collision retry (two sessions) - QA1 FMON 01, 05, 07, 08, 10, 11 |
 | FMON | ZCL_CD_FMON_DDIC | own test include | 6 |  |
-| FMON | ZCL_CD_FMON_ENGINE | own test include | 34 |  |
+| FMON | ZCL_CD_FMON_ENGINE | own test include | 42 |  |
 | FMON | ZCL_CD_FMON_FACTORY | covered | 0 | ZCL_CD_FMON_ENGINE |
 | FMON | ZCL_CD_FMON_FLOW_CDS_TEST | own test include | 20 |  |
 | FMON | ZCL_CD_FMON_INJECTOR | covered | 0 | ZCL_CD_FMON_ENGINE |
@@ -183,7 +183,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | FMON | ZCL_CD_FMON_PRISM_PROC | own test include | 11 |  |
 | FMON | ZCL_CD_FMON_PRISM_QUEUE | own test include | 1 | partial: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case PRISM-12 |
 | FMON | ZCL_CD_FMON_QUERY | own test include | 8 |  |
-| FMON | ZCL_CD_FMON_RULES | own test include | 59 |  |
+| FMON | ZCL_CD_FMON_RULES | own test include | 74 |  |
 | FMON | ZCL_CD_FMON_STATUS | own test include | 24 |  |
 | FMON | ZCL_CD_FMON_UTIL | own test include | 5 |  |
 | HCK | ZBP_R_CD_HCKCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |

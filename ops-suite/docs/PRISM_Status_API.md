@@ -5,9 +5,13 @@
 
 Status 2026-11-06: **built, lint-clean, ABAP Unit not executed, switched off.** The ICF node is not delivered by abapGit and stays inactive until CAB approves the integration (§10). Decision: user, 2026-11-06 — *"We need to provide an API to PRISM which they can call once they receive a file and have processed it."* Style: plain REST JSON over HTTPS to an ICF service (no OData, no CSRF token).
 
+**Release boundary: integration addition — separate CAB approval, SICF node inactive until switch S-PRISM; not part of the read-only monitoring release sign-off.** The read-only file monitoring release is signed off without this API; until S-PRISM, FMON works from SAP's own evidence (and the manual-status app for a milestone an operator verified in the PRISM console).
+
+Design review 2026-11-07 (built, lint-clean, ABAP Unit not executed): one file keeps **one file instance** across midnight and daylight saving (§7a); the PRISM throttle queue is **one per bank** (`FMON_PRISM_THROTTLE_SCOPE` `C`, §7).
+
 ## 1. Operating boundary
 
-The requirements baseline lists *new payment APIs or callbacks* as outside the read-only rollout. This API is therefore **its own approved change**, separate from the read-only release:
+The requirements baseline lists *new payment APIs or callbacks* as outside the read-only rollout. This API is therefore **its own approved change**, separate from the read-only release (integration addition — separate CAB approval, SICF node inactive until switch S-PRISM; not part of the read-only monitoring release sign-off):
 
 | It does | It never does |
 |---|---|
@@ -34,7 +38,7 @@ The background unit it queues is suite-internal processing (FMON evaluation of o
 | Member | Type | Required | Rule | Stored as |
 |---|---|---|---|---|
 | `eventId` | string ≤ 64 | **yes** | PRISM's unique ID of this event; letters, digits, `. _ : -`; the **idempotency key** — a retry sends the same ID | `EVENT_ID` (key) |
-| `fileReference` | string ≤ 255 | **yes** | The reference FMON keys the flow by: the file name SAP generated (outbound) / PRISM delivers (inbound), or the message / request reference of an API flow (§8); no control characters | `FILE_REF` |
+| `fileReference` | string ≤ 255 | **yes** | The reference FMON keys the flow by: the file name SAP generated (outbound) / PRISM delivers (inbound), or the message / request reference of an API flow (§8); no control characters. **Unique per file generation** — every event of one file carries the same reference, another file never the same one on the same business date (contract assumption, VERIFY with the PRISM team, §7a) | `FILE_REF` |
 | `interfaceId` | string ≤ 20 | no | FMON interface (`ZCD_FMON_IFACE`), upper case `A-Z 0-9 _`; when sent it selects the interface, otherwise FMON matches the name pattern | `IFACE_ID` |
 | `direction` | `OUTBOUND` \| `INBOUND` | **yes** | Outbound = SAP → PRISM → bank / IRIS / target; inbound = bank / IRIS / source → PRISM → SAP (case-insensitive) | `DIRECTION` (`O` / `I`) |
 | `milestone` | `RECEIVED` \| `DELIVERED` \| `FAILED` | **yes** | RECEIVED = PRISM received the file (from SAP, or from bank / IRIS / source); DELIVERED = PRISM delivered it (to bank / IRIS / target, or to SAP); FAILED = PRISM could not process or deliver it | `MILESTONE` |
@@ -47,7 +51,7 @@ The background unit it queues is suite-internal processing (FMON evaluation of o
 | `errorCode` | string ≤ 20 | no (recommended with FAILED) | PRISM's error code | `ERROR_CODE` |
 | `errorText` | string | no | Masked (every run of 8+ digits keeps its last 4: `****1234`), control characters replaced, **truncated** to 255 — never rejected for its length. **Must not carry member, bank-account or card data**; the masking is a safety net, not a licence | `ERROR_TEXT` |
 
-Unknown members are ignored (forward compatible). A member sent twice, or a known member sent as an object / array, is a 400. `null` counts as absent. SAP adds `BUSINESS_DATE` (occurredAt in `FMON_TIME_ZONE` — the same rule the FMON adapter applies, so the stored date is the date FMON correlates with), `RECEIVED_AT` (UTC), `RECEIVED_BY` (technical user) and later `PROCESSED_AT`.
+Unknown members are ignored (forward compatible). A member sent twice, or a known member sent as an object / array, is a 400. `null` counts as absent. SAP adds `BUSINESS_DATE` (occurredAt in `FMON_TIME_ZONE` = CST, US Central with daylight saving — the same rule the FMON adapter applies; it is the event's own date, **not** the identity of the file: which file instance the event belongs to is decided by the file generation identity, §7a), `RECEIVED_AT` (UTC), `RECEIVED_BY` (technical user) and later `PROCESSED_AT`.
 
 PRISM's `recordCount` / `controlTotal` are stored as evidence (dashboard, trace); they are **not** written into the file's control figures — SAP's own generation / load evidence stays authoritative (the seed maps no COUNT / AMOUNT field).
 
@@ -170,7 +174,7 @@ sequenceDiagram
 ```
 
 1. **Store** (synchronous, in the HTTP request): validate, insert, queue the bgPF unit, `COMMIT WORK` (`ZCD_OPS_STORE->COMMIT`), answer 202. The event and its unit are committed together; if bgPF cannot register the unit, the event is still stored and the 5-minute run applies it.
-2. **Instant unit** (bgPF, seconds — latency target < 1 minute end to end): reads the event, converts it with the configured PRISM source (`ZCD_FMON_SRC` row with adapter `ZCL_CD_FMON_ADAPTER_PRISM`, same key rules as every source: reference = canonical name or A100 digest, instance = interface + reference + business date, A49), and calls `ZCL_CD_FMON_ENGINE=>RUN_EVENT`:
+2. **Instant unit** (bgPF, seconds — latency target < 1 minute end to end): reads the event, converts it with the configured PRISM source (`ZCD_FMON_SRC` row with adapter `ZCL_CD_FMON_ADAPTER_PRISM`, same key rules as every source: reference = canonical name or A100 digest, instance by the file generation identity of §7a — one instance per file, whatever the event's own date), and calls `ZCL_CD_FMON_ENGINE=>RUN_EVENT`:
    - applies the stage through `ZCL_CD_FMON_STATUS` to **files FMON already knows** (or opens an inbound instance — PRISM sees an inbound file before SAP); a later stage of an unknown outbound file is **deferred** to the 5-minute run (PRISM is often faster than the next read of `ZCDT_REGUT`, and only the full run sees all sources together);
    - saves with the version check (audit A04); on a conflict with the 5-minute run it retries once with a fresh read, then leaves the event to the 5-minute run — a stale version is never written;
    - runs only the checks the event can open or close (`ZCL_CD_FMON_CHK_SLA`, `_REJECT`, `_PRISM_FILE`), saves the findings through the core store and hands them to the alert router exactly like a batch run (rules, throttling, quiet hours of `ZCD_OPS_ALRULE`; the digest is per run, i.e. per event);
@@ -201,13 +205,45 @@ FMON (`FMON_FILE_MONITORING.md` §A3a) does not raise `PRISM_DELIVERED_LATE` / `
 | Item | Rule |
 |---|---|
 | Throttled file | Outbound interface whose `PAY_METHOD` is in `FMON_PRISM_THROTTLE_METHODS` (default `ACH,WIRE`) and `FMON_PRISM_THROTTLE_MIN` > 0. Not throttled: positive pay, stop pay, IRIS, BlackLine, OFSAA, cost centre, source files, every inbound file |
-| Queue | Throttled files of the same business date; `FMON_PRISM_THROTTLE_SCOPE` **`C` = one queue per bank** (`ZCD_FMON_IFACE-BANK_KEY`; confirmed by the user 2026-11-06 — the definition default and the delivered value row), `A` = one PRISM queue for all of them (only if PRISM ever changes to a single queue) |
+| Queue | Throttled files of the same business date (the business date of the file instance, §7a); `FMON_PRISM_THROTTLE_SCOPE` **`C` = one queue per bank** (`ZCD_FMON_IFACE-BANK_KEY`; confirmed by the user 2026-11-06 — the definition default and the delivered value row), `A` = one PRISM queue for all of them (only if PRISM ever changes to a single queue) |
 | Position | Files PRISM received earlier (or in the same instant) that it had not yet delivered / failed when it received this file — taken from the `RECEIVED` / `DELIVERED` / `FAILED` events of the register |
 | Allowance | SLA minutes + `FMON_PRISM_THROTTLE_MIN` × files ahead, on `PRISM_DELIVERED` / `FORWARDED_TO_BANK` and on later stages measured from generation (basis G, e.g. `ACK_RECEIVED`) |
 | Cap | A queue of up to `FMON_PRISM_QUEUE_MAX` files (default 30, incl. the file) is covered; a longer one gets no more allowance and is reported as `PRISM_QUEUE_LONG` (W) |
 | No `RECEIVED` evidence | No allowance — the SLA is evaluated as before |
 
 The same rule applies in the instant unit and in the 5-minute run (one rule in `ZCL_CD_FMON_RULES`, used by `ZCL_CD_FMON_CHK_SLA` on both paths).
+
+## 7a. File identity across midnight and daylight saving (design review 2026-11-07)
+
+> **First principle:** a file is one file from its first evidence to its last, whatever the clock shows in between.
+> **Analogy:** a parcel keeps its tracking number when the van crosses midnight or the clocks change; only a new parcel gets a new number.
+
+Before: the instance was derived from each event's own business date, so PRISM's delivery at 23:58 CST and SAP's receipt at 00:03 CST the next day could create two instances (the first then showed a false `NO_FILE_RECEIVED`). Now (`ZCL_CD_FMON_RULES=>FILE_INSTANCE`, the same rule in the 5-minute run and in the instant unit):
+
+| # | Rule |
+|---|---|
+| 1 | The instance is **fixed when the file is first known** — outbound by its generation in SAP (`GENERATED_IN_SAP`), inbound by the first of PRISM's receipt / delivery and SAP's receipt (whichever reaches SAP first) — keyed by interface + `fileReference`. Its `BUSINESS_DATE` is the business date (`FMON_TIME_ZONE`) of that first evidence and never changes |
+| 2 | Every later event of the same reference **attaches to that instance regardless of its own date or time** (PRISM's delivery, SAP's receipt or load, the bank ACK, a successful retry after `PRISM_FAILED`) |
+| 3 | An instance of the event's own business date is that file — the generation date decides; one reference is one file per business date (unique index REF: IFACE_ID, FILE_REF, BUSINESS_DATE) |
+| 4 | **Only a genuinely new file opens a new instance:** first evidence of a stage the latest earlier instance has already reached (PRISM's receipt of the next day's statement after yesterday's was loaded; a generation in SAP on a later business date) — unless that instance recorded the very same event (same source, stage and time: the next 5-minute run reads SAP's receipt again) |
+| 5 | Earlier evidence that reaches SAP late (PRISM's receipt at 23:59:59 after its delivery at 00:00:30 opened the next day's instance) attaches to that instance |
+| 6 | An undated later stage that fits instances of several business dates is `FILE_REF_AMBIGUOUS` and applied to none (audit A49 kept) |
+
+Times: `occurredAt` and every event time are **UTC**; SLA minutes are UTC differences (`CL_ABAP_TSTMP=>SUBTRACT`), so the repeated hour (fall back) and the missing hour (spring forward) never stretch or shrink a duration. `FMON_TIME_ZONE` = CST serves only the business date, deadlines and calendar windows (VERIFY-STZAC: CST carries the US daylight-saving rule, `FMON_FILE_MONITORING.md` §A3b).
+
+| Acceptance case | Events | Result | ABAP Unit / QA1 |
+|---|---|---|---|
+| Delivery before, receipt after midnight | PRISM `DELIVERED` 23:58 CST 1 Nov (05:58 UTC 2 Nov), SAP `FILE_RECEIVED` 00:03 CST 2 Nov | **one** instance, business date 1 Nov, receipt 5 min after the delivery: no `NO_FILE_RECEIVED` | `inbound_midnight_one_instance`, `receipt_after_midnight_joins` / PRISM-20 |
+| Outbound across midnight | generated 23:50, sent 23:55, PRISM `RECEIVED` 23:58 (1 Nov); `DELIVERED` 00:03, ACK 00:20 (2 Nov) | one instance of the generation date, ACK_RECEIVED | `outbound_midnight_one_instance` / PRISM-21 |
+| Re-read | the next 5-minute run reads SAP's 00:03 receipt again | same instance, no second one | `reread_receipt_no_new_instance`, `reread_receipt_stays` |
+| Fall back (1 Nov 2026) | PRISM `RECEIVED` 01:30 CDT (06:30 UTC), `DELIVERED` 01:10 CST (07:10 UTC), SAP receipt 01:25 CST | one instance of 1 Nov; delivery after 40 UTC minutes (the local clock shows −20) is `PRISM_DELIVERED_LATE` with SLA 30, the receipt after 15 is on time | `dst_fall_back_one_instance`, `sla_utc_minutes_fall_back`, `central_dates_midnight_dst` / PRISM-22 |
+| Spring forward (8 Mar 2026) | PRISM `DELIVERED` 01:50 CST (07:50 UTC), SAP receipt 03:15 CDT (08:15 UTC) | one instance of 8 Mar; 25 UTC minutes (the local clock shows 85): on time with SLA 30 | `dst_spring_forward_one_inst`, `sla_utc_minutes_spring` / PRISM-23 |
+| Same name, consecutive days | two statements both named `…_DAILY.TXT`, 1 Nov and 2 Nov | **two** instances, each with its own business date and receipt | `same_name_two_days_two_files`, `next_day_file_is_new`, `next_day_generation_is_new` / PRISM-24 |
+| PRISM retry after midnight | `FAILED` 23:58, `DELIVERED` 00:03 | the failed file's instance, `PRISM_FAILED` superseded | `retry_after_failure_joins` / PRISM-25 |
+
+**Contract assumption — VERIFY with the PRISM team before S-PRISM:** `fileReference` is unique per file generation (SAP-generated names carry date and sequence; inbound, PRISM sends the name it delivers to SAP). If PRISM reuses a name, the **generation date** decides: on a later business date it is a new file (rule 4, implemented); within one business date it is the same file (rule 3). If PRISM confirms that a name can repeat within one business date (two different files), the reference must carry PRISM's file ID (`prismReference`) and the SAP-side source must key the file the same way — a contract change, not an FMON code change. PRISM sends each milestone once per file (a retry keeps its `eventId`, §5): a milestone re-sent with a new `eventId` after midnight would look like the first evidence of a new generation.
+
+Known limits of the rule: a second SAP source that reports the same first-evidence stage of a file at a different time, after midnight and after the instance already reached that stage, opens a second instance (configure one receipt source per interface); per-payment ACK rows of one file split by midnight are two groups and the file keeps the larger count, not the sum (`ACK_COUNT_MISMATCH` makes it visible; follow-up).
 
 ## 8. What PRISM must send, per flow
 
@@ -264,13 +300,15 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | Service data | SAP Authorization `ZCD_PRISM`; session timeout 00:00:30; *no* stateful |
 | Activation | **Inactive** — activated in PS4 only after CAB approval (`Implementation_Order.md`, switch S-PRISM) |
 
+**Release boundary: integration addition — separate CAB approval, SICF node inactive until switch S-PRISM; not part of the read-only monitoring release sign-off.**
+
 ## 11. Configuration and volumes
 
 | Item | Value |
 |---|---|
 | ZCA_PARAM `FMON_PRISM_MAX_BYTES` | 16384 (body limit) |
 | ZCA_PARAM `FMON_PRISM_INSTANT` (BOOL) | `X` (unit saves findings and alerts, default) / a value row with blank value (registry only) — the 2026-11-07 open item (blank could not switch it off in ZCD_OPS_PARAM) is closed by the BOOL semantics of ZCA_PARAM; deliver the value row so production can switch it |
-| ZCA_PARAM `FMON_TIME_ZONE` | business date of the events (same as every FMON source) |
+| ZCA_PARAM `FMON_TIME_ZONE` | `CST` (US Central with daylight saving, value row): business date of the events (same as every FMON source); event times and SLA minutes stay UTC (§7a) |
 | ZCA_PARAM `FMON_PRISM_THROTTLE_MIN` / `_SCOPE` / `_METHODS`, `FMON_PRISM_QUEUE_MAX` | 2 / `C` (one queue per bank, confirmed; value row delivered) / `ACH,WIRE` / 30 — PRISM throttle allowance on the delivery SLA (§7 Timing) |
 | `ZCD_FMON_SRC` / `_SRCMAP` / `_CHK` / `_SLA` | `config/fmon_seed.md` (PRISM rows) |
 | bgPF | default bgRFC inbound destination for bgPF (SBGRFCCONF) — `Implementation_Order.md` |
@@ -291,7 +329,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | `ZCL_CD_FMON_PRISM_PROC` | Instant processing of one event |
 | `ZCL_CD_FMON_ADAPTER_PRISM` | FMON source adapter (batch safety net and unit) |
 | `ZCL_CD_FMON_CHK_PRISM_FILE` | PRISM_UNKNOWN_FILE / PRISM_NOT_LOADED |
-| Changed: `ZIF_CD_FMON_TYPES` (stages, codes, messages), `ZCL_CD_FMON_STATUS` (ranks per direction, origin, PRISM_FAILED), `ZCL_CD_FMON_RULES` (SLA verdict per direction), `ZCL_CD_FMON_ENGINE` (direction fit, origin, `run_event`), `ZCL_CD_FMON_CHK_REJECT` (`OUTCOME` parameter), `ZCL_CD_FMON_FACTORY` / `_INJECTOR` (PRISM DAO, queue) | |
+| Changed: `ZIF_CD_FMON_TYPES` (stages, codes, messages, `TY_OBSERVATION` / `TY_INSTANCE_PICK`), `ZCL_CD_FMON_STATUS` (ranks per direction, origin, PRISM_FAILED), `ZCL_CD_FMON_RULES` (SLA verdict per direction, `FILE_INSTANCE` — file generation identity §7a), `ZCL_CD_FMON_ENGINE` (direction fit, origin, `run_event`), `ZCL_CD_FMON_CHK_REJECT` (`OUTCOME` parameter), `ZCL_CD_FMON_FACTORY` / `_INJECTOR` (PRISM DAO, queue) | |
 
 ## 13. VERIFY-ADT and known limits
 
@@ -303,5 +341,7 @@ The node is **not serialized**: abapGit's SICF format carries the system-specifi
 | COMMIT WORK inside the uncontrolled bgPF operation (the FMON store commits) | QA case PRISM-12 |
 | ICF: `server->request->get_data( )` before the size check reads the whole body — ICM limit first | QA case PRISM-09 |
 | Customer SICF node below `/sap` | Basis |
+| `fileReference` unique per file generation; a name reused within one business date; one milestone per file (retry with the same `eventId`) | **PRISM team** (§7a) — before S-PRISM |
+| SAP time zone `CST` with the US daylight-saving rule (business dates around both changes) | STZAC / TTZZ, test `central_dates_midnight_dst`, QA cases PRISM-22 / 23 |
 
-Known limits: (1) an inbound file whose PRISM milestone falls on one business date and SAP's receipt on the next (around midnight in `FMON_TIME_ZONE`) becomes two instances — `PRISM_NOT_LOADED` / SLA findings make it visible; (2) correlation requires PRISM to send the reference FMON keys the flow by (§8); (3) the unit does not resolve earlier exceptions (the 5-minute run does, within 5 minutes); (4) the 15-minute dashboard stale threshold applies to the 5-minute run, not to the unit.
+Known limits: (1) closed 2026-11-07 — a file whose PRISM milestone falls on one business date and SAP's receipt on the next is one instance (§7a; the rule's own limits are listed there); (2) correlation requires PRISM to send the reference FMON keys the flow by (§8); (3) the unit does not resolve earlier exceptions (the 5-minute run does, within 5 minutes); (4) the 15-minute dashboard stale threshold applies to the 5-minute run, not to the unit.
