@@ -35,6 +35,7 @@
 *& 2026-11-07 | Dashboard date window GC_DASHBOARD-WINDOW_DAYS (single source, cds_abap_parity).
 *& 2026-11-07 | Parameter names / defaults moved from code: EBS_CB_*, EBS_RESULT_MAX, EBS_CAMT_BAI_FALLBACK,
 *&            | EBS_GL_LEDGER, EBS_RTRV_STATUS_FIELD default, parser classes, prefix EBS_PARSER_.
+*& 2026-11-07 | GC_FINDING_CLASS (ZCD_EBS_RULE_DEF-FINDING_CLASS: DUPLICATE, POSTING).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -436,6 +437,15 @@ INTERFACE zif_cd_ebs_types
 
   "! Customizing table of rule R21 (named in configuration messages)
   CONSTANTS gc_lookup_table TYPE c LENGTH 30 VALUE 'ZCD_EBS_LOOKUP'.
+
+  "! ZCD_EBS_RULE_DEF-FINDING_CLASS: how the dashboard counts a rule's findings (ZI_CD_EbsFinding
+  "! IsDuplicate / IsPostingIncomplete; literals there compared by the portable check cds_abap_parity)
+  TYPES ty_finding_class TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_finding_class,
+      duplicate TYPE ty_finding_class VALUE 'DUPLICATE',
+      posting   TYPE ty_finding_class VALUE 'POSTING',
+    END OF gc_finding_class.
 
   "! Parameters (ZCD_OPS_PARAM) read by EBS and their delivered defaults
   CONSTANTS:

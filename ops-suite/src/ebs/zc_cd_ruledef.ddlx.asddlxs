@@ -43,6 +43,9 @@ annotate entity ZC_CD_RuleDef with
   @UI.identification: [{ position: 90 }]
   NeedsPosting;
 
+  @UI.identification: [{ position: 100 }]
+  FindingClass;
+
   @UI.hidden: true
   LastChangedBy;
 

@@ -7,8 +7,12 @@
 //          statement GROUP1 = bank account number (never shown: masked to the last 4 characters),
 //          GROUP2 = bank key. Statement and file findings of the file source can carry the account
 //          number in the message - their message is not exposed (owned-exceptions app).
-//          Rule literals: S13 POSTING_INCOMPLETE, duplicates S07 / R09 / R22 (config/zcd_ebs_rule_def.csv).
+//          Classification from the rule registry: ZCD_EBS_RULE_DEF-FINDING_CLASS DUPLICATE (seed S07,
+//          R09, R22) / POSTING (seed S13) - a new duplicate rule costs configuration only; check code
+//          POSTING_INCOMPLETE counts as posting incomplete as before (config/zcd_ebs_rule_def.csv).
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-07 | IsDuplicate / IsPostingIncomplete from ZCD_EBS_RULE_DEF-FINDING_CLASS
+//                              | (association) instead of rule literals.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation finding (basic)'
@@ -17,6 +21,8 @@
 @VDM.viewType: #BASIC
 define view entity ZI_CD_EbsFinding
   as select from zcd_ops_finding
+  // VERIFY-ADT: path to a 0..1 association in the element list (left outer join) on 7.58
+  association [0..1] to zcd_ebs_rule_def as _RuleDef on $projection.RuleId = _RuleDef.rule_id
 {
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
@@ -63,10 +69,10 @@ define view entity ZI_CD_EbsFinding
       case when disposition = 'O' or disposition = 'A'
            then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsOpen,
-      case when rule_id = 'S13' or check_code = 'POSTING_INCOMPLETE'
+      case when _RuleDef.finding_class = 'POSTING' or check_code = 'POSTING_INCOMPLETE'
            then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsPostingIncomplete,
-      case when rule_id = 'S07' or rule_id = 'R09' or rule_id = 'R22'
+      case when _RuleDef.finding_class = 'DUPLICATE'
            then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsDuplicate,
       owner                                                 as Owner,

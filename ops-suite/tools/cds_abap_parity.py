@@ -58,6 +58,11 @@ PAIRS = [
     # Reversal: clearing reason 05 is the only reversal reason (user decision 2026-11-07)
     ('reversal_clearing_reason', 'src/core/zr_cd_trxflow.ddls.asddls', r"ClearingReason\s*=\s*'(\w+)'",
      'src/core/zif_cd_ops_trace_types.intf.abap', 'gc_reversal_augrd', 'equal', None),
+    # Dashboard classification of a rule's findings (ZCD_EBS_RULE_DEF-FINDING_CLASS) and its seed
+    ('ebs_finding_class', 'src/ebs/zi_cd_ebsfinding.ddls.asddls', r"_RuleDef\.finding_class\s*=\s*'(\w+)'",
+     'src/ebs/zif_cd_ebs_types.intf.abap', ['gc_finding_class-duplicate', 'gc_finding_class-posting'], 'set', None),
+    ('ebs_finding_class_seed', 'config/zcd_ebs_rule_def.csv', r",(DUPLICATE|POSTING)$",
+     'src/ebs/zif_cd_ebs_types.intf.abap', ['gc_finding_class-duplicate', 'gc_finding_class-posting'], 'set', None),
     # Completed run statuses of the "as of" / KPI views
     ('ebs_completed_run_status',
      ['src/ebs/zi_cd_ebsrunbase.ddls.asddls', 'src/ebs/zi_cd_ebsrunlast.ddls.asddls'], _RUN_STATUS,

@@ -38,7 +38,7 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_EBS_DASH`, ma
 | WARNING | An open **W** finding | yellow |
 | NO_FINDINGS | No open finding — **not** "clean": the statement may not have been validated yet (§2) | green |
 
-Resolved (R), waived (W), superseded (S) and information (I) findings never count. Duplicates = rules **S07** (statement), **R09** (in the statement), **R22** (earlier statements of the account). Literals in `ZI_CD_EbsFinding` / `ZR_CD_EbsStmt` (values of `config/zcd_ebs_rule_def.csv`).
+Resolved (R), waived (W), superseded (S) and information (I) findings never count. Duplicates = findings of rules with `ZCD_EBS_RULE_DEF-FINDING_CLASS` = **DUPLICATE** (seed: **S07** statement, **R09** in the statement, **R22** earlier statements of the account); posting incomplete = **POSTING** (seed **S13**) or check code POSTING_INCOMPLETE. `ZI_CD_EbsFinding` reads the class through an association to the rule registry (configuration app *EBS rules and mapping* → *Rule*), so a new duplicate rule costs configuration only; a rule without class counts in neither.
 
 **Unevaluated lines** come from the run counters: `ZCL_CD_EBS_ENGINE->COUNT_LINES` counts every line in `TOTAL_ITEMS` and in at most one of passed / warning / failed / blocked; a line expected to post but not posted is counted in none, so **not evaluated = total − passed − warning − failed − blocked** (`ZI_CD_EbsRunBase`). Lines of a rule group whose rule had a PLUGIN_ERROR are counted as failed by the engine (as in the run message).
 
@@ -148,6 +148,7 @@ ABAP Unit in `ZCL_CD_EBS_DASH_CDS_TEST` (doubles of FEBKO, FEBEP, ZCD_EBS_ACCT, 
 | EBD-05 | Statement imported before FEBP finished (S13) | Status POSTING_INCOMPLETE; latest run *not evaluated* > 0 = total − passed − warning − failed − blocked of `ZCD_OPS_RUN` |
 | EBD-06 | Resolve the finding in the exceptions app and re-run | Status NO_FINDINGS; finding no longer open |
 | EBD-07 | Duplicate entry (R09 / R22) | Duplicate count 1 on statement and run |
+| EBD-07a | Set FINDING_CLASS of R09 to blank in the configuration app, refresh | The R09 finding is no longer a duplicate (count 0); reset to DUPLICATE → 1; value XYZ refused (413) |
 | EBD-08 | File-source run (bank file before import) with a balance error | Finding in `EbsFinding` (source FILE), message empty, account masked `****nnnn`; no statement row |
 | EBD-09 | ACH return line (lot with RLGRD) and an NOC (DFKKNRP, INFOF with leading zeros) | `EbsReturnNoc`: RETURN with DFKKRP-RLGRD, NOC with DFKKNRP-FLGRD; SE16 matches |
 | EBD-10 | Two runs on one day | KPI row of the day shows the later run only; `EbsRun` lists both |

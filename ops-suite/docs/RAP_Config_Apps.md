@@ -56,7 +56,7 @@ Client settings come from T000 (SCC4) through `ZCL_CD_OPS_CFG_CLIENT`; an unread
 |---|---|---|---|
 | EBS | BtcMap | Scheme BAI2/ISO/PRTRY; flow D/C/*; direction C/D/* or blank; action AUTO_POST / EXCEPTION / BLOCK / NOTIFY / ON_ACCOUNT or blank; **active non-BLOCK row needs a rule group (blank = category) with an active rule**, read across drafts of the same session | 413, 416 |
 | EBS | BtcRule | Severity B/E/W/I or blank; action as above | 413 |
-| EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action | 410, 413 |
+| EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action; finding class DUPLICATE / POSTING or blank | 410, 413 |
 | EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
 | FMON | FmonIface | Direction I/O; **name pattern is valid PCRE** | 413, 418 |
 | FMON | FmonSla | Maximum minutes > 0; severity | 417, 413 |

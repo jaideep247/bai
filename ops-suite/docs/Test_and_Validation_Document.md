@@ -155,6 +155,7 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | FMD-12 | ST05 during use | SELECT only on the FMON / ops store tables; no write, lock or job |
 | FMD-14 | Monitor freshness: set `ZCD_OPS_MONCFG` FMON = 600 in the configuration app, stop the SM36 job for 30 min | Dashboard, overview row and morning report self-check all **not** stale (600 min); reset to 15 → all three stale; delete the row → dashboard 15 min, self-check `HCK_MAX_AGE_H_FMON` |
 | CFG-MON-01 | App *Monitor freshness*: save area XYZ, or 0 minutes | Refused with 413 (area) / 417 (not positive) |
+| CFG-EBS-FC | App *EBS rules and mapping* → Rule: FINDING_CLASS XYZ; then R09 blank | XYZ refused (413); with R09 blank the EBS dashboard no longer counts R09 findings as duplicates (EBD-07a) |
 | FMD-13 | PRISM status API live: PRISM_RECEIVED / _DELIVERED / _FAILED | AT_PRISM; SENT (out) / RECEIVED (in); REJECTED |
 
 ### 6.8 PRISM status API (`POST /sap/zcd_ops/prism_status`, `PRISM_Status_API.md`)

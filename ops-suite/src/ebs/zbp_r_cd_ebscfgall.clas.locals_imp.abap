@@ -22,6 +22,7 @@ INTERFACE lif_c.
       defaultseverity                TYPE string VALUE `DEFAULTSEVERITY`,
       disposition                    TYPE string VALUE `DISPOSITION`,
       expcdi                         TYPE string VALUE `EXPCDI`,
+      findingclass                   TYPE string VALUE `FINDINGCLASS`,
       flowdefault                    TYPE string VALUE `FLOWDEFAULT`,
       flowtype                       TYPE string VALUE `FLOWTYPE`,
       keyfield                       TYPE string VALUE `KEYFIELD`,
@@ -69,6 +70,7 @@ INTERFACE lif_c.
       housebankacct_flowdefault      TYPE string VALUE `,D,C`,
       ruledef_defaultaction          TYPE string VALUE `AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
       ruledef_defaultseverity        TYPE string VALUE `B,E,W,I`,
+      ruledef_findingclass           TYPE string VALUE `,DUPLICATE,POSTING`,
       ruledef_rulelevel              TYPE string VALUE `L,S`,
     END OF gc_val.
 ENDINTERFACE.
@@ -455,6 +457,12 @@ CLASS lhc_ruledef IMPLEMENTATION.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DefaultAction
                         v2 = lif_c=>gc_el-defaultaction v3 = lif_c=>gc_val-ruledef_defaultaction
                         element = lif_c=>gc_el-defaultaction ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-FindingClass )
+                                        iv_list  = lif_c=>gc_val-ruledef_findingclass ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-FindingClass
+                        v2 = lif_c=>gc_el-findingclass v3 = lif_c=>gc_val-ruledef_findingclass
+                        element = lif_c=>gc_el-findingclass ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

@@ -15,6 +15,7 @@ define table zcd_d_ruledef {
   active : abap_boolean;
   blocksposting : abap_boolean;
   needsposting : abap_boolean;
+  findingclass : abap.char(10);
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

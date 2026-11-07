@@ -20,6 +20,7 @@
 *&            | derived from it (ZCD_EBS_ACCT-ACCOUNT_NO); all-PE statement shown with PE account and
 *&            | G/L, mixed / blank XBLNR / inactive account / no line hidden, totals by BAI code + XBLNR.
 *& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of EBS (base dependency doubled).
+*& 2026-11-07 | Rule registry rows (ltd_rows=>rule_defs) for the classification from ZCD_EBS_RULE_DEF-FINDING_CLASS.
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -34,6 +35,13 @@ CLASS ltd_rows DEFINITION FINAL FOR TESTING.
     CONSTANTS gc_xblnr TYPE zif_cd_ebs_types=>ty_xblnr VALUE 'JPMC8XX1174412334'.
     CONSTANTS gc_pe_account TYPE zif_cd_ebs_types=>ty_pe_account VALUE '8XX1174412'.
     TYPES tt_acct TYPE STANDARD TABLE OF zcd_ebs_acct WITH EMPTY KEY.
+    TYPES tt_rule_def TYPE STANDARD TABLE OF zcd_ebs_rule_def WITH EMPTY KEY.
+
+    "! Rule registry rows of the dashboard classification (seed: S07 / R09 / R22 duplicate,
+    "! S13 posting incomplete - ZCD_EBS_RULE_DEF-FINDING_CLASS)
+    CLASS-METHODS rule_defs
+      RETURNING
+        VALUE(rt_defs) TYPE tt_rule_def.
 
     CLASS-METHODS today
       RETURNING
@@ -118,6 +126,21 @@ ENDCLASS.
 
 
 CLASS ltd_rows IMPLEMENTATION.
+
+  METHOD rule_defs.
+    DATA ls_def TYPE zcd_ebs_rule_def.
+    ls_def-rule_id       = 'S07'.
+    ls_def-finding_class = zif_cd_ebs_types=>gc_finding_class-duplicate.
+    INSERT ls_def INTO TABLE rt_defs.
+    ls_def-rule_id       = 'R09'.
+    INSERT ls_def INTO TABLE rt_defs.
+    ls_def-rule_id       = 'R22'.
+    INSERT ls_def INTO TABLE rt_defs.
+    ls_def-rule_id       = 'S13'.
+    ls_def-finding_class = zif_cd_ebs_types=>gc_finding_class-posting.
+    INSERT ls_def INTO TABLE rt_defs.
+  ENDMETHOD.
+
 
   METHOD today.
     rv_date = cl_abap_context_info=>get_system_date( ).
@@ -296,6 +319,7 @@ CLASS ltc_statement IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
+    go_env->insert_test_data( i_data = ltd_rows=>rule_defs( ) ).
     CLEAR mt_findings.
   ENDMETHOD.
 
@@ -739,6 +763,7 @@ CLASS ltc_finding IMPLEMENTATION.
     DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
 
     go_env->clear_doubles( ).
+    go_env->insert_test_data( i_data = ltd_rows=>rule_defs( ) ).
     DATA(ls_feb) = ltd_rows=>finding( iv_run_id      = gc_run
                                       iv_finding_no  = 1
                                       iv_object_type = zcl_cd_ebs_finding=>gc_object_type-statement
@@ -895,6 +920,7 @@ CLASS ltc_run IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
+    go_env->insert_test_data( i_data = ltd_rows=>rule_defs( ) ).
   ENDMETHOD.
 
 

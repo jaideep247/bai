@@ -24,6 +24,8 @@ define view entity ZR_CD_RuleDef
       blocks_posting as BlocksPosting,
       @EndUserText.label: 'Needs posting'
       needs_posting as NeedsPosting,
+      @EndUserText.label: 'Finding class'
+      finding_class as FindingClass,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,
