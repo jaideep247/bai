@@ -32,6 +32,8 @@
 *&            | PAY_UNDETERMINED, configuration finding W); only informational rows are skipped.
 *& 2026-11-07 | Code review: every anomaly of an evidence is listed (TY_EVIDENCE-MORE); the shared
 *&            | reads of the evidence kinds start per run (ZCL_CD_HCK_EV_SUPPORT=>START_COLLECTION).
+*& 2026-11-07 | Persisted verdict: completion PARTIAL after a capped read, evidence PARTIAL when an evidence
+*&            | kind of a mandatory row could not be used (ZCD_HCK_RESULT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -363,6 +365,16 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     report_listed( EXPORTING is_def    = is_def
                              iv_top_n  = lv_top_n
                    CHANGING  cs_result = rs_result ).
+    " What the persisted verdict says about the run of this check (ZCD_HCK_RESULT)
+    IF line_exists( rs_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ] ).
+      rs_result-completion = zif_cd_hck_types=>gc_completion-partial.
+    ENDIF.
+    LOOP AT mt_groups ASSIGNING FIELD-SYMBOL(<ls_group>)
+         WHERE invalid = abap_true OR unconfigured = abap_true.
+      IF <ls_group>-invalid = abap_true OR mandatory_use( <ls_group> ) = abap_true.
+        rs_result-evidence = zif_cd_hck_types=>gc_evidence-partial.
+      ENDIF.
+    ENDLOOP.
     IF lv_no_valut > 0.
       INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-value_date_missing }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-value_date_missing

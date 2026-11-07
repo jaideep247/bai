@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-07 | old_hck_result_is_deleted (purge target HCK_RESULT).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -56,6 +57,7 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS old_alert_log_is_deleted   FOR TESTING.
     METHODS old_fmon_event_is_deleted  FOR TESTING.
     METHODS old_prism_event_is_deleted FOR TESTING.
+    METHODS old_hck_result_is_deleted  FOR TESTING.
 ENDCLASS.
 
 
@@ -64,7 +66,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' )
-                                   ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ( 'ZCD_FMON_PRISM' ) ) ).
+                                   ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ( 'ZCD_FMON_PRISM' )
+                                   ( 'ZCD_HCK_RESULT' ) ) ).
   ENDMETHOD.
 
 
@@ -238,6 +241,33 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   ENDMETHOD.
 
   " Rule: PRISM status events are purged by their receipt time, recent ones are kept
+  METHOD old_hck_result_is_deleted.
+    DATA lt_results TYPE STANDARD TABLE OF zcd_hck_result WITH EMPTY KEY.
+    DATA ls_result TYPE zcd_hck_result.
+    TRY.
+        ls_result-run_id      = gc-run_old.
+        ls_result-check_id    = 'A_INFLIGHT'.
+        ls_result-executed_at = gc-old.
+        INSERT ls_result INTO TABLE lt_results.
+        ls_result-run_id      = gc-run_new.
+        ls_result-executed_at = gc-recent.
+        INSERT ls_result INTO TABLE lt_results.
+        go_env->insert_test_data( lt_results ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->delete_package( iv_target = zif_cd_ops_purge_dao=>gc_target-hck_result
+                                        iv_cutoff = gc-cutoff
+                                        iv_today  = gc-today
+                                        iv_max    = 100 )
+          exp = 1
+          msg = 'Only the old verdict must be deleted' ).
+        SELECT COUNT(*) FROM zcd_hck_result INTO @DATA(lv_left).
+        cl_abap_unit_assert=>assert_equals( act = lv_left exp = 1 msg = 'The recent verdict stays' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD old_prism_event_is_deleted.
     DATA lt_prism TYPE STANDARD TABLE OF zcd_fmon_prism WITH EMPTY KEY.
     TRY.

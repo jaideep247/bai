@@ -12,6 +12,7 @@
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
+*& 2026-11-07 | Purge target HCK_RESULT: check verdicts by execution time (index TIM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION
@@ -63,6 +64,8 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         SELECT COUNT(*) FROM zcd_hck_metric WHERE measured_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_prism.
         SELECT COUNT(*) FROM zcd_fmon_prism WHERE received_at < @iv_cutoff INTO @rv_count.
+      WHEN zif_cd_ops_purge_dao=>gc_target-hck_result.
+        SELECT COUNT(*) FROM zcd_hck_result WHERE executed_at < @iv_cutoff INTO @rv_count.
     ENDCASE.
   ENDMETHOD.
 
@@ -109,6 +112,17 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
           UP TO @iv_max ROWS.
         CHECK lt_metrics IS NOT INITIAL.
         DELETE zcd_hck_metric FROM TABLE @lt_metrics.
+        rv_count = sy-dbcnt.
+
+      WHEN zif_cd_ops_purge_dao=>gc_target-hck_result.
+        SELECT run_id, check_id
+          FROM zcd_hck_result
+          WHERE executed_at < @iv_cutoff
+          ORDER BY run_id, check_id
+          INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_results)
+          UP TO @iv_max ROWS.
+        CHECK lt_results IS NOT INITIAL.
+        DELETE zcd_hck_result FROM TABLE @lt_results.
         rv_count = sy-dbcnt.
 
       WHEN zif_cd_ops_purge_dao=>gc_target-fmon_prism.

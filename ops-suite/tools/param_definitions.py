@@ -104,6 +104,7 @@ DEFAULTS = {
     'RETENTION_DAYS_FMON_EVENT': ('regex', _PURGE, r'gc_target-fmon_event\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_HCK_METRIC': ('regex', _PURGE, r'gc_target-hck_metric\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_FMON_PRISM': ('regex', _PURGE, r'gc_target-fmon_prism\s+default_days\s*=\s*(\d+)'),
+    'RETENTION_DAYS_HCK_RESULT': ('regex', _PURGE, r'gc_target-hck_result\s+default_days\s*=\s*(\d+)'),
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')

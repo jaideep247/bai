@@ -30,6 +30,8 @@
 *& 2026-11-07 | TY_MONITOR_CFG (ZCD_OPS_MONCFG); TY_PE_AREA_STATUS-STALE_AFTER_MIN / AGE_MIN.
 *& 2026-11-07 | Check code PARAM_INVALID (configuration check ZCL_CD_HCK_C_PARAM, parameters in ZCA_PARAM).
 *& 2026-11-07 | CONFIG_CHANGED_IN_PROD / message 374 withdrawn (user decision: new rows by transport, D-3).
+*& 2026-11-07 | Design review: verdict of each check per run persisted (ZCD_HCK_RESULT, TY_RESULT_ROW):
+*&            | check status, completion, evidence availability, baseline mode, run scope (message 300).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -377,6 +379,67 @@ INTERFACE zif_cd_hck_types
     END OF ty_metric_hist.
   TYPES tt_metric_hist TYPE STANDARD TABLE OF ty_metric_hist WITH EMPTY KEY.
 
+  "! How far a check ran (ZCD_HCK_RESULT-COMPLETION) and how much evidence it could read (EVIDENCE)
+  TYPES ty_completion TYPE c LENGTH 10.
+  TYPES ty_check_status TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_completion,
+      complete TYPE ty_completion VALUE 'COMPLETE',
+      "! Ran but stopped or read less than all (timeout overrun, time budget, capped read)
+      partial  TYPE ty_completion VALUE 'PARTIAL',
+      "! The plug-in failed (PLUGIN_ERROR): no verdict about the business - never green
+      failed   TYPE ty_completion VALUE 'FAILED',
+      "! Active but not selected by the run's scope (category / priority / check filter)
+      skipped  TYPE ty_completion VALUE 'SKIPPED',
+    END OF gc_completion.
+  CONSTANTS:
+    BEGIN OF gc_evidence,
+      all     TYPE ty_completion VALUE 'ALL',
+      partial TYPE ty_completion VALUE 'PARTIAL',
+      none    TYPE ty_completion VALUE 'NONE',
+    END OF gc_evidence.
+  "! Status of a check in a run as the report decided it (ZCD_HCK_RESULT-CHECK_STATUS; the dashboard
+  "! shows it and adds NO_RESULT for an active check without a row in the run)
+  CONSTANTS:
+    BEGIN OF gc_check_status,
+      red     TYPE ty_check_status VALUE 'RED',
+      amber   TYPE ty_check_status VALUE 'AMBER',
+      green   TYPE ty_check_status VALUE 'GREEN',
+      warmup  TYPE ty_check_status VALUE 'WARMUP',
+      grey    TYPE ty_check_status VALUE 'GREY',
+      failed  TYPE ty_check_status VALUE 'FAILED',
+      skipped TYPE ty_check_status VALUE 'SKIPPED',
+    END OF gc_check_status.
+  "! Baseline modes of the thresholds a check was evaluated with: several different = MIXED
+  CONSTANTS gc_baseline_mixed TYPE ty_baseline_mode VALUE 'MIXED'.
+  "! Part of the run scope that selects everything (empty range)
+  CONSTANTS gc_scope_all TYPE string VALUE `*`.
+  CONSTANTS gc_scope_sep TYPE string VALUE `, `.
+
+  "! ZCD_HCK_RESULT: the verdict of one check in one run, from the same decision the report uses
+  TYPES:
+    BEGIN OF ty_result_row,
+      run_id        TYPE zif_cd_ops_types=>ty_run_id,
+      check_id      TYPE ty_check_id,
+      executed_at   TYPE timestampl,
+      category      TYPE ty_category,
+      priority      TYPE ty_priority,
+      verdict       TYPE zif_cd_ops_types=>ty_rag,
+      check_status  TYPE ty_check_status,
+      completion    TYPE ty_completion,
+      evidence      TYPE ty_completion,
+      run_scope     TYPE zif_cd_ops_types=>ty_message,
+      metric_count  TYPE i,
+      finding_count TYPE i,
+      error_count   TYPE i,
+      warning_count TYPE i,
+      baseline_mode TYPE ty_baseline_mode,
+      warmup        TYPE abap_bool,
+      runtime_ms    TYPE i,
+      message       TYPE zif_cd_ops_types=>ty_message,
+    END OF ty_result_row.
+  TYPES tt_result_row TYPE STANDARD TABLE OF ty_result_row WITH EMPTY KEY.
+
   "! Result of evaluating one metric against its threshold / baseline
   TYPES:
     BEGIN OF ty_evaluation,
@@ -567,6 +630,14 @@ INTERFACE zif_cd_hck_types
       step_status  TYPE tt_step_status,
       "! A baseline-only metric is still warming up: the check is grey, not GREEN (A102)
       warmup       TYPE abap_bool,
+      "! Set by a check that read less than all (blank = COMPLETE / ALL unless the engine decides
+      "! otherwise: plug-in error FAILED / NONE, overrun or budget PARTIAL)
+      completion   TYPE ty_completion,
+      evidence     TYPE ty_completion,
+      "! Baseline mode of the evaluated thresholds (set by the engine)
+      baseline_mode TYPE ty_baseline_mode,
+      "! Start of the check (set by the engine)
+      executed_at  TYPE timestampl,
     END OF ty_check_result.
   TYPES tt_check_result TYPE STANDARD TABLE OF ty_check_result WITH EMPTY KEY.
 
@@ -758,6 +829,8 @@ INTERFACE zif_cd_hck_types
       baseline_warmup             TYPE zif_cd_ops_types=>ty_msgno VALUE '370',
       step_pattern_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '371',
       suppression_invalid         TYPE zif_cd_ops_types=>ty_msgno VALUE '372',
+      "! Scope of a run in ZCD_HCK_RESULT-RUN_SCOPE (variant and the selection ranges)
+      run_scope                   TYPE zif_cd_ops_types=>ty_msgno VALUE '300',
     END OF gc_msg.
 
 ENDINTERFACE.

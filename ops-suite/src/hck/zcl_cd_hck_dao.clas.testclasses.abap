@@ -18,6 +18,7 @@
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *& 2026-11-07 | monitor_cfg_positive_only (ZCD_OPS_MONCFG doubled).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | check_result_saved_by_key (ZCD_HCK_RESULT doubled, design review).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -46,6 +47,7 @@ CLASS ltc_dao DEFINITION FINAL FOR TESTING
     METHODS history_only_same_dim2 FOR TESTING.
     METHODS saved_metric_is_read_back FOR TESTING.
     METHODS metric_kind_and_weight_saved FOR TESTING.
+    METHODS check_result_saved_by_key FOR TESTING.
     METHODS overdue_open_and_assigned FOR TESTING.
     METHODS only_active_suppressions FOR TESTING.
     METHODS history_one_point_per_run FOR TESTING.
@@ -86,6 +88,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZCD_HCK_METRIC' )
+                                                                            ( 'ZCD_HCK_RESULT' )
                                                                             ( 'ZCD_OPS_FINDING' )
                                                                             ( 'ZCD_OPS_RUN' )
                                                                             ( 'TBTCO' )
@@ -223,6 +226,34 @@ CLASS ltc_dao IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
+
+
+  " Rule: one verdict row per run and check; a repeated save of the same key replaces the row
+  METHOD check_result_saved_by_key.
+    DATA lt_results TYPE zif_cd_hck_types=>tt_result_row.
+    DATA ls_result TYPE zif_cd_hck_types=>ty_result_row.
+    TRY.
+        ls_result-run_id       = '0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D'.
+        ls_result-check_id     = gc_check.
+        ls_result-verdict      = zif_cd_ops_types=>gc_rag-amber.
+        ls_result-check_status = zif_cd_hck_types=>gc_check_status-amber.
+        ls_result-completion   = zif_cd_hck_types=>gc_completion-complete.
+        ls_result-evidence     = zif_cd_hck_types=>gc_evidence-all.
+        INSERT ls_result INTO TABLE lt_results.
+        mo_cut->save_results( lt_results ).
+        CLEAR lt_results.
+        ls_result-verdict      = zif_cd_ops_types=>gc_rag-red.
+        ls_result-check_status = zif_cd_hck_types=>gc_check_status-red.
+        INSERT ls_result INTO TABLE lt_results.
+        mo_cut->save_results( lt_results ).
+        SELECT check_id, check_status, completion FROM zcd_hck_result ORDER BY PRIMARY KEY INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row per run and check' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-check_status exp = zif_cd_hck_types=>gc_check_status-red
+                                            msg = 'The last decision is kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
 
 
   " Rule: saved metrics become history (round trip through ZCD_HCK_METRIC)

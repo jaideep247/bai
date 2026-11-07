@@ -1265,6 +1265,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>300</MSGNR>
+     <TEXT>Variant &amp;1, categories &amp;2, priorities &amp;3, checks:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>

@@ -7,6 +7,7 @@ CD_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (day
 CD_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_FMON_PRISM,P,INT,,,400,,,,,Retention of PRISM status events (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_HCK_METRIC,P,INT,,,400,,,,,Retention of health check metrics (days; >= 30),PE RTB
+CD_OPS,RETENTION_DAYS_HCK_RESULT,P,INT,,,400,,,,,Retention of health check verdicts per run (days; >= 30),PE RTB
 CD_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),PE RTB
 CD_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,PE RTB
 CD_OPS,SLA_DAYS_EBS_B,P,INT,0,,,,,,,SLA days of EBS blocking exceptions (blank = default),PE RTB

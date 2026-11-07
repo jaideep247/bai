@@ -215,6 +215,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 277 | Bank &1, statement date &2: |
 | 278 | &1 &2: stage &4 not reached by &3 |
 | 279 | Posting state not read or statement read capped - not proven; |
+| 300 | Variant &1, categories &2, priorities &3, checks: |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
