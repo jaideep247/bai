@@ -8,6 +8,7 @@
 *& 2026-11-06 | Audit A62: parser plug-in created with interface check (RTTI before CREATE OBJECT).
 *& 2026-11-07 | Parser parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | Release repository seam removed with the blocked-line release (read-only scope).
+*& 2026-11-07 | Comment: parser class from ZCA_PARAM (CLASS with interface ZIF_CD_EBS_PARSER).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -30,7 +31,7 @@ CLASS zcl_cd_ebs_factory DEFINITION
         VALUE(ro_dao) TYPE REF TO zif_cd_ebs_sap_dao.
 
 
-    "! Parser for a file format. Class from ZCD_OPS_PARAM EBS_PARSER_<format>,
+    "! Parser for a file format. Class from ZCA_PARAM EBS_PARSER_<format>,
     "! default ZCL_CD_EBS_PARSER_BAI2 / ZCL_CD_EBS_PARSER_CAMT.
     CLASS-METHODS get_parser
       IMPORTING

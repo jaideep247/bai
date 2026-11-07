@@ -303,7 +303,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RETURNING
         VALUE(rs_ctx) TYPE zif_cd_fmon_types=>ty_check_ctx.
 
-    "! PRISM throttle settings from ZCD_OPS_PARAM (FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
+    "! PRISM throttle settings from ZCA_PARAM (FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
     METHODS throttle_settings
       RETURNING
         VALUE(rs_throttle) TYPE zif_cd_fmon_types=>ty_throttle.

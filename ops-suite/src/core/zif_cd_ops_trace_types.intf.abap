@@ -3,7 +3,7 @@
 *& Purpose:
 *& Types and constants of the read-only 360 degree payment trace: input
 *& keys, stages, evidence statuses, gap reasons, verdicts, parameters of
-*& ZCD_OPS_PARAM, configured-source specifications (validated against the
+*& ZCA_PARAM, configured-source specifications (validated against the
 *& DDIC at run time), DAO row types and the timeline row shown to support.
 *& Modification log:
 *& 2026-11-06 | Initial version (360 degree payment trace).
@@ -11,6 +11,7 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reasons: TY_RETURN-RLGRD, NOC stage and lot item (DFKKNRP), messages 739-741.
 *& 2026-11-07 | Parameter TRACE_REVERSAL_AUGRD removed: GC_REVERSAL_AUGRD '05' (only reversal reason).
+*& 2026-11-07 | Comments: TRACE_ parameters in ZCA_PARAM, area CD_OPS (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -151,7 +152,7 @@ INTERFACE zif_cd_ops_trace_types
     END OF gc_kind.
 
   " ---------------------------------------------------------------- parameters
-  "! ZCD_OPS_PARAM names. TRACE_SRC_* hold a source specification
+  "! ZCA_PARAM names. TRACE_SRC_* hold a source specification
   "! TABLE=..;KEY=..;KEY2=..;REF=..;STATUS=..;DATE=..;TIME=..;INFO=.. (names VERIFY-SE11,
   "! validated against the DDIC and ZCD_FMON_TABWL at run time; blank = not configured)
   CONSTANTS:

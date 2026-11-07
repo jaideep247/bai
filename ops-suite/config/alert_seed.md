@@ -45,7 +45,7 @@ ZCD_OPS_ALLOG needs the **unique** secondary index `INT` (MANDT, INTENT_KEY, ATT
 before go-live; it is what stops two dispatchers sending the same alert (A17). Status values: S sent, F failed,
 T throttled, Q quiet, C claimed (in delivery), R repeat (carried-forward exception, not re-alerted), P partial.
 
-ZCD_OPS_PARAM for reports sent with `send( )`: `ALERT_MORNING` (morning report distribution list), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
+Parameters (ZCA_PARAM area `CD_OPS`) for reports sent with `send( )`: `ALERT_MORNING` (morning report distribution list, LIST - **confirm**; a route other than MORNING in `HCK_MAIL_ROUTE` needs its own definition `ALERT_<route>`), `ALERT_DEFAULT` (fallback), `ALERT_ESCALATION_WINDOW_H` (default 24).
 
 Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUTER` unit tests):
 - Severity **B** (blocked, never posted) ignores quiet hours.
@@ -55,20 +55,22 @@ Rules of behaviour (proved by `ZCL_CD_OPS_ALERT_POLICY` / `ZCL_CD_OPS_ALERT_ROUT
 - MAX_ITEMS keeps the most severe findings (B > E > W > I); the message names how many were held back (A63).
 - Test-mode runs never alert.
 
-## Core parameters — `ZCD_OPS_PARAM` (retention purge, `ZCD_OPS_PURGE`)
+## Core parameters — framework `ZCA_PARAM`, area `CD_OPS` (retention purge, `ZCD_OPS_PURGE`)
 
-| PARAM_NAME | PARAM_VALUE | Meaning |
+Definitions (value type, limits, delivered default) of every parameter: `config/param_definitions.csv`; example value rows to confirm per landscape: `config/param_values.csv` (format: `param-framework/docs/ONBOARDING.md` section 6a). Maintained in the framework app *Parameter areas* (`ZUI_CA_PARAM`), area `CD_OPS` - ZCD_OPS_PARAM is retired.
+
+| Parameter | Delivered default | Meaning |
 |---|---|---|
 | RETENTION_DAYS_RUN | `400` | Runs and their findings older than this are purged — never a run that still holds an open, assigned or validly waived exception |
 | RETENTION_DAYS_ALERT_LOG | `180` | Alert log rows (by send time) |
 | RETENTION_DAYS_FMON_EVENT | `400` | FMON file events (by creation time) |
 | RETENTION_DAYS_HCK_METRIC | `400` | HCK metric history (by measurement time; baselines need the history) |
 | RETENTION_DAYS_FMON_PRISM | `400` | PRISM status API events (`ZCD_FMON_PRISM`, by receipt time); the file history stays in the FMON events |
-| PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package |
+| PURGE_PACKAGE_SIZE | `1000` | Rows (RUN: runs) deleted per package; commit after each package (INT, at least 1) |
 
-Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`).
+Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`). A new purge target needs a definition `RETENTION_DAYS_<target>` (the portable check `param_definitions_complete` enumerates the targets).
 
-## Monitor freshness — `ZCD_OPS_MONCFG` (configuration app *Alerting and parameters*, entity *Monitor freshness*)
+## Monitor freshness — `ZCD_OPS_MONCFG` (configuration app *Alerting and monitor freshness*, entity *Monitor freshness*)
 
 One row per payment engine area: minutes after the last completed run before the monitor counts as **stale**. The "as of" CDS views of the dashboards (`ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`, overview `ZI_CD_OpsFreshU`) and the morning report's self-check (`HCK_SELF`, `PE_AREA_STALE`) read the **same** row, so they cannot disagree. Without a row the dashboards use the delivered value below and the self-check falls back to `HCK_MAX_AGE_H_<area>`, then `HCK_MAX_AGE_HOURS`.
 

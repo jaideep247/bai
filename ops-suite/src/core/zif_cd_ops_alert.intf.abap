@@ -8,12 +8,13 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-05 | dispatch( ) added: configurable rules, channels, throttling.
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-07 | Comment: recipients ALERT_<route> in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert router port</p>
 INTERFACE zif_cd_ops_alert
   PUBLIC.
 
-  "! Deliver a prepared HTML report by e-mail. Recipients: ZCD_OPS_PARAM
+  "! Deliver a prepared HTML report by e-mail. Recipients: ZCA_PARAM
   "! ALERT_<route>, fallback ALERT_DEFAULT; none maintained = nothing sent.
   METHODS send
     IMPORTING

@@ -7,6 +7,7 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | KEY_PATTERN is PCRE (complete object key, case ignored); message 418 for an invalid one.
 *& 2026-11-07 | GC_PARAM_MAX_DAYS (HCK_SUPPRESS_MAX_DAYS) moved here from the behaviour pool.
+*& 2026-11-07 | Comment: HCK_SUPPRESS_MAX_DAYS in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression types</p>
 INTERFACE zif_cd_hck_suppress_types
@@ -22,7 +23,7 @@ INTERFACE zif_cd_hck_suppress_types
 
   "! Longest suppression without a second user (days), parameter HCK_SUPPRESS_MAX_DAYS
   CONSTANTS gc_default_max_days TYPE i VALUE 7.
-  "! Parameter (ZCD_OPS_PARAM) holding the longest suppression in days
+  "! Parameter (ZCA_PARAM) holding the longest suppression in days
   CONSTANTS gc_param_max_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_SUPPRESS_MAX_DAYS'.
 
   TYPES:

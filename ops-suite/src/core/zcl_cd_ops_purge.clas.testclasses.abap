@@ -11,6 +11,7 @@
 *&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
+*& 2026-11-07 | Comment: RETENTION_DAYS_RUN in ZCA_PARAM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -172,7 +173,7 @@ CLASS ltc_purge IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: RETENTION_DAYS_RUN in ZCD_OPS_PARAM decides the cutoff, not code
+  " Rule: RETENTION_DAYS_RUN in ZCA_PARAM decides the cutoff, not code
   METHOD retention_param_is_used.
     TRY.
         mo_store->mo_params->set( iv_name = 'RETENTION_DAYS_RUN' iv_value = '100' ).

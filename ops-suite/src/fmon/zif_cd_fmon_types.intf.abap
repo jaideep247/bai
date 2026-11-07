@@ -25,6 +25,7 @@
 *& 2026-11-07 | Dashboard stale threshold GC_DASHBOARD-STALE_AFTER_MIN (single source, cds_abap_parity).
 *& 2026-11-07 | Delivered defaults of FMON_LOOKBACK_DAYS, _OPEN_DAYS, _DUP_DAYS, _NOC_SLA_DAYS, _MAX_ROWS;
 *&            | check parameter GRACE_MIN (GC_CHECK_PARAM / GC_CHECK_PARAM_DEFAULT).
+*& 2026-11-07 | Comments: parameters in ZCA_PARAM, area CD_FMON (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -256,7 +257,7 @@ INTERFACE zif_cd_fmon_types
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
     END OF gc_check_code.
 
-  "! Runtime parameters in ZCD_OPS_PARAM (defaults in brackets)
+  "! Runtime parameters in ZCA_PARAM (defaults in brackets)
   CONSTANTS:
     BEGIN OF gc_param,
       "! Days read back from legacy tables and files evaluated [1]
@@ -699,7 +700,7 @@ INTERFACE zif_cd_fmon_types
       lots          TYPE tt_lot_status,
       "! Older registry entries with the same name or checksum (duplicate check)
       history       TYPE tt_file,
-      "! PRISM throttle settings (ZCD_OPS_PARAM FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
+      "! PRISM throttle settings (ZCA_PARAM FMON_PRISM_THROTTLE_* / FMON_PRISM_QUEUE_MAX)
       throttle      TYPE ty_throttle,
       "! Throttled outbound files with PRISM receipt evidence (same business dates as the files)
       queue         TYPE tt_queue,

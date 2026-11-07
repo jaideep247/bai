@@ -438,7 +438,7 @@ INTERFACE zif_cd_ebs_types
       posting   TYPE ty_finding_class VALUE 'POSTING',
     END OF gc_finding_class.
 
-  "! Parameters (ZCD_OPS_PARAM) read by EBS and their delivered defaults
+  "! Parameters (ZCA_PARAM) read by EBS and their delivered defaults
   CONSTANTS:
     BEGIN OF gc_param,
       feb_debit_ind     TYPE zif_cd_ops_types=>ty_param_name VALUE 'EBS_FEB_DEBIT_IND',

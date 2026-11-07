@@ -10,6 +10,7 @@
 *& 2026-11-06 | Initial version (audit A14, business decision: look back N days).
 *& 2026-11-06 | Performance fix 2: history read once per account per package (instance memo), statement window
 *&            | applied in ABAP on FEBKO-AZDAT; lines by secondary key STMT.
+*& 2026-11-07 | Comment: parameters in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R22 - duplicate of an earlier statement</p>
 CLASS zcl_cd_ebs_r_r22_dup_history DEFINITION
@@ -21,7 +22,7 @@ CLASS zcl_cd_ebs_r_r22_dup_history DEFINITION
   PUBLIC SECTION.
     METHODS zif_cd_ebs_rule~execute REDEFINITION.
 
-    "! Look-back days when neither the rule row nor ZCD_OPS_PARAM set them
+    "! Look-back days when neither the rule row nor ZCA_PARAM set them
     CONSTANTS gc_default_days TYPE i VALUE 5.
 
   PRIVATE SECTION.

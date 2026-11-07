@@ -20,7 +20,7 @@ define table zcd_hck_def {
   param3        : abap.char(100);
   param4        : abap.char(100);
   package_size  : abap.int4;
-  // 0 = ZCD_OPS_PARAM HCK_TIMEOUT_SEC (default 300)
+  // 0 = ZCA_PARAM HCK_TIMEOUT_SEC (default 300)
   timeout_sec   : abap.int4;
   changed_by    : syuname;
   changed_at    : timestampl;

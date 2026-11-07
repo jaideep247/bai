@@ -9,13 +9,15 @@
 > Maintain in DV1 (SM30), transport DV1 → QA1 → PS4. `ZCD_HCK_BASELINE` and `ZCD_HCK_METRIC` are
 > application data (delivery class A) and are **never** transported.
 
-## 1. Runtime parameters — `ZCD_OPS_PARAM` (core table)
+## 1. Runtime parameters — framework `ZCA_PARAM`, area `CD_HCK` (and `CD_OPS` for ALERT_ / SLA_)
 
-| PARAM_NAME | PARAM_VALUE | Meaning |
+Definitions (value type, limits, delivered default) of every parameter: `config/param_definitions.csv`; example value rows to confirm per landscape: `config/param_values.csv` (format: `param-framework/docs/ONBOARDING.md` section 6a). Maintained in the framework app *Parameter areas* (`ZUI_CA_PARAM`), area `CD_HCK` - ZCD_OPS_PARAM is retired. A bad value is reported by `D_PARAM_INVALID` (§2) the next morning.
+
+| Parameter | Value | Meaning |
 |---|---|---|
 | HCK_WATCH_PE_AREAS | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
 | HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
-| HCK_MAX_AGE_H_FMON | `1` | Fallback only: with the delivered `ZCD_OPS_MONCFG` row FMON = 15 min the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that row is deleted |
+| HCK_MAX_AGE_H_FMON | `1` (value row) | Fallback only: with the delivered `ZCD_OPS_MONCFG` row FMON = 15 min the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that row is deleted |
 | HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0; item-wise checks stop between items once it has passed (BUDGET_EXHAUSTED, A18) |
 | HCK_LOOKBACK_RUNS | `8` | Default baseline history points (one point per finished, non-test run — A59) |
 | HCK_MAX_RUN_MIN | `120` | A run of a watched area in status R longer than this is HUNG (red self-check, A06); per area `HCK_MAX_RUN_MIN_<AREA>` |
@@ -166,8 +168,9 @@ security boundary; every new row needs a reviewer.
 | ZCD_HCK_THRESH | Health check thresholds | X |
 | ZCD_HCK_AGG | Generic aggregates | X |
 | ZCD_HCK_AGGGRP | Expected groups of aggregates (A103) | X |
-| ZCD_OPS_PARAM | Suite parameters | X |
 | ZCD_JOB_STEP | Job cycle steps | X |
+
+Parameters (ZCA_PARAM) are not under drift control: their changes are logged by the framework (table logging, customizing requests) and checked every morning by `D_PARAM_INVALID`.
 
 After every approved transport: run `ZCD_MORNING_REPORT` with **Take config baseline** (needs S_TABU_NAM
 02 for ZCD_HCK_BASELINE).

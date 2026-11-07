@@ -220,7 +220,7 @@ INTERFACE zif_cd_hck_types
       throttled TYPE ty_alert_status VALUE 'T',
     END OF gc_alert_status.
 
-  "! Score points per RAG and weights per priority (defaults; ZCD_OPS_PARAM overrides)
+  "! Score points per RAG and weights per priority (defaults; ZCA_PARAM overrides)
   TYPES:
     BEGIN OF ty_score_rules,
       points_green  TYPE i,
@@ -682,7 +682,7 @@ INTERFACE zif_cd_hck_types
       max_agg_rows   TYPE i VALUE 5000,
     END OF gc_param_default.
 
-  "! Parameters (ZCD_OPS_PARAM) of the health check engine and of its row caps
+  "! Parameters (ZCA_PARAM) of the health check engine and of its row caps
   CONSTANTS:
     BEGIN OF gc_param,
       watch_pe_areas TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS',

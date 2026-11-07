@@ -1,7 +1,7 @@
-// UI annotations: Alerting and parameters
+// UI annotations: Alerting and monitor freshness
 @Metadata.layer: #CORE
-@UI: { headerInfo: { typeName: 'Alerting and parameters',
-                     typeNamePlural: 'Alerting and parameters',
+@UI: { headerInfo: { typeName: 'Alerting and monitor freshness',
+                     typeNamePlural: 'Alerting and monitor freshness',
                      title: { type: #STANDARD, value: 'SingletonID' } } }
 annotate entity ZC_CD_OpsCfgAll with
 {
@@ -12,10 +12,8 @@ annotate entity ZC_CD_OpsCfgAll with
       label: 'Alert rules', position: 20, targetElement: '_AlertRule' },
     { id: 'AlertChannel', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Alert channels', position: 30, targetElement: '_AlertChannel' },
-    { id: 'OpsParam', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Runtime parameters', position: 40, targetElement: '_OpsParam' },
     { id: 'MonitorCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Monitor freshness', position: 50, targetElement: '_MonitorCfg' }
+      label: 'Monitor freshness', position: 40, targetElement: '_MonitorCfg' }
   ]
 
   @UI.lineItem: [{ position: 10 }]
