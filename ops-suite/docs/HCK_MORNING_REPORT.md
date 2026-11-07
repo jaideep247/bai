@@ -214,9 +214,10 @@ sequenceDiagram
     C-->>E: metrics, findings, step states
     Note over E: timeout guard, PLUGIN_ERROR on any exception,<br/>thresholds + baseline per metric
     E->>S: save_findings + commit (not in test mode)
-    E->>D: save_metrics (not in test mode)
+    E->>D: save_metrics, save_results - verdict of the check (not in test mode)
   end
   E->>S: get_last_run(EBS/FMON/HCK) -> HCK_SELF
+  E->>D: save_results(SKIPPED rows of a filtered run) (not in test mode)
   E->>S: reconcile(executed check IDs without plugin error) (not in test mode)
   E->>D: get_open_exceptions(top N)
   E->>S: finish_run + commit (not in test mode: results durable first)
@@ -245,6 +246,7 @@ sequenceDiagram
 | `ZCD_JOB_STEP` | C | MANDT, CYCLE_ID, STEP_NO | Job name pattern (PCRE, §9a), program, variant, predecessor, day offset, start window, max runtime, skippable, critical |
 | `ZCD_HCK_METRIC` | A | MANDT, RUN_ID, CHECK_ID, METRIC, DIM1, DIM2 | Metric history for baselines, trends, dashboard. Index `HST` (CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT), `TIM` (MEASURED_AT) |
 | `ZCD_HCK_BASELINE` | A | MANDT, TABNAME | Golden baseline hash, row count, taken at / by (per system, never transported) |
+| `ZCD_HCK_RESULT` | A | MANDT, RUN_ID, CHECK_ID | **Verdict of each check per run** (design review 2026-11-07), written by the engine from the decision the report uses: executed at, verdict (R / A / G, blank grey), check status (RED / AMBER / GREEN / WARMUP / GREY / FAILED / SKIPPED), completion (COMPLETE / PARTIAL - timeout, budget, capped read / FAILED - plug-in error / SKIPPED - outside the scope of a filtered run), evidence (ALL / PARTIAL / NONE), run scope (variant + selection ranges, message 300), metric / finding / error / warning counts, baseline mode used (NONE / ZSCORE / IQR / MIXED), warm-up, runtime, summary. The health dashboard reads it and never re-derives a status. Index `TIM` (EXECUTED_AT); purge target `HCK_RESULT` (ZCA_PARAM `RETENTION_DAYS_HCK_RESULT`, 400 days) |
 | Core `ZCD_OPS_RUN` / `ZCD_OPS_FINDING` | A / A | — | Run header, findings / owned exceptions (read and written only through the core store; HCK DAO only *reads* findings for the exception queue) |
 | Framework `ZCA_PARAM_AREA` / `_DEF` / `_VAL` | C | — | Parameters of areas `CD_HCK` / `CD_OPS` (read through `ZCL_CD_OPS_FACTORY=>GET_PARAMS`; the check `D_PARAM_INVALID` reads every definition of the four suite areas) |
 | Core `ZCD_OPS_ALLOG` | A | — | Read by `E_ALERT_DELIVERY` (delivered by the core alert router) |
@@ -273,7 +275,7 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_ALERT_HEALTH` | E | P1 window hours (24) | `ALERT_FAILED`, `ALERT_THROTTLED` (channel) | — |
 | `ZCL_CD_HCK_C_NUMRANGE` | E | P1 number range objects (exact SNRO names, comma list; required) | `NR_USED_PCT` (object/subobject/interval/year; level) | `NR_USAGE_HIGH` (W at amber, E at red), `NR_NO_INTERVAL`, `NR_NOT_NUMERIC`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` (W) |
 | `ZCL_CD_HCK_C_QUEUES` | E | P1 queue name PCRE list, P2 destination PCRE list (blank = all), P3 stuck minutes (30), P4 bgRFC source `TABLE=…;NAME=…;DEST=…;STATE=…;DATE=…;TIME=…`; `HCK_QUEUE_ERR_STATES` / `_HOLD_STATES` / `_WAIT_STATES` | `Q_ERROR`, `Q_HOLD`, `Q_STUCK` (entries), `Q_OLDEST_MIN` (level) per source `QOUT` / `QIN` / `BGRF` | `QUEUE_ERROR` (E), `QUEUE_HOLD`, `QUEUE_STUCK`, `QUEUE_CONFIG_INVALID` (W), `QUEUE_NOT_MONITORED` (I) |
-| `ZCL_CD_HCK_C_INFLIGHT` | A | P1 factory calendar (fallback of class / house bank), P2 look-back days VALUE_DATE classes (10), P3 look-back days ISSUE_DATE classes (120), P4 payments listed (10); classes, rules, roles, outcomes, settings in the HCK configuration app (§7b) | `PAY_OPEN`, `AGE_OLDEST` (level), `OVER_WARN_CNT`, `OVER_CRIT_CNT`, `PAY_INCONSISTENT` per flow + class (`DWIR` …); `PAY_EXCLUDED` (DIM2 purpose); `OVER_WARN_AMT`, `OVER_CRIT_AMT` (DIM2 currency) | `PAYMENT_NOT_CLEARED` (W / E), `CLEARING_INCONSISTENT`, `RETURN_INCONSISTENT`, `UNEXPECTED_SEQUENCE`, `PENDING_OUTCOME_MISSING`, `CLEARING_RULE_INVALID`, `VALUE_DATE_MISSING` (I), `INFLIGHT_CONFIG`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` |
+| `ZCL_CD_HCK_C_INFLIGHT` | A | P1 factory calendar (fallback of class / house bank), P2 look-back days VALUE_DATE classes (10), P3 look-back days ISSUE_DATE classes (120), P4 payments listed (10); classes, rules, roles, outcomes, settings in the HCK configuration app (§7b) | `PAY_OPEN`, `AGE_OLDEST` (level), `OVER_WARN_CNT`, `OVER_CRIT_CNT`, `PAY_INCONSISTENT`, `PAY_UNDETERMINED` per flow + class (`DWIR` …); `PAY_EXCLUDED` (DIM2 purpose); `OVER_WARN_AMT`, `OVER_CRIT_AMT` (DIM2 currency) | `PAYMENT_NOT_CLEARED` (W / E), `CLEARING_INCONSISTENT`, `RETURN_INCONSISTENT`, `UNEXPECTED_SEQUENCE`, `PENDING_OUTCOME_MISSING`, `CLEARING_UNDETERMINED` (W), `BTC_ROLE_MISSING`, `CHEQUE_LINK_AMBIGUOUS`, `CHEQUE_REGISTER_MISSING`, `CHEQUE_CLARIFICATION`, `MANUAL_CLEARING_REQUIRED`, `CHEQUE_AMOUNT_MISMATCH` (E), `CLEARING_RULE_INVALID`, `VALUE_DATE_MISSING` (I), `INFLIGHT_CONFIG`, `LIMITS_NOT_CONFIGURED`, `TECH_READ_CAPPED` |
 | built-in `HCK_SELF` | E | `HCK_WATCH_PE_AREAS`; stale threshold: `ZCD_OPS_MONCFG` row of the area (minutes, the same row as the dashboards), else `HCK_MAX_AGE_H_<pe_area>`, else `HCK_MAX_AGE_HOURS` (hours) | — | `PE_AREA_STALE` (E) |
 
 Engine findings for every check: `THRESHOLD_RED` (E), `THRESHOLD_AMBER` (W), `BASELINE_OUTLIER` (W), `BASELINE_WARMUP` (I, A102), `TIMEOUT_OVERRUN` (W), `PLUGIN_ERROR` (E), `ALERT_FAILED` (W).
@@ -429,6 +431,8 @@ Sources in `cds/` (ADT text sources; release-dependent annotations marked *verif
 | `ZI_CD_HckMetric` / `ZI_CD_HckMetricCube` / `ZC_CD_HckMetricQry` | basic / cube / query | Metric trend (volumes per source/LOB per day, durations, error rates) |
 | `ZI_CD_FmonFlowCube` / `ZC_CD_FmonFlowQry` | cube / query | Files, records, control totals, ACK / NACK, rejected / partial per source / LOB / payment method / bank / business date (over `src/fmon` `ZI_CD_FmonFlowFile`; the Fiori deliverable is the file monitoring dashboard, `Dashboard_File_Monitoring.md`) |
 | `ZI_CD_OpsAnalytics` (DCL) | role | `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on basic views and cubes — authorization object `ZCD_OPS` must be created (SU21) |
+
+The health check dashboard (`src/hck`, `Dashboard_Health_Check.md`) shows the verdict of each check as the engine persisted it (`ZCD_HCK_RESULT` → `ZI_CD_HckResult` → `ZR_CD_HckCheck`, design review 2026-11-07): dashboard and report mail show the same status, completion, evidence and scope.
 
 Amounts are DEC without currency reference: always slice by `Currency` before reading totals. Recommended consumption: Fiori "Analytical List Page" / KPI tiles or Analysis for Office on the three queries; test mode runs are filtered out of the run cube and filterable in the findings query.
 
