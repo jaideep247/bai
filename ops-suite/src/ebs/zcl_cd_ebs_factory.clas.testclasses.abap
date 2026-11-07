@@ -9,6 +9,8 @@
 *& not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
+*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *&---------------------------------------------------------------------*
 CLASS ltd_cfg_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -55,20 +57,6 @@ CLASS ltd_parser IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS ltd_store DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~get_param.
-    READ TABLE mt_params INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
-    rv_value = COND #( WHEN sy-subrc = 0 THEN ls_param-value ELSE iv_default ).
-  ENDMETHOD.
-ENDCLASS.
-
-
 CLASS ltc_ebs_factory DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -85,7 +73,7 @@ CLASS ltc_ebs_factory DEFINITION FINAL FOR TESTING
         wrong_parser TYPE abap_bool,
       END OF ty_flags.
 
-    DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
     DATA mo_cfg TYPE REF TO ltd_cfg_dao.
     DATA mo_feb TYPE REF TO ltd_feb_dao.
     DATA mo_sap TYPE REF TO ltd_sap_dao.
@@ -108,13 +96,13 @@ ENDCLASS.
 CLASS ltc_ebs_factory IMPLEMENTATION.
 
   METHOD setup.
-    mo_store   = NEW #( ).
+    mo_params   = NEW #( ).
     mo_cfg     = NEW #( ).
     mo_feb     = NEW #( ).
     mo_sap     = NEW #( ).
     mo_release = NEW #( ).
     mo_parser  = NEW #( ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_params ).
   ENDMETHOD.
 
 
@@ -133,7 +121,7 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
       zcl_cd_ebs_injector=>inject_parser( mo_parser ).
     ENDIF.
     IF is_flags-wrong_parser = abap_true.
-      INSERT VALUE #( name = gc_param_bai2 value = gc_not_parser ) INTO TABLE mo_store->mt_params.
+      mo_params->set( iv_name = gc_param_bai2 iv_value = gc_not_parser ).
     ENDIF.
   ENDMETHOD.
 

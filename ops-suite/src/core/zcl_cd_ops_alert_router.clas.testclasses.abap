@@ -10,6 +10,8 @@
 *& 2026-11-06 | Delivered message carries the intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-06 | Test invalid_rule_pattern_logged: a rule pattern that is not valid PCRE is logged F, nothing sent.
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -108,8 +110,13 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
+    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
+                                                                                     iv_default = iv_default ).
+  ENDMETHOD.
+  METHOD zif_cd_ops_params~get_range.
+    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.

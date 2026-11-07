@@ -7,6 +7,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Release repository seam (design 6.2).
 *& 2026-11-06 | Audit A62: parser plug-in created with interface check (RTTI before CREATE OBJECT).
+*& 2026-11-07 | Parser parameter through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -88,7 +89,7 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
     DATA(lv_default) = COND string( WHEN iv_format = zif_cd_ebs_types=>gc_format-bai2
                                     THEN `ZCL_CD_EBS_PARSER_BAI2`
                                     ELSE `ZCL_CD_EBS_PARSER_CAMT` ).
-    DATA(lv_class) = zcl_cd_ops_factory=>get_store( )->get_param(
+    DATA(lv_class) = zcl_cd_ops_factory=>get_params( )->get_param(
       iv_name    = CONV #( |EBS_PARSER_{ iv_format }| )
       iv_default = lv_default ).
     TRY.

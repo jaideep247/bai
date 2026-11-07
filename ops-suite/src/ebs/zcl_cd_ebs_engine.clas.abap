@@ -876,7 +876,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lo_cfg) = zcl_cd_ebs_factory=>get_cfg_dao( ).
-    DATA(lv_fallback) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = 'EBS_CAMT_BAI_FALLBACK'
+    DATA(lv_fallback) = zcl_cd_ops_factory=>get_params( )->get_param( iv_name    = 'EBS_CAMT_BAI_FALLBACK'
                                                                     iv_default = `X` ).
     DATA(lt_accounts) = lo_cfg->get_accounts( ).
     mo_resolver = NEW #( it_map          = lo_cfg->get_btc_map( )
@@ -1164,7 +1164,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD int_param.
     rv_value = zcl_cd_ops_util=>to_decimal(
-      iv_value   = zcl_cd_ops_factory=>get_store( )->get_param( iv_name = iv_name iv_default = |{ iv_default }| )
+      iv_value   = zcl_cd_ops_factory=>get_params( )->get_param( iv_name = iv_name iv_default = |{ iv_default }| )
       iv_default = iv_default ).
   ENDMETHOD.
 

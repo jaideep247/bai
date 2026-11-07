@@ -12,6 +12,8 @@
 *& 2026-11-06 | PRISM throttle: the unit applies the same queue allowance as the batch run
 *&              (ACH queue, positive pay not counted, throttle 0, PRISM_QUEUE_LONG).
 *& 2026-11-06 | Interface name pattern seeds are PCRE.
+*& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM; the blank
+*&            | FMON_PRISM_INSTANT simulation is marked (not reachable through the real store).
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -143,15 +145,20 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~reconcile.
     mv_reconciles += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    READ TABLE mt_params ASSIGNING FIELD-SYMBOL(<ls_param>) WITH TABLE KEY name = iv_name.
-    IF sy-subrc = 0.
-      rv_value = <ls_param>-value.
+  METHOD zif_cd_ops_params~get_param.
+    " VERIFY (open item, 2026-11-07): ZCL_CD_OPS_STORE returns the default X for a blank
+    " FMON_PRISM_INSTANT, so registry-only mode is not reachable through ZCD_OPS_PARAM today;
+    " this double keeps simulating the documented blank value until the switch is decided
+    IF iv_name = zif_cd_fmon_prism_types=>gc_param_instant AND mv_registry_only = abap_true
+       AND NOT line_exists( mt_params[ name = iv_name ] ).
       RETURN.
     ENDIF.
-    rv_value = COND #( WHEN iv_name = zif_cd_fmon_prism_types=>gc_param_instant AND mv_registry_only = abap_true
-                       THEN ``
-                       ELSE iv_default ).
+    " Every other parameter: the shared fake, semantics of ZCL_CD_OPS_STORE
+    DATA(lo_params) = NEW zcl_cd_ops_params_mem( ).
+    LOOP AT mt_params ASSIGNING FIELD-SYMBOL(<ls_param>).
+      lo_params->set( iv_name = <ls_param>-name iv_value = <ls_param>-value ).
+    ENDLOOP.
+    rv_value = lo_params->zif_cd_ops_params~get_param( iv_name = iv_name iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 

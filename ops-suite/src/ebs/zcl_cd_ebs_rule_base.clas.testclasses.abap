@@ -26,38 +26,10 @@
 *& 2026-11-06 | Return / NOC reason correction: R05 bank-file tests on the file source; LTC_R05_LOT_REASON
 *&            | (FEB source: returns lot DFKKRP-RLGRD, NOC lot DFKKNRP-FLGRD by INFOF).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN, inline CAST.
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
+*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | r08_zero_flag_off_rows_apart: off = N (a blank value is the default X in ZCL_CD_OPS_STORE).
 *&---------------------------------------------------------------------*
-CLASS ltd_store DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~start_run.
-    rs_run-pe_area = iv_pe_area.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~save_findings.
-    cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~finish_run.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~commit.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_last_run.
-    CLEAR rs_run.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_runs_since.
-    CLEAR rt_runs.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_findings.
-    CLEAR rt_findings.
-  ENDMETHOD.
-ENDCLASS.
-
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_clock.
@@ -230,6 +202,8 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
   DURATION SHORT.
 
   PROTECTED SECTION.
+    "! A flag parameter switched off: any non-blank value other than X (blank = the default)
+    CONSTANTS gc_flag_off TYPE string VALUE `N`.
     CONSTANTS:
       BEGIN OF gc_test,
         stmt_key TYPE zif_cd_ebs_types=>ty_stmt_key VALUE 'S0001',
@@ -244,7 +218,7 @@ CLASS ltc_rule_fixture DEFINITION ABSTRACT FOR TESTING
         amount   TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
       END OF gc_test.
 
-    DATA mo_store    TYPE REF TO ltd_store.
+    DATA mo_params    TYPE REF TO zcl_cd_ops_params_mem.
     DATA mo_sap_dao  TYPE REF TO ltd_sap_dao.
     DATA mo_feb_dao  TYPE REF TO ltd_feb_dao.
     DATA mo_cfg_dao  TYPE REF TO ltd_cfg_dao.
@@ -299,11 +273,11 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
 
   METHOD prepare_fixture.
     DATA ls_account TYPE zif_cd_ebs_types=>ty_account_cfg.
-    mo_store   = NEW #( ).
+    mo_params   = NEW #( ).
     mo_sap_dao = NEW #( ).
     mo_feb_dao = NEW #( ).
     mo_cfg_dao = NEW #( ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_params ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ebs_injector=>inject_sap_dao( mo_sap_dao ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_feb_dao ).
@@ -323,7 +297,7 @@ CLASS ltc_rule_fixture IMPLEMENTATION.
   METHOD clear_fixture.
     zcl_cd_ops_injector=>reset( ).
     zcl_cd_ebs_injector=>reset( ).
-    CLEAR: mo_store, mo_sap_dao, mo_feb_dao, mo_cfg_dao.
+    CLEAR: mo_params, mo_sap_dao, mo_feb_dao, mo_cfg_dao.
   ENDMETHOD.
 
 
@@ -1122,7 +1096,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " A65: EBS_KEYLEN_DOCNO above the 12-character key width is a configuration finding
   METHOD r07_key_length_over_width.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-keylen_docno value = '15' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-keylen_docno iv_value = '15' ).
         add_statement( ).
         add_line( ).
         run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( 'R07' ) ).
@@ -1169,7 +1143,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " AWAITING_LOT_TRANSFER (W, NOTIFY), the original message kept in DETAILS
   METHOD r07r_in_flight_awaits.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_value = '24' ).
         add_statement( ).
         add_line( ).
         run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
@@ -1190,7 +1164,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " FS-CD review: after the grace window (4 h, statement 8 h old) the not-found stands
   METHOD r07r_after_grace_fails.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '4' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_value = '4' ).
         add_statement( ).
         add_line( ).
         run( iv_class = 'ZCL_CD_EBS_R_R07R_RETURN_LOT' is_rule = rule( 'R07R' ) ).
@@ -1205,7 +1179,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " FS-CD review: 166D chain - retrieval AF logged, returns lot not yet created, inside the window
   METHOD r07l_lot_in_flight_awaits.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '24' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_value = '24' ).
         INSERT VALUE #( augbl = gc_test-docno status = 'AF' ) INTO TABLE mo_sap_dao->mt_retrievals.
         add_statement( ).
         add_line( ).
@@ -1222,7 +1196,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   " FS-CD review: the creation time decides when present - created 07:00, now 08:00, grace 2 h
   METHOD r07_creation_time_decides.
     TRY.
-        INSERT VALUE #( name = zif_cd_ebs_types=>gc_param-inflight_hours value = '2' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_value = '2' ).
         add_statement( ).
         mt_stmts[ 1 ]-created_date = gc_test-today.
         mt_stmts[ 1 ]-created_time = '070000'.
@@ -1355,7 +1329,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   METHOD r08_leading_zeros_match.
     DATA ls_check TYPE zif_cd_ebs_sap_dao=>ty_check.
     TRY.
-        INSERT VALUE #( name = 'EBS_KEYLEN_ZTNUM' value = '13' ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = 'EBS_KEYLEN_ZTNUM' iv_value = '13' ).
         ls_check-ztnum  = '0000000012345'.
         ls_check-hbkid  = gc_test-hbkid.
         ls_check-hktid  = gc_test-hktid.
@@ -1431,10 +1405,11 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Fix 1 parity: EBS_ZTNUM_IGNORE_ZEROS off - 12345 and 012345 stay two checks in the index
+  " Fix 1 parity: EBS_ZTNUM_IGNORE_ZEROS off - 12345 and 012345 stay two checks in the index.
+  " Off is any value other than X: a blank value is the default X (ZCL_CD_OPS_STORE semantics)
   METHOD r08_zero_flag_off_rows_apart.
     TRY.
-        INSERT VALUE #( name = 'EBS_ZTNUM_IGNORE_ZEROS' value = space ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-ztnum_ignore_zeros iv_value = gc_flag_off ).
         add_zero_pair( ).
         run( iv_class = 'ZCL_CD_EBS_R_R08_CHECK_AMOUNT' is_rule = rule( 'R08' ) ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings

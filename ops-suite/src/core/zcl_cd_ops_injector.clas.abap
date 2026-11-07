@@ -12,6 +12,7 @@
 *& 2026-11-06 | inject_exc_dao added (operations apps).
 *& 2026-11-06 | inject_trace_dao added (360 degree payment trace).
 *& 2026-11-06 | inject_pattern_dao added (PCRE patterns: pattern check and migration).
+*& 2026-11-07 | inject_params added (runtime parameters, ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -27,6 +28,11 @@ CLASS zcl_cd_ops_injector DEFINITION
     CLASS-METHODS inject_store
       IMPORTING
         io_store TYPE REF TO zif_cd_ops_store.
+
+    "! Parameters only (e.g. ZCL_CD_OPS_PARAMS_MEM); without it get_params returns the store
+    CLASS-METHODS inject_params
+      IMPORTING
+        io_params TYPE REF TO zif_cd_ops_params.
 
     CLASS-METHODS inject_alert
       IMPORTING
@@ -79,6 +85,11 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
 
   METHOD inject_store.
     zcl_cd_ops_factory=>go_store_double = io_store.
+  ENDMETHOD.
+
+
+  METHOD inject_params.
+    zcl_cd_ops_factory=>go_params_double = io_params.
   ENDMETHOD.
 
 
@@ -138,6 +149,7 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
 
   METHOD reset.
     CLEAR: zcl_cd_ops_factory=>go_store_double,
+           zcl_cd_ops_factory=>go_params_double,
            zcl_cd_ops_factory=>go_alert_double,
            zcl_cd_ops_factory=>go_clock_double,
            zcl_cd_ops_factory=>go_alert_dao_double,

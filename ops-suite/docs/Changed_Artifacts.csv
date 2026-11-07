@@ -316,6 +316,9 @@ src/core/zcl_cd_ops_lock.clas.xml,abapGit,
 src/core/zcl_cd_ops_ovw_cds_test.clas.abap,ABAP,Holder of the CDS unit tests of the production-support overview page
 src/core/zcl_cd_ops_ovw_cds_test.clas.testclasses.abap,ABAP,CDS tests of the production-support overview page on
 src/core/zcl_cd_ops_ovw_cds_test.clas.xml,abapGit,
+src/core/zcl_cd_ops_params_mem.clas.abap,ABAP,In-memory runtime parameters (ZIF_CD_OPS_PARAMS) with exactly the read
+src/core/zcl_cd_ops_params_mem.clas.testclasses.abap,ABAP,Domain tests of the shared parameter fake: the read semantics of
+src/core/zcl_cd_ops_params_mem.clas.xml,abapGit,
 src/core/zcl_cd_ops_pattern_check.clas.abap,ABAP,Pure pattern logic behind the reports ZCD_OPS_PATTERN_CHECK and
 src/core/zcl_cd_ops_pattern_check.clas.testclasses.abap,ABAP,Domain tests of the pattern check and the CP-to-PCRE conversion rule:
 src/core/zcl_cd_ops_pattern_check.clas.xml,abapGit,
@@ -398,6 +401,8 @@ src/core/zif_cd_ops_exc_types.intf.abap,ABAP,"Types and constants of the excepti
 src/core/zif_cd_ops_exc_types.intf.xml,abapGit,
 src/core/zif_cd_ops_lock.intf.abap,ABAP,One run per payment engine area + variant at a time. The lock survives COMMIT WORK
 src/core/zif_cd_ops_lock.intf.xml,abapGit,
+src/core/zif_cd_ops_params.intf.abap,ABAP,"Runtime parameters of the operations suite, split from ZIF_CD_OPS_STORE"
+src/core/zif_cd_ops_params.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_dao.intf.abap,ABAP,Repository of the pattern check and the pattern migration: configured
 src/core/zif_cd_ops_pattern_dao.intf.xml,abapGit,
 src/core/zif_cd_ops_pattern_types.intf.abap,ABAP,Types and constants of the pattern check and the pattern migration

@@ -16,6 +16,7 @@
 *& 2026-11-06 | Performance fix 3: FEBEP reason / posting-flag reads moved into ZCL_CD_EBS_FEB_DAO get_items (one pass).
 *& 2026-11-06 | Performance fix 6: get_gl_balances - ACDOCA JOIN @itab GROUP BY request (one statement per package).
 *& 2026-11-06 | Return / NOC reason correction: DFKKRP-RLGRD in the returns lot read; get_noc_items (DFKKNRP by INFOF).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -138,7 +139,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " VERIFY-DDIC: the status field name differs between legacy versions
     " (ZZ_RTRV_STATUS in v4 168, ZZRETRIEVAL_STATUS in v4 468). It is a parameter,
     " validated against the DDIC before use - never concatenated unchecked.
-    DATA(lv_field) = to_upper( zcl_cd_ops_factory=>get_store( )->get_param(
+    DATA(lv_field) = to_upper( zcl_cd_ops_factory=>get_params( )->get_param(
                                  iv_name    = zif_cd_ebs_types=>gc_param-rtrv_status_field
                                  iv_default = gc_default_rtrv_field ) ).
     IF field_exists( iv_table = gc_rtrv_table iv_field = lv_field ) = abap_false.
@@ -161,7 +162,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " HBKID/HKTID returned so rules scope a check number to its house bank account
     " A07: optional company-code field (EBS_DFKKCR_BUKRS_FIELD), validated against the DDIC
     DATA(lv_fields) = gc_check_fields.
-    DATA(lv_bukrs_field) = to_upper( condense( zcl_cd_ops_factory=>get_store( )->get_param(
+    DATA(lv_bukrs_field) = to_upper( condense( zcl_cd_ops_factory=>get_params( )->get_param(
                              iv_name = zif_cd_ebs_types=>gc_param-dfkkcr_bukrs_field ) ) ).
     IF lv_bukrs_field IS NOT INITIAL AND field_exists( iv_table = gc_check_table iv_field = lv_bukrs_field ) = abap_true.
       lv_fields = lv_fields && gc_sql_separator && lv_bukrs_field && gc_sql_as_bukrs.
@@ -189,7 +190,7 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_sap_dao~get_gl_balances.
     CHECK it_requests IS NOT INITIAL.
-    DATA(lv_ledger) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = 'EBS_GL_LEDGER'
+    DATA(lv_ledger) = zcl_cd_ops_factory=>get_params( )->get_param( iv_name    = 'EBS_GL_LEDGER'
                                                                   iv_default = CONV #( gc_default_ledger ) ).
     " Aggregation at database level (ACDOCA) - VERIFY-DDIC: TSL/RTCUR for account-currency balance.
     " Fix 6: the requests are an internal table joined on the database (HANA), one SUM per

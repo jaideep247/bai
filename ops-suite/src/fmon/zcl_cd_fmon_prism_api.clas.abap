@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
 *& 2026-11-06 | Instant processing: bgPF unit queued in the LUW of the stored event.
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - request service</p>
 "! Order: 405 method -> 403 authority -> 415 media type -> 413 size -> 400 validation
@@ -110,12 +111,12 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     DATA(ls_mapped) = zcl_cd_fmon_prism_event=>map(
                         is_parsed  = zcl_cd_fmon_prism_event=>parse( is_request-body )
                         is_context = VALUE #( now       = zcl_cd_ops_factory=>get_clock( )->now( )
                                               user      = sy-uname
-                                              time_zone = CONV #( lo_store->get_param(
+                                              time_zone = CONV #( lo_params->get_param(
                                                                     iv_name    = zif_cd_fmon_types=>gc_param-time_zone
                                                                     iv_default = CONV #( zif_cd_ops_types=>gc_time_zone_utc ) ) ) ) ).
     IF ls_mapped-errors IS NOT INITIAL.
@@ -197,7 +198,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
 
   METHOD max_bytes.
     rv_bytes = zcl_cd_ops_util=>to_decimal(
-                 iv_value   = zcl_cd_ops_factory=>get_store( )->get_param(
+                 iv_value   = zcl_cd_ops_factory=>get_params( )->get_param(
                                 iv_name    = zif_cd_fmon_prism_types=>gc_param_max_bytes
                                 iv_default = |{ zif_cd_fmon_prism_types=>gc_default_max_bytes }| )
                  iv_default = zif_cd_fmon_prism_types=>gc_default_max_bytes ).

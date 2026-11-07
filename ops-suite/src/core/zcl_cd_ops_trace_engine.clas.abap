@@ -22,6 +22,7 @@
 *& 2026-11-06 | stage_file returns the file links (RETURNING instead of a single EXPORTING parameter).
 *& 2026-11-07 | Reversal = clearing reason ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD (05, the only
 *&            | reversal reason); parameter TRACE_REVERSAL_AUGRD removed.
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -330,32 +331,32 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
 
   METHOD load_config.
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
-    ms_cfg-max_rows = to_int( iv_value   = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-max_rows )
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
+    ms_cfg-max_rows = to_int( iv_value   = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-max_rows )
                               iv_default = zif_cd_ops_trace_types=>gc_default-max_rows ).
     ms_cfg-request  = parse_source( iv_param = zif_cd_ops_trace_types=>gc_param-src_request
-                                    iv_spec  = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-src_request ) ).
+                                    iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_request ) ).
     ms_cfg-history  = parse_source( iv_param = zif_cd_ops_trace_types=>gc_param-src_history
-                                    iv_spec  = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-src_history ) ).
+                                    iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_history ) ).
     ms_cfg-regut    = parse_source( iv_param = zif_cd_ops_trace_types=>gc_param-src_regut
-                                    iv_spec  = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-src_regut ) ).
+                                    iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_regut ) ).
     ms_cfg-ack      = parse_source( iv_param = zif_cd_ops_trace_types=>gc_param-src_ack
-                                    iv_spec  = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-src_ack ) ).
+                                    iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_ack ) ).
     ms_cfg-chq_hist = parse_source( iv_param = zif_cd_ops_trace_types=>gc_param-src_chq_hist
-                                    iv_spec  = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-src_chq_hist ) ).
-    ms_cfg-bp_source_field = to_upper( condense( lo_store->get_param( zif_cd_ops_trace_types=>gc_param-bp_source_field ) ) ).
-    ms_cfg-success = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-success_value
+                                    iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_chq_hist ) ).
+    ms_cfg-bp_source_field = to_upper( condense( lo_params->get_param( zif_cd_ops_trace_types=>gc_param-bp_source_field ) ) ).
+    ms_cfg-success = lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-success_value
                                           iv_default = zif_cd_ops_trace_types=>gc_default-success_value ).
-    ms_cfg-awtyp = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-gl_awtyp
+    ms_cfg-awtyp = lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-gl_awtyp
                                         iv_default = zif_cd_ops_trace_types=>gc_default-gl_awtyp ).
-    ms_cfg-cheque_methods = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-cheque_methods
+    ms_cfg-cheque_methods = lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-cheque_methods
                                                  iv_default = zif_cd_ops_trace_types=>gc_default-cheque_methods ).
-    ms_cfg-no_ack_methods = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-no_ack_methods ).
-    ms_cfg-nack_values = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-ack_nack_values
+    ms_cfg-no_ack_methods = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-no_ack_methods ).
+    ms_cfg-nack_values = lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-ack_nack_values
                                               iv_default = zif_cd_ops_trace_types=>gc_default-ack_nack_values ).
-    ms_cfg-chq_failed = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-chq_failed_values
+    ms_cfg-chq_failed = lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-chq_failed_values
                                              iv_default = zif_cd_ops_trace_types=>gc_default-chq_failed_values ).
-    ms_cfg-lookback = to_int( iv_value   = lo_store->get_param( zif_cd_ops_trace_types=>gc_param-bank_lookback )
+    ms_cfg-lookback = to_int( iv_value   = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-bank_lookback )
                               iv_default = zif_cd_ops_trace_types=>gc_default-bank_lookback ).
   ENDMETHOD.
 

@@ -7,6 +7,7 @@
 *& live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
+*& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_prism_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -86,10 +87,11 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~rollback.
     mv_rollbacks += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = COND #( WHEN iv_name = zif_cd_fmon_prism_types=>gc_param_max_bytes AND mv_max_bytes IS NOT INITIAL
-                       THEN mv_max_bytes
-                       ELSE iv_default ).
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake: semantics of ZCL_CD_OPS_STORE (blank = default)
+    rv_value = NEW zcl_cd_ops_params_mem( )->set( iv_name  = zif_cd_fmon_prism_types=>gc_param_max_bytes
+                                                  iv_value = mv_max_bytes
+                 )->zif_cd_ops_params~get_param( iv_name = iv_name iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 

@@ -13,6 +13,8 @@
 *& 2026-11-06 | Performance fix 3: reason and posting flags come with the items (one FEBEP read); reads counted.
 *& 2026-11-06 | Return reason correction: FEBEP carries no return reason - the line reason stays blank.
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
+*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *&---------------------------------------------------------------------*
 CLASS ltd_feb DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -45,38 +47,6 @@ CLASS ltd_feb IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
-CLASS ltd_store DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~start_run.
-    rs_run-pe_area = iv_pe_area.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~save_findings.
-    cs_run-finding_count = cs_run-finding_count + lines( it_findings ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~finish_run.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~commit.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_last_run.
-    CLEAR rs_run.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_runs_since.
-    CLEAR rt_runs.
-  ENDMETHOD.
-  METHOD zif_cd_ops_store~get_findings.
-    CLEAR rt_findings.
-  ENDMETHOD.
-ENDCLASS.
-
-
 CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -90,7 +60,7 @@ CLASS ltc_src_feb DEFINITION FINAL FOR TESTING
       END OF gc_test.
 
     DATA mo_dao TYPE REF TO ltd_feb.
-    DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
 
     METHODS setup.
     METHODS teardown.
@@ -128,9 +98,9 @@ CLASS ltc_src_feb IMPLEMENTATION.
 
   METHOD setup.
     mo_dao = NEW #( ).
-    mo_store = NEW #( ).
+    mo_params = NEW #( ).
     zcl_cd_ebs_injector=>inject_feb_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_params ).
   ENDMETHOD.
 
 
@@ -370,8 +340,8 @@ CLASS ltc_src_feb IMPLEMENTATION.
   " the posting-dependent rules behave as before
   METHOD posting_state_off_with_none.
     TRY.
-        INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-feb_posted_fields
-                        value = zif_cd_ebs_types=>gc_param_default-feb_posted_off ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name  = zif_cd_ebs_types=>gc_param-feb_posted_fields
+                        iv_value = zif_cd_ebs_types=>gc_param_default-feb_posted_off ).
         add_header( gc_test-kukey1 ).
         add_item( iv_kukey = gc_test-kukey1 iv_esnum = '00001' ).
         DATA(ls_package) = new_source( )->next_package( ).

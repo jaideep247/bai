@@ -14,6 +14,7 @@
 *& 2026-11-06 | Required plug-in interface checked by RTTI before CREATE OBJECT (audit A62).
 *& 2026-11-06 | Payment trace read repository seam added (360 degree payment trace).
 *& 2026-11-06 | Pattern check / migration repository seam added (PCRE patterns).
+*& 2026-11-07 | get_params: runtime parameters (ZIF_CD_OPS_PARAMS), default the store.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -31,6 +32,11 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-METHODS get_store
       RETURNING
         VALUE(ro_store) TYPE REF TO zif_cd_ops_store.
+
+    "! Runtime parameters: the injected double, else the store (ZCD_OPS_PARAM)
+    CLASS-METHODS get_params
+      RETURNING
+        VALUE(ro_params) TYPE REF TO zif_cd_ops_params.
 
     CLASS-METHODS get_alert
       RETURNING
@@ -97,6 +103,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     TYPES tt_plugin_double TYPE HASHED TABLE OF ty_plugin_double WITH UNIQUE KEY class_name.
 
     CLASS-DATA go_store_double TYPE REF TO zif_cd_ops_store.
+    CLASS-DATA go_params_double TYPE REF TO zif_cd_ops_params.
     CLASS-DATA go_alert_double TYPE REF TO zif_cd_ops_alert.
     CLASS-DATA go_clock_double TYPE REF TO zif_cd_ops_clock.
     CLASS-DATA go_alert_dao_double TYPE REF TO zif_cd_ops_alert_dao.
@@ -134,6 +141,11 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
       go_store = NEW zcl_cd_ops_store( ).
     ENDIF.
     ro_store = go_store.
+  ENDMETHOD.
+
+
+  METHOD get_params.
+    ro_params = COND #( WHEN go_params_double IS BOUND THEN go_params_double ELSE get_store( ) ).
   ENDMETHOD.
 
 

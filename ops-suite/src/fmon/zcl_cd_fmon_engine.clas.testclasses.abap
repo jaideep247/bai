@@ -17,6 +17,7 @@
 *& 2026-11-06 | Modern-syntax sweep: RAISE EXCEPTION NEW, caught exception lx_error.
 *& 2026-11-06 | Interface name pattern seeds are PCRE.
 *& 2026-11-06 | Test invalid_name_pattern_reported (PCRE interface name pattern that does not compile).
+*& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -216,8 +217,10 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~rollback.
     mv_rollback_calls += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = iv_default.
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake (nothing maintained): semantics of ZCL_CD_OPS_STORE
+    rv_value = NEW zcl_cd_ops_params_mem( )->zif_cd_ops_params~get_param( iv_name    = iv_name
+                                                                           iv_default = iv_default ).
   ENDMETHOD.
 ENDCLASS.
 

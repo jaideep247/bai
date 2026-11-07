@@ -16,6 +16,7 @@
 *&            | headers by HASHED key KUKEY for the currency lookup.
 *& 2026-11-06 | Return reason correction: no FEBEP reason field (EBS_FEB_REASON_FIELD removed) - FEBEP
 *&            | carries no return reason; R05 reads it from the returns lot item DFKKRP-RLGRD.
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -99,12 +100,12 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
 
     IF mv_loaded = abap_false.
       check_selection( ms_selection ).
-      DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
-      mv_debit_ind  = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_debit_ind
+      DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
+      mv_debit_ind  = lo_params->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_debit_ind
                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_debit_ind ).
-      mv_credit_ind = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_credit_ind
+      mv_credit_ind = lo_params->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_credit_ind
                                           iv_default = zif_cd_ebs_types=>gc_param_default-feb_credit_ind ).
-      DATA(lv_posted_fields) = lo_store->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_posted_fields
+      DATA(lv_posted_fields) = lo_params->get_param( iv_name    = zif_cd_ebs_types=>gc_param-feb_posted_fields
                                                     iv_default = zif_cd_ebs_types=>gc_param_default-feb_posted_fields ).
       IF to_upper( condense( lv_posted_fields ) ) <> zif_cd_ebs_types=>gc_param_default-feb_posted_off.
         mt_posted_fields = zcl_cd_ops_util=>split_list( lv_posted_fields ).

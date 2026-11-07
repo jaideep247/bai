@@ -83,7 +83,7 @@ CLASS lhc_suppression IMPLEMENTATION.
       ENTITY Suppression FIELDS ( ValidFrom ValidTo ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
     DATA(lv_max_days) = zcl_cd_hck_param=>int(
-                          iv_value   = zcl_cd_ops_factory=>get_store( )->get_param(
+                          iv_value   = zcl_cd_ops_factory=>get_params( )->get_param(
                                          iv_name    = gc_param_max_days
                                          iv_default = |{ zif_cd_hck_suppress_types=>gc_default_max_days }| )
                           iv_default = zif_cd_hck_suppress_types=>gc_default_max_days ).

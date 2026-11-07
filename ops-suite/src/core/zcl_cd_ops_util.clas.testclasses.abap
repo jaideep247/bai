@@ -10,6 +10,7 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | PCRE patterns: whole-value match, case ignored, invalid pattern, literal count.
+*& 2026-11-07 | param_int (shared integer parameter helper) over the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -28,6 +29,9 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS markup_is_escaped            FOR TESTING.
     METHODS elapsed_crosses_minute       FOR TESTING.
     METHODS bad_decimal_gives_default    FOR TESTING.
+    METHODS int_param_reads_value        FOR TESTING.
+    METHODS int_param_blank_is_default   FOR TESTING.
+    METHODS int_param_text_is_default    FOR TESTING.
     METHODS text_fills_message_vars      FOR TESTING.
     METHODS text_tail_is_not_truncated   FOR TESTING.
     METHODS pcre_matches_whole_value     FOR TESTING.
@@ -152,6 +156,40 @@ CLASS ltc_util IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>to_decimal( iv_value = 'abc' iv_default = 7 )
                                         exp = CONV decfloat34( 7 )
                                         msg = 'Bad number must give the default' ).
+  ENDMETHOD.
+
+
+  " Rule: an integer parameter reads the maintained value (shared fake ZCL_CD_OPS_PARAMS_MEM)
+  METHOD int_param_reads_value.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
+    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = ` 25 ` ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                                          iv_name    = lc_name
+                                                                          iv_default = 20 )
+                                        exp = 25
+                                        msg = 'The maintained value must be read' ).
+  ENDMETHOD.
+
+
+  METHOD int_param_blank_is_default.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
+    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = ` ` ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                                          iv_name    = lc_name
+                                                                          iv_default = 20 )
+                                        exp = 20
+                                        msg = 'A blank parameter must give the default' ).
+  ENDMETHOD.
+
+
+  METHOD int_param_text_is_default.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_TOP_N'.
+    DATA(lo_params) = NEW zcl_cd_ops_params_mem( )->set( iv_name = lc_name iv_value = `many` ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                                          iv_name    = lc_name
+                                                                          iv_default = 20 )
+                                        exp = 20
+                                        msg = 'A value that is not a number must give the default' ).
   ENDMETHOD.
 
 

@@ -17,6 +17,8 @@
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | A rule with a pattern that is not valid PCRE is logged FAILED (message 742) and not applied -
 *&              visible in the alert log and the HCK alert health check, never a silent no-match.
+*& 2026-11-07 | Parameter names / default from ZIF_CD_OPS_TYPES; parameters through GET_PARAMS;
+*&            | escalation window with ZCL_CD_OPS_UTIL=>PARAM_INT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -27,7 +29,6 @@ CLASS zcl_cd_ops_alert_router DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_alert.
 
-    CONSTANTS gc_default_window_hours TYPE i VALUE 24.
     CONSTANTS gc_email_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_OPS_CHN_EMAIL'.
 
   PRIVATE SECTION.
@@ -136,10 +137,10 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     DATA ls_run     TYPE zif_cd_ops_types=>ty_run.
 
     CLEAR mt_log.
-    DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
-    DATA(lv_recipients) = lo_store->get_param(
-      iv_name    = CONV #( |ALERT_{ iv_route }| )
-      iv_default = lo_store->get_param( 'ALERT_DEFAULT' ) ).
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
+    DATA(lv_recipients) = lo_params->get_param(
+      iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-alert }{ iv_route }| )
+      iv_default = lo_params->get_param( zif_cd_ops_types=>gc_param-alert_default ) ).
     DATA(lo_dao) = zcl_cd_ops_factory=>get_alert_dao( ).
     " A45: no recipient is a delivery failure the caller hears about, not a silent return
     IF zcl_cd_ops_util=>split_list( lv_recipients ) IS INITIAL.
@@ -221,10 +222,9 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lv_window_h) = CONV i( zcl_cd_ops_util=>to_decimal(
-      iv_value   = zcl_cd_ops_factory=>get_store( )->get_param( iv_name = 'ALERT_ESCALATION_WINDOW_H'
-                                                                iv_default = |{ gc_default_window_hours }| )
-      iv_default = gc_default_window_hours ) ).
+    DATA(lv_window_h) = zcl_cd_ops_util=>param_int( io_params  = zcl_cd_ops_factory=>get_params( )
+                                                    iv_name    = zif_cd_ops_types=>gc_param-alert_window_h
+                                                    iv_default = zif_cd_ops_types=>gc_param_default-alert_window_h ).
     DATA(lv_since) = lv_now.
     TRY.
         lv_since = cl_abap_tstmp=>add( tstmp = lv_now secs = - lv_window_h * gc_seconds_per_hour ).

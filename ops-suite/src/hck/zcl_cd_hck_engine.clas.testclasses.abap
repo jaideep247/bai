@@ -10,6 +10,8 @@
 *& 2026-11-06 | suppressed_red_is_not_red (design 6.3).
 *& 2026-11-06 | hung_run_fails_self, own_run_is_not_hung, empty_selection_is_red, self_check_alone_not_green (A06, A60).
 *& 2026-11-06 | check_receives_time_budget (audit A18).
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -54,9 +56,13 @@ CLASS ltd_store IMPLEMENTATION.
     INSERT LINES OF it_groups INTO TABLE mt_reconciled.
   ENDMETHOD.
 
-  METHOD zif_cd_ops_store~get_param.
-    READ TABLE mt_params INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
-    rv_value = COND #( WHEN sy-subrc = 0 THEN ls_param-value ELSE iv_default ).
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
+    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
+                                                                                     iv_default = iv_default ).
+  ENDMETHOD.
+  METHOD zif_cd_ops_params~get_range.
+    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
 
   METHOD zif_cd_ops_store~get_last_run.

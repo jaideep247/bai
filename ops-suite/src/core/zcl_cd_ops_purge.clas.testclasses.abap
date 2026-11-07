@@ -7,6 +7,8 @@
 *& class. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -44,8 +46,13 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
+    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
+                                                                                     iv_default = iv_default ).
+  ENDMETHOD.
+  METHOD zif_cd_ops_params~get_range.
+    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.

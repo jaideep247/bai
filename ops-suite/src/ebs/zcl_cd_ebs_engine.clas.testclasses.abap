@@ -27,6 +27,8 @@
 *&            | a payment engine XBLNR; LTC_PE_SCOPE - mixed statement skipped and counted, no findings,
 *&            | no reconciliation; all-PE statement validated.
 *& 2026-11-06 | findings_of: prefix test with find( ) instead of a CP wildcard (no CP / NP in the suite).
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*&            | (semantics of ZCL_CD_OPS_STORE: condensed, blank = default).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -111,11 +113,16 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~refresh_params.
+  METHOD zif_cd_ops_params~refresh_params.
     mv_refreshes += 1.
   ENDMETHOD.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
+  METHOD zif_cd_ops_params~get_param.
+    " Shared parameter fake: exactly the read semantics of ZCL_CD_OPS_STORE
+    rv_value = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_param( iv_name    = iv_name
+                                                                                     iv_default = iv_default ).
+  ENDMETHOD.
+  METHOD zif_cd_ops_params~get_range.
+    rt_range = NEW zcl_cd_ops_params_mem( mt_params )->zif_cd_ops_params~get_range( iv_name ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.

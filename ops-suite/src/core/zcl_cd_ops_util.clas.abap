@@ -12,6 +12,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Configured patterns are PCRE (user decision 2026-11-06): pcre_valid, pcre_match
 *&              (whole value, case-insensitive), pcre_literals (specificity).
+*& 2026-11-07 | param_int: the one integer-parameter helper (replaces five private copies).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -152,6 +153,16 @@ CLASS zcl_cd_ops_util DEFINITION
         iv_pattern      TYPE clike
       RETURNING
         VALUE(rv_count) TYPE i.
+
+    "! Integer parameter: the value of iv_name, iv_default when not maintained, blank or not
+    "! a number (decimals rounded). The one helper for numeric parameters of every area.
+    CLASS-METHODS param_int
+      IMPORTING
+        io_params       TYPE REF TO zif_cd_ops_params
+        iv_name         TYPE zif_cd_ops_types=>ty_param_name
+        iv_default      TYPE i
+      RETURNING
+        VALUE(rv_value) TYPE i.
 
     "! Safe string to decimal; returns iv_default on conversion error
     CLASS-METHODS to_decimal
@@ -371,6 +382,12 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
         rv_count += 1.
       ENDIF.
     ENDDO.
+  ENDMETHOD.
+
+
+  METHOD param_int.
+    rv_value = to_decimal( iv_value   = io_params->get_param( iv_name )
+                           iv_default = iv_default ).
   ENDMETHOD.
 
 

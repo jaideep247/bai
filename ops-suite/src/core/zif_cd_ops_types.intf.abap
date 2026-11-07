@@ -18,6 +18,8 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCD_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | Messages 742-747 (PCRE patterns: alert rule pattern invalid, pattern check and migration).
 *& 2026-11-07 | Transactions dashboard date windows GC_TRX_DASHBOARD (single source, cds_abap_parity).
+*& 2026-11-07 | Core parameter names / prefixes / defaults (GC_PARAM, GC_PARAM_PREFIX, GC_PARAM_DEFAULT);
+*&            | TT_PARAM_RANGE and GC_RANGE for ZIF_CD_OPS_PARAMS=>GET_RANGE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -64,6 +66,36 @@ INTERFACE zif_cd_ops_types
       item_window_days     TYPE i VALUE 30,
       evidence_window_days TYPE i VALUE 45,
     END OF gc_trx_dashboard.
+
+  "! Core parameters (ZCD_OPS_PARAM): alerting, purge, exception SLA
+  CONSTANTS:
+    BEGIN OF gc_param,
+      "! Recipients when ALERT_<route> is blank
+      alert_default    TYPE ty_param_name VALUE 'ALERT_DEFAULT',
+      "! Escalation look-back window of an alert rule in hours [24]
+      alert_window_h   TYPE ty_param_name VALUE 'ALERT_ESCALATION_WINDOW_H',
+      "! Rows deleted per purge package [1000]
+      purge_package    TYPE ty_param_name VALUE 'PURGE_PACKAGE_SIZE',
+      "! SLA days of an exception when SLA_DAYS_<area>_<severity> is blank [1]
+      sla_days_default TYPE ty_param_name VALUE 'SLA_DAYS_DEFAULT',
+    END OF gc_param.
+
+  "! Parameter-name prefixes completed at run time (ALERT_<route>, RETENTION_DAYS_<target>,
+  "! SLA_DAYS_<area>_<severity>)
+  CONSTANTS:
+    BEGIN OF gc_param_prefix,
+      alert          TYPE ty_param_name VALUE 'ALERT_',
+      retention_days TYPE ty_param_name VALUE 'RETENTION_DAYS_',
+      sla_days       TYPE ty_param_name VALUE 'SLA_DAYS_',
+    END OF gc_param_prefix.
+
+  "! Delivered defaults of the core parameters
+  CONSTANTS:
+    BEGIN OF gc_param_default,
+      alert_window_h TYPE i VALUE 24,
+      purge_package  TYPE i VALUE 1000,
+      sla_days       TYPE i VALUE 1,
+    END OF gc_param_default.
   "! SALV exception column values (traffic light)
   CONSTANTS:
     BEGIN OF gc_light,
@@ -75,7 +107,15 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_msgno_free TYPE ty_msgno VALUE '000'.
   TYPES ty_action      TYPE c LENGTH 10.
   TYPES ty_param_name  TYPE c LENGTH 30.
+  "! Value of a parameter (ZCD_OPS_PARAM-PARAM_VALUE) and its select-option style view
   TYPES ty_param_value TYPE c LENGTH 255.
+  TYPES tt_param_range TYPE RANGE OF ty_param_value.
+  "! Sign / option of a select-option style range row (ZIF_CD_OPS_PARAMS=>GET_RANGE)
+  CONSTANTS:
+    BEGIN OF gc_range,
+      sign_include TYPE c LENGTH 1 VALUE 'I',
+      option_equal TYPE c LENGTH 2 VALUE 'EQ',
+    END OF gc_range.
   TYPES ty_variant     TYPE c LENGTH 30.
   TYPES ty_amount      TYPE p LENGTH 12 DECIMALS 2.
   TYPES ty_currency    TYPE c LENGTH 5.

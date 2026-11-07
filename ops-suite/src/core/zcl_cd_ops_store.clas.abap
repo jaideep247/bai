@@ -16,6 +16,8 @@
 *& 2026-11-06 | Performance fix 5: carry-forward reads by (OBJECT_TYPE, OBJECT_KEY) pairs; earlier rows found
 *&            | by binary search on the sorted read (newest first kept), not a nested WHERE scan.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Implements ZIF_CD_OPS_PARAMS (via ZIF_CD_OPS_STORE): get_range (I / EQ rows of the list);
+*&            | SLA parameter names / default from ZIF_CD_OPS_TYPES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN/FINDING/PARAM)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -96,7 +98,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~start_run.
     " A64: each run reads the parameters valid at its start (snapshot), never the cache
     " of an earlier run in the same internal session
-    zif_cd_ops_store~refresh_params( ).
+    zif_cd_ops_params~refresh_params( ).
     load_params( ).
     DATA(lo_clock) = zcl_cd_ops_factory=>get_clock( ).
     TRY.
@@ -393,12 +395,12 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ops_store~refresh_params.
+  METHOD zif_cd_ops_params~refresh_params.
     CLEAR: mt_param_cache, mv_params_loaded.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ops_store~get_param.
+  METHOD zif_cd_ops_params~get_param.
     load_params( ).
     READ TABLE mt_param_cache INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
     IF sy-subrc = 0 AND ls_param-value IS NOT INITIAL.
@@ -406,6 +408,15 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     ELSE.
       rv_value = iv_default.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_params~get_range.
+    LOOP AT zcl_cd_ops_util=>split_list( zif_cd_ops_params~get_param( iv_name ) ) ASSIGNING FIELD-SYMBOL(<lv_value>).
+      INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                      option = zif_cd_ops_types=>gc_range-option_equal
+                      low    = <lv_value> ) INTO TABLE rt_range.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -500,11 +511,11 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
 
 
   METHOD sla_days.
-    DATA(lv_value) = zif_cd_ops_store~get_param(
-      iv_name    = CONV #( |SLA_DAYS_{ iv_pe_area }_{ iv_severity }| )
-      iv_default = zif_cd_ops_store~get_param( iv_name    = 'SLA_DAYS_DEFAULT'
-                                               iv_default = `1` ) ).
-    rv_days = zcl_cd_ops_util=>to_decimal( iv_value = lv_value iv_default = 1 ).
+    DATA(lv_value) = zif_cd_ops_params~get_param(
+      iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-sla_days }{ iv_pe_area }_{ iv_severity }| )
+      iv_default = zif_cd_ops_params~get_param( iv_name    = zif_cd_ops_types=>gc_param-sla_days_default
+                                               iv_default = |{ zif_cd_ops_types=>gc_param_default-sla_days }| ) ).
+    rv_days = zcl_cd_ops_util=>to_decimal( iv_value = lv_value iv_default = zif_cd_ops_types=>gc_param_default-sla_days ).
   ENDMETHOD.
 
 

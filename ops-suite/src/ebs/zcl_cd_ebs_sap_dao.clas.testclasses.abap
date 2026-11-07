@@ -11,6 +11,8 @@
 *& 2026-11-06 | Performance fix 6: G/L balances of several statements in one aggregate (ACDOCA double).
 *& 2026-11-06 | Return / NOC reason correction: RLGRD with the returns lot item; NOC items by INFOF (DFKKNRP double).
 *& 2026-11-06 | ltc_sap_dao_reads: cheques, FI lines, lookup rows, retrieval field check (coverage gap closure).
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
+*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -241,21 +243,6 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 ENDCLASS.
 
 
-"! Parameters of the reads (store double through ZCL_CD_OPS_INJECTOR - no cached store)
-CLASS ltd_store DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~get_param.
-    READ TABLE mt_params INTO DATA(ls_param) WITH TABLE KEY name = iv_name.
-    rv_value = COND #( WHEN sy-subrc = 0 THEN ls_param-value ELSE iv_default ).
-  ENDMETHOD.
-ENDCLASS.
-
-
 "! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_OPS_PARAM doubled;
 "! ZCD_OPS_PARAM also serves as the configured lookup table). get_retrievals is tested up to
 "! its DDIC field check, which raises before the SELECT on ZCD_ACH_RTRV_LOG
@@ -286,7 +273,7 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_ebs_sap_dao.
-    DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -319,8 +306,8 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   METHOD setup.
     go_env->clear_doubles( ).
-    mo_store = NEW #( ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
   ENDMETHOD.
 
@@ -336,8 +323,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     DATA ls_cr TYPE dfkkcr.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_ztnum.
     TRY.
-        INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-dfkkcr_bukrs_field
-                        value = gc_test-bad_field ) INTO TABLE mo_store->mt_params.
+        mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-dfkkcr_bukrs_field iv_value = gc_test-bad_field ).
         ls_cr-ztnum = gc_test-cheque.
         INSERT ls_cr INTO TABLE lt_cr.
         go_env->insert_test_data( lt_cr ).
@@ -354,8 +340,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
   " Rule: a retrieval status field the table does not have fails closed (051) before any SQL
   METHOD retrieval_bad_field_raises.
     DATA lt_docno TYPE zif_cd_ebs_sap_dao=>tt_docno.
-    INSERT VALUE #( name  = zif_cd_ebs_types=>gc_param-rtrv_status_field
-                    value = gc_test-bad_field ) INTO TABLE mo_store->mt_params.
+    mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-rtrv_status_field iv_value = gc_test-bad_field ).
     INSERT gc_test-doc1r INTO TABLE lt_docno.
     TRY.
         mo_cut->get_retrievals( lt_docno ).

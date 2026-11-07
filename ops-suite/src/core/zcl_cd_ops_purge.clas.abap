@@ -12,6 +12,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Purge target FMON_PRISM: PRISM status events by receipt time (RETENTION_DAYS_FMON_PRISM).
+*& 2026-11-07 | PURGE_PACKAGE_SIZE / RETENTION_DAYS_ names and default from ZIF_CD_OPS_TYPES; one shared
+*&            | helper ZCL_CD_OPS_UTIL=>PARAM_INT over GET_PARAMS (private int_param removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -22,7 +24,6 @@ CLASS zcl_cd_ops_purge DEFINITION
   PUBLIC SECTION.
     "! Retention never below this many days (protects against a mistyped parameter)
     CONSTANTS gc_min_days TYPE i VALUE 30.
-    CONSTANTS gc_default_package TYPE i VALUE 1000.
 
     TYPES:
       BEGIN OF ty_result,
@@ -63,12 +64,6 @@ CLASS zcl_cd_ops_purge DEFINITION
       RETURNING
         VALUE(rt_targets) TYPE tt_target_cfg.
 
-    METHODS int_param
-      IMPORTING
-        iv_name         TYPE zif_cd_ops_types=>ty_param_name
-        iv_default      TYPE i
-      RETURNING
-        VALUE(rv_value) TYPE i.
 
 ENDCLASS.
 
@@ -86,15 +81,20 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
 
     DATA(lo_dao)   = zcl_cd_ops_factory=>get_purge_dao( ).
     DATA(lo_store) = zcl_cd_ops_factory=>get_store( ).
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
     DATA(lv_today) = zcl_cd_ops_factory=>get_clock( )->today( ).
-    DATA(lv_package) = nmax( val1 = int_param( iv_name = 'PURGE_PACKAGE_SIZE' iv_default = gc_default_package )
+    DATA(lv_package) = nmax( val1 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                                iv_name    = zif_cd_ops_types=>gc_param-purge_package
+                                                                iv_default = zif_cd_ops_types=>gc_param_default-purge_package )
                              val2 = 1 ).
 
     LOOP AT targets( ) ASSIGNING FIELD-SYMBOL(<ls_target>).
       DATA(ls_result) = VALUE ty_result(
         target = <ls_target>-target
-        days   = nmax( val1 = int_param( iv_name    = CONV #( |RETENTION_DAYS_{ <ls_target>-target }| )
-                                         iv_default = <ls_target>-default_days )
+        days   = nmax( val1 = zcl_cd_ops_util=>param_int(
+                                io_params  = lo_params
+                                iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-retention_days }{ <ls_target>-target }| )
+                                iv_default = <ls_target>-default_days )
                        val2 = gc_min_days ) ).
       ls_result-cutoff = cutoff_date( iv_today = lv_today iv_days = ls_result-days ).
       CONVERT DATE ls_result-cutoff TIME zif_cd_ops_types=>gc_time-day_start
@@ -133,11 +133,5 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
                           ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 ) ).
   ENDMETHOD.
 
-
-  METHOD int_param.
-    DATA(lv_text) = zcl_cd_ops_factory=>get_store( )->get_param( iv_name    = iv_name
-                                                                 iv_default = |{ iv_default }| ).
-    rv_value = zcl_cd_ops_util=>to_decimal( iv_value = lv_text iv_default = iv_default ).
-  ENDMETHOD.
 
 ENDCLASS.

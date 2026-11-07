@@ -14,6 +14,7 @@
 *& 2026-11-06 | FS-CD review: in-flight grace - not found within EBS_INFLIGHT_HOURS is AWAITING_LOT_TRANSFER (W, NOTIFY).
 *& 2026-11-06 | Perf fix 1: DFKKCR read once per package (memo for R07C/R08/R12), rows canonicalised once (sorted index).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - rule base</p>
 CLASS zcl_cd_ebs_rule_base DEFINITION
@@ -326,7 +327,7 @@ CLASS zcl_cd_ebs_rule_base IMPLEMENTATION.
 
 
   METHOD param.
-    rv_value = zcl_cd_ops_factory=>get_store( )->get_param( iv_name = iv_name iv_default = iv_default ).
+    rv_value = zcl_cd_ops_factory=>get_params( )->get_param( iv_name = iv_name iv_default = iv_default ).
   ENDMETHOD.
 
 

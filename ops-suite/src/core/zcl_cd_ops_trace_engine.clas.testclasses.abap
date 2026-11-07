@@ -14,6 +14,8 @@
 *&            | different reasons AMBIGUOUS; NOC evidence by clearing document / payment reference,
 *&            | not found = NOT_APPLICABLE, never changes the verdict. Full chain lists the NOC row.
 *& 2026-11-06 | Modern-syntax sweep: string templates.
+*& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
+*&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -157,19 +159,6 @@ CLASS ltd_dao IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS ltd_store DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
-    DATA mt_params TYPE zif_cd_ops_types=>tt_kv.
-ENDCLASS.
-
-CLASS ltd_store IMPLEMENTATION.
-  METHOD zif_cd_ops_store~get_param.
-    rv_value = VALUE #( mt_params[ name = iv_name ]-value DEFAULT iv_default ).
-  ENDMETHOD.
-ENDCLASS.
-
-
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
@@ -254,7 +243,7 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     CONSTANTS gc_file_id TYPE zif_cd_ops_trace_types=>ty_file_id VALUE '00000000000000000000000000000001'.
 
     DATA mo_dao TYPE REF TO ltd_dao.
-    DATA mo_store TYPE REF TO ltd_store.
+    DATA mo_params TYPE REF TO zcl_cd_ops_params_mem.
     DATA mo_auth TYPE REF TO ltd_auth.
 
     METHODS setup.
@@ -332,23 +321,22 @@ CLASS ltc_trace IMPLEMENTATION.
 
   METHOD setup.
     mo_dao   = NEW #( ).
-    mo_store = NEW #( ).
+    mo_params = NEW #( ).
     mo_auth  = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_dao ).
-    zcl_cd_ops_injector=>inject_store( mo_store ).
+    zcl_cd_ops_injector=>inject_params( mo_params ).
     zcl_cd_ops_injector=>inject_auth( mo_auth ).
   ENDMETHOD.
 
 
   METHOD teardown.
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_store, mo_auth.
+    CLEAR: mo_dao, mo_params, mo_auth.
   ENDMETHOD.
 
 
   METHOD param.
-    DELETE mo_store->mt_params WHERE name = iv_name.
-    INSERT VALUE #( name = iv_name value = iv_value ) INTO TABLE mo_store->mt_params.
+    mo_params->set( iv_name = iv_name iv_value = iv_value ).
   ENDMETHOD.
 
 

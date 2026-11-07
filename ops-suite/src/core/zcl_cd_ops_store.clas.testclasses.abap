@@ -14,6 +14,8 @@
 *& 2026-11-06 | Performance fix 5: carry-forward by (type, key) pairs and binary search - other type untouched,
 *&            | newest earlier row inherited.
 *& 2026-11-06 | ltc_store_runs: finish, last run, runs since, findings read (coverage gap closure).
+*& 2026-11-07 | Parameter semantics pinned (blank = default, condensed, get_range) - the same cases
+*&            | as the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -98,6 +100,9 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS stale_running_run_is_found   FOR TESTING.
     METHODS next_run_sees_changed_param  FOR TESTING.
     METHODS param_stable_within_run      FOR TESTING.
+    METHODS blank_param_gives_default    FOR TESTING.
+    METHODS param_value_is_condensed     FOR TESTING.
+    METHODS param_range_from_list        FOR TESTING.
     METHODS carry_other_type_untouched   FOR TESTING.
     METHODS carry_newest_prior_inherited FOR TESTING.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
@@ -544,6 +549,54 @@ CLASS ltc_store IMPLEMENTATION.
     go_env->clear_doubles( ).
     INSERT VALUE #( param_name = iv_name param_value = iv_value ) INTO TABLE lt_param.
     go_env->insert_test_data( lt_param ).
+  ENDMETHOD.
+
+
+  " The parameter semantics the shared fake ZCL_CD_OPS_PARAMS_MEM mirrors (its own tests
+  " assert the same cases): a blank value is the default
+  METHOD blank_param_gives_default.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_LOOKBACK'.
+    TRY.
+        set_param( iv_name = lc_name iv_value = `   ` ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = lc_name iv_default = `8` )
+                                            exp = `8`
+                                            msg = 'A blank parameter must return the default' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A maintained value is read condensed (leading blanks removed, inner blanks collapsed)
+  METHOD param_value_is_condensed.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS'.
+    TRY.
+        set_param( iv_name = lc_name iv_value = `  EBS,   FMON ` ).
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = lc_name iv_default = `X` )
+                                            exp = `EBS, FMON`
+                                            msg = 'The value must be condensed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " get_range: one I / EQ row per list entry, blank entries dropped
+  METHOD param_range_from_list.
+    CONSTANTS lc_name TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_WATCH_PE_AREAS'.
+    DATA lt_exp TYPE zif_cd_ops_types=>tt_param_range.
+    TRY.
+        set_param( iv_name = lc_name iv_value = `EBS;;FMON` ).
+        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+                        low = zif_cd_ops_types=>gc_pe_area-ebs ) INTO TABLE lt_exp.
+        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+                        low = zif_cd_ops_types=>gc_pe_area-file_monitor ) INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_range( lc_name )
+                                            exp = lt_exp
+                                            msg = 'One I / EQ row per entry' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 
