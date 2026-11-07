@@ -197,12 +197,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_PARAM</ARBGB>
-     <MSGNR>046</MSGNR>
-     <TEXT>No authorization for activity &amp;2 in parameter area &amp;1</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_PARAM</ARBGB>
      <MSGNR>047</MSGNR>
      <TEXT>Changes could not be recorded on request &amp;1</TEXT>
     </T100>

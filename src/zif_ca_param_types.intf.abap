@@ -166,7 +166,6 @@ INTERFACE zif_ca_param_types
       request_released   TYPE symsgno VALUE '043',
       config_not_allowed TYPE symsgno VALUE '044',
       value_not_editable TYPE symsgno VALUE '045',
-      not_authorized     TYPE symsgno VALUE '046',
       record_failed      TYPE symsgno VALUE '047',
     END OF gc_msg.
 

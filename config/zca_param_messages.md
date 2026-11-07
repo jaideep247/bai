@@ -48,5 +48,4 @@ Placeholders: `&1` area, `&2` parameter name, `&3` value / row / field,
 | 043 | request_released | Request &1 is not modifiable (released or locked) |
 | 044 | config_not_allowed | Area &1: areas and definitions are maintained only by transport |
 | 045 | value_not_editable | Values of parameter &1 / &2 cannot be changed in this client |
-| 046 | not_authorized | No authorization for activity &2 in parameter area &1 |
 | 047 | record_failed | Changes could not be recorded on request &1 |
