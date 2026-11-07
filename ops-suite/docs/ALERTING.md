@@ -89,6 +89,7 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 | A blocker is never cut by the cap | Severity-ordered cap, digest severity from the full selection, held-back count shown | A63 |
 | A misconfigured channel class never runs | Factory checks ZIF_CD_OPS_ALERT_CHANNEL by RTTI before CREATE OBJECT | A62 |
 | SLG1 entries are findable | External ID `<area>/<run>/<rule>`; BAL_LOG_REFRESH after save | SLG1 |
+| SLG1 kept to a minimum | No delivered rule uses the APPLOG channel; findings, alert attempts and parameter errors live in the suite's tables and the morning report. A rule that needs SLG1 should be E or higher, digest, small MAX_ITEMS | User decision 2026-11-07 |
 
 A claim left in status C by a dump blocks that intent until the operator completes or deletes the row
 (residual: the alert delivery health check counts F and T, not stale C rows yet). Residual: the index INT is a manual SE11 step (not serialized).
@@ -101,7 +102,7 @@ Priority follows the rule's severity and the distribution list it mails; changin
 |---|---|---|---|---|
 | **P1** | B, or a run stopped on the circuit breaker (ON_ABORT) | Money must not move / control did not run | 15 min, 24×7 (quiet hours never hold B) | E-mail with escalation (`EBS_BLOCK`, `ALL_ABORT`) |
 | **P2** | E | Exception needing action the same business day | 1 h in business hours | E-mail (`EBS_ERROR`, `FMON_PART`, `FMON_SLA`, `HCK_RED`, `RUN_LOCKED`, `NOC_AGING`) |
-| **P3** | W | Review in the morning report | Next business day | Application log (`EBS_LOG`), morning report |
+| **P3** | W | Review in the morning report | Next business day | Morning report and dashboards (no alert, no SLG1 entry) |
 | — | I | Information (suppressed, carried forward) | No incident | Application log only |
 
 Per seed rule: `config/alert_seed.md` (column *Priority*). The acknowledgement window is owned by RTB operations; the suite's own evidence is the alert log (status S with time) and the escalation rules (`ESCALATE_AFTER`).

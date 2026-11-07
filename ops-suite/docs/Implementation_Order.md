@@ -49,7 +49,7 @@ Landscape DV1 → QA1 → PS4. Packages `ZCD_OPS` with sub-packages `ZCD_OPS_COR
 5. No SM30 maintenance views: every delivery-class-C table is maintained in its RAP configuration app (`RAP_Config_Apps.md`, step 1a).
 6. Message class `ZCD_OPS` (262 messages: every user-facing text of the suite) — included in the abapGit pull; manual fallback from `config/zcd_ops_messages.md`. Text pools of the four reports and of `ZCL_CD_HCK_REPORT_HTML` / `ZCL_CD_OPS_ALERT_POLICY` come with the abapGit XML (source `docs/text_elements/`); translate both in SE63.
 7a. Technical settings: customizing tables (delivery class C) are delivered **fully buffered**; application tables (A) unbuffered. Secondary indexes are serialized into the abapGit TABL XML (DD12V/DD17V) from the `// @index` lines in `ddic/*/*.tabl.ddl`; after the pull, verify each one in SE11 (step 1c.1) — create it manually only if the pull reports it missing.
-7. Application log object `ZCD_OPS` with subobjects `ALERT` (APPLOG channel) and `PARAM` (parameters ZCA_PARAM refused at run time, written by `ZCL_CD_OPS_PARAMS_CA`) — SLG0.
+7. Application log (SLG0): only needed if a rule uses the APPLOG channel — object `ZCD_OPS`, subobject `ALERT`. No delivered rule writes SLG1 (SLG1 kept to a minimum, 2026-11-07); parameter errors are not logged per run.
 8. Authorization object `ZCD_OPS` — step 0.7 (reports, purge and the CDS access role `ZI_CD_OpsAnalytics`).
 
 ## Step 1a — RAP configuration apps

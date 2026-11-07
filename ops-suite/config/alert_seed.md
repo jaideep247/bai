@@ -10,6 +10,11 @@
 | EMAIL | ZCL_CD_OPS_CHN_EMAIL | *(blank — rule gives the SO23 list)* | X |
 | APPLOG | ZCL_CD_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
 
+**SLG1 kept to a minimum (user decision 2026-11-07).** No delivered rule writes the application log: findings are
+already in `ZCD_OPS_FINDING` (dashboards, morning report), alert attempts in `ZCD_OPS_ALLOG`, parameter errors in the
+morning check `PARAM_INVALID`. The APPLOG channel stays available for a rule that explicitly needs SLG1 — keep such a
+rule to severity E or higher, DIGEST = X (one log per run, not per finding) and a small MAX_ITEMS.
+
 ## E-mail recipients — SO23 shared distribution lists (user decision 2026-11-07)
 
 E-mail DESTINATION and ESCALATION_DEST hold **names of SAPoffice shared distribution lists (SO23)**, comma
@@ -37,7 +42,6 @@ configuration app refuses a pattern that does not compile (message 418); check w
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | EBS_BLOCK | EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD |
 | EBS_ERROR | EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — |
-| EBS_LOG | EBS | W | | | | | APPLOG | ZCD_OPS/EBS | X | 500 | 0 | — | — |
 | FMON_PART | FMON | E | | .*PARTIAL.* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
 | FMON_SLA | FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
 | NOC_AGING | FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
@@ -51,7 +55,7 @@ Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgemen
 |---|---|---|
 | EBS_BLOCK, ALL_ABORT | P1 | 15 min, 24×7 |
 | EBS_ERROR, FMON_PART, FMON_SLA, HCK_RED, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
-| EBS_LOG | P3 | Next business day (morning report) |
+| (warnings W) | P3 | Next business day — morning report and dashboards, no alert |
 
 ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on
 EBS_BLOCK and HCK_RED. Escalation counts consecutive runs of the area (a run without an alert of the rule ends

@@ -203,7 +203,7 @@ SO23 lists are client-specific and not transported: keep members aligned in QA1 
 2. Who may change what: in QA1 / PS4 only the **value row** of a parameter that is not developer-owned can be changed (areas are production-editable) — no new rows, no definitions; field / class names, the trace sources, debit / credit indicators and the ledger are developer-owned and change by transport from DV1. A parameter without a value row runs on its definition default; to make it adjustable in production, deliver a value row by transport.
 3. Enter the value as the definition expects it: INT digits only (within min / max), LIST comma-separated, BOOL `X` = on and **blank = off** (a value row with blank value switches a flag off; deleting the row brings the default back). The app refuses a value the definition does not allow (same rules as the runtime).
 4. Effect: parameters are read once per run (snapshot at `start_run`) — the change applies from the next run; dialog apps read them at once.
-5. Afterwards: if a value nevertheless cannot be read (e.g. the definition changed by a later transport), the run falls back to the code default, writes the error to SLG1 (object `ZCD_OPS`, subobject `PARAM`, external ID = parameter name) and the next morning report shows `PARAM_INVALID` (§5f). Audit: table logging of `ZCA_PARAM_VAL` (SCU3) shows who changed what.
+5. Afterwards: if a value nevertheless cannot be read (e.g. the definition changed by a later transport), the run falls back to the code default (no SLG1 entry) and the next morning report shows `PARAM_INVALID` (§5f). Audit: table logging of `ZCA_PARAM_VAL` (SCU3) shows who changed what.
 
 ## 5f. PARAM_INVALID — a parameter the framework refuses (morning report, check D_PARAM_INVALID)
 
@@ -215,6 +215,6 @@ SO23 lists are client-specific and not transported: keep members aligned in QA1 
 | 005 single value has several rows | Two value rows for one parameter | Delete the extra row |
 | 006-013 invalid value / default | Not a number, outside min / max, pattern mismatch, class / DDIC name unknown or without the interface | Correct the value (app) or the definition (transport) |
 
-Until fixed, each run uses the code default for that parameter and writes one SLG1 entry per parameter and run (`ZCD_OPS` / `PARAM`); nothing stops. The finding closes automatically when the next morning report reads the parameter without error.
+Until fixed, each run uses the code default for that parameter; nothing stops and nothing is written to SLG1 (one report a day, in the morning report). The finding closes automatically when the next morning report reads the parameter without error.
 
 

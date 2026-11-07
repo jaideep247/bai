@@ -8,15 +8,17 @@
 *& names are unchanged. A value the framework resolves wins over the
 *& caller's default (single source of defaults = the definition); BOOL is
 *& X or blank (a blank row = off). A ZCX_CA_PARAM is never silent: it is
-*& written once per snapshot to the application log (ZCD_OPS / PARAM) and
-*& kept for get_errors( ), and the caller's default keeps the run going.
+*& kept once per snapshot for get_errors( ) and the caller's default keeps
+*& the run going; the morning check PARAM_INVALID reports it once a day.
+*& No application log per run (SLG1 kept to a minimum, user 2026-11-07).
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved from ZCD_OPS_PARAM to ZCA_PARAM).
+*& 2026-11-07 | No SLG1 entry per run and parameter (SLG1 minimum); errors in get_errors( ) and PARAM_INVALID.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CD_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
 "! other types via get_value; get_range: get_range (kind S) or get_list as I / EQ rows;
-"! refresh_params: refresh( ). Errors: application log + get_errors( ) + caller default.
+"! refresh_params: refresh( ). Errors: get_errors( ) + caller default (no application log).
 CLASS zcl_cd_ops_params_ca DEFINITION
   PUBLIC
   FINAL
@@ -25,17 +27,10 @@ CLASS zcl_cd_ops_params_ca DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_params.
 
-    "! Application log of parameter errors (object / subobject, SLG0)
-    CONSTANTS gc_log_destination TYPE zif_cd_ops_types=>ty_alert_dest VALUE 'ZCD_OPS/PARAM'.
-    "! Channel class that writes the application log
-    CONSTANTS gc_log_class TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZCL_CD_OPS_CHN_APPLOG'.
-
     "! @parameter io_param | Reader; default: ZCL_CA_PARAM_FACTORY=>GET( ) at every read
-    "! @parameter io_log   | Log channel; default: the application log channel (factory plug-in)
     METHODS constructor
       IMPORTING
-        io_param TYPE REF TO zif_ca_param OPTIONAL
-        io_log   TYPE REF TO zif_cd_ops_alert_channel OPTIONAL.
+        io_param TYPE REF TO zif_ca_param OPTIONAL.
 
     "! Area of a parameter in ZCA_PARAM, from its name prefix; CD_OPS when no prefix fits
     "! (the framework then reports the name as not defined)
@@ -54,7 +49,6 @@ CLASS zcl_cd_ops_params_ca DEFINITION
     TYPES tt_prefix_area TYPE STANDARD TABLE OF ty_prefix_area WITH EMPTY KEY.
 
     DATA mo_param TYPE REF TO zif_ca_param.
-    DATA mo_log TYPE REF TO zif_cd_ops_alert_channel.
     DATA mt_errors TYPE zif_cd_ops_types=>tt_param_error.
 
     "! The prefix table (constants of ZIF_CD_OPS_TYPES)
@@ -66,7 +60,7 @@ CLASS zcl_cd_ops_params_ca DEFINITION
       RETURNING
         VALUE(ro_param) TYPE REF TO zif_ca_param.
 
-    "! Keep the error (once per area / name and snapshot) and write it to the application log
+    "! Keep the error (once per area / name and snapshot)
     METHODS record
       IMPORTING
         iv_area  TYPE zif_ca_param_types=>ty_area
@@ -81,7 +75,6 @@ CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
 
   METHOD constructor.
     mo_param = io_param.
-    mo_log   = io_log.
   ENDMETHOD.
 
 
@@ -176,8 +169,6 @@ CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
 
 
   METHOD record.
-    DATA ls_message TYPE zif_cd_ops_types=>ty_alert_message.
-
     IF line_exists( mt_errors[ area = iv_area name = iv_name ] ).
       RETURN.
     ENDIF.
@@ -185,25 +176,6 @@ CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
                     name  = iv_name
                     msgno = ix_error->get_message( )-msgno
                     text  = ix_error->get_text( ) ) INTO TABLE mt_errors.
-
-    ls_message-channel     = zif_cd_ops_types=>gc_channel-applog.
-    ls_message-destination = gc_log_destination.
-    ls_message-pe_area     = zif_cd_ops_types=>gc_pe_area-core.
-    ls_message-severity    = zif_cd_ops_types=>gc_severity-error.
-    ls_message-rule_id     = iv_name.
-    ls_message-extnumber   = iv_name.
-    ls_message-subject     = ix_error->get_text( ).
-    ls_message-text        = ix_error->get_text( ).
-    TRY.
-        DATA(lo_log) = COND #( WHEN mo_log IS BOUND THEN mo_log
-                               ELSE CAST zif_cd_ops_alert_channel( zcl_cd_ops_factory=>get_plugin(
-                                      iv_class_name = gc_log_class
-                                      iv_interface  = zif_cd_ops_types=>gc_plugin_intf-alert_channel ) ) ).
-        lo_log->deliver( ls_message ).
-      CATCH zcx_cd_ops_error.
-        " The error stays in get_errors( ); a log that cannot be written never stops the run
-        RETURN.
-    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

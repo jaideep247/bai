@@ -427,8 +427,7 @@ GEN_HEADER = """*&--------------------------------------------------------------
 *& instance is the in-memory parameter store of the unit tests: a
 *& ZCL_CA_PARAM_DAO_MEM with the delivered areas and definitions, set( )
 *& maintains a value row, params( ) returns ZCL_CD_OPS_PARAMS_CA over the
-*& real read logic ZCL_CA_PARAM, and the instance keeps the adapter's log
-*& entries in memory (log channel). Production-safe: no database.
+*& real read logic ZCL_CA_PARAM. Production-safe: no database.
 *& Modification log:
 *& 2026-11-07 | Initial version (generated; parameters moved to ZCA_PARAM).
 *&---------------------------------------------------------------------*
@@ -441,11 +440,6 @@ CLASS zcl_cd_ops_param_seed DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    "! Log channel of the adapter: entries are kept in memory (logged( ))
-    INTERFACES zif_cd_ops_alert_channel.
-
-    TYPES tt_message TYPE STANDARD TABLE OF zif_cd_ops_types=>ty_alert_message WITH EMPTY KEY.
-
     "! Delivered areas (config/param_areas.csv)
     CLASS-METHODS areas
       RETURNING
@@ -477,15 +471,11 @@ CLASS zcl_cd_ops_param_seed DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zcl_ca_param_dao_mem.
 
-    "! The suite's parameter adapter over the real read logic; its log entries stay here
+    "! The suite's parameter adapter over the real read logic
     METHODS params
       RETURNING
         VALUE(ro_params) TYPE REF TO zif_cd_ops_params.
 
-    "! Log entries the adapter wrote (one per parameter error and snapshot)
-    METHODS logged
-      RETURNING
-        VALUE(rt_messages) TYPE tt_message.
 
   PRIVATE SECTION.
 """
@@ -493,7 +483,6 @@ CLASS zcl_cd_ops_param_seed DEFINITION
 GEN_FOOTER = """    DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_param TYPE REF TO zif_ca_param.
     DATA mo_params TYPE REF TO zif_cd_ops_params.
-    DATA mt_logged TYPE tt_message.
 
 ENDCLASS.
 
@@ -551,20 +540,9 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
 
   METHOD params.
     IF mo_params IS NOT BOUND.
-      mo_params = NEW zcl_cd_ops_params_ca( io_param = mo_param
-                                            io_log   = me ).
+      mo_params = NEW zcl_cd_ops_params_ca( io_param = mo_param ).
     ENDIF.
     ro_params = mo_params.
-  ENDMETHOD.
-
-
-  METHOD logged.
-    rt_messages = mt_logged.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_ops_alert_channel~deliver.
-    INSERT is_message INTO TABLE mt_logged.
   ENDMETHOD.
 
 ENDCLASS.

@@ -220,9 +220,9 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 |---|---|---|---|---|
 | PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 91 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
-| PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; SLG1 object ZCD_OPS / PARAM one entry (message ZCA_PARAM 006); next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
+| PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |
-| PRM-05 | Definition missing | Delete the definition `EBS_GL_LEDGER` in a sandbox | EBS run uses ledger 0L and logs ZCA_PARAM 003; `PARAM_INVALID` names `CD_EBS/EBS_GL_LEDGER` | pending |
+| PRM-05 | Definition missing | Delete the definition `EBS_GL_LEDGER` in a sandbox | EBS run uses ledger 0L (no SLG1 entry); `PARAM_INVALID` names `CD_EBS/EBS_GL_LEDGER` | pending |
 | PRM-06 | Production change | PS4 / QA1: change the value row of `HCK_SCORE_GREEN_MIN`; try to create a value row and to change `EBS_PARSER_BAI2` | Value change saved without request, visible in SCU3 (`ZCA_PARAM_VAL`); create refused; developer-owned change refused (ZCA_PARAM 045) | pending |
 | PRM-07 | Snapshot per run (A64) | Change `FMON_LOOKBACK_DAYS` while a 5-minute run is running | The running run keeps its value; the next run reads the new one | pending |
 

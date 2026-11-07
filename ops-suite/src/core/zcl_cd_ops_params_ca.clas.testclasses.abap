@@ -3,33 +3,16 @@
 *& Purpose:
 *& Unit tests of the parameter adapter over ZCA_PARAM with the REAL framework
 *& logic: data built with ZCL_CA_PARAM_BUILDER, its in-memory DAO injected
-*& with ZCL_CA_PARAM_INJECTOR (the adapter reads ZCL_CA_PARAM_FACTORY=>GET),
-*& the application log replaced by a channel double (ZCL_CD_OPS_INJECTOR=>
-*& INJECT_PLUGIN). Area by prefix, definition default over caller default,
+*& with ZCL_CA_PARAM_INJECTOR (the adapter reads ZCL_CA_PARAM_FACTORY=>GET).
+*& Area by prefix, definition default over caller default,
 *& BOOL off, fallback when nothing resolves, condensing, lists as ranges,
-*& errors logged once and listed, snapshot refresh. Does not prove live SAP
+*& errors listed once (no application log), snapshot refresh. Does not prove live SAP
 *& runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM); the read semantics pinned before
 *&            | in ZCL_CD_OPS_STORE's tests (blank = default, condensed, range from a list) moved here.
+*& 2026-11-07 | No log channel double: parameter errors are listed only (SLG1 minimum).
 *&---------------------------------------------------------------------*
-CLASS ltd_log DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ops_alert_channel.
-    DATA mt_messages TYPE STANDARD TABLE OF zif_cd_ops_types=>ty_alert_message WITH EMPTY KEY.
-    DATA mv_fail TYPE abap_bool.
-ENDCLASS.
-
-CLASS ltd_log IMPLEMENTATION.
-  METHOD zif_cd_ops_alert_channel~deliver.
-    IF mv_fail = abap_true.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e022(zcd_ops) WITH 'ZCD_OPS' 'PARAM'.
-    ENDIF.
-    INSERT is_message INTO TABLE mt_messages.
-  ENDMETHOD.
-ENDCLASS.
-
-
 CLASS ltc_params_ca DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -58,7 +41,6 @@ CLASS ltc_params_ca DEFINITION FINAL FOR TESTING
         msgno_type   TYPE symsgno VALUE '006',
       END OF gc_test.
 
-    DATA mo_log TYPE REF TO ltd_log.
     DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_cut TYPE REF TO zif_cd_ops_params.
 
@@ -72,9 +54,8 @@ CLASS ltc_params_ca DEFINITION FINAL FOR TESTING
     METHODS bool_blank_row_is_off FOR TESTING.
     METHODS bool_row_and_default_on FOR TESTING.
     METHODS value_is_condensed FOR TESTING.
-    METHODS unknown_name_logged_once FOR TESTING.
+    METHODS unknown_name_listed_once FOR TESTING.
     METHODS invalid_value_is_error FOR TESTING.
-    METHODS log_failure_keeps_error FOR TESTING.
     METHODS range_from_list FOR TESTING.
     METHODS range_of_select_option FOR TESTING.
     METHODS refresh_new_snapshot FOR TESTING.
@@ -113,9 +94,6 @@ CLASS ltc_params_ca IMPLEMENTATION.
       )->param( iv_name       = gc_test-text )->row( gc_test-text_value
       )->dao( ).
     zcl_ca_param_injector=>inject_dao( mo_dao ).
-    mo_log = NEW #( ).
-    zcl_cd_ops_injector=>inject_plugin( iv_class_name = zcl_cd_ops_params_ca=>gc_log_class
-                                        io_instance   = mo_log ).
     mo_cut = NEW zcl_cd_ops_params_ca( ).
   ENDMETHOD.
 
@@ -123,7 +101,7 @@ CLASS ltc_params_ca IMPLEMENTATION.
   METHOD teardown.
     zcl_ca_param_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_cut, mo_dao, mo_log.
+    CLEAR: mo_cut, mo_dao.
   ENDMETHOD.
 
 
@@ -201,8 +179,8 @@ CLASS ltc_params_ca IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: an unknown name is never silent - logged once, listed, the caller's default keeps the run going
-  METHOD unknown_name_logged_once.
+  " Rule: an unknown name is never silent - listed once, the caller's default keeps the run going
+  METHOD unknown_name_listed_once.
     cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = gc_test-unknown iv_default = gc_test-caller )
                                         exp = gc_test-caller msg = 'Unknown name: the caller default' ).
     mo_cut->get_param( iv_name = gc_test-unknown iv_default = gc_test-caller ).
@@ -210,12 +188,7 @@ CLASS ltc_params_ca IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = lines( lt_errors ) exp = 1 msg = 'One error per name' ).
     cl_abap_unit_assert=>assert_equals( act = lt_errors[ 1 ]-msgno exp = gc_test-msgno_name
                                         msg = 'Name not defined (ZCA_PARAM 003)' ).
-    cl_abap_unit_assert=>assert_equals( act = lines( mo_log->mt_messages ) exp = 1 msg = 'Logged once' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_log->mt_messages[ 1 ]-destination
-                                        exp = zcl_cd_ops_params_ca=>gc_log_destination
-                                        msg = 'Application log ZCD_OPS / PARAM' ).
-    cl_abap_unit_assert=>assert_equals( act = mo_log->mt_messages[ 1 ]-text exp = lt_errors[ 1 ]-text
-                                        msg = 'The log carries the framework message' ).
+    cl_abap_unit_assert=>assert_not_initial( act = lt_errors[ 1 ]-text msg = 'The framework message is kept' ).
   ENDMETHOD.
 
 
@@ -229,14 +202,6 @@ CLASS ltc_params_ca IMPLEMENTATION.
                                         msg = 'Not a valid INT (ZCA_PARAM 006)' ).
   ENDMETHOD.
 
-
-  " Rule: a log that cannot be written never stops the run; the error stays listed
-  METHOD log_failure_keeps_error.
-    mo_log->mv_fail = abap_true.
-    cl_abap_unit_assert=>assert_equals( act = mo_cut->get_param( iv_name = gc_test-unknown iv_default = gc_test-caller )
-                                        exp = gc_test-caller msg = 'The read still returns the default' ).
-    cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_errors( ) ) exp = 1 msg = 'The error is listed' ).
-  ENDMETHOD.
 
 
   " Rule: a LIST is one I / EQ row per element, blank elements dropped

@@ -9,6 +9,7 @@
 *& runtime behavior (the definitions in DV1 are checked by PARAM_INVALID).
 *& Modification log:
 *& 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
+*& 2026-11-07 | errors_are_listed: the adapter lists errors, no log channel (SLG1 minimum).
 *&---------------------------------------------------------------------*
 CLASS ltc_param_seed DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -28,7 +29,7 @@ CLASS ltc_param_seed DEFINITION FINAL FOR TESTING
     METHODS every_default_is_readable FOR TESTING.
     METHODS area_by_prefix_of_name FOR TESTING.
     METHODS set_and_remove_value FOR TESTING.
-    METHODS errors_are_logged FOR TESTING.
+    METHODS errors_are_listed FOR TESTING.
 ENDCLASS.
 
 
@@ -78,11 +79,13 @@ CLASS ltc_param_seed IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the adapter of the store logs into the store (no application log in tests)
-  METHOD errors_are_logged.
-    mo_cut->params( )->get_param( gc_test-unknown ).
-    cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->logged( ) ) exp = 1
-                                        msg = 'An undefined name is logged in memory' ).
+  " Rule: an undefined name is listed once by the adapter (no application log)
+  METHOD errors_are_listed.
+    DATA(lo_params) = mo_cut->params( ).
+    lo_params->get_param( gc_test-unknown ).
+    lo_params->get_param( gc_test-unknown ).
+    cl_abap_unit_assert=>assert_equals( act = lines( lo_params->get_errors( ) ) exp = 1
+                                        msg = 'An undefined name is listed once' ).
   ENDMETHOD.
 
 ENDCLASS.

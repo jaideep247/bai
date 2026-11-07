@@ -6,7 +6,7 @@
 *& of a real repository is called, so no database is read), the parser
 *& comes from parameter EBS_PARSER_<format> (ZCA_PARAM definitions of
 *& ZCL_CD_OPS_PARAM_SEED) with the delivered default; a class that is no
-*& parser is refused by the framework (CLASS + interface, logged, delivered
+*& parser is refused by the framework (CLASS + interface, listed, delivered
 *& parser used) and, should a reader deliver one, by the factory (A62).
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
@@ -16,6 +16,7 @@
 *& 2026-11-07 | Release DAO slot removed (read-only scope).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED); A62 proved with a reader double
 *&            | (ltd_params), the framework refusal of a non-parser class (013) proved separately.
+*& 2026-11-07 | Parameter error listed once (no application log of parameter errors).
 *&---------------------------------------------------------------------*
 CLASS ltd_cfg_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -215,7 +216,7 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
 
 
   " Rule: a maintained value that is not a parser class is refused by the framework (CLASS with
-  " interface ZIF_CD_EBS_PARSER, message 013), logged once, and the delivered parser is used
+  " interface ZIF_CD_EBS_PARSER, message 013), listed once, and the delivered parser is used
   METHOD non_parser_value_not_used.
     TRY.
         configure_scenario( VALUE #( wrong_parser = abap_true ) ).
@@ -227,8 +228,6 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_errors ) exp = 1 msg = 'One parameter error' ).
         cl_abap_unit_assert=>assert_equals( act = lt_errors[ 1 ]-msgno exp = gc_msgno_intf
                                             msg = 'Class does not implement the parser interface' ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_params->logged( ) ) exp = 1
-                                            msg = 'The error is logged once' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
