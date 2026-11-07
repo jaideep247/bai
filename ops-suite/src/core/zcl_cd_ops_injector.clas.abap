@@ -13,6 +13,7 @@
 *& 2026-11-06 | inject_trace_dao added (360 degree payment trace).
 *& 2026-11-06 | inject_pattern_dao added (PCRE patterns: pattern check and migration).
 *& 2026-11-07 | inject_params added (runtime parameters, ZIF_CD_OPS_PARAMS).
+*& 2026-11-07 | inject_exc_dao / inject_pattern_dao removed: no test used them (lean scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -58,17 +59,9 @@ CLASS zcl_cd_ops_injector DEFINITION
       IMPORTING
         io_dao TYPE REF TO zif_cd_ops_purge_dao.
 
-    CLASS-METHODS inject_exc_dao
-      IMPORTING
-        io_dao TYPE REF TO zif_cd_ops_exc_dao.
-
     CLASS-METHODS inject_trace_dao
       IMPORTING
         io_dao TYPE REF TO zif_cd_ops_trace_dao.
-
-    CLASS-METHODS inject_pattern_dao
-      IMPORTING
-        io_dao TYPE REF TO zif_cd_ops_pattern_dao.
 
     CLASS-METHODS inject_plugin
       IMPORTING
@@ -123,18 +116,8 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD inject_exc_dao.
-    zcl_cd_ops_factory=>go_exc_dao_double = io_dao.
-  ENDMETHOD.
-
-
   METHOD inject_trace_dao.
     zcl_cd_ops_factory=>go_trace_dao_double = io_dao.
-  ENDMETHOD.
-
-
-  METHOD inject_pattern_dao.
-    zcl_cd_ops_factory=>go_pattern_dao_double = io_dao.
   ENDMETHOD.
 
 
@@ -156,9 +139,7 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_auth_double,
            zcl_cd_ops_factory=>go_lock_double,
            zcl_cd_ops_factory=>go_purge_dao_double,
-           zcl_cd_ops_factory=>go_exc_dao_double,
            zcl_cd_ops_factory=>go_trace_dao_double,
-           zcl_cd_ops_factory=>go_pattern_dao_double,
            zcl_cd_ops_factory=>gt_plugin_double,
            zcl_cd_ops_factory=>go_store.
   ENDMETHOD.

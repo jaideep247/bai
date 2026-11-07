@@ -15,6 +15,7 @@
 *& 2026-11-06 | Payment trace read repository seam added (360 degree payment trace).
 *& 2026-11-06 | Pattern check / migration repository seam added (PCRE patterns).
 *& 2026-11-07 | get_params: runtime parameters (ZIF_CD_OPS_PARAMS), default the store.
+*& 2026-11-07 | Exception and pattern DAO without test-double slot (injector seams removed, unused).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -110,9 +111,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_auth_double TYPE REF TO zif_cd_ops_auth.
     CLASS-DATA go_lock_double TYPE REF TO zif_cd_ops_lock.
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_cd_ops_purge_dao.
-    CLASS-DATA go_exc_dao_double TYPE REF TO zif_cd_ops_exc_dao.
     CLASS-DATA go_trace_dao_double TYPE REF TO zif_cd_ops_trace_dao.
-    CLASS-DATA go_pattern_dao_double TYPE REF TO zif_cd_ops_pattern_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
     CLASS-METHODS describe_interface
@@ -186,8 +185,7 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
 
 
   METHOD get_exc_dao.
-    ro_dao = COND #( WHEN go_exc_dao_double IS BOUND THEN go_exc_dao_double
-                     ELSE NEW zcl_cd_ops_exc_dao( ) ).
+    ro_dao = NEW zcl_cd_ops_exc_dao( ).
   ENDMETHOD.
 
 
@@ -198,8 +196,7 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
 
 
   METHOD get_pattern_dao.
-    ro_dao = COND #( WHEN go_pattern_dao_double IS BOUND THEN go_pattern_dao_double
-                     ELSE NEW zcl_cd_ops_pattern_dao( ) ).
+    ro_dao = NEW zcl_cd_ops_pattern_dao( ).
   ENDMETHOD.
 
 
