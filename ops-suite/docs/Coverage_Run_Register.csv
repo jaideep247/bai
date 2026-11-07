@@ -1,6 +1,5 @@
 Object,Test path,Covered by,ABAP Unit methods supplied,Required statement coverage percent,Measured statement coverage percent,Status
 ZBP_R_CD_EBSCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
-ZBP_R_CD_EBSRELEASE,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes (object ignored by abapGit, .abapgit.xml)"
 ZBP_R_CD_FMONCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_FMONFILE,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
 ZBP_R_CD_FMONPRQWA,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
@@ -19,8 +18,6 @@ ZCL_CD_EBS_INJECTOR,covered,ZCL_CD_EBS_FACTORY,0,90,,Not run in target SAP; meas
 ZCL_CD_EBS_PARSER_BAI2,own test include,,27,90,,Not run in target SAP
 ZCL_CD_EBS_PARSER_CAMT,own test include,,24,90,,Not run in target SAP
 ZCL_CD_EBS_PE_SCOPE,own test include,,17,90,,Not run in target SAP
-ZCL_CD_EBS_RELEASE_DAO,own test include,,1,90,,Not run in target SAP
-ZCL_CD_EBS_RELEASE_POLICY,own test include,,7,90,,Not run in target SAP
 ZCL_CD_EBS_RULE_BASE,own test include,,106,90,,Not run in target SAP
 ZCL_CD_EBS_R_R01_SIGN,covered,ZCL_CD_EBS_RULE_BASE,0,90,,Not run in target SAP; measured in ZCL_CD_EBS_RULE_BASE (rule class: tested through the rule test classes of the abstract base)
 ZCL_CD_EBS_R_R02_BOUNDS,covered,ZCL_CD_EBS_RULE_BASE,0,90,,Not run in target SAP; measured in ZCL_CD_EBS_RULE_BASE (rule class: tested through the rule test classes of the abstract base)

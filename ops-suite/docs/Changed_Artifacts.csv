@@ -68,7 +68,6 @@ ddic/ebs/zcd_d_ruledef.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_acct.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_flow_pat.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_lookup.tabl.ddl,DDIC,
-ddic/ebs/zcd_ebs_release.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_rsn_map.tabl.ddl,DDIC,
 ddic/ebs/zcd_ebs_rule_def.tabl.ddl,DDIC,
 ddic/fmon/zcd_d_fmcal.tabl.ddl,DDIC,
@@ -470,10 +469,6 @@ src/ebs/zbp_r_cd_ebscfgall.clas.abap,ABAP,Behaviour pool of ZR_CD_EbsCfgAll (EBS
 src/ebs/zbp_r_cd_ebscfgall.clas.locals_imp.abap,ABAP,"Handlers and saver of EBS rules and mapping: ZCD_OPS authorisation, create /"
 src/ebs/zbp_r_cd_ebscfgall.clas.testclasses.abap,ABAP,Permission tests of the EBS rules and mapping behaviour pool through EML
 src/ebs/zbp_r_cd_ebscfgall.clas.xml,abapGit,
-src/ebs/zbp_r_cd_ebsrelease.clas.abap,ABAP,"Behaviour pool of ZR_CD_EbsRelease (blocked-line release, design 6.2)."
-src/ebs/zbp_r_cd_ebsrelease.clas.locals_imp.abap,ABAP,"Handler and saver of the blocked-line release app: ZCD_OPS 43 to request,"
-src/ebs/zbp_r_cd_ebsrelease.clas.testclasses.abap,ABAP,Authorization tests of the blocked-line release behaviour pool through EML
-src/ebs/zbp_r_cd_ebsrelease.clas.xml,abapGit,
 src/ebs/zc_cd_btcmap.ddls.asddls,CDS,
 src/ebs/zc_cd_btcmap.ddls.xml,abapGit,
 src/ebs/zc_cd_btcmap.ddlx.asddlxs,CDS,
@@ -514,12 +509,6 @@ src/ebs/zc_cd_ebsproblem.ddls.asddls,CDS,
 src/ebs/zc_cd_ebsproblem.ddls.xml,abapGit,
 src/ebs/zc_cd_ebsproblem.ddlx.asddlxs,CDS,
 src/ebs/zc_cd_ebsproblem.ddlx.xml,abapGit,
-src/ebs/zc_cd_ebsrelease.bdef.asbdef,RAP,
-src/ebs/zc_cd_ebsrelease.bdef.xml,abapGit,
-src/ebs/zc_cd_ebsrelease.ddls.asddls,CDS,
-src/ebs/zc_cd_ebsrelease.ddls.xml,abapGit,
-src/ebs/zc_cd_ebsrelease.ddlx.asddlxs,CDS,
-src/ebs/zc_cd_ebsrelease.ddlx.xml,abapGit,
 src/ebs/zc_cd_ebsretnoc.ddls.asddls,CDS,
 src/ebs/zc_cd_ebsretnoc.ddls.xml,abapGit,
 src/ebs/zc_cd_ebsretnoc.ddlx.asddlxs,CDS,
@@ -561,7 +550,6 @@ src/ebs/zcd_d_ruledef.tabl.xml,abapGit,
 src/ebs/zcd_ebs_acct.tabl.xml,abapGit,
 src/ebs/zcd_ebs_flow_pat.tabl.xml,abapGit,
 src/ebs/zcd_ebs_lookup.tabl.xml,abapGit,
-src/ebs/zcd_ebs_release.tabl.xml,abapGit,
 src/ebs/zcd_ebs_rsn_map.tabl.xml,abapGit,
 src/ebs/zcd_ebs_rule_def.tabl.xml,abapGit,
 src/ebs/zcd_ebs_validate.prog.abap,ABAP,"Runs EBS validation for imported statements (FEBKO/FEBEP, post-import) or"
@@ -654,12 +642,6 @@ src/ebs/zcl_cd_ebs_r_s12_count.clas.abap,ABAP,S12 (imported statements): the num
 src/ebs/zcl_cd_ebs_r_s12_count.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_r_s13_posted.clas.abap,ABAP,S13 (imported statements only): every entry expected to post is posted.
 src/ebs/zcl_cd_ebs_r_s13_posted.clas.xml,abapGit,
-src/ebs/zcl_cd_ebs_release_dao.clas.abap,ABAP,"Reads approved blocked-line releases (ZCD_EBS_RELEASE, status A) for the"
-src/ebs/zcl_cd_ebs_release_dao.clas.testclasses.abap,ABAP,OSQL tests of the release repository: only approved releases of the
-src/ebs/zcl_cd_ebs_release_dao.clas.xml,abapGit,
-src/ebs/zcl_cd_ebs_release_policy.clas.abap,ABAP,"Blocked-line release rules (design 6.2), pure: an approved release turns"
-src/ebs/zcl_cd_ebs_release_policy.clas.testclasses.abap,ABAP,Pure tests of the blocked-line release rules (design 6.2): an approved
-src/ebs/zcl_cd_ebs_release_policy.clas.xml,abapGit,
 src/ebs/zcl_cd_ebs_rule_base.clas.abap,ABAP,"Shared helpers for EBS rules: repository access through the factory, key"
 src/ebs/zcl_cd_ebs_rule_base.clas.testclasses.abap,ABAP,"Tests for every EBS rule class (R01-R19, S01-S12), grouped by test level:"
 src/ebs/zcl_cd_ebs_rule_base.clas.xml,abapGit,
@@ -710,10 +692,6 @@ src/ebs/zif_cd_ebs_feb_dao.intf.abap,ABAP,Raw reads only; conversion to the form
 src/ebs/zif_cd_ebs_feb_dao.intf.xml,abapGit,
 src/ebs/zif_cd_ebs_parser.intf.abap,ABAP,"Implementations: ZCL_CD_EBS_PARSER_BAI2, ZCL_CD_EBS_PARSER_CAMT."
 src/ebs/zif_cd_ebs_parser.intf.xml,abapGit,
-src/ebs/zif_cd_ebs_release_dao.intf.abap,ABAP,Repository of blocked-line releases for the posting gate: approved
-src/ebs/zif_cd_ebs_release_dao.intf.xml,abapGit,
-src/ebs/zif_cd_ebs_release_types.intf.abap,ABAP,Types and constants of the blocked-line release (design 6.2): release
-src/ebs/zif_cd_ebs_release_types.intf.xml,abapGit,
 src/ebs/zif_cd_ebs_rule.intf.abap,ABAP,"One class per rule, configured in ZCD_EBS_RULE_DEF and assigned to rule"
 src/ebs/zif_cd_ebs_rule.intf.xml,abapGit,
 src/ebs/zif_cd_ebs_sap_dao.intf.abap,ABAP,"All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are"
@@ -742,10 +720,6 @@ src/ebs/zr_cd_ebslookup.ddls.asddls,CDS,
 src/ebs/zr_cd_ebslookup.ddls.xml,abapGit,
 src/ebs/zr_cd_ebsproblem.ddls.asddls,CDS,
 src/ebs/zr_cd_ebsproblem.ddls.xml,abapGit,
-src/ebs/zr_cd_ebsrelease.bdef.asbdef,RAP,
-src/ebs/zr_cd_ebsrelease.bdef.xml,abapGit,
-src/ebs/zr_cd_ebsrelease.ddls.asddls,CDS,
-src/ebs/zr_cd_ebsrelease.ddls.xml,abapGit,
 src/ebs/zr_cd_ebsretnoc.ddls.asddls,CDS,
 src/ebs/zr_cd_ebsretnoc.ddls.xml,abapGit,
 src/ebs/zr_cd_ebsrun.ddls.asddls,CDS,
@@ -764,8 +738,6 @@ src/ebs/zui_cd_ebs_cfg.srvd.srvdsrv,RAP,
 src/ebs/zui_cd_ebs_cfg.srvd.xml,abapGit,
 src/ebs/zui_cd_ebs_dash.srvd.srvdsrv,RAP,
 src/ebs/zui_cd_ebs_dash.srvd.xml,abapGit,
-src/ebs/zui_cd_ebs_rel.srvd.srvdsrv,RAP,
-src/ebs/zui_cd_ebs_rel.srvd.xml,abapGit,
 src/fmon/package.devc.xml,abapGit,
 src/fmon/za_cd_fmonmanual.ddls.asddls,CDS,
 src/fmon/za_cd_fmonmanual.ddls.xml,abapGit,

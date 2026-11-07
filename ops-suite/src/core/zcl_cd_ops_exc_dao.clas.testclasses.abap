@@ -6,6 +6,7 @@
 *& Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-07 | Resolve test uses history action MANUAL (RELEASE removed, read-only scope).
 *&---------------------------------------------------------------------*
 CLASS ltc_exc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -101,9 +102,9 @@ CLASS ltc_exc_dao IMPLEMENTATION.
         ls_key-finding_no = 1.
         INSERT ls_key INTO TABLE lt_keys.
         mo_cut->resolve( it_keys      = lt_keys
-                         iv_action    = zif_cd_ops_exc_types=>gc_action-release
+                         iv_action    = zif_cd_ops_exc_types=>gc_action-manual
                          iv_reason    = gc_test-reason
-                         iv_reference = 'REL-1'
+                         iv_reference = 'PRQ-1'
                          iv_user      = gc_test-user
                          iv_at        = gc_test-at ).
         SELECT SINGLE disposition, resolved_by, resolution
@@ -121,7 +122,7 @@ CLASS ltc_exc_dao IMPLEMENTATION.
           ORDER BY created_at
           INTO TABLE @DATA(lt_hist).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_hist ) exp = 1 msg = 'One history row per action' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_hist[ 1 ]-action exp = zif_cd_ops_exc_types=>gc_action-release
+        cl_abap_unit_assert=>assert_equals( act = lt_hist[ 1 ]-action exp = zif_cd_ops_exc_types=>gc_action-manual
                                             msg = 'The history row must name the action' ).
         cl_abap_unit_assert=>assert_equals( act = lt_hist[ 1 ]-from_disp exp = zif_cd_ops_types=>gc_disposition-open
                                             msg = 'The history row must keep the previous disposition' ).

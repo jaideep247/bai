@@ -7,6 +7,7 @@
 *& replaced by TEST-INJECTION; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-07 | Company-code test uses activity 02 (activity 43 removed, read-only scope).
 *&---------------------------------------------------------------------*
 CLASS ltc_auth DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -91,7 +92,7 @@ CLASS ltc_auth IMPLEMENTATION.
     TRY.
         configure_scenario( VALUE #( area_allowed = abap_true ) ).
         cl_abap_unit_assert=>assert_false(
-          act = mo_cut->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-release
+          act = mo_cut->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-change
                                     iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                     iv_bukrs    = gc_bukrs )
           msg = 'Company-code check decides with company code' ).

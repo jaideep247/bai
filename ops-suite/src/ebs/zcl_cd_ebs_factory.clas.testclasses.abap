@@ -11,6 +11,7 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
+*& 2026-11-07 | Release DAO slot removed (read-only scope).
 *&---------------------------------------------------------------------*
 CLASS ltd_cfg_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -36,15 +37,6 @@ CLASS ltd_sap_dao DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_sap_dao IMPLEMENTATION.
-ENDCLASS.
-
-
-CLASS ltd_release_dao DEFINITION FINAL FOR TESTING.
-  PUBLIC SECTION.
-    INTERFACES zif_cd_ebs_release_dao PARTIALLY IMPLEMENTED.
-ENDCLASS.
-
-CLASS ltd_release_dao IMPLEMENTATION.
 ENDCLASS.
 
 
@@ -77,7 +69,6 @@ CLASS ltc_ebs_factory DEFINITION FINAL FOR TESTING
     DATA mo_cfg TYPE REF TO ltd_cfg_dao.
     DATA mo_feb TYPE REF TO ltd_feb_dao.
     DATA mo_sap TYPE REF TO ltd_sap_dao.
-    DATA mo_release TYPE REF TO ltd_release_dao.
     DATA mo_parser TYPE REF TO ltd_parser.
 
     METHODS setup.
@@ -100,7 +91,6 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
     mo_cfg     = NEW #( ).
     mo_feb     = NEW #( ).
     mo_sap     = NEW #( ).
-    mo_release = NEW #( ).
     mo_parser  = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params ).
   ENDMETHOD.
@@ -117,7 +107,6 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
       zcl_cd_ebs_injector=>inject_cfg_dao( mo_cfg ).
       zcl_cd_ebs_injector=>inject_feb_dao( mo_feb ).
       zcl_cd_ebs_injector=>inject_sap_dao( mo_sap ).
-      zcl_cd_ebs_injector=>inject_release_dao( mo_release ).
       zcl_cd_ebs_injector=>inject_parser( mo_parser ).
     ENDIF.
     IF is_flags-wrong_parser = abap_true.
@@ -136,8 +125,6 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
                                             msg = 'FEB DAO double' ).
         cl_abap_unit_assert=>assert_equals( act = zcl_cd_ebs_factory=>get_sap_dao( ) exp = mo_sap
                                             msg = 'SAP DAO double' ).
-        cl_abap_unit_assert=>assert_equals( act = zcl_cd_ebs_factory=>get_release_dao( ) exp = mo_release
-                                            msg = 'Release DAO double' ).
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_ebs_factory=>get_parser( zif_cd_ebs_types=>gc_format-bai2 )
           exp = mo_parser
@@ -161,9 +148,6 @@ CLASS ltc_ebs_factory IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( zcl_cd_ebs_factory=>get_sap_dao( ) IS INSTANCE OF zcl_cd_ebs_sap_dao )
           msg = 'Delivered SAP DAO' ).
-        cl_abap_unit_assert=>assert_true(
-          act = xsdbool( zcl_cd_ebs_factory=>get_release_dao( ) IS INSTANCE OF zcl_cd_ebs_release_dao )
-          msg = 'Delivered release DAO' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -101,8 +101,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 157 | FI document &1 &2 is not cleared |
 | 158 | Account &1 trailer 49 |
 | 159 | Opening &1 <> prior closing &2 |
-| 160 | Release is not waiting for approval (status &1) |
-| 161 | Line (object key) and check code are required for a release |
 | 162 | Opening &1 + &2 - &3 <> closing &4 |
 | 163 | Declared totals do not balance: difference &1 |
 | 164 | Statement &1 follows &2: &3 missing |
@@ -120,7 +118,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 176 | &1 blocked, &2 warnings |
 | 177 | Unknown record &1 in line &2 ignored (valid: 01 02 03 16 49 88 98 99) |
 | 178 | Group &1 (originator &2): no group trailer 98 before line &3 |
-| 179 | Released by &1 (requested by &2): |
 | 180 | &1 control total |
 | 181 | &1 number of records |
 | 182 | Group &1 trailer 98 |

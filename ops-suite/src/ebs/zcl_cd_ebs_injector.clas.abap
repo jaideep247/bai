@@ -5,8 +5,8 @@
 *& reset( ) in teardown. Not FOR TESTING so the factory can name it GLOBAL FRIEND.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | inject_release_dao (design 6.2).
 *& 2026-11-06 | Performance fix 1: inject_sap_dao( ) and reset( ) clear the rule-base check-register memo.
+*& 2026-11-07 | inject_release_dao removed with the blocked-line release (read-only scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - test injector</p>
 CLASS zcl_cd_ebs_injector DEFINITION
@@ -31,9 +31,6 @@ CLASS zcl_cd_ebs_injector DEFINITION
       IMPORTING
         io_parser TYPE REF TO zif_cd_ebs_parser.
 
-    CLASS-METHODS inject_release_dao
-      IMPORTING
-        io_dao TYPE REF TO zif_cd_ebs_release_dao.
 
     CLASS-METHODS reset.
 
@@ -65,17 +62,11 @@ CLASS zcl_cd_ebs_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD inject_release_dao.
-    zcl_cd_ebs_factory=>go_release_dao_double = io_dao.
-  ENDMETHOD.
-
-
   METHOD reset.
     CLEAR: zcl_cd_ebs_factory=>go_cfg_dao_double,
            zcl_cd_ebs_factory=>go_feb_dao_double,
            zcl_cd_ebs_factory=>go_sap_dao_double,
-           zcl_cd_ebs_factory=>go_parser_double,
-           zcl_cd_ebs_factory=>go_release_dao_double.
+           zcl_cd_ebs_factory=>go_parser_double.
     zcl_cd_ebs_rule_base=>clear_memo( ).
   ENDMETHOD.
 

@@ -5,6 +5,7 @@
 *& 6.1): actions, history rows, decisions of ZCL_CD_OPS_EXC_POLICY.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-07 | History action RELEASE removed with the blocked-line release (read-only scope).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - exception lifecycle types</p>
 INTERFACE zif_cd_ops_exc_types
@@ -21,8 +22,6 @@ INTERFACE zif_cd_ops_exc_types
       resolve     TYPE ty_action VALUE 'RESOLVE',
       waive_req   TYPE ty_action VALUE 'WAIVE_REQ',
       waive_ok    TYPE ty_action VALUE 'WAIVE_OK',
-      "! EBS blocked-line release approved (design 6.2)
-      release     TYPE ty_action VALUE 'RELEASE',
       "! Handled manually outside SAP (FMON manual status, PRISM request, design 6.4/6.5)
       manual      TYPE ty_action VALUE 'MANUAL',
     END OF gc_action.

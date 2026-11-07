@@ -692,7 +692,6 @@ INTERFACE zif_cd_ebs_types
       run_counts_2                TYPE zif_cd_ops_types=>ty_msgno VALUE '176',
       unknown_record              TYPE zif_cd_ops_types=>ty_msgno VALUE '177',
       group_trailer_missing       TYPE zif_cd_ops_types=>ty_msgno VALUE '178',
-      released_by                 TYPE zif_cd_ops_types=>ty_msgno VALUE '179',
       control_total               TYPE zif_cd_ops_types=>ty_msgno VALUE '180',
       number_of_records           TYPE zif_cd_ops_types=>ty_msgno VALUE '181',
       group_trailer_98            TYPE zif_cd_ops_types=>ty_msgno VALUE '182',

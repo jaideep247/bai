@@ -9,8 +9,6 @@
     <item>/.gitignore</item>
     <item>/LICENSE</item>
     <item>/README.md</item>
-    <item>/ops-suite/src/ebs/*ebsrelease.*</item>
-    <item>/ops-suite/src/ebs/zui_cd_ebs_rel.*</item>
    </IGNORE>
   </DATA>
  </asx:values>

@@ -581,18 +581,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>160</MSGNR>
-     <TEXT>Release is not waiting for approval (status &amp;1)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>161</MSGNR>
-     <TEXT>Line (object key) and check code are required for a release</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>162</MSGNR>
      <TEXT>Opening &amp;1 + &amp;2 - &amp;3 &lt;&gt; closing &amp;4</TEXT>
     </T100>
@@ -691,12 +679,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>178</MSGNR>
      <TEXT>Group &amp;1 (originator &amp;2): no group trailer 98 before line &amp;3</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>179</MSGNR>
-     <TEXT>Released by &amp;1 (requested by &amp;2):</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
