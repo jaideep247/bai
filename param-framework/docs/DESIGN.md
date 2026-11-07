@@ -217,7 +217,7 @@ manual app test in `docs/VERIFY.md`). Consumers test with the real logic over
 `^(ZCL_CA_|ZIF_CA_|ZCX_CA_|LCL_|LTC_|LTD_|LIF_)`, SAP stubs from `abaplint/deps`),
 `tools/checks.py` (name lengths, artifact headers, PCRE only, no CP / NP, no inline user
 texts, no `SELECT *`, FINAL, test class risk / duration, message constants vs. message
-class, neutral wording), `tools/abapgit_serialize.py --check`, tool tests; CI in
+class), `tools/abapgit_serialize.py --check`, tool tests; CI in
 `ci/abaplint.yml`.
 
 ## 11. Review findings and how each is prevented

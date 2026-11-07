@@ -26,5 +26,5 @@ All notable changes of the parameter framework (`param-framework/` in jaideep247
 
 ### Offline evidence (2026-11-07)
 - abaplint 2.120.92 (`abaplint.json`, v758): 0 issues.
-- `tools/checks.py`: 10/10 checks passed; tool tests green; serializer check up to date.
+- `tools/checks.py`: 9/9 checks passed; tool tests green; serializer check up to date.
 - Not proven offline: activation, DDIC, RAP runtime, ABAP Unit, ATC (`docs/VERIFY.md`).

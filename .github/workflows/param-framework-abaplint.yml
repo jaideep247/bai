@@ -1,0 +1,32 @@
+name: param-framework
+
+on:
+  push:
+    paths: ['param-framework/**', '.github/workflows/param-framework-abaplint.yml']
+  pull_request:
+    paths: ['param-framework/**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: param-framework
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # pinned: the offline evidence in CHANGELOG.md was produced with this version
+      - name: Install abaplint
+        run: npm install -g @abaplint/cli@2.120.92
+      - name: Show versions
+        run: abaplint --version && python3 --version
+      - name: Syntax and house rules (abaplint.json)
+        run: abaplint abaplint.json
+      - name: abapGit metadata up to date
+        run: python3 tools/abapgit_serialize.py --check
+      - name: House checks
+        run: python3 tools/checks.py
+      - name: Tool tests
+        run: python3 -m unittest discover -s tools/tests -v

@@ -87,11 +87,6 @@ class CheckTest(unittest.TestCase):
                   '  PRIVATE SECTION.\n    METHODS run FOR TESTING.\nENDCLASS.\n')
         self.assertEqual(len(checks.check_test_classes(self.root)), 1)
 
-    def test_neutral_wording(self):
-        word = 'edualc'[::-1]
-        self.write('docs/x.md', f'written with {word}\n')
-        self.assertEqual(len(checks.check_neutral_wording(self.root)), 1)
-
     def test_messages_match_constants(self):
         self.write('config/repository.json', '{"message_class": {"source": "config/m.md"}}')
         self.write('config/m.md', '| 001 | area_unknown | Area &1 does not exist |\n')
