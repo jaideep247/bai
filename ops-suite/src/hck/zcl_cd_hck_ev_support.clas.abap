@@ -5,11 +5,15 @@
 *& reference forms (as stored and without leading zeros), comma lists,
 *& document keys, run-date window, required rule parameters, evidence rows
 *& the one statement-line read by reference (FEBEP-CHECT through the
-*& payment trace repository) and the one G/L line read by XREF2 (runtime
-*& DAO), mapped back to the payment document. No SQL of its own;
-*& read-only.
+*& payment trace repository), the cheque lines (one cheque read, one line
+*& read, linked by cheque number suffix AND house bank account through the
+*& shared ZCL_CD_OPS_CHEQUE_LINK - ambiguous lines attributed to none) and
+*& the one G/L line read by XREF2 (runtime DAO), mapped back to the payment
+*& document. No SQL of its own; read-only.
 *& Modification log:
 *& 2026-11-07 | Initial version (clearing / return evidence as plug-ins, user rule 5).
+*& 2026-11-07 | Design review: lines_by_cheque (every eligible cheque kept, number suffix and house
+*&            | bank account, CHEQUE_LINK_AMBIGUOUS), add_anomaly; ref_key delegates to the core link.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - helpers of the payment evidence plug-ins</p>
 CLASS zcl_cd_hck_ev_support DEFINITION
@@ -52,6 +56,24 @@ CLASS zcl_cd_hck_ev_support DEFINITION
         doc1r TYPE zif_cd_hck_runtime_types=>ty_docno,
       END OF ty_ref_doc.
     TYPES tt_ref_doc TYPE HASHED TABLE OF ty_ref_doc WITH UNIQUE KEY ref.
+
+    "! A payment whose cheque fits a statement line that also fits another cheque of the same
+    "! house bank account (the line is attributed to none)
+    TYPES:
+      BEGIN OF ty_ambiguous,
+        doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
+        detail TYPE string,
+      END OF ty_ambiguous.
+    TYPES tt_ambiguous TYPE SORTED TABLE OF ty_ambiguous WITH NON-UNIQUE KEY doc1r.
+    "! Cheque lines of payments: attributed lines, the cheques read (paying company code in BUKRS)
+    "! and the payments of ambiguous lines
+    TYPES:
+      BEGIN OF ty_cheque_lines,
+        lines     TYPE tt_doc_line,
+        checks    TYPE zif_cd_ops_trace_types=>tt_check,
+        ambiguous TYPE tt_ambiguous,
+        capped    TYPE abap_bool,
+      END OF ty_cheque_lines.
 
     "! Reference without blanks and leading zeros (FEBEP-CHECT, XREF2 and ZTNUM may carry the
     "! number with or without them - VERIFY in QA1)
@@ -111,6 +133,29 @@ CLASS zcl_cd_hck_ev_support DEFINITION
       RETURNING
         VALUE(rs_lines) TYPE ty_doc_lines.
 
+    "! Statement lines of the payments' cheques (DFKKCR-DOC1R = AUGBL; one cheque read, one line
+    "! read from the earliest run): a line belongs to a cheque only when FEBEP-CHECT is the last
+    "! iv_length characters of DFKKCR-ZTNUM AND its statement account (FEBKO) is the cheque's paying
+    "! house bank account (company code of the payment, DFKKCR-HBKID / HKTID); a line fitting several
+    "! cheques of one account is attributed to none and each of their payments is listed as ambiguous
+    CLASS-METHODS lines_by_cheque
+      IMPORTING
+        it_payments     TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+        iv_length       TYPE i
+        iv_max_rows     TYPE i
+      RETURNING
+        VALUE(rs_lines) TYPE ty_cheque_lines.
+
+    "! Sets an anomaly (code, severity, detail appended) on the evidence of a payment
+    CLASS-METHODS add_anomaly
+      IMPORTING
+        iv_doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno
+        iv_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_detail   TYPE string
+      CHANGING
+        ct_evidence TYPE zif_cd_hck_runtime_types=>tt_evidence.
+
     "! G/L lines (BSEG) of the payment documents by the stable key XREF2 = AUGBL (as stored and
     "! normalised) in the company code, fiscal years of the run dates up to the following year
     "! (calendar fiscal year assumed - VERIFY), optionally only the G/L accounts of iv_accounts
@@ -148,8 +193,8 @@ ENDCLASS.
 CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
 
   METHOD ref_key.
-    rv_key = condense( val = CONV string( iv_ref ) del = ` ` ).
-    SHIFT rv_key LEFT DELETING LEADING '0'.
+    " One comparable form for every reference of the suite (shared with the cheque link)
+    rv_key = zcl_cd_ops_cheque_link=>ref_key( iv_ref ).
   ENDMETHOD.
 
 
@@ -219,6 +264,67 @@ CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
     rs_lines = lines_by_ref( it_ref_doc  = lt_ref_doc
                              iv_from     = earliest_run( it_payments )
                              iv_max_rows = iv_max_rows ).
+  ENDMETHOD.
+
+
+  METHOD lines_by_cheque.
+    TYPES:
+      BEGIN OF ty_doc_bukrs,
+        doc1r TYPE zif_cd_hck_runtime_types=>ty_docno,
+        bukrs TYPE zif_cd_ops_trace_types=>ty_bukrs,
+      END OF ty_doc_bukrs.
+    DATA lt_bukrs TYPE HASHED TABLE OF ty_doc_bukrs WITH UNIQUE KEY doc1r.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    DATA(lt_docno) = docnos( it_payments ).
+    IF lt_docno IS INITIAL OR iv_max_rows <= 0.
+      RETURN.
+    ENDIF.
+    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      INSERT VALUE #( doc1r = <ls_payment>-doc1r bukrs = <ls_payment>-bukrs ) INTO TABLE lt_bukrs.
+    ENDLOOP.
+    " The paying company code of a cheque is the company code of its payment (DPAYH-BUKRS)
+    LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_checks_by_doc( lt_docno ) ASSIGNING FIELD-SYMBOL(<ls_read>)
+         WHERE ztnum IS NOT INITIAL.
+      ls_check = <ls_read>.
+      IF ls_check-bukrs IS INITIAL.
+        ls_check-bukrs = VALUE #( lt_bukrs[ doc1r = ls_check-doc1r ]-bukrs OPTIONAL ).
+      ENDIF.
+      INSERT ls_check INTO TABLE rs_lines-checks.
+    ENDLOOP.
+    DATA(lt_refs) = zcl_cd_ops_cheque_link=>query_refs( it_checks = rs_lines-checks iv_length = iv_length ).
+    IF lt_refs IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lt_lines) = zcl_cd_ops_factory=>get_trace_dao( )->get_bank_lines( it_ref      = lt_refs
+                                                                         iv_from     = earliest_run( it_payments )
+                                                                         iv_max_rows = iv_max_rows ).
+    rs_lines-capped = xsdbool( lines( lt_lines ) >= iv_max_rows ).
+    LOOP AT zcl_cd_ops_cheque_link=>link( it_checks = rs_lines-checks
+                                          it_lines  = lt_lines
+                                          iv_length = iv_length ) ASSIGNING FIELD-SYMBOL(<ls_link>).
+      IF <ls_link>-candidates = 1.
+        INSERT VALUE #( doc1r = <ls_link>-doc1r line = <ls_link>-line ) INTO TABLE rs_lines-lines.
+        CONTINUE.
+      ENDIF.
+      " Several eligible cheques: no cashing evidence is inherited, every payment is told
+      LOOP AT <ls_link>-docs ASSIGNING FIELD-SYMBOL(<lv_doc>).
+        INSERT VALUE #( doc1r = <lv_doc> detail = <ls_link>-detail ) INTO TABLE rs_lines-ambiguous.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD add_anomaly.
+    READ TABLE ct_evidence ASSIGNING FIELD-SYMBOL(<ls_evidence>) WITH TABLE KEY doc1r = iv_doc1r.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( doc1r = iv_doc1r ) INTO TABLE ct_evidence ASSIGNING <ls_evidence>.
+    ENDIF.
+    <ls_evidence>-anomaly  = iv_code.
+    <ls_evidence>-severity = iv_severity.
+    IF iv_detail IS NOT INITIAL.
+      <ls_evidence>-detail = COND #( WHEN <ls_evidence>-detail IS INITIAL THEN iv_detail
+                                     ELSE |{ <ls_evidence>-detail }{ gc_detail_sep }{ iv_detail }| ).
+    ENDIF.
   ENDMETHOD.
 
 

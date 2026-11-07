@@ -15,6 +15,8 @@
 *& 2026-11-07 | TY_CHECK-BANCD (cheque encashment date) for the in-flight check A_INFLIGHT.
 *& 2026-11-07 | In-flight evidence (user rules): TY_CHECK-STATE (DFKKCR-STATE, confirmed) replaces
 *&            | BANCD; TY_BANK_LINE-VORGC / VGEXT (BAI / ISO code); TY_RETURN-AMOUNT (DFKKRP, VERIFY-DDIC).
+*& 2026-11-07 | TY_BANK_LINE-BUKRS / HBKID / HKTID (statement account, FEBKO) and message 749: cheque
+*&            | link by number and house bank account (design review, ZCL_CD_OPS_CHEQUE_LINK).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -367,7 +369,7 @@ INTERFACE zif_cd_ops_trace_types
     END OF ty_check.
   TYPES tt_check TYPE STANDARD TABLE OF ty_check WITH EMPTY KEY.
 
-  "! Bank statement line (FEBEP). VERIFY-SE11: KWBTR
+  "! Bank statement line (FEBEP) with the account of its statement (FEBKO). VERIFY-SE11: KWBTR
   TYPES:
     BEGIN OF ty_bank_line,
       kukey TYPE n LENGTH 8,
@@ -379,6 +381,11 @@ INTERFACE zif_cd_ops_trace_types
       vorgc TYPE c LENGTH 3,
       "! External transaction (FEBEP-VGEXT): ISO code of a CAMT import (ZCL_CD_EBS_SRC_FEB=>LINE_CODE)
       vgext TYPE c LENGTH 27,
+      "! Statement account (FEBKO-BUKRS / HBKID / HKTID of the line's KUKEY): a cheque line fits
+      "! only a cheque of this house bank account (ZCL_CD_OPS_CHEQUE_LINK)
+      bukrs TYPE ty_bukrs,
+      hbkid TYPE c LENGTH 5,
+      hktid TYPE c LENGTH 5,
     END OF ty_bank_line.
   TYPES tt_bank_line TYPE STANDARD TABLE OF ty_bank_line WITH EMPTY KEY.
 
@@ -520,6 +527,8 @@ INTERFACE zif_cd_ops_trace_types
       return_reasons    TYPE zif_cd_ops_types=>ty_msgno VALUE '739',
       noc_item          TYPE zif_cd_ops_types=>ty_msgno VALUE '740',
       no_noc            TYPE zif_cd_ops_types=>ty_msgno VALUE '741',
+      "! A statement line fits several cheques of one house bank account (ZCL_CD_OPS_CHEQUE_LINK)
+      cheque_ambiguous  TYPE zif_cd_ops_types=>ty_msgno VALUE '749',
     END OF gc_msg.
 
 ENDINTERFACE.

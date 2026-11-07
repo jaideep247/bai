@@ -299,6 +299,9 @@ src/core/zcl_cd_ops_cfg_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_cfg_transport.clas.abap,ABAP,Records the customizing rows changed in one RAP save on a customizing
 src/core/zcl_cd_ops_cfg_transport.clas.testclasses.abap,ABAP,Unit tests of the transport recording wrapper through test seam CTS_API:
 src/core/zcl_cd_ops_cfg_transport.clas.xml,abapGit,
+src/core/zcl_cd_ops_cheque_link.clas.abap,ABAP,One rule for tying a bank statement line (FEBEP) to a cheque of the
+src/core/zcl_cd_ops_cheque_link.clas.testclasses.abap,ABAP,Unit tests of the statement line to cheque link: the same cheque number
+src/core/zcl_cd_ops_cheque_link.clas.xml,abapGit,
 src/core/zcl_cd_ops_chn_applog.clas.abap,ABAP,Alert channel APPLOG: writes the alert to the application log (SLG1).
 src/core/zcl_cd_ops_chn_applog.clas.testclasses.abap,ABAP,Unit tests of the application log alert channel through its test seams:
 src/core/zcl_cd_ops_chn_applog.clas.xml,abapGit,

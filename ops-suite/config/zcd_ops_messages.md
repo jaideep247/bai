@@ -447,3 +447,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 746 | &1 value(s) read, &2 matched by no pattern, &3 pattern(s) match nothing |
 | 747 | Row cap &1 reached reading the values of &2 - list may be incomplete |
 | 748 | Configuration cannot be changed in this client - run the migration in DV1 |
+| 749 | Line &1 fits &2 cheques of account &3 - not attributed: |

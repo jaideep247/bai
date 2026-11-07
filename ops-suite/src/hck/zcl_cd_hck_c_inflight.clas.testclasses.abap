@@ -18,7 +18,8 @@
 *& 2026-11-07 | Rules and evidence plug-ins, configured classes and calendars (user rules 1-5).
 *& 2026-11-07 | Design review: mandatory rows (X / C / N) not configured or not usable leave the
 *&            | purpose undetermined (no CLEARED on the indicator alone, no later purpose);
-*&            | informational rows skipped; Stripe rows as seeded (C) and the explicit switch (blank).
+*&            | informational rows skipped; Stripe rows as seeded (C) and the explicit switch (blank);
+*&            | test cheques and statement lines carry the house bank account (cheque link).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -210,6 +211,9 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       gc_card     TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'B',
       gc_bukrs    TYPE c LENGTH 4 VALUE 'US01',
       gc_barclays TYPE zif_cd_hck_runtime_types=>ty_hbkid VALUE 'BARC1',
+      "! House bank account of the test cheques and of every test statement line
+      gc_chq_bank    TYPE zif_cd_hck_runtime_types=>ty_hbkid VALUE 'JPMC1',
+      gc_chq_account TYPE c LENGTH 5 VALUE 'CHK01',
       gc_usd      TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
       gc_amount   TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00',
       "! Wednesday; Tuesday 2026-11-10 is a holiday of the US test calendar, Monday of the UK one
@@ -552,6 +556,10 @@ CLASS ltc_inflight IMPLEMENTATION.
     ls_line-vorgc = iv_code.
     ls_line-budat = iv_budat.
     ls_line-kwbtr = iv_kwbtr.
+    " Statement account (FEBKO): the house bank account of the test cheques
+    ls_line-bukrs = gc_bukrs.
+    ls_line-hbkid = gc_chq_bank.
+    ls_line-hktid = gc_chq_account.
     INSERT ls_line INTO TABLE mo_trace->mt_lines.
   ENDMETHOD.
 
@@ -1235,6 +1243,8 @@ CLASS ltc_inflight IMPLEMENTATION.
           ls_check-doc1r = <lv_doc>.
           ls_check-state = lt_states[ sy-tabix ].
           ls_check-ztnum = |XX99{ sy-tabix }000000000077|.
+          ls_check-hbkid = gc_chq_bank.
+          ls_check-hktid = gc_chq_account.
           INSERT ls_check INTO TABLE mo_trace->mt_checks.
         ENDLOOP.
         add_line( iv_chect = '1000000000077' iv_budat = '20260805' ).

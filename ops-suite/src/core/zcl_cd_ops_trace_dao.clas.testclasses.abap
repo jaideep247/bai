@@ -14,6 +14,7 @@
 *& 2026-11-06 | ltc_trace_dao_reads: partners, clearing items, headers, file events, method kind (gap closure).
 *& 2026-11-07 | Cheque by payment document carries the encashment date BANCD (check A_INFLIGHT).
 *& 2026-11-07 | Cheque status DFKKCR-STATE instead of BANCD; bank line BAI code VORGC.
+*& 2026-11-07 | Bank lines carry the statement account (FEBKO double, join by KUKEY).
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -65,7 +66,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKOP' ) ( 'FEBEP' ) ( 'DFKKCR' ) ( 'ZCD_FMON_FILE' )
+      i_dependency_list = VALUE #( ( 'DFKKOP' ) ( 'FEBEP' ) ( 'FEBKO' ) ( 'DFKKCR' ) ( 'ZCD_FMON_FILE' )
                                    ( 'DFKKSUMC' ) ( 'BKPF' ) ( 'BSEG' ) ( 'DFKKNRP' ) ) ).
   ENDMETHOD.
 
@@ -108,6 +109,19 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     DATA ls_febep TYPE febep.
     DATA lt_cr TYPE STANDARD TABLE OF dfkkcr WITH EMPTY KEY.
     DATA ls_cr TYPE dfkkcr.
+    DATA lt_febko TYPE STANDARD TABLE OF febko WITH EMPTY KEY.
+    DATA ls_febko TYPE febko.
+    " Statement headers: the house bank account of each statement
+    ls_febko-kukey = '00000101'.
+    ls_febko-bukrs = gc_test-bukrs.
+    ls_febko-hbkid = 'JPMC1'.
+    ls_febko-hktid = 'CHK01'.
+    INSERT ls_febko INTO TABLE lt_febko.
+    ls_febko-kukey = '00000090'.
+    INSERT ls_febko INTO TABLE lt_febko.
+    ls_febko-kukey = '00000102'.
+    INSERT ls_febko INTO TABLE lt_febko.
+    go_env->insert_test_data( lt_febko ).
     " In the window, by reference
     ls_febep-kukey = '00000101'.
     ls_febep-esnum = '00001'.
@@ -216,6 +230,9 @@ CLASS ltc_trace_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'One line in the window' ).
         cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-kukey exp = '00000101' msg = 'The line of this reference' ).
         cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-vorgc exp = '466' msg = 'BAI type code of the line' ).
+        cl_abap_unit_assert=>assert_equals( act = |{ lt_lines[ 1 ]-bukrs }/{ lt_lines[ 1 ]-hbkid }/{ lt_lines[ 1 ]-hktid }|
+                                            exp = |{ gc_test-bukrs }/JPMC1/CHK01|
+                                            msg = 'Statement account of the line (FEBKO)' ).
         DATA(lt_all) = mo_cut->get_bank_lines( it_ref      = VALUE #( ( CONV #( gc_test-payment ) ) )
                                                iv_from     = VALUE #( )
                                                iv_max_rows = 50 ).

@@ -16,7 +16,8 @@
 *& 2026-11-07 | ltc_ev_btc_seq_chq: cheque lifecycle 581 / 255 / corrections (link by cheque number,
 *&            | register state, clarification, manual clearing, register amount).
 *& 2026-11-07 | Design review: unknown monetary code = INDETERMINATE + BTC_ROLE_MISSING; exclusion
-*&            | list HCK_BTC_INFO_BAI2 and zero-amount lines ignored; parameters injected.
+*&            | list HCK_BTC_INFO_BAI2 and zero-amount lines ignored; parameters injected; cheque lines
+*&            | with the house bank account, a line of two cheques of one account = CHEQUE_LINK_AMBIGUOUS.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -558,6 +559,12 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       "! 20 characters; the statement carries the last 13
       gc_ztnum  TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0011234567890123',
       gc_chect  TYPE zif_cd_ops_trace_types=>ty_ref VALUE '1234567890123',
+      "! Second cheque of the same account with the same last 13 characters
+      gc_twin_doc   TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300009',
+      gc_twin_ztnum TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0091234567890123',
+      gc_bukrs  TYPE zif_cd_ops_trace_types=>ty_bukrs VALUE 'US01',
+      gc_hbkid  TYPE c LENGTH 5 VALUE 'JPMC1',
+      gc_hktid  TYPE c LENGTH 5 VALUE 'CHK01',
       gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '250.00',
       gc_d      TYPE zif_cd_hck_runtime_types=>ty_flow VALUE 'D',
       gc_chq    TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
@@ -592,6 +599,8 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
         iv_payment_amount  TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount
         iv_target          TYPE clike
         iv_chect           TYPE zif_cd_ops_trace_types=>ty_ref DEFAULT gc_chect
+        "! A second cheque of the same account with the same last 13 characters
+        iv_twin            TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(rs_evidence) TYPE zif_cd_hck_runtime_types=>ty_evidence
       RAISING
@@ -606,6 +615,7 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
     METHODS cheque_amount_mismatch    FOR TESTING.
     METHODS link_by_suffix_13         FOR TESTING.
     METHODS unexpected_cheque_order   FOR TESTING.
+    METHODS ambiguous_line_not_evaluated FOR TESTING.
 ENDCLASS.
 
 
@@ -680,7 +690,14 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
     ls_check-doc1r  = gc_doc.
     ls_check-ztnum  = gc_ztnum.
     ls_check-state  = iv_state.
+    ls_check-hbkid  = gc_hbkid.
+    ls_check-hktid  = gc_hktid.
     INSERT ls_check INTO TABLE mo_trace->mt_checks.
+    IF iv_twin = abap_true.
+      ls_check-doc1r = gc_twin_doc.
+      ls_check-ztnum = gc_twin_ztnum.
+      INSERT ls_check INTO TABLE mo_trace->mt_checks.
+    ENDIF.
     SPLIT iv_codes AT ',' INTO TABLE DATA(lt_codes).
     LOOP AT lt_codes ASSIGNING FIELD-SYMBOL(<lv_code>).
       CLEAR ls_line.
@@ -690,10 +707,19 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
       ls_line-vorgc = <lv_code>.
       ls_line-budat = CONV d( '20261001' ) + sy-tabix.
       ls_line-kwbtr = gc_amount.
+      ls_line-bukrs = gc_bukrs.
+      ls_line-hbkid = gc_hbkid.
+      ls_line-hktid = gc_hktid.
       INSERT ls_line INTO TABLE mo_trace->mt_lines.
     ENDLOOP.
-    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount )
+    INSERT VALUE #( doc1r = gc_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount
+                    bukrs = gc_bukrs )
       INTO TABLE lt_payments.
+    IF iv_twin = abap_true.
+      INSERT VALUE #( doc1r = gc_twin_doc laufd = '20260920' flow = gc_d class = gc_chq amount = - iv_payment_amount
+                      bukrs = gc_bukrs )
+        INTO TABLE lt_payments.
+    ENDIF.
     DATA(ls_result) = NEW zcl_cd_hck_ev_btc_seq( )->zif_cd_hck_evidence~collect(
                         it_payments = lt_payments
                         is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ' param1 = iv_target
@@ -818,6 +844,21 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
         cl_abap_unit_assert=>assert_initial(
           act = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` iv_chect = '300001' )
           msg = 'The payment document is no cheque link' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (design review 3): a 581 that fits two cheques of the same account is attributed to neither;
+  " the lifecycle is not evaluated (never CLEARED) and the payment carries CHEQUE_LINK_AMBIGUOUS
+  METHOD ambiguous_line_not_evaluated.
+    TRY.
+        DATA(ls_evidence) = evaluate( iv_codes = `581` iv_state = 'B' iv_target = `CLEARED` iv_twin = abap_true ).
+        cl_abap_unit_assert=>assert_false( act = ls_evidence-found msg = 'Not cleared' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_evidence-anomaly
+                                            exp = zif_cd_hck_runtime_types=>gc_code-cheque_ambiguous
+                                            msg = 'Ambiguous cheque line' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

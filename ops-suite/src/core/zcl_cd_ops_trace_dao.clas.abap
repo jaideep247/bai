@@ -20,6 +20,8 @@
 *&            | shared EBS read DFKKNRP by INFOF, capped like the cheque read.
 *& 2026-11-07 | get_checks_by_doc also reads the encashment date BANCD (in-flight check A_INFLIGHT).
 *& 2026-11-07 | get_checks_by_doc reads DFKKCR-STATE (confirmed) instead of BANCD; bank lines with VORGC / VGEXT.
+*& 2026-11-07 | get_bank_lines with the statement account (FEBKO BUKRS / HBKID / HKTID, join by KUKEY) for the
+*&            | cheque link by number and house bank account (design review).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -175,12 +177,14 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
     CHECK it_ref IS NOT INITIAL.
     " Confirmed: FEBEP-CHECT = DFKKOP-AUGBL (E G H I J K L) / DFKKCR-ZTNUM (C); BUDAT always
     " filled. VERIFY-SE11: KWBTR, VORGC / VGEXT (BAI / CAMT code, as the EBS line read); secondary
-    " index on CHECT expected (performance check in QA1)
-    SELECT kukey, esnum, chect, budat, kwbtr, vorgc, vgext
-      FROM febep
+    " index on CHECT expected (performance check in QA1). The statement account (FEBKO BUKRS /
+    " HBKID / HKTID, as the EBS statement read) ties a cheque line to its house bank account
+    SELECT p~kukey, p~esnum, p~chect, p~budat, p~kwbtr, p~vorgc, p~vgext, k~bukrs, k~hbkid, k~hktid
+      FROM febep AS p
+      INNER JOIN febko AS k ON k~kukey = p~kukey
       FOR ALL ENTRIES IN @it_ref
-      WHERE chect = @it_ref-table_line
-        AND budat >= @iv_from
+      WHERE p~chect = @it_ref-table_line
+        AND p~budat >= @iv_from
       INTO CORRESPONDING FIELDS OF TABLE @rt_lines.
     SORT rt_lines BY kukey esnum.
     DATA(lv_first_over) = iv_max_rows + 1.

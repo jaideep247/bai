@@ -17,6 +17,8 @@
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (ZCL_CD_OPS_INJECTOR=>INJECT_PARAMS)
 *&            | instead of a hand-written store double: the semantics of ZCL_CD_OPS_STORE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | Bank lines carry their statement account; a cheque number on another house bank
+*&            | account is not the cheque's encashment (shared cheque link, design review).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -206,6 +208,8 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
         "! NOC lot item whose INFOF holds the clearing document / the FIN (payment reference)
         noc_by_augbl      TYPE abap_bool,
         noc_by_fin        TYPE abap_bool,
+        "! The cheque number is on a statement of another house bank account
+        cheque_other_acct TYPE abap_bool,
       END OF ty_flags.
 
     CONSTANTS:
@@ -290,6 +294,7 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     METHODS ach_full_chain_is_complete    FOR TESTING.
     METHODS every_verified_row_has_source FOR TESTING.
     METHODS cheque_encashed_by_ztnum      FOR TESTING.
+    METHODS cheque_other_account_missing  FOR TESTING.
     METHODS reissue_traces_two_attempts   FOR TESTING.
     METHODS reversal_without_history      FOR TESTING.
     METHODS reversal_history_unavailable  FOR TESTING.
@@ -513,6 +518,10 @@ CLASS ltc_trace IMPLEMENTATION.
       ls_bank-esnum = '00001'.
       ls_bank-chect = COND #( WHEN is_flags-cheque = abap_true THEN gc-ztnum ELSE CONV #( gc-current ) ).
       ls_bank-budat = '20261103'.
+      " Statement account (FEBKO): the cheque's house bank account unless the scenario says otherwise
+      ls_bank-bukrs = gc-bukrs.
+      ls_bank-hbkid = COND #( WHEN is_flags-cheque_other_acct = abap_true THEN 'BOA01' ELSE 'JPMC1' ).
+      ls_bank-hktid = 'CHK01'.
       INSERT ls_bank INTO TABLE mo_dao->mt_bank.
       IF is_flags-two_bank_lines = abap_true.
         ls_bank-kukey = '00000102'.
@@ -673,6 +682,29 @@ CLASS ltc_trace IMPLEMENTATION.
                                             msg = 'Settlement evidence is the FEBEP line' ).
         cl_abap_unit_assert=>assert_equals( act = ls_bank-record_key exp = |00000101/00001/{ gc-current }|
                                             msg = 'FEBEP key KUKEY / ESNUM / CHECT' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (design review 3): the same cheque number on a statement of another house bank account is
+  " not this cheque's encashment - the settlement stays MISSING, never inherited
+  METHOD cheque_other_account_missing.
+    TRY.
+        configure_scenario( VALUE #( cheque = abap_true cheque_other_acct = abap_true ) ).
+        DATA(ls_result) = run_trace( ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-rows[ stage  = zif_cd_ops_trace_types=>gc_stage-settlement
+                                                      reason = zif_cd_ops_trace_types=>gc_reason-encashed ] ) )
+          msg = 'No encashment from another account' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-rows[ stage        = zif_cd_ops_trace_types=>gc_stage-settlement
+                                                      source_table = zif_cd_ops_trace_types=>gc_table-febep
+                                                      status       = zif_cd_ops_trace_types=>gc_status-missing ] ) )
+          msg = 'Settlement missing' ).
+        cl_abap_unit_assert=>assert_differs( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
+                                             msg = 'Never COMPLETE' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

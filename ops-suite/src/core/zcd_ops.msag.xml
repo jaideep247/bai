@@ -2654,6 +2654,12 @@
      <MSGNR>748</MSGNR>
      <TEXT>Configuration cannot be changed in this client - run the migration in DV1</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>749</MSGNR>
+     <TEXT>Line &amp;1 fits &amp;2 cheques of account &amp;3 - not attributed:</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

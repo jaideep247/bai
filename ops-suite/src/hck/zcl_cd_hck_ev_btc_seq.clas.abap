@@ -19,7 +19,10 @@
 *& unmapped line is a relevant event: lifecycle INDETERMINATE (never
 *& found) and BTC_ROLE_MISSING (E) naming code, date, amount, flow / class.
 *& Cheques (PARAM2 = ZTNUM): the lines are linked by FEBEP-CHECT = the
-*& last PARAM3 (13) characters of DFKKCR-ZTNUM, an outcome row may require
+*& last PARAM3 (13) characters of DFKKCR-ZTNUM on a statement of the
+*& cheque's paying house bank account (shared ZCL_CD_HCK_EV_SUPPORT=>
+*& LINES_BY_CHEQUE; a line of several cheques of one account is attributed
+*& to none, CHEQUE_LINK_AMBIGUOUS, lifecycle not evaluated), an outcome row may require
 *& a register state (DFKKCR-STATE, cheque by DFKKCR-DOC1R = AUGBL) and may
 *& raise its own finding (e.g. CHEQUE_CLARIFICATION, MANUAL_CLEARING_
 *& REQUIRED), and a line of a role compared with R must carry the payment
@@ -31,6 +34,8 @@
 *&            | finding, register amount (user facts on disbursement cheques).
 *& 2026-11-07 | Design review: unmapped monetary codes no longer disappear - INDETERMINATE +
 *&            | BTC_ROLE_MISSING; approved informational exclusions per scheme (HCK_BTC_INFO_<scheme>).
+*& 2026-11-07 | Design review: cheque lines by suffix AND house bank account (shared reader, every
+*&            | eligible cheque kept); ambiguous line = CHEQUE_LINK_AMBIGUOUS; cheque_links removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION
@@ -115,15 +120,6 @@ CLASS zcl_cd_hck_ev_btc_seq DEFINITION
       RETURNING
         VALUE(rs_outcome) TYPE zif_cd_hck_runtime_types=>ty_seq_outcome.
 
-    "! Cheques of the payments (one read), mapped by the cheque-number suffix
-    CLASS-METHODS cheque_links
-      IMPORTING
-        it_payments    TYPE zif_cd_hck_runtime_types=>tt_issued_payment
-        iv_length      TYPE i
-      EXPORTING
-        et_ref_doc     TYPE zcl_cd_hck_ev_support=>tt_ref_doc
-        et_register    TYPE tt_register.
-
     "! The last line of a role compared with the register differs from the cheque amount
     CLASS-METHODS register_mismatch
       IMPORTING
@@ -150,9 +146,9 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
   METHOD zif_cd_hck_evidence~collect.
     DATA lt_lots TYPE tt_lot.
     DATA lt_steps TYPE tt_step.
-    DATA lt_ref_doc TYPE zcl_cd_hck_ev_support=>tt_ref_doc.
     DATA lt_register TYPE tt_register.
     DATA ls_lines TYPE zcl_cd_hck_ev_support=>ty_doc_lines.
+    DATA ls_cheque TYPE zcl_cd_hck_ev_support=>ty_cheque_lines.
     DATA lt_unmapped TYPE string_table.
     CLEAR mt_info.
     mt_targets = zcl_cd_hck_ev_support=>tokens(
@@ -175,18 +171,25 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     ENDLOOP.
     mv_today = zcl_cd_ops_factory=>get_clock( )->today( ).
 
-    " Statement link: payment document (default) or the cheque number suffix (PARAM2 = ZTNUM)
+    " Statement link: payment document (default) or the cheque number suffix on the cheque's house
+    " bank account (PARAM2 = ZTNUM)
     IF to_upper( condense( CONV string( is_rule-param2 ) ) ) = zif_cd_hck_runtime_types=>gc_link_cheque.
-      cheque_links( EXPORTING it_payments = it_payments
-                              iv_length   = nmax( val1 = 1
-                                                  val2 = zcl_cd_hck_param=>int(
-                                                           iv_value   = is_rule-param3
-                                                           iv_default = zif_cd_hck_runtime_types=>gc_check_default-ztnum_suffix ) )
-                    IMPORTING et_ref_doc  = lt_ref_doc
-                              et_register = lt_register ).
-      ls_lines = zcl_cd_hck_ev_support=>lines_by_ref( it_ref_doc  = lt_ref_doc
-                                                      iv_from     = zcl_cd_hck_ev_support=>earliest_run( it_payments )
-                                                      iv_max_rows = iv_max_rows ).
+      ls_cheque = zcl_cd_hck_ev_support=>lines_by_cheque(
+                    it_payments = it_payments
+                    iv_length   = nmax( val1 = 1
+                                        val2 = zcl_cd_hck_param=>int(
+                                                 iv_value   = is_rule-param3
+                                                 iv_default = zif_cd_hck_runtime_types=>gc_check_default-ztnum_suffix ) )
+                    iv_max_rows = iv_max_rows ).
+      ls_lines-lines  = ls_cheque-lines.
+      ls_lines-capped = ls_cheque-capped.
+      " Register state as maintained (blank = open); the first cheque of a document is its register
+      LOOP AT ls_cheque-checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+        INSERT VALUE #( doc1r = <ls_check>-doc1r
+                        state = COND #( WHEN <ls_check>-state IS INITIAL THEN zif_cd_hck_runtime_types=>gc_state_blank
+                                        ELSE to_upper( CONV string( <ls_check>-state ) ) )
+                        ztnum = condense( CONV string( <ls_check>-ztnum ) ) ) INTO TABLE lt_register.
+      ENDLOOP.
     ELSE.
       ls_lines = zcl_cd_hck_ev_support=>lines_by_doc( it_payments = it_payments
                                                       iv_max_rows = iv_max_rows ).
@@ -205,6 +208,15 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
 
     LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
       CLEAR: lt_steps, lt_unmapped.
+      " A statement line of several cheques of one account: the lifecycle cannot be told
+      READ TABLE ls_cheque-ambiguous ASSIGNING FIELD-SYMBOL(<ls_ambiguous>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
+      IF sy-subrc = 0.
+        INSERT VALUE #( doc1r    = <ls_payment>-doc1r
+                        anomaly  = zif_cd_hck_runtime_types=>gc_code-cheque_ambiguous
+                        severity = zif_cd_ops_types=>gc_severity-error
+                        detail   = <ls_ambiguous>-detail ) INTO TABLE rs_result-evidence.
+        CONTINUE.
+      ENDIF.
       LOOP AT ls_lines-lines USING KEY by_doc ASSIGNING FIELD-SYMBOL(<ls_line>) WHERE doc1r = <ls_payment>-doc1r.
         DATA(ls_code) = zcl_cd_ebs_src_feb=>line_code( iv_vorgc = <ls_line>-line-vorgc
                                                        iv_vgext = <ls_line>-line-vgext ).
@@ -401,27 +413,6 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     ENDWHILE.
   ENDMETHOD.
 
-
-
-  METHOD cheque_links.
-    CLEAR: et_ref_doc, et_register.
-    DATA(lt_docno) = zcl_cd_hck_ev_support=>docnos( it_payments ).
-    IF lt_docno IS INITIAL.
-      RETURN.
-    ENDIF.
-    LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_checks_by_doc( lt_docno ) ASSIGNING FIELD-SYMBOL(<ls_check>)
-         WHERE ztnum IS NOT INITIAL.
-      DATA(lv_suffix) = zcl_cd_hck_ev_stmt_cheque=>suffix( iv_ztnum = <ls_check>-ztnum iv_length = iv_length ).
-      INSERT VALUE #( ref   = zcl_cd_hck_ev_support=>ref_key( lv_suffix )
-                      raw   = lv_suffix
-                      doc1r = <ls_check>-doc1r ) INTO TABLE et_ref_doc.
-      " Register state as maintained (blank = open); the first cheque of a document is its register
-      INSERT VALUE #( doc1r = <ls_check>-doc1r
-                      state = COND #( WHEN <ls_check>-state IS INITIAL THEN zif_cd_hck_runtime_types=>gc_state_blank
-                                      ELSE to_upper( CONV string( <ls_check>-state ) ) )
-                      ztnum = condense( CONV string( <ls_check>-ztnum ) ) ) INTO TABLE et_register.
-    ENDLOOP.
-  ENDMETHOD.
 
 
   METHOD register_mismatch.
