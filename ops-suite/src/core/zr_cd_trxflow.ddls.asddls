@@ -5,8 +5,8 @@
 //          evidence of each later step: payment run (DPAYH by DOC1R, live status), cheque (DFKKCR),
 //          bank settlement / cheque encashment (FEBEP-CHECT), return (DFKKRP-SELW1, reason RLGRD),
 //          NOC (DFKKNRP-INFOF, reason FLGRD). Flow bucket = where the item is now (terminal outcome
-//          first): RETURNED (returns lot item), REVERSED (clearing reason 05, TRACE_REVERSAL_AUGRD
-//          default), SETTLED (bank line on the clearing document or the cheque), PAID (payment run
+//          first): RETURNED (returns lot item), REVERSED (clearing reason 05, the only reversal
+//          reason = ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD), SETTLED (bank line on the clearing document or the cheque), PAID (payment run
 //          or cheque, no bank line yet), CLEARED (clearing document without payment evidence in the
 //          window), POSTED (open). "Reached" measures count every step an item got to.
 //          Requested / errored requests, ACK and cheque status need unconfirmed fields of custom

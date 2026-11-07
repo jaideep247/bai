@@ -40,7 +40,7 @@ Fiori elements **analytical list page** (OData V4, main entity `Transaction`):
 | Bucket (terminal first) | Evidence | Join (confirmed unless marked) |
 |---|---|---|
 | RETURNED | Returns lot item | DFKKRP-SELW1 = DFKKOP-AUGBL |
-| REVERSED | Clearing reason 05 (`TRACE_REVERSAL_AUGRD` default; literal in CDS) | DFKKOP-AUGRD (VERIFY-SE11) |
+| REVERSED | Clearing reason 05 — the only reversal reason (user 2026-11-07); literal in CDS, equal to `ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD` (parity check `cds_abap_parity`) | DFKKOP-AUGRD (VERIFY-SE11) |
 | SETTLED | Bank line on the payment document (methods E G H I J K L) or on the cheque number (method C, encashment) | FEBEP-CHECT = AUGBL; DFKKCR-DOC1R = AUGBL and FEBEP-CHECT = DFKKCR-ZTNUM |
 | PAID | Payment run row (not a proposal run) or cheque | DPAYH-DOC1R = AUGBL (XVORL VERIFY-SE11); DFKKCR-DOC1R = AUGBL |
 | CLEARED | Clearing document without payment evidence in the window (e.g. cleared by offset, or the run is older than 45 days) | DFKKOP-AUGBL |

@@ -2,7 +2,7 @@
   "_artifact": {
     "name": "portable_checks.json",
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
-    "generated": "2026-11-06"
+    "generated": "2026-11-07"
   },
   "passed": 22,
   "total": 22,
@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (2140 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (2139 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {

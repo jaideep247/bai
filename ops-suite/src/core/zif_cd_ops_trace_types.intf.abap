@@ -10,12 +10,14 @@
 *& 2026-11-06 | Cheque company code, file name (digest check), partner mismatch reason.
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reasons: TY_RETURN-RLGRD, NOC stage and lot item (DFKKNRP), messages 739-741.
+*& 2026-11-07 | Parameter TRACE_REVERSAL_AUGRD removed: GC_REVERSAL_AUGRD '05' (only reversal reason).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
   PUBLIC.
 
   TYPES ty_stage        TYPE c LENGTH 15.
+  TYPES ty_augrd        TYPE c LENGTH 2.
   TYPES ty_status       TYPE c LENGTH 15.
   TYPES ty_reason       TYPE c LENGTH 30.
   TYPES ty_verdict      TYPE c LENGTH 15.
@@ -162,7 +164,6 @@ INTERFACE zif_cd_ops_trace_types
       src_chq_hist      TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_SRC_CHQ_HIST',
       bp_source_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_BP_SOURCE_FIELD',
       success_value     TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_PRQ_SUCCESS',
-      reversal_reasons  TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_REVERSAL_AUGRD',
       gl_awtyp          TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_GL_AWTYP',
       cheque_methods    TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_CHECK_METHODS',
       no_ack_methods    TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_NO_ACK_METHODS',
@@ -171,19 +172,22 @@ INTERFACE zif_cd_ops_trace_types
       bank_lookback     TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_BANK_LOOKBACK_DAYS',
     END OF gc_param.
 
-  "! Defaults: SUCCESS / ZZ_STATUS confirmed (USAA_Known_Tables); AUGRD 05, AWTYP FKKSU,
+  "! Defaults: SUCCESS / ZZ_STATUS confirmed (USAA_Known_Tables); AWTYP FKKSU,
   "! cheque method C and cheque terminal statuses 3 / 4 / 9 (ZECT_STATUS) from the reference
   CONSTANTS:
     BEGIN OF gc_default,
       max_rows          TYPE i VALUE 50,
       success_value     TYPE string VALUE `SUCCESS`,
-      reversal_reasons  TYPE string VALUE `05`,
       gl_awtyp          TYPE string VALUE `FKKSU`,
       cheque_methods    TYPE string VALUE `C`,
       chq_failed_values TYPE string VALUE `3,4,9`,
       ack_nack_values   TYPE string VALUE `NACK,REJECTED,R`,
       bank_lookback     TYPE i VALUE 5,
     END OF gc_default.
+
+  "! Clearing reason of a reversal (DFKKOP-AUGRD, VERIFY-SE11): 05 is the only reversal reason
+  "! (user decision 2026-11-07); literal '05' in ZR_CD_TrxFlow, compared by the parity check
+  CONSTANTS gc_reversal_augrd TYPE ty_augrd VALUE '05'.
 
   "! Keys of a source specification
   CONSTANTS:
@@ -316,7 +320,7 @@ INTERFACE zif_cd_ops_trace_types
       pymet TYPE ty_pymet,
       augbl TYPE ty_docno,
       augdt TYPE d,
-      augrd TYPE c LENGTH 2,
+      augrd TYPE ty_augrd,
       fin   TYPE ty_fin,
     END OF ty_item.
   TYPES tt_item TYPE STANDARD TABLE OF ty_item WITH EMPTY KEY.

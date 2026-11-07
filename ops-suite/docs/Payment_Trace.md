@@ -63,7 +63,7 @@ After a reversal or clearing reset, `DFKKOP` of the request item carries a **new
 2. traces payment, file, ACK, settlement / return and G/L **for every clearing reference** (current + historical), one attempt each — a reissue is a later attempt (`trace_history` `:636`, `build_attempts` `:726`);
 3. treats reversal evidence without a history row as **`REVERSAL_HISTORY_MISSING`** (MISSING), and an unconfigured / unreadable history source as UNAVAILABLE — with reason `REVERSAL_HISTORY_MISSING` when the item shows reversal evidence. Neither is ever a pass; an unconfigured history keeps every trace INCOMPLETE, because the absence of an earlier attempt is then unproven.
 
-Reversal evidence used: `DFKKOP-AUGRD` in `TRACE_REVERSAL_AUGRD` (default `05`; then the current AUGBL is the reversal, not a payment attempt), or `DFKKKO-STBEL` set on the current clearing document. Both are standard fields **not used elsewhere in this repository — VERIFY-SE11**. `BKPF-STBLG` (used by `src/hck/zcl_cd_hck_dao.clas.abap:532`) excludes reversed G/L documents.
+Reversal evidence used: `DFKKOP-AUGRD` = `05` (constant `ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD`; 05 is the only reversal reason — user decision 2026-11-07, no parameter; then the current AUGBL is the reversal, not a payment attempt), or `DFKKKO-STBEL` set on the current clearing document. Both are standard fields **not used elsewhere in this repository — VERIFY-SE11**. `BKPF-STBLG` (used by `src/hck/zcl_cd_hck_dao.clas.abap:532`) excludes reversed G/L documents.
 **Limitation:** a clearing reset followed by a re-clearing that leaves no reversal mark on the item is visible only through the history source. Proposed extra indicator (not built): `DFKKOP-XRAGL` (clearing reset), VERIFY-SE11.
 
 ### 4.3 Reused access paths (no copies, no new dynamic SQL)
@@ -93,7 +93,6 @@ The trace DAO's own static reads: DFKKOP (by FIN, by AUGBL), DFKKKO, DFKKCR by D
 | `TRACE_SRC_CHQ_HIST` | — | `TABLE=ZCD_CHECK_HIST;KEY=<cheque no>;STATUS=ZECT_STATUS;DATE=..;TIME=..` |
 | `TRACE_BP_SOURCE_FIELD` | — | BUT000 field carrying the source (blank = partner read without source only) |
 | `TRACE_PRQ_SUCCESS` | SUCCESS | Success value of `ZZ_STATUS` |
-| `TRACE_REVERSAL_AUGRD` | 05 | Clearing reasons that mean "reversed" (comma list) |
 | `TRACE_GL_AWTYP` | FKKSU | AWTYP of the payment engine G/L transfer |
 | `TRACE_CHECK_METHODS` | C | Cheque payment methods |
 | `TRACE_NO_ACK_METHODS` | — | Methods without bank ACK (BANK_ACK = NOT_APPLICABLE) |

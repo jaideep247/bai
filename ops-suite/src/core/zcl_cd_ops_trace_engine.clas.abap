@@ -20,6 +20,8 @@
 *& 2026-11-06 | Return / NOC reasons: return rows show DFKKRP-RLGRD (different reasons = AMBIGUOUS row);
 *&            | NOC evidence row per attempt (DFKKNRP by INFOF), informational - never decides the verdict.
 *& 2026-11-06 | stage_file returns the file links (RETURNING instead of a single EXPORTING parameter).
+*& 2026-11-07 | Reversal = clearing reason ZIF_CD_OPS_TRACE_TYPES=>GC_REVERSAL_AUGRD (05, the only
+*&            | reversal reason); parameter TRACE_REVERSAL_AUGRD removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -65,7 +67,6 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
         chq_hist        TYPE zif_cd_ops_trace_types=>ty_source_cfg,
         bp_source_field TYPE zif_cd_ops_trace_types=>ty_fieldname,
         success         TYPE string,
-        reversal        TYPE string,
         awtyp           TYPE zif_cd_ops_trace_types=>ty_key_value,
         cheque_methods  TYPE string,
         no_ack_methods  TYPE string,
@@ -345,8 +346,6 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     ms_cfg-bp_source_field = to_upper( condense( lo_store->get_param( zif_cd_ops_trace_types=>gc_param-bp_source_field ) ) ).
     ms_cfg-success = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-success_value
                                           iv_default = zif_cd_ops_trace_types=>gc_default-success_value ).
-    ms_cfg-reversal = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-reversal_reasons
-                                           iv_default = zif_cd_ops_trace_types=>gc_default-reversal_reasons ).
     ms_cfg-awtyp = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-gl_awtyp
                                         iv_default = zif_cd_ops_trace_types=>gc_default-gl_awtyp ).
     ms_cfg-cheque_methods = lo_store->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-cheque_methods
@@ -648,8 +647,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     LOOP AT mt_items INTO ls_item.
       " Reversal / reset evidence: cleared by a reversal (AUGRD), or the clearing document
       " itself was reversed (DFKKKO-STBEL) - both VERIFY-SE11
-      DATA(lv_reversed) = xsdbool( ( ls_item-augrd IS NOT INITIAL AND in_list( iv_value = ls_item-augrd
-                                                                               iv_list  = ms_cfg-reversal ) = abap_true )
+      DATA(lv_reversed) = xsdbool( ls_item-augrd = zif_cd_ops_trace_types=>gc_reversal_augrd
                                    OR VALUE zif_cd_ops_trace_types=>ty_docno( mt_headers[ KEY by_opbel opbel = ls_item-augbl ]-stbel
                                                                               OPTIONAL ) IS NOT INITIAL ).
       DATA(ls_read) = read_source( is_source = ms_cfg-history is_key = VALUE #( key1 = ls_item-opbel ) ).
@@ -705,7 +703,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       ENDLOOP.
       " The current clearing is a payment attempt unless it is the reversal itself
       IF ls_item-augbl IS NOT INITIAL
-         AND NOT ( ls_item-augrd IS NOT INITIAL AND in_list( iv_value = ls_item-augrd iv_list = ms_cfg-reversal ) = abap_true ).
+         AND ls_item-augrd <> zif_cd_ops_trace_types=>gc_reversal_augrd.
         INSERT VALUE #( kind       = zif_cd_ops_trace_types=>gc_attempt-current
                         ref        = ls_item-augbl
                         item_opbel = ls_item-opbel
