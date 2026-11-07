@@ -29,6 +29,8 @@
 *& 2026-11-07 | BAI processing deadline: statement evidence (FEB adapter), stage deadlines
 *&            | (ZCD_FMON_DEADL), check code STAGE_DEADLINE_MISSED, messages 272-279,
 *&            | parameter FMON_FEB_STMT_OFFSET, unprocessed count of a source record.
+*& 2026-11-07 | Design review: TY_OBSERVATION / TY_INSTANCE_PICK (file generation identity -
+*&            | one instance per file across midnight and daylight saving).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -505,6 +507,30 @@ INTERFACE zif_cd_fmon_types
       file_ref TYPE ty_file_ref,
     END OF ty_file_key.
   TYPES tt_file_key TYPE STANDARD TABLE OF ty_file_key WITH EMPTY KEY.
+
+  "! File generation identity (design review 2026-11-07): what the instance decision
+  "! ZCL_CD_FMON_RULES=>FILE_INSTANCE knows about one observation of a file reference
+  TYPES:
+    BEGIN OF ty_observation,
+      src_id        TYPE ty_src_id,
+      file_ref      TYPE ty_file_ref,
+      stage         TYPE ty_stage,
+      direction     TYPE ty_direction,
+      "! Business date of the observation's own time stamp (blank = undated)
+      business_date TYPE d,
+      "! Business date an undated first evidence opens (the run's business date)
+      run_date      TYPE d,
+      "! UTC
+      event_at      TYPE timestampl,
+    END OF ty_observation.
+
+  "! Instance decision: the existing instance the observation belongs to, or none (blank ID:
+  "! a new file generation, or no instance yet), or ambiguous (applied to none)
+  TYPES:
+    BEGIN OF ty_instance_pick,
+      file_id   TYPE ty_file_id,
+      ambiguous TYPE abap_bool,
+    END OF ty_instance_pick.
   TYPES tt_file_id TYPE STANDARD TABLE OF ty_file_id WITH EMPTY KEY.
   TYPES tt_file_name TYPE STANDARD TABLE OF ty_file_name WITH EMPTY KEY.
   TYPES tt_checksum TYPE STANDARD TABLE OF ty_checksum WITH EMPTY KEY.

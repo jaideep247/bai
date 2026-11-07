@@ -33,6 +33,9 @@
 *&            | (private int_param and inline defaults removed).
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZCA_PARAM) instead of the store;
 *&            | FMON_PRISM_INSTANT is BOOL (blank value row = registry only).
+*& 2026-11-07 | Design review: file generation identity - resolve_file( ) asks
+*&            | ZCL_CD_FMON_RULES=>FILE_INSTANCE with the events of the instances found by
+*&            | reference (prefetch), so one file keeps one instance across midnight and DST.
 *& 2026-11-07 | BAI processing deadline: statement evidence of the FEB adapter kept for the checks
 *&            | (evidence-only records are not applied), unprocessed count of a source record,
 *&            | stage deadlines (ZCD_FMON_DEADL) and time zone in the check context, interface-day
@@ -196,6 +199,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_changed TYPE tt_id_set.
     DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mt_new_events TYPE zif_cd_fmon_types=>tt_event.
+    "! Recorded events of the instances found by reference (prefetch) - the instance decision
+    "! tells a re-read of an event from a new generation of the reference
+    DATA mt_ref_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mt_lots TYPE zif_cd_fmon_types=>tt_lot_status.
     DATA mt_expects TYPE zif_cd_fmon_types=>tt_expect.
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
@@ -238,10 +244,11 @@ CLASS zcl_cd_fmon_engine DEFINITION
       IMPORTING
         it_groups TYPE tt_group.
 
-    "! File instance of an observation (audit A49): identity = interface + reference +
-    "! business date. An origin (first stage) without its instance creates one; a later
-    "! stage goes to the instance of its date, else to the latest earlier instance; an
-    "! undated observation matching instances of several dates is ambiguous (blank id)
+    "! File instance of an observation - file generation identity (design review 2026-11-07,
+    "! ZCL_CD_FMON_RULES=>FILE_INSTANCE): the instance is fixed by the file's first evidence and
+    "! later evidence of the same interface + reference attaches whatever its own date or time;
+    "! a new generation, or a reference without instance, opens one (get_or_create) - except a
+    "! later stage in single-event mode (blank id: deferred); ambiguous = applied to none
     METHODS resolve_file
       IMPORTING
         is_group      TYPE ty_group
@@ -498,7 +505,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mo_params   = zcl_cd_ops_factory=>get_params( ).
     mo_clock    = zcl_cd_ops_factory=>get_clock( ).
 
-    CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_lots, mt_expects, mt_findings, mt_statements.
+    CLEAR: mt_files, mt_changed, mt_events, mt_new_events, mt_ref_events, mt_lots, mt_expects, mt_findings,
+           mt_statements.
     mv_date      = iv_business_date.
     mv_iface     = iv_iface_id.
     mv_test_mode = iv_test_mode.
@@ -770,6 +778,9 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     LOOP AT lt_found ASSIGNING FIELD-SYMBOL(<ls_file>).
       INSERT <ls_file> INTO TABLE mt_files.
     ENDLOOP.
+    IF lt_found IS NOT INITIAL.
+      mt_ref_events = mo_dao->get_events( VALUE #( FOR ls_found IN lt_found ( ls_found-file_id ) ) ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -805,15 +816,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
 
   METHOD resolve_file.
-    DATA lv_best TYPE zif_cd_fmon_types=>ty_file_id.
-    DATA lv_best_date TYPE d.
-    DATA lv_count TYPE i.
+    DATA lt_candidates TYPE zif_cd_fmon_types=>tt_file.
+    DATA lt_events TYPE zif_cd_fmon_types=>tt_event.
 
     CLEAR: ev_file_id, ev_ambiguous.
-    DATA(lv_origin) = zcl_cd_fmon_status=>is_origin( iv_stage     = is_group-stage
-                                                     iv_direction = is_iface-direction ).
-    DATA(lv_date) = COND d( WHEN is_group-business_date IS NOT INITIAL THEN is_group-business_date
-                            WHEN lv_origin = abap_true THEN mv_date ).
     LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>) USING KEY ref
          WHERE iface_id = is_group-iface_id AND file_ref = is_group-file_ref.
       " Audit A100: a digest reference matches only the file with the same full name
@@ -824,27 +830,36 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         ev_ambiguous = abap_true.
         RETURN.
       ENDIF.
-      lv_count += 1.
-      IF lv_date IS NOT INITIAL AND <ls_file>-business_date = lv_date.
-        ev_file_id = <ls_file>-file_id.
-        RETURN.
-      ENDIF.
-      IF lv_origin = abap_false AND ( lv_date IS INITIAL OR <ls_file>-business_date < lv_date )
-         AND ( lv_best IS INITIAL OR <ls_file>-business_date > lv_best_date ).
-        lv_best      = <ls_file>-file_id.
-        lv_best_date = <ls_file>-business_date.
-      ENDIF.
+      INSERT <ls_file> INTO TABLE lt_candidates.
+      " Recorded (prefetched) and applied in this run: a re-read is told from a new generation
+      LOOP AT mt_ref_events ASSIGNING FIELD-SYMBOL(<ls_recorded>) USING KEY by_file WHERE file_id = <ls_file>-file_id.
+        INSERT <ls_recorded> INTO TABLE lt_events.
+      ENDLOOP.
+      LOOP AT mt_new_events ASSIGNING FIELD-SYMBOL(<ls_applied>) USING KEY by_file WHERE file_id = <ls_file>-file_id.
+        INSERT <ls_applied> INTO TABLE lt_events.
+      ENDLOOP.
     ENDLOOP.
-    IF lv_origin = abap_false AND lv_best IS NOT INITIAL.
-      IF is_group-business_date IS INITIAL AND lv_count > 1.
-        " Undated and several instances: no safe correlation
-        ev_ambiguous = abap_true.
-        RETURN.
-      ENDIF.
-      ev_file_id = lv_best.
+
+    DATA(ls_pick) = zcl_cd_fmon_rules=>file_instance(
+                      is_obs        = VALUE #( src_id        = is_group-src_id
+                                               file_ref      = is_group-file_ref
+                                               stage         = is_group-stage
+                                               direction     = is_iface-direction
+                                               business_date = is_group-business_date
+                                               run_date      = mv_date
+                                               event_at      = is_group-event_at )
+                      it_candidates = lt_candidates
+                      it_events     = lt_events ).
+    IF ls_pick-ambiguous = abap_true.
+      ev_ambiguous = abap_true.
       RETURN.
     ENDIF.
-    IF mv_single = abap_true AND lv_origin = abap_false.
+    IF ls_pick-file_id IS NOT INITIAL.
+      ev_file_id = ls_pick-file_id.
+      RETURN.
+    ENDIF.
+    IF mv_single = abap_true
+       AND zcl_cd_fmon_status=>is_origin( iv_stage = is_group-stage iv_direction = is_iface-direction ) = abap_false.
       " A later stage of a file FMON does not know yet (e.g. PRISM faster than the generation
       " read): never opened by one event alone - blank ID, the 5-minute run correlates it
       RETURN.

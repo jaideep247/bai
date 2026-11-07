@@ -22,6 +22,11 @@
 *&            | serves no parameters.
 *& 2026-11-07 | BAI deadline: statement evidence of a source reaches the deadline check (evidence-only
 *&            | records not applied), unprocessed count of a record, interface-day key reconciled.
+*& 2026-11-07 | Design review, file generation identity: PRISM delivery 23:58 CST and SAP receipt
+*&            | 00:03 CST = one instance (inbound and outbound), a re-read receipt stays, two files
+*&            | of the same name on consecutive days = two instances, daylight saving (repeated /
+*&            | missing hour) = one instance with SLA minutes on UTC. DAO double serves recorded
+*&            | events (MT_OLD_EVENTS); act( ) takes the run date.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -43,6 +48,8 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mv_conflict_all TYPE abap_bool.
     "! The save fails with a technical SQL error (audit A05)
     DATA mv_sql_error TYPE abap_bool.
+    "! Recorded events of registry rows (ZCD_FMON_EVENT as an earlier run left it)
+    DATA mt_old_events TYPE zif_cd_fmon_types=>tt_event.
 ENDCLASS.
 
 
@@ -85,7 +92,11 @@ CLASS ltd_dao IMPLEMENTATION.
     CLEAR rt_files.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_events.
-    CLEAR rt_events.
+    LOOP AT mt_old_events ASSIGNING FIELD-SYMBOL(<ls_event>).
+      IF line_exists( it_file_ids[ table_line = <ls_event>-file_id ] ).
+        INSERT <ls_event> INTO TABLE rt_events.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~save_files.
     mv_save_calls += 1.
@@ -349,6 +360,34 @@ CLASS ltc_engine DEFINITION FINAL
     CONSTANTS gc_bai TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'BAI_JPMC_IN'.
     CONSTANTS gc_bai_ref TYPE zif_cd_fmon_types=>ty_file_ref VALUE 'FEB/JPMC/20261101'.
     CONSTANTS gc_src_feb TYPE zif_cd_fmon_types=>ty_src_id VALUE 'FEB'.
+    "! File generation identity (design review 2026-11-07): an inbound statement whose name is the
+    "! same every day; times UTC, business dates US Central (CST, daylight saving)
+    CONSTANTS gc_stmt TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'STMT_PNC_IN'.
+    CONSTANTS gc_stmt_file TYPE zif_cd_fmon_types=>ty_file_name VALUE 'STMT_PNC_DAILY.TXT'.
+    CONSTANTS gc_stmt_id TYPE i VALUE 96.
+    CONSTANTS gc_sla_min TYPE i VALUE 30.
+    CONSTANTS gc_dst_spring TYPE d VALUE '20260308'.
+    CONSTANTS:
+      BEGIN OF gc_ts,
+        "! 1 Nov 23:50 / 23:55 / 23:58 CST and 2 Nov 00:03 / 00:20 CST
+        t2350 TYPE timestampl VALUE '20261102055000',
+        t2355 TYPE timestampl VALUE '20261102055500',
+        t2358 TYPE timestampl VALUE '20261102055800',
+        t0003 TYPE timestampl VALUE '20261102060300',
+        t0020 TYPE timestampl VALUE '20261102062000',
+        "! Statement of 1 Nov at 08:00 / 08:20 CST and of 2 Nov at 01:00 / 01:20 CST
+        day1_received  TYPE timestampl VALUE '20261101140000',
+        day1_loaded    TYPE timestampl VALUE '20261101142000',
+        day2_received  TYPE timestampl VALUE '20261102070000',
+        day2_loaded    TYPE timestampl VALUE '20261102072000',
+        "! Fall back 1 Nov: 01:30 CDT, 01:10 CST, 01:25 CST (local clock goes back)
+        fall_received  TYPE timestampl VALUE '20261101063000',
+        fall_delivered TYPE timestampl VALUE '20261101071000',
+        fall_sap       TYPE timestampl VALUE '20261101072500',
+        "! Spring forward 8 Mar: 01:50 CST, 03:15 CDT (local clock jumps 85 minutes)
+        spring_deliv   TYPE timestampl VALUE '20260308075000',
+        spring_sap     TYPE timestampl VALUE '20260308081500',
+      END OF gc_ts.
 
     DATA mo_dao TYPE REF TO ltd_dao.
     DATA mo_adapter TYPE REF TO ltd_adapter.
@@ -367,6 +406,8 @@ CLASS ltc_engine DEFINITION FINAL
         is_flags TYPE ty_flags.
 
     METHODS act
+      IMPORTING
+        iv_date          TYPE d DEFAULT gc_date
       RETURNING
         VALUE(rs_result) TYPE zif_cd_fmon_types=>ty_result
       RAISING
@@ -465,6 +506,30 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS prism_only_file_surfaces FOR TESTING.
     METHODS feb_evidence_drives_deadline FOR TESTING.
     METHODS feb_partial_sets_unprocessed FOR TESTING.
+    METHODS inbound_midnight_one_instance FOR TESTING.
+    METHODS outbound_midnight_one_instance FOR TESTING.
+    METHODS reread_receipt_no_new_instance FOR TESTING.
+    METHODS same_name_two_days_two_files FOR TESTING.
+    METHODS dst_fall_back_one_instance FOR TESTING.
+    METHODS dst_spring_forward_one_inst FOR TESTING.
+
+    "! Inbound statement interface (same file name every day) with SLA rows FILE_RECEIVED and
+    "! PRISM_DELIVERED (30 min, basis P) and the PRISM source
+    METHODS add_statement_iface.
+
+    "! Saved registry rows of the statement file
+    METHODS stmt_files
+      RETURNING
+        VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
+
+    "! The finding code of the stage's SLA state is among the findings
+    METHODS has_sla_code
+      IMPORTING
+        is_result     TYPE zif_cd_fmon_types=>ty_result
+        iv_stage      TYPE zif_cd_fmon_types=>ty_stage
+        iv_state      TYPE zif_cd_fmon_types=>ty_sla_state
+      RETURNING
+        VALUE(rv_has) TYPE abap_bool.
 
     "! BAI statement interface, its calendar, a 01:00 FULLY_PROCESSED deadline and a FEB source
     "! record (statement evidence: 2 accounts expected, iv_imported imported, iv_open lines open)
@@ -663,7 +728,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
 
   METHOD act.
-    rs_result = zcl_cd_fmon_factory=>get_engine( )->run( iv_business_date = gc_date
+    rs_result = zcl_cd_fmon_factory=>get_engine( )->run( iv_business_date = iv_date
                                                          iv_test_mode     = mv_test_mode ).
   ENDMETHOD.
 
@@ -1460,6 +1525,235 @@ CLASS ltc_engine IMPLEMENTATION.
                          OPTIONAL )
           exp = zif_cd_fmon_types=>gc_deadline_cond-not_posted
           msg = 'Deadline missed: imported, not posted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_statement_iface.
+    DATA ls_sla TYPE zif_cd_fmon_types=>ty_sla.
+    add_iface( iv_iface_id = gc_stmt iv_direction = zif_cd_fmon_types=>gc_direction-inbound
+               iv_file_type = zif_cd_fmon_types=>gc_file_type-statement iv_pattern = 'STMT_PNC_.*' ).
+    ls_sla-iface_id    = gc_stmt.
+    ls_sla-stage       = zif_cd_fmon_types=>gc_stage-received.
+    ls_sla-max_minutes = gc_sla_min.
+    ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
+    ls_sla-severity    = zif_cd_ops_types=>gc_severity-error.
+    INSERT ls_sla INTO TABLE mo_dao->mt_slas.
+    ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_delivered.
+    INSERT ls_sla INTO TABLE mo_dao->mt_slas.
+    add_prism_source( ).
+  ENDMETHOD.
+
+
+  METHOD stmt_files.
+    DATA(lv_ref) = zcl_cd_fmon_util=>normalize_ref( gc_stmt_file ).
+    rt_files = VALUE #( FOR ls_file IN mo_dao->mt_saved WHERE ( file_ref = lv_ref ) ( ls_file ) ).
+    SORT rt_files BY business_date.
+  ENDMETHOD.
+
+
+  METHOD has_sla_code.
+    DATA(lv_code) = zcl_cd_fmon_rules=>sla_code( iv_stage = iv_stage iv_state = iv_state ).
+    rv_has = xsdbool( line_exists( is_result-findings[ check_code = lv_code ] ) ).
+  ENDMETHOD.
+
+
+  " Acceptance (design review): PRISM delivers the statement at 23:58 CST, SAP receives it at
+  " 00:03 CST the next business day - one instance with the business date of PRISM's delivery,
+  " SAP's receipt 5 minutes after the delivery meets the FILE_RECEIVED SLA (two instances would
+  " leave NO_FILE_RECEIVED on the first).
+  METHOD inbound_midnight_one_instance.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_iface( ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                    iv_at = gc_ts-t2358 iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-t0003 iv_date = gc_date ).
+        DATA(ls_result) = act( ).
+        DATA(lt_files) = stmt_files( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_files ) exp = 1
+                                            msg = 'Delivery before and receipt after midnight must be one instance' ).
+        cl_abap_unit_assert=>assert_equals( act = |{ lt_files[ 1 ]-business_date }/{ lt_files[ 1 ]-stage }|
+                                            exp = |{ gc_prev_day }/{ zif_cd_fmon_types=>gc_stage-received }|
+                                            msg = 'Business date of the first evidence, stage of SAP''s receipt' ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( has_sla_code( is_result = ls_result iv_stage = zif_cd_fmon_types=>gc_stage-received
+                                       iv_state  = zif_cd_fmon_types=>gc_sla_state-missing ) = abap_true
+                      OR has_sla_code( is_result = ls_result iv_stage = zif_cd_fmon_types=>gc_stage-received
+                                       iv_state  = zif_cd_fmon_types=>gc_sla_state-late ) = abap_true )
+          msg = 'The receipt 5 minutes after the delivery meets the SLA' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review, outbound): generated and handed to PRISM before midnight, delivered
+  " and acknowledged after midnight - one instance of the generation date ends ACK_RECEIVED.
+  METHOD outbound_midnight_one_instance.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_prism_source( ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = gc_ts-t2350 iv_count = 10 iv_amount = '1000.00' iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-sent
+                    iv_at = gc_ts-t2355 iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_received
+                    iv_at = gc_ts-t2358 iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                    iv_at = gc_ts-t0003 iv_date = gc_date ).
+        add_record( iv_src_id = gc_src_ack iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                    iv_at = gc_ts-t0020 iv_count = 10 iv_amount = '1000.00' iv_date = gc_date ).
+        DATA(ls_result) = act( ).
+        DATA(lv_ref) = zcl_cd_fmon_util=>normalize_ref( gc_out_file ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lines( VALUE zif_cd_fmon_types=>tt_file( FOR ls_file IN mo_dao->mt_saved
+                                                         WHERE ( file_ref = lv_ref ) ( ls_file ) ) )
+          exp = 1
+          msg = 'Generation before and delivery after midnight must be one instance' ).
+        cl_abap_unit_assert=>assert_equals( act = out_row( is_result = ls_result iv_date = gc_prev_day )-outcome
+                                            exp = zif_cd_fmon_types=>gc_stage-ack
+                                            msg = 'The instance of the generation date ends ACK_RECEIVED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the next 5-minute run reads SAP's receipt of 00:03 again - it is the event the instance
+  " recorded, so it stays with the instance of the previous business date (no second instance).
+  METHOD reread_receipt_no_new_instance.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_file.
+    DATA ls_event TYPE zif_cd_fmon_types=>ty_event.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_iface( ).
+        ls_file-file_id        = CONV zif_cd_fmon_types=>ty_file_id( gc_stmt_id ).
+        ls_file-iface_id       = gc_stmt.
+        ls_file-file_ref       = zcl_cd_fmon_util=>normalize_ref( gc_stmt_file ).
+        ls_file-direction      = zif_cd_fmon_types=>gc_direction-inbound.
+        ls_file-file_type      = zif_cd_fmon_types=>gc_file_type-statement.
+        ls_file-file_name      = gc_stmt_file.
+        ls_file-business_date  = gc_prev_day.
+        ls_file-stage          = zif_cd_fmon_types=>gc_stage-received.
+        ls_file-first_event_at = gc_ts-t2358.
+        ls_file-last_event_at  = gc_ts-t0003.
+        ls_file-db_exists      = abap_true.
+        ls_file-db_version     = gc_ts-t0020.
+        INSERT ls_file INTO TABLE mo_dao->mt_existing.
+        ls_event-file_id  = ls_file-file_id.
+        ls_event-event_no = 1.
+        ls_event-stage    = zif_cd_fmon_types=>gc_stage-prism_delivered.
+        ls_event-event_at = gc_ts-t2358.
+        ls_event-src_id   = gc_src_prism.
+        ls_event-src_key  = ls_file-file_ref.
+        INSERT ls_event INTO TABLE mo_dao->mt_old_events.
+        ls_event-event_no = 2.
+        ls_event-stage    = zif_cd_fmon_types=>gc_stage-received.
+        ls_event-event_at = gc_ts-t0003.
+        ls_event-src_id   = gc_src_in.
+        INSERT ls_event INTO TABLE mo_dao->mt_old_events.
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-t0003 iv_date = gc_date ).
+        act( ).
+        DATA(lt_files) = stmt_files( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_files ) exp = 1
+                                            msg = 'The re-read receipt must not open a second instance' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_files[ 1 ]-file_id exp = ls_file-file_id
+                                            msg = 'The re-read receipt stays with the recorded instance' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review): two different files with the same name on consecutive days, both
+  " in one run's look-back - two instances, each with its own business date and receipt.
+  METHOD same_name_two_days_two_files.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_iface( ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_received
+                    iv_at = gc_ts-day1_received iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-day1_loaded iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_received
+                    iv_at = gc_ts-day2_received iv_date = gc_date ).
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-day2_loaded iv_date = gc_date ).
+        act( ).
+        DATA(lt_files) = stmt_files( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_files ) exp = 2
+                                            msg = 'Two files of the same name on two days must be two instances' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ lt_files[ 1 ]-business_date }/{ lt_files[ 1 ]-stage }/|
+             && |{ lt_files[ 2 ]-business_date }/{ lt_files[ 2 ]-stage }|
+          exp = |{ gc_prev_day }/{ zif_cd_fmon_types=>gc_stage-received }/|
+             && |{ gc_date }/{ zif_cd_fmon_types=>gc_stage-received }|
+          msg = 'Each file has its own business date and its own receipt' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review, fall back 1 Nov 2026): PRISM receives at 01:30 CDT, delivers at
+  " 01:10 CST (local clock earlier, 40 minutes later), SAP receives at 01:25 CST - one instance
+  " of 1 Nov at FILE_RECEIVED; SLA minutes are UTC: the delivery is late (40 > 30), the receipt
+  " is on time (15).
+  METHOD dst_fall_back_one_instance.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_iface( ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_received
+                    iv_at = gc_ts-fall_received iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                    iv_at = gc_ts-fall_delivered iv_date = gc_prev_day ).
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-fall_sap iv_date = gc_prev_day ).
+        DATA(ls_result) = act( gc_prev_day ).
+        DATA(lt_files) = stmt_files( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ lines( lt_files ) }/{ lt_files[ 1 ]-business_date }/{ lt_files[ 1 ]-stage }|
+          exp = |1/{ gc_prev_day }/{ zif_cd_fmon_types=>gc_stage-received }|
+          msg = 'Events in the repeated hour must be one instance of 1 Nov at FILE_RECEIVED' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ has_sla_code( is_result = ls_result iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                                 iv_state  = zif_cd_fmon_types=>gc_sla_state-late ) }/|
+             && |{ has_sla_code( is_result = ls_result iv_stage = zif_cd_fmon_types=>gc_stage-received
+                                 iv_state  = zif_cd_fmon_types=>gc_sla_state-late ) }|
+          exp = |{ abap_true }/|
+          msg = 'UTC minutes: delivery 40 min after receipt is late, SAP receipt after 15 min is not' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review, spring forward 8 Mar 2026): PRISM delivers at 01:50 CST, SAP
+  " receives at 03:15 CDT (local clock 85 minutes later, 25 minutes pass) - one instance of 8 Mar,
+  " the receipt meets the 30-minute SLA.
+  METHOD dst_spring_forward_one_inst.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        add_statement_iface( ).
+        add_record( iv_src_id = gc_src_prism iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-prism_delivered
+                    iv_at = gc_ts-spring_deliv iv_date = gc_dst_spring ).
+        add_record( iv_src_id = gc_src_in iv_name = gc_stmt_file iv_stage = zif_cd_fmon_types=>gc_stage-received
+                    iv_at = gc_ts-spring_sap iv_date = gc_dst_spring ).
+        DATA(ls_result) = act( gc_dst_spring ).
+        DATA(lt_files) = stmt_files( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = |{ lines( lt_files ) }/{ lt_files[ 1 ]-business_date }/{ lt_files[ 1 ]-stage }|
+          exp = |1/{ gc_dst_spring }/{ zif_cd_fmon_types=>gc_stage-received }|
+          msg = 'Events around the missing hour must be one instance of 8 Mar at FILE_RECEIVED' ).
+        cl_abap_unit_assert=>assert_false(
+          act = has_sla_code( is_result = ls_result iv_stage = zif_cd_fmon_types=>gc_stage-received
+                              iv_state  = zif_cd_fmon_types=>gc_sla_state-late )
+          msg = 'UTC minutes: SAP''s receipt 25 min after the delivery is on time' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

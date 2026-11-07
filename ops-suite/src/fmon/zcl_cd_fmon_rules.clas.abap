@@ -17,6 +17,8 @@
 *&              queue allowance in the SLA verdict of the delivery stage and later stages.
 *& 2026-11-06 | Interface name patterns are PCRE matched to the complete file name (case ignored);
 *&              specificity = literal characters of the pattern (ZCL_CD_OPS_UTIL=>PCRE_LITERALS).
+*& 2026-11-07 | Design review: FILE_INSTANCE - file generation identity (the instance is fixed by
+*&              the file's first evidence; later events attach whatever their date or time).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure domain rules</p>
 CLASS zcl_cd_fmon_rules DEFINITION
@@ -247,7 +249,43 @@ CLASS zcl_cd_fmon_rules DEFINITION
       RETURNING
         VALUE(rs_cfg) TYPE zif_cd_fmon_types=>ty_lotcfg.
 
+    "! File generation identity (design review 2026-11-07; replaces the date rule of audit A49).
+    "! The instance of a file is fixed when the file is first known - outbound by its generation
+    "! in SAP, inbound by the first of PRISM's receipt / delivery and SAP's receipt - and keeps the
+    "! business date of that first evidence. Later evidence of the same interface + reference
+    "! attaches to it whatever its own business date or time (midnight, daylight saving); only a
+    "! new generation of the reference opens a new instance. In this order:
+    "! <ol><li>an instance of the observation's own business date is that file (the generation
+    "! date decides - one reference is one file per business date);</li>
+    "! <li>else the latest instance of an earlier date: first evidence (IS_ORIGIN) of a stage the
+    "! instance has already reached (ZCL_CD_FMON_STATUS=>REACHES) is a new generation - unless
+    "! the instance recorded that very event (same source, stage and time: a re-read); every
+    "! other observation attaches; an undated observation with several instances is ambiguous;</li>
+    "! <li>else (only instances of later dates) first evidence not after the earliest one's first
+    "! event attaches to it (earlier evidence that reached SAP late);</li>
+    "! <li>otherwise none: blank ID - the caller opens an instance or defers.</li></ol>
+    "! Contract assumption (VERIFY with PRISM): the reference is unique per file generation; a
+    "! name PRISM reuses is told apart by the business date of the new generation only.
+    CLASS-METHODS file_instance
+      IMPORTING
+        is_obs         TYPE zif_cd_fmon_types=>ty_observation
+        it_candidates  TYPE zif_cd_fmon_types=>tt_file
+        it_events      TYPE zif_cd_fmon_types=>tt_event
+      RETURNING
+        VALUE(rs_pick) TYPE zif_cd_fmon_types=>ty_instance_pick.
+
   PRIVATE SECTION.
+
+    "! First evidence that continues the instance: the instance has not reached the stage yet
+    "! (the rest of the file's first evidence, e.g. SAP's receipt after PRISM's delivery across
+    "! midnight, or PRISM's delivery after a failure), or the instance recorded this very event
+    CLASS-METHODS continues_file
+      IMPORTING
+        is_obs         TYPE zif_cd_fmon_types=>ty_observation
+        is_file        TYPE zif_cd_fmon_types=>ty_file
+        it_events      TYPE zif_cd_fmon_types=>tt_event
+      RETURNING
+        VALUE(rv_same) TYPE abap_bool.
 
     "! Queue of a throttled interface: blank (scope A), else its bank key ('*' when blank)
     CLASS-METHODS queue_key
@@ -714,6 +752,64 @@ CLASS zcl_cd_fmon_rules IMPLEMENTATION.
        AND ( iv_stage = zif_cd_fmon_types=>gc_stage-fully OR iv_stage = zif_cd_fmon_types=>gc_stage-partially ).
       rv_stage = zif_cd_fmon_types=>gc_stage-loaded.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD file_instance.
+    DATA ls_earlier TYPE zif_cd_fmon_types=>ty_file.
+    DATA ls_later TYPE zif_cd_fmon_types=>ty_file.
+
+    DATA(lv_origin) = zcl_cd_fmon_status=>is_origin( iv_stage     = is_obs-stage
+                                                     iv_direction = is_obs-direction ).
+    DATA(lv_date) = COND d( WHEN is_obs-business_date IS NOT INITIAL THEN is_obs-business_date
+                            WHEN lv_origin = abap_true THEN is_obs-run_date ).
+    LOOP AT it_candidates ASSIGNING FIELD-SYMBOL(<ls_file>).
+      IF lv_date IS NOT INITIAL AND <ls_file>-business_date = lv_date.
+        rs_pick-file_id = <ls_file>-file_id.
+        RETURN.
+      ENDIF.
+      IF lv_date IS INITIAL OR <ls_file>-business_date < lv_date.
+        IF ls_earlier IS INITIAL OR <ls_file>-business_date > ls_earlier-business_date.
+          ls_earlier = <ls_file>.
+        ENDIF.
+      ELSEIF ls_later IS INITIAL OR <ls_file>-business_date < ls_later-business_date.
+        ls_later = <ls_file>.
+      ENDIF.
+    ENDLOOP.
+
+    IF ls_earlier IS NOT INITIAL.
+      IF is_obs-business_date IS INITIAL AND lines( it_candidates ) > 1.
+        " Undated and several instances: no safe correlation (audit A49)
+        rs_pick-ambiguous = abap_true.
+      ELSEIF lv_origin = abap_false
+          OR continues_file( is_obs = is_obs is_file = ls_earlier it_events = it_events ) = abap_true.
+        rs_pick-file_id = ls_earlier-file_id.
+      ENDIF.
+      RETURN.
+    ENDIF.
+
+    IF ls_later IS NOT INITIAL AND lv_origin = abap_true
+       AND ( ls_later-first_event_at IS INITIAL OR is_obs-event_at <= ls_later-first_event_at ).
+      rs_pick-file_id = ls_later-file_id.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD continues_file.
+    IF zcl_cd_fmon_status=>reaches( is_file = is_file iv_stage = is_obs-stage ) = abap_false.
+      rv_same = abap_true.
+      RETURN.
+    ENDIF.
+    LOOP AT it_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file
+         WHERE file_id = is_file-file_id
+           AND src_id  = is_obs-src_id
+           AND src_key = is_obs-file_ref
+           AND stage   = is_obs-stage.
+      IF <ls_event>-event_at = is_obs-event_at.
+        rv_same = abap_true.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

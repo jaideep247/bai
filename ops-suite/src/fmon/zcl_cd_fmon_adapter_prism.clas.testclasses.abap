@@ -7,6 +7,8 @@
 *& configuration errors; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
+*& 2026-11-07 | Design review: business dates in US Central (CST) around midnight and both
+*&              daylight-saving changes (repeated / missing hour).
 *&---------------------------------------------------------------------*
 CLASS ltd_prism_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -36,7 +38,22 @@ CLASS ltc_adapter_prism DEFINITION FINAL
         file_name TYPE zif_cd_fmon_types=>ty_file_name VALUE 'ach_pnc_20261106_01',
         occurred  TYPE timestampl VALUE '20261106143000',
         iface     TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'WIRE_JPMC_OUT',
+        "! FMON_TIME_ZONE of the landscape: US Central with daylight saving
+        central   TYPE zif_cd_fmon_types=>ty_time_zone VALUE 'CST',
       END OF gc_test.
+    "! occurredAt (UTC) and the business date in US Central
+    CONSTANTS:
+      BEGIN OF gc_utc,
+        "! 23:58 CST on 1 Nov and 00:03 CST on 2 Nov
+        before_midnight TYPE timestampl VALUE '20261102055800',
+        after_midnight  TYPE timestampl VALUE '20261102060300',
+        "! 01:30 CDT and 01:30 CST on 1 Nov (the repeated hour)
+        repeated_cdt    TYPE timestampl VALUE '20261101063000',
+        repeated_cst    TYPE timestampl VALUE '20261101073000',
+        "! 01:59 CST and 03:01 CDT on 8 Mar (02:00-03:00 does not exist)
+        before_jump     TYPE timestampl VALUE '20260308075900',
+        after_jump      TYPE timestampl VALUE '20260308080100',
+      END OF gc_utc.
 
     DATA mo_dao TYPE REF TO ltd_prism_dao.
     DATA ms_request TYPE zif_cd_fmon_types=>ty_read_request.
@@ -49,12 +66,14 @@ CLASS ltc_adapter_prism DEFINITION FINAL
         iv_event_id  TYPE zif_cd_fmon_prism_types=>ty_event_id
         iv_milestone TYPE zif_cd_fmon_prism_types=>ty_milestone
         iv_iface     TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
-        iv_processed TYPE abap_bool DEFAULT abap_false.
+        iv_processed TYPE abap_bool DEFAULT abap_false
+        iv_occurred  TYPE timestampl DEFAULT gc_test-occurred.
 
     METHODS rows_become_prism_stages FOR TESTING.
     METHODS interface_id_wins FOR TESTING.
     METHODS batch_reads_unprocessed FOR TESTING.
     METHODS unknown_field_is_refused FOR TESTING.
+    METHODS central_dates_midnight_dst FOR TESTING.
 
 ENDCLASS.
 
@@ -102,7 +121,7 @@ CLASS ltc_adapter_prism IMPLEMENTATION.
     ls_row-iface_id     = iv_iface.
     ls_row-direction    = zif_cd_fmon_types=>gc_direction-outbound.
     ls_row-milestone    = iv_milestone.
-    ls_row-occurred_at  = gc_test-occurred.
+    ls_row-occurred_at  = iv_occurred.
     ls_row-processed_at = COND #( WHEN iv_processed = abap_true THEN gc_test-occurred ).
     INSERT ls_row INTO TABLE mo_dao->mt_rows.
   ENDMETHOD.
@@ -178,6 +197,43 @@ CLASS ltc_adapter_prism IMPLEMENTATION.
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno exp = '201'
                                             msg = 'Message 201: field does not exist' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Acceptance (design review): the business date is occurredAt in FMON_TIME_ZONE (US Central,
+  " daylight saving) - 23:58 CST stays on 1 Nov and 00:03 CST is 2 Nov; both 01:30 of the
+  " repeated hour (CDT, then CST) are 1 Nov; both sides of the missing hour are 8 Mar. The event
+  " time itself stays UTC, so SLA minutes are UTC differences.
+  METHOD central_dates_midnight_dst.
+    DATA lv_dates TYPE string.
+    TRY.
+        ms_request-time_zone = gc_test-central.
+        add_row( iv_event_id = 'E1' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                 iv_occurred = gc_utc-before_midnight ).
+        add_row( iv_event_id = 'E2' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                 iv_occurred = gc_utc-after_midnight ).
+        add_row( iv_event_id = 'E3' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-received
+                 iv_occurred = gc_utc-repeated_cdt ).
+        add_row( iv_event_id = 'E4' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                 iv_occurred = gc_utc-repeated_cst ).
+        add_row( iv_event_id = 'E5' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-received
+                 iv_occurred = gc_utc-before_jump ).
+        add_row( iv_event_id = 'E6' iv_milestone = zif_cd_fmon_prism_types=>gc_milestone-delivered
+                 iv_occurred = gc_utc-after_jump ).
+        DATA(lt_records) = zcl_cd_fmon_adapter_prism=>to_records( is_request = ms_request
+                                                                  it_rows    = mo_dao->mt_rows ).
+        LOOP AT lt_records ASSIGNING FIELD-SYMBOL(<ls_record>).
+          lv_dates = |{ lv_dates }{ <ls_record>-business_date }/|.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals(
+          act = lv_dates
+          exp = |20261101/20261102/20261101/20261101/20260308/20260308/|
+          msg = 'Business dates must be the US Central dates around midnight and both DST changes' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_records[ 4 ]-event_at exp = gc_utc-repeated_cst
+                                            msg = 'The event time stays UTC' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
