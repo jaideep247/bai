@@ -18,6 +18,7 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reason correction: TY_RETURN_ITEM-RLGRD (DFKKRP return reason, same read);
 *&            | get_noc_items - NOC lot items (DFKKNRP) by INFOF with their NOC reason FLGRD.
+*& 2026-11-07 | TY_RETURN_ITEM-AMOUNT (DFKKRP-BETRW) for the in-flight check (shared read, A_INFLIGHT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -49,6 +50,9 @@ INTERFACE zif_cd_ebs_sap_dao
       lot_stars TYPE ty_status,
       "! Return reason of the item (DFKKRP-RLGRD, VERIFY-SE11) - FEBEP carries no return reason
       rlgrd     TYPE ty_lot_reason,
+      "! Returned amount of the item (DFKKRP-BETRW, VERIFY-DDIC) - the morning report compares it
+      "! with the return line of the bank statement (A_INFLIGHT)
+      amount    TYPE zif_cd_ops_types=>ty_amount,
     END OF ty_return_item.
   "! Fix 4: secondary key BY_SELW1 - rules read the items of one payment document by key
   TYPES tt_return_item TYPE STANDARD TABLE OF ty_return_item WITH EMPTY KEY

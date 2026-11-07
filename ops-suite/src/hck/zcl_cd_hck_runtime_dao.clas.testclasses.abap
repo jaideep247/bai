@@ -4,13 +4,16 @@
 *& OSQL tests of the runtime reads: NRIV internal intervals of the current /
 *& next year (external and past years left out), DPAYH payments in the
 *& run-date window with the collection indicator of their method (proposal
-*& runs, other methods, blank DOC1R left out), cleared assignments (BSAS)
-*& and qRFC entries grouped per queue / state / day with the oldest time;
-*& field and whitelist validation before any SQL. DDIC descriptions and
-*& the whitelist come from an HCK DAO double; does not prove live SAP
-*& runtime behavior (VERIFY-DDIC field names, BSAS as compatibility view).
+*& runs, other methods, blank DOC1R left out) and qRFC entries grouped
+*& per queue / state / day with the oldest time; field and whitelist
+*& validation before any SQL. ltc_inflight_reads: G/L lines by XREF2 (company
+*& code, fiscal years, accounts, cap), active rows of the in-flight
+*& configuration, a configured table read by reference (whitelist, DDIC).
+*& DDIC descriptions and the whitelist come from an HCK DAO double; does
+*& not prove live SAP runtime behavior (VERIFY-DDIC field names).
 *& Modification log:
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
+*& 2026-11-07 | BSAS assignment test replaced; ltc_inflight_reads (user rules 1-5).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -82,7 +85,6 @@ CLASS ltc_runtime_dao DEFINITION FINAL FOR TESTING
     METHODS intervals_internal_this_year FOR TESTING.
     METHODS no_objects_read_nothing      FOR TESTING.
     METHODS payments_window_and_flow     FOR TESTING.
-    METHODS cleared_assignment_found     FOR TESTING.
     METHODS queue_grouped_per_day        FOR TESTING.
     METHODS unknown_field_raises         FOR TESTING.
     METHODS configured_needs_whitelist   FOR TESTING.
@@ -94,7 +96,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'NRIV' ) ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ( 'BSAS' ) ( 'TRFCQOUT' ) ) ).
+      i_dependency_list = VALUE #( ( 'NRIV' ) ( 'DPAYH' ) ( 'T001' ) ( 'TFK042Z' ) ( 'TRFCQOUT' ) ) ).
   ENDMETHOD.
 
 
@@ -168,14 +170,13 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     DATA ls_t001 TYPE t001.
     DATA lt_tfk042z TYPE STANDARD TABLE OF tfk042z WITH EMPTY KEY.
     DATA ls_tfk042z TYPE tfk042z.
-    DATA lt_bsas TYPE STANDARD TABLE OF bsas WITH EMPTY KEY.
-    DATA ls_bsas TYPE bsas.
     " Disbursement wire in the window (read)
     ls_dpayh-laufd = '20261105'.
     ls_dpayh-laufi = 'R00001'.
     ls_dpayh-doc1r = gc_test-doc1.
     ls_dpayh-bukrs = gc_test-bukrs.
     ls_dpayh-pymet = gc_test-wire.
+    ls_dpayh-hbkid = 'JPMC1'.
     ls_dpayh-valut = '20261106'.
     ls_dpayh-rwbtr = '-100.00'.
     ls_dpayh-waers = 'USD'.
@@ -220,14 +221,6 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
     CLEAR ls_tfk042z-xeinz.
     INSERT ls_tfk042z INTO TABLE lt_tfk042z.
     go_env->insert_test_data( lt_tfk042z ).
-
-    ls_bsas-bukrs = gc_test-bukrs.
-    ls_bsas-zuonr = gc_test-doc2.
-    ls_bsas-belnr = '0100000001'.
-    ls_bsas-gjahr = '2026'.
-    ls_bsas-buzei = '001'.
-    INSERT ls_bsas INTO TABLE lt_bsas.
-    go_env->insert_test_data( lt_bsas ).
   ENDMETHOD.
 
 
@@ -315,8 +308,6 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
                                              iv_to       = gc_test-to
                                              iv_max_rows = 100 )
           msg = 'No method: nothing read' ).
-        cl_abap_unit_assert=>assert_initial( act = mo_cut->get_cleared_assignments( VALUE #( ) )
-                                             msg = 'No key: nothing read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -336,22 +327,8 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_false( act = lt_payments[ 1 ]-xeinz msg = 'Wire: disbursement' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-valut exp = '20261106' msg = 'Value date read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-currency exp = 'USD' msg = 'Currency read' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_payments[ 1 ]-hbkid exp = 'JPMC1' msg = 'House bank read' ).
         cl_abap_unit_assert=>assert_true( act = lt_payments[ 2 ]-xeinz msg = 'Direct debit: collection' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " Rule: an assignment with a cleared G/L line is returned, others are not
-  METHOD cleared_assignment_found.
-    TRY.
-        DATA(lt_cleared) = mo_cut->get_cleared_assignments(
-          VALUE #( ( bukrs = gc_test-bukrs zuonr = gc_test-doc2 ) ( bukrs = gc_test-bukrs zuonr = gc_test-doc1 ) ) ).
-        cl_abap_unit_assert=>assert_equals( act = lt_cleared
-                                            exp = VALUE zif_cd_hck_runtime_types=>tt_assignment(
-                                                    ( bukrs = gc_test-bukrs zuonr = gc_test-doc2 ) )
-                                            msg = 'Only the cleared assignment' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -407,6 +384,299 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'Character day field must raise' ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
         cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Type error' ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+
+CLASS ltc_inflight_reads DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        bukrs TYPE c LENGTH 4 VALUE 'US01',
+        doc1  TYPE zif_cd_hck_runtime_types=>ty_xref2 VALUE '000000300001',
+        doc2  TYPE zif_cd_hck_runtime_types=>ty_xref2 VALUE '000000300002',
+        hkont TYPE zif_cd_hck_runtime_types=>ty_hkont VALUE '0001100100',
+        other TYPE zif_cd_hck_runtime_types=>ty_hkont VALUE '0001100200',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+    DATA mo_cut TYPE REF TO zif_cd_hck_runtime_dao.
+    DATA mo_hck_dao TYPE REF TO ltd_hck_dao.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+    METHODS teardown.
+    METHODS insert_gl_lines.
+    METHODS insert_configuration.
+
+    METHODS gl_lines_by_xref2_window   FOR TESTING.
+    METHODS gl_lines_by_account_capped FOR TESTING.
+    METHODS configuration_active_only  FOR TESTING.
+    METHODS reference_rows_read        FOR TESTING.
+    METHODS reference_needs_whitelist  FOR TESTING.
+    METHODS reference_unknown_field    FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_inflight_reads IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create(
+      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_PMBANK' ) ( 'ZCD_HCK_CLRRULE' )
+                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ( 'ZCD_HCK_EVSET' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+    insert_gl_lines( ).
+    insert_configuration( ).
+    mo_hck_dao = NEW #( ).
+    mo_hck_dao->mt_fields = VALUE #( ( fieldname = 'METHOD_CLASS' type_kind = cl_abap_typedescr=>typekind_char )
+                                     ( fieldname = 'FLOW' type_kind = cl_abap_typedescr=>typekind_char )
+                                     ( fieldname = 'PAY_METHODS' type_kind = cl_abap_typedescr=>typekind_char ) ).
+    mo_hck_dao->mv_whitelisted = abap_true.
+    zcl_cd_hck_injector=>inject_dao( mo_hck_dao ).
+    mo_cut = NEW zcl_cd_hck_runtime_dao( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_cd_hck_injector=>reset( ).
+    CLEAR: mo_cut, mo_hck_dao.
+  ENDMETHOD.
+
+
+  METHOD insert_gl_lines.
+    DATA lt_bseg TYPE STANDARD TABLE OF bseg WITH EMPTY KEY.
+    DATA ls_bseg TYPE bseg.
+    " Collection clearing line of doc1, cleared (Stripe: ZUONR = descriptor)
+    ls_bseg-bukrs = gc_test-bukrs.
+    ls_bseg-belnr = '0100000001'.
+    ls_bseg-gjahr = '2026'.
+    ls_bseg-buzei = '001'.
+    ls_bseg-hkont = gc_test-hkont.
+    ls_bseg-xref2 = gc_test-doc1.
+    ls_bseg-zuonr = 'STRIPE DESCRIPTOR 1'.
+    ls_bseg-augbl = '0200000001'.
+    INSERT ls_bseg INTO TABLE lt_bseg.
+    " Line of doc2 on another account, open
+    ls_bseg-belnr = '0100000002'.
+    ls_bseg-hkont = gc_test-other.
+    ls_bseg-xref2 = gc_test-doc2.
+    ls_bseg-zuonr = gc_test-doc2.
+    CLEAR ls_bseg-augbl.
+    INSERT ls_bseg INTO TABLE lt_bseg.
+    " doc2 in an old fiscal year (outside the window) and in another company code
+    ls_bseg-belnr = '0100000003'.
+    ls_bseg-gjahr = '2024'.
+    INSERT ls_bseg INTO TABLE lt_bseg.
+    ls_bseg-belnr = '0100000004'.
+    ls_bseg-gjahr = '2026'.
+    ls_bseg-bukrs = 'DE01'.
+    INSERT ls_bseg INTO TABLE lt_bseg.
+    go_env->insert_test_data( lt_bseg ).
+  ENDMETHOD.
+
+
+  METHOD insert_configuration.
+    DATA lt_class TYPE STANDARD TABLE OF zcd_hck_pmclass WITH EMPTY KEY.
+    DATA ls_class TYPE zcd_hck_pmclass.
+    DATA lt_bank TYPE STANDARD TABLE OF zcd_hck_pmbank WITH EMPTY KEY.
+    DATA ls_bank TYPE zcd_hck_pmbank.
+    DATA lt_rule TYPE STANDARD TABLE OF zcd_hck_clrrule WITH EMPTY KEY.
+    DATA ls_rule TYPE zcd_hck_clrrule.
+    DATA lt_role TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
+    DATA ls_role TYPE zcd_hck_btcrole.
+    DATA lt_out TYPE STANDARD TABLE OF zcd_hck_seqout WITH EMPTY KEY.
+    DATA ls_out TYPE zcd_hck_seqout.
+    DATA lt_set TYPE STANDARD TABLE OF zcd_hck_evset WITH EMPTY KEY.
+    DATA ls_set TYPE zcd_hck_evset.
+    ls_class-flow = 'D'.
+    ls_class-method_class = 'WIR'.
+    ls_class-pay_methods = 'E'.
+    ls_class-age_basis = zif_cd_hck_runtime_types=>gc_age_basis-value_date.
+    ls_class-calendar = 'US'.
+    ls_class-active = abap_true.
+    INSERT ls_class INTO TABLE lt_class.
+    ls_class-method_class = 'ACI'.
+    ls_class-active = abap_false.
+    INSERT ls_class INTO TABLE lt_class.
+    go_env->insert_test_data( lt_class ).
+    ls_bank-flow = 'D'.
+    ls_bank-method_class = 'ACI'.
+    ls_bank-hbkid = 'BARC1'.
+    ls_bank-calendar = 'GB'.
+    ls_bank-active = abap_true.
+    INSERT ls_bank INTO TABLE lt_bank.
+    go_env->insert_test_data( lt_bank ).
+    ls_rule-flow = 'D'.
+    ls_rule-method_class = 'WIR'.
+    ls_rule-purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared.
+    ls_rule-seq = '010'.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_STMT_DOC'.
+    ls_rule-required = zif_cd_hck_runtime_types=>gc_required-must_hold.
+    ls_rule-active = abap_true.
+    INSERT ls_rule INTO TABLE lt_rule.
+    ls_rule-seq = '020'.
+    ls_rule-active = abap_false.
+    INSERT ls_rule INTO TABLE lt_rule.
+    go_env->insert_test_data( lt_rule ).
+    ls_role-flow = 'C'.
+    ls_role-method_class = 'CRD'.
+    ls_role-scheme = 'BAI2'.
+    ls_role-btc_code = '195'.
+    ls_role-role = 'PAYOUT_RECEIVED'.
+    ls_role-active = abap_true.
+    INSERT ls_role INTO TABLE lt_role.
+    go_env->insert_test_data( lt_role ).
+    ls_out-flow = 'D'.
+    ls_out-method_class = 'ACH'.
+    ls_out-seq = '010'.
+    ls_out-seq_pattern = 'ORIGINAL'.
+    ls_out-outcome = 'CLEARED'.
+    ls_out-expected_dfkkrp = '0'.
+    ls_out-active = abap_true.
+    INSERT ls_out INTO TABLE lt_out.
+    go_env->insert_test_data( lt_out ).
+    ls_set-set_id = 'STRIPE'.
+    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-table.
+    ls_set-value = 'ZCD_STRP_POUT_LOG'.
+    ls_set-active = abap_true.
+    INSERT ls_set INTO TABLE lt_set.
+    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-intent_field.
+    ls_set-active = abap_false.
+    INSERT ls_set INTO TABLE lt_set.
+    go_env->insert_test_data( lt_set ).
+  ENDMETHOD.
+
+
+  " Rule: G/L lines by company code + XREF2 within the fiscal-year window, with ZUONR and AUGBL
+  METHOD gl_lines_by_xref2_window.
+    TRY.
+        DATA(lt_lines) = mo_cut->get_gl_lines_by_xref2(
+                           it_keys       = VALUE #( ( bukrs = gc_test-bukrs xref2 = gc_test-doc1 )
+                                                    ( bukrs = gc_test-bukrs xref2 = gc_test-doc2 ) )
+                           iv_gjahr_from = '2026'
+                           iv_gjahr_to   = '2027'
+                           it_hkont      = VALUE #( )
+                           iv_max_rows   = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 2 msg = 'Window and company code bound' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-augbl exp = '0200000001' msg = 'Clearing read' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-zuonr exp = 'STRIPE DESCRIPTOR 1' msg = 'Assignment read' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = mo_cut->get_gl_lines_by_xref2( it_keys       = VALUE #( )
+                                               iv_gjahr_from = '2026'
+                                               iv_gjahr_to   = '2027'
+                                               it_hkont      = VALUE #( )
+                                               iv_max_rows   = 100 )
+          msg = 'No key: nothing read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: G/L accounts restrict the read; the row cap cuts the result
+  METHOD gl_lines_by_account_capped.
+    TRY.
+        DATA(lt_lines) = mo_cut->get_gl_lines_by_xref2(
+                           it_keys       = VALUE #( ( bukrs = gc_test-bukrs xref2 = gc_test-doc1 )
+                                                    ( bukrs = gc_test-bukrs xref2 = gc_test-doc2 ) )
+                           iv_gjahr_from = '2026'
+                           iv_gjahr_to   = '2027'
+                           it_hkont      = VALUE #( ( gc_test-hkont ) )
+                           iv_max_rows   = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'Only the clearing account' ).
+        DATA(lt_capped) = mo_cut->get_gl_lines_by_xref2(
+                            it_keys       = VALUE #( ( bukrs = gc_test-bukrs xref2 = gc_test-doc1 )
+                                                     ( bukrs = gc_test-bukrs xref2 = gc_test-doc2 ) )
+                            iv_gjahr_from = '2026'
+                            iv_gjahr_to   = '2027'
+                            it_hkont      = VALUE #( )
+                            iv_max_rows   = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_capped ) exp = 1 msg = 'Cap applied' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: every configuration read returns the active rows only (production switches rows off)
+  METHOD configuration_active_only.
+    TRY.
+        DATA(lt_classes) = mo_cut->get_pm_classes( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 1 msg = 'Active class only' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ 1 ]-calendar exp = 'US' msg = 'Calendar read' ).
+        DATA(lt_banks) = mo_cut->get_pm_banks( ).
+        DATA(lt_roles) = mo_cut->get_btc_roles( ).
+        DATA(lt_outcomes) = mo_cut->get_seq_outcomes( ).
+        cl_abap_unit_assert=>assert_equals( act = lt_banks[ 1 ]-calendar exp = 'GB' msg = 'Bank calendar' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_clearing_rules( ) ) exp = 1 msg = 'Active rule only' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
+                                            msg = 'Role per flow / class / scheme / code' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_outcomes[ 1 ]-outcome exp = 'CLEARED' msg = 'Outcome' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_evidence_settings( 'STRIPE' ) ) exp = 1
+                                            msg = 'Active settings of the set only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a configured table is read by its reference field for the given values (here the method
+  " class table as stand-in for the Stripe payout log), roles without a field are not selected
+  METHOD reference_rows_read.
+    TRY.
+        DATA(lt_rows) = mo_cut->get_reference_rows(
+                          is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'METHOD_CLASS'
+                                                 type_field = 'FLOW' status_field = 'PAY_METHODS' )
+                          it_refs     = VALUE #( ( CONV #( 'WIR' ) ) ( CONV #( 'XYZ' ) ) )
+                          iv_max_rows = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row by reference' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-rtype exp = 'D' msg = 'Role field read' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = 'E' msg = 'Status field read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the configured table must be on ZCD_HCK_TABWL
+  METHOD reference_needs_whitelist.
+    mo_hck_dao->mv_whitelisted = abap_false.
+    TRY.
+        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'METHOD_CLASS' )
+                                    it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
+                                    iv_max_rows = 100 ).
+        cl_abap_unit_assert=>fail( msg = 'Table off the whitelist must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Whitelist error' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a field name that is not in the DDIC raises before any SQL
+  METHOD reference_unknown_field.
+    TRY.
+        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'NO_SUCH_FIELD' )
+                                    it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
+                                    iv_max_rows = 100 ).
+        cl_abap_unit_assert=>fail( msg = 'Unknown field must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_bound( act = lx_error msg = 'Validation error' ).
     ENDTRY.
   ENDMETHOD.
 

@@ -192,6 +192,18 @@ INTERFACE zif_cd_ebs_types
     END OF ty_statement.
   TYPES tt_statement TYPE STANDARD TABLE OF ty_statement WITH EMPTY KEY.
 
+  "! Code of a statement line as delivered: scheme and code, ISO parts (one derivation for EBS
+  "! and the in-flight check of the morning report, ZCL_CD_EBS_SRC_FEB=>LINE_CODE)
+  TYPES:
+    BEGIN OF ty_line_code,
+      scheme     TYPE ty_scheme,
+      btc_code   TYPE ty_btc_code,
+      domain     TYPE c LENGTH 4,
+      family     TYPE c LENGTH 4,
+      subfamily  TYPE c LENGTH 4,
+      prtry_code TYPE ty_btc_code,
+    END OF ty_line_code.
+
   TYPES:
     BEGIN OF ty_line,
       stmt_key      TYPE ty_stmt_key,

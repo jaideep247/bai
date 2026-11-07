@@ -19,6 +19,7 @@
 *& 2026-11-07 | Parameters through ZCL_CD_OPS_FACTORY=>GET_PARAMS (ZIF_CD_OPS_PARAMS).
 *& 2026-11-07 | EBS_GL_LEDGER and EBS_RTRV_STATUS_FIELD name / default from ZIF_CD_EBS_TYPES.
 *& 2026-11-07 | Comments: parameters in ZCA_PARAM (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | Returns lot read also returns the item amount DFKKRP-BETRW (A_INFLIGHT, VERIFY-DDIC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine read repository</p>
 CLASS zcl_cd_ebs_sap_dao DEFINITION
@@ -59,8 +60,9 @@ CLASS zcl_cd_ebs_sap_dao IMPLEMENTATION.
     " Confirmed: DFKKRP-SELW1 = DFKKOP-AUGBL (= FEBEP-CHECT).
     " VERIFY-DDIC: DFKKRK-STARS joined via OPBEL as in legacy v4 (ZCL_BAI_168_DISB)
     " Return reason correction 2026-11-06: the return reason is DFKKRP-RLGRD (VERIFY-SE11) -
-    " read in the same statement, FEBEP carries no return reason
-    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd
+    " read in the same statement, FEBEP carries no return reason. VERIFY-DDIC: BETRW (returned
+    " amount, compared with the return line by the morning report check A_INFLIGHT)
+    SELECT rp~selw1, rp~opbel, rk~stars AS lot_stars, rp~rlgrd, rp~betrw AS amount
       FROM dfkkrp AS rp
       LEFT OUTER JOIN dfkkrk AS rk ON rk~opbel = rp~opbel
       FOR ALL ENTRIES IN @it_docno

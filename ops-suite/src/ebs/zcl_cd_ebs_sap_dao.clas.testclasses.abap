@@ -16,6 +16,7 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | ZCD_OPS_PARAM retired: the lookup tests read ZCD_OPS_MONCFG as configured table; ltc_sap_dao
 *&            | injects the parameters (EBS_GL_LEDGER) and resets them.
+*& 2026-11-07 | Returns lot item amount (DFKKRP-BETRW) for the in-flight check.
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -77,6 +78,7 @@ CLASS ltc_sap_dao IMPLEMENTATION.
     ls_rp-opbel = gc_test-lot_doc.
     ls_rp-selw1 = gc_test-payment.
     ls_rp-rlgrd = gc_test-rlgrd.
+    ls_rp-betrw = '250.00'.
     INSERT ls_rp INTO TABLE lt_rp.
     go_env->insert_test_data( lt_rp ).
     ls_rk-opbel = gc_test-lot_doc.
@@ -117,6 +119,8 @@ CLASS ltc_sap_dao IMPLEMENTATION.
                                             msg = 'Lot status must come from DFKKRK of the item OPBEL' ).
         cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-rlgrd exp = gc_test-rlgrd
                                             msg = 'The return reason must come from DFKKRP-RLGRD' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_items[ 1 ]-amount exp = '250.00'
+                                            msg = 'Returned amount from DFKKRP-BETRW (VERIFY-DDIC)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

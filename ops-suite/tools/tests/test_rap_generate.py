@@ -56,7 +56,8 @@ class PcreCheckTemplateTest(unittest.TestCase):
 
     def test_every_pattern_field_is_validated(self):
         expected = {('ebs', 'zcd_ebs_flow_pat', 'pattern'), ('fmon', 'zcd_fmon_iface', 'name_pattern'),
-                    ('hck', 'zcd_job_step', 'jobname'), ('core', 'zcd_ops_alrule', 'rule_pattern'),
+                    ('hck', 'zcd_job_step', 'jobname'), ('hck', 'zcd_hck_seqout', 'seq_pattern'),
+                    ('core', 'zcd_ops_alrule', 'rule_pattern'),
                     ('core', 'zcd_ops_alrule', 'check_pattern'), ('core', 'zcd_ops_alrule', 'group1_pattern'),
                     ('core', 'zcd_ops_alrule', 'group2_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']

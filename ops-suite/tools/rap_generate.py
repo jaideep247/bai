@@ -127,6 +127,22 @@ SPEC = {
             ('zcd_job_cycle', 'JobCycle', 'zcd_d_jobcyc', 'Job cycle', 'Job cycles', [], []),
             ('zcd_job_step', 'JobStep', 'zcd_d_jobstep', 'Job step', 'Job cycle steps', [],
              [('window', 'window_from', 'window_to'), ('pcre', 'jobname')]),
+            # User rules 2026-11-07 (in-flight check A_INFLIGHT): method classes, evidence rules, BAI roles
+            # and role-sequence outcomes - all keyed by flow + method class (an open list: a new class is
+            # rows in these tables, never a code or domain change)
+            ('zcd_hck_pmclass', 'HckPmClass', 'zcd_d_hckpmcls', 'Payment method class', 'Payment method classes',
+             [], [('enum', 'flow', 'D,C'), ('enum', 'age_basis', 'VALUE_DATE,ISSUE_DATE')]),
+            ('zcd_hck_pmbank', 'HckPmBank', 'zcd_d_hckpmbnk', 'Bank calendar', 'Factory calendar per house bank',
+             [], [('enum', 'flow', 'D,C')]),
+            ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
+             [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,VOIDED,PENDING,IN_FLIGHT'),
+                  ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
+            ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
+            ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role', 'Bank transaction code roles', [],
+             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY')]),
+            ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
+             [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
+              ('enum', 'severity', ',' + SEV)]),
         ]),
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
@@ -166,7 +182,14 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'higher_is_worse': 'Higher is worse', 'is_noc': 'NOC reason', 'ack_level': 'ACK level',
           # User decision 2026-11-06: ZCD_EBS_ACCT-ACCOUNT_NO is the payment engine bank account as
           # derived from FEBEP-XBLNR (bank text removed, first 10 characters) - EBS scope
-          'account_no': 'Payment engine account (XBLNR, 10 characters)'}
+          'account_no': 'Payment engine account (XBLNR, 10 characters)',
+          # In-flight check configuration (user rules 2026-11-07)
+          'pay_methods': 'Payment methods (comma list)', 'age_basis': 'Ageing basis',
+          'required': 'Required (X must hold, C condition, N must not hold)', 'evidence_class': 'Evidence class',
+          'compare_amount': 'Compare amount with returns lot',
+          'seq_pattern': 'Role sequence (PCRE, whole value)',
+          'expected_dfkkrp': 'Returns lot items expected (blank = not checked)',
+          'max_age_days': 'Maximum age of a pending outcome (days)'}
 ADMIN = ('last_changed_by', 'last_changed_at', 'local_last_changed_at')
 LEGACY_ADMIN = ('changed_by', 'changed_at')
 

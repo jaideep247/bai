@@ -1740,7 +1740,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>384</MSGNR>
-     <TEXT>Check &amp;1: no payment method is mapped to a method class</TEXT>
+     <TEXT>Check &amp;1: no payment method is mapped to a method class (ZCD_HCK_PMCLASS)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1794,13 +1794,43 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>393</MSGNR>
-     <TEXT>Method class &amp;1 is not monitored: parameter &amp;2 is blank</TEXT>
+     <TEXT>&amp;1 is not monitored: no payment methods in ZCD_HCK_PMCLASS</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>394</MSGNR>
      <TEXT>Time field &amp;1 of table &amp;2 is not of type TIMS</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>395</MSGNR>
+     <TEXT>&amp;1: &amp;2 payment(s) - &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>396</MSGNR>
+     <TEXT>Payment &amp;1, method &amp;2, run date &amp;3 (&amp;4):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>397</MSGNR>
+     <TEXT>held:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>398</MSGNR>
+     <TEXT>- not held:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>399</MSGNR>
+     <TEXT>- holds but must not:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2179,6 +2209,138 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>547</MSGNR>
      <TEXT>Flow pattern &amp;1 (priority &amp;2) is not valid PCRE - line blocked</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>650</MSGNR>
+     <TEXT>- anomaly of &amp;1:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>651</MSGNR>
+     <TEXT>Evidence &amp;1 (&amp;2) not usable - its purposes are not judged:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>652</MSGNR>
+     <TEXT>&amp;1 is not monitored: no active CLEARED rule in ZCD_HCK_CLRRULE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>653</MSGNR>
+     <TEXT>- also found:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>654</MSGNR>
+     <TEXT>bank codes</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>655</MSGNR>
+     <TEXT>statement line &amp;1 code &amp;2 amount &amp;3 posted &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>656</MSGNR>
+     <TEXT>&amp;1 status &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>657</MSGNR>
+     <TEXT>returns lot &amp;1 reason &amp;2 amount &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>658</MSGNR>
+     <TEXT>G/L line &amp;1 &amp;2 &amp;3 clearing &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>659</MSGNR>
+     <TEXT>- outcome &amp;1 (rule &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>660</MSGNR>
+     <TEXT>- returns lot items &amp;1, expected &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>661</MSGNR>
+     <TEXT>- return line amount &amp;1, returns lot &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>662</MSGNR>
+     <TEXT>- no active pattern of ZCD_HCK_SEQOUT matches</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>663</MSGNR>
+     <TEXT>- pending &amp;1 days after the last line, more than &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>664</MSGNR>
+     <TEXT>returns lot item(s) &amp;1 without a return line</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>665</MSGNR>
+     <TEXT>Evidence &amp;1: parameter &amp;2 required (&amp;3 &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>666</MSGNR>
+     <TEXT>Pattern &amp;1 of ZCD_HCK_SEQOUT &amp;2 is not a valid PCRE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>667</MSGNR>
+     <TEXT>Evidence &amp;1 (&amp;2) not configured (ZCD_HCK_EVSET) - its rows are ignored</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>668</MSGNR>
+     <TEXT>payout log &amp;1 type &amp;2 payout &amp;3 ACK &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>669</MSGNR>
+     <TEXT>G/L line &amp;1 / &amp;2 assignment &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>670</MSGNR>
+     <TEXT>- assignment changed (no longer AUGBL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>671</MSGNR>
+     <TEXT>Evidence &amp;1: expectation &amp;2 invalid (EQUAL or CHANGED)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -8,6 +8,11 @@
 *& delivered (VERIFY-DDIC) table and field names of the queue reads.
 *& Modification log:
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
+*& 2026-11-07 | Clearing / return evidence by rule table ZCD_HCK_CLRRULE and evidence plug-ins
+*&            | (ZIF_CD_HCK_EVIDENCE); method class CRD (card collections); BSAS assignment
+*&            | read replaced by BSEG XREF2; CLEARING_ / RETURN_INCONSISTENT (user rules 1-5);
+*&            | BAI lifecycle per payment: roles ZCD_HCK_BTCROLE, outcomes ZCD_HCK_SEQOUT (user
+*&            | correction of rule 4), UNEXPECTED_SEQUENCE, PENDING_OUTCOME_MISSING.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -135,7 +140,9 @@ INTERFACE zif_cd_hck_runtime_types
   " ------------------------------------------------------------ payments in flight
   "! D disbursement (TFK042Z-XEINZ blank), C collection (XEINZ = X)
   TYPES ty_flow TYPE c LENGTH 1.
-  "! Method class: WIR wire, ACH, CHQ cheque (mapping of payment methods in ZCA_PARAM)
+  "! Method class (ZCD_HCK_PMCLASS-METHOD_CLASS, e.g. WIR, ACH, CHQ, CRD): an open list of
+  "! configuration, never a fixed domain. Three characters: flow + class is the 4-character
+  "! threshold key (ZCD_HCK_THRESH-BUKRS)
   TYPES ty_method_class TYPE c LENGTH 3.
   "! Flow + method class, e.g. DWIR: the metric dimension and the threshold key
   TYPES ty_flow_class TYPE c LENGTH 4.
@@ -143,8 +150,10 @@ INTERFACE zif_cd_hck_runtime_types
   TYPES tt_pymet TYPE SORTED TABLE OF ty_pymet WITH UNIQUE KEY table_line.
   "! DFKKOP-AUGBL / DPAYH-DOC1R width (as ZIF_CD_OPS_TRACE_TYPES=>TY_DOCNO)
   TYPES ty_docno TYPE c LENGTH 12.
-  "! BSEG-ZUONR (assignment; carries AUGBL for ACH and card)
-  TYPES ty_zuonr TYPE c LENGTH 18.
+  "! BSEG-XREF2 (reference key 2; carries AUGBL for ACH and card collections)
+  TYPES ty_xref2 TYPE c LENGTH 12.
+  TYPES ty_hkont TYPE c LENGTH 10.
+  TYPES tt_hkont TYPE SORTED TABLE OF ty_hkont WITH UNIQUE KEY table_line.
 
   CONSTANTS:
     BEGIN OF gc_flow,
@@ -152,15 +161,44 @@ INTERFACE zif_cd_hck_runtime_types
       collection   TYPE ty_flow VALUE 'C',
     END OF gc_flow.
 
+  "! How a method class is aged: business days after the value date (run date when missing)
+  "! or calendar days after the issue (run) date
+  TYPES ty_age_basis TYPE c LENGTH 10.
   CONSTANTS:
-    BEGIN OF gc_method_class,
-      wire   TYPE ty_method_class VALUE 'WIR',
-      ach    TYPE ty_method_class VALUE 'ACH',
-      cheque TYPE ty_method_class VALUE 'CHQ',
-    END OF gc_method_class.
+    BEGIN OF gc_age_basis,
+      value_date TYPE ty_age_basis VALUE 'VALUE_DATE',
+      issue_date TYPE ty_age_basis VALUE 'ISSUE_DATE',
+    END OF gc_age_basis.
+
+  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged
+  TYPES:
+    BEGIN OF ty_pm_class,
+      flow         TYPE ty_flow,
+      method_class TYPE ty_method_class,
+      "! SAP payment methods of the class (comma list)
+      pay_methods  TYPE c LENGTH 40,
+      age_basis    TYPE ty_age_basis,
+      "! Factory calendar of the business days (blank = PARAM1 of the check)
+      calendar     TYPE zif_cd_hck_types=>ty_calendar,
+      description  TYPE zif_cd_hck_types=>ty_text,
+    END OF ty_pm_class.
+  TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class.
+
+  "! DPAYH-HBKID (house bank of the payment)
+  TYPES ty_hbkid TYPE c LENGTH 5.
+  "! ZCD_HCK_PMBANK: factory calendar of a house bank for a flow + method class (e.g. UK / German
+  "! bank holidays of an international ACH bank); overrides the calendar of the method class
+  TYPES:
+    BEGIN OF ty_pm_bank,
+      flow         TYPE ty_flow,
+      method_class TYPE ty_method_class,
+      hbkid        TYPE ty_hbkid,
+      calendar     TYPE zif_cd_hck_types=>ty_calendar,
+    END OF ty_pm_bank.
+  TYPES tt_pm_bank TYPE SORTED TABLE OF ty_pm_bank WITH UNIQUE KEY flow method_class hbkid.
 
   "! Payment of a payment run (DPAYH, proposal runs excluded, DOC1R filled) with its flow.
-  "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
+  "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
   TYPES:
     BEGIN OF ty_issued_payment,
       doc1r    TYPE ty_docno,
@@ -168,21 +206,247 @@ INTERFACE zif_cd_hck_runtime_types
       laufi    TYPE c LENGTH 6,
       bukrs    TYPE c LENGTH 4,
       pymet    TYPE ty_pymet,
+      "! House bank (calendar override per bank, ZCD_HCK_PMBANK)
+      hbkid    TYPE ty_hbkid,
       valut    TYPE d,
       amount   TYPE zif_cd_ops_types=>ty_amount,
       currency TYPE zif_cd_ops_types=>ty_currency,
       "! TFK042Z-XEINZ: X = collection, blank = disbursement
       xeinz    TYPE abap_bool,
+      "! Set by the check (not read): flow D / C and method class of the payment method
+      flow     TYPE ty_flow,
+      class    TYPE ty_method_class,
     END OF ty_issued_payment.
   TYPES tt_issued_payment TYPE STANDARD TABLE OF ty_issued_payment WITH EMPTY KEY.
 
-  "! Company code + assignment of a clearing-account line (collections: ZUONR = AUGBL)
+  "! Company code + XREF2 of a G/L line (collections: XREF2 = AUGBL)
   TYPES:
-    BEGIN OF ty_assignment,
+    BEGIN OF ty_xref2_key,
       bukrs TYPE c LENGTH 4,
-      zuonr TYPE ty_zuonr,
-    END OF ty_assignment.
-  TYPES tt_assignment TYPE SORTED TABLE OF ty_assignment WITH UNIQUE KEY bukrs zuonr.
+      xref2 TYPE ty_xref2,
+    END OF ty_xref2_key.
+  TYPES tt_xref2_key TYPE SORTED TABLE OF ty_xref2_key WITH UNIQUE KEY bukrs xref2.
+
+  "! G/L line (BSEG) found by company code + XREF2 with its clearing document
+  TYPES:
+    BEGIN OF ty_gl_xref2_line,
+      bukrs TYPE c LENGTH 4,
+      belnr TYPE c LENGTH 10,
+      gjahr TYPE n LENGTH 4,
+      buzei TYPE n LENGTH 3,
+      xref2 TYPE ty_xref2,
+      "! Assignment: AUGBL after the payment run; Stripe payout processing sets the descriptor
+      zuonr TYPE c LENGTH 18,
+      augbl TYPE c LENGTH 10,
+    END OF ty_gl_xref2_line.
+  TYPES tt_gl_xref2_line TYPE STANDARD TABLE OF ty_gl_xref2_line WITH EMPTY KEY.
+
+  " ------------------------------------------------------------ clearing / return rules
+  "! Purpose of a rule row (ZCD_HCK_CLRRULE-PURPOSE)
+  TYPES ty_purpose TYPE c LENGTH 10.
+  "! X = must hold and indicates the purpose, C = must hold but does not indicate it on its own
+  "! (condition), N = must not hold, blank = shown in the detail only (never decides)
+  TYPES ty_required TYPE c LENGTH 1.
+  TYPES ty_rule_seq TYPE n LENGTH 3.
+  TYPES ty_rule_param TYPE c LENGTH 40.
+
+  "! Purposes in the order they decide: the first purpose with evidence decides (a voided
+  "! cheque or a returned payment is never judged as cleared)
+  CONSTANTS:
+    BEGIN OF gc_purpose,
+      voided   TYPE ty_purpose VALUE 'VOIDED',
+      returned TYPE ty_purpose VALUE 'RETURNED',
+      "! Outcome not final yet but expected (e.g. redeposit of a failed collection): not late
+      pending   TYPE ty_purpose VALUE 'PENDING',
+      cleared   TYPE ty_purpose VALUE 'CLEARED',
+      "! Consistency of a state in flight (e.g. Stripe payout processed, F.13 still open): all
+      "! rows hold = still in flight and aged, some = CLEARING_INCONSISTENT
+      in_flight TYPE ty_purpose VALUE 'IN_FLIGHT',
+    END OF gc_purpose.
+
+  CONSTANTS:
+    BEGIN OF gc_required,
+      must_hold     TYPE ty_required VALUE 'X',
+      condition     TYPE ty_required VALUE 'C',
+      must_not_hold TYPE ty_required VALUE 'N',
+      info          TYPE ty_required VALUE ' ',
+    END OF gc_required.
+
+  "! Expectation of the evidence ZCL_CD_HCK_EV_GL_ZUONR (PARAM1): BSEG-ZUONR still = AUGBL
+  "! (ACH collections, F.13 clears one-to-one) or changed (Stripe: statement descriptor)
+  TYPES ty_zuonr_expect TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_zuonr_expect,
+      equal   TYPE ty_zuonr_expect VALUE 'EQUAL',
+      changed TYPE ty_zuonr_expect VALUE 'CHANGED',
+    END OF gc_zuonr_expect.
+
+  "! Names of the rule parameters (named in the message of a missing parameter)
+  CONSTANTS:
+    BEGIN OF gc_rule_param,
+      param1 TYPE string VALUE `PARAM1`,
+    END OF gc_rule_param.
+
+  "! Interface every evidence plug-in (ZCD_HCK_CLRRULE-EVIDENCE_CLASS) implements
+  CONSTANTS gc_evidence_intf TYPE zif_cd_ops_types=>ty_class_name VALUE 'ZIF_CD_HCK_EVIDENCE'.
+
+  "! One active row of ZCD_HCK_CLRRULE: evidence kind and its parameters for flow + method
+  "! class + purpose; rows of one purpose are AND-combined (REQUIRED X / N)
+  TYPES:
+    BEGIN OF ty_clr_rule,
+      flow           TYPE ty_flow,
+      method_class   TYPE ty_method_class,
+      purpose        TYPE ty_purpose,
+      seq            TYPE ty_rule_seq,
+      evidence_class TYPE zif_cd_ops_types=>ty_class_name,
+      param1         TYPE ty_rule_param,
+      param2         TYPE ty_rule_param,
+      param3         TYPE ty_rule_param,
+      required       TYPE ty_required,
+      description    TYPE zif_cd_hck_types=>ty_text,
+    END OF ty_clr_rule.
+  TYPES tt_clr_rule TYPE SORTED TABLE OF ty_clr_rule WITH UNIQUE KEY flow method_class purpose seq.
+
+  " ------------------------------------------------------------ BAI lifecycle of a payment
+  "! Code of a statement line in its scheme (BAI2 type code, ISO Domain-Family-Sub-family, PRTRY;
+  "! as ZCD_BTC_MAP) and its role in the lifecycle of one payment reference
+  TYPES ty_scheme TYPE c LENGTH 5.
+  TYPES ty_btc_code TYPE c LENGTH 35.
+  TYPES ty_btc_role TYPE c LENGTH 15.
+  TYPES ty_outcome TYPE c LENGTH 20.
+  TYPES ty_seq_pattern TYPE c LENGTH 200.
+  "! Separator of the ordered role sequence matched by ZCD_HCK_SEQOUT-SEQ_PATTERN
+  CONSTANTS gc_role_sep TYPE string VALUE `,`.
+
+  "! ZCD_HCK_BTCROLE: the same code means different things per flow + method class; the scheme
+  "! of a line comes from the statement format (ZCL_CD_EBS_SRC_FEB=>LINE_CODE: BAI2 / ISO / PRTRY)
+  TYPES:
+    BEGIN OF ty_btc_role_row,
+      flow           TYPE ty_flow,
+      method_class   TYPE ty_method_class,
+      scheme         TYPE ty_scheme,
+      btc_code       TYPE ty_btc_code,
+      role           TYPE ty_btc_role,
+      "! X: the amount of a line of this role is compared with the returns lot (DFKKRP)
+      compare_amount TYPE abap_bool,
+    END OF ty_btc_role_row.
+  TYPES tt_btc_role TYPE SORTED TABLE OF ty_btc_role_row WITH UNIQUE KEY flow method_class scheme btc_code.
+
+  "! ZCD_HCK_SEQOUT: the first active pattern (by SEQ) matching the whole role sequence decides
+  TYPES:
+    BEGIN OF ty_seq_outcome,
+      flow            TYPE ty_flow,
+      method_class    TYPE ty_method_class,
+      seq             TYPE ty_rule_seq,
+      seq_pattern     TYPE ty_seq_pattern,
+      outcome         TYPE ty_outcome,
+      "! Returns lot items (DFKKRP) expected: 0 .. 9, blank = not checked
+      expected_dfkkrp TYPE c LENGTH 1,
+      "! Pending outcome: calendar days after the last line it may stay (0 = no limit)
+      max_age_days    TYPE i,
+      "! Severity when the evidence does not match (blank = E)
+      severity        TYPE zif_cd_ops_types=>ty_severity,
+      description     TYPE zif_cd_hck_types=>ty_text,
+    END OF ty_seq_outcome.
+  TYPES tt_seq_outcome TYPE SORTED TABLE OF ty_seq_outcome WITH UNIQUE KEY flow method_class seq.
+
+  CONSTANTS:
+    BEGIN OF gc_outcome,
+      cleared          TYPE ty_outcome VALUE 'CLEARED',
+      in_flight        TYPE ty_outcome VALUE 'IN_FLIGHT',
+      returned         TYPE ty_outcome VALUE 'RETURNED',
+      retrieved        TYPE ty_outcome VALUE 'RETRIEVED',
+      retrieval_failed TYPE ty_outcome VALUE 'RETRIEVAL_FAILED',
+      redeposit        TYPE ty_outcome VALUE 'REDEPOSIT_PENDING',
+    END OF gc_outcome.
+
+  " ------------------------------------------------------------ evidence settings / configured source
+  "! ZCD_HCK_EVSET: named settings of an evidence kind (set id = PARAM1 of the rule), e.g. the
+  "! field names and record-type values of the Stripe payout log
+  TYPES ty_set_id TYPE c LENGTH 10.
+  TYPES ty_set_name TYPE c LENGTH 20.
+  TYPES:
+    BEGIN OF ty_setting,
+      name  TYPE ty_set_name,
+      value TYPE ty_rule_param,
+    END OF ty_setting.
+  TYPES tt_setting TYPE SORTED TABLE OF ty_setting WITH UNIQUE KEY name.
+
+  "! Setting names of the Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE): chain payment document
+  "! (DFKKOP-AUGBL) -> payment intent ID (DFKKOP field DFKKOP_INTENT_FIELD) -> payout log row
+  "! (TABLE, field INTENT_FIELD). *_FIELD / TABLE = names validated against the DDIC and
+  "! ZCD_HCK_TABWL; CHARGE .. ACK_PARTIAL = optional comma lists of record-type / ACK values
+  CONSTANTS:
+    BEGIN OF gc_setting,
+      table         TYPE ty_set_name VALUE 'TABLE',
+      intent_field  TYPE ty_set_name VALUE 'INTENT_FIELD',
+      dfkkop_intent TYPE ty_set_name VALUE 'DFKKOP_INTENT_FIELD',
+      type_field    TYPE ty_set_name VALUE 'TYPE_FIELD',
+      payout_field  TYPE ty_set_name VALUE 'PAYOUT_FIELD',
+      ack_field     TYPE ty_set_name VALUE 'ACK_FIELD',
+      charge        TYPE ty_set_name VALUE 'CHARGE',
+      refund        TYPE ty_set_name VALUE 'REFUND',
+      ack_full      TYPE ty_set_name VALUE 'ACK_FULL',
+      ack_partial   TYPE ty_set_name VALUE 'ACK_PARTIAL',
+    END OF gc_setting.
+
+  "! Confirmed: DFKKOP-AUGBL = payment document (the open items a payment cleared)
+  CONSTANTS gc_dfkkop_augbl TYPE zif_cd_hck_types=>ty_fieldname VALUE 'AUGBL'.
+
+  "! A configured table read by payment reference: the fields by role (names validated before
+  "! the read; blank = role not read)
+  TYPES:
+    BEGIN OF ty_ref_source,
+      tabname        TYPE zif_cd_hck_types=>ty_tabname,
+      ref_field      TYPE zif_cd_hck_types=>ty_fieldname,
+      type_field     TYPE zif_cd_hck_types=>ty_fieldname,
+      amount_field   TYPE zif_cd_hck_types=>ty_fieldname,
+      currency_field TYPE zif_cd_hck_types=>ty_fieldname,
+      group_field    TYPE zif_cd_hck_types=>ty_fieldname,
+      date_field     TYPE zif_cd_hck_types=>ty_fieldname,
+      status_field   TYPE zif_cd_hck_types=>ty_fieldname,
+    END OF ty_ref_source.
+
+  "! One row of a configured source (aliases = components)
+  TYPES:
+    BEGIN OF ty_ref_row,
+      ref      TYPE c LENGTH 70,
+      rtype    TYPE c LENGTH 40,
+      amount   TYPE zif_cd_ops_types=>ty_amount,
+      currency TYPE zif_cd_ops_types=>ty_currency,
+      grp      TYPE c LENGTH 70,
+      rdate    TYPE d,
+      status   TYPE c LENGTH 40,
+    END OF ty_ref_row.
+  TYPES tt_ref_row TYPE STANDARD TABLE OF ty_ref_row WITH EMPTY KEY.
+  TYPES tt_ref_value TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_ref WITH UNIQUE KEY table_line.
+
+  "! Evidence of one kind for one payment; a payment without a row has no evidence
+  TYPES:
+    BEGIN OF ty_evidence,
+      doc1r      TYPE ty_docno,
+      found      TYPE abap_bool,
+      "! Matching records (statement lines, lot items, G/L lines, cheques)
+      hits       TYPE i,
+      "! Anomaly of the evidence itself: finding code (UNEXPECTED_SEQUENCE, RETURN_INCONSISTENT,
+      "! PENDING_OUTCOME_MISSING) and its severity; the payment is listed there, never aged
+      anomaly    TYPE zif_cd_ops_types=>ty_check_code,
+      severity   TYPE zif_cd_ops_types=>ty_severity,
+      "! Short evidence text for the finding (keys, status values, sequence)
+      detail     TYPE string,
+    END OF ty_evidence.
+  TYPES tt_evidence TYPE HASHED TABLE OF ty_evidence WITH UNIQUE KEY doc1r.
+
+  TYPES:
+    BEGIN OF ty_evidence_result,
+      evidence TYPE tt_evidence,
+      "! A read of the kind reached the row cap (result may be incomplete)
+      capped   TYPE abap_bool,
+      "! Table of the capped read (named in TECH_READ_CAPPED)
+      source   TYPE zif_cd_hck_types=>ty_tabname,
+      "! The kind's settings are not maintained: its rows are ignored (information finding)
+      unconfigured TYPE abap_bool,
+    END OF ty_evidence_result.
 
   " ------------------------------------------------------------ check codes
   CONSTANTS:
@@ -204,12 +468,22 @@ INTERFACE zif_cd_hck_runtime_types
       payment_not_clear  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAYMENT_NOT_CLEARED',
       "! Payments aged from the run date because the value date is missing
       value_date_missing TYPE zif_cd_ops_types=>ty_check_code VALUE 'VALUE_DATE_MISSING',
-      "! Configuration of the in-flight check incomplete (calendar, method class)
+      "! Configuration of the in-flight check incomplete (calendar, method class, rules)
       inflight_config    TYPE zif_cd_ops_types=>ty_check_code VALUE 'INFLIGHT_CONFIG',
       "! No ZCD_HCK_THRESH limits for a metric the check classifies by - not evaluated
       limits_missing     TYPE zif_cd_ops_types=>ty_check_code VALUE 'LIMITS_NOT_CONFIGURED',
       "! A read reached its row cap: the result may be incomplete
       read_capped        TYPE zif_cd_ops_types=>ty_check_code VALUE 'TECH_READ_CAPPED',
+      "! Some but not all evidence of CLEARED (or VOIDED) holds (user rules 1, 2)
+      clearing_inconsist TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_INCONSISTENT',
+      "! Some but not all evidence of RETURNED holds, amounts differ, several lines (rule 4)
+      return_inconsist   TYPE zif_cd_ops_types=>ty_check_code VALUE 'RETURN_INCONSISTENT',
+      "! A ZCD_HCK_CLRRULE row cannot be used (class, parameters): its purpose is not judged
+      clrrule_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_RULE_INVALID',
+      "! The ordered BAI roles of a payment match no active ZCD_HCK_SEQOUT pattern
+      unexpected_seq     TYPE zif_cd_ops_types=>ty_check_code VALUE 'UNEXPECTED_SEQUENCE',
+      "! A pending outcome (e.g. redeposit) is older than its MAX_AGE_DAYS
+      pending_overdue    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PENDING_OUTCOME_MISSING',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -227,10 +501,6 @@ INTERFACE zif_cd_hck_runtime_types
       queue_wait_states TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_QUEUE_WAIT_STATES',
       "! Rows of one technical read (NRIV intervals, queue groups)
       max_tech_rows     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_TECH_ROWS',
-      "! Payment methods per method class (comma lists of SAP payment methods)
-      inflight_wire     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_WIRE_METHODS',
-      inflight_ach      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_ACH_METHODS',
-      inflight_cheque   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_CHQ_METHODS',
       "! Payments read per window (DPAYH)
       inflight_max_rows TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_MAX_ROWS',
     END OF gc_param.
@@ -241,7 +511,6 @@ INTERFACE zif_cd_hck_runtime_types
       queue_hold_states TYPE string VALUE `STOP,WAITSTOP`,
       queue_wait_states TYPE string VALUE `READY,RUNNING`,
       max_tech_rows     TYPE i VALUE 5000,
-      inflight_cheque   TYPE string VALUE `C`,
       inflight_max_rows TYPE i VALUE 5000,
     END OF gc_param_default.
 
@@ -250,13 +519,15 @@ INTERFACE zif_cd_hck_runtime_types
     BEGIN OF gc_check_default,
       "! E_QUEUES PARAM3: READY / RUNNING older than this is stuck (minutes)
       queue_stuck_min TYPE i VALUE 30,
-      "! A_INFLIGHT PARAM2 / PARAM3: look-back of wire / ACH and of cheques (days)
+      "! A_INFLIGHT PARAM2 / PARAM3: look-back of VALUE_DATE classes and of ISSUE_DATE classes
       inflight_days   TYPE i VALUE 10,
       cheque_days     TYPE i VALUE 120,
       "! A_INFLIGHT PARAM4: payments listed per finding (oldest first)
       top_n           TYPE i VALUE 10,
       "! Longest day range counted in business days (calendar reads per run)
       max_calendar    TYPE i VALUE 400,
+      "! Evidence ZCL_CD_HCK_EV_STMT_CHEQUE PARAM1: FEBEP-CHECT = last 13 characters of ZTNUM
+      ztnum_suffix    TYPE i VALUE 13,
     END OF gc_check_default.
 
   " ------------------------------------------------------------ messages (class ZCD_OPS)
@@ -278,6 +549,30 @@ INTERFACE zif_cd_hck_runtime_types
       run_date_used       TYPE zif_cd_ops_types=>ty_msgno VALUE '391',
       value_date_missing  TYPE zif_cd_ops_types=>ty_msgno VALUE '392',
       class_not_watched   TYPE zif_cd_ops_types=>ty_msgno VALUE '393',
+      inconsistent        TYPE zif_cd_ops_types=>ty_msgno VALUE '395',
+      evidence_line       TYPE zif_cd_ops_types=>ty_msgno VALUE '396',
+      evidence_held       TYPE zif_cd_ops_types=>ty_msgno VALUE '397',
+      evidence_missing    TYPE zif_cd_ops_types=>ty_msgno VALUE '398',
+      evidence_forbidden  TYPE zif_cd_ops_types=>ty_msgno VALUE '399',
+      evidence_anomaly    TYPE zif_cd_ops_types=>ty_msgno VALUE '650',
+      rule_invalid        TYPE zif_cd_ops_types=>ty_msgno VALUE '651',
+      no_cleared_rule     TYPE zif_cd_ops_types=>ty_msgno VALUE '652',
+      evidence_info       TYPE zif_cd_ops_types=>ty_msgno VALUE '653',
+      ev_bank_line        TYPE zif_cd_ops_types=>ty_msgno VALUE '655',
+      ev_status           TYPE zif_cd_ops_types=>ty_msgno VALUE '656',
+      ev_return_item      TYPE zif_cd_ops_types=>ty_msgno VALUE '657',
+      ev_gl_line          TYPE zif_cd_ops_types=>ty_msgno VALUE '658',
+      ev_sequence         TYPE zif_cd_ops_types=>ty_msgno VALUE '654',
+      ev_outcome          TYPE zif_cd_ops_types=>ty_msgno VALUE '659',
+      ev_lot_count        TYPE zif_cd_ops_types=>ty_msgno VALUE '660',
+      ev_amount_differs   TYPE zif_cd_ops_types=>ty_msgno VALUE '661',
+      ev_no_pattern       TYPE zif_cd_ops_types=>ty_msgno VALUE '662',
+      ev_pending_age      TYPE zif_cd_ops_types=>ty_msgno VALUE '663',
+      ev_lot_no_line      TYPE zif_cd_ops_types=>ty_msgno VALUE '664',
+      evidence_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '667',
+      ev_ref_row          TYPE zif_cd_ops_types=>ty_msgno VALUE '668',
+      ev_zuonr            TYPE zif_cd_ops_types=>ty_msgno VALUE '669',
+      ev_zuonr_changed    TYPE zif_cd_ops_types=>ty_msgno VALUE '670',
     END OF gc_msg.
 
 ENDINTERFACE.

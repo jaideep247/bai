@@ -20,6 +20,8 @@
 *& 2026-11-07 | posted_fields( ): one reading of EBS_FEB_POSTED_FIELDS, shared with the statement
 *&            | evidence of file monitoring (ZCL_CD_EBS_STMT_EVIDENCE).
 *& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
+*& 2026-11-07 | line_code( ): scheme / code of a FEBEP line (VORGC = BAI2, VGEXT = ISO or PRTRY), shared
+*&            | with the in-flight check of the morning report (BAI lifecycle of a payment).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - source FEBKO/FEBEP</p>
 CLASS zcl_cd_ebs_src_feb DEFINITION
@@ -48,6 +50,16 @@ CLASS zcl_cd_ebs_src_feb DEFINITION
     CLASS-METHODS posted_fields
       RETURNING
         VALUE(rt_fields) TYPE string_table.
+
+    "! Scheme and code of a FEBEP line: VORGC filled = BAI2 type code; otherwise the external
+    "! transaction VGEXT of a CAMT import (Domain-Family-Sub-family = ISO, else BAI2 / PRTRY).
+    "! One derivation for EBS and the morning report (pure, no database)
+    CLASS-METHODS line_code
+      IMPORTING
+        iv_vorgc       TYPE clike
+        iv_vgext       TYPE clike
+      RETURNING
+        VALUE(rs_code) TYPE zif_cd_ebs_types=>ty_line_code.
 
   PRIVATE SECTION.
     DATA ms_selection    TYPE zif_cd_ebs_feb_dao=>ty_selection.
@@ -201,28 +213,39 @@ CLASS zcl_cd_ebs_src_feb IMPLEMENTATION.
     rs_line-gjahr        = is_item-gjahr.
     rs_line-posting_rule = is_item-vgint.
 
-    IF is_item-vorgc IS NOT INITIAL.
-      rs_line-scheme   = zif_cd_ebs_types=>gc_scheme-bai2.
-      rs_line-btc_code = is_item-vorgc.
+    DATA(ls_code) = line_code( iv_vorgc = is_item-vorgc iv_vgext = is_item-vgext ).
+    rs_line-scheme     = ls_code-scheme.
+    rs_line-btc_code   = ls_code-btc_code.
+    rs_line-domain     = ls_code-domain.
+    rs_line-family     = ls_code-family.
+    rs_line-subfamily  = ls_code-subfamily.
+    rs_line-prtry_code = ls_code-prtry_code.
+  ENDMETHOD.
+
+
+  METHOD line_code.
+    IF iv_vorgc IS NOT INITIAL.
+      rs_code-scheme   = zif_cd_ebs_types=>gc_scheme-bai2.
+      rs_code-btc_code = iv_vorgc.
       RETURN.
     ENDIF.
 
     " CAMT import: external transaction holds Domain/Family/Sub-family (separator + - or /)
-    DATA(lv_code) = translate( val = condense( CONV string( is_item-vgext ) ) from = `+/` to = `--` ).
+    DATA(lv_code) = translate( val = condense( CONV string( iv_vgext ) ) from = `+/` to = `--` ).
     SPLIT lv_code AT '-' INTO DATA(lv_domain) DATA(lv_family) DATA(lv_subfamily).
     IF lv_family IS NOT INITIAL.
-      rs_line-scheme    = zif_cd_ebs_types=>gc_scheme-iso.
-      rs_line-domain    = lv_domain.
-      rs_line-family    = lv_family.
-      rs_line-subfamily = lv_subfamily.
-      rs_line-btc_code  = COND #( WHEN lv_subfamily IS NOT INITIAL THEN |{ lv_domain }-{ lv_family }-{ lv_subfamily }|
+      rs_code-scheme    = zif_cd_ebs_types=>gc_scheme-iso.
+      rs_code-domain    = lv_domain.
+      rs_code-family    = lv_family.
+      rs_code-subfamily = lv_subfamily.
+      rs_code-btc_code  = COND #( WHEN lv_subfamily IS NOT INITIAL THEN |{ lv_domain }-{ lv_family }-{ lv_subfamily }|
                                   ELSE |{ lv_domain }-{ lv_family }| ).
     ELSE.
-      rs_line-scheme     = COND #( WHEN strlen( lv_code ) = 3 AND lv_code CO zif_cd_ebs_types=>gc_digits
+      rs_code-scheme     = COND #( WHEN strlen( lv_code ) = 3 AND lv_code CO zif_cd_ebs_types=>gc_digits
                                    THEN zif_cd_ebs_types=>gc_scheme-bai2
                                    ELSE zif_cd_ebs_types=>gc_scheme-prtry ).
-      rs_line-btc_code   = lv_code.
-      rs_line-prtry_code = lv_code.
+      rs_code-btc_code   = lv_code.
+      rs_code-prtry_code = lv_code.
     ENDIF.
   ENDMETHOD.
 

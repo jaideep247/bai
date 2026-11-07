@@ -1,23 +1,32 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_c_inflight.clas.testclasses.abap
 *& Purpose:
-*& Unit tests of the in-flight check: wire / ACH aged in business days after
-*& the value date (boundary, holiday, no calendar, missing value date), both
-*& flows reported separately, cleared / returned / reversed payments left
-*& out (bank line, cleared assignment, encashed cheque), cheques in calendar
-*& days, empty data, method mapping and limits configuration, row cap and
-*& top N. Runtime DAO, payment trace repository and HCK DAO are test doubles
-*& from the injectors, parameters the delivered in-memory definitions;
-*& does not prove live SAP runtime behavior.
+*& Unit tests of the in-flight check: ageing (business days after the
+*& value date with class / house-bank / check calendar, missing value
+*& date, issue-date classes in calendar days), flows and classes from
+*& configuration (a new class by rows only), the rule combination (all
+*& rows hold = excluded, some = inconsistent, none = open, must-not-hold,
+*& purpose order, anomalies, unusable or unconfigured kinds, one collect
+*& per kind) and the user rules 1-4 end to end with the delivered
+*& evidence plug-ins (wire / ACH status and line, cheque B / V / blank,
+*& collection BSEG XREF2, ACH return with and without returns lot, Stripe
+*& not configured). Runtime DAO, payment trace repository, HCK DAO, clock
+*& and test evidence kinds are doubles from the injectors, parameters the
+*& delivered in-memory definitions; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (payments in flight, both flows, value date).
+*& 2026-11-07 | Rules and evidence plug-ins, configured classes and calendars (user rules 1-5).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_runtime_dao PARTIALLY IMPLEMENTED.
     DATA mt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
-    DATA mt_cleared TYPE zif_cd_hck_runtime_types=>tt_assignment.
-    DATA mt_asked TYPE zif_cd_hck_runtime_types=>tt_assignment.
+    DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
+    DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
+    DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
+    DATA mt_roles TYPE zif_cd_hck_runtime_types=>tt_btc_role.
+    DATA mt_outcomes TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
+    DATA mt_gl_lines TYPE zif_cd_hck_runtime_types=>tt_gl_xref2_line.
 ENDCLASS.
 
 CLASS ltd_runtime_dao IMPLEMENTATION.
@@ -30,11 +39,34 @@ CLASS ltd_runtime_dao IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD zif_cd_hck_runtime_dao~get_cleared_assignments.
-    mt_asked = it_keys.
-    LOOP AT mt_cleared ASSIGNING FIELD-SYMBOL(<ls_cleared>).
-      IF line_exists( it_keys[ bukrs = <ls_cleared>-bukrs zuonr = <ls_cleared>-zuonr ] ).
-        INSERT <ls_cleared> INTO TABLE rt_cleared.
+  METHOD zif_cd_hck_runtime_dao~get_pm_classes.
+    rt_classes = mt_classes.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_pm_banks.
+    rt_banks = mt_banks.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_clearing_rules.
+    rt_rules = mt_rules.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_btc_roles.
+    rt_roles = mt_roles.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_seq_outcomes.
+    rt_outcomes = mt_outcomes.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_evidence_settings.
+    CLEAR rt_settings.
+  ENDMETHOD.
+
+  METHOD zif_cd_hck_runtime_dao~get_gl_lines_by_xref2.
+    LOOP AT mt_gl_lines ASSIGNING FIELD-SYMBOL(<ls_line>).
+      IF line_exists( it_keys[ bukrs = <ls_line>-bukrs xref2 = <ls_line>-xref2 ] ).
+        INSERT <ls_line> INTO TABLE rt_lines.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -48,6 +80,7 @@ CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
     DATA mt_returns TYPE zif_cd_ops_trace_types=>tt_return.
     DATA mt_checks TYPE zif_cd_ops_trace_types=>tt_check.
     DATA mt_lines TYPE zif_cd_ops_trace_types=>tt_bank_line.
+    DATA mt_runs TYPE zif_cd_ops_trace_types=>tt_payment_run.
 ENDCLASS.
 
 CLASS ltd_trace_dao IMPLEMENTATION.
@@ -56,13 +89,25 @@ CLASS ltd_trace_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_trace_dao~get_returns.
-    rt_returns = mt_returns.
+    LOOP AT mt_returns ASSIGNING FIELD-SYMBOL(<ls_return>).
+      IF line_exists( it_docno[ table_line = <ls_return>-selw1 ] ).
+        INSERT <ls_return> INTO TABLE rt_returns.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
     LOOP AT mt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
       IF line_exists( it_docno[ table_line = <ls_check>-doc1r ] ).
         INSERT <ls_check> INTO TABLE rt_checks.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_trace_dao~get_payment_runs.
+    LOOP AT mt_runs ASSIGNING FIELD-SYMBOL(<ls_run>).
+      IF line_exists( it_docno[ table_line = <ls_run>-doc1r ] ).
+        INSERT <ls_run> INTO TABLE rt_runs.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -80,15 +125,68 @@ ENDCLASS.
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
-    "! Non-working days of the test calendar (every other day works)
-    DATA mt_holidays TYPE SORTED TABLE OF d WITH UNIQUE KEY table_line.
+    TYPES:
+      BEGIN OF ty_holiday,
+        calendar TYPE zif_cd_hck_types=>ty_calendar,
+        date     TYPE d,
+      END OF ty_holiday.
+    "! Non-working days per test calendar (every other day works)
+    DATA mt_holidays TYPE SORTED TABLE OF ty_holiday WITH UNIQUE KEY calendar date.
     DATA mv_calls TYPE i.
 ENDCLASS.
 
 CLASS ltd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~is_working_day.
     mv_calls = mv_calls + 1.
-    rv_working = xsdbool( NOT line_exists( mt_holidays[ table_line = iv_date ] ) ).
+    rv_working = xsdbool( NOT line_exists( mt_holidays[ calendar = iv_calendar date = iv_date ] ) ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltd_clock DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_clock PARTIALLY IMPLEMENTED.
+ENDCLASS.
+
+CLASS ltd_clock IMPLEMENTATION.
+  METHOD zif_cd_ops_clock~today.
+    rv_date = '20261111'.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! Test evidence kind: found for the listed documents, optional anomaly, unconfigured or failing
+CLASS ltd_evidence DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_hck_evidence.
+    DATA mt_found TYPE SORTED TABLE OF zif_cd_hck_runtime_types=>ty_docno WITH UNIQUE KEY table_line.
+    DATA mv_anomaly_doc TYPE zif_cd_hck_runtime_types=>ty_docno.
+    DATA mv_unconfigured TYPE abap_bool.
+    DATA mv_fail TYPE abap_bool.
+    DATA mv_calls TYPE i.
+    DATA mv_asked TYPE i.
+ENDCLASS.
+
+CLASS ltd_evidence IMPLEMENTATION.
+  METHOD zif_cd_hck_evidence~collect.
+    mv_calls = mv_calls + 1.
+    mv_asked = mv_asked + lines( it_payments ).
+    IF mv_fail = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e665(zcd_ops) WITH is_rule-evidence_class is_rule-param1
+                                                                  is_rule-flow is_rule-purpose.
+    ENDIF.
+    rs_result-unconfigured = mv_unconfigured.
+    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      IF line_exists( mt_found[ table_line = <ls_payment>-doc1r ] ).
+        INSERT VALUE #( doc1r = <ls_payment>-doc1r found = abap_true hits = 1 detail = is_rule-evidence_class )
+          INTO TABLE rs_result-evidence.
+      ENDIF.
+      IF <ls_payment>-doc1r = mv_anomaly_doc.
+        INSERT VALUE #( doc1r    = <ls_payment>-doc1r
+                        anomaly  = zif_cd_hck_runtime_types=>gc_code-unexpected_seq
+                        severity = zif_cd_ops_types=>gc_severity-warning ) INTO TABLE rs_result-evidence.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 ENDCLASS.
 
@@ -101,13 +199,17 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     CONSTANTS:
       gc_check    TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_INFLIGHT',
       gc_calendar TYPE zif_cd_hck_types=>ty_param VALUE 'US',
+      gc_uk       TYPE zif_cd_hck_types=>ty_calendar VALUE 'GB',
       gc_wire     TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'E',
       gc_ach      TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'G',
       gc_cheque   TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'C',
+      gc_coll_ach TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'H',
+      gc_card     TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'B',
       gc_bukrs    TYPE c LENGTH 4 VALUE 'US01',
+      gc_barclays TYPE zif_cd_hck_runtime_types=>ty_hbkid VALUE 'BARC1',
       gc_usd      TYPE zif_cd_ops_types=>ty_currency VALUE 'USD',
       gc_amount   TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00',
-      "! Wednesday; Tuesday 2026-11-10 is a holiday of the test calendar
+      "! Wednesday; Tuesday 2026-11-10 is a holiday of the US test calendar, Monday of the UK one
       gc_today    TYPE d VALUE '20261111',
       gc_holiday  TYPE d VALUE '20261110',
       gc_monday   TYPE d VALUE '20261109',
@@ -116,37 +218,94 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       gc_doc2     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300002',
       gc_doc3     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300003',
       gc_doc4     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300004',
-      gc_ztnum    TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000770001'.
+      gc_doc5     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300005',
+      gc_doc6     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300006',
+      "! Names of the test evidence kinds (injected plug-ins)
+      gc_ev_a     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_A',
+      gc_ev_b     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_B',
+      gc_ev_c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_C'.
+
+    CONSTANTS:
+      BEGIN OF gc_class,
+        wire   TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'WIR',
+        ach    TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'ACH',
+        cheque TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
+        card   TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CRD',
+      END OF gc_class.
 
     CONSTANTS:
       BEGIN OF gc_key,
         d_wire   TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'DWIR',
         d_ach    TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'DACH',
         d_cheque TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'DCHQ',
-        c_wire   TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'CWIR',
         c_ach    TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'CACH',
+        c_card   TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'CCRD',
+        c_cheque TYPE zif_cd_hck_runtime_types=>ty_flow_class VALUE 'CCHQ',
       END OF gc_key.
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
     DATA mo_trace TYPE REF TO ltd_trace_dao.
     DATA mo_hck_dao TYPE REF TO ltd_hck_dao.
+    DATA mo_ev_a TYPE REF TO ltd_evidence.
+    DATA mo_ev_b TYPE REF TO ltd_evidence.
+    DATA mo_ev_c TYPE REF TO ltd_evidence.
     DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA mt_thresholds TYPE zif_cd_hck_types=>tt_threshold.
 
     METHODS setup.
     METHODS teardown.
+    " ageing
     METHODS wire_value_date_boundary    FOR TESTING.
     METHODS holiday_is_not_a_business_day FOR TESTING.
     METHODS no_calendar_counts_all_days FOR TESTING.
+    METHODS bank_calendar_overrides     FOR TESTING.
     METHODS missing_value_date_run_date FOR TESTING.
     METHODS flows_reported_separately   FOR TESTING.
-    METHODS cleared_and_returned_skip   FOR TESTING.
-    METHODS cheque_calendar_days        FOR TESTING.
+    METHODS issue_date_calendar_days    FOR TESTING.
     METHODS empty_data_measures_zero    FOR TESTING.
     METHODS method_in_two_classes_raises FOR TESTING.
     METHODS limits_missing_warns        FOR TESTING.
     METHODS read_cap_and_top_n          FOR TESTING.
+    METHODS reversed_payment_excluded   FOR TESTING.
+    METHODS currencies_never_summed     FOR TESTING.
+    " rule combination
+    METHODS all_rows_hold_excluded      FOR TESTING.
+    METHODS partial_rows_inconsistent   FOR TESTING.
+    METHODS no_evidence_stays_open      FOR TESTING.
+    METHODS must_not_hold_violated      FOR TESTING.
+    METHODS purpose_order_returned_first FOR TESTING.
+    METHODS partial_return_return_code  FOR TESTING.
+    METHODS anomaly_listed_not_aged     FOR TESTING.
+    METHODS unusable_kind_fails_closed  FOR TESTING.
+    METHODS unconfigured_kind_ignored   FOR TESTING.
+    METHODS one_collect_per_kind        FOR TESTING.
+    METHODS class_without_rule_unwatched FOR TESTING.
+    METHODS new_class_by_configuration  FOR TESTING.
+    " user rules end to end
+    METHODS rule1_wire_status_and_line  FOR TESTING.
+    METHODS rule2_cheque_b_v_blank      FOR TESTING.
+    METHODS rule3_collection_xref2      FOR TESTING.
+    METHODS rule4_ach_return_with_lot   FOR TESTING.
+    METHODS rule4_ach_return_lot_missing FOR TESTING.
+    METHODS stripe_unconfigured_bseg    FOR TESTING.
 
+    METHODS add_class
+      IMPORTING
+        iv_flow     TYPE zif_cd_hck_runtime_types=>ty_flow
+        iv_class    TYPE zif_cd_hck_runtime_types=>ty_method_class
+        iv_methods  TYPE clike
+        iv_basis    TYPE zif_cd_hck_runtime_types=>ty_age_basis DEFAULT zif_cd_hck_runtime_types=>gc_age_basis-value_date
+        iv_calendar TYPE zif_cd_hck_types=>ty_calendar OPTIONAL.
+    METHODS add_rule
+      IMPORTING
+        iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_purpose  TYPE zif_cd_hck_runtime_types=>ty_purpose DEFAULT zif_cd_hck_runtime_types=>gc_purpose-cleared
+        iv_seq      TYPE zif_cd_hck_runtime_types=>ty_rule_seq
+        iv_class    TYPE zif_cd_ops_types=>ty_class_name
+        iv_param1   TYPE clike OPTIONAL
+        iv_required TYPE zif_cd_hck_runtime_types=>ty_required DEFAULT zif_cd_hck_runtime_types=>gc_required-must_hold.
+    "! Delivered seed rules of user rules 1-4 (real evidence plug-ins) instead of the test kinds
+    METHODS seed_rules.
     METHODS limit
       IMPORTING
         iv_key   TYPE zif_cd_hck_runtime_types=>ty_flow_class
@@ -158,7 +317,16 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_pymet      TYPE zif_cd_hck_runtime_types=>ty_pymet DEFAULT gc_wire
         iv_laufd      TYPE d DEFAULT gc_friday
         iv_valut      TYPE d OPTIONAL
-        iv_collection TYPE abap_bool DEFAULT abap_false.
+        iv_collection TYPE abap_bool DEFAULT abap_false
+        iv_currency   TYPE zif_cd_ops_types=>ty_currency DEFAULT gc_usd
+        iv_hbkid      TYPE zif_cd_hck_runtime_types=>ty_hbkid OPTIONAL.
+    METHODS add_line
+      IMPORTING
+        iv_chect TYPE clike
+        iv_code  TYPE clike OPTIONAL
+        iv_budat TYPE d DEFAULT gc_friday
+        iv_esnum TYPE i DEFAULT 1
+        iv_kwbtr TYPE zif_cd_ops_types=>ty_amount DEFAULT gc_amount.
     METHODS act
       IMPORTING
         iv_calendar      TYPE zif_cd_hck_types=>ty_param DEFAULT gc_calendar
@@ -172,14 +340,22 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         is_result       TYPE zif_cd_hck_types=>ty_check_result
         iv_metric       TYPE zif_cd_hck_types=>ty_metric_name
         iv_key          TYPE zif_cd_hck_runtime_types=>ty_flow_class DEFAULT gc_key-d_wire
+        iv_dim2         TYPE clike OPTIONAL
       RETURNING
         VALUE(rv_value) TYPE zif_cd_hck_types=>ty_value.
-    METHODS late
+    METHODS finding
       IMPORTING
         is_result         TYPE zif_cd_hck_types=>ty_check_result
+        iv_code           TYPE zif_cd_ops_types=>ty_check_code DEFAULT zif_cd_hck_runtime_types=>gc_code-payment_not_clear
         iv_key            TYPE zif_cd_hck_runtime_types=>ty_flow_class DEFAULT gc_key-d_wire
       RETURNING
         VALUE(rs_finding) TYPE zif_cd_ops_types=>ty_finding.
+    METHODS lists
+      IMPORTING
+        is_finding    TYPE zif_cd_ops_types=>ty_finding
+        iv_doc        TYPE clike
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
 ENDCLASS.
 
 
@@ -189,20 +365,40 @@ CLASS ltc_inflight IMPLEMENTATION.
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
     mo_hck_dao = NEW #( ).
-    INSERT gc_holiday INTO TABLE mo_hck_dao->mt_holidays.
+    INSERT VALUE #( calendar = gc_calendar date = gc_holiday ) INTO TABLE mo_hck_dao->mt_holidays.
+    INSERT VALUE #( calendar = gc_uk date = gc_monday ) INTO TABLE mo_hck_dao->mt_holidays.
     zcl_cd_hck_injector=>inject_dao( mo_hck_dao ).
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
+    zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     mo_params = NEW #( ).
-    mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-inflight_wire iv_value = gc_wire ).
-    mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-inflight_ach iv_value = gc_ach ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
-    " Seed limits (confirm): wire late from 1 / critical from 2 business days after the value
-    " date, ACH 2 / 3, cheques 61 / 90+ calendar days (> 60 / > 90)
+    mo_ev_a = NEW #( ).
+    mo_ev_b = NEW #( ).
+    mo_ev_c = NEW #( ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_a io_instance = mo_ev_a ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_b io_instance = mo_ev_b ).
+    zcl_cd_ops_injector=>inject_plugin( iv_class_name = gc_ev_c io_instance = mo_ev_c ).
+    " Classes as seeded (collections ACH also by the CAMT methods; card = Stripe B)
+    add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-disbursement iv_class = gc_class-wire iv_methods = gc_wire ).
+    add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-disbursement iv_class = gc_class-ach iv_methods = |A,{ gc_ach }| ).
+    add_class( iv_flow    = zif_cd_hck_runtime_types=>gc_flow-disbursement
+               iv_class   = gc_class-cheque
+               iv_methods = gc_cheque
+               iv_basis   = zif_cd_hck_runtime_types=>gc_age_basis-issue_date ).
+    add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-collection iv_class = gc_class-ach iv_methods = |1,{ gc_coll_ach }| ).
+    add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-collection iv_class = gc_class-card iv_methods = gc_card ).
+    " Every class is cleared by test kind A unless a test configures more
+    add_rule( iv_key = gc_key-d_wire iv_seq = '010' iv_class = gc_ev_a ).
+    add_rule( iv_key = gc_key-d_ach iv_seq = '010' iv_class = gc_ev_a ).
+    add_rule( iv_key = gc_key-d_cheque iv_seq = '010' iv_class = gc_ev_a ).
+    add_rule( iv_key = gc_key-c_ach iv_seq = '010' iv_class = gc_ev_a ).
+    add_rule( iv_key = gc_key-c_card iv_seq = '010' iv_class = gc_ev_a ).
+    " Seed limits: wire 1 / 2 business days after the value date, ACH and card 2 / 3, cheques 61 / 91 days
     limit( iv_key = gc_key-d_wire iv_amber = 1 iv_red = 2 ).
-    limit( iv_key = gc_key-c_wire iv_amber = 1 iv_red = 2 ).
     limit( iv_key = gc_key-d_ach iv_amber = 2 iv_red = 3 ).
     limit( iv_key = gc_key-c_ach iv_amber = 2 iv_red = 3 ).
+    limit( iv_key = gc_key-c_card iv_amber = 2 iv_red = 3 ).
     limit( iv_key = gc_key-d_cheque iv_amber = 61 iv_red = 91 ).
   ENDMETHOD.
 
@@ -210,7 +406,103 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_trace, mo_hck_dao, mo_params, mt_thresholds.
+    CLEAR: mo_dao, mo_trace, mo_hck_dao, mo_params, mt_thresholds, mo_ev_a, mo_ev_b, mo_ev_c.
+  ENDMETHOD.
+
+
+  METHOD add_class.
+    DATA ls_class TYPE zif_cd_hck_runtime_types=>ty_pm_class.
+    ls_class-flow         = iv_flow.
+    ls_class-method_class = iv_class.
+    ls_class-pay_methods  = iv_methods.
+    ls_class-age_basis    = iv_basis.
+    ls_class-calendar     = iv_calendar.
+    INSERT ls_class INTO TABLE mo_dao->mt_classes.
+  ENDMETHOD.
+
+
+  METHOD add_rule.
+    DATA ls_rule TYPE zif_cd_hck_runtime_types=>ty_clr_rule.
+    ls_rule-flow           = iv_key(1).
+    ls_rule-method_class   = iv_key+1(3).
+    ls_rule-purpose        = iv_purpose.
+    ls_rule-seq            = iv_seq.
+    ls_rule-evidence_class = iv_class.
+    ls_rule-param1         = iv_param1.
+    ls_rule-required       = iv_required.
+    INSERT ls_rule INTO TABLE mo_dao->mt_rules.
+  ENDMETHOD.
+
+
+  METHOD seed_rules.
+    DATA ls_role TYPE zif_cd_hck_runtime_types=>ty_btc_role_row.
+    DATA ls_outcome TYPE zif_cd_hck_runtime_types=>ty_seq_outcome.
+    CLEAR mo_dao->mt_rules.
+    " Rule 1: wire disbursement cleared = statement line AND DPAYH status CLEARED
+    add_rule( iv_key = gc_key-d_wire iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_STMT_DOC' ).
+    add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_PAY_STATUS' iv_param1 = 'CLEARED' ).
+    " ACH disbursement: lifecycle outcome AND status; returned / retrieved by the lifecycle
+    add_rule( iv_key = gc_key-d_ach iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_BTC_SEQ' iv_param1 = 'CLEARED,RETRIEVAL_FAILED' ).
+    add_rule( iv_key = gc_key-d_ach iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_PAY_STATUS' iv_param1 = 'CLEARED' ).
+    add_rule( iv_key     = gc_key-d_ach
+              iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned
+              iv_seq     = '010'
+              iv_class   = 'ZCL_CD_HCK_EV_BTC_SEQ'
+              iv_param1  = 'RETURNED,RETRIEVED' ).
+    " Rule 2: cheque cleared = state B AND statement line of the cheque number; voided = V and no line
+    add_rule( iv_key = gc_key-d_cheque iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_CHQ_STATUS' iv_param1 = 'B' ).
+    add_rule( iv_key = gc_key-d_cheque iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_STMT_CHEQUE' iv_param1 = '13' ).
+    add_rule( iv_key     = gc_key-d_cheque
+              iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-voided
+              iv_seq     = '010'
+              iv_class   = 'ZCL_CD_HCK_EV_CHQ_STATUS'
+              iv_param1  = 'V' ).
+    add_rule( iv_key      = gc_key-d_cheque
+              iv_purpose  = zif_cd_hck_runtime_types=>gc_purpose-voided
+              iv_seq      = '020'
+              iv_class    = 'ZCL_CD_HCK_EV_STMT_CHEQUE'
+              iv_param1   = '13'
+              iv_required = zif_cd_hck_runtime_types=>gc_required-must_not_hold ).
+    " Rule 3: collection ACH cleared = lifecycle CLEARED AND BSEG XREF2 cleared
+    add_rule( iv_key = gc_key-c_ach iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_BTC_SEQ' iv_param1 = 'CLEARED' ).
+    add_rule( iv_key = gc_key-c_ach iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_GL_XREF2' ).
+    " Card: Stripe payout (settings not maintained in the test) AND BSEG XREF2 cleared
+    add_rule( iv_key = gc_key-c_card iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_STRIPE' iv_param1 = 'STRIPE' ).
+    add_rule( iv_key = gc_key-c_card iv_seq = '020' iv_class = 'ZCL_CD_HCK_EV_GL_XREF2' ).
+    " Roles and outcomes (subset of the seed)
+    ls_role-flow = zif_cd_hck_runtime_types=>gc_flow-disbursement.
+    ls_role-method_class = gc_class-ach.
+    ls_role-scheme = 'BAI2'.
+    ls_role-btc_code = '466'.
+    ls_role-role = 'ORIGINAL'.
+    INSERT ls_role INTO TABLE mo_dao->mt_roles.
+    ls_role-btc_code = '168'.
+    ls_role-role = 'RETURNED'.
+    ls_role-compare_amount = abap_true.
+    INSERT ls_role INTO TABLE mo_dao->mt_roles.
+    ls_role-flow = zif_cd_hck_runtime_types=>gc_flow-collection.
+    ls_role-btc_code = '166'.
+    ls_role-role = 'COLLECTED'.
+    ls_role-compare_amount = abap_false.
+    INSERT ls_role INTO TABLE mo_dao->mt_roles.
+    ls_outcome-flow = zif_cd_hck_runtime_types=>gc_flow-disbursement.
+    ls_outcome-method_class = gc_class-ach.
+    ls_outcome-seq = '010'.
+    ls_outcome-seq_pattern = 'ORIGINAL'.
+    ls_outcome-outcome = 'CLEARED'.
+    ls_outcome-expected_dfkkrp = '0'.
+    INSERT ls_outcome INTO TABLE mo_dao->mt_outcomes.
+    ls_outcome-seq = '020'.
+    ls_outcome-seq_pattern = 'ORIGINAL,RETURNED'.
+    ls_outcome-outcome = 'RETURNED'.
+    ls_outcome-expected_dfkkrp = '1'.
+    INSERT ls_outcome INTO TABLE mo_dao->mt_outcomes.
+    ls_outcome-flow = zif_cd_hck_runtime_types=>gc_flow-collection.
+    ls_outcome-seq = '010'.
+    ls_outcome-seq_pattern = 'COLLECTED'.
+    ls_outcome-outcome = 'CLEARED'.
+    ls_outcome-expected_dfkkrp = '0'.
+    INSERT ls_outcome INTO TABLE mo_dao->mt_outcomes.
   ENDMETHOD.
 
 
@@ -233,11 +525,24 @@ CLASS ltc_inflight IMPLEMENTATION.
     ls_payment-laufd    = iv_laufd.
     ls_payment-bukrs    = gc_bukrs.
     ls_payment-pymet    = iv_pymet.
+    ls_payment-hbkid    = iv_hbkid.
     ls_payment-valut    = iv_valut.
     ls_payment-amount   = gc_amount.
-    ls_payment-currency = gc_usd.
+    ls_payment-currency = iv_currency.
     ls_payment-xeinz    = iv_collection.
     INSERT ls_payment INTO TABLE mo_dao->mt_payments.
+  ENDMETHOD.
+
+
+  METHOD add_line.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    ls_line-kukey = '00000101'.
+    ls_line-esnum = iv_esnum.
+    ls_line-chect = iv_chect.
+    ls_line-vorgc = iv_code.
+    ls_line-budat = iv_budat.
+    ls_line-kwbtr = iv_kwbtr.
+    INSERT ls_line INTO TABLE mo_trace->mt_lines.
   ENDMETHOD.
 
 
@@ -256,13 +561,17 @@ CLASS ltc_inflight IMPLEMENTATION.
 
 
   METHOD metric.
-    rv_value = VALUE #( is_result-metrics[ metric = iv_metric dim1 = iv_key ]-value OPTIONAL ).
+    rv_value = VALUE #( is_result-metrics[ metric = iv_metric dim1 = iv_key dim2 = iv_dim2 ]-value OPTIONAL ).
   ENDMETHOD.
 
 
-  METHOD late.
-    rs_finding = VALUE #( is_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
-                                              reference  = iv_key ] OPTIONAL ).
+  METHOD finding.
+    rs_finding = VALUE #( is_result-findings[ check_code = iv_code reference = iv_key ] OPTIONAL ).
+  ENDMETHOD.
+
+
+  METHOD lists.
+    rv_yes = xsdbool( find( val = is_finding-details sub = CONV string( iv_doc ) ) >= 0 ).
   ENDMETHOD.
 
 
@@ -280,15 +589,13 @@ CLASS ltc_inflight IMPLEMENTATION.
                                             exp = 2 msg = 'Oldest: 2 business days' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count )
                                             exp = 1 msg = 'Value date today is not late' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-crit_count )
-                                            exp = 1 msg = 'One critical' ).
-        cl_abap_unit_assert=>assert_equals( act = late( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-error
+        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-error
                                             msg = 'Critical payment: error' ).
-        cl_abap_unit_assert=>assert_equals(
-          act = VALUE #( ls_result-metrics[ metric = zcl_cd_hck_c_inflight=>gc_metric-crit_amount
-                                            dim1   = gc_key-d_wire dim2 = gc_usd ]-value OPTIONAL )
-          exp = CONV zif_cd_hck_types=>ty_value( abs( gc_amount ) )
-          msg = 'Critical amount per currency' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-crit_amount
+                                                          iv_dim2   = gc_usd )
+                                            exp = CONV zif_cd_hck_types=>ty_value( abs( gc_amount ) )
+                                            msg = 'Critical amount per currency' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -298,22 +605,19 @@ CLASS ltc_inflight IMPLEMENTATION.
   " Rule: a holiday of the factory calendar between value date and today is not counted
   METHOD holiday_is_not_a_business_day.
     TRY.
-        " Monday -> 10 (holiday), 11 = 1 business day: warning (amber 1), not critical (red 2)
         add_payment( iv_doc = gc_doc1 iv_valut = gc_monday ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
                                             exp = 1 msg = 'Holiday not counted' ).
-        cl_abap_unit_assert=>assert_equals( act = late( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_equals( act = finding( ls_result )-severity exp = zif_cd_ops_types=>gc_severity-warning
                                             msg = 'Late, not critical: warning' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-crit_count )
-                                            exp = 0 msg = 'Nothing critical' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: without a factory calendar every day counts (warning says so) - the same payment is critical
+  " Rule: without any factory calendar every day counts (warning says so)
   METHOD no_calendar_counts_all_days.
     TRY.
         add_payment( iv_doc = gc_doc1 iv_valut = gc_monday ).
@@ -321,11 +625,33 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
                                             exp = 2 msg = 'Calendar days' ).
         cl_abap_unit_assert=>assert_equals( act = mo_hck_dao->mv_calls exp = 0 msg = 'No calendar read' ).
-        cl_abap_unit_assert=>assert_equals(
-          act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
-                                             severity   = zif_cd_ops_types=>gc_severity-warning ]-severity OPTIONAL )
-          exp = zif_cd_ops_types=>gc_severity-warning
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                                          severity   = zif_cd_ops_types=>gc_severity-warning ] ) )
           msg = 'Missing calendar: warning' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the calendar of the house bank (ZCD_HCK_PMBANK) wins over the class and the check
+  " calendar - UK holiday Monday, US holiday Tuesday (international ACH via Barclays)
+  METHOD bank_calendar_overrides.
+    DATA ls_bank TYPE zif_cd_hck_runtime_types=>ty_pm_bank.
+    TRY.
+        ls_bank-flow         = zif_cd_hck_runtime_types=>gc_flow-disbursement.
+        ls_bank-method_class = gc_class-wire.
+        ls_bank-hbkid        = gc_barclays.
+        ls_bank-calendar     = gc_uk.
+        INSERT ls_bank INTO TABLE mo_dao->mt_banks.
+        " Friday -> 07 08 (weekend counts in the test), 09 UK holiday, 10, 11 = 4 UK business days
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday iv_hbkid = gc_barclays iv_currency = 'GBP' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
+                                            exp = 4 msg = 'UK calendar of the bank used' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_hck_dao->mt_holidays[ calendar = gc_uk ] ) )
+                                          msg = 'UK calendar configured' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -335,14 +661,12 @@ CLASS ltc_inflight IMPLEMENTATION.
   " Rule: without value date the payment is aged from the run date and the finding says so
   METHOD missing_value_date_run_date.
     TRY.
-        " Friday run date -> 07, 08, 09, 11 = 4 business days (10 is a holiday)
         add_payment( iv_doc = gc_doc1 ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
                                             exp = 4 msg = 'Aged from the run date' ).
-        DATA(lv_details) = late( ls_result )-details.
         cl_abap_unit_assert=>assert_true(
-          act = xsdbool( find( val = lv_details
+          act = xsdbool( find( val = finding( ls_result )-details
                                sub = zcl_cd_ops_util=>text( zif_cd_hck_runtime_types=>gc_msg-run_date_used ) ) >= 0 )
           msg = 'Detail says the run date was used' ).
         cl_abap_unit_assert=>assert_true(
@@ -354,12 +678,10 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: collections (XEINZ = X) are measured and reported apart from disbursements (C / D)
+  " Rule: collections (XEINZ = X) are measured and reported apart from disbursements
   METHOD flows_reported_separately.
     TRY.
-        " ACH collection, value date Friday: 4 business days -> critical (red 3)
-        add_payment( iv_doc = gc_doc1 iv_pymet = gc_ach iv_valut = gc_friday iv_collection = abap_true ).
-        " ACH disbursement, value date Monday: 1 business day -> not late (amber 2)
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_coll_ach iv_valut = gc_friday iv_collection = abap_true ).
         add_payment( iv_doc = gc_doc2 iv_pymet = gc_ach iv_valut = gc_monday ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
@@ -370,80 +692,26 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count
                                                           iv_key    = gc_key-d_ach )
                                             exp = 0 msg = 'Disbursement ACH within grace' ).
-        cl_abap_unit_assert=>assert_equals( act = late( is_result = ls_result iv_key = gc_key-c_ach )-severity
-                                            exp = zif_cd_ops_types=>gc_severity-error
-                                            msg = 'Finding of flow C' ).
-        cl_abap_unit_assert=>assert_initial( act = late( is_result = ls_result iv_key = gc_key-d_ach )
+        cl_abap_unit_assert=>assert_initial( act = finding( is_result = ls_result iv_key = gc_key-d_ach )
                                              msg = 'No finding of flow D' ).
-        cl_abap_unit_assert=>assert_true(
-          act = xsdbool( line_exists( mo_dao->mt_asked[ bukrs = gc_bukrs zuonr = gc_doc1 ] ) )
-          msg = 'Collection checked against the cleared assignment (ZUONR = AUGBL)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: a payment matched to a bank line (CHECT = AUGBL, leading zeros ignored), a collection
-  " with a cleared assignment, a returned and a reversed payment are not in flight
-  METHOD cleared_and_returned_skip.
-    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
-    DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
-    DATA ls_header TYPE zif_cd_ops_trace_types=>ty_doc_header.
-    TRY.
-        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
-        add_payment( iv_doc = gc_doc2 iv_valut = gc_friday ).
-        add_payment( iv_doc = gc_doc3 iv_valut = gc_friday ).
-        add_payment( iv_doc = gc_doc4 iv_pymet = gc_ach iv_valut = gc_friday iv_collection = abap_true ).
-        ls_line-chect = '300001'.
-        INSERT ls_line INTO TABLE mo_trace->mt_lines.
-        ls_return-selw1 = gc_doc2.
-        INSERT ls_return INTO TABLE mo_trace->mt_returns.
-        ls_header-opbel = gc_doc3.
-        ls_header-stbel = '000000900001'.
-        INSERT ls_header INTO TABLE mo_trace->mt_headers.
-        INSERT VALUE #( bukrs = gc_bukrs zuonr = gc_doc4 ) INTO TABLE mo_dao->mt_cleared.
-        DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
-                                            exp = 0 msg = 'No wire in flight' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
-                                                          iv_key    = gc_key-c_ach )
-                                            exp = 0 msg = 'Collection cleared on the clearing account' ).
-        cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-payment_not_clear ] ) )
-          msg = 'Nothing late' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
-
-
-  " Rule: cheques (disbursements) age in calendar days from issue: 60 days is not late, 61 is;
-  " an encashed cheque or one on a bank line (CHECT = ZTNUM) is cleared; collection cheques are not watched
-  METHOD cheque_calendar_days.
-    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
-    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+  " Rule: ISSUE_DATE classes (cheques) age in calendar days from issue: 60 days is not late, 61 is
+  METHOD issue_date_calendar_days.
     TRY.
         add_payment( iv_doc = gc_doc1 iv_pymet = gc_cheque iv_laufd = '20260912' ).
         add_payment( iv_doc = gc_doc2 iv_pymet = gc_cheque iv_laufd = '20260911' ).
         add_payment( iv_doc = gc_doc3 iv_pymet = gc_cheque iv_laufd = '20260801' ).
-        add_payment( iv_doc = gc_doc4 iv_pymet = gc_cheque iv_laufd = '20260801' ).
-        add_payment( iv_doc = '000000300005' iv_pymet = gc_cheque iv_laufd = '20260801' iv_collection = abap_true ).
-        ls_check-doc1r = gc_doc3.
-        ls_check-bancd = '20260815'.
-        INSERT ls_check INTO TABLE mo_trace->mt_checks.
-        CLEAR ls_check.
-        ls_check-doc1r = gc_doc4.
-        ls_check-ztnum = gc_ztnum.
-        INSERT ls_check INTO TABLE mo_trace->mt_checks.
-        ls_line-chect = '770001'.
-        INSERT ls_line INTO TABLE mo_trace->mt_lines.
+        INSERT gc_doc3 INTO TABLE mo_ev_a->mt_found.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
                                                           iv_key    = gc_key-d_cheque )
-                                            exp = 2 msg = 'Two cheques uncashed' ).
+                                            exp = 2 msg = 'Two cheques open, one cleared' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest
                                                           iv_key    = gc_key-d_cheque )
@@ -452,33 +720,30 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count
                                                           iv_key    = gc_key-d_cheque )
                                             exp = 1 msg = '60 days not late, 61 late' ).
-        cl_abap_unit_assert=>assert_equals( act = late( is_result = ls_result iv_key = gc_key-d_cheque )-severity
-                                            exp = zif_cd_ops_types=>gc_severity-warning
-                                            msg = 'Late cheque, not critical' ).
-        cl_abap_unit_assert=>assert_false(
-          act = xsdbool( line_exists( ls_result-metrics[ dim1 = 'CCHQ' ] ) )
-          msg = 'Collection cheques are not watched' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: nothing in flight measures zero for every watched flow / class (DWIR CWIR DACH CACH DCHQ)
+  " Rule: nothing in flight measures zero for every watched flow / class
   METHOD empty_data_measures_zero.
     TRY.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 20 msg = 'Four metrics x five keys' ).
+        " 5 classes x (4 counts + PAY_INCONSISTENT + PAY_EXCLUDED of CLEARED)
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 30 msg = 'Six metrics x five keys' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_calls exp = 0 msg = 'No payments: no evidence read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: a payment method in two classes is a configuration error (PLUGIN_ERROR), never a guess
+  " Rule: a payment method in two classes of one flow is a configuration error, never a guess
   METHOD method_in_two_classes_raises.
-    mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-inflight_ach iv_value = |{ gc_ach },{ gc_wire }| ).
+    add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-disbursement iv_class = 'ACI' iv_methods = gc_ach ).
+    add_rule( iv_key = 'DACI' iv_seq = '010' iv_class = gc_ev_a ).
     TRY.
         act( ).
         cl_abap_unit_assert=>fail( msg = 'Ambiguous mapping must raise' ).
@@ -491,24 +756,24 @@ CLASS ltc_inflight IMPLEMENTATION.
   " Rule: a watched key without limits is not judged (warning); a class without methods is listed
   METHOD limits_missing_warns.
     TRY.
-        DELETE mt_thresholds WHERE bukrs = gc_key-c_wire.
-        mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-inflight_ach iv_value = space ).
-        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday iv_collection = abap_true ).
+        DELETE mt_thresholds WHERE bukrs = gc_key-c_ach.
+        add_class( iv_flow = zif_cd_hck_runtime_types=>gc_flow-collection iv_class = gc_class-wire iv_methods = space ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_coll_ach iv_valut = gc_friday iv_collection = abap_true ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing ]-severity OPTIONAL )
           exp = zif_cd_ops_types=>gc_severity-warning
           msg = 'Limits missing: warning' ).
-        cl_abap_unit_assert=>assert_initial( act = late( is_result = ls_result iv_key = gc_key-c_wire )
+        cl_abap_unit_assert=>assert_initial( act = finding( is_result = ls_result iv_key = gc_key-c_ach )
                                              msg = 'Not judged without limits' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
-                                                          iv_key    = gc_key-c_wire )
+                                                          iv_key    = gc_key-c_ach )
                                             exp = 1 msg = 'Still counted' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                                                           severity   = zif_cd_ops_types=>gc_severity-info ] ) )
-          msg = 'ACH not monitored: listed' ).
+          msg = 'Class without payment methods: listed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -525,10 +790,506 @@ CLASS ltc_inflight IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ] ) )
           msg = 'Cap reached: reported' ).
-        SPLIT late( ls_result )-details AT cl_abap_char_utilities=>newline INTO TABLE DATA(lt_lines).
+        SPLIT finding( ls_result )-details AT cl_abap_char_utilities=>newline INTO TABLE DATA(lt_lines).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'Top 1 listed' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count )
                                             exp = 2 msg = 'Counts are complete' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a reversed payment (DFKKKO-STBEL) is not in flight and no evidence is read for it
+  METHOD reversed_payment_excluded.
+    DATA ls_header TYPE zif_cd_ops_trace_types=>ty_doc_header.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        ls_header-opbel = gc_doc1.
+        ls_header-stbel = '000000900001'.
+        INSERT ls_header INTO TABLE mo_trace->mt_headers.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'Reversed: not in flight' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_asked exp = 0 msg = 'No evidence asked for it' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: amounts are reported per currency (USD / EUR / GBP), never summed across currencies
+  METHOD currencies_never_summed.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc2 iv_valut = gc_friday iv_currency = 'EUR' ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_amount
+                                                          iv_dim2   = 'EUR' )
+                                            exp = CONV zif_cd_hck_types=>ty_value( abs( gc_amount ) )
+                                            msg = 'EUR on its own' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_amount
+                                                          iv_dim2   = gc_usd )
+                                            exp = CONV zif_cd_hck_types=>ty_value( abs( gc_amount ) )
+                                            msg = 'USD on its own' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: all required rows of a purpose hold = excluded, counted per purpose
+  METHOD all_rows_hold_excluded.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        INSERT gc_doc1 INTO TABLE mo_ev_b->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'Cleared: not open' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'Counted as cleared' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: some but not all required rows hold = CLEARING_INCONSISTENT naming what held, not aged
+  METHOD partial_rows_inconsistent.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Inconsistency: error' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_ev_a ) msg = 'Names what held' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_ev_b ) msg = 'Names what is missing' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'Listed, not aged' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-inconsistent )
+                                            exp = 1 msg = 'Counted inconsistent' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: no row of any purpose holds = in flight (aged)
+  METHOD no_evidence_stays_open.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 1 msg = 'In flight' ).
+        cl_abap_unit_assert=>assert_initial(
+          act = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist )
+          msg = 'Not inconsistent' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a must-not-hold row (N) that holds makes the purpose inconsistent
+  METHOD must_not_hold_violated.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b
+                  iv_required = zif_cd_hck_runtime_types=>gc_required-must_not_hold ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc2 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        INSERT gc_doc1 INTO TABLE mo_ev_b->mt_found.
+        INSERT gc_doc2 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc1 ) msg = 'Forbidden evidence' ).
+        cl_abap_unit_assert=>assert_false( act = lists( is_finding = ls_finding iv_doc = gc_doc2 ) msg = 'Absent: consistent' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'One cleared' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: purposes decide in order VOIDED, RETURNED, PENDING, CLEARED - a complete return is never
+  " judged as an incomplete clearing
+  METHOD purpose_order_returned_first.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        add_rule( iv_key = gc_key-d_wire iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned
+                  iv_seq = '010' iv_class = gc_ev_c ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        INSERT gc_doc1 INTO TABLE mo_ev_c->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+                                            exp = 1 msg = 'Returned decides' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'No clearing inconsistency' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a partial RETURNED purpose is RETURN_INCONSISTENT
+  METHOD partial_return_return_code.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned
+                  iv_seq = '010' iv_class = gc_ev_b ).
+        add_rule( iv_key = gc_key-d_wire iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned
+                  iv_seq = '020' iv_class = gc_ev_c ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_c->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-return_inconsist )
+                       iv_doc     = gc_doc1 )
+          msg = 'Return inconsistency listed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an anomaly of an evidence is its own finding (code and severity of the evidence), not aged
+  METHOD anomaly_listed_not_aged.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        mo_ev_a->mv_anomaly_doc = gc_doc1.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-unexpected_seq ).
+        cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Severity of the evidence' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'Not aged' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an evidence class that does not implement the interface (or raises) is CLEARING_RULE_INVALID;
+  " its purpose is not judged, the payment stays in flight (fail closed)
+  METHOD unusable_kind_fails_closed.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = 'ZCL_CD_OPS_UTIL' ).
+        add_rule( iv_key = gc_key-d_ach iv_seq = '020' iv_class = gc_ev_b ).
+        mo_ev_b->mv_fail = abap_true.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc2 iv_pymet = gc_ach iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        INSERT gc_doc2 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lines( FILTER #( ls_result-findings USING KEY primary_key
+                                 WHERE check_code = zif_cd_hck_runtime_types=>gc_code-clrrule_invalid ) )
+          exp = 2 msg = 'Both unusable kinds reported' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 1 msg = 'Wire stays in flight' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
+                                                          iv_key    = gc_key-d_ach )
+                                            exp = 1 msg = 'ACH stays in flight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a kind whose settings are not maintained is listed (information) and ignored: the other
+  " rows decide
+  METHOD unconfigured_kind_ignored.
+    TRY.
+        add_rule( iv_key = gc_key-d_wire iv_seq = '020' iv_class = gc_ev_b ).
+        mo_ev_b->mv_unconfigured = abap_true.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config ]-severity OPTIONAL )
+          exp = zif_cd_ops_types=>gc_severity-info
+          msg = 'Not configured: information' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'Kind A alone decides' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: one collect per evidence kind and parameters for all flows / classes (batch, never per payment)
+  METHOD one_collect_per_kind.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc2 iv_pymet = gc_ach iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc3 iv_pymet = gc_coll_ach iv_valut = gc_friday iv_collection = abap_true ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_calls exp = 1 msg = 'One collect' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_asked exp = 3 msg = 'For every payment' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a class without a CLEARED rule is not watched (listed), its payments are not read
+  METHOD class_without_rule_unwatched.
+    TRY.
+        DELETE mo_dao->mt_rules WHERE flow = zif_cd_hck_runtime_types=>gc_flow-collection
+                                  AND method_class = gc_class-card.
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_card iv_valut = gc_friday iv_collection = abap_true ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_result-metrics[ dim1 = gc_key-c_card ] ) )
+                                           msg = 'Card not measured' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                                          severity   = zif_cd_ops_types=>gc_severity-info ] ) )
+          msg = 'Listed as not monitored' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a new class (collection cheques, method Q) is evaluated from configuration rows only:
+  " class row, evidence rows of a delivered kind, limits - no code change
+  METHOD new_class_by_configuration.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    TRY.
+        add_class( iv_flow    = zif_cd_hck_runtime_types=>gc_flow-collection
+                   iv_class   = gc_class-cheque
+                   iv_methods = 'Q'
+                   iv_basis   = zif_cd_hck_runtime_types=>gc_age_basis-issue_date ).
+        add_rule( iv_key = gc_key-c_cheque iv_seq = '010' iv_class = 'ZCL_CD_HCK_EV_CHQ_STATUS' iv_param1 = 'B' ).
+        limit( iv_key = gc_key-c_cheque iv_amber = 30 iv_red = 45 ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = 'Q' iv_laufd = '20260920' iv_collection = abap_true ).
+        add_payment( iv_doc = gc_doc2 iv_pymet = 'Q' iv_laufd = '20260920' iv_collection = abap_true ).
+        ls_check-doc1r = gc_doc1.
+        ls_check-state = 'B'.
+        INSERT ls_check INTO TABLE mo_trace->mt_checks.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-c_cheque
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'Cashed collection cheque cleared' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest
+                                                          iv_key    = gc_key-c_cheque )
+                                            exp = 52 msg = 'Open one aged in calendar days' ).
+        cl_abap_unit_assert=>assert_equals( act = finding( is_result = ls_result iv_key = gc_key-c_cheque )-severity
+                                            exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Late beyond its own limits' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User rule 1: wire disbursement cleared = statement line (CHECT = AUGBL) AND DPAYH-ZZ_PAYMENT_STATUS
+  " CLEARED; only one of the two = CLEARING_INCONSISTENT
+  METHOD rule1_wire_status_and_line.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc2 iv_valut = gc_friday ).
+        add_payment( iv_doc = gc_doc3 iv_valut = gc_friday ).
+        add_line( iv_chect = '300001' iv_code = '495' ).
+        add_line( iv_chect = '300002' iv_code = '495' ).
+        INSERT VALUE #( doc1r = gc_doc1 laufd = gc_friday status = 'CLEARED' ) INTO TABLE mo_trace->mt_runs.
+        INSERT VALUE #( doc1r = gc_doc2 laufd = gc_friday status = 'SENT' ) INTO TABLE mo_trace->mt_runs.
+        INSERT VALUE #( doc1r = gc_doc3 laufd = gc_friday status = 'CLEARED' ) INTO TABLE mo_trace->mt_runs.
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'Line and status: cleared' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc2 )
+                                          msg = 'On the statement but status not CLEARED' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc3 )
+                                          msg = 'Status CLEARED but no statement line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User rule 2: cheque B + statement line (CHECT = last 13 of ZTNUM) cleared; V voided (counted
+  " apart); blank open; B without line, blank with line and V with line inconsistent
+  METHOD rule2_cheque_b_v_blank.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        add_payment( iv_doc = gc_doc2 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        add_payment( iv_doc = gc_doc3 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        add_payment( iv_doc = gc_doc4 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        add_payment( iv_doc = gc_doc5 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        add_payment( iv_doc = gc_doc6 iv_pymet = gc_cheque iv_laufd = '20260801' ).
+        " doc1 B + line, doc2 V, doc3 blank, doc4 B no line, doc5 blank + line, doc6 V + line
+        DATA(lt_states) = VALUE string_table( ( `B` ) ( `V` ) ( `` ) ( `B` ) ( `` ) ( `V` ) ).
+        DATA(lt_docs) = VALUE string_table( ( CONV #( gc_doc1 ) ) ( CONV #( gc_doc2 ) ) ( CONV #( gc_doc3 ) )
+                                            ( CONV #( gc_doc4 ) ) ( CONV #( gc_doc5 ) ) ( CONV #( gc_doc6 ) ) ).
+        LOOP AT lt_docs ASSIGNING FIELD-SYMBOL(<lv_doc>).
+          CLEAR ls_check.
+          ls_check-doc1r = <lv_doc>.
+          ls_check-state = lt_states[ sy-tabix ].
+          ls_check-ztnum = |XX99{ sy-tabix }000000000077|.
+          INSERT ls_check INTO TABLE mo_trace->mt_checks.
+        ENDLOOP.
+        add_line( iv_chect = '1000000000077' iv_budat = '20260805' ).
+        add_line( iv_chect = '5000000000077' iv_budat = '20260805' iv_esnum = 2 ).
+        add_line( iv_chect = '6000000000077' iv_budat = '20260805' iv_esnum = 3 ).
+        DATA(ls_result) = act( ).
+        DATA(ls_finding) = finding( is_result = ls_result
+                                    iv_code   = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                    iv_key    = gc_key-d_cheque ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-d_cheque
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'B with line: cashed' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-d_cheque
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-voided )
+                                            exp = 1 msg = 'V without line: voided, counted apart' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
+                                                          iv_key    = gc_key-d_cheque )
+                                            exp = 1 msg = 'Blank without line: open and aged' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc4 ) msg = 'B without line' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc5 ) msg = 'Line, status blank' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc6 ) msg = 'Line, status V' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User rule 3: collection cleared = lifecycle CLEARED (166) AND BSEG line XREF2 = AUGBL with AUGBL
+  " filled; an open BSEG line = CLEARING_INCONSISTENT
+  METHOD rule3_collection_xref2.
+    DATA ls_gl TYPE zif_cd_hck_runtime_types=>ty_gl_xref2_line.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_coll_ach iv_valut = gc_friday iv_collection = abap_true ).
+        add_payment( iv_doc = gc_doc2 iv_pymet = gc_coll_ach iv_valut = gc_friday iv_collection = abap_true ).
+        add_line( iv_chect = '300001' iv_code = '166' ).
+        add_line( iv_chect = '300002' iv_code = '166' iv_esnum = 2 ).
+        ls_gl-bukrs = gc_bukrs.
+        ls_gl-xref2 = gc_doc1.
+        ls_gl-belnr = '0100000001'.
+        ls_gl-augbl = '0200000001'.
+        INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
+        ls_gl-xref2 = gc_doc2.
+        ls_gl-belnr = '0100000002'.
+        CLEAR ls_gl-augbl.
+        INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-c_ach
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'Collected and G/L line cleared' ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result
+                                             iv_code   = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                             iv_key    = gc_key-c_ach )
+                       iv_doc     = gc_doc2 )
+          msg = 'Collected but G/L line open' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User rule 4: ACH disbursement 466 -> 168 with one returns lot item = returned (excluded)
+  METHOD rule4_ach_return_with_lot.
+    DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_ach iv_valut = gc_friday ).
+        add_line( iv_chect = '300001' iv_code = '466' iv_budat = gc_friday ).
+        add_line( iv_chect = '300001' iv_code = '168' iv_budat = gc_monday iv_esnum = 2 ).
+        ls_return-selw1  = gc_doc1.
+        ls_return-amount = abs( gc_amount ).
+        INSERT ls_return INTO TABLE mo_trace->mt_returns.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-d_ach
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+                                            exp = 1 msg = 'Consistent return excluded' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User rule 4: 466 -> 168 without a returns lot = RETURN_INCONSISTENT (missing returns lot)
+  METHOD rule4_ach_return_lot_missing.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_ach iv_valut = gc_friday ).
+        add_line( iv_chect = '300001' iv_code = '466' iv_budat = gc_friday ).
+        add_line( iv_chect = '300001' iv_code = '168' iv_budat = gc_monday iv_esnum = 2 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_true(
+          act = lists( is_finding = finding( is_result = ls_result
+                                             iv_code   = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+                                             iv_key    = gc_key-d_ach )
+                       iv_doc     = gc_doc1 )
+          msg = 'Missing returns lot listed' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
+                                                          iv_key    = gc_key-d_ach )
+                                            exp = 0 msg = 'Listed, not aged' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Card: while the Stripe settings are not maintained, the BSEG XREF2 rule alone decides
+  METHOD stripe_unconfigured_bseg.
+    DATA ls_gl TYPE zif_cd_hck_runtime_types=>ty_gl_xref2_line.
+    TRY.
+        seed_rules( ).
+        add_payment( iv_doc = gc_doc1 iv_pymet = gc_card iv_valut = gc_friday iv_collection = abap_true ).
+        ls_gl-bukrs = gc_bukrs.
+        ls_gl-xref2 = gc_doc1.
+        ls_gl-augbl = '0200000001'.
+        INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_key    = gc_key-c_card
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 1 msg = 'BSEG decides' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                                          severity   = zif_cd_ops_types=>gc_severity-info ] ) )
+          msg = 'Stripe evidence not configured: information' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

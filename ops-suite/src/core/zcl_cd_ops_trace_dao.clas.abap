@@ -19,6 +19,7 @@
 *& 2026-11-06 | Return / NOC reasons: RLGRD with the returns (shared EBS read); NOC items through the
 *&            | shared EBS read DFKKNRP by INFOF, capped like the cheque read.
 *& 2026-11-07 | get_checks_by_doc also reads the encashment date BANCD (in-flight check A_INFLIGHT).
+*& 2026-11-07 | get_checks_by_doc reads DFKKCR-STATE (confirmed) instead of BANCD; bank lines with VORGC / VGEXT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -173,8 +174,9 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
   METHOD zif_cd_ops_trace_dao~get_bank_lines.
     CHECK it_ref IS NOT INITIAL.
     " Confirmed: FEBEP-CHECT = DFKKOP-AUGBL (E G H I J K L) / DFKKCR-ZTNUM (C); BUDAT always
-    " filled. VERIFY-SE11: KWBTR; secondary index on CHECT expected (performance check in QA1)
-    SELECT kukey, esnum, chect, budat, kwbtr
+    " filled. VERIFY-SE11: KWBTR, VORGC / VGEXT (BAI / CAMT code, as the EBS line read); secondary
+    " index on CHECT expected (performance check in QA1)
+    SELECT kukey, esnum, chect, budat, kwbtr, vorgc, vgext
       FROM febep
       FOR ALL ENTRIES IN @it_ref
       WHERE chect = @it_ref-table_line
@@ -197,9 +199,10 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
 
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
     CHECK it_docno IS NOT INITIAL.
-    " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL. VERIFY-DDIC: RWBTR, CRSTATUS (as the EBS read),
-    " BANCD (encashment date; read for the morning report check A_INFLIGHT)
-    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus, bancd
+    " Confirmed: DFKKCR-DOC1R = DFKKOP-AUGBL; STATE = cheque status (B cashed, V voided, blank
+    " open; user 2026-11-07, read for the morning report check A_INFLIGHT). VERIFY-DDIC: RWBTR,
+    " CRSTATUS (as the EBS read)
+    SELECT ztnum, hbkid, hktid, doc1r, rwbtr AS amount, crstatus, state
       FROM dfkkcr
       FOR ALL ENTRIES IN @it_docno
       WHERE doc1r = @it_docno-table_line

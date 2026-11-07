@@ -23,7 +23,19 @@ annotate entity ZC_CD_HckCfgAll with
     { id: 'JobCycle', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Job cycles', position: 80, targetElement: '_JobCycle' },
     { id: 'JobStep', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Job cycle steps', position: 90, targetElement: '_JobStep' }
+      label: 'Job cycle steps', position: 90, targetElement: '_JobStep' },
+    { id: 'HckPmClass', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Payment method classes', position: 100, targetElement: '_HckPmClass' },
+    { id: 'HckPmBank', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Factory calendar per house bank', position: 110, targetElement: '_HckPmBank' },
+    { id: 'HckClrRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Clearing / return evidence rules', position: 120, targetElement: '_HckClrRule' },
+    { id: 'HckEvidenceSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Evidence settings', position: 130, targetElement: '_HckEvidenceSet' },
+    { id: 'HckBtcRole', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Bank transaction code roles', position: 140, targetElement: '_HckBtcRole' },
+    { id: 'HckSeqOutcome', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Role sequence outcomes', position: 150, targetElement: '_HckSeqOutcome' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

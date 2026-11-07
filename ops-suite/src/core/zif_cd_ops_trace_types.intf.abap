@@ -13,6 +13,8 @@
 *& 2026-11-07 | Parameter TRACE_REVERSAL_AUGRD removed: GC_REVERSAL_AUGRD '05' (only reversal reason).
 *& 2026-11-07 | Comments: TRACE_ parameters in ZCA_PARAM, area CD_OPS (ZCD_OPS_PARAM retired).
 *& 2026-11-07 | TY_CHECK-BANCD (cheque encashment date) for the in-flight check A_INFLIGHT.
+*& 2026-11-07 | In-flight evidence (user rules): TY_CHECK-STATE (DFKKCR-STATE, confirmed) replaces
+*&            | BANCD; TY_BANK_LINE-VORGC / VGEXT (BAI / ISO code); TY_RETURN-AMOUNT (DFKKRP, VERIFY-DDIC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -359,8 +361,9 @@ INTERFACE zif_cd_ops_trace_types
       doc1r    TYPE ty_docno,
       amount   TYPE zif_cd_ops_types=>ty_amount,
       crstatus TYPE c LENGTH 20,
-      "! Encashment date of the cheque (DFKKCR-BANCD, VERIFY-DDIC); read by get_checks_by_doc
-      bancd    TYPE d,
+      "! Cheque status DFKKCR-STATE (confirmed 2026-11-07: B cashed, V voided, blank open);
+      "! read by get_checks_by_doc
+      state    TYPE c LENGTH 1,
     END OF ty_check.
   TYPES tt_check TYPE STANDARD TABLE OF ty_check WITH EMPTY KEY.
 
@@ -372,6 +375,10 @@ INTERFACE zif_cd_ops_trace_types
       chect TYPE ty_ref,
       budat TYPE d,
       kwbtr TYPE zif_cd_ops_types=>ty_amount,
+      "! BAI type code of the line (FEBEP-VORGC, as the EBS line read; VERIFY-DDIC there)
+      vorgc TYPE c LENGTH 3,
+      "! External transaction (FEBEP-VGEXT): ISO code of a CAMT import (ZCL_CD_EBS_SRC_FEB=>LINE_CODE)
+      vgext TYPE c LENGTH 27,
     END OF ty_bank_line.
   TYPES tt_bank_line TYPE STANDARD TABLE OF ty_bank_line WITH EMPTY KEY.
 
@@ -382,6 +389,8 @@ INTERFACE zif_cd_ops_trace_types
       lot_stars TYPE c LENGTH 20,
       "! Return reason DFKKRP-RLGRD (VERIFY-SE11; code only - no text table read)
       rlgrd     TYPE c LENGTH 3,
+      "! Amount of the returns lot item (DFKKRP-BETRW, VERIFY-DDIC; compared with the return line)
+      amount    TYPE zif_cd_ops_types=>ty_amount,
     END OF ty_return.
   TYPES tt_return TYPE STANDARD TABLE OF ty_return WITH EMPTY KEY.
 

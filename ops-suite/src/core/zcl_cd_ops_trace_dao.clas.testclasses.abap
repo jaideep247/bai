@@ -13,6 +13,7 @@
 *& 2026-11-06 | Return / NOC reasons: NOC lot items by INFOF through the shared EBS read, capped.
 *& 2026-11-06 | ltc_trace_dao_reads: partners, clearing items, headers, file events, method kind (gap closure).
 *& 2026-11-07 | Cheque by payment document carries the encashment date BANCD (check A_INFLIGHT).
+*& 2026-11-07 | Cheque status DFKKCR-STATE instead of BANCD; bank line BAI code VORGC.
 *&---------------------------------------------------------------------*
 CLASS ltc_trace_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -112,6 +113,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     ls_febep-esnum = '00001'.
     ls_febep-chect = gc_test-payment.
     ls_febep-budat = '20261103'.
+    ls_febep-vorgc = '466'.
     INSERT ls_febep INTO TABLE lt_febep.
     " Same reference, posted before the window (an older attempt)
     ls_febep-kukey = '00000090'.
@@ -127,7 +129,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
     ls_cr-hktid = 'CHK01'.
     ls_cr-ztnum = gc_test-ztnum.
     ls_cr-doc1r = gc_test-payment.
-    ls_cr-bancd = '20261104'.
+    ls_cr-state = 'B'.
     INSERT ls_cr INTO TABLE lt_cr.
     go_env->insert_test_data( lt_cr ).
   ENDMETHOD.
@@ -213,6 +215,7 @@ CLASS ltc_trace_dao IMPLEMENTATION.
                                                  iv_max_rows = 50 ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'One line in the window' ).
         cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-kukey exp = '00000101' msg = 'The line of this reference' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lines[ 1 ]-vorgc exp = '466' msg = 'BAI type code of the line' ).
         DATA(lt_all) = mo_cut->get_bank_lines( it_ref      = VALUE #( ( CONV #( gc_test-payment ) ) )
                                                iv_from     = VALUE #( )
                                                iv_max_rows = 50 ).
@@ -231,8 +234,8 @@ CLASS ltc_trace_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'One cheque' ).
         cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-ztnum exp = gc_test-ztnum msg = 'Cheque number' ).
         cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-hbkid exp = 'JPMC1' msg = 'House bank kept' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-bancd exp = '20261104'
-                                            msg = 'Encashment date read (VERIFY-DDIC BANCD)' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-state exp = 'B'
+                                            msg = 'Cheque status DFKKCR-STATE read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

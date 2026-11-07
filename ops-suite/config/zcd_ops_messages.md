@@ -294,7 +294,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 381 | &1 entry(ies), oldest &2 min - look in &3 |
 | 382 | Queue source &1 (&2) was not read: |
 | 383 | bgRFC is not monitored: PARAM4 (bgRFC source) of check &1 is blank |
-| 384 | Check &1: no payment method is mapped to a method class |
+| 384 | Check &1: no payment method is mapped to a method class (ZCD_HCK_PMCLASS) |
 | 385 | Payment method &1 is mapped to two method classes (&2, &3) |
 | 386 | Check &1: no limits in ZCD_HCK_THRESH for &2 - not evaluated |
 | 387 | Check &1: no factory calendar (PARAM1) - business days = calendar days |
@@ -303,8 +303,13 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 390 | age &1, amount &2 &3 |
 | 391 | (no value date: run date used) |
 | 392 | &1 payment(s) without value date aged from the run date (&2) |
-| 393 | Method class &1 is not monitored: parameter &2 is blank |
+| 393 | &1 is not monitored: no payment methods in ZCD_HCK_PMCLASS |
 | 394 | Time field &1 of table &2 is not of type TIMS |
+| 395 | &1: &2 payment(s) - &3 |
+| 396 | Payment &1, method &2, run date &3 (&4): |
+| 397 | held: |
+| 398 | - not held: |
+| 399 | - holds but must not: |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |
@@ -368,6 +373,28 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 545 | Payment &1: &2 lot items with different reasons (&3) |
 | 546 | &1 statements out of scope (lines not all payment engine accounts) |
 | 547 | Flow pattern &1 (priority &2) is not valid PCRE - line blocked |
+| 650 | - anomaly of &1: |
+| 651 | Evidence &1 (&2) not usable - its purposes are not judged: |
+| 652 | &1 is not monitored: no active CLEARED rule in ZCD_HCK_CLRRULE |
+| 653 | - also found: |
+| 654 | bank codes |
+| 655 | statement line &1 code &2 amount &3 posted &4 |
+| 656 | &1 status &2 |
+| 657 | returns lot &1 reason &2 amount &3 |
+| 658 | G/L line &1 &2 &3 clearing &4 |
+| 659 | - outcome &1 (rule &2) |
+| 660 | - returns lot items &1, expected &2 |
+| 661 | - return line amount &1, returns lot &2 |
+| 662 | - no active pattern of ZCD_HCK_SEQOUT matches |
+| 663 | - pending &1 days after the last line, more than &2 |
+| 664 | returns lot item(s) &1 without a return line |
+| 665 | Evidence &1: parameter &2 required (&3 &4) |
+| 666 | Pattern &1 of ZCD_HCK_SEQOUT &2 is not a valid PCRE |
+| 667 | Evidence &1 (&2) not configured (ZCD_HCK_EVSET) - its rows are ignored |
+| 668 | payout log &1 type &2 payout &3 ACK &4 |
+| 669 | G/L line &1 / &2 assignment &3 |
+| 670 | - assignment changed (no longer AUGBL) |
+| 671 | Evidence &1: expectation &2 invalid (EQUAL or CHANGED) |
 | 700 | Payment trace &1: verdict &2, first gap &3 (attempt &4) |
 | 701 | Request &1 source &2 counter &3 status &4 |
 | 702 | No SUCCESS row for FIN &1 source &2 (&3 row(s) read) |

@@ -20,6 +20,12 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _HckWhitelist { create; with draft; }
   use association _JobCycle { create; with draft; }
   use association _JobStep { create; with draft; }
+  use association _HckPmClass { create; with draft; }
+  use association _HckPmBank { create; with draft; }
+  use association _HckClrRule { create; with draft; }
+  use association _HckEvidenceSet { create; with draft; }
+  use association _HckBtcRole { create; with draft; }
+  use association _HckSeqOutcome { create; with draft; }
 }
 
 define behavior for ZC_CD_HckCheckDef alias HckCheckDef
@@ -86,6 +92,60 @@ use etag
 }
 
 define behavior for ZC_CD_JobStep alias JobStep
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckPmClass alias HckPmClass
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckPmBank alias HckPmBank
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckClrRule alias HckClrRule
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckEvidenceSet alias HckEvidenceSet
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckBtcRole alias HckBtcRole
+use etag
+{
+  use update;
+  use delete;
+
+  use association _HckCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_HckSeqOutcome alias HckSeqOutcome
 use etag
 {
   use update;
