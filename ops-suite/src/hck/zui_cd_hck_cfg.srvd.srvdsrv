@@ -16,4 +16,6 @@ define service ZUI_CD_HCK_CFG {
   expose ZC_CD_HckEvidenceSet as HckEvidenceSet;
   expose ZC_CD_HckBtcRole as HckBtcRole;
   expose ZC_CD_HckSeqOutcome as HckSeqOutcome;
+  expose ZC_CD_HckReconSet as HckReconSet;
+  expose ZC_CD_HckReconBtc as HckReconBtc;
 }

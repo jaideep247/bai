@@ -18,6 +18,7 @@
 *&            | serves no parameters.
 *& 2026-11-07 | Persisted verdicts (ZCD_HCK_RESULT, design review): green without metric, filtered run with
 *&            | scope and SKIPPED rows, warm-up next to a fixed limit = report, failed check never green.
+*& 2026-11-07 | no_evidence_check_is_grey: evidence NONE (A_RECON_3WAY without any leg) is grey, not GREEN.
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -249,6 +250,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       gc_red_check  TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_RED',
       gc_warm_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_WARM',
       gc_fail_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'B_FAIL',
+      gc_none_check TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_EMPTY',
       gc_metric     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVERDUE',
       gc_dim        TYPE zif_cd_hck_types=>ty_dim VALUE 'EBS',
       gc_green      TYPE zif_cd_ops_types=>ty_rag VALUE 'G',
@@ -277,6 +279,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         warmup_fixed    TYPE abap_bool,
         "! The run selects only the red check (check-id filter)
         filter_red      TYPE abap_bool,
+        "! A check without findings that read no evidence at all (evidence NONE)
+        no_evidence     TYPE abap_bool,
       END OF ty_flags.
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
@@ -316,6 +320,7 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS result_filtered_run_scope FOR TESTING.
     METHODS result_warmup_fixed_limit FOR TESTING.
     METHODS result_failed_never_green FOR TESTING.
+    METHODS no_evidence_check_is_grey FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -425,6 +430,11 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_threshold-higher_is_worse = abap_true.
       ls_threshold-baseline_mode   = zif_cd_hck_types=>gc_baseline-zscore.
       INSERT ls_threshold INTO TABLE mo_dao->mt_thresholds.
+    ENDIF.
+
+    IF is_flags-no_evidence = abap_true.
+      DATA(lo_none) = add_check( iv_check_id = gc_none_check iv_category = 'A' iv_priority = 'H' ).
+      lo_none->ms_result-evidence = zif_cd_hck_types=>gc_evidence-none.
     ENDIF.
 
     IF is_flags-warmup_fixed = abap_true.
@@ -805,6 +815,25 @@ CLASS ltc_engine IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_row-evidence exp = zif_cd_hck_types=>gc_evidence-none
                                             msg = 'No evidence' ).
         cl_abap_unit_assert=>assert_differs( act = ls_row-verdict exp = gc_green msg = 'Never green' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-07): a check that read no evidence at all (evidence NONE) proves nothing - grey,
+  " status GREY in the persisted verdict, never GREEN
+  METHOD no_evidence_check_is_grey.
+    TRY.
+        configure_scenario( VALUE #( no_evidence = abap_true ) ).
+        DATA(ls_report) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = ls_report-results[ check_id = gc_none_check ]-rag exp = gc_grey
+                                            msg = 'No evidence must not be GREEN' ).
+        DATA(ls_row) = mo_dao->mt_results[ check_id = gc_none_check ].
+        cl_abap_unit_assert=>assert_equals( act = ls_row-check_status exp = zif_cd_hck_types=>gc_check_status-grey
+                                            msg = 'Persisted as GREY' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_row-evidence exp = zif_cd_hck_types=>gc_evidence-none
+                                            msg = 'Evidence NONE kept' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

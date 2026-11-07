@@ -1,0 +1,75 @@
+// UI annotations: Health check setup - Reconciliation clearing account sets
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Reconciliation set',
+                     typeNamePlural: 'Reconciliation clearing account sets',
+                     title: { type: #STANDARD, value: 'SetId' } } }
+annotate entity ZC_CD_HckReconSet with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  SetId;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Kind;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  Side;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Bukrs;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Hkont;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  Waers;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  Hbkid;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Hktid;
+
+  @UI.identification: [{ position: 90 }]
+  InvertBank;
+
+  @UI.identification: [{ position: 100 }]
+  LegBank;
+
+  @UI.identification: [{ position: 110 }]
+  LegFica;
+
+  @UI.identification: [{ position: 120 }]
+  Tolerance;
+
+  @UI.identification: [{ position: 130 }]
+  Description;
+
+  @UI.identification: [{ position: 140 }]
+  Active;
+
+  @UI.hidden: true
+  ChangedBy;
+
+  @UI.hidden: true
+  ChangedAt;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

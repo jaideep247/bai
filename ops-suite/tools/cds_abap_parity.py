@@ -83,6 +83,21 @@ PAIRS = [
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
     ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| (?:EBS|HCK) \| (\d+) \|",
      'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
+    # Three-way reconciliation (A_RECON_3WAY, 2026-11-07): the bank leg scopes lines by the XBLNR
+    # account exactly as EBS; the result view splits the group key by position and selects RC_*
+    ('recon_xblnr_bank_text_pcre', 'src/hck/zi_cd_hckrcbankline.ddls.asddls', r"pcre\s*=>\s*'([^']*)'",
+     'src/ebs/zif_cd_ebs_types.intf.abap', 'gc_pe_account-bank_text_pcre', 'equal', None),
+    ('recon_xblnr_account_length', 'src/hck/zi_cd_hckrcbankline.ddls.asddls',
+     r"result_length\s*=>\s*\d+\s*\)\s*,\s*' '\s*\)\s*,\s*(\d+)\s*\)",
+     'src/ebs/zif_cd_ebs_types.intf.abap', 'gc_pe_account-length', 'equal', None),
+    ('recon_metric_prefix', 'src/hck/zi_cd_hckrecon.ddls.asddls', r"left\(\s*Metric\.metric\s*,\s*\d+\s*\)\s*=\s*'([^']*)'",
+     'src/hck/zif_cd_hck_recon_types.intf.abap', 'gc_metric_prefix', 'equal', None),
+    ('recon_group_bukrs_width', 'src/hck/zi_cd_hckrecon.ddls.asddls', r"substring\(\s*Metric\.dim1\s*,\s*1\s*,\s*(\d+)\s*\)",
+     'src/hck/zif_cd_hck_recon_types.intf.abap', 'gc_group_width-bukrs', 'equal', None),
+    ('recon_group_hkont_width', 'src/hck/zi_cd_hckrecon.ddls.asddls', r"substring\(\s*Metric\.dim1\s*,\s*6\s*,\s*(\d+)\s*\)",
+     'src/hck/zif_cd_hck_recon_types.intf.abap', 'gc_group_width-hkont', 'equal', None),
+    ('recon_group_waers_width', 'src/hck/zi_cd_hckrecon.ddls.asddls', r"substring\(\s*Metric\.dim1\s*,\s*17\s*,\s*(\d+)\s*\)",
+     'src/hck/zif_cd_hck_recon_types.intf.abap', 'gc_group_width-waers', 'equal', None),
 ]
 
 
