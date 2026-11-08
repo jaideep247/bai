@@ -2459,6 +2459,36 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>683</MSGNR>
+     <TEXT>Payment &amp;1: DPAYH status still &amp;2, bank evidence &amp;3 since &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>684</MSGNR>
+     <TEXT>Payment &amp;1: DPAYH status still &amp;2, bank ACK received &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>685</MSGNR>
+     <TEXT>Status lag after the bank ACK not evaluated: &amp;1 not configured</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>686</MSGNR>
+     <TEXT>Status lag after the bank ACK not evaluated (&amp;1):</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>687</MSGNR>
+     <TEXT>- not updated &amp;1 min after the evidence:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>690</MSGNR>
      <TEXT>&amp;1 &amp;2: bank vs G/L differs by &amp;3, unexplained &amp;4</TEXT>
     </T100>

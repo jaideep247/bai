@@ -94,6 +94,8 @@ CD_HCK,HCK_MAX_RUN_MIN_EBS,P,INT,1,,,,,,,Hung limit of EBS runs (minutes; blank 
 CD_HCK,HCK_MAX_RUN_MIN_FMON,P,INT,1,,,,,,,Hung limit of FMON runs (minutes; blank = default),PE RTB
 CD_HCK,HCK_MAX_RUN_MIN_HCK,P,INT,1,,,,,,,Hung limit of HCK runs (minutes; blank = default),PE RTB
 CD_HCK,HCK_MAX_TECH_ROWS,P,INT,,,5000,,,,,NRIV intervals / queue groups per read (ceiling 50000),PE RTB
+CD_HCK,HCK_PAY_STATUS_ACK_OPEN,P,LIST,,,ISSUED,,,,,DPAYH statuses that must change after the bank ACK (list),PE RTB
+CD_HCK,HCK_PAY_STATUS_LAG_MIN,P,INT,0,10080,120,,,,,Grace before a payment status lag is reported (minutes),PE RTB
 CD_HCK,HCK_QUEUE_ERR_STATES,P,LIST,,,"SYSFAIL,CPICERR",,,,,qRFC / bgRFC states that are an error (comma list),PE RTB
 CD_HCK,HCK_QUEUE_HOLD_STATES,P,LIST,,,"STOP,WAITSTOP",,,,,qRFC / bgRFC states that hold a queue (comma list),PE RTB
 CD_HCK,HCK_QUEUE_WAIT_STATES,P,LIST,,,"READY,RUNNING",,,,,States stuck when older than the age limit (comma list),PE RTB

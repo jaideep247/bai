@@ -24,6 +24,8 @@
 *& 2026-11-07 | Purpose RETRIEVED after RETURNED (canonical payment outcome: a retrieval is not a return).
 *& 2026-11-08 | Confirmed DPAYH status values: evidence PENDING (status job not yet run) and EV_DATE
 *&            | (newest record of the evidence); message 682 (waiting for the payment status job).
+*& 2026-11-08 | Status lag: check code PAY_STATUS_LAG, parameters HCK_PAY_STATUS_LAG_MIN (grace, 120 min)
+*&            | and HCK_PAY_STATUS_ACK_OPEN (statuses that must change after the bank ACK), messages 683-687.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -563,6 +565,9 @@ INTERFACE zif_cd_hck_runtime_types
       "! Outcome findings of cheques (ZCD_HCK_SEQOUT-FINDING): several 581 / 255, correction
       cheque_clarify     TYPE zif_cd_ops_types=>ty_check_code VALUE 'CHEQUE_CLARIFICATION',
       manual_clearing    TYPE zif_cd_ops_types=>ty_check_code VALUE 'MANUAL_CLEARING_REQUIRED',
+      "! The bank evidence decides (or the bank ACK is in) but DPAYH-ZZ_PAYMENT_STATUS has not
+      "! followed within the grace period (hourly payment status job): one finding per payment
+      status_lag         TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_LAG',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -582,6 +587,11 @@ INTERFACE zif_cd_hck_runtime_types
       max_tech_rows     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_MAX_TECH_ROWS',
       "! Payments read per window (DPAYH)
       inflight_max_rows TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_INFLIGHT_MAX_ROWS',
+      "! Minutes after the bank evidence / the bank ACK before a status that did not follow is a
+      "! PAY_STATUS_LAG (the payment status job runs hourly)
+      status_lag_min    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_LAG_MIN',
+      "! Payment statuses that must have changed once the bank ACK of the payment is received
+      status_ack_open   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_ACK_OPEN',
     END OF gc_param.
 
   "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of
@@ -599,6 +609,8 @@ INTERFACE zif_cd_hck_runtime_types
       queue_wait_states TYPE string VALUE `READY,RUNNING`,
       max_tech_rows     TYPE i VALUE 5000,
       inflight_max_rows TYPE i VALUE 5000,
+      status_lag_min    TYPE i VALUE 120,
+      status_ack_open   TYPE string VALUE `ISSUED`,
     END OF gc_param_default.
 
   "! Defaults of the check parameters (PARAM1-4 of ZCD_HCK_DEF) when blank
@@ -671,6 +683,11 @@ INTERFACE zif_cd_hck_runtime_types
       ev_other_cheque     TYPE zif_cd_ops_types=>ty_msgno VALUE '680',
       ev_register_missing TYPE zif_cd_ops_types=>ty_msgno VALUE '681',
       evidence_pending    TYPE zif_cd_ops_types=>ty_msgno VALUE '682',
+      lag_bank            TYPE zif_cd_ops_types=>ty_msgno VALUE '683',
+      lag_ack             TYPE zif_cd_ops_types=>ty_msgno VALUE '684',
+      lag_ack_unconfig    TYPE zif_cd_ops_types=>ty_msgno VALUE '685',
+      lag_ack_failed      TYPE zif_cd_ops_types=>ty_msgno VALUE '686',
+      lag_detail          TYPE zif_cd_ops_types=>ty_msgno VALUE '687',
     END OF gc_msg.
 
 ENDINTERFACE.

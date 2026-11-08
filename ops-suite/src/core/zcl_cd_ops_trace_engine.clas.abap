@@ -29,6 +29,8 @@
 *& 2026-11-07 | Stage OUTCOME: the canonical outcome of each current attempt by the shared evaluator
 *&            | ZIF_CD_OPS_PAY_OUTCOME (the verdict of A_INFLIGHT and the transactions dashboard), FIN in
 *&            | two sources = AMBIGUOUS; informational for the evidence verdict (as NOC); result outcome.
+*& 2026-11-08 | TO_DATE / TO_TIME public: the status-lag finding of A_INFLIGHT reads the ACK time of the
+*&            | same configured ACK source (TRACE_SRC_ACK) with the same conversion; no behaviour change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -58,6 +60,20 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
         iv_value         TYPE clike
       RETURNING
         VALUE(rv_masked) TYPE string.
+
+    "! Date of a configured source value: YYYYMMDD, or the date part of a time stamp; else blank
+    CLASS-METHODS to_date
+      IMPORTING
+        iv_value       TYPE clike
+      RETURNING
+        VALUE(rv_date) TYPE d.
+
+    "! Time of a configured source value: hhmmss, or the time part of a time stamp; else blank
+    CLASS-METHODS to_time
+      IMPORTING
+        iv_value       TYPE clike
+      RETURNING
+        VALUE(rv_time) TYPE t.
 
   PRIVATE SECTION.
     CONSTANTS gc_digits TYPE string VALUE `0123456789`.
@@ -293,12 +309,6 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
       RETURNING
         VALUE(rv_in) TYPE abap_bool.
 
-    CLASS-METHODS to_date
-      IMPORTING
-        iv_value       TYPE clike
-      RETURNING
-        VALUE(rv_date) TYPE d.
-
     "! Positive whole number of a parameter, else the default
     CLASS-METHODS to_int
       IMPORTING
@@ -306,12 +316,6 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
         iv_default    TYPE i
       RETURNING
         VALUE(rv_int) TYPE i.
-
-    CLASS-METHODS to_time
-      IMPORTING
-        iv_value       TYPE clike
-      RETURNING
-        VALUE(rv_time) TYPE t.
 
     CLASS-METHODS is_gap
       IMPORTING

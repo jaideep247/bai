@@ -295,6 +295,19 @@ Until fixed, each run uses the code default for that parameter; nothing stops an
 | `CLEARING_RULE_INVALID` E | Evidence class and PARAM1 in the message, exception text | Payment engine support | The row cannot be used (class does not implement `ZIF_CD_HCK_EVIDENCE`, required parameter blank, invalid sequence pattern, unknown field): its purposes are not judged and the payments stay in flight (aged). Correct the row in DV1 and transport. |
 | `TECH_READ_CAPPED` W | Parameter `HCK_INFLIGHT_MAX_ROWS` | Payment engine support | More payments in the window than the cap: counts may be incomplete. Raise the cap after a QA1 runtime check or shorten PARAM2 / PARAM3. |
 
+## 5k-1. A_INFLIGHT — PAY_STATUS_LAG: the DPAYH status did not follow the bank (2026-11-08)
+
+**What it means.** One warning per payment in flight: the bank already decided (a 195 / 168 / 166 lifecycle with its returns lot, or the bank ACK of a disbursement), but DPAYH-ZZ_PAYMENT_STATUS is still `ISSUED` / `CONFIRMED` more than `HCK_PAY_STATUS_LAG_MIN` (120) minutes later. The hourly payment status job did not update it. The payment stays in flight (aged); nothing is posted or changed by the suite. No alert e-mail is sent by default.
+
+| Message | Where to look | Who acts | What to do |
+|---|---|---|---|
+| 683 "DPAYH status still CONFIRMED, bank evidence RETURNED / RETRIEVED since <day>" + the deciding evidence | Payment trace of the document (stages BANK_LINE, RETURN, OUTCOME), DPAYH-ZZ_PAYMENT_STATUS, SM37 of the hourly payment status job (last runs, cancellations), `ZCD_SPE_EXCP_LOG` | Payment engine support (status job owner) | Job cancelled / not scheduled → restart it per its runbook; job ran but skipped the payment → status-job defect (ticket with the payment document); many payments of one day at once → the job ran before the statement import (timing; resolves with its next run). Never set the status from the suite |
+| 684 "DPAYH status still ISSUED, bank ACK received <date time>" + ACK row | Payment trace stage BANK_ACK (same ACK source), FMON file board (ACK_RECEIVED), SM37 of the status job | Payment engine support | As above; an ACK of the wrong payment (reference) → check the ACK source configuration `TRACE_SRC_ACK` |
+| `INFLIGHT_CONFIG` I "Status lag after the bank ACK not evaluated: TRACE_SRC_ACK not configured" | ZCA_PARAM `TRACE_SRC_ACK` (needs TABLE, KEY and DATE) | Payment engine support | Expected until the ACK table fields are confirmed in SE11; then maintain the parameter (developer-owned, transport) |
+| `INFLIGHT_CONFIG` W "… not evaluated (table): <error>" | Table / fields of `TRACE_SRC_ACK`, `ZCD_FMON_TABWL`, authorisation S_TABU_NAM | Payment engine support | Correct the configuration by transport |
+
+The grace of the bank-evidence case starts at the end of the statement line's posting day (FEBEP has no time): a statement imported shortly before the report can show a lag that the next status job resolves - check the job's last run before escalating.
+
 ## 5l. A_INFLIGHT — inconsistent clearing / return evidence (CLEARING_INCONSISTENT, RETURN_INCONSISTENT, UNEXPECTED_SEQUENCE, PENDING_OUTCOME_MISSING)
 
 **What it means.** Two pieces of evidence about one payment disagree, or the bank code sequence of the payment is not a known lifecycle. The payment is listed (oldest first, per flow + class) and not aged. Each detail line names the purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT) and what held, what is missing and what must not hold, or the anomaly with its evidence (codes with dates, returns lot items, amounts). The suite never posts, clears, voids or changes a status.

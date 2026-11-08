@@ -27,6 +27,9 @@
 *& 2026-11-08 | Confirmed DPAYH status values: fixture wire returned excluded as RETURNED, the return whose
 *&            | status is not updated yet stays in flight (aged, not listed), cheques voided / stopped
 *&            | excluded as VOIDED, stopped cheque cashed CLEARING_INCONSISTENT "stopped cheque cashed".
+*& 2026-11-08 | PAY_STATUS_LAG: bank evidence decides but the status lags beyond the grace (one finding per
+*&            | payment, metric), within the grace silent, bank ACK older than the grace while ISSUED,
+*&            | ACK source not configured (information, nothing judged).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -100,9 +103,21 @@ CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
     DATA mt_checks TYPE zif_cd_ops_trace_types=>tt_check.
     DATA mt_lines TYPE zif_cd_ops_trace_types=>tt_bank_line.
     DATA mt_runs TYPE zif_cd_ops_trace_types=>tt_payment_run.
+    "! Rows of the configured payment-level ACK source (TRACE_SRC_ACK)
+    DATA mt_acks TYPE zif_cd_ops_trace_types=>tt_cfg_row.
+    DATA mv_ack_reads TYPE i.
 ENDCLASS.
 
 CLASS ltd_trace_dao IMPLEMENTATION.
+  METHOD zif_cd_ops_trace_dao~read_configured_set.
+    mv_ack_reads = mv_ack_reads + 1.
+    LOOP AT mt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>).
+      IF line_exists( it_keys[ table_line = <ls_ack>-key1 ] ).
+        INSERT <ls_ack> INTO TABLE rt_rows.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
   METHOD zif_cd_ops_trace_dao~get_doc_headers.
     rt_headers = mt_headers.
   ENDMETHOD.
@@ -251,7 +266,20 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       "! Names of the test evidence kinds (injected plug-ins)
       gc_ev_a     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_A',
       gc_ev_b     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_B',
-      gc_ev_c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_C'.
+      gc_ev_c     TYPE zif_cd_ops_types=>ty_class_name VALUE 'LTD_EVIDENCE_C',
+      "! Morning report time of the status-lag tests (grace 120 min: limit 06:00 today)
+      gc_morning  TYPE t VALUE '080000',
+      "! Payment-level ACK source as the payment trace configures it (test names)
+      gc_ack_spec TYPE string VALUE `TABLE=ZCD_WIRE_ACK;KEY=AUGBL;STATUS=ACK_STATUS;DATE=ACK_DATE;TIME=ACK_TIME`.
+
+    "! Confirmed DPAYH-ZZ_PAYMENT_STATUS values (2026-11-08) and ACK statuses of the tests
+    CONSTANTS:
+      BEGIN OF gc_status,
+        issued    TYPE c LENGTH 20 VALUE 'ISSUED',
+        confirmed TYPE c LENGTH 20 VALUE 'CONFIRMED',
+        ack       TYPE c LENGTH 40 VALUE 'ACK',
+        nack      TYPE c LENGTH 40 VALUE 'NACK',
+      END OF gc_status.
 
     CONSTANTS:
       BEGIN OF gc_class,
@@ -329,6 +357,19 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS fixture_return_lag_in_flight FOR TESTING.
     METHODS fixture_cheques_voided       FOR TESTING.
     METHODS fixture_stopped_cashed       FOR TESTING.
+    " status lag (PAY_STATUS_LAG)
+    METHODS lag_after_grace_reported     FOR TESTING.
+    METHODS lag_within_grace_silent      FOR TESTING.
+    METHODS ack_lag_after_grace          FOR TESTING.
+    METHODS ack_source_unconfigured      FOR TESTING.
+    "! A wire in flight (test kind A finds nothing) with its DPAYH status and an optional bank ACK
+    METHODS add_acked_wire
+      IMPORTING
+        iv_doc        TYPE zif_cd_hck_runtime_types=>ty_docno
+        iv_status     TYPE clike
+        iv_ack_status TYPE clike OPTIONAL
+        iv_ack_date   TYPE d OPTIONAL
+        iv_ack_time   TYPE t OPTIONAL.
 
     "! Configuration and data of the shared fixtures (all scenarios, delivered rules)
     METHODS load_fixtures
@@ -377,6 +418,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       IMPORTING
         iv_calendar      TYPE zif_cd_hck_types=>ty_param DEFAULT gc_calendar
         iv_top_n         TYPE zif_cd_hck_types=>ty_param OPTIONAL
+        iv_time          TYPE t OPTIONAL
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
@@ -608,6 +650,7 @@ CLASS ltc_inflight IMPLEMENTATION.
     ls_def-param4          = iv_top_n.
     ls_context-report_date = gc_today.
     ls_context-now_date    = gc_today.
+    ls_context-now_time    = iv_time.
     rs_result = NEW zcl_cd_hck_c_inflight( )->zif_cd_hck_check~execute( is_def        = ls_def
                                                                         it_thresholds = mt_thresholds
                                                                         is_context    = ls_context ).
@@ -1651,6 +1694,125 @@ CLASS ltc_inflight IMPLEMENTATION.
                                           msg = 'Detail: stopped cheque cashed' ).
         cl_abap_unit_assert=>assert_equals( act = ls_finding-severity exp = zif_cd_ops_types=>gc_severity-error
                                             msg = 'Error' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Status lag (b): the 195 of the wire return is on yesterday's statement, DPAYH still CONFIRMED at
+  " 08:00 today - more than 120 minutes after the end of the line's day: one PAY_STATUS_LAG (W) for that
+  " payment only (decided payments never lag), metric per flow + class
+  METHOD lag_after_grace_reported.
+    TRY.
+        DATA(lo_fixture) = load_fixtures( ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lv_doc) = lo_fixture->scenario( zcl_cd_ops_pay_fixture=>gc_scenario-return_lag )-augbl.
+        DATA(lt_lag) = VALUE zif_cd_ops_types=>tt_finding( ).
+        LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
+             WHERE check_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
+          INSERT <ls_finding> INTO TABLE lt_lag.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging payment in the fixtures' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( lv_doc )
+                                            msg = 'The return whose status lags' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Warning' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-message
+                                                               sub = condense( gc_status-confirmed ) ) >= 0 )
+                                          msg = 'The status that did not follow is named' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-d_wire )
+                                            exp = 1 msg = 'Metric DWIR' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-d_cheque )
+                                            exp = 0 msg = 'Zero is measured' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Status lag (b) within the grace (HCK_PAY_STATUS_LAG_MIN 600: limit yesterday 22:00): nothing reported,
+  " the payment stays in flight
+  METHOD lag_within_grace_silent.
+    TRY.
+        mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-status_lag_min iv_value = '600' ).
+        load_fixtures( ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_result-findings[
+                                                            check_code = zif_cd_hck_runtime_types=>gc_code-status_lag ] ) )
+                                           msg = 'Within the grace: no lag' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
+                                                          iv_key    = gc_key-d_wire )
+                                            exp = 1 msg = 'Still in flight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_acked_wire.
+    add_payment( iv_doc = iv_doc iv_valut = gc_today ).
+    INSERT VALUE #( doc1r = iv_doc laufd = gc_friday status = iv_status ) INTO TABLE mo_trace->mt_runs.
+    IF iv_ack_status IS SUPPLIED.
+      INSERT VALUE #( key1    = iv_doc
+                      status  = iv_ack_status
+                      ev_date = iv_ack_date
+                      ev_time = iv_ack_time ) INTO TABLE mo_trace->mt_acks.
+    ENDIF.
+  ENDMETHOD.
+
+
+  " Status lag (a): the bank ACK of a disbursement (payment-level ACK source of the payment trace) is
+  " older than the grace and DPAYH still says ISSUED - reported; an ACK inside the grace, a payment
+  " already CONFIRMED and a NACK are not; one ACK read for all
+  METHOD ack_lag_after_grace.
+    TRY.
+        mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_ack iv_value = gc_ack_spec ).
+        add_acked_wire( iv_doc = gc_doc1 iv_status = gc_status-issued iv_ack_status = gc_status-ack
+                        iv_ack_date = gc_holiday iv_ack_time = '100000' ).
+        add_acked_wire( iv_doc = gc_doc2 iv_status = gc_status-issued iv_ack_status = gc_status-ack
+                        iv_ack_date = gc_today iv_ack_time = '073000' ).
+        add_acked_wire( iv_doc = gc_doc3 iv_status = gc_status-confirmed iv_ack_status = gc_status-ack
+                        iv_ack_date = gc_holiday iv_ack_time = '100000' ).
+        add_acked_wire( iv_doc = gc_doc4 iv_status = gc_status-issued iv_ack_status = gc_status-nack
+                        iv_ack_date = gc_holiday iv_ack_time = '100000' ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lt_lag) = VALUE zif_cd_ops_types=>tt_finding( ).
+        LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
+             WHERE check_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
+          INSERT <ls_finding> INTO TABLE lt_lag.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only the old ACK with status ISSUED' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+                                            msg = 'Payment 1' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 1 msg = 'One ACK read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Status lag (a) without a configured ACK source: said once as information, nothing judged, no read
+  METHOD ack_source_unconfigured.
+    TRY.
+        add_acked_wire( iv_doc = gc_doc1 iv_status = gc_status-issued ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lv_key) = CONV zif_cd_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+                                                             |{ zif_cd_ops_trace_types=>gc_param-src_ack }| ).
+        DATA(ls_info) = VALUE #( ls_result-findings[ object_key = lv_key ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_equals( act = ls_info-check_code exp = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                            msg = 'ACK source not configured: configuration finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_info-severity exp = zif_cd_ops_types=>gc_severity-info
+                                            msg = 'Information' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( ls_result-findings[
+                                                            check_code = zif_cd_hck_runtime_types=>gc_code-status_lag ] ) )
+                                           msg = 'No lag without ACK evidence' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 0 msg = 'No read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

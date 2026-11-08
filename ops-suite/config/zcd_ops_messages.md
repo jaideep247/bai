@@ -414,6 +414,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 680 | - cheque &1 (state &2), not the deciding cheque: |
 | 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |
 | 682 | - waiting for the payment status job: |
+| 683 | Payment &1: DPAYH status still &2, bank evidence &3 since &4 |
+| 684 | Payment &1: DPAYH status still &2, bank ACK received &3 |
+| 685 | Status lag after the bank ACK not evaluated: &1 not configured |
+| 686 | Status lag after the bank ACK not evaluated (&1): |
+| 687 | - not updated &1 min after the evidence: |
 | 690 | &1 &2: bank vs G/L differs by &3, unexplained &4 |
 | 691 | &1 &2: G/L &3 vs payment engine control total &4 |
 | 692 | Stripe group &1: charges &2, fees &3 vs deposit &4 |

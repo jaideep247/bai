@@ -49,6 +49,15 @@ table `ZCD_OPS_ALRULE` — suggested HCK rule: payment engine area `HCK`, minimu
 digest per run, rule/group pattern blank = any (patterns are PCRE matched to the complete value,
 case ignored; `*` alone is not a valid PCRE - confirm with the core owner).
 
+**Payment status lag (`A_INFLIGHT`, 2026-11-08, `HCK_MORNING_REPORT.md` §7b-6):**
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `HCK_PAY_STATUS_LAG_MIN` | INT 0..10080 | `120` | Minutes after the bank evidence (end of the statement line's day) or the bank ACK before a DPAYH status that did not follow is `PAY_STATUS_LAG` (W); the payment status job runs hourly |
+| `HCK_PAY_STATUS_ACK_OPEN` | LIST | `ISSUED` | DPAYH statuses that must have changed once the payment-level bank ACK (`TRACE_SRC_ACK`) is received |
+
+No alert rule is delivered for `PAY_STATUS_LAG` (morning report and dashboard only).
+
 ## 2. Check catalog — `ZCD_HCK_DEF`
 
 Pattern lists (PARAM1 of `B_JOB_RUNTIME` / `E_JOBS`, PARAM1-2 of `B_APPLOG`, PARAM2 of `B_CYCLE_*`) and the
