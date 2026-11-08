@@ -20,6 +20,8 @@
 *&            | SCOPE and never returns a RECON row (btc_roles_lifecycle_only).
 *& 2026-11-08 | Table consolidation: ZCD_HCK_EVSET no longer doubled or read (Stripe settings are ZCA_PARAM
 *&            | parameters).
+*& 2026-11-08 | Table consolidation: the house-bank calendar is a ZCD_HCK_PMCLASS row with HBKID, read with
+*&            | the classes (ZCD_HCK_PMBANK merged).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -455,7 +457,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_PMBANK' ) ( 'ZCD_HCK_CLRRULE' )
+      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_CLRRULE' )
                                    ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ) ).
   ENDMETHOD.
 
@@ -520,8 +522,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD insert_configuration.
     DATA lt_class TYPE STANDARD TABLE OF zcd_hck_pmclass WITH EMPTY KEY.
     DATA ls_class TYPE zcd_hck_pmclass.
-    DATA lt_bank TYPE STANDARD TABLE OF zcd_hck_pmbank WITH EMPTY KEY.
-    DATA ls_bank TYPE zcd_hck_pmbank.
     DATA lt_rule TYPE STANDARD TABLE OF zcd_hck_clrrule WITH EMPTY KEY.
     DATA ls_rule TYPE zcd_hck_clrrule.
     DATA lt_role TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
@@ -538,14 +538,13 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_class-method_class = 'ACI'.
     ls_class-active = abap_false.
     INSERT ls_class INTO TABLE lt_class.
+    " House-bank calendar of the ACI class: a row with HBKID, calendar only (ZCD_HCK_PMBANK merged)
+    CLEAR: ls_class-pay_methods, ls_class-age_basis.
+    ls_class-hbkid = 'BARC1'.
+    ls_class-calendar = 'GB'.
+    ls_class-active = abap_true.
+    INSERT ls_class INTO TABLE lt_class.
     go_env->insert_test_data( lt_class ).
-    ls_bank-flow = 'D'.
-    ls_bank-method_class = 'ACI'.
-    ls_bank-hbkid = 'BARC1'.
-    ls_bank-calendar = 'GB'.
-    ls_bank-active = abap_true.
-    INSERT ls_bank INTO TABLE lt_bank.
-    go_env->insert_test_data( lt_bank ).
     ls_rule-flow = 'D'.
     ls_rule-method_class = 'WIR'.
     ls_rule-purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared.
@@ -639,12 +638,14 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD configuration_active_only.
     TRY.
         DATA(lt_classes) = mo_cut->get_pm_classes( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 1 msg = 'Active class only' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_classes[ 1 ]-calendar exp = 'US' msg = 'Calendar read' ).
-        DATA(lt_banks) = mo_cut->get_pm_banks( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 2
+                                            msg = 'Active class row and active house-bank row only' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'WIR' hbkid = space ]-calendar
+                                            exp = 'US' msg = 'Calendar of the class row' ).
         DATA(lt_roles) = mo_cut->get_btc_roles( ).
         DATA(lt_outcomes) = mo_cut->get_seq_outcomes( ).
-        cl_abap_unit_assert=>assert_equals( act = lt_banks[ 1 ]-calendar exp = 'GB' msg = 'Bank calendar' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'ACI' hbkid = 'BARC1' ]-calendar
+                                            exp = 'GB' msg = 'Calendar of the house-bank row (key HBKID)' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_clearing_rules( ) ) exp = 1 msg = 'Active rule only' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
                                             msg = 'Role per flow / class / scheme / code' ).

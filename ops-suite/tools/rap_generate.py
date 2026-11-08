@@ -142,10 +142,15 @@ SPEC = {
             # User rules 2026-11-07 (in-flight check A_INFLIGHT): method classes, evidence rules, BAI roles
             # and role-sequence outcomes - all keyed by flow + method class (an open list: a new class is
             # rows in these tables, never a code or domain change)
-            ('zcd_hck_pmclass', 'HckPmClass', 'zcd_d_hckpmcls', 'Payment method class', 'Payment method classes',
-             [], [('enum', 'flow', 'D,C'), ('enum', 'age_basis', 'VALUE_DATE,ISSUE_DATE')]),
-            ('zcd_hck_pmbank', 'HckPmBank', 'zcd_d_hckpmbnk', 'Bank calendar', 'Factory calendar per house bank',
-             [], [('enum', 'flow', 'D,C')]),
+            # Table consolidation 2026-11-08: a row with a house bank (HBKID) only overrides the
+            # calendar of its class (was ZCD_HCK_PMBANK); the class row (HBKID blank) keeps the payment
+            # methods, so a payment method still maps to exactly one class per flow
+            ('zcd_hck_pmclass', 'HckPmClass', 'zcd_d_hckpmcls', 'Payment method class',
+             'Payment method classes (and house-bank calendars)', ['hbkid'],
+             [('enum', 'flow', 'D,C'),
+              ('when', 'hbkid', BLANK, [('enum', 'age_basis', 'VALUE_DATE,ISSUE_DATE')]),
+              ('when', 'hbkid', FILLED, [('required', 'calendar'), ('blank', 'pay_methods'),
+                                         ('blank', 'age_basis')])]),
             ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
              [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),

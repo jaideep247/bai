@@ -9,7 +9,7 @@ Status 2026-11-07: written and statically checked offline (abaplint 0 issues for
 
 | Piece | Object | What it does |
 |---|---|---|
-| Evaluator | `ZIF_CD_OPS_PAY_OUTCOME` / `ZCL_CD_OPS_PAY_OUTCOME` (core factory `GET_PAY_OUTCOME`) | The A_INFLIGHT rules and evidence plug-ins (`HCK_MORNING_REPORT.md` §7b, tables `ZCD_HCK_PMCLASS` / `PMBANK` / `CLRRULE` / `BTCROLE` / `SEQOUT`, Stripe parameters `HCK_STRIPE_*`, plug-ins `ZCL_CD_HCK_EV_*`) moved unchanged into one shared service. Verdict per payment: outcome, deciding evidence kind and reference, finding. Source attribution: a FIN in two sources is **AMBIGUOUS** |
+| Evaluator | `ZIF_CD_OPS_PAY_OUTCOME` / `ZCL_CD_OPS_PAY_OUTCOME` (core factory `GET_PAY_OUTCOME`) | The A_INFLIGHT rules and evidence plug-ins (`HCK_MORNING_REPORT.md` §7b, tables `ZCD_HCK_PMCLASS` (with house-bank calendar rows) / `CLRRULE` / `BTCROLE` / `SEQOUT`, Stripe parameters `HCK_STRIPE_*`, plug-ins `ZCL_CD_HCK_EV_*`) moved unchanged into one shared service. Verdict per payment: outcome, deciding evidence kind and reference, finding. Source attribution: a FIN in two sources is **AMBIGUOUS** |
 | 5-minute snapshot | `ZCL_CD_OPS_PAY_SNAPSHOT`, job step `ZCD_OPS_PAY_SNAPSHOT` (step 2 of SM36 `ZCD_FMON_MONITOR_ALL`) | Only payments with new evidence since the watermark of each source; a new version only when the outcome changed |
 | History | `ZCD_PAY_OUTCOME` (keys only) + `ZCD_PAY_OUTWM` (watermarks) | Valid from / to; "as of" any instant since go-live; purge after 400 days |
 | Views | `ZI_CD_PayOutcome`, `ZI_CD_PayOutcomeTs`, `ZI_CD_PayOutcomeAt`, `ZI_CD_PayOutcomeItm` | The version valid at the instant, per FIN + source (request side) or per FIN + company code + payment (item side) |

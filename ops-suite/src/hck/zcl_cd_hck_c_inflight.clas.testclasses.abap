@@ -38,13 +38,14 @@
 *&            | and file-level classes in one run.
 *& 2026-11-08 | Table consolidation: runtime DAO double without get_evidence_settings (Stripe settings are
 *&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
+*& 2026-11-08 | Table consolidation: house-bank calendar as ZCD_HCK_PMCLASS row with HBKID; override for its
+*&            | own bank only (other_bank_uses_class_calendar), calendars asked recorded by the DAO double.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_runtime_dao PARTIALLY IMPLEMENTED.
     DATA mt_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
     DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
-    DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
     DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
     DATA mt_roles TYPE zif_cd_hck_runtime_types=>tt_btc_role.
     DATA mt_outcomes TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
@@ -71,10 +72,6 @@ CLASS ltd_runtime_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_runtime_dao~get_pm_classes.
     rt_classes = mt_classes.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_runtime_dao~get_pm_banks.
-    rt_banks = mt_banks.
   ENDMETHOD.
 
   METHOD zif_cd_hck_runtime_dao~get_clearing_rules.
@@ -204,11 +201,14 @@ CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
     "! Non-working days per test calendar (every other day works)
     DATA mt_holidays TYPE SORTED TABLE OF ty_holiday WITH UNIQUE KEY calendar date.
     DATA mv_calls TYPE i.
+    "! Calendars the check asked for (which calendar a payment was aged in)
+    DATA mt_asked TYPE SORTED TABLE OF zif_cd_hck_types=>ty_calendar WITH UNIQUE KEY table_line.
 ENDCLASS.
 
 CLASS ltd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~is_working_day.
     mv_calls = mv_calls + 1.
+    INSERT iv_calendar INTO TABLE mt_asked.
     rv_working = xsdbool( NOT line_exists( mt_holidays[ calendar = iv_calendar date = iv_date ] ) ).
   ENDMETHOD.
 ENDCLASS.
@@ -366,6 +366,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS holiday_is_not_a_business_day FOR TESTING.
     METHODS no_calendar_counts_all_days FOR TESTING.
     METHODS bank_calendar_overrides     FOR TESTING.
+    METHODS other_bank_uses_class_calendar FOR TESTING.
     METHODS missing_value_date_run_date FOR TESTING.
     METHODS flows_reported_separately   FOR TESTING.
     METHODS issue_date_calendar_days    FOR TESTING.
@@ -468,6 +469,9 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_methods  TYPE clike
         iv_basis    TYPE zif_cd_hck_runtime_types=>ty_age_basis DEFAULT zif_cd_hck_runtime_types=>gc_age_basis-value_date
         iv_calendar TYPE zif_cd_hck_types=>ty_calendar OPTIONAL.
+    "! ZCD_HCK_PMCLASS row of house bank Barclays (UK calendar) for the wire class: HBKID filled,
+    "! calendar only (table consolidation 2026-11-08, was ZCD_HCK_PMBANK)
+    METHODS add_bank_calendar.
     METHODS add_rule
       IMPORTING
         iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
@@ -839,26 +843,54 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the calendar of the house bank (ZCD_HCK_PMBANK) wins over the class and the check
-  " calendar - UK holiday Monday, US holiday Tuesday (international ACH via Barclays)
+  " Rule: the calendar of the house bank (ZCD_HCK_PMCLASS row with HBKID; table consolidation
+  " 2026-11-08, was ZCD_HCK_PMBANK) wins over the class and the check calendar - UK holiday Monday,
+  " US holiday Tuesday (international ACH via Barclays); the bank row maps no payment method
   METHOD bank_calendar_overrides.
-    DATA ls_bank TYPE zif_cd_hck_runtime_types=>ty_pm_bank.
     TRY.
-        ls_bank-flow         = zif_cd_hck_runtime_types=>gc_flow-disbursement.
-        ls_bank-method_class = gc_class-wire.
-        ls_bank-hbkid        = gc_barclays.
-        ls_bank-calendar     = gc_uk.
-        INSERT ls_bank INTO TABLE mo_dao->mt_banks.
+        add_bank_calendar( ).
         " Friday -> 07 08 (weekend counts in the test), 09 UK holiday, 10, 11 = 4 UK business days
         add_payment( iv_doc = gc_doc1 iv_valut = gc_friday iv_hbkid = gc_barclays iv_currency = 'GBP' ).
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
                                             exp = 4 msg = 'UK calendar of the bank used' ).
-        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_hck_dao->mt_holidays[ calendar = gc_uk ] ) )
-                                          msg = 'UK calendar configured' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_hck_dao->mt_asked[ table_line = gc_uk ] ) )
+                                          msg = 'Aged in the UK calendar of the house bank' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_hck_dao->mt_asked[ table_line = gc_calendar ] ) )
+                                           msg = 'Not in the check calendar' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a payment of another house bank (no row with its HBKID) is aged in the calendar of its
+  " class row, else PARAM1 of the check - the override applies to its own house bank only
+  METHOD other_bank_uses_class_calendar.
+    TRY.
+        add_bank_calendar( ).
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_friday iv_hbkid = gc_chq_bank ).
+        DATA(ls_result) = act( ).
+        " Friday -> 07 08 09, 10 US holiday, 11 = 4 business days of the check calendar
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
+                                            exp = 4 msg = 'Classified once (the bank row maps no method) and aged' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( mo_hck_dao->mt_asked[ table_line = gc_calendar ] ) )
+                                          msg = 'Aged in the class / check calendar' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( mo_hck_dao->mt_asked[ table_line = gc_uk ] ) )
+                                           msg = 'Not in the UK calendar of another house bank' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_bank_calendar.
+    DATA ls_bank TYPE zif_cd_hck_runtime_types=>ty_pm_class.
+    ls_bank-flow         = zif_cd_hck_runtime_types=>gc_flow-disbursement.
+    ls_bank-method_class = gc_class-wire.
+    ls_bank-hbkid        = gc_barclays.
+    ls_bank-calendar     = gc_uk.
+    INSERT ls_bank INTO TABLE mo_dao->mt_classes.
   ENDMETHOD.
 
 

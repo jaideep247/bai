@@ -21,6 +21,8 @@
 *&            | class split from SCOPE).
 *& 2026-11-08 | Table consolidation: get_evidence_settings (ZCD_HCK_EVSET) removed - the Stripe settings are
 *&            | ZCA_PARAM parameters HCK_STRIPE_*.
+*& 2026-11-08 | Table consolidation: get_pm_classes returns the class rows and the house-bank calendar rows
+*&            | (key HBKID); get_pm_banks (ZCD_HCK_PMBANK) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -90,15 +92,12 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_lines) TYPE zif_cd_hck_runtime_types=>tt_gl_xref2_line.
 
-  "! Active method classes (ZCD_HCK_PMCLASS) with their payment methods and ageing basis
+  "! Active rows of ZCD_HCK_PMCLASS: the method classes (HBKID blank) with their payment methods
+  "! and ageing basis, and the house-bank calendars per flow + method class (HBKID filled;
+  "! table consolidation 2026-11-08, was ZCD_HCK_PMBANK)
   METHODS get_pm_classes
     RETURNING
       VALUE(rt_classes) TYPE zif_cd_hck_runtime_types=>tt_pm_class.
-
-  "! Active house-bank calendars per flow + method class (ZCD_HCK_PMBANK)
-  METHODS get_pm_banks
-    RETURNING
-      VALUE(rt_banks) TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
 
   "! Rows of a configured table whose reference field is one of the values (e.g. the Stripe
   "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_OPS_TABWL (HCK / READ), fields in the DDIC - checked before

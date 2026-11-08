@@ -280,13 +280,25 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 
 | ID | Scenario | Setup | Expected | Result |
 |---|---|---|---|---|
-| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 92 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 129 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
 | PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |
 | PRM-05 | Definition missing | Delete the definition `EBS_GL_LEDGER` in a sandbox | EBS run uses ledger 0L (no SLG1 entry); `PARAM_INVALID` names `CD_EBS/EBS_GL_LEDGER` | pending |
 | PRM-06 | Production change | PS4 / QA1: change the value row of `HCK_SCORE_GREEN_MIN`; try to create a value row and to change `EBS_PARSER_BAI2` | Value change saved without request, visible in SCU3 (`ZCA_PARAM_VAL`); create refused; developer-owned change refused (ZCA_PARAM 045) | pending |
 | PRM-07 | Snapshot per run (A64) | Change `FMON_LOOKBACK_DAYS` while a 5-minute run is running | The running run keeps its value; the next run reads the new one | pending |
+
+### 6.15 Table consolidation 2026-11-08 (`Implementation_Order.md`, section *Table consolidation 2026-11-08*)
+
+| ID | Scenario | Setup | Expected | Result |
+|---|---|---|---|---|
+| CONS-01 | One approved-table list, filtered by reader | `ZCD_OPS_TABWL`: `ZCDT_REGUT` only as HCK / READ | FMON source REGUT refused (244); HCK aggregate on the table allowed; adding FMON / SOURCE allows the FMON read. App refuses purpose READ for FMON (413) and a field on an HCK row (423) | pending |
+| CONS-02 | Drift rows | `ZCD_OPS_TABWL` HCK / DRIFT `ZCD_HCK_DEF`; take baseline, change a check row | `CONFIG_DRIFT` for ZCD_HCK_DEF; a READ row of another table is not hashed | pending |
+| CONS-03 | Bank code role usages | `ZCD_HCK_BTCROLE`: LIFECYCLE `DACH` 166 RETRIEVED and RECON `DISB_ACH` 166 CUTOFF | `A_INFLIGHT` sees RETRIEVED, `A_RECON_3WAY` CUTOFF; app refuses role LEG on a LIFECYCLE row (424), scope `XACH` (425), role ORIGINAL or scheme ISO on a RECON row (413) | pending |
+| CONS-04 | Duration and deadline of one stage | `ZCD_FMON_SLA` BAI_JPMC_IN FULLY_PROCESSED: DURATION 60 P and DEADLINE `*` 10:00 | Both evaluated by their own check; 10:00 BAI rule `FMON_BAIDL` unchanged (FMON-QA-15..19). App refuses DURATION without minutes (417) or with a due time (423), DEADLINE without due time (422) | pending |
+| CONS-05 | Stripe settings as parameters | Definitions `HCK_STRIPE_*` imported, no value rows | Card payments `CLEARING_UNDETERMINED` ("Stripe evidence not configured"); after maintaining table / intent fields: evidence read | pending |
+| CONS-06 | Expected groups list | `ZCD_HCK_AGG` A_RET_AGED `EXPECTED_GROUPS` = two company codes, one without aged items | Silent company measures 0; app refuses `US01,,US02`, a repeat (426) and a list without group field (423) | pending |
+| CONS-07 | House-bank calendar row | `ZCD_HCK_PMCLASS` D ACI with HBKID Barclays, CALENDAR GB, no methods | Barclays payments aged in GB, other banks in the class / PARAM1 calendar; app refuses methods on the bank row (423) and a bank row without calendar (422); no 385 | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

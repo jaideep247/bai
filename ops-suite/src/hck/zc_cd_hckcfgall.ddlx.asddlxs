@@ -19,17 +19,15 @@ annotate entity ZC_CD_HckCfgAll with
     { id: 'JobStep', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Job cycle steps', position: 60, targetElement: '_JobStep' },
     { id: 'HckPmClass', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Payment method classes', position: 70, targetElement: '_HckPmClass' },
-    { id: 'HckPmBank', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Factory calendar per house bank', position: 80, targetElement: '_HckPmBank' },
+      label: 'Payment method classes (and house-bank calendars)', position: 70, targetElement: '_HckPmClass' },
     { id: 'HckClrRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Clearing / return evidence rules', position: 90, targetElement: '_HckClrRule' },
+      label: 'Clearing / return evidence rules', position: 80, targetElement: '_HckClrRule' },
     { id: 'HckBtcRole', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Bank code roles (lifecycle and reconciliation)', position: 100, targetElement: '_HckBtcRole' },
+      label: 'Bank code roles (lifecycle and reconciliation)', position: 90, targetElement: '_HckBtcRole' },
     { id: 'HckSeqOutcome', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Role sequence outcomes', position: 110, targetElement: '_HckSeqOutcome' },
+      label: 'Role sequence outcomes', position: 100, targetElement: '_HckSeqOutcome' },
     { id: 'HckReconSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Reconciliation clearing account sets', position: 120, targetElement: '_HckReconSet' }
+      label: 'Reconciliation clearing account sets', position: 110, targetElement: '_HckReconSet' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

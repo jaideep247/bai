@@ -20,6 +20,7 @@ INTERFACE lif_c.
       agebasis                       TYPE string VALUE `AGEBASIS`,
       aggfunc                        TYPE string VALUE `AGGFUNC`,
       baselinemode                   TYPE string VALUE `BASELINEMODE`,
+      calendar                       TYPE string VALUE `CALENDAR`,
       category                       TYPE string VALUE `CATEGORY`,
       classname                      TYPE string VALUE `CLASSNAME`,
       compareamount                  TYPE string VALUE `COMPAREAMOUNT`,
@@ -37,8 +38,10 @@ INTERFACE lif_c.
       finding                        TYPE string VALUE `FINDING`,
       flow                           TYPE string VALUE `FLOW`,
       groupfield                     TYPE string VALUE `GROUPFIELD`,
+      hbkid                          TYPE string VALUE `HBKID`,
       jobname                        TYPE string VALUE `JOBNAME`,
       kind                           TYPE string VALUE `KIND`,
+      paymethods                     TYPE string VALUE `PAYMETHODS`,
       priority                       TYPE string VALUE `PRIORITY`,
       purpose                        TYPE string VALUE `PURPOSE`,
       red                            TYPE string VALUE `RED`,
@@ -61,7 +64,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `HckBtcRole`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
       hckclrrule                     TYPE string VALUE `HckClrRule`,
-      hckpmbank                      TYPE string VALUE `HckPmBank`,
       hckpmclass                     TYPE string VALUE `HckPmClass`,
       hckreconset                    TYPE string VALUE `HckReconSet`,
       hckseqoutcome                  TYPE string VALUE `HckSeqOutcome`,
@@ -81,7 +83,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `ZCD_HCK_BTCROLE`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
       hckclrrule                     TYPE string VALUE `ZCD_HCK_CLRRULE`,
-      hckpmbank                      TYPE string VALUE `ZCD_HCK_PMBANK`,
       hckpmclass                     TYPE string VALUE `ZCD_HCK_PMCLASS`,
       hckreconset                    TYPE string VALUE `ZCD_HCK_RCSET`,
       hckseqoutcome                  TYPE string VALUE `ZCD_HCK_SEQOUT`,
@@ -106,8 +107,7 @@ INTERFACE lif_c.
       hckclrrule_flow                TYPE string VALUE `D,C`,
       hckclrrule_purpose             TYPE string VALUE `CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT`,
       hckclrrule_required            TYPE string VALUE `,X,C,N`,
-      hckpmbank_flow                 TYPE string VALUE `D,C`,
-      hckpmclass_agebasis            TYPE string VALUE `VALUE_DATE,ISSUE_DATE`,
+      hckpmclass_agebasis_blank      TYPE string VALUE `VALUE_DATE,ISSUE_DATE`,
       hckpmclass_flow                TYPE string VALUE `D,C`,
       hckreconset_kind               TYPE string VALUE `THREEWAY,ACH_ZUONR,STRIPE`,
       hckreconset_side               TYPE string VALUE `C,D`,
@@ -175,9 +175,6 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckPmClass = if_abap_behv=>mk-on.
       result-%assoc-_HckPmClass = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckPmBank = if_abap_behv=>mk-on.
-      result-%assoc-_HckPmBank = lv_create.
     ENDIF.
     IF requested_features-%assoc-_HckClrRule = if_abap_behv=>mk-on.
       result-%assoc-_HckClrRule = lv_create.
@@ -795,11 +792,30 @@ CLASS lhc_hckpmclass IMPLEMENTATION.
                         v2 = lif_c=>gc_el-flow v3 = lif_c=>gc_val-hckpmclass_flow
                         element = lif_c=>gc_el-flow ) INTO TABLE lt_msg.
       ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AgeBasis )
-                                        iv_list  = lif_c=>gc_val-hckpmclass_agebasis ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-AgeBasis
-                        v2 = lif_c=>gc_el-agebasis v3 = lif_c=>gc_val-hckpmclass_agebasis
-                        element = lif_c=>gc_el-agebasis ) INTO TABLE lt_msg.
+      IF ls_row-Hbkid IS INITIAL.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AgeBasis )
+                                          iv_list  = lif_c=>gc_val-hckpmclass_agebasis_blank ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-AgeBasis
+                          v2 = lif_c=>gc_el-agebasis v3 = lif_c=>gc_val-hckpmclass_agebasis_blank
+                          element = lif_c=>gc_el-agebasis ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF ls_row-Hbkid IS NOT INITIAL.
+        IF ls_row-Calendar IS INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-calendar
+                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
+                          element = lif_c=>gc_el-calendar ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-PayMethods IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-paymethods
+                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
+                          element = lif_c=>gc_el-paymethods ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-AgeBasis IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-agebasis
+                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
+                          element = lif_c=>gc_el-agebasis ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -849,106 +865,6 @@ CLASS lhc_hckpmclass IMPLEMENTATION.
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
         INTO TABLE reported-hckpmclass.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_hckpmbank DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckPmBank RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckPmBank~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckPmBank~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckpmbank IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckPmBank
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckpmbank.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
-                                        iv_list  = lif_c=>gc_val-hckpmbank_flow ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Flow
-                        v2 = lif_c=>gc_el-flow v3 = lif_c=>gc_val-hckpmbank_flow
-                        element = lif_c=>gc_el-flow ) INTO TABLE lt_msg.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckpmbank.
-        INSERT INITIAL LINE INTO TABLE reported-hckpmbank ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-hckcfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckpmbank.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckpmbank.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckpmbank.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1480,7 +1396,6 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-jobcycle table = lif_c=>gc_tab-jobcycle )
             ( entity = lif_c=>gc_ent-jobstep table = lif_c=>gc_tab-jobstep )
             ( entity = lif_c=>gc_ent-hckpmclass table = lif_c=>gc_tab-hckpmclass )
-            ( entity = lif_c=>gc_ent-hckpmbank table = lif_c=>gc_tab-hckpmbank )
             ( entity = lif_c=>gc_ent-hckclrrule table = lif_c=>gc_tab-hckclrrule )
             ( entity = lif_c=>gc_ent-hckbtcrole table = lif_c=>gc_tab-hckbtcrole )
             ( entity = lif_c=>gc_ent-hckseqoutcome table = lif_c=>gc_tab-hckseqoutcome )

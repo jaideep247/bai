@@ -8,7 +8,7 @@
 *& DPAYH payments in a run-date window with the collection indicator of
 *& their method (TFK042Z via T001), G/L lines by XREF2 (BSEG) and the
 *& active rows of the in-flight configuration (ZCD_HCK_PMCLASS, _CLRRULE,
-*& _PMBANK, _BTCROLE usage LIFECYCLE, _SEQOUT).
+*& HBKID rows = house-bank calendars, _BTCROLE usage LIFECYCLE, _SEQOUT).
 *& Every read is keyed or window-bounded and capped. Read-only: no INSERT
 *& / UPDATE / DELETE, no lock, no queue or interval is changed.
 *& Unconfirmed names: VERIFY-DDIC (Release_Readiness.md).
@@ -23,6 +23,8 @@
 *&            | class split from SCOPE).
 *& 2026-11-08 | Table consolidation: get_evidence_settings (ZCD_HCK_EVSET) removed - the Stripe settings are
 *&            | ZCA_PARAM parameters HCK_STRIPE_*.
+*& 2026-11-08 | Table consolidation: get_pm_classes returns the class rows and the house-bank calendar rows
+*&            | (key HBKID); get_pm_banks (ZCD_HCK_PMBANK) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -259,20 +261,13 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_runtime_dao~get_pm_classes.
-    SELECT flow, method_class, pay_methods, age_basis, calendar, description
+    " Class rows (HBKID blank) and the calendar overrides of house banks in one read (ZCD_HCK_PMBANK
+    " merged, 2026-11-08); the caller separates them
+    SELECT flow, method_class, hbkid, pay_methods, age_basis, calendar, description
       FROM zcd_hck_pmclass
       WHERE active = @abap_true
-      ORDER BY flow, method_class
-      INTO CORRESPONDING FIELDS OF TABLE @rt_classes.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_hck_runtime_dao~get_pm_banks.
-    SELECT flow, method_class, hbkid, calendar
-      FROM zcd_hck_pmbank
-      WHERE active = @abap_true
       ORDER BY flow, method_class, hbkid
-      INTO CORRESPONDING FIELDS OF TABLE @rt_banks.
+      INTO CORRESPONDING FIELDS OF TABLE @rt_classes.
   ENDMETHOD.
 
 

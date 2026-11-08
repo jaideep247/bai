@@ -96,7 +96,7 @@ uncapped count.
 | A_RECON_3WAY | Three-way reconciliation bank / G/L transit / payment engine | A | ZCL_CD_HCK_C_RECON3 | X | 27 | H | | | | 300 |
 | E_QUEUES | qRFC / bgRFC queues in error or stuck | E | ZCL_CD_HCK_C_QUEUES | X | 115 | H | `<payment engine queue patterns, e.g. ZCD_.*, confirm in SMQ1 / SMQ2>` (blank = all) | `<destination patterns, e.g. PRISM.*>` (blank = all) | `30` (stuck minutes) | 60 |
 
-`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars in `ZCD_HCK_PMCLASS` / `ZCD_HCK_PMBANK`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
+`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b, both rows of ZCD_HCK_PMCLASS), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars (class rows and house-bank rows) in `ZCD_HCK_PMCLASS`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
 `A_RECON_3WAY` has no PARAM1-4: the window, timing, redeposit days, tolerance and the row cap are ZCA_PARAM `HCK_RECON_*` (§1); the sets and bank code roles are §10. It also reads EBS_FEB_CREDIT_IND / EBS_FEB_DEBIT_IND, EBS_GL_LEDGER (owned by EBS) and TRACE_GL_AWTYP (core) - one definition each.
 `E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
 `E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a `ZCD_OPS_TABWL` row HCK / READ for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
@@ -269,29 +269,31 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 ## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
 
-User rules 2026-11-07. All five tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+User rules 2026-11-07. All four tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes (and house-bank calendars)*, *Clearing / return evidence rules*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
 
 ### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
 
-| FLOW | METHOD_CLASS | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|
-| D | WIR | `E` | VALUE_DATE | | Wire disbursements | X |
-| D | ACH | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
-| D | CHQ | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
-| C | ACH | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
-| C | CRD | `B` | VALUE_DATE | | Card collections (Stripe) | X |
-| D | ACI | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
+| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| D | WIR | (blank) | `E` | VALUE_DATE | | Wire disbursements | X |
+| D | ACH | (blank) | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
+| D | CHQ | (blank) | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
+| C | ACH | (blank) | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
+| C | CRD | (blank) | `B` | VALUE_DATE | | Card collections (Stripe) | X |
+| D | ACI | (blank) | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
 
-CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise).
+Key FLOW + METHOD_CLASS + HBKID (table consolidation 2026-11-08: HBKID added, `ZCD_HCK_PMBANK` merged). The rows above are the **class rows** (HBKID blank = all house banks). CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise) - only class rows carry payment methods, so a house-bank row (§8b) never makes a second class of a method.
 
-### 8b. `ZCD_HCK_PMBANK` — factory calendar per house bank (optional override)
+### 8b. `ZCD_HCK_PMCLASS` rows with a house bank — factory calendar per house bank (optional override; was `ZCD_HCK_PMBANK`)
 
-| FLOW | METHOD_CLASS | HBKID | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|
-| D | ACI | `‹Barclays house bank, confirm›` | `‹UK calendar›` | UK bank holidays | (blank) |
-| D | ACI | `‹Commerzbank house bank, confirm›` | `‹DE calendar›` | German bank holidays | (blank) |
+A row with HBKID only overrides the calendar of its class for the payments of that house bank: CALENDAR is required, PAY_METHODS and AGE_BASIS must stay blank (configuration app, messages 422 / 423); the class row of the same flow + class must exist and be active for the class to be watched.
 
-Resolution per payment: this row (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
+| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| D | ACI | `‹Barclays house bank, confirm›` | (blank) | (blank) | `‹UK calendar›` | UK bank holidays | (blank) |
+| D | ACI | `‹Commerzbank house bank, confirm›` | (blank) | (blank) | `‹DE calendar›` | German bank holidays | (blank) |
+
+Resolution per payment (unchanged by the consolidation): the row with the payment's house bank (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class row (HBKID blank) → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
 
 ### 8c. `ZCD_HCK_CLRRULE` — clearing / return evidence rules
 

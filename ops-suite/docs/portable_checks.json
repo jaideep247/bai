@@ -7,7 +7,7 @@
   "passed": 27,
   "total": 27,
   "abap_files": 378,
-  "declared_unit_methods": 1542,
+  "declared_unit_methods": 1543,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,7 +79,7 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (3784 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (3782 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
@@ -169,7 +169,7 @@
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1264 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1256 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]

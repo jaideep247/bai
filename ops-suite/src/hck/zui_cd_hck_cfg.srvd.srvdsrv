@@ -8,7 +8,6 @@ define service ZUI_CD_HCK_CFG {
   expose ZC_CD_JobCycle as JobCycle;
   expose ZC_CD_JobStep as JobStep;
   expose ZC_CD_HckPmClass as HckPmClass;
-  expose ZC_CD_HckPmBank as HckPmBank;
   expose ZC_CD_HckClrRule as HckClrRule;
   expose ZC_CD_HckBtcRole as HckBtcRole;
   expose ZC_CD_HckSeqOutcome as HckSeqOutcome;

@@ -13,6 +13,8 @@
 *& 2026-11-07 | Initial version (one canonical payment outcome model).
 *& 2026-11-08 | Verdict STATUS_PENDING (bank evidence decides, the payment status job has not caught up:
 *&            | in flight) and EVIDENCE_DATE (basis of the morning report's status-lag finding).
+*& 2026-11-08 | Table consolidation: TY_CONFIG-BANKS are the house-bank rows of ZCD_HCK_PMCLASS
+*&            | (ZCD_HCK_PMBANK merged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -122,7 +124,8 @@ INTERFACE zif_cd_ops_payout_types
   TYPES:
     BEGIN OF ty_config,
       classes  TYPE zif_cd_hck_runtime_types=>tt_pm_class,
-      banks    TYPE zif_cd_hck_runtime_types=>tt_pm_bank,
+      "! House-bank calendar rows of ZCD_HCK_PMCLASS (HBKID filled; the class rows are CLASSES)
+      banks    TYPE zif_cd_hck_runtime_types=>tt_pm_class,
       rules    TYPE zif_cd_hck_runtime_types=>tt_clr_rule,
       methods  TYPE tt_method,
       watched  TYPE tt_flow_class,

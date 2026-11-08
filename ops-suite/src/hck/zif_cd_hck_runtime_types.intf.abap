@@ -35,6 +35,8 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: Stripe evidence settings are ZCA_PARAM parameters HCK_STRIPE_*
 *&            | (GC_PARAM; ZCD_HCK_EVSET retired, TY_SETTING / GC_SETTING removed).
+*& 2026-11-08 | Table consolidation: TY_PM_CLASS with key HBKID (blank = class row, filled = calendar of a
+*&            | house bank; ZCD_HCK_PMBANK merged); TY_PM_BANK removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -192,32 +194,28 @@ INTERFACE zif_cd_hck_runtime_types
       issue_date TYPE ty_age_basis VALUE 'ISSUE_DATE',
     END OF gc_age_basis.
 
-  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged
+  "! DPAYH-HBKID (house bank of the payment)
+  TYPES ty_hbkid TYPE c LENGTH 5.
+  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged (HBKID blank:
+  "! the class row), or the factory calendar of one house bank of the class (HBKID filled: only
+  "! CALENDAR, e.g. UK / German bank holidays of an international ACH bank; overrides the class
+  "! calendar - table consolidation 2026-11-08, was ZCD_HCK_PMBANK). A payment method maps to a
+  "! class by the class rows only, so it stays in exactly one class per flow.
   TYPES:
     BEGIN OF ty_pm_class,
       flow         TYPE ty_flow,
       method_class TYPE ty_method_class,
-      "! SAP payment methods of the class (comma list)
+      "! House bank of a calendar override; blank = the class row (all house banks)
+      hbkid        TYPE ty_hbkid,
+      "! SAP payment methods of the class (comma list; class row only)
       pay_methods  TYPE c LENGTH 40,
+      "! Ageing basis (class row only)
       age_basis    TYPE ty_age_basis,
-      "! Factory calendar of the business days (blank = PARAM1 of the check)
+      "! Factory calendar of the business days (class row: blank = PARAM1 of the check)
       calendar     TYPE zif_cd_hck_types=>ty_calendar,
       description  TYPE zif_cd_hck_types=>ty_text,
     END OF ty_pm_class.
-  TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class.
-
-  "! DPAYH-HBKID (house bank of the payment)
-  TYPES ty_hbkid TYPE c LENGTH 5.
-  "! ZCD_HCK_PMBANK: factory calendar of a house bank for a flow + method class (e.g. UK / German
-  "! bank holidays of an international ACH bank); overrides the calendar of the method class
-  TYPES:
-    BEGIN OF ty_pm_bank,
-      flow         TYPE ty_flow,
-      method_class TYPE ty_method_class,
-      hbkid        TYPE ty_hbkid,
-      calendar     TYPE zif_cd_hck_types=>ty_calendar,
-    END OF ty_pm_bank.
-  TYPES tt_pm_bank TYPE SORTED TABLE OF ty_pm_bank WITH UNIQUE KEY flow method_class hbkid.
+  TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class hbkid.
 
   "! Payment of a payment run (DPAYH, proposal runs excluded, DOC1R filled) with its flow.
   "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
@@ -228,7 +226,7 @@ INTERFACE zif_cd_hck_runtime_types
       laufi    TYPE c LENGTH 6,
       bukrs    TYPE c LENGTH 4,
       pymet    TYPE ty_pymet,
-      "! House bank (calendar override per bank, ZCD_HCK_PMBANK)
+      "! House bank (calendar override per bank, ZCD_HCK_PMCLASS row with HBKID)
       hbkid    TYPE ty_hbkid,
       valut    TYPE d,
       amount   TYPE zif_cd_ops_types=>ty_amount,

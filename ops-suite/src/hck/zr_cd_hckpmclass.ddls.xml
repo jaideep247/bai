@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_HCKPMCLASS</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Payment method classes</DDTEXT>
+    <DDTEXT>Payment method classes (and house-bank calendars)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

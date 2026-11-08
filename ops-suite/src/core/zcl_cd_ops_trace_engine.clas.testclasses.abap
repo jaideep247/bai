@@ -24,6 +24,8 @@
 *&            | evaluator - retrieval, bank line without clearing, two runs, FIN in two sources.
 *& 2026-11-08 | Table consolidation: runtime DAO double without get_evidence_settings (Stripe settings are
 *&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
+*& 2026-11-08 | Table consolidation: runtime DAO double without get_pm_banks (house-bank calendars are
+*&            | ZCD_HCK_PMCLASS rows).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -1267,10 +1269,6 @@ CLASS ltd_runtime_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_runtime_dao~get_pm_classes.
     rt_classes = mt_classes.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_runtime_dao~get_pm_banks.
-    CLEAR rt_banks.
   ENDMETHOD.
 
   METHOD zif_cd_hck_runtime_dao~get_clearing_rules.

@@ -18,7 +18,6 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _JobCycle { create; with draft; }
   use association _JobStep { create; with draft; }
   use association _HckPmClass { create; with draft; }
-  use association _HckPmBank { create; with draft; }
   use association _HckClrRule { create; with draft; }
   use association _HckBtcRole { create; with draft; }
   use association _HckSeqOutcome { create; with draft; }
@@ -71,15 +70,6 @@ use etag
 }
 
 define behavior for ZC_CD_HckPmClass alias HckPmClass
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckPmBank alias HckPmBank
 use etag
 {
   use update;
