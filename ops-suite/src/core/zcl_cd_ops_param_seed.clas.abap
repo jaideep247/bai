@@ -342,12 +342,12 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
         min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
-        default_value   TYPE zif_ca_param_types=>ty_value VALUE '400',
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE '90',
         allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
         interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
         mandatory       TYPE abap_bool VALUE IS INITIAL,
         developer_owned TYPE abap_bool VALUE IS INITIAL,
-        description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of payment outcome versions (days; >= 30)',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of closed / final outcome versions (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
       END OF gc_d016.
     CONSTANTS:

@@ -17,6 +17,8 @@
 *& 2026-11-07 | Purpose: retention days in ZCA_PARAM (ZCD_OPS_PARAM retired).
 *& 2026-11-07 | Purge target HCK_RESULT (check verdicts per run, 400 days, RETENTION_DAYS_HCK_RESULT).
 *& 2026-11-07 | Purge target PAY_OUTCOME (payment outcome versions, 400 days, RETENTION_DAYS_PAY_OUTCOME).
+*& 2026-11-08 | PAY_OUTCOME retention 90 days (user decision 2026-11-08, about 60 million versions at the
+*&            | confirmed volume); the 30-day minimum guard stays.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge</p>
 CLASS zcl_cd_ops_purge DEFINITION
@@ -135,7 +137,7 @@ CLASS zcl_cd_ops_purge IMPLEMENTATION.
                           ( target = zif_cd_ops_purge_dao=>gc_target-hck_metric default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-fmon_prism default_days = 400 )
                           ( target = zif_cd_ops_purge_dao=>gc_target-hck_result default_days = 400 )
-                          ( target = zif_cd_ops_purge_dao=>gc_target-pay_outcome default_days = 400 ) ).
+                          ( target = zif_cd_ops_purge_dao=>gc_target-pay_outcome default_days = 90 ) ).
   ENDMETHOD.
 
 

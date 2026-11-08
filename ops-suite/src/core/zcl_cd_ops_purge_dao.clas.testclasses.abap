@@ -11,6 +11,8 @@
 *& 2026-11-07 | old_hck_result_is_deleted (purge target HCK_RESULT).
 *& 2026-11-07 | old_outcome_version_deleted (purge target PAY_OUTCOME: closed versions and runs before
 *&            | the cutoff; the current version of a recent payment stays).
+*& 2026-11-08 | Retention 90 days of PAY_OUTCOME: an open cheque 120 days old keeps its current version,
+*&            | a cleared payment 91 days old and a version closed 91 days ago are purged.
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -30,6 +32,21 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
         old_run   TYPE d VALUE '20250101',
         new_run   TYPE d VALUE '20261101',
       END OF gc.
+    "! Retention 90 days of the payment outcome (user decision 2026-11-08): today 2026-11-08,
+    "! cutoff 2026-08-10
+    CONSTANTS:
+      BEGIN OF gc_ret,
+        today      TYPE d VALUE '20261108',
+        cutoff     TYPE timestampl VALUE '20260810000000.0000000',
+        days_120   TYPE d VALUE '20260711',
+        days_91    TYPE d VALUE '20260809',
+        closed_91  TYPE timestamp VALUE '20260809120000',
+        opened     TYPE timestamp VALUE '20260711180000',
+        cheque_doc TYPE c LENGTH 12 VALUE '000000910001',
+        wire_doc   TYPE c LENGTH 12 VALUE '000000910002',
+        ach_doc    TYPE c LENGTH 12 VALUE '000000910003',
+        package    TYPE i VALUE 100,
+      END OF gc_ret.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
     DATA mo_cut TYPE REF TO zif_cd_ops_purge_dao.
@@ -63,6 +80,23 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
     METHODS old_prism_event_is_deleted FOR TESTING.
     METHODS old_hck_result_is_deleted  FOR TESTING.
     METHODS old_outcome_version_deleted FOR TESTING.
+    METHODS open_cheque_keeps_current  FOR TESTING.
+    METHODS cleared_old_payment_purged FOR TESTING.
+    METHODS closed_old_version_purged  FOR TESTING.
+
+    "! One payment outcome version (keys of the test payments, FIN and source fixed)
+    METHODS given_version
+      IMPORTING
+        iv_augbl      TYPE clike
+        iv_laufd      TYPE d
+        iv_valid_from TYPE timestamp
+        iv_valid_to   TYPE timestamp
+        iv_outcome    TYPE zif_cd_ops_payout_types=>ty_outcome.
+
+    "! Purge one package of PAY_OUTCOME with the 90-day cutoff; the versions left
+    METHODS purge_90_days
+      RETURNING
+        VALUE(rt_left) TYPE zif_cd_ops_payout_types=>tt_version.
 ENDCLASS.
 
 
@@ -345,6 +379,109 @@ CLASS ltc_purge_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'One version stays' ).
         cl_abap_unit_assert=>assert_equals( act = lt_left[ 1 ]-valid_to exp = zif_cd_ops_payout_types=>gc_valid_to_open
                                             msg = 'The current version of the recent payment' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD given_version.
+    DATA lt_versions TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
+    DATA ls_version TYPE zcd_pay_outcome.
+    ls_version-fin_id     = 'FIN0000009101'.
+    ls_version-source     = 'PCLM'.
+    ls_version-bukrs      = 'US01'.
+    ls_version-augbl      = iv_augbl.
+    ls_version-laufd      = iv_laufd.
+    ls_version-laufi      = 'RUN001'.
+    ls_version-valid_from = iv_valid_from.
+    ls_version-valid_to   = iv_valid_to.
+    ls_version-outcome    = iv_outcome.
+    INSERT ls_version INTO TABLE lt_versions.
+    go_env->insert_test_data( lt_versions ).
+  ENDMETHOD.
+
+
+  METHOD purge_90_days.
+    mo_cut->delete_package( iv_target = zif_cd_ops_purge_dao=>gc_target-pay_outcome
+                            iv_cutoff = gc_ret-cutoff
+                            iv_today  = gc_ret-today
+                            iv_max    = gc_ret-package ).
+    SELECT augbl, laufd, valid_from, valid_to, outcome
+      FROM zcd_pay_outcome
+      ORDER BY augbl, valid_from
+      INTO CORRESPONDING FIELDS OF TABLE @rt_left.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): the current version of a payment that is not final is never purged - an open
+  " cheque issued 120 days ago keeps its current version (A_INFLIGHT still counts it); its history
+  " closed before the cutoff goes
+  METHOD open_cheque_keeps_current.
+    TRY.
+        given_version( iv_augbl      = gc_ret-cheque_doc
+                       iv_laufd      = gc_ret-days_120
+                       iv_valid_from = gc_ret-opened
+                       iv_valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open
+                       iv_outcome    = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        DATA(lt_left) = purge_90_days( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'The current version stays' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_left[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-in_flight
+                                            msg = 'Open cheque still in flight' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->count_purgeable( iv_target = zif_cd_ops_purge_dao=>gc_target-pay_outcome
+                                         iv_cutoff = gc_ret-cutoff
+                                         iv_today  = gc_ret-today )
+          exp = 0
+          msg = 'Nothing purgeable' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): the current version of a final outcome is purged once its payment run is
+  " before the cutoff - a wire cleared, paid 91 days ago, goes; the same outcome 120 days old in
+  " flight (other payment) is not touched
+  METHOD cleared_old_payment_purged.
+    TRY.
+        given_version( iv_augbl      = gc_ret-wire_doc
+                       iv_laufd      = gc_ret-days_91
+                       iv_valid_from = gc_ret-closed_91
+                       iv_valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open
+                       iv_outcome    = zif_cd_ops_payout_types=>gc_outcome-cleared ).
+        given_version( iv_augbl      = gc_ret-cheque_doc
+                       iv_laufd      = gc_ret-days_120
+                       iv_valid_from = gc_ret-opened
+                       iv_valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open
+                       iv_outcome    = zif_cd_ops_payout_types=>gc_outcome-pending ).
+        DATA(lt_left) = purge_90_days( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'Only the pending payment stays' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_left[ 1 ]-augbl exp = gc_ret-cheque_doc msg = 'Cleared payment purged' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a version closed before the cutoff (91 days ago) is purged; the current version of the
+  " payment (not final) stays
+  METHOD closed_old_version_purged.
+    TRY.
+        given_version( iv_augbl      = gc_ret-ach_doc
+                       iv_laufd      = gc_ret-days_120
+                       iv_valid_from = gc_ret-opened
+                       iv_valid_to   = gc_ret-closed_91
+                       iv_outcome    = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        given_version( iv_augbl      = gc_ret-ach_doc
+                       iv_laufd      = gc_ret-days_120
+                       iv_valid_from = gc_ret-closed_91
+                       iv_valid_to   = zif_cd_ops_payout_types=>gc_valid_to_open
+                       iv_outcome    = zif_cd_ops_payout_types=>gc_outcome-inconsistent ).
+        DATA(lt_left) = purge_90_days( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_left ) exp = 1 msg = 'Closed version purged' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_left[ 1 ]-valid_to exp = zif_cd_ops_payout_types=>gc_valid_to_open
+                                            msg = 'Current version stays' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

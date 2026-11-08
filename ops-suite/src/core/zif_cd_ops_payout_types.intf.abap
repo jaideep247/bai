@@ -15,6 +15,8 @@
 *&            | in flight) and EVIDENCE_DATE (basis of the morning report's status-lag finding).
 *& 2026-11-08 | Table consolidation: TY_CONFIG-BANKS are the house-bank rows of ZCD_HCK_PMCLASS
 *&            | (ZCD_HCK_PMBANK merged).
+*& 2026-11-08 | TT_OUTCOME_RANGE: the final outcomes (ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) as a range
+*&            | for the recheck, the purge and A_INFLIGHT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -63,6 +65,9 @@ INTERFACE zif_cd_ops_payout_types
       inconsistent TYPE ty_status VALUE 'I',
       reversed     TYPE ty_status VALUE 'R',
     END OF gc_status.
+
+  "! A set of outcomes for SQL (sign I, option EQ), e.g. the final outcomes
+  TYPES tt_outcome_range TYPE RANGE OF ty_outcome.
 
   "! Open end of a version: VALID_TO of the current version
   CONSTANTS gc_valid_to_open TYPE ty_timestamp VALUE '99991231235959'.

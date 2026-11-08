@@ -37,5 +37,8 @@ define table zcd_pay_outcome {
 // @index DAT: MANDT, BUKRS, LAUFD
 // @index OUT: MANDT, OUTCOME, VALID_TO
 // @index FIN: MANDT, FIN_ID, SOURCE
-// Retention: ZCD_OPS_PURGE deletes versions closed before the cutoff and payments of runs before
-// it (parameter RETENTION_DAYS_PAY_OUTCOME, 400 days).
+// Retention (2026-11-08): ZCD_OPS_PURGE deletes versions closed before the cutoff and the current
+// version of a payment whose outcome is final (CLEARED, RETURNED, RETRIEVED, VOIDED, REVERSED -
+// ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) and whose run is before the cutoff (parameter
+// RETENTION_DAYS_PAY_OUTCOME, 90 days); the current version of a payment that is not final is never
+// deleted - A_INFLIGHT counts every payment in flight from it.

@@ -254,7 +254,7 @@ ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (16 tests on the shared fixtures with the de
 | POC-08 | Capped evidence read (`HCK_INFLIGHT_MAX_ROWS` 10) | ZCA_PARAM value row | `PAY_OUTCOME_FAILED`, nothing written for the package, watermark kept | pending |
 | POC-09 | Test mode | `P_TEST` = X | Counts per source, no version, no watermark, no commit | pending |
 | POC-10 | Overlapping start | Two starts | Second refused RUN_LOCKED | pending |
-| POC-11 | Purge PAY_OUTCOME on a QA1 copy, `RETENTION_DAYS_PAY_OUTCOME` 30 | — | Closed versions before the cutoff and runs before the cutoff date deleted; current versions of recent payments kept | pending |
+| POC-11 | Purge PAY_OUTCOME on a QA1 copy, `RETENTION_DAYS_PAY_OUTCOME` 90 (2026-11-08) | — | Closed versions before the cutoff deleted; current versions of final outcomes (CLEARED, RETURNED, RETRIEVED, VOIDED, REVERSED) of runs before the cutoff deleted; the current version of every payment not final kept however old (an open cheque of 120 days stays); unit tests `open_cheque_keeps_current`, `cleared_old_payment_purged`, `closed_old_version_purged` | pending |
 | POC-12 | Runtime at peak (gate 3) | Production-like volume | Step 2 well within 5 minutes; ST05: no SELECT per payment, indexes DAT / OUT / FIN used | pending |
 
 ### 6.12 Production-support overview page (`ZUI_CD_OPS_OVERVIEW_O4`, `Dashboard_Production_Support.md`)

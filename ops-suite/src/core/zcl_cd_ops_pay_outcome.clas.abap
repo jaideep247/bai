@@ -29,6 +29,8 @@
 *&            | the deciding evidence in the verdict.
 *& 2026-11-08 | Table consolidation: class rows (HBKID blank) map the payment methods, rows with a house bank
 *&            | are calendar overrides (ZCD_HCK_PMBANK merged into ZCD_HCK_PMCLASS).
+*& 2026-11-08 | FINAL_OUTCOMES: the one definition of a final outcome (CLEARED, RETURNED, RETRIEVED,
+*&            | VOIDED, REVERSED) used by the snapshot recheck, the purge and A_INFLIGHT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -46,6 +48,14 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
     CLASS-METHODS purposes
       RETURNING
         VALUE(rt_purposes) TYPE string_table.
+
+    "! Final outcomes: the money movement of the payment is decided for good (CLEARED, RETURNED,
+    "! RETRIEVED, VOIDED, REVERSED). Every other outcome (IN_FLIGHT, PENDING, UNDETERMINED,
+    "! INCONSISTENT, AMBIGUOUS) can still change: the snapshot rechecks it, the purge keeps its
+    "! current version and A_INFLIGHT counts it however old it is
+    CLASS-METHODS final_outcomes
+      RETURNING
+        VALUE(rt_outcomes) TYPE zif_cd_ops_payout_types=>tt_outcome_range.
 
     "! Row cap of every evidence read: HCK_INFLIGHT_MAX_ROWS (the cap of A_INFLIGHT), so every
     "! consumer judges with the same limit
@@ -202,6 +212,17 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                            ( CONV #( zif_cd_hck_runtime_types=>gc_purpose-pending ) )
                            ( CONV #( zif_cd_hck_runtime_types=>gc_purpose-cleared ) )
                            ( CONV #( zif_cd_hck_runtime_types=>gc_purpose-in_flight ) ) ).
+  ENDMETHOD.
+
+
+  METHOD final_outcomes.
+    rt_outcomes = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                           option = zif_cd_ops_types=>gc_range-option_equal
+                           ( low = zif_cd_ops_payout_types=>gc_outcome-cleared )
+                           ( low = zif_cd_ops_payout_types=>gc_outcome-returned )
+                           ( low = zif_cd_ops_payout_types=>gc_outcome-retrieved )
+                           ( low = zif_cd_ops_payout_types=>gc_outcome-voided )
+                           ( low = zif_cd_ops_payout_types=>gc_outcome-reversed ) ).
   ENDMETHOD.
 
 

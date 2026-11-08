@@ -17,6 +17,8 @@
 *& business tables only; writes ZCD_PAY_OUTCOME and ZCD_PAY_OUTWM only.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
+*& 2026-11-08 | RECHECK reads the outcomes that are not final by the one definition
+*&            | (ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES; same set as before).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -314,20 +316,13 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD recheck.
-    DATA lt_open TYPE RANGE OF zif_cd_ops_payout_types=>ty_outcome.
     DATA(lv_cursor) = CONV ty_docno( is_watermark-wm_key ).
     " State without change stamp (DPAYH status, cheque register state, request log of an ambiguous
-    " FIN): current versions that are not final, by AUGBL after the cursor (index OUT)
-    lt_open = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                       option = zif_cd_ops_types=>gc_range-option_equal
-                       ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
-                       ( low = zif_cd_ops_payout_types=>gc_outcome-pending )
-                       ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined )
-                       ( low = zif_cd_ops_payout_types=>gc_outcome-inconsistent )
-                       ( low = zif_cd_ops_payout_types=>gc_outcome-ambiguous ) ).
+    " FIN): current versions whose outcome is not final, by AUGBL after the cursor (index OUT)
+    DATA(lt_final) = zcl_cd_ops_pay_outcome=>final_outcomes( ).
     SELECT DISTINCT augbl
       FROM zcd_pay_outcome
-      WHERE outcome IN @lt_open
+      WHERE outcome NOT IN @lt_final
         AND valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
         AND augbl > @lv_cursor
       ORDER BY augbl

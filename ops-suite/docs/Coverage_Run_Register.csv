@@ -170,7 +170,7 @@ ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,10,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,9,90,,Not run in target SAP
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
-ZCL_CD_OPS_PURGE_DAO,own test include,,10,90,,Not run in target SAP
+ZCL_CD_OPS_PURGE_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_STORE,own test include,,23,90,,Not run in target SAP; partial exemption: COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own test include,,14,90,,"Not run in target SAP; partial exemption: reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"

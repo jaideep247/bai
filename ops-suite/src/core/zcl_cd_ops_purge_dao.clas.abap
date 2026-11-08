@@ -15,6 +15,10 @@
 *& 2026-11-07 | Purge target HCK_RESULT: check verdicts by execution time (index TIM).
 *& 2026-11-07 | Purge target PAY_OUTCOME: versions closed before the cutoff (index OUT) and versions of
 *&            | payment runs before the cutoff date (index DAT).
+*& 2026-11-08 | PAY_OUTCOME fix: the current version is deleted only when its outcome is final
+*&            | (ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) and its payment run is before the cutoff date;
+*&            | the current version of a payment that is not final is never deleted, however old.
+*&            | Closed versions (VALID_TO before the cutoff) go as before.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION
@@ -77,9 +81,12 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         SELECT COUNT(*) FROM zcd_hck_result WHERE executed_at < @iv_cutoff INTO @rv_count.
       WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
         DATA(lv_cutoff_date) = cutoff_date( iv_cutoff ).
+        DATA(lt_final) = zcl_cd_ops_pay_outcome=>final_outcomes( ).
         SELECT COUNT(*) FROM zcd_pay_outcome
           WHERE valid_to < @iv_cutoff
-             OR laufd < @lv_cutoff_date
+             OR ( valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+                  AND outcome IN @lt_final
+                  AND laufd < @lv_cutoff_date )
           INTO @rv_count.
     ENDCASE.
   ENDMETHOD.
@@ -141,13 +148,18 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         rv_count = sy-dbcnt.
 
       WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
-        " Closed versions (VALID_TO before the cutoff) and every version of a payment run before the
-        " cutoff date: a payment older than the retention leaves no history behind
+        " Closed versions (VALID_TO before the cutoff, index OUT) and the current version of a payment
+        " whose outcome is final and whose payment run is before the cutoff date. The current version of
+        " a payment that is not final (in flight, pending, undetermined, inconsistent, ambiguous) is
+        " never deleted, however old: A_INFLIGHT counts it from this table
         DATA(lv_run_cutoff) = cutoff_date( iv_cutoff ).
+        DATA(lt_final_outcomes) = zcl_cd_ops_pay_outcome=>final_outcomes( ).
         SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from
           FROM zcd_pay_outcome
           WHERE valid_to < @iv_cutoff
-             OR laufd < @lv_run_cutoff
+             OR ( valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+                  AND outcome IN @lt_final_outcomes
+                  AND laufd < @lv_run_cutoff )
           ORDER BY fin_id, source, bukrs, augbl, laufd, laufi, valid_from
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_versions)
           UP TO @iv_max ROWS.
