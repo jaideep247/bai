@@ -413,6 +413,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 679 | - lifecycle &1: monetary line without role |
 | 680 | - cheque &1 (state &2), not the deciding cheque: |
 | 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |
+| 682 | - waiting for the payment status job: |
 | 690 | &1 &2: bank vs G/L differs by &3, unexplained &4 |
 | 691 | &1 &2: G/L &3 vs payment engine control total &4 |
 | 692 | Stripe group &1: charges &2, fees &3 vs deposit &4 |

@@ -18,6 +18,9 @@
 *&            | (checks_of, memo of the run started by start_collection), cheque lines memo per suffix
 *&            | length and payment set, the deciding (live) cheque of a payment, validation helpers of
 *&            | the outcome configuration (register state tokens, outcome finding catalogue).
+*& 2026-11-08 | status_of: the live payment status (DPAYH-ZZ_PAYMENT_STATUS, newest run row) read once
+*&            | per payment and collection, shared by the payment and cheque status kinds and the
+*&            | status-lag finding of A_INFLIGHT.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - helpers of the payment evidence plug-ins</p>
 CLASS zcl_cd_hck_ev_support DEFINITION
@@ -81,6 +84,14 @@ CLASS zcl_cd_hck_ev_support DEFINITION
         capped    TYPE abap_bool,
       END OF ty_cheque_lines.
 
+    "! Live payment status of a payment document (upper case)
+    TYPES:
+      BEGIN OF ty_pay_status,
+        doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
+        status TYPE string,
+      END OF ty_pay_status.
+    TYPES tt_pay_status TYPE HASHED TABLE OF ty_pay_status WITH UNIQUE KEY doc1r.
+
     "! The deciding cheque of each payment document: the newest (house bank, account, number) cheque
     "! not voided; a payment whose cheques are all voided is decided by its newest cheque
     TYPES tt_live TYPE HASHED TABLE OF zif_cd_ops_trace_types=>ty_check WITH UNIQUE KEY doc1r.
@@ -101,6 +112,16 @@ CLASS zcl_cd_hck_ev_support DEFINITION
         it_payments      TYPE zif_cd_hck_runtime_types=>tt_issued_payment
       RETURNING
         VALUE(rt_checks) TYPE zif_cd_ops_trace_types=>tt_check.
+
+    "! Live payment status DPAYH-ZZ_PAYMENT_STATUS of the newest payment run row of each payment
+    "! document (proposal runs excluded; shared EBS read through the payment trace repository), in
+    "! upper case; a document without run row has no entry. Each document is read once per
+    "! collection, shared by the payment status kinds and the status-lag finding of A_INFLIGHT
+    CLASS-METHODS status_of
+      IMPORTING
+        it_payments      TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+      RETURNING
+        VALUE(rt_status) TYPE tt_pay_status.
 
     CLASS-METHODS live_cheques
       IMPORTING
@@ -254,6 +275,9 @@ CLASS zcl_cd_hck_ev_support DEFINITION
     CLASS-DATA gt_memo_checks TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_check
                               WITH NON-UNIQUE KEY doc1r.
     CLASS-DATA gt_memo_lines TYPE tt_memo_lines.
+    "! Payment documents whose payment status was read in this collection, and the statuses found
+    CLASS-DATA gt_memo_status_docs TYPE zif_cd_ops_trace_types=>tt_docno.
+    CLASS-DATA gt_memo_status TYPE tt_pay_status.
 
 ENDCLASS.
 
@@ -338,7 +362,7 @@ CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
 
   METHOD start_collection.
     gv_generation = gv_generation + 1.
-    CLEAR: gt_memo_docs, gt_memo_checks, gt_memo_lines.
+    CLEAR: gt_memo_docs, gt_memo_checks, gt_memo_lines, gt_memo_status_docs, gt_memo_status.
   ENDMETHOD.
 
 
@@ -378,6 +402,33 @@ CLASS zcl_cd_hck_ev_support IMPLEMENTATION.
       LOOP AT gt_memo_checks ASSIGNING FIELD-SYMBOL(<ls_memo>) WHERE doc1r = <ls_doc>-doc1r.
         INSERT <ls_memo> INTO TABLE rt_checks.
       ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD status_of.
+    DATA lt_missing TYPE zif_cd_ops_trace_types=>tt_docno.
+    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      IF NOT line_exists( gt_memo_status_docs[ table_line = <ls_payment>-doc1r ] ).
+        INSERT <ls_payment>-doc1r INTO TABLE lt_missing.
+      ENDIF.
+    ENDLOOP.
+    " One read for the documents not read yet in this collection; newest run first per document:
+    " the first row of a document is its live status
+    IF lt_missing IS NOT INITIAL.
+      LOOP AT zcl_cd_ops_factory=>get_trace_dao( )->get_payment_runs( lt_missing ) ASSIGNING FIELD-SYMBOL(<ls_run>).
+        IF NOT line_exists( gt_memo_status[ doc1r = <ls_run>-doc1r ] ).
+          INSERT VALUE #( doc1r  = <ls_run>-doc1r
+                          status = to_upper( condense( CONV string( <ls_run>-status ) ) ) ) INTO TABLE gt_memo_status.
+        ENDIF.
+      ENDLOOP.
+      INSERT LINES OF lt_missing INTO TABLE gt_memo_status_docs.
+    ENDIF.
+    LOOP AT it_payments ASSIGNING <ls_payment>.
+      READ TABLE gt_memo_status ASSIGNING FIELD-SYMBOL(<ls_status>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
+      IF sy-subrc = 0 AND NOT line_exists( rt_status[ doc1r = <ls_status>-doc1r ] ).
+        INSERT <ls_status> INTO TABLE rt_status.
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

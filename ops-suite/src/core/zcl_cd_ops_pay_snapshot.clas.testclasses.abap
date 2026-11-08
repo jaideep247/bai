@@ -9,9 +9,14 @@
 *& up only new evidence and advances, a newer DPAYH run closes the version
 *& of the older run, a FIN in two sources is AMBIGUOUS for both with a
 *& finding, test mode writes nothing, a capped evidence read fails closed
-*& (nothing written, watermark kept). Does not prove live SAP runtime behavior.
+*& (nothing written, watermark kept). Confirmed status values (2026-11-08):
+*& a return with status RETURNED creates the RETURNED version; the same
+*& return while the status job has not updated the status stays IN_FLIGHT -
+*& no new version because of the status lag. Does not prove live SAP
+*& runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
+*& 2026-11-08 | Fixtures wire returned / return with the status pending: version only on an outcome change.
 *&---------------------------------------------------------------------*
 "! Snapshot repository double: evidence events per source, versions in memory
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
@@ -246,6 +251,8 @@ CLASS ltc_snapshot DEFINITION FINAL FOR TESTING
     METHODS two_sources_ambiguous_both FOR TESTING.
     METHODS test_mode_writes_nothing   FOR TESTING.
     METHODS capped_read_fails_closed   FOR TESTING.
+    METHODS return_creates_version     FOR TESTING.
+    METHODS status_lag_no_new_version  FOR TESTING.
 
     "! Scenario of the shared fixture: its payment as evidence of DOCUMENTS, its item, its sources
     "! and the evaluator's verdict
@@ -316,7 +323,8 @@ CLASS ltc_snapshot IMPLEMENTATION.
                     laufd   = rs_scenario-expected_laufd
                     laufi   = rs_scenario-expected_laufi
                     bukrs   = zcl_cd_ops_pay_fixture=>gc_bukrs
-                    outcome = rs_scenario-evaluated ) INTO TABLE mo_outcome->mt_verdicts.
+                    outcome = rs_scenario-evaluated
+                    status_pending = rs_scenario-status_pending ) INTO TABLE mo_outcome->mt_verdicts.
   ENDMETHOD.
 
 
@@ -352,6 +360,40 @@ CLASS ltc_snapshot IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-valid_from exp = gc_now msg = 'Valid from now' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-valid_to
                                             exp = zif_cd_ops_payout_types=>gc_valid_to_open msg = 'Open end' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Confirmed status values 2026-11-08: the wire return with status RETURNED replaces IN_FLIGHT by a
+  " RETURNED version
+  METHOD return_creates_version.
+    TRY.
+        DATA(ls_scenario) = given( zcl_cd_ops_pay_fixture=>gc_scenario-returned ).
+        current_version( is_scenario = ls_scenario iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_closed ) exp = 1 msg = 'IN_FLIGHT closed' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_dao->mt_inserted ) exp = 1 msg = 'One new version' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-returned
+                                            msg = 'RETURNED' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The return is on the statement but the status job has not updated DPAYH yet: the verdict stays
+  " IN_FLIGHT (status pending) - the snapshot writes no version because of the lag (the morning
+  " report's PAY_STATUS_LAG reports it after the grace period)
+  METHOD status_lag_no_new_version.
+    TRY.
+        DATA(ls_scenario) = given( zcl_cd_ops_pay_fixture=>gc_scenario-return_lag ).
+        cl_abap_unit_assert=>assert_true( act = mo_outcome->mt_verdicts[ 1 ]-status_pending msg = 'Fixture: status pending' ).
+        current_version( is_scenario = ls_scenario iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        act( ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_closed msg = 'Nothing closed' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_inserted msg = 'No version because of the lag' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

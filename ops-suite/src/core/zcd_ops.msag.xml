@@ -2453,6 +2453,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>682</MSGNR>
+     <TEXT>- waiting for the payment status job:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>690</MSGNR>
      <TEXT>&amp;1 &amp;2: bank vs G/L differs by &amp;3, unexplained &amp;4</TEXT>
     </T100>

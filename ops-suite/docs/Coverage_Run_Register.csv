@@ -96,7 +96,7 @@ ZCL_CD_HCK_C_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_GENERIC_AGG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
-ZCL_CD_HCK_C_INFLIGHT,own test include,,39,90,,Not run in target SAP
+ZCL_CD_HCK_C_INFLIGHT,own test include,,43,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_CYCLE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_RUNTIME,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_NUMRANGE,own test include,,10,90,,Not run in target SAP
@@ -114,10 +114,10 @@ ZCL_CD_HCK_DASH_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_DATASET,own test include,,4,90,,"Not run in target SAP; partial exemption: success path of OPEN / TRANSFER DATASET writes to the application server - QA1 (error paths unit tested, nothing written)"
 ZCL_CD_HCK_ENGINE,own test include,,27,90,,Not run in target SAP
 ZCL_CD_HCK_EV_BTC_SEQ,own test include,,31,90,,Not run in target SAP
-ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,5,90,,Not run in target SAP
+ZCL_CD_HCK_EV_CHQ_STATUS,own test include,,7,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_XREF2,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_EV_GL_ZUONR,own test include,,3,90,,Not run in target SAP
-ZCL_CD_HCK_EV_PAY_STATUS,own test include,,4,90,,Not run in target SAP
+ZCL_CD_HCK_EV_PAY_STATUS,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_RETURN_LOT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_EV_STMT_CHEQUE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_STMT_DOC,own test include,,4,90,,Not run in target SAP
@@ -165,9 +165,9 @@ ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,0,90,,"Not run in target SAP; measured in ZCL_CD_OPS_PAY_OUTCOME (test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS)"
-ZCL_CD_OPS_PAY_OUTCOME,own test include,,9,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_OUTCOME,own test include,,16,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,10,90,,Not run in target SAP
-ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,9,90,,Not run in target SAP
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,own test include,,10,90,,Not run in target SAP

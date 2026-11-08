@@ -49,6 +49,7 @@
 *&            | finding no longer hides lot / amount / age); REG_STATE only against a register row
 *&            | (CHEQUE_REGISTER_MISSING); amount from the payment; outcome states tokenised once;
 *&            | one evaluation per link and run, found per PARAM1 (memo of the collection).
+*& 2026-11-08 | EV_DATE = posting date of the newest line of the lifecycle (basis of the status lag).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION
@@ -499,6 +500,8 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
     DATA(lv_sequence) = concat_lines_of( table = lt_roles sep = zif_cd_hck_runtime_types=>gc_role_sep ).
     rs_life-evidence-doc1r = is_payment-doc1r.
     rs_life-evidence-hits  = lines( it_steps ).
+    " Newest line (steps ordered by statement date / statement / line): when the bank evidence arrived
+    rs_life-evidence-ev_date = it_steps[ lines( it_steps ) ]-budat.
     DATA(lv_detail) = zcl_cd_ops_util=>text(
                         iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_sequence
                         iv_tail  = |{ lv_sequence } ({ concat_lines_of( table = lt_codes

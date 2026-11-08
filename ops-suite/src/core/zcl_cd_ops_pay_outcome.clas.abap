@@ -13,12 +13,20 @@
 *& reversed payment documents (DFKKKO-STBEL). Also the source attribution
 *& of a FIN number (request log, SUCCESS row rule): two or more sources =
 *& AMBIGUOUS. The verdict names the outcome, the deciding evidence kind and
-*& reference and the finding. Read-only; reads through ZIF_CD_HCK_RUNTIME_DAO
-*& and ZIF_CD_OPS_TRACE_DAO (factories), never SQL of its own.
+*& reference and the finding. A mandatory row whose evidence is PENDING (the
+*& payment status job has not updated the status yet) is neither held nor
+*& missing: when it is the only gap of an indicated purpose the payment stays
+*& IN_FLIGHT (STATUS_PENDING, aged; the morning report reports PAY_STATUS_LAG
+*& after the grace period) - never inconsistent, no later purpose decides.
+*& Read-only; reads through ZIF_CD_HCK_RUNTIME_DAO and ZIF_CD_OPS_TRACE_DAO
+*& (factories), never SQL of its own.
 *& Modification log:
 *& 2026-11-07 | Initial version: collect / decide moved from ZCL_CD_HCK_C_INFLIGHT (behaviour
 *&            | unchanged), purpose RETRIEVED (a retrieval is not a return), outcome per payment,
 *&            | latest payment run per document, source attribution (AMBIGUOUS).
+*& 2026-11-08 | Pending evidence (confirmed DPAYH status values, hourly status job): an indicated purpose
+*&            | whose only gap is a pending row stays IN_FLIGHT with STATUS_PENDING; EVIDENCE_DATE of
+*&            | the deciding evidence in the verdict.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -129,6 +137,26 @@ CLASS zcl_cd_ops_pay_outcome DEFINITION
         is_listing TYPE zif_cd_ops_payout_types=>ty_listing
       CHANGING
         cs_verdict TYPE zif_cd_ops_payout_types=>ty_verdict.
+
+    "! In flight with the status pending: the deciding evidence and the rows waiting for the status job
+    CLASS-METHODS pending_verdict
+      IMPORTING
+        iv_kind    TYPE zif_cd_ops_types=>ty_class_name
+        iv_ref     TYPE string
+        iv_date    TYPE d
+        it_pending TYPE string_table
+      CHANGING
+        cs_verdict TYPE zif_cd_ops_payout_types=>ty_verdict.
+
+    "! Tail of an inconsistency: what held, what is missing, what must not hold, what is shown only
+    CLASS-METHODS inconsistency_tail
+      IMPORTING
+        it_held        TYPE string_table
+        it_missing     TYPE string_table
+        it_forbidden   TYPE string_table
+        it_info        TYPE string_table
+      RETURNING
+        VALUE(rv_tail) TYPE string.
 
     "! REQUIRED X, C or N: the row must be evaluable; blank (or any other value) = informational
     CLASS-METHODS is_mandatory
@@ -464,6 +492,7 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     DATA lt_forbidden TYPE string_table.
     DATA lt_info TYPE string_table.
     DATA lt_unusable TYPE string_table.
+    DATA lt_pending TYPE string_table.
     DATA ls_group TYPE ty_group.
     DATA ls_evidence TYPE zif_cd_hck_runtime_types=>ty_evidence.
     rs_verdict = VALUE #( doc1r   = is_payment-doc1r
@@ -481,12 +510,13 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
 
     " Purposes in order: the first one with evidence decides
     LOOP AT purposes( ) ASSIGNING FIELD-SYMBOL(<lv_purpose>).
-      CLEAR: lt_held, lt_missing, lt_forbidden, lt_info, lt_unusable.
+      CLEAR: lt_held, lt_missing, lt_forbidden, lt_info, lt_unusable, lt_pending.
       DATA(lv_indicated) = abap_false.
       DATA(lv_rows) = 0.
       DATA(lv_indicator_unusable) = abap_false.
       DATA(lv_first_kind) = VALUE zif_cd_ops_types=>ty_class_name( ).
       DATA(lv_first_ref) = ``.
+      DATA(lv_first_date) = VALUE d( ).
       DATA(lv_unusable_kind) = VALUE zif_cd_ops_types=>ty_class_name( ).
       LOOP AT ms_config-rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
            WHERE flow = is_payment-flow AND method_class = is_payment-class AND purpose = <lv_purpose>.
@@ -520,7 +550,11 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
               IF lv_first_kind IS INITIAL.
                 lv_first_kind = ls_group-evidence_class.
                 lv_first_ref  = lv_text.
+                lv_first_date = ls_evidence-ev_date.
               ENDIF.
+            ELSEIF ls_evidence-pending = abap_true.
+              " Expected to follow (payment status job): neither held nor missing, never indicates
+              INSERT lv_text INTO TABLE lt_pending.
             ELSE.
               INSERT lv_text INTO TABLE lt_missing.
             ENDIF.
@@ -528,6 +562,8 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
             " A condition must hold but never indicates the purpose on its own
             IF ls_evidence-found = abap_true.
               INSERT lv_text INTO TABLE lt_held.
+            ELSEIF ls_evidence-pending = abap_true.
+              INSERT lv_text INTO TABLE lt_pending.
             ELSE.
               INSERT lv_text INTO TABLE lt_missing.
             ENDIF.
@@ -569,10 +605,23 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       rs_verdict-purpose = <lv_purpose>.
+      " The evidence holds and only the payment status is not updated yet: in flight (aged), never
+      " inconsistent and no later purpose decides; the status lag is a finding of the morning report
+      IF lt_missing IS INITIAL AND lt_forbidden IS INITIAL AND lt_pending IS NOT INITIAL.
+        IF rs_verdict-status = zif_cd_ops_payout_types=>gc_status-open.
+          pending_verdict( EXPORTING iv_kind    = lv_first_kind
+                                     iv_ref     = lv_first_ref
+                                     iv_date    = lv_first_date
+                                     it_pending = lt_pending
+                           CHANGING  cs_verdict = rs_verdict ).
+        ENDIF.
+        RETURN.
+      ENDIF.
       IF lt_missing IS INITIAL AND lt_forbidden IS INITIAL.
         IF rs_verdict-status = zif_cd_ops_payout_types=>gc_status-open.
           rs_verdict-evidence_kind = lv_first_kind.
           rs_verdict-evidence_ref  = lv_first_ref.
+          rs_verdict-evidence_date = lv_first_date.
           " A consistent state in flight stays in flight (aged); other purposes exclude
           IF <lv_purpose> <> zif_cd_hck_runtime_types=>gc_purpose-in_flight.
             rs_verdict-status  = zif_cd_ops_payout_types=>gc_status-excluded.
@@ -581,24 +630,17 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
         ENDIF.
         RETURN.
       ENDIF.
-      " Some but not all: the finding names what held, what is missing and what must not hold
-      DATA(lv_tail) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_held
-                                             iv_tail  = concat_lines_of( table = lt_held sep = ` | ` ) ).
-      IF lt_missing IS NOT INITIAL.
-        lv_tail = |{ lv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_missing
-                                                        iv_tail  = concat_lines_of( table = lt_missing sep = ` | ` ) ) }|.
-      ENDIF.
-      IF lt_forbidden IS NOT INITIAL.
-        lv_tail = |{ lv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_forbidden
-                                                        iv_tail  = concat_lines_of( table = lt_forbidden sep = ` | ` ) ) }|.
-      ENDIF.
-      IF lt_info IS NOT INITIAL.
-        lv_tail = |{ lv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_info
-                                                        iv_tail  = concat_lines_of( table = lt_info sep = ` | ` ) ) }|.
-      ENDIF.
+      " Some but not all: the finding names what held, what is missing and what must not hold (a
+      " pending row is not held either)
+      INSERT LINES OF lt_pending INTO TABLE lt_missing.
+      DATA(lv_tail) = inconsistency_tail( it_held      = lt_held
+                                          it_missing   = lt_missing
+                                          it_forbidden = lt_forbidden
+                                          it_info      = lt_info ).
       IF rs_verdict-evidence_kind IS INITIAL.
         rs_verdict-evidence_kind = lv_first_kind.
         rs_verdict-evidence_ref  = lv_first_ref.
+        rs_verdict-evidence_date = lv_first_date.
       ENDIF.
       list( EXPORTING is_payment = is_payment
                       is_listing = VALUE #( code     = COND #( WHEN <lv_purpose> = zif_cd_hck_runtime_types=>gc_purpose-returned
@@ -713,6 +755,34 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
         RETURN.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD pending_verdict.
+    cs_verdict-status_pending = abap_true.
+    cs_verdict-evidence_kind  = iv_kind.
+    cs_verdict-evidence_date  = iv_date.
+    cs_verdict-evidence_ref   = |{ iv_ref } | &&
+                                |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_pending
+                                                          iv_tail  = concat_lines_of( table = it_pending sep = ` | ` ) ) }|.
+  ENDMETHOD.
+
+
+  METHOD inconsistency_tail.
+    rv_tail = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_held
+                                     iv_tail  = concat_lines_of( table = it_held sep = ` | ` ) ).
+    IF it_missing IS NOT INITIAL.
+      rv_tail = |{ rv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_missing
+                                                      iv_tail  = concat_lines_of( table = it_missing sep = ` | ` ) ) }|.
+    ENDIF.
+    IF it_forbidden IS NOT INITIAL.
+      rv_tail = |{ rv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_forbidden
+                                                      iv_tail  = concat_lines_of( table = it_forbidden sep = ` | ` ) ) }|.
+    ENDIF.
+    IF it_info IS NOT INITIAL.
+      rv_tail = |{ rv_tail } { zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evidence_info
+                                                      iv_tail  = concat_lines_of( table = it_info sep = ` | ` ) ) }|.
+    ENDIF.
   ENDMETHOD.
 
 

@@ -11,8 +11,16 @@
 *& request source fails closed. Runtime DAO, payment trace repository and
 *& clock are doubles from the injectors, parameters the delivered in-memory
 *& definitions; does not prove live SAP runtime behavior.
+*& Confirmed status values (2026-11-08): a wire return with status RETURNED
+*& is RETURNED; the same return while the status is still CONFIRMED stays
+*& IN_FLIGHT (status pending, never inconsistent); status RETURNED without
+*& the bank line is RETURN_INCONSISTENT; cheques: V without STOPPED, STOPPED
+*& with state blank, STOPPED and V are VOIDED; STOPPED and cashed is
+*& CLEARING_INCONSISTENT "stopped cheque cashed".
 *& Modification log:
 *& 2026-11-07 | Initial version (one canonical payment outcome model).
+*& 2026-11-08 | Status rows of RETURNED / RETRIEVED (pending statuses), cheques stopped = voided (user
+*&            | decision); cheque register rows served by the trace double.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -67,6 +75,7 @@ CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
     DATA mt_returns TYPE zif_cd_ops_trace_types=>tt_return.
     DATA mt_runs TYPE zif_cd_ops_trace_types=>tt_payment_run.
     DATA mt_requests TYPE zif_cd_ops_trace_types=>tt_cfg_row.
+    DATA mt_checks TYPE zif_cd_ops_trace_types=>tt_check.
 ENDCLASS.
 
 CLASS ltd_trace_dao IMPLEMENTATION.
@@ -103,7 +112,11 @@ CLASS ltd_trace_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_trace_dao~get_checks_by_doc.
-    CLEAR rt_checks.
+    LOOP AT mt_checks ASSIGNING FIELD-SYMBOL(<ls_check>).
+      IF line_exists( it_docno[ table_line = <ls_check>-doc1r ] ).
+        INSERT <ls_check> INTO TABLE rt_checks.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_cd_ops_trace_dao~read_configured_set.
@@ -157,6 +170,20 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
     METHODS reversed_document         FOR TESTING.
     METHODS unwatched_method_no_verdict FOR TESTING.
     METHODS request_source_fails_closed FOR TESTING.
+    METHODS returned_with_status_returned FOR TESTING.
+    METHODS return_status_lag_in_flight FOR TESTING.
+    METHODS returned_status_without_line FOR TESTING.
+    METHODS voided_cheque_without_stop  FOR TESTING.
+    METHODS stopped_cheque_blank_voided FOR TESTING.
+    METHODS stopped_and_voided_cheque   FOR TESTING.
+    METHODS stopped_cheque_cashed       FOR TESTING.
+
+    "! Verdict of a cheque scenario: VOIDED, consistent (excluded)
+    METHODS assert_voided
+      IMPORTING
+        iv_id TYPE zcl_cd_ops_pay_fixture=>ty_scenario_id
+      RAISING
+        zcx_cd_ops_error.
 
     "! Serve one fixture scenario from the doubles
     METHODS load
@@ -207,6 +234,7 @@ CLASS ltc_outcome IMPLEMENTATION.
     INSERT LINES OF mo_fixture->payment_runs( rs_scenario ) INTO TABLE mo_trace->mt_runs.
     INSERT LINES OF rs_scenario-lines INTO TABLE mo_trace->mt_lines.
     INSERT LINES OF rs_scenario-returns INTO TABLE mo_trace->mt_returns.
+    INSERT LINES OF rs_scenario-checks INTO TABLE mo_trace->mt_checks.
     LOOP AT rs_scenario-requests ASSIGNING FIELD-SYMBOL(<ls_request>).
       INSERT VALUE #( key1 = <ls_request>-fin key2 = <ls_request>-source status = <ls_request>-status )
         INTO TABLE mo_trace->mt_requests.
@@ -333,6 +361,8 @@ CLASS ltc_outcome IMPLEMENTATION.
                                            is_source  = lt_sources[ fin = <ls_scenario>-fin ] ).
           cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = <ls_scenario>-expected
                                               msg = |{ <ls_scenario>-id }: expected outcome| ).
+          cl_abap_unit_assert=>assert_equals( act = ls_verdict-status_pending exp = <ls_scenario>-status_pending
+                                              msg = |{ <ls_scenario>-id }: status pending| ).
         ENDLOOP.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -367,6 +397,128 @@ CLASS ltc_outcome IMPLEMENTATION.
           <ls_payment>-pymet = gc_unwatched.
         ENDLOOP.
         cl_abap_unit_assert=>assert_initial( act = verdict_of( ls_scenario-augbl ) msg = 'No verdict' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Confirmed status values 2026-11-08: wire 495 -> 195 with its returns lot and DPAYH status RETURNED
+  " is RETURNED (status row next to the bank evidence)
+  METHOD returned_with_status_returned.
+    TRY.
+        DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-returned ).
+        DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-returned
+                                            msg = 'Returned with status RETURNED: RETURNED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-status exp = zif_cd_ops_payout_types=>gc_status-excluded
+                                            msg = 'Out of flight' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-status_pending msg = 'Nothing pending' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The return is on the bank statement but DPAYH still says CONFIRMED (status job not run yet): the
+  " payment stays IN_FLIGHT with the status pending - never RETURN_INCONSISTENT; the deciding evidence
+  " is dated by the newest statement line (basis of PAY_STATUS_LAG in the morning report)
+  METHOD return_status_lag_in_flight.
+    TRY.
+        DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-return_lag ).
+        DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-in_flight
+                                            msg = 'Status not updated yet: IN_FLIGHT' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-status exp = zif_cd_ops_payout_types=>gc_status-open
+                                            msg = 'Stays in flight (aged)' ).
+        cl_abap_unit_assert=>assert_true( act = ls_verdict-status_pending msg = 'Waiting for the status job' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-purpose exp = zif_cd_hck_runtime_types=>gc_purpose-returned
+                                            msg = 'The bank evidence says RETURNED' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_verdict-finding msg = 'No inconsistency finding' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_verdict-listings msg = 'Nothing listed' ).
+        DATA(lt_lines) = ls_scenario-lines.
+        SORT lt_lines BY budat DESCENDING.
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-evidence_date exp = lt_lines[ 1 ]-budat
+                                            msg = 'Dated by the 195 line' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Status RETURNED without the 195 on the statement is not a lag: RETURN_INCONSISTENT (rule 4)
+  METHOD returned_status_without_line.
+    TRY.
+        DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-returned ).
+        CLEAR: mo_trace->mt_lines, mo_trace->mt_returns.
+        DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-inconsistent
+                                            msg = 'Status RETURNED without the bank line: INCONSISTENT' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-finding exp = zif_cd_hck_runtime_types=>gc_code-return_inconsist
+                                            msg = 'Finding RETURN_INCONSISTENT' ).
+        cl_abap_unit_assert=>assert_false( act = ls_verdict-status_pending msg = 'Not pending' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD assert_voided.
+    DATA(ls_scenario) = load( iv_id ).
+    DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
+    cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-voided
+                                        msg = |{ iv_id }: VOIDED| ).
+    cl_abap_unit_assert=>assert_equals( act = ls_verdict-status exp = zif_cd_ops_payout_types=>gc_status-excluded
+                                        msg = |{ iv_id }: out of flight| ).
+    cl_abap_unit_assert=>assert_initial( act = ls_verdict-finding msg = |{ iv_id }: no finding| ).
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: register state V without a stop payment is VOIDED
+  METHOD voided_cheque_without_stop.
+    TRY.
+        assert_voided( zcl_cd_ops_pay_fixture=>gc_scenario-chq_voided ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: DPAYH status STOPPED with the register state still blank is VOIDED
+  METHOD stopped_cheque_blank_voided.
+    TRY.
+        assert_voided( zcl_cd_ops_pay_fixture=>gc_scenario-chq_stopped ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: STOPPED and V is VOIDED (either one is enough)
+  METHOD stopped_and_voided_cheque.
+    TRY.
+        assert_voided( zcl_cd_ops_pay_fixture=>gc_scenario-chq_stop_void ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: a stopped cheque that was cashed (581, state B) is CLEARING_INCONSISTENT
+  " and the listing says "stopped cheque cashed" - never VOIDED, never CLEARED
+  METHOD stopped_cheque_cashed.
+    TRY.
+        DATA(ls_scenario) = load( zcl_cd_ops_pay_fixture=>gc_scenario-chq_stop_cash ).
+        DATA(ls_verdict) = verdict_of( ls_scenario-augbl ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-inconsistent
+                                            msg = 'Stopped and cashed: INCONSISTENT' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-finding exp = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                            msg = 'Finding CLEARING_INCONSISTENT' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_verdict-purpose exp = zif_cd_hck_runtime_types=>gc_purpose-voided
+                                            msg = 'Judged as a voided (stopped) cheque' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( find( val = ls_verdict-listings[ 1 ]-line sub = zcl_cd_ops_pay_fixture=>gc_stopped_cashed ) >= 0 )
+          msg = 'The detail says stopped cheque cashed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -22,6 +22,8 @@
 *& 2026-11-07 | Code review of the cheque lifecycle: every anomaly of an evidence (TY_EVIDENCE-MORE),
 *&            | correction lines (compare C), voided state, register missing, outcome finding catalogue.
 *& 2026-11-07 | Purpose RETRIEVED after RETURNED (canonical payment outcome: a retrieval is not a return).
+*& 2026-11-08 | Confirmed DPAYH status values: evidence PENDING (status job not yet run) and EV_DATE
+*&            | (newest record of the evidence); message 682 (waiting for the payment status job).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -486,6 +488,13 @@ INTERFACE zif_cd_hck_runtime_types
       detail     TYPE string,
       "! Anomalies after the primary one (ANOMALY), in the order found; each is its own finding
       more       TYPE tt_anomaly,
+      "! Not found yet, but expected to follow: the payment status is one of the statuses the hourly
+      "! payment status job has not updated yet (PARAM2 of ZCL_CD_HCK_EV_PAY_STATUS). A mandatory row
+      "! that is pending keeps a purpose indicated by other evidence in flight - never inconsistent
+      pending    TYPE abap_bool,
+      "! Date of the newest record of the evidence (posting date of the last statement line of the
+      "! lifecycle); blank when the kind has none
+      ev_date    TYPE d,
     END OF ty_evidence.
   TYPES tt_evidence TYPE HASHED TABLE OF ty_evidence WITH UNIQUE KEY doc1r.
 
@@ -661,6 +670,7 @@ INTERFACE zif_cd_hck_runtime_types
       ev_indeterminate    TYPE zif_cd_ops_types=>ty_msgno VALUE '679',
       ev_other_cheque     TYPE zif_cd_ops_types=>ty_msgno VALUE '680',
       ev_register_missing TYPE zif_cd_ops_types=>ty_msgno VALUE '681',
+      evidence_pending    TYPE zif_cd_ops_types=>ty_msgno VALUE '682',
     END OF gc_msg.
 
 ENDINTERFACE.

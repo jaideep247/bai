@@ -10,11 +10,16 @@
 *& a voided cheque and its reissue never make the payment voided). The
 *& cheques come from the read shared with the other cheque kinds
 *& (ZCL_CD_HCK_EV_SUPPORT=>CHECKS_OF: one DFKKCR read per payment and run).
+*& PARAM2 (optional): live payment statuses DPAYH-ZZ_PAYMENT_STATUS that
+*& hold on their own, with or without a register row (VOIDED: STOPPED = stop
+*& payment - user decision 2026-11-08: state V or status STOPPED, either one
+*& is enough); status read shared (ZCL_CD_HCK_EV_SUPPORT=>STATUS_OF).
 *& Read-only: no cheque status is changed.
 *& Modification log:
 *& 2026-11-07 | Initial version (user rule 2: cheque status B / V / blank, field STATE confirmed).
 *& 2026-11-07 | Token BLANK for the blank state (a returned cheque keeps STATE blank today).
 *& 2026-11-07 | Code review: the deciding (live) cheque only; DFKKCR read shared (checks_of).
+*& 2026-11-08 | PARAM2: payment statuses that hold alone (stopped cheque = voided, user decision).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - cheque status DFKKCR-STATE in a list of values</p>
 CLASS zcl_cd_hck_ev_chq_status DEFINITION
@@ -57,6 +62,21 @@ CLASS zcl_cd_hck_ev_chq_status IMPLEMENTATION.
                                                        iv_v1    = zif_cd_ops_trace_types=>gc_table-dfkkcr
                                                        iv_v2    = lv_state )
         CHANGING  ct_evidence = rs_result-evidence ).
+    ENDLOOP.
+    " A listed payment status holds on its own (stop payment: the cheque counts as voided)
+    DATA(lt_statuses) = zcl_cd_hck_ev_support=>tokens( is_rule-param2 ).
+    IF lt_statuses IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT zcl_cd_hck_ev_support=>status_of( it_payments ) ASSIGNING FIELD-SYMBOL(<ls_status>).
+      IF line_exists( lt_statuses[ table_line = <ls_status>-status ] ).
+        zcl_cd_hck_ev_support=>add_hit(
+          EXPORTING iv_doc1r    = <ls_status>-doc1r
+                    iv_detail   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-ev_status
+                                                         iv_v1    = zif_cd_ops_trace_types=>gc_table-dpayh
+                                                         iv_v2    = <ls_status>-status )
+          CHANGING  ct_evidence = rs_result-evidence ).
+      ENDIF.
     ENDLOOP.
   ENDMETHOD.
 

@@ -11,6 +11,8 @@
 *& numbers. Read-only towards business tables: nothing here posts.
 *& Modification log:
 *& 2026-11-07 | Initial version (one canonical payment outcome model).
+*& 2026-11-08 | Verdict STATUS_PENDING (bank evidence decides, the payment status job has not caught up:
+*&            | in flight) and EVIDENCE_DATE (basis of the morning report's status-lag finding).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -94,6 +96,12 @@ INTERFACE zif_cd_ops_payout_types
       severity      TYPE zif_cd_ops_types=>ty_severity,
       "! Every listing of the payment (anomalies first, then the purpose), for the findings
       listings      TYPE tt_listing,
+      "! The evidence of the purpose holds but a mandatory payment status row waits for the hourly
+      "! payment status job (status still in its PARAM2): outcome IN_FLIGHT, never inconsistent;
+      "! A_INFLIGHT reports PAY_STATUS_LAG once the grace period has passed. Not stored (no version)
+      status_pending TYPE abap_bool,
+      "! Date of the deciding evidence (posting date of the newest statement line of the lifecycle)
+      evidence_date  TYPE d,
     END OF ty_verdict.
   "! One verdict per payment, in the order of the payments evaluated
   TYPES tt_verdict TYPE STANDARD TABLE OF ty_verdict WITH EMPTY KEY

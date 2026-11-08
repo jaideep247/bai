@@ -14,10 +14,20 @@
 *& the given day. Reads and writes nothing.
 *& Modification log:
 *& 2026-11-07 | Initial version (one canonical payment outcome model: shared negative fixtures).
+*& 2026-11-08 | Confirmed DPAYH status values (ISSUED, CONFIRMED, CLEARED, RETURNED, RETRIEVED,
+*&            | STOPPED; SENT replaced by CONFIRMED); rules as delivered with the status rows of
+*&            | RETURNED / RETRIEVED (PARAM2 pending ISSUED,CONFIRMED) and the cheque rows (VOIDED =
+*&            | state V or status STOPPED, user decision 2026-11-08); scenarios wire returned,
+*&            | return with the status not updated yet, cheque voided / stopped / stopped and voided /
+*&            | stopped and cashed; cheque register rows and cheque lines. Defect fixed: the ACH
+*&            | CLEARED rows were added with the purpose of the wire RETURNED row before them (duplicate
+*&            | keys dropped the ACH RETURNED row; class D ACH had no CLEARED rule, so not watched).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - shared test fixtures</p>
 "! Scenarios GC_SCENARIO: retrieval without return, bank line without clearing, two DPAYH runs,
-"! FIN in two sources, SUCCESS older than 30 days; HISTORY: two versions of one payment.
+"! FIN in two sources, SUCCESS older than 30 days, wire returned, return whose status the status
+"! job has not updated yet, cheque voided / stopped / stopped and voided / stopped and cashed;
+"! HISTORY: two versions of one payment.
 CLASS zcl_cd_ops_pay_fixture DEFINITION
   PUBLIC
   FINAL
@@ -38,6 +48,19 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         two_sources TYPE ty_scenario_id VALUE 'FIN_TWO_SOURCES',
         "! Cleared wire; request SUCCESS 40 days ago, failed retry today: still PROCESSED
         success_old TYPE ty_scenario_id VALUE 'SUCCESS_OLD',
+        "! Wire 495 -> 195 with one returns lot item, DPAYH status RETURNED: RETURNED
+        returned    TYPE ty_scenario_id VALUE 'WIRE_RETURNED',
+        "! The same return, DPAYH status still CONFIRMED (status job not run yet): IN_FLIGHT with the
+        "! status pending - never INCONSISTENT; the morning report's status lag reports it
+        return_lag  TYPE ty_scenario_id VALUE 'RETURN_STATUS_LAG',
+        "! Cheque register state V, status ISSUED (no stop payment): VOIDED
+        chq_voided  TYPE ty_scenario_id VALUE 'CHEQUE_VOIDED',
+        "! Status STOPPED, register state still blank: VOIDED (user decision 2026-11-08)
+        chq_stopped TYPE ty_scenario_id VALUE 'CHEQUE_STOPPED',
+        "! Status STOPPED and state V: VOIDED
+        chq_stop_void TYPE ty_scenario_id VALUE 'CHEQUE_STOP_VOIDED',
+        "! Status STOPPED, cheque cashed (581, state B): INCONSISTENT - stopped cheque cashed
+        chq_stop_cash TYPE ty_scenario_id VALUE 'CHEQUE_STOP_CASHED',
       END OF gc_scenario.
 
     CONSTANTS gc_bukrs TYPE c LENGTH 4 VALUE 'US01'.
@@ -46,6 +69,9 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
     CONSTANTS gc_amount TYPE zif_cd_ops_types=>ty_amount VALUE '-250.00'.
     CONSTANTS gc_wire TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'E'.
     CONSTANTS gc_ach TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'G'.
+    CONSTANTS gc_cheque TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'C'.
+    "! Text of the delivered cheque rule rows that names a stopped cheque that was cashed
+    CONSTANTS gc_stopped_cashed TYPE string VALUE `stopped cheque cashed`.
     CONSTANTS gc_scheme TYPE zif_cd_hck_runtime_types=>ty_scheme VALUE 'BAI2'.
     CONSTANTS gc_kukey TYPE n LENGTH 8 VALUE '00009001'.
     CONSTANTS:
@@ -58,10 +84,15 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         success TYPE c LENGTH 20 VALUE 'SUCCESS',
         failed  TYPE c LENGTH 20 VALUE 'FAILED',
       END OF gc_request_status.
+    "! DPAYH-ZZ_PAYMENT_STATUS values (confirmed by the user 2026-11-08)
     CONSTANTS:
       BEGIN OF gc_pay_status,
-        cleared TYPE c LENGTH 20 VALUE 'CLEARED',
-        sent    TYPE c LENGTH 20 VALUE 'SENT',
+        issued    TYPE c LENGTH 20 VALUE 'ISSUED',
+        confirmed TYPE c LENGTH 20 VALUE 'CONFIRMED',
+        cleared   TYPE c LENGTH 20 VALUE 'CLEARED',
+        returned  TYPE c LENGTH 20 VALUE 'RETURNED',
+        retrieved TYPE c LENGTH 20 VALUE 'RETRIEVED',
+        stopped   TYPE c LENGTH 20 VALUE 'STOPPED',
       END OF gc_pay_status.
 
     "! One DPAYH row of the scenario's payment document
@@ -97,6 +128,8 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         runs             TYPE tt_run,
         lines            TYPE zif_cd_ops_trace_types=>tt_bank_line,
         returns          TYPE zif_cd_ops_trace_types=>tt_return,
+        "! Cheque register rows (DFKKCR) of the payment document
+        checks           TYPE zif_cd_ops_trace_types=>tt_check,
         requests         TYPE tt_request,
         "! Expected canonical outcome (and the run it is judged on)
         expected         TYPE zif_cd_ops_payout_types=>ty_outcome,
@@ -104,6 +137,8 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         expected_laufi   TYPE c LENGTH 6,
         "! Outcome the evaluator gives before the source attribution (AMBIGUOUS scenarios)
         evaluated        TYPE zif_cd_ops_payout_types=>ty_outcome,
+        "! Expected: the bank evidence decides, the payment status job has not caught up (in flight)
+        status_pending   TYPE abap_bool,
       END OF ty_scenario.
     TYPES tt_scenario TYPE STANDARD TABLE OF ty_scenario WITH EMPTY KEY.
 
@@ -126,24 +161,27 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
       RETURNING
         VALUE(rs_scenario) TYPE ty_scenario.
 
-    "! Method classes as delivered: D WIR (E), D ACH (G), value-date aged
+    "! Method classes as delivered: D WIR (E), D ACH (G), value-date aged; D CHQ (C), issue-date aged
     METHODS classes
       RETURNING
         VALUE(rt_classes) TYPE zif_cd_hck_runtime_types=>tt_pm_class.
 
     "! Rules as delivered (config/hck_seed.md section 8c): wire CLEARED = lifecycle CLEARED AND DPAYH
-    "! status CLEARED, RETURNED = lifecycle RETURNED; ACH CLEARED = lifecycle CLEARED / RETRIEVAL_FAILED
-    "! AND status CLEARED, RETURNED = lifecycle RETURNED, RETRIEVED = lifecycle RETRIEVED
+    "! status CLEARED, RETURNED = lifecycle RETURNED AND status RETURNED (ISSUED / CONFIRMED pending);
+    "! ACH CLEARED = lifecycle CLEARED / RETRIEVAL_FAILED AND status CLEARED, RETURNED = lifecycle
+    "! RETURNED AND status RETURNED, RETRIEVED = lifecycle RETRIEVED AND status RETRIEVED (pending as
+    "! for RETURNED); cheque VOIDED = state V or status STOPPED, no cashed line, register not cashed;
+    "! CLEARED = state B AND cheque lifecycle CLEARED / CLEARED_MANUAL
     METHODS rules
       RETURNING
         VALUE(rt_rules) TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
 
-    "! Bank code roles of D WIR / D ACH (BAI2)
+    "! Bank code roles of D WIR / D ACH / D CHQ (BAI2)
     METHODS roles
       RETURNING
         VALUE(rt_roles) TYPE zif_cd_hck_runtime_types=>tt_btc_role.
 
-    "! Sequence outcomes of D WIR / D ACH
+    "! Sequence outcomes of D WIR / D ACH / D CHQ (cheque: CASHED only)
     METHODS outcomes
       RETURNING
         VALUE(rt_outcomes) TYPE zif_cd_hck_runtime_types=>tt_seq_outcome.
@@ -214,6 +252,12 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         two_runs    TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009003',
         two_sources TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009004',
         success_old TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009005',
+        returned    TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009006',
+        return_lag  TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009007',
+        chq_voided  TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009008',
+        chq_stopped TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009009',
+        chq_stop_void TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009010',
+        chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009011',
       END OF gc_fin.
     CONSTANTS:
       BEGIN OF gc_opbel,
@@ -222,6 +266,12 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         two_runs    TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009003',
         two_sources TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009004',
         success_old TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009005',
+        returned    TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009006',
+        return_lag  TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009007',
+        chq_voided  TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009008',
+        chq_stopped TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009009',
+        chq_stop_void TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009010',
+        chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009011',
       END OF gc_opbel.
     CONSTANTS:
       BEGIN OF gc_augbl,
@@ -230,7 +280,37 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         two_runs    TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900003',
         two_sources TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900004',
         success_old TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900005',
+        returned    TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900006',
+        return_lag  TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900007',
+        chq_voided  TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900008',
+        chq_stopped TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900009',
+        chq_stop_void TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900010',
+        chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900011',
       END OF gc_augbl.
+    "! Cheque numbers (DFKKCR-ZTNUM, 13 characters = the statement reference FEBEP-CHECT)
+    CONSTANTS:
+      BEGIN OF gc_ztnum,
+        chq_voided    TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000008',
+        chq_stopped   TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000009',
+        chq_stop_void TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000010',
+        chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000011',
+      END OF gc_ztnum.
+    "! Paying house bank account of the cheques and of their statement lines
+    CONSTANTS:
+      BEGIN OF gc_cheque_account,
+        hbkid TYPE c LENGTH 5 VALUE 'JPMC1',
+        hktid TYPE c LENGTH 5 VALUE 'CHK01',
+      END OF gc_cheque_account.
+    "! DFKKCR-STATE (confirmed: B cashed, V voided, blank open)
+    CONSTANTS:
+      BEGIN OF gc_cheque_state,
+        open   TYPE c LENGTH 1 VALUE ' ',
+        cashed TYPE c LENGTH 1 VALUE 'B',
+        voided TYPE c LENGTH 1 VALUE 'V',
+      END OF gc_cheque_state.
+    "! Returns lot of the wire returns (DFKKRP-OPBEL, lot status)
+    CONSTANTS gc_return_doc TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000990101'.
+    CONSTANTS gc_lot_done TYPE c LENGTH 1 VALUE '5'.
     CONSTANTS:
       BEGIN OF gc_btc,
         wire_original TYPE zif_cd_hck_runtime_types=>ty_btc_code VALUE '495',
@@ -238,29 +318,34 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         ach_original  TYPE zif_cd_hck_runtime_types=>ty_btc_code VALUE '466',
         ach_returned  TYPE zif_cd_hck_runtime_types=>ty_btc_code VALUE '168',
         ach_retrieved TYPE zif_cd_hck_runtime_types=>ty_btc_code VALUE '166',
+        cheque_cashed TYPE zif_cd_hck_runtime_types=>ty_btc_code VALUE '581',
       END OF gc_btc.
     CONSTANTS:
       BEGIN OF gc_role,
         original  TYPE zif_cd_hck_runtime_types=>ty_btc_role VALUE 'ORIGINAL',
         returned  TYPE zif_cd_hck_runtime_types=>ty_btc_role VALUE 'RETURNED',
         retrieved TYPE zif_cd_hck_runtime_types=>ty_btc_role VALUE 'RETRIEVED',
+        cashed    TYPE zif_cd_hck_runtime_types=>ty_btc_role VALUE 'CASHED',
       END OF gc_role.
     CONSTANTS:
       BEGIN OF gc_pattern,
         original  TYPE zif_cd_hck_runtime_types=>ty_seq_pattern VALUE 'ORIGINAL',
         returned  TYPE zif_cd_hck_runtime_types=>ty_seq_pattern VALUE 'ORIGINAL,RETURNED',
         retrieved TYPE zif_cd_hck_runtime_types=>ty_seq_pattern VALUE 'ORIGINAL,RETRIEVED',
+        cashed    TYPE zif_cd_hck_runtime_types=>ty_seq_pattern VALUE 'CASHED',
       END OF gc_pattern.
     CONSTANTS:
       BEGIN OF gc_run,
         ach  TYPE c LENGTH 6 VALUE 'ACH001',
         wire TYPE c LENGTH 6 VALUE 'WIR001',
         rerun TYPE c LENGTH 6 VALUE 'WIR002',
+        cheque TYPE c LENGTH 6 VALUE 'CHQ001',
       END OF gc_run.
     CONSTANTS:
       BEGIN OF gc_class,
         wire TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'WIR',
         ach  TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'ACH',
+        cheque TYPE zif_cd_hck_runtime_types=>ty_method_class VALUE 'CHQ',
       END OF gc_class.
     CONSTANTS:
       BEGIN OF gc_seq,
@@ -275,6 +360,19 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
       END OF gc_lot_items.
     "! ACH lifecycle outcomes that clear (retrieval failed = the payment stays paid)
     CONSTANTS gc_ach_cleared TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'CLEARED,RETRIEVAL_FAILED'.
+    "! PARAM2 of the delivered status rows of RETURNED / RETRIEVED: statuses the status job has not updated
+    CONSTANTS gc_status_pending TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'ISSUED,CONFIRMED'.
+    "! Cheque lifecycle outcomes that mean cashed; suffix length of the cheque link
+    CONSTANTS gc_cheque_cleared TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'CLEARED,CLEARED_MANUAL'.
+    CONSTANTS gc_suffix TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE '13'.
+    "! Cheques of the scenarios were issued this many days ago
+    CONSTANTS gc_cheque_days TYPE i VALUE 5.
+    "! Descriptions of the delivered N rows of D CHQ VOIDED (they name the stopped cheque cashed)
+    CONSTANTS:
+      BEGIN OF gc_description,
+        no_cashed_line TYPE zif_cd_hck_types=>ty_text VALUE 'No cashed line (voided cheque or stopped cheque cashed)',
+        not_cashed     TYPE zif_cd_hck_types=>ty_text VALUE 'Register not cashed (stopped cheque cashed: state B)',
+      END OF gc_description.
 
     DATA mv_today TYPE d.
     DATA mt_scenarios TYPE tt_scenario.
@@ -297,6 +395,40 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         iv_status TYPE clike
       CHANGING
         cs_scenario TYPE ty_scenario.
+
+    METHODS add_check
+      IMPORTING
+        iv_ztnum    TYPE zif_cd_ops_trace_types=>ty_ref
+        iv_state    TYPE clike
+      CHANGING
+        cs_scenario TYPE ty_scenario.
+
+    "! Statement line of a cheque: CHECT = the cheque number, on the cheque's house bank account
+    METHODS add_cheque_line
+      IMPORTING
+        iv_ztnum    TYPE zif_cd_ops_trace_types=>ty_ref
+        iv_esnum    TYPE i
+      CHANGING
+        cs_scenario TYPE ty_scenario.
+
+    "! Returns lot item of the payment for the payment amount
+    METHODS add_return
+      CHANGING
+        cs_scenario TYPE ty_scenario.
+
+    "! A cheque payment of the scenario with its DPAYH status and its register row
+    METHODS cheque_scenario
+      IMPORTING
+        iv_id              TYPE ty_scenario_id
+        iv_fin             TYPE zif_cd_ops_trace_types=>ty_fin
+        iv_opbel           TYPE zif_cd_ops_trace_types=>ty_docno
+        iv_augbl           TYPE zif_cd_ops_trace_types=>ty_docno
+        iv_ztnum           TYPE zif_cd_ops_trace_types=>ty_ref
+        iv_status          TYPE clike
+        iv_state           TYPE clike
+        iv_expected        TYPE zif_cd_ops_payout_types=>ty_outcome
+      RETURNING
+        VALUE(rs_scenario) TYPE ty_scenario.
 
     METHODS add_request
       IMPORTING
@@ -339,7 +471,7 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_scenario-augbl  = gc_augbl-retrieval.
     ls_scenario-pymet  = gc_ach.
     ls_scenario-budat  = mv_today - 4.
-    add_run( EXPORTING iv_days = 3 iv_laufi = gc_run-ach iv_status = gc_pay_status-cleared CHANGING cs_scenario = ls_scenario ).
+    add_run( EXPORTING iv_days = 3 iv_laufi = gc_run-ach iv_status = gc_pay_status-retrieved CHANGING cs_scenario = ls_scenario ).
     add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-ach_original iv_days = 3 iv_esnum = 1
               CHANGING  cs_scenario = ls_scenario ).
     add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-ach_retrieved iv_days = 1 iv_esnum = 2
@@ -356,14 +488,14 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_scenario-augbl  = gc_augbl-bank_line.
     ls_scenario-pymet  = gc_wire.
     ls_scenario-budat  = mv_today - 3.
-    add_run( EXPORTING iv_days = 2 iv_laufi = gc_run-wire iv_status = gc_pay_status-sent CHANGING cs_scenario = ls_scenario ).
+    add_run( EXPORTING iv_days = 2 iv_laufi = gc_run-wire iv_status = gc_pay_status-confirmed CHANGING cs_scenario = ls_scenario ).
     add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_original iv_days = 1 iv_esnum = 3
               CHANGING  cs_scenario = ls_scenario ).
     add_request( EXPORTING iv_source = gc_source-pclm iv_days = 3 CHANGING cs_scenario = ls_scenario ).
     ls_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-inconsistent.
     INSERT ls_scenario INTO TABLE mt_scenarios.
 
-    " Two DPAYH runs of one document: the older SENT, the newer CLEARED
+    " Two DPAYH runs of one document: the older CONFIRMED, the newer CLEARED
     CLEAR ls_scenario.
     ls_scenario-id     = gc_scenario-two_runs.
     ls_scenario-fin    = gc_fin-two_runs.
@@ -371,7 +503,7 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_scenario-augbl  = gc_augbl-two_runs.
     ls_scenario-pymet  = gc_wire.
     ls_scenario-budat  = mv_today - 6.
-    add_run( EXPORTING iv_days = 5 iv_laufi = gc_run-wire iv_status = gc_pay_status-sent CHANGING cs_scenario = ls_scenario ).
+    add_run( EXPORTING iv_days = 5 iv_laufi = gc_run-wire iv_status = gc_pay_status-confirmed CHANGING cs_scenario = ls_scenario ).
     add_run( EXPORTING iv_days = 2 iv_laufi = gc_run-rerun iv_status = gc_pay_status-cleared CHANGING cs_scenario = ls_scenario ).
     add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_original iv_days = 1 iv_esnum = 4
               CHANGING  cs_scenario = ls_scenario ).
@@ -416,6 +548,79 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-cleared.
     INSERT ls_scenario INTO TABLE mt_scenarios.
 
+    " Wire return 495 -> 195 with one returns lot item, DPAYH status RETURNED
+    CLEAR ls_scenario.
+    ls_scenario-id     = gc_scenario-returned.
+    ls_scenario-fin    = gc_fin-returned.
+    ls_scenario-opbel  = gc_opbel-returned.
+    ls_scenario-augbl  = gc_augbl-returned.
+    ls_scenario-pymet  = gc_wire.
+    ls_scenario-budat  = mv_today - 4.
+    add_run( EXPORTING iv_days = 3 iv_laufi = gc_run-wire iv_status = gc_pay_status-returned CHANGING cs_scenario = ls_scenario ).
+    add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_original iv_days = 3 iv_esnum = 7
+              CHANGING  cs_scenario = ls_scenario ).
+    add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_returned iv_days = 1 iv_esnum = 8
+              CHANGING  cs_scenario = ls_scenario ).
+    add_return( CHANGING cs_scenario = ls_scenario ).
+    add_request( EXPORTING iv_source = gc_source-pclm iv_days = 4 CHANGING cs_scenario = ls_scenario ).
+    ls_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-returned.
+    INSERT ls_scenario INTO TABLE mt_scenarios.
+
+    " The same return while the DPAYH status is still CONFIRMED: the status job has not run yet
+    CLEAR ls_scenario.
+    ls_scenario-id     = gc_scenario-return_lag.
+    ls_scenario-fin    = gc_fin-return_lag.
+    ls_scenario-opbel  = gc_opbel-return_lag.
+    ls_scenario-augbl  = gc_augbl-return_lag.
+    ls_scenario-pymet  = gc_wire.
+    ls_scenario-budat  = mv_today - 4.
+    add_run( EXPORTING iv_days = 3 iv_laufi = gc_run-wire iv_status = gc_pay_status-confirmed CHANGING cs_scenario = ls_scenario ).
+    add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_original iv_days = 3 iv_esnum = 9
+              CHANGING  cs_scenario = ls_scenario ).
+    add_line( EXPORTING iv_doc = ls_scenario-augbl iv_code = gc_btc-wire_returned iv_days = 1 iv_esnum = 10
+              CHANGING  cs_scenario = ls_scenario ).
+    add_return( CHANGING cs_scenario = ls_scenario ).
+    add_request( EXPORTING iv_source = gc_source-pclm iv_days = 4 CHANGING cs_scenario = ls_scenario ).
+    ls_scenario-expected       = zif_cd_ops_payout_types=>gc_outcome-in_flight.
+    ls_scenario-status_pending = abap_true.
+    INSERT ls_scenario INTO TABLE mt_scenarios.
+
+    " Cheques (user decision 2026-11-08: a stopped cheque is voided; stopped and cashed is inconsistent)
+    INSERT cheque_scenario( iv_id       = gc_scenario-chq_voided
+                            iv_fin      = gc_fin-chq_voided
+                            iv_opbel    = gc_opbel-chq_voided
+                            iv_augbl    = gc_augbl-chq_voided
+                            iv_ztnum    = gc_ztnum-chq_voided
+                            iv_status   = gc_pay_status-issued
+                            iv_state    = gc_cheque_state-voided
+                            iv_expected = zif_cd_ops_payout_types=>gc_outcome-voided ) INTO TABLE mt_scenarios.
+    INSERT cheque_scenario( iv_id       = gc_scenario-chq_stopped
+                            iv_fin      = gc_fin-chq_stopped
+                            iv_opbel    = gc_opbel-chq_stopped
+                            iv_augbl    = gc_augbl-chq_stopped
+                            iv_ztnum    = gc_ztnum-chq_stopped
+                            iv_status   = gc_pay_status-stopped
+                            iv_state    = gc_cheque_state-open
+                            iv_expected = zif_cd_ops_payout_types=>gc_outcome-voided ) INTO TABLE mt_scenarios.
+    INSERT cheque_scenario( iv_id       = gc_scenario-chq_stop_void
+                            iv_fin      = gc_fin-chq_stop_void
+                            iv_opbel    = gc_opbel-chq_stop_void
+                            iv_augbl    = gc_augbl-chq_stop_void
+                            iv_ztnum    = gc_ztnum-chq_stop_void
+                            iv_status   = gc_pay_status-stopped
+                            iv_state    = gc_cheque_state-voided
+                            iv_expected = zif_cd_ops_payout_types=>gc_outcome-voided ) INTO TABLE mt_scenarios.
+    ls_scenario = cheque_scenario( iv_id       = gc_scenario-chq_stop_cash
+                                   iv_fin      = gc_fin-chq_stop_cash
+                                   iv_opbel    = gc_opbel-chq_stop_cash
+                                   iv_augbl    = gc_augbl-chq_stop_cash
+                                   iv_ztnum    = gc_ztnum-chq_stop_cash
+                                   iv_status   = gc_pay_status-stopped
+                                   iv_state    = gc_cheque_state-cashed
+                                   iv_expected = zif_cd_ops_payout_types=>gc_outcome-inconsistent ).
+    add_cheque_line( EXPORTING iv_ztnum = gc_ztnum-chq_stop_cash iv_esnum = 11 CHANGING cs_scenario = ls_scenario ).
+    INSERT ls_scenario INTO TABLE mt_scenarios.
+
     " The run judged: the latest one (run date, then run ID)
     LOOP AT mt_scenarios ASSIGNING FIELD-SYMBOL(<ls_scenario>).
       DATA(lt_runs) = <ls_scenario>-runs.
@@ -452,6 +657,58 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD cheque_scenario.
+    rs_scenario-id    = iv_id.
+    rs_scenario-fin   = iv_fin.
+    rs_scenario-opbel = iv_opbel.
+    rs_scenario-augbl = iv_augbl.
+    rs_scenario-pymet = gc_cheque.
+    rs_scenario-budat = mv_today - gc_cheque_days.
+    add_run( EXPORTING iv_days = gc_cheque_days iv_laufi = gc_run-cheque iv_status = iv_status CHANGING cs_scenario = rs_scenario ).
+    add_check( EXPORTING iv_ztnum = iv_ztnum iv_state = iv_state CHANGING cs_scenario = rs_scenario ).
+    add_request( EXPORTING iv_source = gc_source-pclm iv_days = gc_cheque_days CHANGING cs_scenario = rs_scenario ).
+    rs_scenario-expected = iv_expected.
+  ENDMETHOD.
+
+
+  METHOD add_check.
+    DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
+    ls_check-ztnum  = iv_ztnum.
+    ls_check-bukrs  = gc_bukrs.
+    ls_check-hbkid  = gc_cheque_account-hbkid.
+    ls_check-hktid  = gc_cheque_account-hktid.
+    ls_check-doc1r  = cs_scenario-augbl.
+    ls_check-amount = abs( gc_amount ).
+    ls_check-state  = iv_state.
+    INSERT ls_check INTO TABLE cs_scenario-checks.
+  ENDMETHOD.
+
+
+  METHOD add_cheque_line.
+    DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
+    ls_line-kukey = gc_kukey.
+    ls_line-esnum = iv_esnum.
+    ls_line-chect = iv_ztnum.
+    ls_line-vorgc = gc_btc-cheque_cashed.
+    ls_line-budat = mv_today - 1.
+    ls_line-kwbtr = gc_amount.
+    ls_line-bukrs = gc_bukrs.
+    ls_line-hbkid = gc_cheque_account-hbkid.
+    ls_line-hktid = gc_cheque_account-hktid.
+    INSERT ls_line INTO TABLE cs_scenario-lines.
+  ENDMETHOD.
+
+
+  METHOD add_return.
+    DATA ls_return TYPE zif_cd_ops_trace_types=>ty_return.
+    ls_return-selw1     = cs_scenario-augbl.
+    ls_return-opbel     = gc_return_doc.
+    ls_return-lot_stars = gc_lot_done.
+    ls_return-amount    = abs( gc_amount ).
+    INSERT ls_return INTO TABLE cs_scenario-returns.
+  ENDMETHOD.
+
+
   METHOD add_request.
     DATA ls_request TYPE ty_request.
     ls_request-fin          = cs_scenario-fin.
@@ -472,6 +729,10 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     INSERT ls_class INTO TABLE rt_classes.
     ls_class-method_class = gc_class-ach.
     ls_class-pay_methods  = gc_ach.
+    INSERT ls_class INTO TABLE rt_classes.
+    ls_class-method_class = gc_class-cheque.
+    ls_class-pay_methods  = gc_cheque.
+    ls_class-age_basis    = zif_cd_hck_runtime_types=>gc_age_basis-issue_date.
     INSERT ls_class INTO TABLE rt_classes.
   ENDMETHOD.
 
@@ -496,8 +757,16 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
     ls_rule-param1         = zif_cd_hck_runtime_types=>gc_outcome-returned.
     INSERT ls_rule INTO TABLE rt_rules.
-    " ACH: lifecycle CLEARED AND status CLEARED; RETURNED and RETRIEVED by the lifecycle
+    " Status row next to the bank evidence (2026-11-08): RETURNED, ISSUED / CONFIRMED = not updated yet
+    ls_rule-seq            = gc_seq-second.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_PAY_STATUS'.
+    ls_rule-param1         = gc_pay_status-returned.
+    ls_rule-param2         = gc_status_pending.
+    INSERT ls_rule INTO TABLE rt_rules.
+    CLEAR ls_rule-param2.
+    " ACH: lifecycle CLEARED AND status CLEARED; RETURNED and RETRIEVED by the lifecycle and the status
     ls_rule-method_class   = gc_class-ach.
+    ls_rule-purpose        = zif_cd_hck_runtime_types=>gc_purpose-cleared.
     ls_rule-seq            = gc_seq-first.
     ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
     ls_rule-param1         = gc_ach_cleared.
@@ -511,8 +780,57 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
     ls_rule-param1         = zif_cd_hck_runtime_types=>gc_outcome-returned.
     INSERT ls_rule INTO TABLE rt_rules.
+    ls_rule-seq            = gc_seq-second.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_PAY_STATUS'.
+    ls_rule-param1         = gc_pay_status-returned.
+    ls_rule-param2         = gc_status_pending.
+    INSERT ls_rule INTO TABLE rt_rules.
+    CLEAR ls_rule-param2.
     ls_rule-purpose        = zif_cd_hck_runtime_types=>gc_purpose-retrieved.
+    ls_rule-seq            = gc_seq-first.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
     ls_rule-param1         = zif_cd_hck_runtime_types=>gc_outcome-retrieved.
+    INSERT ls_rule INTO TABLE rt_rules.
+    ls_rule-seq            = gc_seq-second.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_PAY_STATUS'.
+    ls_rule-param1         = gc_pay_status-retrieved.
+    ls_rule-param2         = gc_status_pending.
+    INSERT ls_rule INTO TABLE rt_rules.
+    CLEAR ls_rule-param2.
+    " Cheques (user decision 2026-11-08): VOIDED = register state V or DPAYH status STOPPED (either
+    " alone), no cashed line and the register not cashed (stopped cheque cashed = inconsistent)
+    ls_rule-method_class   = gc_class-cheque.
+    ls_rule-purpose        = zif_cd_hck_runtime_types=>gc_purpose-voided.
+    ls_rule-seq            = gc_seq-first.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_CHQ_STATUS'.
+    ls_rule-param1         = gc_cheque_state-voided.
+    ls_rule-param2         = gc_pay_status-stopped.
+    INSERT ls_rule INTO TABLE rt_rules.
+    ls_rule-seq            = gc_seq-second.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
+    ls_rule-param1         = gc_cheque_cleared.
+    ls_rule-param2         = zif_cd_hck_runtime_types=>gc_link_cheque.
+    ls_rule-param3         = gc_suffix.
+    ls_rule-required       = zif_cd_hck_runtime_types=>gc_required-must_not_hold.
+    ls_rule-description    = gc_description-no_cashed_line.
+    INSERT ls_rule INTO TABLE rt_rules.
+    ls_rule-seq            = gc_seq-third.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_CHQ_STATUS'.
+    ls_rule-param1         = gc_cheque_state-cashed.
+    CLEAR: ls_rule-param2, ls_rule-param3.
+    ls_rule-description    = gc_description-not_cashed.
+    INSERT ls_rule INTO TABLE rt_rules.
+    CLEAR ls_rule-description.
+    " CLEARED = register state B AND the cheque lifecycle CLEARED / CLEARED_MANUAL
+    ls_rule-required       = zif_cd_hck_runtime_types=>gc_required-must_hold.
+    ls_rule-purpose        = zif_cd_hck_runtime_types=>gc_purpose-cleared.
+    ls_rule-seq            = gc_seq-first.
+    INSERT ls_rule INTO TABLE rt_rules.
+    ls_rule-seq            = gc_seq-second.
+    ls_rule-evidence_class = 'ZCL_CD_HCK_EV_BTC_SEQ'.
+    ls_rule-param1         = gc_cheque_cleared.
+    ls_rule-param2         = zif_cd_hck_runtime_types=>gc_link_cheque.
+    ls_rule-param3         = gc_suffix.
     INSERT ls_rule INTO TABLE rt_rules.
   ENDMETHOD.
 
@@ -542,6 +860,12 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_role-btc_code       = gc_btc-ach_retrieved.
     ls_role-role           = gc_role-retrieved.
     ls_role-compare_amount = space.
+    INSERT ls_role INTO TABLE rt_roles.
+    " Cheque paid: the amount is compared with the payment amount
+    ls_role-method_class   = gc_class-cheque.
+    ls_role-btc_code       = gc_btc-cheque_cashed.
+    ls_role-role           = gc_role-cashed.
+    ls_role-compare_amount = zif_cd_hck_runtime_types=>gc_compare-register.
     INSERT ls_role INTO TABLE rt_roles.
   ENDMETHOD.
 
@@ -576,6 +900,13 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     ls_outcome-seq             = gc_seq-third.
     ls_outcome-seq_pattern     = gc_pattern-retrieved.
     ls_outcome-outcome         = zif_cd_hck_runtime_types=>gc_outcome-retrieved.
+    ls_outcome-expected_dfkkrp = gc_lot_items-none.
+    INSERT ls_outcome INTO TABLE rt_outcomes.
+    " Cheque: CASHED -> CLEARED (no returns lot for any cheque outcome, confirmed)
+    ls_outcome-method_class    = gc_class-cheque.
+    ls_outcome-seq             = gc_seq-second.
+    ls_outcome-seq_pattern     = gc_pattern-cashed.
+    ls_outcome-outcome         = zif_cd_hck_runtime_types=>gc_outcome-cleared.
     ls_outcome-expected_dfkkrp = gc_lot_items-none.
     INSERT ls_outcome INTO TABLE rt_outcomes.
   ENDMETHOD.
