@@ -49,7 +49,7 @@ Every B/E/W finding is an exception in ZCD_OPS_FINDING with disposition O (open)
 
 | Situation | Action | Effect |
 |---|---|---|
-| Alert storm | Deactivate the rule in the Alerting & monitor freshness app or raise THROTTLE_MIN | Immediate, logged |
+| Alert storm | Deactivate the rule in the Alerting & approved tables app or raise THROTTLE_MIN | Immediate, logged |
 | Change a threshold / SLA / rule parameter in production | Configuration app of the area → Edit → change the existing row → Save | No transport; logged in SCU3. New rows only in DV1 and by transport |
 | A check or rule fails repeatedly (PLUGIN_ERROR) | Deactivate its row (ZCD_HCK_DEF / ZCD_BTC_RULE / ZCD_FMON_CHK) | Others keep running. Deactivating the rule removes that check — get the rule owner's approval |
 | Remove the suite | Unschedule the three jobs | Back to previous behaviour in < 15 min |
@@ -214,7 +214,7 @@ SO23 lists are client-specific and not transported: keep members aligned in QA1 
 Example — "alert if the PNC ACH returns file is not fully processed by 16:00":
 1. **DV1 — check the interface and calendar.** App *File monitoring setup* (customizing request on the root) → *Interfaces*: the interface exists and is active (`ACH_RET_PNC_IN`). → *Expected files per day type*: a NORMAL row with expected count ≥ 1 exists (the deadline is evaluated only on business days the calendar expects a file; a HOLIDAY row with 0 keeps holidays silent). Missing: create the calendar row on the same request.
 2. **DV1 — create the deadline.** *Stage deadlines (clock time)* → *Create*: interface `ACH_RET_PNC_IN`, stage `FULLY_PROCESSED` (allowed: FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED), day type `*` (or NORMAL / MONTH_END / RETURNS_DAY for a day-specific time), due time `16:00` (US Central: `FMON_TIME_ZONE` = CST, `FMON_FILE_MONITORING.md` §A3b), severity `E`, active `X`, description. Save on the customizing request.
-3. **DV1 — route the alert.** App *Alerting and monitor freshness* → *Alert rules* (same or a second customizing request): an existing rule with check pattern `STAGE_DEADLINE_MISSED` and a group1 pattern that matches the interface already routes it (e.g. extend `FMON_BAIDL`'s group1 pattern), or a new rule: payment engine area FMON, minimum severity E, check pattern `STAGE_DEADLINE_MISSED`, group1 pattern `ACH_RET_PNC_IN`, channel EMAIL, destination an **SO23 shared list** (e.g. `ZCD_RETOPS`), escalate after 6 runs to `ZCD_RTBLEAD`, active. E-mail only — never an APPLOG rule (SLG1 kept to a minimum). The SO23 list itself is client-specific: create it in QA1 and PS4 by hand (§5f).
+3. **DV1 — route the alert.** App *Alerting and approved tables* → *Alert rules* (same or a second customizing request): an existing rule with check pattern `STAGE_DEADLINE_MISSED` and a group1 pattern that matches the interface already routes it (e.g. extend `FMON_BAIDL`'s group1 pattern), or a new rule: payment engine area FMON, minimum severity E, check pattern `STAGE_DEADLINE_MISSED`, group1 pattern `ACH_RET_PNC_IN`, channel EMAIL, destination an **SO23 shared list** (e.g. `ZCD_RETOPS`), escalate after 6 runs to `ZCD_RTBLEAD`, active. E-mail only — never an APPLOG rule (SLG1 kept to a minimum). The SO23 list itself is client-specific: create it in QA1 and PS4 by hand (§5f).
 4. **QA1 — test.** Release the request, import into QA1. `ZCD_FMON_MONITOR` in test mode for a business day after the due time: the board shows the interface row with STAGE_DEADLINE_MISSED when the stage was not reached (nothing when it was); test mode sends no mail. Record the result in the change ticket.
 5. **PS4 — transport.** Import the request into PS4 with the normal change approval. After the import run `ZCD_MORNING_REPORT` with **Take config baseline** (`config/hck_seed.md` §6), so that the morning report does not show the transported rows as drift.
 
@@ -233,10 +233,10 @@ Example — "alert if the PNC ACH returns file is not fully processed by 16:00":
 ## Changing a stale threshold or a parameter safely (2026-11-07)
 
 **Stale threshold of a monitor** (dashboards *and* morning report self-check):
-1. Configuration app *Alerting and monitor freshness* → *Monitor freshness* → row of the area (FMON, EBS, HCK) → `STALE_AFTER_MIN` in minutes (> 0; the app refuses 0 and unknown areas). Delivered: FMON 15, EBS 1560, HCK 1560 (`config/alert_seed.md`).
-2. Save in DV1, transport (the app records the change in a customizing request where the client allows it). Do not maintain stale thresholds as parameters: `HCK_MAX_AGE_H_<area>` / `HCK_MAX_AGE_HOURS` are only the fallback of the self-check when the area has no `ZCD_OPS_MONCFG` row.
+1. Framework app *Parameter areas* (`ZUI_CA_PARAM_O4`), area `CD_OPS` → parameter `MON_STALE_AFTER_MIN_<area>` (FMON, EBS, HCK; table consolidation 2026-11-08, was the `ZCD_OPS_MONCFG` row) → value row in minutes (INT, at least 1; the framework refuses 0 and non-numbers). Delivered definition defaults: FMON 15, EBS 1560, HCK 1560 (`config/alert_seed.md`).
+2. A value of a released parameter may be adjusted where the framework allows it (production-editable area `CD_OPS`, change-logged); otherwise maintain it in DV1 on a customizing request and transport. `HCK_MAX_AGE_H_<area>` / `HCK_MAX_AGE_HOURS` are only the fallback of the self-check when `MON_STALE_AFTER_MIN_<area>` cannot be read (`D_PARAM_INVALID`).
 3. Check: the overview page (*Monitor freshness*) shows the new threshold in `StaleAfterMinutes`; the next morning report's self-check uses the same value (`PE_AREA_STALE`).
-4. Delete the row to return to the delivered value (dashboards: CDS fallback literal; self-check: hours parameters).
+4. Delete the value row to return to the delivered definition default (dashboards and self-check alike).
 
 **Runtime parameter (framework `ZCA_PARAM`, app *Parameter areas* `ZUI_CA_PARAM_O4`)**:
 1. Find the parameter: area by prefix (`ALERT_` `SLA_` `RETENTION_` `PURGE_` `TRACE_` → `CD_OPS`, `EBS_` → `CD_EBS`, `FMON_` → `CD_FMON`, `HCK_` → `CD_HCK`), definition (value type, min / max, allowed pattern, delivered default) in the app or `config/param_definitions.csv`.

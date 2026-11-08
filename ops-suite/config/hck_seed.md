@@ -17,7 +17,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 |---|---|---|
 | HCK_WATCH_PE_AREAS | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
 | HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
-| HCK_MAX_AGE_H_FMON | `1` (value row) | Fallback only: with the delivered `ZCD_OPS_MONCFG` row FMON = 15 min the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that row is deleted |
+| HCK_MAX_AGE_H_FMON | `1` (value row) | Fallback only: with the delivered parameter `MON_STALE_AFTER_MIN_FMON` = 15 min (area CD_OPS, was the `ZCD_OPS_MONCFG` row) the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that parameter cannot be read (refused value) |
 | HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0; item-wise checks stop between items once it has passed (BUDGET_EXHAUSTED, A18) |
 | HCK_LOOKBACK_RUNS | `8` | Default baseline history points (one point per finished, non-test run — A59) |
 | HCK_MAX_RUN_MIN | `120` | A run of a watched area in status R longer than this is HUNG (red self-check, A06); per area `HCK_MAX_RUN_MIN_<AREA>` |

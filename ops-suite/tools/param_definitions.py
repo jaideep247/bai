@@ -64,6 +64,9 @@ RUNTIME = {
     (OPS_TYPES, 'gc_param_prefix-sla_days'):
         ('product', ('struct', OPS_TYPES, 'gc_pe_area', ['ebs', 'file_monitor', 'health_check']),
                     ('struct', OPS_TYPES, 'gc_severity', ['block', 'error', 'warning'])),
+    # Monitor freshness per area (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
+    (OPS_TYPES, 'gc_param_prefix-stale_after_min'):
+        ('struct', OPS_TYPES, 'gc_pe_area', ['ebs', 'file_monitor', 'health_check']),
     (os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_prefix-max_age'):
         ('list', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_default-watch_pe_areas'),
     (os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_prefix-max_run'):
@@ -113,6 +116,14 @@ DEFAULTS = {
     'RETENTION_DAYS_FMON_PRISM': ('regex', _PURGE, r'gc_target-fmon_prism\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_HCK_RESULT': ('regex', _PURGE, r'gc_target-hck_result\s+default_days\s*=\s*(\d+)'),
     'RETENTION_DAYS_PAY_OUTCOME': ('regex', _PURGE, r'gc_target-pay_outcome\s+default_days\s*=\s*(\d+)'),
+    # Stale thresholds (minutes): the values the dashboards' CDS literals hold (cds_abap_parity) -
+    # FMON 3 x its 5-minute cadence, EBS / HCK = HCK_MAX_AGE_HOURS (26 h) in minutes
+    'MON_STALE_AFTER_MIN_FMON': ('const', os.path.join('src', 'fmon', 'zif_cd_fmon_types.intf.abap'),
+                                 'gc_dashboard-stale_after_min'),
+    'MON_STALE_AFTER_MIN_EBS': ('const', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'),
+                                'gc_param_default-max_age_hours', 60),
+    'MON_STALE_AFTER_MIN_HCK': ('const', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'),
+                                'gc_param_default-max_age_hours', 60),
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')

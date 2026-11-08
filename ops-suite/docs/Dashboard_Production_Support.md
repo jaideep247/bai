@@ -11,7 +11,7 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 
 | Card | Card type | Entity (overview service) | Shows | Navigates to |
 |---|---|---|---|---|
-| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold (`ZCD_OPS_MONCFG`, delivered 15 min / 26 h / 26 h; the same row the morning report self-check uses), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
+| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold (ZCA_PARAM `MON_STALE_AFTER_MIN_<area>`, delivered 15 min / 26 h / 26 h; the same parameter the morning report self-check uses - was `ZCD_OPS_MONCFG`), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
 | **Open critical exceptions** | List | `CriticalException` (selection variant `Overdue` as tab) | Open / assigned B and E findings of every area, overdue first: area, check code, object, owner, due date, days overdue | Owned-exceptions app (`ZCDOpsException-manage`, `ZUI_CD_OPS_EXC_O4`) |
 | **Files** | KPI + analytical | `FileFlowKpi` (variant `Today`, chart `FilesByBucket`, data points `Rejected`, `Unprocessed`, `Breached`, `MonitorAge`) | Files per flow bucket today, rejected / unprocessed / breached | `ZCDFileFlow-analyze` (file monitoring ALP) |
 | Files – latest failures | List | `FileFailure` | Rejected, partial, SLA-breached files | `ZCDFileFlow-analyze` |

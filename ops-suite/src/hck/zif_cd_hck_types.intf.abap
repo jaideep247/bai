@@ -36,6 +36,8 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: GC_BTC_USAGE (ZCD_HCK_BTCROLE-USAGE LIFECYCLE / RECON; ZCD_HCK_RCBTC
 *&            | merged).
+*& 2026-11-08 | Table consolidation: TY_MONITOR_CFG removed (ZCD_OPS_MONCFG retired; stale threshold =
+*&            | parameter MON_STALE_AFTER_MIN_<area>).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -681,7 +683,7 @@ INTERFACE zif_cd_hck_types
       warning_count TYPE i,
       age_hours     TYPE i,
       max_age_hours TYPE i,
-      "! ZCD_OPS_MONCFG-STALE_AFTER_MIN of the area (0 = no row: hours rule HCK_MAX_AGE_H_*)
+      "! MON_STALE_AFTER_MIN_<area> (0 = not readable: hours rule HCK_MAX_AGE_H_*)
       stale_after_min TYPE i,
       age_min       TYPE i,
       stale         TYPE abap_bool,
@@ -690,14 +692,6 @@ INTERFACE zif_cd_hck_types
       max_run_min   TYPE i,
     END OF ty_pe_area_status.
   TYPES tt_pe_area_status TYPE STANDARD TABLE OF ty_pe_area_status WITH EMPTY KEY.
-
-  "! Monitor freshness per area (core table ZCD_OPS_MONCFG; the dashboards read the same row)
-  TYPES:
-    BEGIN OF ty_monitor_cfg,
-      pe_area         TYPE zif_cd_ops_types=>ty_pe_area,
-      stale_after_min TYPE i,
-    END OF ty_monitor_cfg.
-  TYPES tt_monitor_cfg TYPE SORTED TABLE OF ty_monitor_cfg WITH UNIQUE KEY pe_area.
 
   "! Selection of one engine run (morning report selection screen)
   TYPES:

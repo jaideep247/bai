@@ -24,7 +24,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _WINDOW = r"dats_add_days\(\s*\$session\.system_date\s*,\s*-(\d+)\s*,"
 _RUN_STATUS = r"status\s*=\s*'(\w)'"
-_STALE_FALLBACK = r"coalesce\(\s*Cfg\.stale_after_min\s*,\s*(\d+)\s*\)"
+_STALE_FALLBACK = r"coalesce\(\s*Cfg\.StaleAfterMinutes\s*,\s*(\d+)\s*\)"
+_STALE_VIEW = 'src/core/zi_cd_opsstalecfg.ddls.asddls'
 
 # (name, cds file(s), pattern, abap file, constant(s), mode, scale)
 PAIRS = [
@@ -91,15 +92,22 @@ PAIRS = [
      ['src/fmon/zi_cd_fmonrunlast.ddls.asddls', 'src/hck/zi_cd_hckrunlast.ddls.asddls'], _RUN_STATUS,
      'src/core/zif_cd_ops_types.intf.abap',
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error'], 'set', None),
-    # Stale thresholds: ZCD_OPS_MONCFG row, else the CDS fallback literal = the ABAP default;
-    # the delivered seed rows equal them (config/alert_seed.md)
+    # Stale thresholds (table consolidation 2026-11-08): ZCA_PARAM MON_STALE_AFTER_MIN_<area> through
+    # ZI_CD_OpsStaleCfg (the CDS holds the parameter area and name prefix as literals), else the
+    # CDS fallback literal = the ABAP default; the delivered definitions equal them
+    # (config/param_definitions.csv, checked by param_definitions_complete) and so does the documented
+    # table of config/alert_seed.md
+    ('stale_param_area', _STALE_VIEW, r"Def\.area\s*=\s*'([A-Z_]+)'",
+     'src/core/zif_cd_ops_types.intf.abap', 'gc_param_area-ops', 'equal', None),
+    ('stale_param_prefix', _STALE_VIEW, r"'(MON_[A-Z_]*_)%?'",
+     'src/core/zif_cd_ops_types.intf.abap', 'gc_param_prefix-stale_after_min', 'equal', None),
     ('fmon_stale_fallback_minutes', 'src/fmon/zr_cd_fmonasof.ddls.asddls', _STALE_FALLBACK,
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
     ('ebs_hck_stale_fallback_minutes', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
      _STALE_FALLBACK, 'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
-    ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| FMON \| (\d+) \|",
+    ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_FMON` \| (\d+) \|",
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
-    ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| (?:EBS|HCK) \| (\d+) \|",
+    ('ebs_hck_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_(?:EBS|HCK)` \| (\d+) \|",
      'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
     # Three-way reconciliation (A_RECON_3WAY, 2026-11-07): the bank leg scopes lines by the XBLNR
     # account exactly as EBS; the result view splits the group key by position and selects RC_*

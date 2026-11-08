@@ -21,6 +21,8 @@
 *&            | G/L, mixed / blank XBLNR / inactive account / no line hidden, totals by BAI code + XBLNR.
 *& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of EBS (base dependency doubled).
 *& 2026-11-07 | Rule registry rows (ltd_rows=>rule_defs) for the classification from ZCD_EBS_RULE_DEF-FINDING_CLASS.
+*& 2026-11-08 | Table consolidation: moncfg_threshold_applies with a value row of MON_STALE_AFTER_MIN_EBS
+*&            | over its definition (ZCA_PARAM_DEF / _VAL doubled as base dependencies of ZI_CD_OpsStaleCfg).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -1073,22 +1075,36 @@ CLASS ltc_run IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: ZCD_OPS_MONCFG decides (60 minutes): a run two hours old is stale, although the
-  " delivered 26 hours would keep it fresh
+  " Rule: the parameter MON_STALE_AFTER_MIN_EBS decides (value row 60 minutes over the definition
+  " default 1560; table consolidation 2026-11-08, was ZCD_OPS_MONCFG): a run two hours old is stale,
+  " although the delivered 26 hours would keep it fresh
   METHOD moncfg_threshold_applies.
     CONSTANTS lc_minutes TYPE i VALUE 60.
     CONSTANTS lc_two_hours TYPE i VALUE 7200.
-    DATA lt_cfg TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
-    DATA ls_cfg TYPE zcd_ops_moncfg.
+    DATA lt_def TYPE STANDARD TABLE OF zca_param_def WITH EMPTY KEY.
+    DATA ls_def TYPE zca_param_def.
+    DATA lt_val TYPE STANDARD TABLE OF zca_param_val WITH EMPTY KEY.
+    DATA ls_val TYPE zca_param_val.
     TRY.
         DATA lt_runs TYPE STANDARD TABLE OF zcd_ops_run WITH EMPTY KEY.
         INSERT counted_run( iv_run_id = gc_run-early iv_ended_at = ltd_rows=>seconds_ago( lc_two_hours ) )
                INTO TABLE lt_runs.
         go_env->insert_test_data( i_data = lt_runs ).
-        ls_cfg-pe_area         = zif_cd_ops_types=>gc_pe_area-ebs.
-        ls_cfg-stale_after_min = lc_minutes.
-        INSERT ls_cfg INTO TABLE lt_cfg.
-        go_env->insert_test_data( i_data = lt_cfg ).
+        ls_def-area          = zif_cd_ops_types=>gc_param_area-ops.
+        ls_def-name          = |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }{ zif_cd_ops_types=>gc_pe_area-ebs }|.
+        ls_def-kind          = zif_ca_param_types=>gc_kind-single.
+        ls_def-value_type    = zif_ca_param_types=>gc_value_type-int.
+        ls_def-default_value = |{ gc_stale_minutes }|.
+        INSERT ls_def INTO TABLE lt_def.
+        go_env->insert_test_data( i_data = lt_def ).
+        ls_val-area = ls_def-area.
+        ls_val-name = ls_def-name.
+        ls_val-numb = 1.
+        ls_val-sign = zif_ca_param_types=>gc_sign-include.
+        ls_val-opti = zif_ca_param_types=>gc_option-eq.
+        ls_val-low  = |{ lc_minutes }|.
+        INSERT ls_val INTO TABLE lt_val.
+        go_env->insert_test_data( i_data = lt_val ).
 
         SELECT SINGLE isstale, staleafterminutes FROM zr_cd_ebsasof INTO @DATA(ls_row).
 

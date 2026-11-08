@@ -19,6 +19,8 @@
 *& 2026-11-07 | Persisted verdicts (ZCD_HCK_RESULT, design review): green without metric, filtered run with
 *&            | scope and SKIPPED rows, warm-up next to a fixed limit = report, failed check never green.
 *& 2026-11-07 | no_evidence_check_is_grey: evidence NONE (A_RECON_3WAY without any leg) is grey, not GREEN.
+*& 2026-11-08 | Table consolidation: stale threshold from MON_STALE_AFTER_MIN_FMON - delivered default,
+*&            | maintained value, refused value keeps the hours rule (replace the ZCD_OPS_MONCFG tests).
 *&---------------------------------------------------------------------*
 CLASS ltd_store DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -178,7 +180,6 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_thresholds TYPE zif_cd_hck_types=>tt_threshold.
     DATA mv_metric_saves TYPE i.
     DATA mt_suppressions TYPE zif_cd_hck_suppress_types=>tt_suppression.
-    DATA mt_moncfg TYPE zif_cd_hck_types=>tt_monitor_cfg.
     "! Verdict rows saved (ZCD_HCK_RESULT)
     DATA mt_results TYPE zif_cd_hck_types=>tt_result_row.
 ENDCLASS.
@@ -209,10 +210,6 @@ CLASS ltd_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_open_exceptions.
     CLEAR rt_exceptions.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_dao~get_monitor_cfg.
-    rt_cfg = mt_moncfg.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~get_suppressions.
@@ -273,8 +270,8 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
         warmup_metric   TYPE abap_bool,
         "! FMON's last run started two hours before now
         fmon_two_hours  TYPE abap_bool,
-        "! ZCD_OPS_MONCFG row of FMON (minutes; 0 = no row)
-        fmon_moncfg_min TYPE i,
+        "! Value row of MON_STALE_AFTER_MIN_FMON (blank = the delivered definition default)
+        fmon_stale      TYPE string,
         "! Warm-up baseline next to a fixed (static) limit that the value passes
         warmup_fixed    TYPE abap_bool,
         "! The run selects only the red check (check-id filter)
@@ -284,6 +281,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
       END OF ty_flags.
 
     CONSTANTS gc_two_hours_sec TYPE i VALUE 7200.
+    "! Stale threshold of FMON (core parameter, was ZCD_OPS_MONCFG) and a value ZCA_PARAM refuses (INT)
+    CONSTANTS gc_fmon_stale_param TYPE zif_cd_ops_types=>ty_param_name VALUE 'MON_STALE_AFTER_MIN_FMON'.
+    CONSTANTS gc_not_an_integer TYPE string VALUE `FIFTEEN`.
     DATA mo_store TYPE REF TO ltd_store.
     DATA mo_alert TYPE REF TO ltd_alert.
     DATA mo_clock TYPE REF TO ltd_clock.
@@ -303,8 +303,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS real_run_persists_dispatches FOR TESTING.
     METHODS mail_goes_to_morning_route FOR TESTING.
     METHODS stale_area_fails_self FOR TESTING.
-    METHODS moncfg_threshold_wins FOR TESTING.
-    METHODS no_moncfg_keeps_hours_rule FOR TESTING.
+    METHODS stale_default_from_definition FOR TESTING.
+    METHODS stale_value_row_wins FOR TESTING.
+    METHODS unreadable_stale_keeps_hours FOR TESTING.
     METHODS category_rag_and_score FOR TESTING.
     METHODS alerts_sent_after_commit FOR TESTING.
     METHODS held_lock_skips_run FOR TESTING.
@@ -464,9 +465,9 @@ CLASS ltc_engine IMPLEMENTATION.
       ls_last_run-rag        = gc_green.
       INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
       ls_last_run-started_at = ltd_clock=>gc_base.
-      IF is_flags-fmon_moncfg_min > 0.
-        INSERT VALUE #( pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor
-                        stale_after_min = is_flags-fmon_moncfg_min ) INTO TABLE mo_dao->mt_moncfg.
+      IF is_flags-fmon_stale IS NOT INITIAL.
+        mo_store->mo_params->set( iv_name  = gc_fmon_stale_param
+                                  iv_value = is_flags-fmon_stale ).
       ENDIF.
       IF is_flags-ebs_never_ran = abap_false.
         ls_last_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
@@ -655,34 +656,57 @@ CLASS ltc_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a ZCD_OPS_MONCFG row decides the self-check (same threshold as the dashboards):
-  " FMON two hours old is stale with 15 minutes, although HCK_MAX_AGE_HOURS (26 h) is not reached
-  METHOD moncfg_threshold_wins.
-    CONSTANTS lc_fmon_min TYPE i VALUE 15.
+  " Rule (table consolidation 2026-11-08): the parameter MON_STALE_AFTER_MIN_FMON replaces the
+  " ZCD_OPS_MONCFG row; its delivered definition default (15 minutes, the dashboards' value) decides
+  " the self-check: FMON two hours old is stale although HCK_MAX_AGE_HOURS (26 h) is not reached
+  METHOD stale_default_from_definition.
     TRY.
-        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true
-                                     fmon_moncfg_min = lc_fmon_min ) ).
+        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true ) ).
         DATA(ls_report) = act( ).
         DATA(ls_fmon) = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ].
         cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale exp = abap_true
-                                            msg = 'FMON must be stale after the configured 15 minutes' ).
-        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale_after_min exp = lc_fmon_min
-                                            msg = 'The configured threshold must be reported' ).
+                                            msg = 'FMON must be stale after the delivered 15 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale_after_min
+                                            exp = zif_cd_fmon_types=>gc_dashboard-stale_after_min
+                                            msg = 'The definition default (dashboard value) is reported' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: without a ZCD_OPS_MONCFG row the hours rule (HCK_MAX_AGE_HOURS, 26 h) is unchanged
-  METHOD no_moncfg_keeps_hours_rule.
+  " Rule: a maintained value of MON_STALE_AFTER_MIN_FMON wins over the definition default
+  METHOD stale_value_row_wins.
+    CONSTANTS lc_fmon_min TYPE i VALUE 600.
     TRY.
-        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true ) ).
+        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true
+                                     fmon_stale = |{ lc_fmon_min }| ) ).
+        DATA(ls_report) = act( ).
+        DATA(ls_fmon) = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ].
+        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale exp = abap_false
+                                            msg = 'Two hours is within the maintained 600 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_fmon-stale_after_min exp = lc_fmon_min
+                                            msg = 'The maintained threshold must be reported' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a value the framework refuses (not an integer) is never silent and never 'stale after 0':
+  " the hours rule (HCK_MAX_AGE_HOURS, 26 h) applies and the error is listed (PARAM_INVALID)
+  METHOD unreadable_stale_keeps_hours.
+    TRY.
+        configure_scenario( VALUE #( include_pe_areas = abap_true fmon_two_hours = abap_true
+                                     fmon_stale = gc_not_an_integer ) ).
         DATA(ls_report) = act( ).
         cl_abap_unit_assert=>assert_equals(
           act = ls_report-pe_areas[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]-stale
           exp = abap_false
           msg = 'Two hours is within the default 26 hours' ).
+        DATA(lt_errors) = mo_store->mo_params->params( )->get_errors( ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_errors[ name = gc_fmon_stale_param ] ) )
+                                          msg = 'The refused value is listed as a parameter error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -4,7 +4,7 @@
 *& The suite's runtime parameters (ZIF_CD_OPS_PARAMS) over the global
 *& parameter framework ZCA_PARAM (ZIF_CA_PARAM from ZCL_CA_PARAM_FACTORY).
 *& The area comes from the name prefix (ALERT_ SLA_ RETENTION_ PURGE_
-*& TRACE_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK);
+*& TRACE_ PAYOUT_ MON_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK);
 *& names are unchanged. A value the framework resolves wins over the
 *& caller's default (single source of defaults = the definition); BOOL is
 *& X or blank (a blank row = off). A ZCX_CA_PARAM is never silent: it is
@@ -15,6 +15,8 @@
 *& 2026-11-07 | Initial version (parameters moved from ZCD_OPS_PARAM to ZCA_PARAM).
 *& 2026-11-07 | No SLG1 entry per run and parameter (SLG1 minimum); errors in get_errors( ) and PARAM_INVALID.
 *& 2026-11-07 | Prefix PAYOUT_ -> CD_OPS (payment outcome snapshot parameters).
+*& 2026-11-08 | Prefix MON_ -> CD_OPS (monitor freshness MON_STALE_AFTER_MIN_<area>, table consolidation; was
+*&            | ZCD_OPS_MONCFG).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CD_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -97,6 +99,7 @@ CLASS zcl_cd_ops_params_ca IMPLEMENTATION.
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-purge     area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-trace     area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-payout    area = zif_cd_ops_types=>gc_param_area-ops )
+                      ( prefix = zif_cd_ops_types=>gc_param_area_prefix-monitor   area = zif_cd_ops_types=>gc_param_area-ops )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-ebs       area = zif_cd_ops_types=>gc_param_area-ebs )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-fmon      area = zif_cd_ops_types=>gc_param_area-fmon )
                       ( prefix = zif_cd_ops_types=>gc_param_area_prefix-hck       area = zif_cd_ops_types=>gc_param_area-hck ) ).

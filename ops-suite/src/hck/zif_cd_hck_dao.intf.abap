@@ -19,6 +19,8 @@
 *& 2026-11-07 | get_monitor_cfg (ZCD_OPS_MONCFG, DEFAULT IGNORE for existing doubles).
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_monitor_cfg (ZCD_OPS_MONCFG) removed - the stale threshold per area
+*&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -271,12 +273,6 @@ INTERFACE zif_cd_hck_dao
       VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
     RAISING
       zcx_cd_ops_error.
-
-  "! Monitor freshness per area (ZCD_OPS_MONCFG, rows with a positive threshold): the
-  "! self-check reads it first, so it agrees with the dashboards' "as of" views
-  METHODS get_monitor_cfg DEFAULT IGNORE
-    RETURNING
-      VALUE(rt_cfg) TYPE zif_cd_hck_types=>tt_monitor_cfg.
 
   "! Active suppressions (status A, today within the period) - design 6.3
   METHODS get_suppressions DEFAULT IGNORE

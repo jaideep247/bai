@@ -172,7 +172,7 @@ SPEC = {
         ]),
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
-        title='Alerting, freshness and approved tables', tables=[
+        title='Alerting and approved tables', tables=[
             ('zcd_ops_alrule', 'AlertRule', 'zcd_d_alrule', 'Alert rule', 'Alert rules', [],
              [('enum', 'pe_area', ',*,EBS,FMON,HCK'), ('enum', 'min_severity', ',' + SEV),
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
@@ -180,10 +180,8 @@ SPEC = {
               ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
             ('zcd_ops_alchn', 'AlertChannel', 'zcd_d_alchn', 'Channel', 'Alert channels', [],
              [('class', 'class_name', 'ZIF_CD_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination')]),
-            # Runtime parameters are maintained in the framework app ZUI_CA_PARAM (ZCA_PARAM), not here
-            # Stale threshold per monitor: the dashboards and the HCK self-check read the same row
-            ('zcd_ops_moncfg', 'MonitorCfg', 'zcd_d_moncfg', 'Monitor freshness', 'Monitor freshness', [],
-             [('enum', 'pe_area', 'EBS,FMON,HCK'), ('positive', 'stale_after_min')]),
+            # Runtime parameters are maintained in the framework app ZUI_CA_PARAM (ZCA_PARAM), not here -
+            # also the stale threshold per monitor (MON_STALE_AFTER_MIN_<area>, was ZCD_OPS_MONCFG, 2026-11-08)
             # Table consolidation 2026-11-08: one approved-table list for every dynamic reader (was
             # ZCD_FMON_TABWL, ZCD_HCK_TABWL, ZCD_HCK_DRIFT) - a cross-area security boundary, so it
             # lives in the core app; area + purpose say which reader may use a row

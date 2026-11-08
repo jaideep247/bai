@@ -33,6 +33,8 @@
 *& 2026-11-07 | save_results: verdict of each check per run (ZCD_HCK_RESULT, design review).
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_monitor_cfg (ZCD_OPS_MONCFG) removed - the stale threshold per area
+*&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -761,14 +763,6 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             previous = lx_digest.
     ENDTRY.
     rv_hash = lv_hash.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_dao~get_monitor_cfg.
-    SELECT pe_area, stale_after_min
-      FROM zcd_ops_moncfg
-      WHERE stale_after_min > 0
-      ORDER BY pe_area
-      INTO CORRESPONDING FIELDS OF TABLE @rt_cfg.
   ENDMETHOD.
 
 

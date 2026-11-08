@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_OPSCFGALL</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Alerting, freshness and approved tables (all)</DDTEXT>
+    <DDTEXT>Alerting and approved tables (all)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

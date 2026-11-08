@@ -2,10 +2,11 @@
 // Purpose: Monitor freshness per payment engine area for the production-support overview page
 //          (docs/Dashboard_Production_Support.md): the "as of" rows of the three batch monitors in
 //          one shape - FMON (ZR_CD_FmonAsOf: last completed full run), EBS (ZR_CD_EbsAsOf), HCK
-//          (ZR_CD_HckAsOf) - with the threshold each applies (ZCD_OPS_MONCFG, else 15 min / 26 h). The transactions dashboard is live (no monitor run) and has no row. Read-only.
+//          (ZR_CD_HckAsOf) - with the threshold each applies (ZCA_PARAM MON_STALE_AFTER_MIN_<area>, else 15 min / 26 h). The transactions dashboard is live (no monitor run) and has no row. Read-only.
 // Modification log: 2026-11-06 | Initial version (production-support overview page).
 //                   2026-11-06 | FMON threshold 15 min (native SAP job every 5 min).
 //                   2026-11-07 | Thresholds from the as-of views (ZCD_OPS_MONCFG), no literal here.
+//                   2026-11-08 | Table consolidation: the as-of views read ZCA_PARAM (ZI_CD_OpsStaleCfg).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Monitor freshness per area (union)'
 @Metadata.ignorePropagatedAnnotations: true

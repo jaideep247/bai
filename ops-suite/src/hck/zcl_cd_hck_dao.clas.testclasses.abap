@@ -21,6 +21,8 @@
 *& 2026-11-07 | check_result_saved_by_key (ZCD_HCK_RESULT doubled, design review).
 *& 2026-11-08 | Table consolidation: whitelist and drift rows in ZCD_OPS_TABWL; purpose filtering (READ vs
 *&            | DRIFT vs FMON SOURCE).
+*& 2026-11-08 | Table consolidation: monitor_cfg_positive_only removed with get_monitor_cfg (ZCD_OPS_MONCFG
+*&            | retired).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -741,7 +743,6 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
     METHODS applog_stats_per_object FOR TESTING.
     METHODS open_exceptions_oldest_first FOR TESTING.
     METHODS alert_stats_in_window FOR TESTING.
-    METHODS monitor_cfg_positive_only FOR TESTING.
 ENDCLASS.
 
 
@@ -752,7 +753,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
       i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' ) ( 'ZCD_HCK_AGGGRP' )
                                    ( 'ZCD_OPS_TABWL' ) ( 'ZCD_HCK_BASELINE' )
                                    ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_JOB_STEP' ) ( 'BALHDR' )
-                                   ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ( 'ZCD_OPS_MONCFG' ) ) ).
+                                   ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ) ).
   ENDMETHOD.
 
 
@@ -766,32 +767,6 @@ CLASS ltc_dao_reads IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
     go_env->clear_doubles( ).
     mo_cut = NEW zcl_cd_hck_dao( ).
-  ENDMETHOD.
-
-
-  " Rule: monitor freshness rows with a positive threshold, one per area (ZCD_OPS_MONCFG)
-  METHOD monitor_cfg_positive_only.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_ops_moncfg.
-    DATA lt_exp TYPE zif_cd_hck_types=>tt_monitor_cfg.
-    DATA ls_exp TYPE zif_cd_hck_types=>ty_monitor_cfg.
-    TRY.
-        ls_row-pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor.
-        ls_row-stale_after_min = 15.
-        INSERT ls_row INTO TABLE lt_rows.
-        ls_row-pe_area         = zif_cd_ops_types=>gc_pe_area-ebs.
-        ls_row-stale_after_min = 0.
-        INSERT ls_row INTO TABLE lt_rows.
-        go_env->insert_test_data( lt_rows ).
-        ls_exp-pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor.
-        ls_exp-stale_after_min = 15.
-        INSERT ls_exp INTO TABLE lt_exp.
-        cl_abap_unit_assert=>assert_equals( act = mo_cut->get_monitor_cfg( )
-                                            exp = lt_exp
-                                            msg = 'Only rows with a positive threshold are read' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
   ENDMETHOD.
 
 

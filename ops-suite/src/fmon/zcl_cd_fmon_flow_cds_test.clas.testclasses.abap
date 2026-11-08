@@ -15,6 +15,9 @@
 *& 2026-11-06 | Initial version (FMON file monitoring dashboard).
 *& 2026-11-06 | Modern-syntax sweep: test helper LTD_ROWS.
 *& 2026-11-07 | moncfg_threshold_applies: ZCD_OPS_MONCFG threshold of FMON (base dependency doubled).
+*& 2026-11-08 | Table consolidation: moncfg_threshold_applies with the definition default of
+*&            | MON_STALE_AFTER_MIN_FMON and no value row (ZCA_PARAM_DEF doubled as base dependency of
+*&            | ZI_CD_OpsStaleCfg).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -846,23 +849,28 @@ CLASS ltc_as_of IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: ZCD_OPS_MONCFG decides (600 minutes): a run two hours old is not stale, although the
-  " delivered 15 minutes would make it stale
+  " Rule: the definition default of MON_STALE_AFTER_MIN_FMON decides when no value row is maintained
+  " (here a landscape definition of 600 minutes; table consolidation 2026-11-08, was ZCD_OPS_MONCFG):
+  " a run two hours old is not stale, although the CDS fallback 15 minutes would make it stale
   METHOD moncfg_threshold_applies.
     CONSTANTS lc_minutes TYPE i VALUE 600.
     CONSTANTS lc_two_hours TYPE i VALUE 7200.
-    DATA lt_cfg TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
-    DATA ls_cfg TYPE zcd_ops_moncfg.
+    DATA lt_def TYPE STANDARD TABLE OF zca_param_def WITH EMPTY KEY.
+    DATA ls_def TYPE zca_param_def.
     TRY.
         GET TIME STAMP FIELD DATA(lv_now).
         add_run( iv_run_id   = gc_run-r1
                  iv_status   = zif_cd_ops_types=>gc_run_status-success
                  iv_ended_at = cl_abap_tstmp=>subtractsecs( tstmp = CONV timestampl( lv_now ) secs = lc_two_hours ) ).
         persist( ).
-        ls_cfg-pe_area         = zif_cd_ops_types=>gc_pe_area-file_monitor.
-        ls_cfg-stale_after_min = lc_minutes.
-        INSERT ls_cfg INTO TABLE lt_cfg.
-        go_env->insert_test_data( i_data = lt_cfg ).
+        ls_def-area          = zif_cd_ops_types=>gc_param_area-ops.
+        ls_def-name          = |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }{
+                                  zif_cd_ops_types=>gc_pe_area-file_monitor }|.
+        ls_def-kind          = zif_ca_param_types=>gc_kind-single.
+        ls_def-value_type    = zif_ca_param_types=>gc_value_type-int.
+        ls_def-default_value = |{ lc_minutes }|.
+        INSERT ls_def INTO TABLE lt_def.
+        go_env->insert_test_data( i_data = lt_def ).
 
         SELECT SINGLE isstale, staleafterminutes FROM zr_cd_fmonasof INTO @DATA(ls_row).
         cl_abap_unit_assert=>assert_subrc( exp = 0 msg = 'The row must exist' ).
