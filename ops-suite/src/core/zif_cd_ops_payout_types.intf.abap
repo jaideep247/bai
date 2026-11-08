@@ -345,6 +345,8 @@ INTERFACE zif_cd_ops_payout_types
   TYPES tt_check_code_range TYPE RANGE OF zif_cd_ops_types=>ty_check_code.
   TYPES tt_date_range TYPE RANGE OF d.
   TYPES tt_pymet_range TYPE RANGE OF zif_cd_hck_runtime_types=>ty_pymet.
+  "! FINAL_FROM of a query that counts no final outcome (no run date reaches it)
+  CONSTANTS gc_no_final_from TYPE d VALUE '99991231'.
 
   "! Which current versions an aggregate read covers
   TYPES:
@@ -471,6 +473,8 @@ INTERFACE zif_cd_ops_payout_types
       evidence_text    TYPE zif_cd_ops_types=>ty_msgno VALUE '756',
       "! &1 run date &2: &3 payment(s) - &4
       aggregated       TYPE zif_cd_ops_types=>ty_msgno VALUE '757',
+      "! Amount &1 &2
+      amount_currency  TYPE zif_cd_ops_types=>ty_msgno VALUE '758',
       "! First &1 of &2 payment(s), oldest first:
       examples_head    TYPE zif_cd_ops_types=>ty_msgno VALUE '759',
       "! Full list: transactions dashboard or ZCD_PAY_OUTCOME current versions, finding &1, run date &2

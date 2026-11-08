@@ -29,6 +29,7 @@
 *&            | purpose).
 *& 2026-11-08 | Table consolidation: parameters MON_STALE_AFTER_MIN_<area> (area prefix MON_ -> CD_OPS; was
 *&            | ZCD_OPS_MONCFG).
+*& 2026-11-08 | GC_RANGE-SIGN_EXCLUDE (a range that leaves a value out, e.g. the PAY_STATUS_PENDING marker).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -168,6 +169,7 @@ INTERFACE zif_cd_ops_types
   CONSTANTS:
     BEGIN OF gc_range,
       sign_include TYPE c LENGTH 1 VALUE 'I',
+      sign_exclude TYPE c LENGTH 1 VALUE 'E',
       option_equal TYPE c LENGTH 2 VALUE 'EQ',
     END OF gc_range.
   TYPES ty_variant     TYPE c LENGTH 30.

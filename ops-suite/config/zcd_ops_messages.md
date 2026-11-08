@@ -294,6 +294,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 371 | Job step &1/&2: job name pattern &3 is not valid PCRE - not evaluated |
 | 372 | Suppression for &1: key pattern &2 is not valid PCRE - not applied |
 | 373 | Check &1: pattern &2 in the parameters is not valid PCRE |
+| 374 | &1 not yet snapshotted, &2 attribution ambiguous: evaluated live |
 | 375 | Check &1: PARAM1 (number range objects) is not maintained |
 | 376 | Number range &1 interval &2: &3 % used, &4 numbers left |
 | 377 | Number range object &1 has no internal interval for &2 or &3 |
@@ -492,6 +493,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 755 | Outcome of payment &1 could not be evaluated: |
 | 756 | evidence &1: &2 |
 | 757 | &1 run date &2: &3 payment(s) - &4 |
+| 758 | Amount &1 &2 |
 | 759 | First &1 of &2 payment(s), oldest first: |
 | 760 | Full list: transactions dashboard / ZCD_PAY_OUTCOME, &1, run date &2 |
 | 761 | Outcome snapshot &1 min behind (limit &2): &3 processed up to &4 |

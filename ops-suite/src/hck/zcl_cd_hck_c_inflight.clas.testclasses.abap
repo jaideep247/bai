@@ -40,6 +40,16 @@
 *&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
 *& 2026-11-08 | Table consolidation: house-bank calendar as ZCD_HCK_PMCLASS row with HBKID; override for its
 *&            | own bank only (other_bank_uses_class_calendar), calendars asked recorded by the DAO double.
+*& 2026-11-08 | Scale (2 million payments a peak day): the payments of the scenarios below are not yet
+*&            | snapshotted (outcome DAO double: fresh watermark, no current version) and are judged live
+*&            | through the evaluator, as before; findings are aggregated per flow + class + code + run
+*&            | date (examples in the details, reference = flow + class), PAYOUT_EXAMPLES replaces
+*&            | PARAM4, the latest DPAYH run of a document counts once. New: the aggregate path (current
+*&            | versions grouped on HANA) - a wire 30 business days old is still counted (no window),
+*&            | 100 000 payments with one finding give one finding with count 100 000 and N examples,
+*&            | marker PAY_STATUS_PENDING after the grace is PAY_STATUS_LAG, final outcomes only within
+*&            | the window, a stale or never-run snapshot is PAY_SNAPSHOT_STALE with evidence PARTIAL,
+*&            | snapshotted documents are not evaluated live (PAY_NOT_SNAPSHOT counts the others).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -268,6 +278,58 @@ CLASS ltd_evidence IMPLEMENTATION.
 ENDCLASS.
 
 
+"! Outcome snapshot repository: watermarks, current versions grouped (aggregate path), examples,
+"! candidates; payments of the runtime DAO double not snapshotted are evaluated live by the check
+CLASS ltd_outcome_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_pay_outcome_dao PARTIALLY IMPLEMENTED.
+    DATA mo_runtime TYPE REF TO ltd_runtime_dao.
+    DATA mt_watermarks TYPE zif_cd_ops_payout_types=>tt_watermark.
+    DATA mt_groups TYPE zif_cd_ops_payout_types=>tt_outcome_group.
+    DATA mt_examples TYPE zif_cd_ops_payout_types=>tt_outcome_example.
+    DATA mt_rows TYPE zif_cd_ops_payout_types=>tt_outcome_example.
+    "! Payment documents with a current version: never evaluated live
+    DATA mt_snapshotted TYPE zif_cd_ops_trace_types=>tt_docno.
+    "! The query of the last aggregate read
+    DATA ms_query TYPE zif_cd_ops_payout_types=>ty_group_query.
+ENDCLASS.
+
+CLASS ltd_outcome_dao IMPLEMENTATION.
+  METHOD zif_cd_ops_pay_outcome_dao~get_watermarks.
+    rt_watermarks = mt_watermarks.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_unsnapshotted.
+    LOOP AT mo_runtime->mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>) WHERE laufd >= iv_from.
+      IF line_exists( it_methods[ table_line = <ls_payment>-pymet ] )
+         AND NOT line_exists( mt_snapshotted[ table_line = <ls_payment>-doc1r ] ).
+        INSERT <ls_payment>-doc1r INTO TABLE rt_docno.
+      ENDIF.
+      IF lines( rt_docno ) >= iv_max.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_ambiguous_only.
+    CLEAR rt_docno.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_outcome_groups.
+    ms_query = is_query.
+    rt_groups = mt_groups.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_outcome_examples.
+    rt_examples = mt_examples.
+  ENDMETHOD.
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_outcome_rows.
+    rt_rows = mt_rows.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_inflight DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -294,6 +356,10 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       gc_holiday  TYPE d VALUE '20261110',
       gc_monday   TYPE d VALUE '20261109',
       gc_friday   TYPE d VALUE '20261106',
+      "! DOCUMENTS watermark date of the snapshot double (live window from the day before)
+      gc_wm_date  TYPE d VALUE '20260101',
+      "! 31 days before today: 30 business days in the US test calendar (Tuesday 2026-11-10 a holiday)
+      gc_old_wire TYPE d VALUE '20261011',
       gc_doc1     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300001',
       gc_doc2     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300002',
       gc_doc3     TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300003',
@@ -350,6 +416,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       END OF gc_key.
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
+    DATA mo_out TYPE REF TO ltd_outcome_dao.
     DATA mo_trace TYPE REF TO ltd_trace_dao.
     DATA mo_fmon TYPE REF TO ltd_fmon_dao.
     DATA mo_hck_dao TYPE REF TO ltd_hck_dao.
@@ -373,7 +440,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS empty_data_measures_zero    FOR TESTING.
     METHODS method_in_two_classes_raises FOR TESTING.
     METHODS limits_missing_warns        FOR TESTING.
-    METHODS read_cap_and_top_n          FOR TESTING.
+    METHODS read_cap_and_examples       FOR TESTING.
     METHODS reversed_payment_excluded   FOR TESTING.
     METHODS currencies_never_summed     FOR TESTING.
     " rule combination
@@ -422,6 +489,22 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS file_ack_group_unconfigured  FOR TESTING.
     METHODS file_ack_two_runs_apart      FOR TESTING.
     METHODS ack_levels_in_one_run        FOR TESTING.
+    " aggregate path (current versions of the outcome snapshot grouped on HANA)
+    METHODS agg_old_wire_still_counted  FOR TESTING.
+    METHODS agg_100k_one_finding        FOR TESTING.
+    METHODS agg_pending_marker_lags     FOR TESTING.
+    METHODS agg_excluded_in_window      FOR TESTING.
+    METHODS stale_snapshot_partial      FOR TESTING.
+    METHODS never_run_snapshot_partial  FOR TESTING.
+    METHODS snapshotted_not_live        FOR TESTING.
+    "! A group of current versions of wires (method E, flow D) of one run date
+    METHODS add_group
+      IMPORTING
+        iv_laufd    TYPE d
+        iv_outcome  TYPE zif_cd_ops_payout_types=>ty_outcome
+        iv_payments TYPE i
+        iv_finding  TYPE zif_cd_ops_types=>ty_check_code OPTIONAL
+        iv_due      TYPE abap_bool DEFAULT abap_false.
     "! A collection ACH payment in flight (test kind A finds nothing) of a Friday run with its status
     METHODS add_collection
       IMPORTING
@@ -507,8 +590,8 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS act
       IMPORTING
         iv_calendar      TYPE zif_cd_hck_types=>ty_param DEFAULT gc_calendar
-        iv_top_n         TYPE zif_cd_hck_types=>ty_param OPTIONAL
         iv_time          TYPE t OPTIONAL
+        iv_fresh         TYPE abap_bool DEFAULT abap_true
       RETURNING
         VALUE(rs_result) TYPE zif_cd_hck_types=>ty_check_result
       RAISING
@@ -542,6 +625,10 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD setup.
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
+    " Outcome snapshot: no current version yet - every scenario payment is judged live
+    mo_out = NEW #( ).
+    mo_out->mo_runtime = mo_dao.
+    zcl_cd_ops_injector=>inject_pay_outcome_dao( mo_out ).
     mo_hck_dao = NEW #( ).
     INSERT VALUE #( calendar = gc_calendar date = gc_holiday ) INTO TABLE mo_hck_dao->mt_holidays.
     INSERT VALUE #( calendar = gc_uk date = gc_monday ) INTO TABLE mo_hck_dao->mt_holidays.
@@ -604,7 +691,7 @@ CLASS ltc_inflight IMPLEMENTATION.
     zcl_cd_hck_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
     zcl_cd_fmon_injector=>reset( ).
-    CLEAR: mo_dao, mo_trace, mo_fmon, mo_hck_dao, mo_params, mt_thresholds, mo_ev_a, mo_ev_b, mo_ev_c.
+    CLEAR: mo_dao, mo_out, mo_trace, mo_fmon, mo_hck_dao, mo_params, mt_thresholds, mo_ev_a, mo_ev_b, mo_ev_c.
   ENDMETHOD.
 
 
@@ -758,7 +845,14 @@ CLASS ltc_inflight IMPLEMENTATION.
     DATA ls_context TYPE zif_cd_hck_types=>ty_context.
     ls_def-check_id        = gc_check.
     ls_def-param1          = iv_calendar.
-    ls_def-param4          = iv_top_n.
+    " The snapshot ran now (lag 0): its DOCUMENTS watermark is from January, so the live window covers
+    " every scenario payment that has no current version
+    IF iv_fresh = abap_true.
+      DELETE mo_out->mt_watermarks WHERE source = zif_cd_ops_payout_types=>gc_source-documents.
+      INSERT VALUE #( source     = zif_cd_ops_payout_types=>gc_source-documents
+                      wm_date    = gc_wm_date
+                      current_to = local_ts( iv_date = gc_today iv_time = iv_time ) ) INTO TABLE mo_out->mt_watermarks.
+    ENDIF.
     ls_context-report_date = gc_today.
     ls_context-now_date    = gc_today.
     ls_context-now_time    = iv_time.
@@ -966,8 +1060,9 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD empty_data_measures_zero.
     TRY.
         DATA(ls_result) = act( ).
-        " 5 classes x (4 counts + PAY_INCONSISTENT + PAY_EXCLUDED of CLEARED)
-        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 30 msg = 'Six metrics x five keys' ).
+        " 5 classes x (4 counts + PAY_INCONSISTENT + PAY_UNDETERMINED + PAY_STATUS_LAG + PAY_NOT_SNAPSHOT
+        " + PAY_EXCLUDED of CLEARED)
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 45 msg = 'Nine metrics x five keys' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
         cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_calls exp = 0 msg = 'No payments: no evidence read' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1016,18 +1111,22 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a read that reaches HCK_INFLIGHT_MAX_ROWS is reported; PARAM4 limits the listed payments
-  METHOD read_cap_and_top_n.
+  " Rule: a live read that reaches HCK_INFLIGHT_MAX_ROWS is reported; PAYOUT_EXAMPLES (ZCA_PARAM, was
+  " PARAM4) limits the examples of a finding, the count stays complete
+  METHOD read_cap_and_examples.
     TRY.
         mo_params->set( iv_name = zif_cd_hck_runtime_types=>gc_param-inflight_max_rows iv_value = '2' ).
+        mo_params->set( iv_name = zif_cd_ops_payout_types=>gc_param-examples iv_value = '1' ).
         add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
         add_payment( iv_doc = gc_doc2 iv_valut = gc_friday ).
-        DATA(ls_result) = act( iv_top_n = '1' ).
+        DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ] ) )
           msg = 'Cap reached: reported' ).
-        SPLIT finding( ls_result )-details AT cl_abap_char_utilities=>newline INTO TABLE DATA(lt_lines).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 1 msg = 'Top 1 listed' ).
+        DATA(ls_late) = finding( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = xsdbool( lists( is_finding = ls_late iv_doc = gc_doc1 ) )
+                                            exp = xsdbool( NOT lists( is_finding = ls_late iv_doc = gc_doc2 ) )
+                                            msg = 'One example listed' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-warn_count )
                                             exp = 2 msg = 'Counts are complete' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1728,7 +1827,8 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Shared fixture: a wire paid in two DPAYH runs is cleared (both run rows of the window excluded)
+  " Shared fixture: a wire paid in two DPAYH runs is cleared - the latest run of the document counts
+  " once (as the snapshot and the trace judge it)
   METHOD fixture_two_runs_cleared.
     TRY.
         DATA(lo_fixture) = load_fixtures( ).
@@ -1738,15 +1838,15 @@ CLASS ltc_inflight IMPLEMENTATION.
         LOOP AT lo_fixture->scenarios( ) ASSIGNING FIELD-SYMBOL(<ls_scenario>) WHERE pymet = zcl_cd_ops_pay_fixture=>gc_wire.
           CASE <ls_scenario>-evaluated.
             WHEN zif_cd_ops_payout_types=>gc_outcome-cleared.
-              lv_cleared = lv_cleared + lines( <ls_scenario>-runs ).
+              lv_cleared = lv_cleared + 1.
             WHEN zif_cd_ops_payout_types=>gc_outcome-in_flight.
-              lv_in_flight = lv_in_flight + lines( <ls_scenario>-runs ).
+              lv_in_flight = lv_in_flight + 1.
           ENDCASE.
         ENDLOOP.
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
                                                           iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
-                                            exp = lv_cleared msg = 'Every cleared wire run row excluded' ).
+                                            exp = lv_cleared msg = 'Every cleared wire excluded once' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
                                             exp = lv_in_flight msg = 'Only the wire whose status is not updated in flight' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1853,11 +1953,11 @@ CLASS ltc_inflight IMPLEMENTATION.
           INSERT <ls_finding> INTO TABLE lt_lag.
         ENDLOOP.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging payment in the fixtures' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( lv_doc )
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = lv_doc )
                                             msg = 'The return whose status lags' ).
         cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
                                             msg = 'Warning' ).
-        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-message
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details
                                                                sub = condense( gc_status-confirmed ) ) >= 0 )
                                           msg = 'The status that did not follow is named' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
@@ -1927,7 +2027,7 @@ CLASS ltc_inflight IMPLEMENTATION.
           INSERT <ls_finding> INTO TABLE lt_lag.
         ENDLOOP.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only the old ACK with status ISSUED' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = gc_doc1 )
                                             msg = 'Payment 1' ).
         cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 1 msg = 'One ACK read' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -2009,11 +2109,11 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( iv_time = gc_morning ).
         DATA(lt_lag) = lags( ls_result ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging collection' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = gc_doc1 )
                                             msg = 'The collection whose status lags' ).
         cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
                                             msg = 'Warning' ).
-        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-message sub = condense( gc_status-issued ) ) >= 0 )
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = condense( gc_status-issued ) ) >= 0 )
                                           msg = 'The status that did not follow is named' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = `ACH_COLL_FILE_1.txt` ) >= 0 )
                                           msg = 'The acknowledged file is named' ).
@@ -2090,7 +2190,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( iv_time = gc_morning ).
         DATA(lt_lag) = lags( ls_result ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only run A lags' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = gc_doc1 )
                                             msg = 'Payment of run A' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = `ACH_COLL_FILE_2.txt` ) >= 0 )
                                           msg = 'The regenerated file decides' ).
@@ -2155,7 +2255,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( iv_time = gc_morning ).
         DATA(lt_lag) = lags( ls_result ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only run A lags' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_lag[ 1 ] iv_doc = gc_doc1 )
                                             msg = 'Payment of run A' ).
         cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 1 msg = 'One FMON read' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_fmon->mt_keys ) exp = 2 msg = 'Both groups in it' ).
@@ -2234,6 +2334,198 @@ CLASS ltc_inflight IMPLEMENTATION.
                 msg = |{ <ls_scenario>-id }: excluded by the check as { ls_verdict-purpose }| ).
           ENDCASE.
         ENDLOOP.
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD add_group.
+    DATA ls_group TYPE zif_cd_ops_payout_types=>ty_outcome_group.
+    ls_group-xeinz      = abap_false.
+    ls_group-pymet      = gc_wire.
+    ls_group-laufd      = iv_laufd.
+    ls_group-valut      = iv_laufd.
+    ls_group-currency   = gc_usd.
+    ls_group-outcome    = iv_outcome.
+    ls_group-finding    = iv_finding.
+    ls_group-pay_status = gc_status-confirmed.
+    ls_group-due        = iv_due.
+    ls_group-payments   = iv_payments.
+    ls_group-amount     = abs( gc_amount ) * iv_payments.
+    INSERT ls_group INTO TABLE mo_out->mt_groups.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): every payment not yet final is counted from the snapshot, however old - a wire
+  " 30 business days after its value date is in flight, late and critical; no look-back window, no
+  " live evaluation for it
+  METHOD agg_old_wire_still_counted.
+    TRY.
+        add_group( iv_laufd = gc_old_wire iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight iv_payments = 3 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 3 msg = 'Three old wires in flight' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest )
+                                            exp = 30 msg = '30 business days, still counted' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-crit_count )
+                                            exp = 3 msg = 'Critical' ).
+        DATA(ls_late) = finding( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = ls_late-object_key
+                                            exp = |{ gc_check }/{ gc_key-d_wire }/| &&
+                                                  |{ zif_cd_hck_runtime_types=>gc_code-payment_not_clear }/{ gc_old_wire }|
+                                            msg = 'One finding per flow + class + code + run date, stable key' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_late-severity exp = zif_cd_ops_types=>gc_severity-error
+                                            msg = 'Critical: error' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_late-amount exp = abs( gc_amount ) * 3 msg = 'Amount of the day' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_out->ms_query-all_ages[ low = zif_cd_ops_payout_types=>gc_outcome-in_flight ] ) )
+          msg = 'In flight counted however old' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_calls exp = 0 msg = 'Nothing judged live' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): 100 000 payments with the same finding on one run date are one finding row with
+  " the count 100 000, the amount and the first PAYOUT_EXAMPLES (10) payments, oldest first
+  METHOD agg_100k_one_finding.
+    DATA ls_example TYPE zif_cd_ops_payout_types=>ty_outcome_example.
+    TRY.
+        add_group( iv_laufd    = gc_friday
+                   iv_outcome  = zif_cd_ops_payout_types=>gc_outcome-inconsistent
+                   iv_payments = 100000
+                   iv_finding  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
+        DO 12 TIMES.
+          ls_example-doc1r    = |0000005{ sy-index WIDTH = 5 ALIGN = RIGHT PAD = '0' }|.
+          ls_example-laufd    = gc_friday.
+          ls_example-pymet    = gc_wire.
+          ls_example-valut    = gc_friday + sy-index.
+          ls_example-currency = gc_usd.
+          ls_example-amount   = abs( gc_amount ).
+          ls_example-outcome  = zif_cd_ops_payout_types=>gc_outcome-inconsistent.
+          ls_example-finding  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
+          INSERT ls_example INTO TABLE mo_out->mt_examples.
+        ENDDO.
+        DATA(ls_result) = act( ).
+        DATA(lt_rows) = VALUE zif_cd_ops_types=>tt_finding( ).
+        LOOP AT ls_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
+             WHERE check_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
+          INSERT <ls_finding> INTO TABLE lt_rows.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One finding row' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_rows[ 1 ]-message sub = `100000` ) >= 0 )
+                                          msg = 'Count 100 000 in the message' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-inconsistent )
+                                            exp = 100000 msg = 'PAY_INCONSISTENT' ).
+        DATA(lv_listed) = 0.
+        LOOP AT mo_out->mt_examples ASSIGNING FIELD-SYMBOL(<ls_example>).
+          IF lists( is_finding = lt_rows[ 1 ] iv_doc = <ls_example>-doc1r ) = abap_true.
+            lv_listed = lv_listed + 1.
+          ENDIF.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = lv_listed exp = zif_cd_ops_payout_types=>gc_param_default-examples
+                                            msg = 'N examples' ).
+        cl_abap_unit_assert=>assert_true( act = lists( is_finding = lt_rows[ 1 ] iv_doc = mo_out->mt_examples[ 1 ]-doc1r )
+                                          msg = 'The oldest first' ).
+        cl_abap_unit_assert=>assert_false( act = lists( is_finding = lt_rows[ 1 ] iv_doc = mo_out->mt_examples[ 12 ]-doc1r )
+                                           msg = 'The youngest beyond N not listed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a version marked PAY_STATUS_PENDING whose grace has passed (DUE) is PAY_STATUS_LAG; not yet due
+  " is silent; both stay in flight
+  METHOD agg_pending_marker_lags.
+    TRY.
+        add_group( iv_laufd    = gc_friday
+                   iv_outcome  = zif_cd_ops_payout_types=>gc_outcome-in_flight
+                   iv_payments = 2
+                   iv_finding  = zif_cd_ops_payout_types=>gc_code-status_pending
+                   iv_due      = abap_true ).
+        add_group( iv_laufd    = gc_monday
+                   iv_outcome  = zif_cd_ops_payout_types=>gc_outcome-in_flight
+                   iv_payments = 1
+                   iv_finding  = zif_cd_ops_payout_types=>gc_code-status_pending ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lt_lag) = lags( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lag finding (Friday)' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag )
+                                            exp = 2 msg = 'Two payments lag' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 3 msg = 'All three in flight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a final outcome counts for PAY_EXCLUDED within the look-back window of the class only
+  METHOD agg_excluded_in_window.
+    TRY.
+        add_group( iv_laufd = gc_friday iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared iv_payments = 4 ).
+        add_group( iv_laufd = gc_old_wire iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared iv_payments = 7 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
+                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+                                            exp = 4 msg = 'Only the run within the window' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
+                                            exp = 0 msg = 'Cleared payments are not in flight' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): a snapshot behind more than MON_STALE_AFTER_MIN_CORE (30) is said - warning
+  " PAY_SNAPSHOT_STALE, evidence PARTIAL: never green on stale data
+  METHOD stale_snapshot_partial.
+    TRY.
+        INSERT VALUE #( source     = zif_cd_ops_payout_types=>gc_source-documents
+                        wm_date    = gc_wm_date
+                        current_to = local_ts( iv_date = gc_today iv_time = '060000' ) ) INTO TABLE mo_out->mt_watermarks.
+        DATA(ls_result) = act( iv_time = gc_morning iv_fresh = abap_false ).
+        cl_abap_unit_assert=>assert_equals(
+          act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-snapshot_stale ]-severity OPTIONAL )
+          exp = zif_cd_ops_types=>gc_severity-warning
+          msg = 'Two hours behind: stale' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-evidence exp = zif_cd_hck_types=>gc_evidence-partial
+                                            msg = 'Evidence PARTIAL' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a snapshot that never ran is stale too (no outcome is current)
+  METHOD never_run_snapshot_partial.
+    TRY.
+        DATA(ls_result) = act( iv_fresh = abap_false ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-snapshot_stale ] ) )
+          msg = 'Never run: stale' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-evidence exp = zif_cd_hck_types=>gc_evidence-partial
+                                            msg = 'Evidence PARTIAL' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a payment document with a current version is counted from the snapshot, never judged live;
+  " only the document the snapshot has not reached is evaluated live (PAY_NOT_SNAPSHOT)
+  METHOD snapshotted_not_live.
+    TRY.
+        add_payment( iv_doc = gc_doc1 iv_valut = gc_today ).
+        add_payment( iv_doc = gc_doc2 iv_valut = gc_today ).
+        INSERT gc_doc1 INTO TABLE mo_out->mt_snapshotted.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_asked exp = 1 msg = 'Only the new document judged live' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-not_snapshot )
+                                            exp = 1 msg = 'Not yet snapshotted: one' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

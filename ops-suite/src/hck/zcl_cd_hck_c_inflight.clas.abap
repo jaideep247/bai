@@ -5,23 +5,30 @@
 *& still in flight, per flow (D disbursement / C collection,
 *& TFK042Z-XEINZ) and method class (configuration ZCD_HCK_PMCLASS: payment
 *& methods, ageing basis, calendar; rows with HBKID: calendar per house
-*& bank). What takes a payment out of flight is configuration
-*& (ZCD_HCK_CLRRULE): per flow + class and purpose (VOIDED, RETURNED,
-*& RETRIEVED, PENDING, CLEARED, IN_FLIGHT - the first purpose with evidence decides)
-*& the rows name evidence plug-ins (ZIF_CD_HCK_EVIDENCE) that must hold
-*& (X mandatory, indicates the purpose; C mandatory corroboration) or must
-*& not hold (N, mandatory); blank rows are informational. All rows hold =
-*& excluded (counted per purpose; IN_FLIGHT: stays in flight); some but not
-*& all = CLEARING_INCONSISTENT / RETURN_INCONSISTENT naming what held; a
-*& mandatory row whose kind is not configured or not usable leaves the
-*& purpose undetermined (CLEARING_UNDETERMINED, no later purpose decides,
-*& the payment stays in flight); an anomaly of an evidence (unexpected bank code sequence, returns
-*& lot mismatch, pending outcome overdue, Stripe refund) is its own
-*& finding. Payments without a decision are aged: VALUE_DATE classes in
-*& business days after the value date (run date when missing), ISSUE_DATE
-*& classes in calendar days after the run date. Reversed payments
-*& (DFKKKO-STBEL) are excluded. One batch read per evidence kind; read-only.
-*& The decision per payment is the canonical evaluator ZIF_CD_OPS_PAY_OUTCOME.
+*& bank). The verdict of every payment is the canonical outcome of the
+*& shared evaluator ZIF_CD_OPS_PAY_OUTCOME (rules ZCD_HCK_CLRRULE, evidence
+*& plug-ins): CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING excluded,
+*& IN_FLIGHT and UNDETERMINED aged, INCONSISTENT listed. Since 2026-11-08 the
+*& check counts EVERY payment not yet final from the current versions of
+*& ZCD_PAY_OUTCOME (5-minute snapshot), aggregated on HANA with DPAYH by key
+*& - no row cap and no look-back window for payments in flight, however
+*& old; final outcomes count for PAY_EXCLUDED within the look-back windows.
+*& Ageing as before: VALUE_DATE classes in business days after the value
+*& date (run date when missing) by the house bank / class / PARAM1 calendar,
+*& ISSUE_DATE classes in calendar days after the run date; the calendars are
+*& read once per run into a day table per calendar and applied to the
+*& groups, never per payment. Only payment documents the snapshot has not
+*& reached yet (no current version, runs since the DOCUMENTS watermark) and
+*& payments whose versions all say AMBIGUOUS are evaluated live, bounded by
+*& HCK_INFLIGHT_MAX_ROWS (metric PAY_NOT_SNAPSHOT). A snapshot behind more
+*& than MON_STALE_AFTER_MIN_CORE is said (PAY_SNAPSHOT_STALE, evidence
+*& PARTIAL): never GREEN on stale data. Findings are aggregated: one per
+*& flow + method class + finding code + payment run date with the count,
+*& the amount per currency and the first PAYOUT_EXAMPLES payments (oldest
+*& first). PAY_STATUS_LAG: (b) the version marked PAY_STATUS_PENDING longer
+*& than HCK_PAY_STATUS_LAG_MIN, (a) the bank ACK of the payment or of the
+*& file of its run older than the grace while the status is still ISSUED.
+*& Read-only.
 *& Modification log:
 *& 2026-11-07 | Initial version (payments in flight, morning report).
 *& 2026-11-07 | Both flows (D / C); wire / ACH aged from the value date in business days (user change).
@@ -56,15 +63,25 @@
 *&            | all is FMON's finding, not a lag. Reads FMON through its factory only (one-way).
 *& 2026-11-08 | Table consolidation: house-bank calendars are ZCD_HCK_PMCLASS rows with HBKID (ZCD_HCK_PMBANK
 *&            | merged); resolution bank row, class row, PARAM1, none - unchanged.
+*& 2026-11-08 | Scale (2 million payments a peak day, user 2026-11-08): every payment in flight counted from
+*&            | the current versions of ZCD_PAY_OUTCOME grouped on HANA (ZIF_CD_OPS_PAY_OUTCOME_DAO=>
+*&            | GET_OUTCOME_GROUPS) - no row cap, no look-back window for outcomes not final; calendars
+*&            | as day tables per calendar and run; live evaluation only for documents not yet snapshotted
+*&            | and AMBIGUOUS-only payments (PAY_NOT_SNAPSHOT); stale snapshot = PAY_SNAPSHOT_STALE W and
+*&            | evidence PARTIAL (MON_STALE_AFTER_MIN_CORE); findings aggregated per flow + method class
+*&            | + code + run date with count, amount per currency and the first PAYOUT_EXAMPLES payments
+*&            | (PARAM4 retired); PAY_STATUS_LAG (b) from the version marker PAY_STATUS_PENDING (grace
+*&            | from its VALID_FROM), (a) per file from the grouped runs, (a) per payment from the
+*&            | candidates still ISSUED (bounded by HCK_INFLIGHT_MAX_ROWS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
-"! days of VALUE_DATE classes (default 10), PARAM3 = look-back days of ISSUE_DATE classes
-"! (default 120), PARAM4 = payments listed per finding (default 10). Metrics per flow + class
+"! days of VALUE_DATE classes for PAY_EXCLUDED and the live evaluation before the first snapshot
+"! (default 10), PARAM3 = the same for ISSUE_DATE classes (default 120). Metrics per flow + class
 "! (DIM1, e.g. DWIR): PAY_OPEN, AGE_OLDEST (level), OVER_WARN_CNT, OVER_CRIT_CNT,
 "! OVER_WARN_AMT / OVER_CRIT_AMT (DIM2 currency, never summed across currencies),
-"! PAY_EXCLUDED (DIM2 purpose) and PAY_INCONSISTENT. Warning / critical = AMBER / RED of
-"! AGE_OLDEST in ZCD_HCK_THRESH (age at which the payment is late).
+"! PAY_EXCLUDED (DIM2 purpose), PAY_INCONSISTENT, PAY_UNDETERMINED, PAY_STATUS_LAG,
+"! PAY_NOT_SNAPSHOT. Warning / critical = AMBER / RED of AGE_OLDEST in ZCD_HCK_THRESH.
 CLASS zcl_cd_hck_c_inflight DEFINITION
   PUBLIC
   FINAL
@@ -87,37 +104,66 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         undetermined TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_UNDETERMINED',
         "! Payments in flight whose DPAYH status did not follow the bank evidence / ACK in time
         status_lag   TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_STATUS_LAG',
+        "! Payment documents the outcome snapshot has not reached yet: evaluated live in this run
+        not_snapshot TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_NOT_SNAPSHOT',
       END OF gc_metric.
 
   PRIVATE SECTION.
-    "! A payment listed in an inconsistency or anomaly finding
     TYPES:
-      BEGIN OF ty_listed,
-        key      TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        code     TYPE zif_cd_ops_types=>ty_check_code,
-        severity TYPE zif_cd_ops_types=>ty_severity,
-        laufd    TYPE d,
+      BEGIN OF ty_amount,
+        currency TYPE zif_cd_ops_types=>ty_currency,
+        amount   TYPE zif_cd_ops_types=>ty_amount,
+      END OF ty_amount.
+    TYPES tt_amount TYPE SORTED TABLE OF ty_amount WITH UNIQUE KEY currency.
+
+    "! An example payment of a finding (oldest first: reference date, then payment document)
+    TYPES:
+      BEGIN OF ty_example,
+        ref_date TYPE d,
         doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno,
         line     TYPE string,
-      END OF ty_listed.
-    TYPES tt_listed TYPE STANDARD TABLE OF ty_listed WITH EMPTY KEY.
+      END OF ty_example.
+    TYPES tt_example TYPE STANDARD TABLE OF ty_example WITH EMPTY KEY.
 
-    "! A payment not cleared, with its age (business or calendar days) and its verdict
+    "! One aggregated finding: flow + method class, finding code, payment run date
     TYPES:
-      BEGIN OF ty_open,
+      BEGIN OF ty_cell,
         key      TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        age      TYPE i,
-        doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno,
-        pymet    TYPE zif_cd_hck_runtime_types=>ty_pymet,
-        laufd    TYPE d,
-        ref_date TYPE d,
-        no_valut TYPE abap_bool,
-        amount   TYPE zif_cd_ops_types=>ty_amount,
+        day      TYPE d,
+        code     TYPE zif_cd_ops_types=>ty_check_code,
+        severity TYPE zif_cd_ops_types=>ty_severity,
+        payments TYPE i,
+        "! Late payments: critical ones and the oldest age
+        crit     TYPE i,
+        oldest   TYPE i,
+        amounts  TYPE tt_amount,
+        examples TYPE tt_example,
+      END OF ty_cell.
+    TYPES tt_cell TYPE HASHED TABLE OF ty_cell WITH UNIQUE KEY key day code.
+
+    "! Counts per flow + method class (metrics)
+    TYPES:
+      BEGIN OF ty_stat,
+        key          TYPE zif_cd_hck_runtime_types=>ty_flow_class,
+        open         TYPE i,
+        oldest       TYPE i,
+        warn         TYPE i,
+        crit         TYPE i,
+        inconsistent TYPE i,
+        undetermined TYPE i,
+        lag          TYPE i,
+        live         TYPE i,
+      END OF ty_stat.
+    TYPES tt_stat TYPE HASHED TABLE OF ty_stat WITH UNIQUE KEY key.
+
+    TYPES:
+      BEGIN OF ty_late_amount,
+        key      TYPE zif_cd_hck_runtime_types=>ty_flow_class,
         currency TYPE zif_cd_ops_types=>ty_currency,
-        warn     TYPE abap_bool,
-        crit     TYPE abap_bool,
-      END OF ty_open.
-    TYPES tt_open TYPE STANDARD TABLE OF ty_open WITH EMPTY KEY.
+        warn     TYPE zif_cd_hck_types=>ty_value,
+        crit     TYPE zif_cd_hck_types=>ty_value,
+      END OF ty_late_amount.
+    TYPES tt_late_amount TYPE HASHED TABLE OF ty_late_amount WITH UNIQUE KEY key currency.
 
     TYPES:
       BEGIN OF ty_excluded,
@@ -127,23 +173,29 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       END OF ty_excluded.
     TYPES tt_excluded TYPE HASHED TABLE OF ty_excluded WITH UNIQUE KEY key purpose.
 
+    "! AGE_OLDEST limits of a watched flow + class (SET = amber or red maintained)
     TYPES:
-      BEGIN OF ty_working_day,
+      BEGIN OF ty_limit,
+        key   TYPE zif_cd_hck_runtime_types=>ty_flow_class,
+        limit TYPE zif_cd_hck_types=>ty_threshold,
+        set   TYPE abap_bool,
+      END OF ty_limit.
+    TYPES tt_limit TYPE HASHED TABLE OF ty_limit WITH UNIQUE KEY key.
+
+    "! Business days per calendar: working days in ( DATE, today ], built once per run downwards
+    TYPES:
+      BEGIN OF ty_cum,
         calendar TYPE zif_cd_hck_types=>ty_calendar,
         date     TYPE d,
-        working  TYPE abap_bool,
-      END OF ty_working_day.
-    TYPES tt_working_day TYPE HASHED TABLE OF ty_working_day WITH UNIQUE KEY calendar date.
-
-    "! A payment whose DPAYH status did not follow the bank evidence or the bank ACK in time
+        days     TYPE i,
+      END OF ty_cum.
+    TYPES tt_cum TYPE HASHED TABLE OF ty_cum WITH UNIQUE KEY calendar date.
     TYPES:
-      BEGIN OF ty_lag,
-        doc1r   TYPE zif_cd_hck_runtime_types=>ty_docno,
-        key     TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        message TYPE string,
-        detail  TYPE string,
-      END OF ty_lag.
-    TYPES tt_lag TYPE SORTED TABLE OF ty_lag WITH UNIQUE KEY doc1r.
+      BEGIN OF ty_cal_low,
+        calendar TYPE zif_cd_hck_types=>ty_calendar,
+        low      TYPE d,
+      END OF ty_cal_low.
+    TYPES tt_cal_low TYPE HASHED TABLE OF ty_cal_low WITH UNIQUE KEY calendar.
 
     "! Oldest bank ACK of a payment (configured ACK source)
     TYPES:
@@ -168,15 +220,6 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         ifaces TYPE tt_iface_id,
       END OF ty_file_link.
 
-    "! ACK of the file of a payment's run: the latest of the ACKs of the latest generations
-    TYPES:
-      BEGIN OF ty_file_ack,
-        doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
-        ack_at TYPE timestampl,
-        text   TYPE string,
-      END OF ty_file_ack.
-    TYPES tt_file_ack TYPE HASHED TABLE OF ty_file_ack WITH UNIQUE KEY doc1r.
-
     "! ACK of a generation group: OPEN = a latest generation without ACK (FMON's finding, not judged)
     TYPES:
       BEGIN OF ty_group_time,
@@ -187,137 +230,246 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       END OF ty_group_time.
     TYPES tt_group_time TYPE HASHED TABLE OF ty_group_time WITH UNIQUE KEY gen_group.
 
+    "! Payments in flight still ISSUED of a run acknowledged per file (versioned groups and live payments)
+    TYPES:
+      BEGIN OF ty_run_part,
+        key       TYPE zif_cd_hck_runtime_types=>ty_flow_class,
+        laufd     TYPE d,
+        laufi     TYPE c LENGTH 6,
+        hbkid     TYPE zif_cd_hck_runtime_types=>ty_hbkid,
+        currency  TYPE zif_cd_ops_types=>ty_currency,
+        payments  TYPE i,
+        amount    TYPE zif_cd_ops_types=>ty_amount,
+        "! A live payment (its example line is written here)
+        payment   TYPE zif_cd_hck_runtime_types=>ty_issued_payment,
+        status    TYPE string,
+        gen_group TYPE zif_cd_fmon_types=>ty_file_ref,
+      END OF ty_run_part.
+    TYPES tt_run_part TYPE STANDARD TABLE OF ty_run_part WITH EMPTY KEY.
+
     DATA mo_outcome TYPE REF TO zif_cd_ops_pay_outcome.
+    DATA mo_dao TYPE REF TO zif_cd_ops_pay_outcome_dao.
+    DATA ms_def TYPE zif_cd_hck_types=>ty_check_def.
     DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
     "! Calendar overrides per house bank (ZCD_HCK_PMCLASS rows with HBKID)
     DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_class.
     DATA mt_methods TYPE zif_cd_ops_payout_types=>tt_method.
     DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
     DATA mt_watched TYPE zif_cd_ops_payout_types=>tt_flow_class.
-    DATA mt_working TYPE tt_working_day.
-    DATA mt_listed TYPE tt_listed.
+    DATA mt_limits TYPE tt_limit.
+    DATA mt_cum TYPE tt_cum.
+    DATA mt_cal_low TYPE tt_cal_low.
+    DATA mt_cells TYPE tt_cell.
+    DATA mt_stats TYPE tt_stat.
+    DATA mt_late_amounts TYPE tt_late_amount.
     DATA mt_excluded TYPE tt_excluded.
+    DATA mt_run_parts TYPE tt_run_part.
+    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA ms_link TYPE ty_file_link.
+    DATA mt_file_classes TYPE string_table.
+    DATA mt_ack_open TYPE string_table.
+    DATA mt_no_ack TYPE string_table.
     DATA mv_calendar TYPE zif_cd_hck_types=>ty_calendar.
     DATA mv_cap TYPE i.
-    DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    DATA mv_examples TYPE i.
+    DATA mv_today TYPE d.
+    DATA mv_value_from TYPE d.
+    DATA mv_issue_from TYPE d.
+    DATA mv_grace TYPE i.
+    "! Instant before which a status evidence / ACK is overdue (now - grace)
+    DATA mv_limit TYPE timestampl.
+    DATA mv_no_valut TYPE i.
+    DATA mv_ambiguous_live TYPE i.
+    DATA mv_partial TYPE abap_bool.
 
     METHODS load_configuration
-      IMPORTING
-        is_def    TYPE zif_cd_hck_types=>ty_check_def
       CHANGING
         cs_result TYPE zif_cd_hck_types=>ty_check_result
       RAISING
         zcx_cd_ops_error.
 
-    METHODS read_payments
+    "! Parameters of the run: examples, status-lag grace and ACK lists, windows, AGE_OLDEST limits
+    METHODS read_settings
       IMPORTING
-        iv_basis           TYPE zif_cd_hck_runtime_types=>ty_age_basis
-        iv_from            TYPE d
-        iv_to              TYPE d
-        is_def             TYPE zif_cd_hck_types=>ty_check_def
+        is_context    TYPE zif_cd_hck_types=>ty_context
+        it_thresholds TYPE zif_cd_hck_types=>tt_threshold.
+
+    "! The snapshot lag: stale (or never run) = PAY_SNAPSHOT_STALE and evidence PARTIAL; returns the
+    "! DOCUMENTS watermark date (start of the live window), initial when none
+    METHODS check_snapshot
+      IMPORTING
+        is_context        TYPE zif_cd_hck_types=>ty_context
       RETURNING
-        VALUE(rt_payments) TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+        VALUE(rv_wm_date) TYPE d.
+
+    "! Query of the aggregate reads: the watched methods, outcomes counted however old
+    METHODS base_query
+      RETURNING
+        VALUE(rs_query) TYPE zif_cd_ops_payout_types=>ty_group_query.
+
+    "! Every current version grouped on HANA: aged, listed, excluded, lagging
+    METHODS read_aggregate.
+
+    "! Payment documents not yet snapshotted (and AMBIGUOUS-only payments): evaluated live, bounded
+    METHODS read_live
+      IMPORTING
+        iv_wm_date TYPE d.
+
+    "! (a) per payment: the versioned candidates still ISSUED and the live ones - bank ACK older than
+    "! the grace; (a) per file: the runs of the classes acknowledged per file
+    METHODS read_ack_lags
+      IMPORTING
+        it_live   TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+        it_status TYPE zcl_cd_hck_ev_support=>tt_pay_status.
+
+    "! The first PAYOUT_EXAMPLES payments of every finding from the current versions (one read)
+    METHODS read_examples.
+
+    "! A group of payments in flight aged: counts, late cell; the age is returned
+    METHODS add_open
+      IMPORTING
+        iv_key         TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_day         TYPE d
+        iv_ref_date    TYPE d
+        iv_no_valut    TYPE abap_bool
+        iv_calendar    TYPE zif_cd_hck_types=>ty_calendar
+        iv_payments    TYPE i
+        iv_amount      TYPE zif_cd_ops_types=>ty_amount
+        iv_currency    TYPE zif_cd_ops_types=>ty_currency
+      RETURNING
+        VALUE(rv_age)  TYPE i.
+
+    METHODS add_cell
+      IMPORTING
+        iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_day      TYPE d
+        iv_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_payments TYPE i
+        iv_amount   TYPE zif_cd_ops_types=>ty_amount
+        iv_currency TYPE zif_cd_ops_types=>ty_currency.
+
+    "! An example of an existing cell, kept when it is among the first PAYOUT_EXAMPLES (oldest first)
+    METHODS add_example
+      IMPORTING
+        iv_key      TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_day      TYPE d
+        iv_code     TYPE zif_cd_ops_types=>ty_check_code
+        iv_ref_date TYPE d
+        iv_doc1r    TYPE zif_cd_hck_runtime_types=>ty_docno
+        iv_line     TYPE string.
+
+    METHODS stat
+      IMPORTING
+        iv_key         TYPE zif_cd_hck_runtime_types=>ty_flow_class
+      RETURNING
+        VALUE(rr_stat) TYPE REF TO ty_stat.
+
+    "! Flow + method class of a method and flow indicator; blank when the class is not watched
+    METHODS key_of
+      IMPORTING
+        iv_pymet      TYPE zif_cd_hck_runtime_types=>ty_pymet
+        iv_xeinz      TYPE abap_bool
+      RETURNING
+        VALUE(rv_key) TYPE zif_cd_hck_runtime_types=>ty_flow_class.
+
+    "! ISSUE_DATE class: calendar days after the run date
+    METHODS is_issue_basis
+      IMPORTING
+        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
+
+    "! Run date inside the look-back window of the class (PAY_EXCLUDED)
+    METHODS in_window
+      IMPORTING
+        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_laufd      TYPE d
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
 
     "! Calendar of the payment: house bank row, method class, PARAM1 of the check
     METHODS calendar_of
       IMPORTING
-        is_payment         TYPE zif_cd_hck_runtime_types=>ty_issued_payment
+        iv_key             TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_hbkid           TYPE zif_cd_hck_runtime_types=>ty_hbkid
       RETURNING
         VALUE(rv_calendar) TYPE zif_cd_hck_types=>ty_calendar.
 
+    "! Age of a payment: business days after the reference date (calendar), as before - working days
+    "! in ( max( reference date, today - 400 ), today ], from the day table of the calendar
     METHODS business_days
       IMPORTING
         iv_after       TYPE d
-        iv_today       TYPE d
         iv_calendar    TYPE zif_cd_hck_types=>ty_calendar
       RETURNING
         VALUE(rv_days) TYPE i.
 
-    METHODS report
+    "! RAG of an age against AGE_OLDEST of the flow + class (initial: limits not maintained)
+    METHODS rag_of
       IMPORTING
-        it_open       TYPE tt_open
-        it_thresholds TYPE zif_cd_hck_types=>tt_threshold
-        is_def        TYPE zif_cd_hck_types=>ty_check_def
-      CHANGING
-        cs_result     TYPE zif_cd_hck_types=>ty_check_result.
+        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
+        iv_age        TYPE i
+      RETURNING
+        VALUE(rv_rag) TYPE zif_cd_ops_types=>ty_rag.
 
-    "! Inconsistency and anomaly findings (one per flow / class and code, oldest payments first)
-    METHODS report_listed
+    "! Detail line of a payment: document, method, run date, aged-from date, age, amount
+    METHODS payment_line
       IMPORTING
-        is_def    TYPE zif_cd_hck_types=>ty_check_def
-        iv_top_n  TYPE i
+        iv_doc1r       TYPE zif_cd_hck_runtime_types=>ty_docno
+        iv_pymet       TYPE zif_cd_hck_runtime_types=>ty_pymet
+        iv_laufd       TYPE d
+        iv_ref_date    TYPE d
+        iv_no_valut    TYPE abap_bool
+        iv_age         TYPE i
+        iv_amount      TYPE zif_cd_ops_types=>ty_amount
+        iv_currency    TYPE zif_cd_ops_types=>ty_currency
+      RETURNING
+        VALUE(rv_line) TYPE string.
+
+    METHODS report
       CHANGING
         cs_result TYPE zif_cd_hck_types=>ty_check_result.
 
-    "! PAY_STATUS_LAG: one finding per payment in flight whose DPAYH status did not follow the bank
-    "! evidence (verdict STATUS_PENDING) or its bank ACK within HCK_PAY_STATUS_LAG_MIN; metric per
-    "! watched flow + class. No read per payment (shared status read, one ACK read)
-    METHODS report_status_lag
-      IMPORTING
-        it_payments   TYPE zif_cd_hck_runtime_types=>tt_issued_payment
-        is_evaluation TYPE zif_cd_ops_payout_types=>ty_evaluation
-        is_def        TYPE zif_cd_hck_types=>ty_check_def
-        is_context    TYPE zif_cd_hck_types=>ty_context
+    "! One finding per cell: count, amount per currency, examples, drill-down
+    METHODS report_cells
       CHANGING
-        cs_result     TYPE zif_cd_hck_types=>ty_check_result.
+        cs_result TYPE zif_cd_hck_types=>ty_check_result.
 
     "! Oldest bank ACK (not a NACK, with a date) of each payment from the configured payment-level
     "! ACK source TRACE_SRC_ACK (the payment trace's link: KEY = clearing reference; DATE / TIME)
     METHODS acks_of
       IMPORTING
         it_payments    TYPE zif_cd_hck_runtime_types=>tt_issued_payment
-        is_def         TYPE zif_cd_hck_types=>ty_check_def
       EXPORTING
         ev_has_time    TYPE abap_bool
-      CHANGING
-        cs_result      TYPE zif_cd_hck_types=>ty_check_result
       RETURNING
         VALUE(rt_acks) TYPE tt_ack.
 
     "! File-level ACK link of the run (FMON source HCK_PAY_ACK_FILE_SRC: GROUP_FIELDS -> DPAYH run
     "! fields; interfaces). Not usable: one INFLIGHT_CONFIG W per run (the case is not evaluable)
     METHODS file_ack_link
-      IMPORTING
-        is_def         TYPE zif_cd_hck_types=>ty_check_def
-      CHANGING
-        cs_result      TYPE zif_cd_hck_types=>ty_check_result
       RETURNING
         VALUE(rs_link) TYPE ty_file_link.
 
     "! The one finding of a file-level link that is not usable
     METHODS file_ack_unusable
       IMPORTING
-        is_def     TYPE zif_cd_hck_types=>ty_check_def
-        iv_message TYPE string
-      CHANGING
-        cs_result  TYPE zif_cd_hck_types=>ty_check_result.
+        iv_message TYPE string.
 
-    "! ACK of the file of each payment's run: generation group key of the payment run (built as FMON
-    "! builds it), one FMON read for all payments, the latest generation of each interface of the group
-    "! (a replaced file never counts) must have its ACK; the latest of these ACKs counts. No entry =
-    "! no ACK (FMON's finding) or no group key
-    METHODS file_acks_of
-      IMPORTING
-        it_payments    TYPE zif_cd_hck_runtime_types=>tt_issued_payment
-        is_link        TYPE ty_file_link
+    "! ACK of the files of generation groups: one FMON read for all groups, the latest generation of
+    "! each interface of a group (a replaced file never counts) must have its ACK; the latest of these
+    "! ACKs counts. A group without entry or OPEN = no ACK (FMON's finding)
+    METHODS group_acks
       RETURNING
-        VALUE(rt_acks) TYPE tt_file_ack.
+        VALUE(rt_acks) TYPE tt_group_time.
 
-    "! PAY_STATUS_LAG of payments acknowledged per file whose file ACK is older than the grace
-    METHODS file_lags
-      IMPORTING
-        it_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment
-        is_link     TYPE ty_file_link
-        it_status   TYPE zcl_cd_hck_ev_support=>tt_pay_status
-        iv_limit    TYPE timestampl
-        iv_grace    TYPE i
-      CHANGING
-        ct_lag      TYPE tt_lag.
-
-    "! Value of a DPAYH payment run field of the payment, unformatted as FMON reads a source field
+    "! Value of a DPAYH payment run field, unformatted as FMON reads a source field
     CLASS-METHODS run_value
       IMPORTING
-        is_payment      TYPE zif_cd_hck_runtime_types=>ty_issued_payment
+        iv_laufd        TYPE d
+        iv_laufi        TYPE clike
+        iv_hbkid        TYPE clike
         iv_field        TYPE string
       RETURNING
         VALUE(rv_value) TYPE string.
@@ -336,8 +488,7 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
     "! Read capped: listed once per read (findings of the reads are collected in MT_FINDINGS)
     METHODS capped
       IMPORTING
-        iv_table TYPE clike
-        is_def   TYPE zif_cd_hck_types=>ty_check_def.
+        iv_table TYPE clike.
 
 ENDCLASS.
 
@@ -346,131 +497,44 @@ ENDCLASS.
 CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
   METHOD zif_cd_hck_check~execute.
-    DATA lt_open TYPE tt_open.
-    DATA lv_no_valut TYPE i.
-
-    CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_watched, mt_working, mt_listed,
-           mt_excluded, mt_findings.
+    CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_watched, mt_limits, mt_cum, mt_cal_low, mt_cells,
+           mt_stats, mt_late_amounts, mt_excluded, mt_run_parts, mt_findings, ms_link, mv_no_valut,
+           mv_ambiguous_live, mv_partial.
+    ms_def = is_def.
+    mv_today = is_context-now_date.
     mv_calendar = to_upper( condense( is_def-param1 ) ).
     mv_cap = zcl_cd_hck_param=>row_cap( iv_name    = zif_cd_hck_runtime_types=>gc_param-inflight_max_rows
                                         iv_default = zif_cd_hck_runtime_types=>gc_param_default-inflight_max_rows
                                         iv_ceiling = zif_cd_hck_runtime_types=>gc_max_inflight_rows ).
-    " The canonical evaluator (shared with the payment trace and the transactions dashboard)
+    " The canonical evaluator (shared with the payment trace and the transactions dashboard) and the
+    " current versions it wrote (5-minute snapshot)
     mo_outcome = zcl_cd_ops_factory=>get_pay_outcome( ).
-    load_configuration( EXPORTING is_def    = is_def
-                        CHANGING  cs_result = rs_result ).
-    DATA(lv_today) = is_context-now_date.
-    DATA(lv_days) = nmax( val1 = 1
-                          val2 = zcl_cd_hck_param=>int( iv_value   = is_def-param2
-                                                        iv_default = zif_cd_hck_runtime_types=>gc_check_default-inflight_days ) ).
-    DATA(lv_issue_days) = nmax( val1 = 1
-                                val2 = zcl_cd_hck_param=>int( iv_value   = is_def-param3
-                                                              iv_default = zif_cd_hck_runtime_types=>gc_check_default-cheque_days ) ).
+    mo_dao     = zcl_cd_ops_factory=>get_pay_outcome_dao( ).
+    load_configuration( CHANGING cs_result = rs_result ).
+    read_settings( is_context    = is_context
+                   it_thresholds = it_thresholds ).
+    DATA(lv_wm_date) = check_snapshot( is_context ).
 
-    " Two bounded windows (one read each, never one per payment): by ageing basis
-    DATA(lt_read) = read_payments( iv_basis = zif_cd_hck_runtime_types=>gc_age_basis-value_date
-                                   iv_from  = CONV d( lv_today - lv_days )
-                                   iv_to    = lv_today
-                                   is_def   = is_def ).
-    INSERT LINES OF read_payments( iv_basis = zif_cd_hck_runtime_types=>gc_age_basis-issue_date
-                                   iv_from  = CONV d( lv_today - lv_issue_days )
-                                   iv_to    = lv_today
-                                   is_def   = is_def ) INTO TABLE lt_read.
+    " Every payment not yet final from the snapshot (HANA groups), the rest live (bounded)
+    read_aggregate( ).
+    read_live( lv_wm_date ).
+    read_examples( ).
 
-    " One verdict per payment, in the order of the payments (reversed payments: not in flight)
-    DATA(ls_evaluation) = mo_outcome->evaluate( lt_read ).
-    INSERT LINES OF ls_evaluation-findings INTO TABLE mt_findings.
-
-    LOOP AT lt_read ASSIGNING FIELD-SYMBOL(<ls_payment>).
-      DATA(ls_verdict) = ls_evaluation-verdicts[ sy-tabix ].
-      DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ <ls_payment>-flow }{ <ls_payment>-class }| ).
-      LOOP AT ls_verdict-listings ASSIGNING FIELD-SYMBOL(<ls_listing>).
-        INSERT VALUE #( key      = lv_key
-                        code     = <ls_listing>-code
-                        severity = <ls_listing>-severity
-                        laufd    = <ls_payment>-laufd
-                        doc1r    = <ls_payment>-doc1r
-                        line     = <ls_listing>-line ) INTO TABLE mt_listed.
-      ENDLOOP.
-      CASE ls_verdict-status.
-        WHEN zif_cd_ops_payout_types=>gc_status-excluded.
-          READ TABLE mt_excluded ASSIGNING FIELD-SYMBOL(<ls_excluded>)
-               WITH TABLE KEY key = lv_key purpose = ls_verdict-purpose.
-          IF sy-subrc <> 0.
-            INSERT VALUE #( key = lv_key purpose = ls_verdict-purpose ) INTO TABLE mt_excluded ASSIGNING <ls_excluded>.
-          ENDIF.
-          <ls_excluded>-count = <ls_excluded>-count + 1.
-          CONTINUE.
-        WHEN zif_cd_ops_payout_types=>gc_status-open.
-          " In flight (also undetermined): aged below
-        WHEN OTHERS.
-          " Inconsistent / anomalous (listed, not aged) or reversed (not in flight)
-          CONTINUE.
-      ENDCASE.
-      DATA(ls_open) = VALUE ty_open( key      = lv_key
-                                     doc1r    = <ls_payment>-doc1r
-                                     pymet    = <ls_payment>-pymet
-                                     laufd    = <ls_payment>-laufd
-                                     amount   = abs( <ls_payment>-amount )
-                                     currency = <ls_payment>-currency ).
-      IF mt_classes[ flow = <ls_payment>-flow method_class = <ls_payment>-class ]-age_basis
-         = zif_cd_hck_runtime_types=>gc_age_basis-issue_date.
-        " Issue date basis (e.g. cheques): calendar days since issue (run date)
-        ls_open-ref_date = <ls_payment>-laufd.
-        ls_open-age      = nmax( val1 = 0 val2 = lv_today - <ls_payment>-laufd ).
-      ELSE.
-        " Value date basis (wire / ACH / card): business days after the value date; run date when missing
-        ls_open-ref_date = <ls_payment>-valut.
-        IF ls_open-ref_date IS INITIAL.
-          ls_open-ref_date = <ls_payment>-laufd.
-          ls_open-no_valut = abap_true.
-          lv_no_valut = lv_no_valut + 1.
-        ENDIF.
-        ls_open-age = business_days( iv_after    = ls_open-ref_date
-                                     iv_today    = lv_today
-                                     iv_calendar = calendar_of( <ls_payment> ) ).
-      ENDIF.
-      INSERT ls_open INTO TABLE lt_open.
-    ENDLOOP.
-
-    report_status_lag( EXPORTING it_payments   = lt_read
-                                 is_evaluation = ls_evaluation
-                                 is_def        = is_def
-                                 is_context    = is_context
-                       CHANGING  cs_result     = rs_result ).
     INSERT LINES OF mt_findings INTO TABLE rs_result-findings.
-    report( EXPORTING it_open       = lt_open
-                      it_thresholds = it_thresholds
-                      is_def        = is_def
-            CHANGING  cs_result     = rs_result ).
-    DATA(lv_top_n) = nmax( val1 = 1
-                           val2 = zcl_cd_hck_param=>int( iv_value   = is_def-param4
-                                                         iv_default = zif_cd_hck_runtime_types=>gc_check_default-top_n ) ).
-    report_listed( EXPORTING is_def    = is_def
-                             iv_top_n  = lv_top_n
-                   CHANGING  cs_result = rs_result ).
+    report( CHANGING cs_result = rs_result ).
     " What the persisted verdict says about the run of this check (ZCD_HCK_RESULT)
     IF line_exists( rs_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-read_capped ] ).
       rs_result-completion = zif_cd_hck_types=>gc_completion-partial.
     ENDIF.
-    IF ls_evaluation-evidence_partial = abap_true.
+    IF mv_partial = abap_true.
       rs_result-evidence = zif_cd_hck_types=>gc_evidence-partial.
-    ENDIF.
-    IF lv_no_valut > 0.
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-value_date_missing }|
-                      check_code = zif_cd_hck_runtime_types=>gc_code-value_date_missing
-                      severity   = zif_cd_ops_types=>gc_severity-info
-                      action     = zif_cd_ops_types=>gc_action-notify
-                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-value_date_missing
-                                                          iv_v1    = lv_no_valut
-                                                          iv_v2    = is_def-check_id ) ) INTO TABLE rs_result-findings.
     ENDIF.
   ENDMETHOD.
 
 
   METHOD load_configuration.
     " Method classes, house bank calendars, rules: the evaluator's configuration (one copy)
-    DATA(ls_config) = mo_outcome->load( iv_context  = is_def-check_id
+    DATA(ls_config) = mo_outcome->load( iv_context  = ms_def-check_id
                                         iv_max_rows = mv_cap ).
     mt_classes = ls_config-classes.
     mt_banks   = ls_config-banks.
@@ -484,56 +548,740 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       lv_calendar_missing = abap_true.
     ENDLOOP.
     IF mv_calendar IS INITIAL AND lv_calendar_missing = abap_true.
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-inflight_config }|
+      INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-inflight_config }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                       severity   = zif_cd_ops_types=>gc_severity-warning
                       action     = zif_cd_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-no_calendar
-                                                          iv_v1    = is_def-check_id ) ) INTO TABLE cs_result-findings.
+                                                          iv_v1    = ms_def-check_id ) ) INTO TABLE cs_result-findings.
     ENDIF.
   ENDMETHOD.
 
 
-  METHOD read_payments.
-    DATA lt_methods TYPE zif_cd_hck_runtime_types=>tt_pymet.
-    LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
-      IF mt_classes[ flow = <ls_method>-flow method_class = <ls_method>-class ]-age_basis = iv_basis
-         OR ( iv_basis = zif_cd_hck_runtime_types=>gc_age_basis-value_date
-              AND mt_classes[ flow = <ls_method>-flow method_class = <ls_method>-class ]-age_basis
-                  <> zif_cd_hck_runtime_types=>gc_age_basis-issue_date ).
-        INSERT <ls_method>-pymet INTO TABLE lt_methods.
+  METHOD read_settings.
+    DATA lv_now TYPE timestamp.
+    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
+    mv_examples = nmax( val1 = 1
+                        val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                           iv_name    = zif_cd_ops_payout_types=>gc_param-examples
+                                                           iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
+    " Look-back windows: PAY_EXCLUDED and the live evaluation before the snapshot's first run
+    DATA(lv_days) = zcl_cd_hck_param=>int( iv_value   = ms_def-param2
+                                           iv_default = zif_cd_hck_runtime_types=>gc_check_default-inflight_days ).
+    DATA(lv_issue_days) = zcl_cd_hck_param=>int( iv_value   = ms_def-param3
+                                                 iv_default = zif_cd_hck_runtime_types=>gc_check_default-cheque_days ).
+    mv_value_from = mv_today - nmax( val1 = 1 val2 = lv_days ).
+    mv_issue_from = mv_today - nmax( val1 = 1 val2 = lv_issue_days ).
+    " Status lag: grace after the bank evidence / ACK, statuses that must have changed, ACK level
+    mv_grace = nmax( val1 = 0
+                     val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                        iv_name    = zif_cd_hck_runtime_types=>gc_param-status_lag_min
+                                                        iv_default = zif_cd_hck_runtime_types=>gc_param_default-status_lag_min ) ).
+    CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
+    mv_limit = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
+                                            secs  = mv_grace * 60 ).
+    mt_file_classes = zcl_cd_hck_ev_support=>tokens(
+                        lo_params->get_param( iv_name    = zif_cd_hck_runtime_types=>gc_param-ack_file_classes
+                                              iv_default = zif_cd_hck_runtime_types=>gc_param_default-ack_file_classes ) ).
+    mt_ack_open = zcl_cd_hck_ev_support=>tokens(
+                    lo_params->get_param( iv_name    = zif_cd_hck_runtime_types=>gc_param-status_ack_open
+                                          iv_default = zif_cd_hck_runtime_types=>gc_param_default-status_ack_open ) ).
+    mt_no_ack = zcl_cd_hck_ev_support=>tokens( lo_params->get_param( zif_cd_ops_trace_types=>gc_param-no_ack_methods ) ).
+    " The file-level link is checked once per run as soon as a watched class is acknowledged per file
+    LOOP AT mt_file_classes ASSIGNING FIELD-SYMBOL(<lv_file_class>).
+      IF line_exists( mt_watched[ table_line = CONV zif_cd_hck_runtime_types=>ty_flow_class( <lv_file_class> ) ] ).
+        ms_link = file_ack_link( ).
+        EXIT.
       ENDIF.
     ENDLOOP.
-    IF lt_methods IS INITIAL.
+    " AGE_OLDEST limits once per watched flow + class; a key without limits is not judged (warning)
+    LOOP AT mt_watched ASSIGNING FIELD-SYMBOL(<lv_key>).
+      DATA(ls_limit) = VALUE ty_limit( key   = <lv_key>
+                                       limit = zcl_cd_hck_threshold=>resolve( it_thresholds = it_thresholds
+                                                                              iv_metric     = gc_metric-age_oldest
+                                                                              iv_key        = <lv_key> ) ).
+      ls_limit-limit-baseline_mode = zif_cd_hck_types=>gc_baseline-none.
+      ls_limit-set = xsdbool( ls_limit-limit-amber <> 0 OR ls_limit-limit-red <> 0 ).
+      INSERT ls_limit INTO TABLE mt_limits.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD check_snapshot.
+    DATA lv_now TYPE timestampl.
+    DATA(lt_watermarks) = mo_dao->get_watermarks( ).
+    rv_wm_date = VALUE #( lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_date OPTIONAL ).
+    CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
+    DATA(ls_lag) = zcl_cd_ops_pay_snapshot=>lag( it_watermarks = lt_watermarks
+                                                 iv_now        = lv_now ).
+    DATA(lv_limit) = zcl_cd_ops_util=>param_int(
+                       io_params  = zcl_cd_ops_factory=>get_params( )
+                       iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }| &&
+                                            |{ zif_cd_ops_types=>gc_pe_area-core }| )
+                       iv_default = zif_cd_ops_payout_types=>gc_param_default-stale_after_min ).
+    IF ls_lag-known = abap_true AND ls_lag-minutes <= lv_limit.
       RETURN.
     ENDIF.
-    DATA(lt_read) = zcl_cd_hck_factory=>get_runtime_dao( )->get_issued_payments( it_methods  = lt_methods
-                                                                                  iv_from     = iv_from
-                                                                                  iv_to       = iv_to
-                                                                                  iv_max_rows = mv_cap ).
-    IF lines( lt_read ) >= mv_cap.
-      capped( iv_table = zif_cd_hck_runtime_types=>gc_param-inflight_max_rows
-              is_def   = is_def ).
-    ENDIF.
-    " Flow and class by the evaluator; a method read for the other basis of the same letter
-    " (other flow) is left to its own window
-    LOOP AT mo_outcome->classify( lt_read ) ASSIGNING FIELD-SYMBOL(<ls_payment>).
-      DATA(lv_basis) = mt_classes[ flow = <ls_payment>-flow method_class = <ls_payment>-class ]-age_basis.
-      IF lv_basis <> zif_cd_hck_runtime_types=>gc_age_basis-issue_date.
-        lv_basis = zif_cd_hck_runtime_types=>gc_age_basis-value_date.
+    " Stale or never run: the counts may miss the newest evidence - said, never green on stale data
+    mv_partial = abap_true.
+    INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-snapshot_stale }|
+                    check_code = zif_cd_hck_runtime_types=>gc_code-snapshot_stale
+                    severity   = zif_cd_ops_types=>gc_severity-warning
+                    action     = zif_cd_ops_types=>gc_action-notify
+                    message    = COND #( WHEN ls_lag-known = abap_true
+                                         THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_lag
+                                                                     iv_v1    = ls_lag-minutes
+                                                                     iv_v2    = lv_limit
+                                                                     iv_v3    = ls_lag-source
+                                                                     iv_v4    = |{ ls_lag-current_to TIMESTAMP = ISO }| )
+                                         ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-snapshot_never
+                                                                     iv_v1    = ms_def-check_id ) ) )
+           INTO TABLE mt_findings.
+  ENDMETHOD.
+
+
+  METHOD base_query.
+    LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
+      INSERT <ls_method>-pymet INTO TABLE rs_query-methods.
+    ENDLOOP.
+    rs_query-all_ages = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                                 option = zif_cd_ops_types=>gc_range-option_equal
+                                 ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
+                                 ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined )
+                                 ( low = zif_cd_ops_payout_types=>gc_outcome-inconsistent ) ).
+    " No final outcome unless the caller asks (a run date never reached)
+    rs_query-final_from = zif_cd_ops_payout_types=>gc_no_final_from.
+    rs_query-lag_limit  = mv_limit.
+  ENDMETHOD.
+
+
+  METHOD read_aggregate.
+    DATA(ls_query) = base_query( ).
+    " Excluded purposes (the purpose values are the outcome values) within the look-back windows
+    LOOP AT zcl_cd_ops_pay_outcome=>purposes( ) ASSIGNING FIELD-SYMBOL(<lv_purpose>)
+         WHERE table_line <> zif_cd_hck_runtime_types=>gc_purpose-in_flight.
+      INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                      option = zif_cd_ops_types=>gc_range-option_equal
+                      low    = <lv_purpose> ) INTO TABLE ls_query-recent.
+    ENDLOOP.
+    ls_query-final_from = nmin( val1 = mv_value_from val2 = mv_issue_from ).
+
+    LOOP AT mo_dao->get_outcome_groups( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_group>).
+      DATA(lv_key) = key_of( iv_pymet = <ls_group>-pymet iv_xeinz = <ls_group>-xeinz ).
+      IF lv_key IS INITIAL.
+        CONTINUE.
       ENDIF.
-      IF lv_basis = iv_basis.
-        INSERT <ls_payment> INTO TABLE rt_payments.
+      CASE <ls_group>-outcome.
+        WHEN zif_cd_ops_payout_types=>gc_outcome-in_flight OR zif_cd_ops_payout_types=>gc_outcome-undetermined.
+          " In flight (also undetermined): aged from the value date (run date when missing) or the run date
+          DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_group>-valut IS INITIAL
+                                        THEN <ls_group>-laufd ELSE <ls_group>-valut ).
+          add_open( iv_key      = lv_key
+                    iv_day      = <ls_group>-laufd
+                    iv_ref_date = lv_ref_date
+                    iv_no_valut = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_group>-valut IS INITIAL )
+                    iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_group>-hbkid )
+                    iv_payments = <ls_group>-payments
+                    iv_amount   = <ls_group>-amount
+                    iv_currency = <ls_group>-currency ).
+          IF <ls_group>-outcome = zif_cd_ops_payout_types=>gc_outcome-undetermined.
+            DATA(lr_stat) = stat( lv_key ).
+            lr_stat->undetermined = lr_stat->undetermined + <ls_group>-payments.
+            add_cell( iv_key      = lv_key
+                      iv_day      = <ls_group>-laufd
+                      iv_code     = zif_cd_hck_runtime_types=>gc_code-undetermined
+                      iv_severity = zif_cd_ops_types=>gc_severity-warning
+                      iv_payments = <ls_group>-payments
+                      iv_amount   = <ls_group>-amount
+                      iv_currency = <ls_group>-currency ).
+          ELSEIF <ls_group>-finding = zif_cd_ops_payout_types=>gc_code-status_pending.
+            " (b) The bank evidence decides, the status job has not followed: due after the grace
+            IF <ls_group>-due = abap_true.
+              add_cell( iv_key      = lv_key
+                        iv_day      = <ls_group>-laufd
+                        iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                        iv_severity = zif_cd_ops_types=>gc_severity-warning
+                        iv_payments = <ls_group>-payments
+                        iv_amount   = <ls_group>-amount
+                        iv_currency = <ls_group>-currency ).
+            ENDIF.
+            CONTINUE.
+          ENDIF.
+          " (a) per file: a run of a class acknowledged per file with payments still ISSUED
+          IF ms_link-usable = abap_true
+             AND line_exists( mt_file_classes[ table_line = CONV string( lv_key ) ] )
+             AND line_exists( mt_ack_open[ table_line = to_upper( condense( CONV string( <ls_group>-pay_status ) ) ) ] )
+             AND NOT line_exists( mt_no_ack[ table_line = to_upper( CONV string( <ls_group>-pymet ) ) ] ).
+            INSERT VALUE #( key      = lv_key
+                            laufd    = <ls_group>-laufd
+                            laufi    = <ls_group>-laufi
+                            hbkid    = <ls_group>-hbkid
+                            currency = <ls_group>-currency
+                            payments = <ls_group>-payments
+                            amount   = <ls_group>-amount
+                            status   = condense( CONV string( <ls_group>-pay_status ) ) ) INTO TABLE mt_run_parts.
+          ENDIF.
+        WHEN zif_cd_ops_payout_types=>gc_outcome-inconsistent.
+          " Inconsistent / anomalous: listed under the payment's primary finding, not aged
+          lr_stat = stat( lv_key ).
+          lr_stat->inconsistent = lr_stat->inconsistent + <ls_group>-payments.
+          add_cell( iv_key      = lv_key
+                    iv_day      = <ls_group>-laufd
+                    iv_code     = COND #( WHEN <ls_group>-finding IS INITIAL
+                                          THEN zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                          ELSE <ls_group>-finding )
+                    iv_severity = COND #( WHEN <ls_group>-severity IS INITIAL
+                                          THEN zif_cd_ops_types=>gc_severity-error
+                                          ELSE <ls_group>-severity )
+                    iv_payments = <ls_group>-payments
+                    iv_amount   = <ls_group>-amount
+                    iv_currency = <ls_group>-currency ).
+        WHEN OTHERS.
+          " Excluded by a consistent purpose: counted within the look-back window of the class
+          IF in_window( iv_key = lv_key iv_laufd = <ls_group>-laufd ) = abap_true.
+            READ TABLE mt_excluded ASSIGNING FIELD-SYMBOL(<ls_excluded>)
+                 WITH TABLE KEY key = lv_key purpose = CONV zif_cd_hck_runtime_types=>ty_purpose( <ls_group>-outcome ).
+            IF sy-subrc <> 0.
+              INSERT VALUE #( key = lv_key purpose = CONV #( <ls_group>-outcome ) ) INTO TABLE mt_excluded
+                ASSIGNING <ls_excluded>.
+            ENDIF.
+            <ls_excluded>-count = <ls_excluded>-count + <ls_group>-payments.
+          ENDIF.
+      ENDCASE.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD read_live.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    DATA lt_latest TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    DATA lt_open TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    DATA lt_ack_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    DATA lt_methods TYPE zif_cd_hck_runtime_types=>tt_pymet.
+    LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
+      INSERT <ls_method>-pymet INTO TABLE lt_methods.
+    ENDLOOP.
+    " Not reached by the snapshot: runs from the day before the DOCUMENTS watermark (before the first
+    " snapshot run: the look-back windows), bounded by HCK_INFLIGHT_MAX_ROWS as before
+    DATA(lv_from) = COND d( WHEN iv_wm_date IS NOT INITIAL THEN iv_wm_date - 1
+                            ELSE nmin( val1 = mv_value_from val2 = mv_issue_from ) ).
+    DATA(lt_new) = mo_dao->get_unsnapshotted( it_methods = lt_methods
+                                              iv_from    = lv_from
+                                              iv_max     = mv_cap ).
+    IF lines( lt_new ) >= mv_cap.
+      capped( zif_cd_ops_payout_types=>gc_table-outcome ).
+    ENDIF.
+    DATA(lt_ambiguous) = mo_dao->get_ambiguous_only( is_query = base_query( )
+                                                     iv_max   = mv_cap ).
+    IF lines( lt_ambiguous ) >= mv_cap.
+      capped( zif_cd_ops_payout_types=>gc_table-outcome ).
+    ENDIF.
+    lt_docno = lt_new.
+    INSERT LINES OF lt_ambiguous INTO TABLE lt_docno.
+    IF lt_docno IS INITIAL.
+      read_ack_lags( it_live = VALUE #( ) it_status = VALUE #( ) ).
+      RETURN.
+    ENDIF.
+
+    " The latest payment run of each document, classified and judged by the evaluator (as the snapshot)
+    DATA(lt_runs) = zcl_cd_hck_factory=>get_runtime_dao( )->get_issued_payments_by_doc(
+                      it_docno    = lt_docno
+                      iv_max_rows = nmax( val1 = mv_cap val2 = lines( lt_docno ) ) ).
+    SORT lt_runs BY doc1r ASCENDING laufd DESCENDING laufi DESCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_runs COMPARING doc1r.
+    INSERT LINES OF lt_runs INTO TABLE lt_latest.
+    DATA(lt_payments) = mo_outcome->classify( lt_latest ).
+    DATA(ls_evaluation) = mo_outcome->evaluate( lt_payments ).
+    INSERT LINES OF ls_evaluation-findings INTO TABLE mt_findings.
+    IF ls_evaluation-evidence_partial = abap_true.
+      mv_partial = abap_true.
+    ENDIF.
+    " The live payment status of the payments in flight (one shared read of the run)
+    LOOP AT lt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      IF ls_evaluation-verdicts[ sy-tabix ]-status = zif_cd_ops_payout_types=>gc_status-open.
+        INSERT <ls_payment> INTO TABLE lt_open.
       ENDIF.
     ENDLOOP.
+    DATA(lt_status) = VALUE zcl_cd_hck_ev_support=>tt_pay_status( ).
+    IF lt_open IS NOT INITIAL.
+      lt_status = zcl_cd_hck_ev_support=>status_of( lt_open ).
+    ENDIF.
+    CLEAR lt_open.
+
+    LOOP AT lt_payments ASSIGNING <ls_payment>.
+      DATA(ls_verdict) = ls_evaluation-verdicts[ sy-tabix ].
+      DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ <ls_payment>-flow }{ <ls_payment>-class }| ).
+      DATA(lr_stat) = stat( lv_key ).
+      IF line_exists( lt_new[ table_line = <ls_payment>-doc1r ] ).
+        lr_stat->live = lr_stat->live + 1.
+      ELSE.
+        mv_ambiguous_live = mv_ambiguous_live + 1.
+      ENDIF.
+      DATA(lv_amount) = CONV zif_cd_ops_types=>ty_amount( abs( <ls_payment>-amount ) ).
+      " Every listing of the payment under its code (inconsistency, anomaly, undetermined)
+      LOOP AT ls_verdict-listings ASSIGNING FIELD-SYMBOL(<ls_listing>).
+        add_cell( iv_key      = lv_key
+                  iv_day      = <ls_payment>-laufd
+                  iv_code     = <ls_listing>-code
+                  iv_severity = <ls_listing>-severity
+                  iv_payments = 1
+                  iv_amount   = lv_amount
+                  iv_currency = <ls_payment>-currency ).
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_payment>-laufd
+                     iv_code     = <ls_listing>-code
+                     iv_ref_date = <ls_payment>-laufd
+                     iv_doc1r    = <ls_payment>-doc1r
+                     iv_line     = <ls_listing>-line ).
+      ENDLOOP.
+      CASE ls_verdict-status.
+        WHEN zif_cd_ops_payout_types=>gc_status-excluded.
+          IF in_window( iv_key = lv_key iv_laufd = <ls_payment>-laufd ) = abap_true.
+            READ TABLE mt_excluded ASSIGNING FIELD-SYMBOL(<ls_excluded>)
+                 WITH TABLE KEY key = lv_key purpose = ls_verdict-purpose.
+            IF sy-subrc <> 0.
+              INSERT VALUE #( key = lv_key purpose = ls_verdict-purpose ) INTO TABLE mt_excluded ASSIGNING <ls_excluded>.
+            ENDIF.
+            <ls_excluded>-count = <ls_excluded>-count + 1.
+          ENDIF.
+          CONTINUE.
+        WHEN zif_cd_ops_payout_types=>gc_status-open.
+          " In flight (also undetermined): aged below
+        WHEN zif_cd_ops_payout_types=>gc_status-inconsistent.
+          lr_stat->inconsistent = lr_stat->inconsistent + 1.
+          CONTINUE.
+        WHEN OTHERS.
+          " Reversed: not in flight
+          CONTINUE.
+      ENDCASE.
+      IF ls_verdict-outcome = zif_cd_ops_payout_types=>gc_outcome-undetermined.
+        lr_stat->undetermined = lr_stat->undetermined + 1.
+      ENDIF.
+      DATA(lv_no_valut) = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_payment>-valut IS INITIAL ).
+      DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_payment>-valut IS INITIAL
+                                    THEN <ls_payment>-laufd ELSE <ls_payment>-valut ).
+      DATA(lv_age) = add_open( iv_key      = lv_key
+                               iv_day      = <ls_payment>-laufd
+                               iv_ref_date = lv_ref_date
+                               iv_no_valut = lv_no_valut
+                               iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_payment>-hbkid )
+                               iv_payments = 1
+                               iv_amount   = lv_amount
+                               iv_currency = <ls_payment>-currency ).
+      add_example( iv_key      = lv_key
+                   iv_day      = <ls_payment>-laufd
+                   iv_code     = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
+                   iv_ref_date = lv_ref_date
+                   iv_doc1r    = <ls_payment>-doc1r
+                   iv_line     = payment_line( iv_doc1r    = <ls_payment>-doc1r
+                                               iv_pymet    = <ls_payment>-pymet
+                                               iv_laufd    = <ls_payment>-laufd
+                                               iv_ref_date = lv_ref_date
+                                               iv_no_valut = lv_no_valut
+                                               iv_age      = lv_age
+                                               iv_amount   = lv_amount
+                                               iv_currency = <ls_payment>-currency ) ).
+      IF ls_verdict-status_pending = abap_true.
+        " (b) The evidence day (newest statement line; the run date when the kind has no date) + grace
+        DATA(lv_since) = COND d( WHEN ls_verdict-evidence_date IS NOT INITIAL THEN ls_verdict-evidence_date
+                                 ELSE <ls_payment>-laufd ).
+        IF lag_due( iv_date = lv_since iv_time = VALUE #( ) iv_has_time = abap_false iv_limit = mv_limit ) = abap_true.
+          add_cell( iv_key      = lv_key
+                    iv_day      = <ls_payment>-laufd
+                    iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                    iv_severity = zif_cd_ops_types=>gc_severity-warning
+                    iv_payments = 1
+                    iv_amount   = lv_amount
+                    iv_currency = <ls_payment>-currency ).
+          add_example( iv_key      = lv_key
+                       iv_day      = <ls_payment>-laufd
+                       iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                       iv_ref_date = lv_ref_date
+                       iv_doc1r    = <ls_payment>-doc1r
+                       iv_line     = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_bank
+                                                               iv_v1    = <ls_payment>-doc1r
+                                                               iv_v2    = VALUE #( lt_status[ doc1r = <ls_payment>-doc1r ]-status
+                                                                                   OPTIONAL )
+                                                               iv_v3    = ls_verdict-purpose
+                                                               iv_v4    = |{ lv_since DATE = ISO }| ) } | &&
+                                     |{ ls_verdict-evidence_ref }| ).
+        ENDIF.
+      ELSE.
+        INSERT <ls_payment> INTO TABLE lt_open.
+      ENDIF.
+    ENDLOOP.
+
+    " (a) Live payments in flight whose live status still says ISSUED
+    LOOP AT lt_open ASSIGNING <ls_payment>.
+      DATA(lv_status) = VALUE #( lt_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL ).
+      IF lv_status IS INITIAL OR NOT line_exists( mt_ack_open[ table_line = lv_status ] )
+         OR line_exists( mt_no_ack[ table_line = to_upper( CONV string( <ls_payment>-pymet ) ) ] ).
+        CONTINUE.
+      ENDIF.
+      lv_key = |{ <ls_payment>-flow }{ <ls_payment>-class }|.
+      IF NOT line_exists( mt_file_classes[ table_line = CONV string( lv_key ) ] ).
+        INSERT <ls_payment> INTO TABLE lt_ack_due.
+      ELSEIF ms_link-usable = abap_true.
+        INSERT VALUE #( key      = lv_key
+                        laufd    = <ls_payment>-laufd
+                        laufi    = <ls_payment>-laufi
+                        hbkid    = <ls_payment>-hbkid
+                        currency = <ls_payment>-currency
+                        payments = 1
+                        amount   = abs( <ls_payment>-amount )
+                        payment  = <ls_payment>
+                        status   = lv_status ) INTO TABLE mt_run_parts.
+      ENDIF.
+    ENDLOOP.
+    read_ack_lags( it_live = lt_ack_due it_status = lt_status ).
+  ENDMETHOD.
+
+
+  METHOD read_ack_lags.
+    DATA lt_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    " The live status of every candidate (live payments: the shared status read; versioned: the read)
+    DATA(lt_due_status) = it_status.
+    lt_due = it_live.
+    " (a) per payment, versioned: payments in flight of the classes acknowledged per payment whose live
+    " status still says ISSUED (one bounded read, oldest run first)
+    IF mt_ack_open IS NOT INITIAL.
+      DATA(ls_query) = base_query( ).
+      CLEAR ls_query-methods.
+      LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
+        IF NOT line_exists( mt_file_classes[ table_line = |{ <ls_method>-flow }{ <ls_method>-class }| ] )
+           AND NOT line_exists( mt_no_ack[ table_line = to_upper( CONV string( <ls_method>-pymet ) ) ] ).
+          INSERT <ls_method>-pymet INTO TABLE ls_query-methods.
+        ENDIF.
+      ENDLOOP.
+      ls_query-all_ages = VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                                   option = zif_cd_ops_types=>gc_range-option_equal
+                                   ( low = zif_cd_ops_payout_types=>gc_outcome-in_flight )
+                                   ( low = zif_cd_ops_payout_types=>gc_outcome-undetermined ) ).
+      ls_query-findings = VALUE #( ( sign   = zif_cd_ops_types=>gc_range-sign_exclude
+                                     option = zif_cd_ops_types=>gc_range-option_equal
+                                     low    = zif_cd_ops_payout_types=>gc_code-status_pending ) ).
+      ls_query-statuses = VALUE #( FOR lv_open IN mt_ack_open ( sign   = zif_cd_ops_types=>gc_range-sign_include
+                                                                option = zif_cd_ops_types=>gc_range-option_equal
+                                                                low    = lv_open ) ).
+      DATA(lt_rows) = COND zif_cd_ops_payout_types=>tt_outcome_example(
+                        WHEN ls_query-methods IS NOT INITIAL
+                        THEN mo_dao->get_outcome_rows( is_query = ls_query iv_max = mv_cap ) ).
+      IF lines( lt_rows ) >= mv_cap.
+        capped( zif_cd_ops_payout_types=>gc_table-outcome ).
+      ENDIF.
+      LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+        DATA(lv_key) = key_of( iv_pymet = <ls_row>-pymet iv_xeinz = <ls_row>-xeinz ).
+        IF lv_key IS INITIAL OR line_exists( mt_file_classes[ table_line = CONV string( lv_key ) ] ).
+          CONTINUE.
+        ENDIF.
+        INSERT VALUE #( doc1r    = <ls_row>-doc1r
+                        laufd    = <ls_row>-laufd
+                        laufi    = <ls_row>-laufi
+                        bukrs    = <ls_row>-bukrs
+                        pymet    = <ls_row>-pymet
+                        hbkid    = <ls_row>-hbkid
+                        valut    = <ls_row>-valut
+                        amount   = <ls_row>-amount
+                        currency = <ls_row>-currency
+                        xeinz    = <ls_row>-xeinz
+                        flow     = lv_key(1)
+                        class    = lv_key+1(3) ) INTO TABLE lt_due.
+        INSERT VALUE #( doc1r = <ls_row>-doc1r status = condense( CONV string( <ls_row>-pay_status ) ) )
+          INTO TABLE lt_due_status.
+      ENDLOOP.
+    ENDIF.
+
+    " (a) per payment: the bank ACK of the payment older than the grace while the status says ISSUED
+    IF lt_due IS NOT INITIAL.
+      DATA(lt_acks) = acks_of( EXPORTING it_payments = lt_due
+                               IMPORTING ev_has_time = DATA(lv_has_time) ).
+      LOOP AT lt_due ASSIGNING FIELD-SYMBOL(<ls_payment>).
+        DATA(lv_status) = VALUE #( lt_due_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL ).
+        READ TABLE lt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
+        IF sy-subrc <> 0.
+          CONTINUE.
+        ENDIF.
+        IF lag_due( iv_date = <ls_ack>-date iv_time = <ls_ack>-time iv_has_time = lv_has_time iv_limit = mv_limit ) = abap_false.
+          CONTINUE.
+        ENDIF.
+        lv_key = |{ <ls_payment>-flow }{ <ls_payment>-class }|.
+        add_cell( iv_key      = lv_key
+                  iv_day      = <ls_payment>-laufd
+                  iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                  iv_severity = zif_cd_ops_types=>gc_severity-warning
+                  iv_payments = 1
+                  iv_amount   = abs( <ls_payment>-amount )
+                  iv_currency = <ls_payment>-currency ).
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_payment>-laufd
+                     iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                     iv_ref_date = <ls_ack>-date
+                     iv_doc1r    = <ls_payment>-doc1r
+                     iv_line     = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack
+                                                             iv_v1    = <ls_payment>-doc1r
+                                                             iv_v2    = lv_status
+                                                             iv_v3    = |{ <ls_ack>-date DATE = ISO } { <ls_ack>-time TIME = ISO }| ) } | &&
+                                   |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
+                                                             iv_v1    = mv_grace
+                                                             iv_tail  = <ls_ack>-text ) }| ).
+      ENDLOOP.
+    ENDIF.
+
+    " (a) per file: the ACK of the file of the payment run older than the grace while still ISSUED
+    IF mt_run_parts IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lt_groups) = group_acks( ).
+    LOOP AT mt_run_parts ASSIGNING FIELD-SYMBOL(<ls_part>).
+      READ TABLE lt_groups ASSIGNING FIELD-SYMBOL(<ls_group>) WITH TABLE KEY gen_group = <ls_part>-gen_group.
+      " No ACK of the file: FMON's own finding (NO_BANK_ACK / missing), never a status lag here
+      IF sy-subrc <> 0 OR <ls_group>-open = abap_true OR <ls_group>-ack_at IS INITIAL OR <ls_group>-ack_at > mv_limit.
+        CONTINUE.
+      ENDIF.
+      add_cell( iv_key      = <ls_part>-key
+                iv_day      = <ls_part>-laufd
+                iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                iv_severity = zif_cd_ops_types=>gc_severity-warning
+                iv_payments = <ls_part>-payments
+                iv_amount   = <ls_part>-amount
+                iv_currency = <ls_part>-currency ).
+      IF <ls_part>-payment IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      DATA(lv_date) = VALUE d( ).
+      DATA(lv_time) = VALUE t( ).
+      CONVERT TIME STAMP <ls_group>-ack_at TIME ZONE sy-zonlo INTO DATE lv_date TIME lv_time.
+      add_example( iv_key      = <ls_part>-key
+                   iv_day      = <ls_part>-laufd
+                   iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                   iv_ref_date = lv_date
+                   iv_doc1r    = <ls_part>-payment-doc1r
+                   iv_line     = |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_file_ack
+                                                           iv_v1    = <ls_part>-payment-doc1r
+                                                           iv_v2    = <ls_part>-status
+                                                           iv_v3    = |{ lv_date DATE = ISO } { lv_time TIME = ISO }| ) } | &&
+                                 |{ zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
+                                                           iv_v1    = mv_grace
+                                                           iv_tail  = <ls_group>-text ) }| ).
+    ENDLOOP.
+    " Versioned payments of a lagging run: the examples read (one per partition) carries them
+    DELETE mt_run_parts WHERE payment IS NOT INITIAL.
+    LOOP AT mt_run_parts ASSIGNING <ls_part>.
+      READ TABLE lt_groups ASSIGNING <ls_group> WITH TABLE KEY gen_group = <ls_part>-gen_group.
+      IF sy-subrc <> 0 OR <ls_group>-open = abap_true OR <ls_group>-ack_at IS INITIAL OR <ls_group>-ack_at > mv_limit.
+        <ls_part>-gen_group = space.
+      ELSE.
+        <ls_part>-status = <ls_group>-text.
+      ENDIF.
+    ENDLOOP.
+    DELETE mt_run_parts WHERE gen_group IS INITIAL.
+  ENDMETHOD.
+
+
+  METHOD read_examples.
+    DATA lt_days TYPE zif_cd_ops_payout_types=>tt_date_range.
+    LOOP AT mt_cells ASSIGNING FIELD-SYMBOL(<ls_cell>).
+      IF NOT line_exists( lt_days[ low = <ls_cell>-day ] ).
+        INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
+                        option = zif_cd_ops_types=>gc_range-option_equal
+                        low    = <ls_cell>-day ) INTO TABLE lt_days.
+      ENDIF.
+    ENDLOOP.
+    IF lt_days IS INITIAL.
+      RETURN.
+    ENDIF.
+    " The first PAYOUT_EXAMPLES payments of each partition of the run dates with a finding (HANA,
+    " ROW_NUMBER): a cell's examples are the oldest of the partitions it is made of
+    DATA(ls_query) = base_query( ).
+    ls_query-days = lt_days.
+    LOOP AT mo_dao->get_outcome_examples( is_query = ls_query iv_rows = mv_examples ) ASSIGNING FIELD-SYMBOL(<ls_example>).
+      DATA(lv_key) = key_of( iv_pymet = <ls_example>-pymet iv_xeinz = <ls_example>-xeinz ).
+      IF lv_key IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      DATA(lv_no_valut) = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_example>-valut IS INITIAL ).
+      DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_example>-valut IS INITIAL
+                                    THEN <ls_example>-laufd ELSE <ls_example>-valut ).
+      DATA(lv_age) = COND i( WHEN is_issue_basis( lv_key ) = abap_true
+                               THEN nmax( val1 = 0 val2 = mv_today - lv_ref_date )
+                             ELSE business_days( iv_after    = lv_ref_date
+                                                 iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_example>-hbkid ) ) ).
+      DATA(lv_line) = payment_line( iv_doc1r    = <ls_example>-doc1r
+                                    iv_pymet    = <ls_example>-pymet
+                                    iv_laufd    = <ls_example>-laufd
+                                    iv_ref_date = lv_ref_date
+                                    iv_no_valut = lv_no_valut
+                                    iv_age      = lv_age
+                                    iv_amount   = <ls_example>-amount
+                                    iv_currency = <ls_example>-currency ).
+      IF <ls_example>-outcome = zif_cd_ops_payout_types=>gc_outcome-inconsistent.
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_example>-laufd
+                     iv_code     = COND #( WHEN <ls_example>-finding IS INITIAL
+                                           THEN zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
+                                           ELSE <ls_example>-finding )
+                     iv_ref_date = lv_ref_date
+                     iv_doc1r    = <ls_example>-doc1r
+                     iv_line     = |{ lv_line } { <ls_example>-evidence_ref }| ).
+        CONTINUE.
+      ENDIF.
+      " In flight: late, undetermined, status lag
+      DATA(lv_rag) = rag_of( iv_key = lv_key iv_age = lv_age ).
+      IF lv_rag = zif_cd_ops_types=>gc_rag-red OR lv_rag = zif_cd_ops_types=>gc_rag-amber.
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_example>-laufd
+                     iv_code     = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
+                     iv_ref_date = lv_ref_date
+                     iv_doc1r    = <ls_example>-doc1r
+                     iv_line     = lv_line ).
+      ENDIF.
+      IF <ls_example>-outcome = zif_cd_ops_payout_types=>gc_outcome-undetermined.
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_example>-laufd
+                     iv_code     = zif_cd_hck_runtime_types=>gc_code-undetermined
+                     iv_ref_date = lv_ref_date
+                     iv_doc1r    = <ls_example>-doc1r
+                     iv_line     = |{ lv_line } { <ls_example>-evidence_ref }| ).
+      ELSEIF <ls_example>-finding = zif_cd_ops_payout_types=>gc_code-status_pending AND <ls_example>-due = abap_true.
+        add_example( iv_key      = lv_key
+                     iv_day      = <ls_example>-laufd
+                     iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                     iv_ref_date = lv_ref_date
+                     iv_doc1r    = <ls_example>-doc1r
+                     iv_line     = |{ lv_line } { <ls_example>-evidence_ref }| ).
+      ELSE.
+        " A payment of a lagging run acknowledged per file, status still ISSUED
+        READ TABLE mt_run_parts ASSIGNING FIELD-SYMBOL(<ls_part>)
+             WITH KEY key = lv_key laufd = <ls_example>-laufd laufi = <ls_example>-laufi hbkid = <ls_example>-hbkid.
+        IF sy-subrc = 0 AND line_exists( mt_ack_open[ table_line = to_upper( condense( CONV string( <ls_example>-pay_status ) ) ) ] ).
+          add_example( iv_key      = lv_key
+                       iv_day      = <ls_example>-laufd
+                       iv_code     = zif_cd_hck_runtime_types=>gc_code-status_lag
+                       iv_ref_date = lv_ref_date
+                       iv_doc1r    = <ls_example>-doc1r
+                       iv_line     = |{ lv_line } { <ls_part>-status }| ).
+        ENDIF.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD add_open.
+    DATA(lr_stat) = stat( iv_key ).
+    rv_age = COND #( WHEN is_issue_basis( iv_key ) = abap_true
+                       " Issue date basis (e.g. cheques): calendar days since issue (run date)
+                       THEN nmax( val1 = 0 val2 = mv_today - iv_ref_date )
+                     " Value date basis (wire / ACH / card): business days after the value date
+                     ELSE business_days( iv_after = iv_ref_date iv_calendar = iv_calendar ) ).
+    lr_stat->open   = lr_stat->open + iv_payments.
+    lr_stat->oldest = nmax( val1 = lr_stat->oldest val2 = rv_age ).
+    IF iv_no_valut = abap_true.
+      mv_no_valut = mv_no_valut + iv_payments.
+    ENDIF.
+    DATA(lv_rag) = rag_of( iv_key = iv_key iv_age = rv_age ).
+    IF lv_rag <> zif_cd_ops_types=>gc_rag-red AND lv_rag <> zif_cd_ops_types=>gc_rag-amber.
+      RETURN.
+    ENDIF.
+    DATA(lv_crit) = COND i( WHEN lv_rag = zif_cd_ops_types=>gc_rag-red THEN iv_payments ).
+    lr_stat->warn = lr_stat->warn + iv_payments.
+    lr_stat->crit = lr_stat->crit + lv_crit.
+    " Amounts per currency (EUR / GBP alongside USD): never summed across currencies
+    READ TABLE mt_late_amounts ASSIGNING FIELD-SYMBOL(<ls_late>) WITH TABLE KEY key = iv_key currency = iv_currency.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( key = iv_key currency = iv_currency ) INTO TABLE mt_late_amounts ASSIGNING <ls_late>.
+    ENDIF.
+    <ls_late>-warn = <ls_late>-warn + iv_amount.
+    IF lv_crit > 0.
+      <ls_late>-crit = <ls_late>-crit + iv_amount.
+    ENDIF.
+    add_cell( iv_key      = iv_key
+              iv_day      = iv_day
+              iv_code     = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
+              iv_severity = COND #( WHEN lv_crit > 0 THEN zif_cd_ops_types=>gc_severity-error
+                                    ELSE zif_cd_ops_types=>gc_severity-warning )
+              iv_payments = iv_payments
+              iv_amount   = iv_amount
+              iv_currency = iv_currency ).
+    READ TABLE mt_cells ASSIGNING FIELD-SYMBOL(<ls_cell>)
+         WITH TABLE KEY key = iv_key day = iv_day code = zif_cd_hck_runtime_types=>gc_code-payment_not_clear.
+    IF sy-subrc = 0.
+      <ls_cell>-crit   = <ls_cell>-crit + lv_crit.
+      <ls_cell>-oldest = nmax( val1 = <ls_cell>-oldest val2 = rv_age ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add_cell.
+    READ TABLE mt_cells ASSIGNING FIELD-SYMBOL(<ls_cell>) WITH TABLE KEY key = iv_key day = iv_day code = iv_code.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( key = iv_key day = iv_day code = iv_code ) INTO TABLE mt_cells ASSIGNING <ls_cell>.
+    ENDIF.
+    <ls_cell>-payments = <ls_cell>-payments + iv_payments.
+    IF zcl_cd_ops_util=>severity_rank( iv_severity ) > zcl_cd_ops_util=>severity_rank( <ls_cell>-severity ).
+      <ls_cell>-severity = iv_severity.
+    ENDIF.
+    READ TABLE <ls_cell>-amounts ASSIGNING FIELD-SYMBOL(<ls_amount>) WITH TABLE KEY currency = iv_currency.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( currency = iv_currency ) INTO TABLE <ls_cell>-amounts ASSIGNING <ls_amount>.
+    ENDIF.
+    <ls_amount>-amount = <ls_amount>-amount + iv_amount.
+    IF iv_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
+      DATA(lr_stat) = stat( iv_key ).
+      lr_stat->lag = lr_stat->lag + iv_payments.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add_example.
+    READ TABLE mt_cells ASSIGNING FIELD-SYMBOL(<ls_cell>) WITH TABLE KEY key = iv_key day = iv_day code = iv_code.
+    IF sy-subrc <> 0 OR line_exists( <ls_cell>-examples[ doc1r = iv_doc1r ] ).
+      RETURN.
+    ENDIF.
+    INSERT VALUE #( ref_date = iv_ref_date doc1r = iv_doc1r line = iv_line ) INTO TABLE <ls_cell>-examples.
+    " Deterministic: oldest first (reference date, then payment document), the first N kept
+    SORT <ls_cell>-examples BY ref_date ASCENDING doc1r ASCENDING.
+    DATA(lv_first_over) = mv_examples + 1.
+    IF lines( <ls_cell>-examples ) >= lv_first_over.
+      DELETE <ls_cell>-examples FROM lv_first_over.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD stat.
+    READ TABLE mt_stats REFERENCE INTO rr_stat WITH TABLE KEY key = iv_key.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( key = iv_key ) INTO TABLE mt_stats REFERENCE INTO rr_stat.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD key_of.
+    DATA(lv_flow) = COND zif_cd_hck_runtime_types=>ty_flow( WHEN iv_xeinz = abap_true
+                                                              THEN zif_cd_hck_runtime_types=>gc_flow-collection
+                                                            ELSE zif_cd_hck_runtime_types=>gc_flow-disbursement ).
+    DATA(lv_class) = VALUE #( mt_methods[ flow = lv_flow pymet = iv_pymet ]-class OPTIONAL ).
+    IF lv_class IS NOT INITIAL AND line_exists( mt_watched[ table_line = |{ lv_flow }{ lv_class }| ] ).
+      rv_key = |{ lv_flow }{ lv_class }|.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_issue_basis.
+    rv_yes = xsdbool( VALUE #( mt_classes[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = space ]-age_basis OPTIONAL )
+                      = zif_cd_hck_runtime_types=>gc_age_basis-issue_date ).
+  ENDMETHOD.
+
+
+  METHOD in_window.
+    DATA(lv_from) = COND d( WHEN is_issue_basis( iv_key ) = abap_true THEN mv_issue_from ELSE mv_value_from ).
+    rv_yes = xsdbool( iv_laufd >= lv_from AND iv_laufd <= mv_today ).
   ENDMETHOD.
 
 
   METHOD calendar_of.
-    rv_calendar = VALUE #( mt_banks[ flow = is_payment-flow method_class = is_payment-class hbkid = is_payment-hbkid ]-calendar
-                           OPTIONAL ).
+    rv_calendar = VALUE #( mt_banks[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = iv_hbkid ]-calendar OPTIONAL ).
     IF rv_calendar IS INITIAL.
-      rv_calendar = VALUE #( mt_classes[ flow = is_payment-flow method_class = is_payment-class hbkid = space ]-calendar
+      rv_calendar = VALUE #( mt_classes[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = space ]-calendar
                              OPTIONAL ).
     ENDIF.
     IF rv_calendar IS INITIAL.
@@ -544,104 +1292,81 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
 
   METHOD business_days.
-    IF iv_today <= iv_after.
+    IF mv_today <= iv_after.
       RETURN.
     ENDIF.
     IF iv_calendar IS INITIAL.
-      rv_days = iv_today - iv_after.
+      rv_days = mv_today - iv_after.
       RETURN.
     ENDIF.
-    " Calendar reads are bounded (one per calendar, date and run, cached)
-    DATA(lv_date) = CONV d( nmax( val1 = iv_after
-                                  val2 = iv_today - zif_cd_hck_runtime_types=>gc_check_default-max_calendar ) ).
-    DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
-    WHILE lv_date < iv_today.
-      lv_date = lv_date + 1.
-      READ TABLE mt_working ASSIGNING FIELD-SYMBOL(<ls_day>) WITH TABLE KEY calendar = iv_calendar date = lv_date.
-      IF sy-subrc <> 0.
-        INSERT VALUE #( calendar = iv_calendar
-                        date     = lv_date
-                        working  = lo_dao->is_working_day( iv_calendar = iv_calendar iv_date = lv_date ) )
-          INTO TABLE mt_working ASSIGNING <ls_day>.
-      ENDIF.
-      IF <ls_day>-working = abap_true.
-        rv_days = rv_days + 1.
-      ENDIF.
-    ENDWHILE.
+    " Bounded as before: at most the last 400 days are counted
+    DATA(lv_from) = CONV d( nmax( val1 = iv_after
+                                  val2 = mv_today - zif_cd_hck_runtime_types=>gc_check_default-max_calendar ) ).
+    " The day table of the calendar grows downwards only as far as a payment needs it (one calendar
+    " read per calendar and date per run, as before - never per payment)
+    READ TABLE mt_cal_low ASSIGNING FIELD-SYMBOL(<ls_low>) WITH TABLE KEY calendar = iv_calendar.
+    IF sy-subrc <> 0.
+      INSERT VALUE #( calendar = iv_calendar low = mv_today ) INTO TABLE mt_cal_low ASSIGNING <ls_low>.
+      INSERT VALUE #( calendar = iv_calendar date = mv_today days = 0 ) INTO TABLE mt_cum.
+    ENDIF.
+    IF <ls_low>-low > lv_from.
+      DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
+      DATA(lv_days) = mt_cum[ calendar = iv_calendar date = <ls_low>-low ]-days.
+      WHILE <ls_low>-low > lv_from.
+        IF lo_dao->is_working_day( iv_calendar = iv_calendar iv_date = <ls_low>-low ) = abap_true.
+          lv_days = lv_days + 1.
+        ENDIF.
+        <ls_low>-low = <ls_low>-low - 1.
+        INSERT VALUE #( calendar = iv_calendar date = <ls_low>-low days = lv_days ) INTO TABLE mt_cum.
+      ENDWHILE.
+    ENDIF.
+    rv_days = mt_cum[ calendar = iv_calendar date = lv_from ]-days.
+  ENDMETHOD.
+
+
+  METHOD rag_of.
+    READ TABLE mt_limits ASSIGNING FIELD-SYMBOL(<ls_limit>) WITH TABLE KEY key = iv_key.
+    IF sy-subrc <> 0 OR <ls_limit>-set = abap_false.
+      RETURN.
+    ENDIF.
+    rv_rag = zcl_cd_hck_threshold=>evaluate( iv_value     = iv_age
+                                             is_threshold = <ls_limit>-limit
+                                             it_history   = VALUE #( ) )-rag.
+  ENDMETHOD.
+
+
+  METHOD payment_line.
+    rv_line = zcl_cd_ops_util=>text(
+                iv_msgno = zif_cd_hck_runtime_types=>gc_msg-payment_line
+                iv_v1    = iv_doc1r
+                iv_v2    = iv_pymet
+                iv_v3    = |{ iv_laufd DATE = ISO }|
+                iv_v4    = |{ iv_ref_date DATE = ISO }|
+                iv_tail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-payment_age
+                                                 iv_v1    = iv_age
+                                                 iv_v2    = |{ iv_amount STYLE = SIMPLE }|
+                                                 iv_v3    = iv_currency ) ).
+    IF iv_no_valut = abap_true.
+      rv_line = |{ rv_line } { zcl_cd_ops_util=>text( zif_cd_hck_runtime_types=>gc_msg-run_date_used ) }|.
+    ENDIF.
   ENDMETHOD.
 
 
   METHOD report.
-    DATA lt_sorted TYPE tt_open.
-    DATA lt_inconsistent TYPE tt_key.
-    DATA lt_undetermined TYPE tt_key.
-    DATA lt_details TYPE string_table.
-    DATA(lv_top_n) = nmax( val1 = 1
-                           val2 = zcl_cd_hck_param=>int( iv_value   = is_def-param4
-                                                         iv_default = zif_cd_hck_runtime_types=>gc_check_default-top_n ) ).
     LOOP AT mt_watched ASSIGNING FIELD-SYMBOL(<lv_key>).
-      DATA(ls_limit) = zcl_cd_hck_threshold=>resolve( it_thresholds = it_thresholds
-                                                      iv_metric     = gc_metric-age_oldest
-                                                      iv_key        = <lv_key> ).
-      ls_limit-baseline_mode = zif_cd_hck_types=>gc_baseline-none.
-      DATA(lv_limits_set) = xsdbool( ls_limit-amber <> 0 OR ls_limit-red <> 0 ).
-      IF lv_limits_set = abap_false.
-        INSERT VALUE #( object_key = |{ is_def-check_id }/{ <lv_key> }|
-                        check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing
-                        severity   = zif_cd_ops_types=>gc_severity-warning
-                        action     = zif_cd_ops_types=>gc_action-notify
-                        message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-limits_missing
-                                                            iv_v1    = is_def-check_id
-                                                            iv_v2    = |{ gc_metric-age_oldest }/{ <lv_key> }| ) )
-               INTO TABLE cs_result-findings.
-      ENDIF.
-
-      DATA(lv_open) = 0.
-      DATA(lv_oldest) = 0.
-      DATA(lv_warn) = 0.
-      DATA(lv_crit) = 0.
-      CLEAR lt_sorted.
-      LOOP AT it_open ASSIGNING FIELD-SYMBOL(<ls_open>) WHERE key = <lv_key>.
-        lv_open   = lv_open + 1.
-        lv_oldest = nmax( val1 = lv_oldest val2 = <ls_open>-age ).
-        IF lv_limits_set = abap_false.
-          CONTINUE.
-        ENDIF.
-        DATA(lv_rag) = zcl_cd_hck_threshold=>evaluate( iv_value     = <ls_open>-age
-                                                       is_threshold = ls_limit
-                                                       it_history   = VALUE #( ) )-rag.
-        IF lv_rag <> zif_cd_ops_types=>gc_rag-red AND lv_rag <> zif_cd_ops_types=>gc_rag-amber.
-          CONTINUE.
-        ENDIF.
-        DATA(ls_late) = <ls_open>.
-        ls_late-warn = abap_true.
-        ls_late-crit = xsdbool( lv_rag = zif_cd_ops_types=>gc_rag-red ).
-        lv_warn = lv_warn + 1.
-        IF ls_late-crit = abap_true.
-          lv_crit = lv_crit + 1.
-        ENDIF.
-        INSERT ls_late INTO TABLE lt_sorted.
-      ENDLOOP.
-
+      DATA(ls_stat) = VALUE #( mt_stats[ key = <lv_key> ] OPTIONAL ).
       " Zero is evidence: every watched flow / class measures its counts and oldest age
-      INSERT VALUE #( metric = gc_metric-open dim1 = <lv_key> value = lv_open ) INTO TABLE cs_result-metrics.
-      INSERT VALUE #( metric = gc_metric-age_oldest dim1 = <lv_key> value = lv_oldest
+      INSERT VALUE #( metric = gc_metric-open dim1 = <lv_key> value = ls_stat-open ) INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-age_oldest dim1 = <lv_key> value = ls_stat-oldest
                       kind   = zif_cd_hck_types=>gc_metric_kind-level ) INTO TABLE cs_result-metrics.
-      INSERT VALUE #( metric = gc_metric-warn_count dim1 = <lv_key> value = lv_warn ) INTO TABLE cs_result-metrics.
-      INSERT VALUE #( metric = gc_metric-crit_count dim1 = <lv_key> value = lv_crit ) INTO TABLE cs_result-metrics.
-      CLEAR: lt_inconsistent, lt_undetermined.
-      LOOP AT mt_listed ASSIGNING FIELD-SYMBOL(<ls_inconsistent>) WHERE key = <lv_key>.
-        " Undetermined payments stay in flight (aged): counted apart, not as inconsistent
-        IF <ls_inconsistent>-code = zif_cd_hck_runtime_types=>gc_code-undetermined.
-          INSERT CONV string( <ls_inconsistent>-doc1r ) INTO TABLE lt_undetermined.
-        ELSE.
-          INSERT CONV string( <ls_inconsistent>-doc1r ) INTO TABLE lt_inconsistent.
-        ENDIF.
-      ENDLOOP.
-      INSERT VALUE #( metric = gc_metric-inconsistent dim1 = <lv_key> value = lines( lt_inconsistent ) )
+      INSERT VALUE #( metric = gc_metric-warn_count dim1 = <lv_key> value = ls_stat-warn ) INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-crit_count dim1 = <lv_key> value = ls_stat-crit ) INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-inconsistent dim1 = <lv_key> value = ls_stat-inconsistent )
              INTO TABLE cs_result-metrics.
-      INSERT VALUE #( metric = gc_metric-undetermined dim1 = <lv_key> value = lines( lt_undetermined ) )
+      INSERT VALUE #( metric = gc_metric-undetermined dim1 = <lv_key> value = ls_stat-undetermined )
              INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-status_lag dim1 = <lv_key> value = ls_stat-lag ) INTO TABLE cs_result-metrics.
+      INSERT VALUE #( metric = gc_metric-not_snapshot dim1 = <lv_key> value = ls_stat-live ) INTO TABLE cs_result-metrics.
       LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
            WHERE flow = <lv_key>(1) AND method_class = <lv_key>+1(3)
            GROUP BY <ls_rule>-purpose ASSIGNING FIELD-SYMBOL(<lv_purpose>).
@@ -650,228 +1375,97 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                INTO TABLE cs_result-metrics.
       ENDLOOP.
       " Amounts per currency (EUR / GBP alongside USD): never summed across currencies
-      LOOP AT lt_sorted ASSIGNING FIELD-SYMBOL(<ls_amount>) GROUP BY <ls_amount>-currency ASSIGNING FIELD-SYMBOL(<ls_group>).
-        DATA(lv_warn_amount) = VALUE zif_cd_hck_types=>ty_value( ).
-        DATA(lv_crit_amount) = VALUE zif_cd_hck_types=>ty_value( ).
-        LOOP AT GROUP <ls_group> ASSIGNING FIELD-SYMBOL(<ls_member>).
-          lv_warn_amount = lv_warn_amount + <ls_member>-amount.
-          IF <ls_member>-crit = abap_true.
-            lv_crit_amount = lv_crit_amount + <ls_member>-amount.
-          ENDIF.
-        ENDLOOP.
-        INSERT VALUE #( metric = gc_metric-warn_amount dim1 = <lv_key> dim2 = <ls_group>
-                        value  = lv_warn_amount ) INTO TABLE cs_result-metrics.
-        INSERT VALUE #( metric = gc_metric-crit_amount dim1 = <lv_key> dim2 = <ls_group>
-                        value  = lv_crit_amount ) INTO TABLE cs_result-metrics.
+      LOOP AT mt_late_amounts ASSIGNING FIELD-SYMBOL(<ls_late>) WHERE key = <lv_key>.
+        INSERT VALUE #( metric = gc_metric-warn_amount dim1 = <lv_key> dim2 = <ls_late>-currency
+                        value  = <ls_late>-warn ) INTO TABLE cs_result-metrics.
+        INSERT VALUE #( metric = gc_metric-crit_amount dim1 = <lv_key> dim2 = <ls_late>-currency
+                        value  = <ls_late>-crit ) INTO TABLE cs_result-metrics.
       ENDLOOP.
-
-      IF lv_warn = 0.
-        CONTINUE.
+      IF VALUE #( mt_limits[ key = <lv_key> ]-set OPTIONAL ) = abap_false.
+        INSERT VALUE #( object_key = |{ ms_def-check_id }/{ <lv_key> }|
+                        check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing
+                        severity   = zif_cd_ops_types=>gc_severity-warning
+                        action     = zif_cd_ops_types=>gc_action-notify
+                        message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-limits_missing
+                                                            iv_v1    = ms_def-check_id
+                                                            iv_v2    = |{ gc_metric-age_oldest }/{ <lv_key> }| ) )
+               INTO TABLE cs_result-findings.
       ENDIF.
-      " Detail: the oldest late payments first (no bank account data is shown)
-      SORT lt_sorted BY age DESCENDING laufd ASCENDING doc1r ASCENDING.
-      CLEAR lt_details.
-      LOOP AT lt_sorted ASSIGNING FIELD-SYMBOL(<ls_listed>) TO lv_top_n.
-        DATA(lv_line) = zcl_cd_ops_util=>text(
-                          iv_msgno = zif_cd_hck_runtime_types=>gc_msg-payment_line
-                          iv_v1    = <ls_listed>-doc1r
-                          iv_v2    = <ls_listed>-pymet
-                          iv_v3    = |{ <ls_listed>-laufd DATE = ISO }|
-                          iv_v4    = |{ <ls_listed>-ref_date DATE = ISO }|
-                          iv_tail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-payment_age
-                                                           iv_v1    = <ls_listed>-age
-                                                           iv_v2    = |{ <ls_listed>-amount STYLE = SIMPLE }|
-                                                           iv_v3    = <ls_listed>-currency ) ).
-        IF <ls_listed>-no_valut = abap_true.
-          lv_line = |{ lv_line } { zcl_cd_ops_util=>text( zif_cd_hck_runtime_types=>gc_msg-run_date_used ) }|.
-        ENDIF.
-        INSERT lv_line INTO TABLE lt_details.
-      ENDLOOP.
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ <lv_key> }|
-                      check_code = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
-                      severity   = COND #( WHEN lv_crit > 0 THEN zif_cd_ops_types=>gc_severity-error
-                                           ELSE zif_cd_ops_types=>gc_severity-warning )
-                      action     = zif_cd_ops_types=>gc_action-notify
-                      reference  = <lv_key>
-                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-not_cleared
-                                                          iv_v1    = <lv_key>
-                                                          iv_v2    = lv_warn
-                                                          iv_v3    = lv_crit
-                                                          iv_v4    = lv_oldest )
-                      details    = concat_lines_of( table = lt_details sep = cl_abap_char_utilities=>newline ) )
-             INTO TABLE cs_result-findings.
     ENDLOOP.
+    report_cells( CHANGING cs_result = cs_result ).
+
+    IF mv_no_valut > 0.
+      INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-value_date_missing }|
+                      check_code = zif_cd_hck_runtime_types=>gc_code-value_date_missing
+                      severity   = zif_cd_ops_types=>gc_severity-info
+                      action     = zif_cd_ops_types=>gc_action-notify
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-value_date_missing
+                                                          iv_v1    = mv_no_valut
+                                                          iv_v2    = ms_def-check_id ) ) INTO TABLE cs_result-findings.
+    ENDIF.
+    " Not yet snapshotted: metric PAY_NOT_SNAPSHOT per flow + class; payments whose versions all say
+    " AMBIGUOUS (no stored outcome to count) are evaluated live too and said here
+    DATA(lv_live) = REDUCE i( INIT lv_sum = 0 FOR ls_live IN mt_stats NEXT lv_sum = lv_sum + ls_live-live ).
+    IF mv_ambiguous_live > 0.
+      INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-evaluated_live }|
+                      check_code = zif_cd_hck_runtime_types=>gc_code-evaluated_live
+                      severity   = zif_cd_ops_types=>gc_severity-info
+                      action     = zif_cd_ops_types=>gc_action-notify
+                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-evaluated_live
+                                                          iv_v1    = lv_live
+                                                          iv_v2    = mv_ambiguous_live ) ) INTO TABLE cs_result-findings.
+    ENDIF.
+    " Payments whose clearing cannot be determined (mandatory evidence unavailable at the evaluation)
+    IF REDUCE i( INIT lv_count = 0 FOR ls_und IN mt_stats NEXT lv_count = lv_count + ls_und-undetermined ) > 0.
+      mv_partial = abap_true.
+    ENDIF.
   ENDMETHOD.
 
 
-  METHOD report_listed.
+  METHOD report_cells.
     DATA lt_details TYPE string_table.
-    DATA(lt_listed) = mt_listed.
-    SORT lt_listed BY key code laufd doc1r.
-    LOOP AT lt_listed ASSIGNING FIELD-SYMBOL(<ls_first>)
-         GROUP BY ( key = <ls_first>-key code = <ls_first>-code ) ASSIGNING FIELD-SYMBOL(<ls_group>).
-      CLEAR lt_details.
-      DATA(lv_count) = 0.
-      DATA(lv_severity) = VALUE zif_cd_ops_types=>ty_severity( ).
-      LOOP AT GROUP <ls_group> ASSIGNING FIELD-SYMBOL(<ls_member>).
-        lv_count = lv_count + 1.
-        IF zcl_cd_ops_util=>severity_rank( <ls_member>-severity ) > zcl_cd_ops_util=>severity_rank( lv_severity ).
-          lv_severity = <ls_member>-severity.
-        ENDIF.
-        IF lv_count <= iv_top_n.
-          INSERT <ls_member>-line INTO TABLE lt_details.
-        ENDIF.
+    DATA lt_amounts TYPE string_table.
+    DATA lt_sorted TYPE SORTED TABLE OF ty_cell WITH UNIQUE KEY key code day.
+    lt_sorted = mt_cells.
+    LOOP AT lt_sorted ASSIGNING FIELD-SYMBOL(<ls_cell>).
+      CLEAR: lt_details, lt_amounts.
+      LOOP AT <ls_cell>-amounts ASSIGNING FIELD-SYMBOL(<ls_amount>).
+        INSERT zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-amount_currency
+                                      iv_v1    = |{ <ls_amount>-amount STYLE = SIMPLE }|
+                                      iv_v2    = <ls_amount>-currency ) INTO TABLE lt_amounts.
       ENDLOOP.
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ <ls_group>-key }/{ <ls_group>-code }|
-                      check_code = <ls_group>-code
-                      severity   = lv_severity
+      INSERT concat_lines_of( table = lt_amounts sep = ` | ` ) INTO TABLE lt_details.
+      INSERT zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-examples_head
+                                    iv_v1    = lines( <ls_cell>-examples )
+                                    iv_v2    = <ls_cell>-payments ) INTO TABLE lt_details.
+      LOOP AT <ls_cell>-examples ASSIGNING FIELD-SYMBOL(<ls_example>).
+        INSERT <ls_example>-line INTO TABLE lt_details.
+      ENDLOOP.
+      INSERT zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-drill_down
+                                    iv_v1    = <ls_cell>-code
+                                    iv_v2    = |{ <ls_cell>-day DATE = ISO }| ) INTO TABLE lt_details.
+      DATA(lv_where) = |{ <ls_cell>-key } { <ls_cell>-day DATE = ISO }|.
+      " One finding per flow + method class + code + run date; the key is stable across runs
+      INSERT VALUE #( object_key = |{ ms_def-check_id }/{ <ls_cell>-key }/{ <ls_cell>-code }/{ <ls_cell>-day }|
+                      group1     = <ls_cell>-key
+                      check_code = <ls_cell>-code
+                      severity   = <ls_cell>-severity
                       action     = zif_cd_ops_types=>gc_action-notify
-                      reference  = <ls_group>-key
-                      message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-inconsistent
-                                                          iv_v1    = <ls_group>-key
-                                                          iv_v2    = lv_count
-                                                          iv_v3    = <ls_group>-code )
+                      amount     = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-amount )
+                      currency   = COND #( WHEN lines( <ls_cell>-amounts ) = 1 THEN <ls_cell>-amounts[ 1 ]-currency )
+                      reference  = <ls_cell>-key
+                      message    = COND #( WHEN <ls_cell>-code = zif_cd_hck_runtime_types=>gc_code-payment_not_clear
+                                           THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-not_cleared
+                                                                       iv_v1    = lv_where
+                                                                       iv_v2    = <ls_cell>-payments
+                                                                       iv_v3    = <ls_cell>-crit
+                                                                       iv_v4    = <ls_cell>-oldest )
+                                           ELSE zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-inconsistent
+                                                                       iv_v1    = lv_where
+                                                                       iv_v2    = <ls_cell>-payments
+                                                                       iv_v3    = <ls_cell>-code ) )
                       details    = concat_lines_of( table = lt_details sep = cl_abap_char_utilities=>newline ) )
              INTO TABLE cs_result-findings.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD report_status_lag.
-    DATA lt_open TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
-    DATA lt_ack_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
-    DATA lt_file_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
-    DATA lt_lag TYPE tt_lag.
-    DATA ls_link TYPE ty_file_link.
-    DATA lv_now TYPE timestamp.
-    DATA lv_limit TYPE timestampl.
-    DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
-    DATA(lv_grace) = nmax( val1 = 0
-                           val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
-                                                              iv_name    = zif_cd_hck_runtime_types=>gc_param-status_lag_min
-                                                              iv_default = zif_cd_hck_runtime_types=>gc_param_default-status_lag_min ) ).
-    CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
-    lv_limit = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
-                                            secs  = lv_grace * 60 ).
-    " Which bank ACK applies is configuration per flow + class: the listed classes are acknowledged per
-    " file (the FMON file of the payment run), every other class per payment (TRACE_SRC_ACK)
-    DATA(lt_file_classes) = zcl_cd_hck_ev_support=>tokens(
-                              lo_params->get_param( iv_name    = zif_cd_hck_runtime_types=>gc_param-ack_file_classes
-                                                    iv_default = zif_cd_hck_runtime_types=>gc_param_default-ack_file_classes ) ).
-    " The file-level link is checked once per run as soon as a watched class is acknowledged per file
-    LOOP AT lt_file_classes ASSIGNING FIELD-SYMBOL(<lv_file_class>).
-      IF line_exists( mt_watched[ table_line = CONV zif_cd_hck_runtime_types=>ty_flow_class( <lv_file_class> ) ] ).
-        ls_link = file_ack_link( EXPORTING is_def    = is_def
-                                 CHANGING  cs_result = cs_result ).
-        EXIT.
-      ENDIF.
-    ENDLOOP.
-
-    " Payments in flight (also undetermined): a decided payment is not lagging
-    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
-      IF is_evaluation-verdicts[ sy-tabix ]-status = zif_cd_ops_payout_types=>gc_status-open.
-        INSERT <ls_payment> INTO TABLE lt_open.
-      ENDIF.
-    ENDLOOP.
-    IF lt_open IS NOT INITIAL.
-      DATA(lt_status) = zcl_cd_hck_ev_support=>status_of( lt_open ).
-      DATA(lt_ack_open) = zcl_cd_hck_ev_support=>tokens(
-                            lo_params->get_param( iv_name    = zif_cd_hck_runtime_types=>gc_param-status_ack_open
-                                                  iv_default = zif_cd_hck_runtime_types=>gc_param_default-status_ack_open ) ).
-      DATA(lt_no_ack) = zcl_cd_hck_ev_support=>tokens( lo_params->get_param( zif_cd_ops_trace_types=>gc_param-no_ack_methods ) ).
-    ENDIF.
-
-    LOOP AT it_payments ASSIGNING <ls_payment>.
-      DATA(ls_verdict) = is_evaluation-verdicts[ sy-tabix ].
-      IF ls_verdict-status <> zif_cd_ops_payout_types=>gc_status-open.
-        CONTINUE.
-      ENDIF.
-      DATA(lv_status) = VALUE #( lt_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL ).
-      DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ <ls_payment>-flow }{ <ls_payment>-class }| ).
-      IF ls_verdict-status_pending = abap_true.
-        " (b) The bank evidence decides the purpose, the status job has not followed: the evidence day
-        " (newest statement line; the run date when the kind has no date) plus the grace
-        DATA(lv_since) = COND d( WHEN ls_verdict-evidence_date IS NOT INITIAL THEN ls_verdict-evidence_date
-                                 ELSE <ls_payment>-laufd ).
-        IF lag_due( iv_date = lv_since iv_time = VALUE #( ) iv_has_time = abap_false iv_limit = lv_limit ) = abap_true.
-          INSERT VALUE #( doc1r   = <ls_payment>-doc1r
-                          key     = lv_key
-                          message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_bank
-                                                           iv_v1    = <ls_payment>-doc1r
-                                                           iv_v2    = lv_status
-                                                           iv_v3    = ls_verdict-purpose
-                                                           iv_v4    = |{ lv_since DATE = ISO }| )
-                          detail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
-                                                           iv_v1    = lv_grace
-                                                           iv_tail  = CONV string( ls_verdict-evidence_ref ) ) )
-            INTO TABLE lt_lag.
-        ENDIF.
-      ELSEIF lv_status IS NOT INITIAL AND line_exists( lt_ack_open[ table_line = lv_status ] )
-             AND NOT line_exists( lt_no_ack[ table_line = to_upper( CONV string( <ls_payment>-pymet ) ) ] ).
-        IF NOT line_exists( lt_file_classes[ table_line = CONV string( lv_key ) ] ).
-          " (a) candidate acknowledged per payment (by default the disbursements)
-          INSERT <ls_payment> INTO TABLE lt_ack_due.
-        ELSEIF ls_link-usable = abap_true.
-          " (a) candidate acknowledged per file (by default the collections): the payment run's file
-          INSERT <ls_payment> INTO TABLE lt_file_due.
-        ENDIF.
-      ENDIF.
-    ENDLOOP.
-
-    " (a) The bank ACK of the payment is older than the grace, the status still says ISSUED
-    IF lt_ack_due IS NOT INITIAL.
-      DATA(lt_acks) = acks_of( EXPORTING it_payments = lt_ack_due
-                                         is_def      = is_def
-                               IMPORTING ev_has_time = DATA(lv_has_time)
-                               CHANGING  cs_result   = cs_result ).
-      LOOP AT lt_ack_due ASSIGNING <ls_payment>.
-        READ TABLE lt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
-        IF sy-subrc <> 0.
-          CONTINUE.
-        ENDIF.
-        IF lag_due( iv_date = <ls_ack>-date iv_time = <ls_ack>-time iv_has_time = lv_has_time iv_limit = lv_limit ) = abap_false.
-          CONTINUE.
-        ENDIF.
-        INSERT VALUE #( doc1r   = <ls_payment>-doc1r
-                        key     = |{ <ls_payment>-flow }{ <ls_payment>-class }|
-                        message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack
-                                                         iv_v1    = <ls_payment>-doc1r
-                                                         iv_v2    = VALUE #( lt_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL )
-                                                         iv_v3    = |{ <ls_ack>-date DATE = ISO } { <ls_ack>-time TIME = ISO }| )
-                        detail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
-                                                         iv_v1    = lv_grace
-                                                         iv_tail  = <ls_ack>-text ) ) INTO TABLE lt_lag.
-      ENDLOOP.
-    ENDIF.
-
-    " (a) per file: the ACK of the payment run's file is older than the grace, the status still ISSUED
-    IF lt_file_due IS NOT INITIAL.
-      file_lags( EXPORTING it_payments = lt_file_due
-                           is_link     = ls_link
-                           it_status   = lt_status
-                           iv_limit    = lv_limit
-                           iv_grace    = lv_grace
-                 CHANGING  ct_lag      = lt_lag ).
-    ENDIF.
-
-    " One finding per payment (default: no alert rule - warnings of the morning report and dashboard)
-    LOOP AT lt_lag ASSIGNING FIELD-SYMBOL(<ls_lag>).
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/{ <ls_lag>-doc1r }|
-                      group1     = <ls_lag>-key
-                      check_code = zif_cd_hck_runtime_types=>gc_code-status_lag
-                      severity   = zif_cd_ops_types=>gc_severity-warning
-                      action     = zif_cd_ops_types=>gc_action-notify
-                      reference  = <ls_lag>-doc1r
-                      message    = <ls_lag>-message
-                      details    = <ls_lag>-detail ) INTO TABLE cs_result-findings.
-    ENDLOOP.
-    " Zero is evidence: every watched flow + class measures its lagging payments
-    LOOP AT mt_watched ASSIGNING FIELD-SYMBOL(<lv_key>).
-      DATA(lv_count) = 0.
-      LOOP AT lt_lag TRANSPORTING NO FIELDS WHERE key = <lv_key>.
-        lv_count = lv_count + 1.
-      ENDLOOP.
-      INSERT VALUE #( metric = gc_metric-status_lag dim1 = <lv_key> value = lv_count ) INTO TABLE cs_result-metrics.
     ENDLOOP.
   ENDMETHOD.
 
@@ -885,14 +1479,14 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                         iv_spec  = lo_params->get_param( zif_cd_ops_trace_types=>gc_param-src_ack ) ).
     " Without table, key or date the ACK time is unknown: the case is not evaluated (said once)
     IF ls_source-table_name IS INITIAL OR ls_source-key_field IS INITIAL OR ls_source-date_field IS INITIAL.
-      INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+      INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                    |{ zif_cd_ops_trace_types=>gc_param-src_ack }|
                       check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                       severity   = zif_cd_ops_types=>gc_severity-info
                       action     = zif_cd_ops_types=>gc_action-notify
                       message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack_unconfig
                                                           iv_v1    = zif_cd_ops_trace_types=>gc_param-src_ack ) )
-             INTO TABLE cs_result-findings.
+             INTO TABLE mt_findings.
       RETURN.
     ENDIF.
     ev_has_time = xsdbool( ls_source-time_field IS NOT INITIAL ).
@@ -908,18 +1502,18 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                                                                   it_keys     = lt_keys
                                                                                   iv_max_rows = mv_cap ).
       CATCH zcx_cd_ops_error INTO DATA(lx_error).
-        INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/{ ls_source-table_name }|
+        INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/{ ls_source-table_name }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                         severity   = zif_cd_ops_types=>gc_severity-warning
                         action     = zif_cd_ops_types=>gc_action-notify
                         message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_ack_failed
                                                             iv_v1    = ls_source-table_name
                                                             iv_tail  = lx_error->get_text( ) ) )
-               INTO TABLE cs_result-findings.
+               INTO TABLE mt_findings.
         RETURN.
     ENDTRY.
     IF lines( lt_rows ) >= mv_cap.
-      capped( iv_table = ls_source-table_name is_def = is_def ).
+      capped( ls_source-table_name ).
     ENDIF.
     DATA(lt_nack) = zcl_cd_hck_ev_support=>tokens(
                       lo_params->get_param( iv_name    = zif_cd_ops_trace_types=>gc_param-ack_nack_values
@@ -959,10 +1553,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     DATA(lt_sources) = lo_fmon->get_sources( ).
     DATA(ls_src) = VALUE zif_cd_fmon_types=>ty_src( lt_sources[ src_id = lv_src_id ] OPTIONAL ).
     IF ls_src-group_fields IS INITIAL.
-      file_ack_unusable( EXPORTING is_def     = is_def
-                                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_unconfig
-                                                                       iv_v1    = lv_src_id )
-                         CHANGING  cs_result  = cs_result ).
+      file_ack_unusable( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_unconfig
+                                                iv_v1    = lv_src_id ) ).
       RETURN.
     ENDIF.
     " Each group field must be a DPAYH payment run field: the payment's value of the same name
@@ -971,11 +1563,9 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       IF lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufd
          AND lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufi
          AND lv_field <> zif_cd_hck_runtime_types=>gc_run_field-hbkid.
-        file_ack_unusable( EXPORTING is_def     = is_def
-                                     iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_field
-                                                                         iv_v1    = lv_field
-                                                                         iv_v2    = lv_src_id )
-                           CHANGING  cs_result  = cs_result ).
+        file_ack_unusable( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_field
+                                                  iv_v1    = lv_field
+                                                  iv_v2    = lv_src_id ) ).
         CLEAR rs_link.
         RETURN.
       ENDIF.
@@ -993,10 +1583,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       ENDLOOP.
     ENDIF.
     IF rs_link-ifaces IS INITIAL.
-      file_ack_unusable( EXPORTING is_def     = is_def
-                                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_no_iface
-                                                                       iv_v1    = zif_cd_fmon_types=>gc_ack_level-file )
-                         CHANGING  cs_result  = cs_result ).
+      file_ack_unusable( zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_no_iface
+                                                iv_v1    = zif_cd_fmon_types=>gc_ack_level-file ) ).
       CLEAR rs_link.
       RETURN.
     ENDIF.
@@ -1005,45 +1593,40 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
 
   METHOD file_ack_unusable.
-    INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+    INSERT VALUE #( object_key = |{ ms_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
                                  |{ zif_cd_hck_runtime_types=>gc_param-ack_file_src }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
                     severity   = zif_cd_ops_types=>gc_severity-warning
                     action     = zif_cd_ops_types=>gc_action-notify
-                    message    = iv_message ) INTO TABLE cs_result-findings.
+                    message    = iv_message ) INTO TABLE mt_findings.
   ENDMETHOD.
 
 
-  METHOD file_acks_of.
-    TYPES:
-      BEGIN OF ty_group_of,
-        doc1r     TYPE zif_cd_hck_runtime_types=>ty_docno,
-        gen_group TYPE zif_cd_fmon_types=>ty_file_ref,
-      END OF ty_group_of.
-    DATA lt_group_of TYPE HASHED TABLE OF ty_group_of WITH UNIQUE KEY doc1r.
+  METHOD group_acks.
     DATA lt_keys TYPE zif_cd_fmon_types=>tt_group_key.
     DATA lt_values TYPE string_table.
     DATA lt_files TYPE zif_cd_fmon_types=>tt_file.
     DATA lt_file_ack TYPE HASHED TABLE OF zif_cd_fmon_types=>ty_group_ack WITH UNIQUE KEY file_id.
-    DATA lt_groups TYPE tt_group_time.
     DATA lv_since TYPE d.
 
     " Generation group key of each payment run, built from the values FMON reads from the source row
-    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+    LOOP AT mt_run_parts ASSIGNING FIELD-SYMBOL(<ls_part>).
       CLEAR lt_values.
-      LOOP AT is_link-fields ASSIGNING FIELD-SYMBOL(<lv_field>).
-        INSERT run_value( is_payment = <ls_payment> iv_field = <lv_field> ) INTO TABLE lt_values.
+      LOOP AT ms_link-fields ASSIGNING FIELD-SYMBOL(<lv_field>).
+        INSERT run_value( iv_laufd = <ls_part>-laufd
+                          iv_laufi = <ls_part>-laufi
+                          iv_hbkid = <ls_part>-hbkid
+                          iv_field = <lv_field> ) INTO TABLE lt_values.
       ENDLOOP.
-      DATA(lv_group) = zcl_cd_fmon_rules=>generation_key( lt_values ).
-      IF lv_group IS INITIAL.
+      <ls_part>-gen_group = zcl_cd_fmon_rules=>generation_key( lt_values ).
+      IF <ls_part>-gen_group IS INITIAL.
         CONTINUE.
       ENDIF.
-      INSERT VALUE #( doc1r = <ls_payment>-doc1r gen_group = lv_group ) INTO TABLE lt_group_of.
-      LOOP AT is_link-ifaces ASSIGNING FIELD-SYMBOL(<lv_iface>).
-        INSERT VALUE #( iface_id = <lv_iface> gen_group = lv_group ) INTO TABLE lt_keys.
+      LOOP AT ms_link-ifaces ASSIGNING FIELD-SYMBOL(<lv_iface>).
+        INSERT VALUE #( iface_id = <lv_iface> gen_group = <ls_part>-gen_group ) INTO TABLE lt_keys.
       ENDLOOP.
-      IF lv_since IS INITIAL OR <ls_payment>-laufd < lv_since.
-        lv_since = <ls_payment>-laufd.
+      IF lv_since IS INITIAL OR <ls_part>-laufd < lv_since.
+        lv_since = <ls_part>-laufd.
       ENDIF.
     ENDLOOP.
     IF lt_keys IS INITIAL.
@@ -1051,8 +1634,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     ENDIF.
     SORT lt_keys BY iface_id gen_group.
     DELETE ADJACENT DUPLICATES FROM lt_keys COMPARING iface_id gen_group.
-    " One read for all candidates: the files of the groups since the day before the earliest run (the
-    " file's business date is in FMON's time zone) with their ACK events
+    " One read for all runs: the files of the groups since the day before the earliest run (the file's
+    " business date is in FMON's time zone) with their ACK events
     DATA(lt_rows) = zcl_cd_fmon_factory=>get_dao( )->get_group_acks( it_keys  = lt_keys
                                                                      iv_since = CONV d( lv_since - 1 ) ).
     " The generations and the earliest ACK of each file
@@ -1076,9 +1659,9 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       IF zcl_cd_fmon_rules=>next_generation( is_file = <ls_file> it_generations = lt_files ) IS NOT INITIAL.
         CONTINUE.
       ENDIF.
-      READ TABLE lt_groups ASSIGNING FIELD-SYMBOL(<ls_group>) WITH TABLE KEY gen_group = <ls_file>-gen_group.
+      READ TABLE rt_acks ASSIGNING FIELD-SYMBOL(<ls_group>) WITH TABLE KEY gen_group = <ls_file>-gen_group.
       IF sy-subrc <> 0.
-        INSERT VALUE #( gen_group = <ls_file>-gen_group ) INTO TABLE lt_groups ASSIGNING <ls_group>.
+        INSERT VALUE #( gen_group = <ls_file>-gen_group ) INTO TABLE rt_acks ASSIGNING <ls_group>.
       ENDIF.
       READ TABLE lt_file_ack ASSIGNING <ls_file_ack> WITH TABLE KEY file_id = <ls_file>-file_id.
       IF sy-subrc <> 0.
@@ -1091,37 +1674,6 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                                    iv_tail  = CONV string( <ls_file>-file_name ) ).
       ENDIF.
     ENDLOOP.
-    LOOP AT lt_group_of ASSIGNING FIELD-SYMBOL(<ls_group_of>).
-      READ TABLE lt_groups ASSIGNING <ls_group> WITH TABLE KEY gen_group = <ls_group_of>-gen_group.
-      IF sy-subrc = 0 AND <ls_group>-open = abap_false AND <ls_group>-ack_at IS NOT INITIAL.
-        INSERT VALUE #( doc1r = <ls_group_of>-doc1r ack_at = <ls_group>-ack_at text = <ls_group>-text ) INTO TABLE rt_acks.
-      ENDIF.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD file_lags.
-    DATA lv_date TYPE d.
-    DATA lv_time TYPE t.
-    DATA(lt_acks) = file_acks_of( it_payments = it_payments
-                                  is_link     = is_link ).
-    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
-      READ TABLE lt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
-      " No ACK of the file: FMON's own finding (NO_BANK_ACK / missing), never a status lag here
-      IF sy-subrc <> 0 OR <ls_ack>-ack_at > iv_limit.
-        CONTINUE.
-      ENDIF.
-      CONVERT TIME STAMP <ls_ack>-ack_at TIME ZONE sy-zonlo INTO DATE lv_date TIME lv_time.
-      INSERT VALUE #( doc1r   = <ls_payment>-doc1r
-                      key     = |{ <ls_payment>-flow }{ <ls_payment>-class }|
-                      message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_file_ack
-                                                       iv_v1    = <ls_payment>-doc1r
-                                                       iv_v2    = VALUE #( it_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL )
-                                                       iv_v3    = |{ lv_date DATE = ISO } { lv_time TIME = ISO }| )
-                      detail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
-                                                       iv_v1    = iv_grace
-                                                       iv_tail  = <ls_ack>-text ) ) INTO TABLE ct_lag.
-    ENDLOOP.
   ENDMETHOD.
 
 
@@ -1129,11 +1681,11 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     " Unformatted as the FMON reader converts a source field (dates YYYYMMDD)
     CASE iv_field.
       WHEN zif_cd_hck_runtime_types=>gc_run_field-laufd.
-        rv_value = |{ is_payment-laufd }|.
+        rv_value = |{ iv_laufd }|.
       WHEN zif_cd_hck_runtime_types=>gc_run_field-laufi.
-        rv_value = is_payment-laufi.
+        rv_value = iv_laufi.
       WHEN zif_cd_hck_runtime_types=>gc_run_field-hbkid.
-        rv_value = is_payment-hbkid.
+        rv_value = iv_hbkid.
     ENDCASE.
     rv_value = condense( rv_value ).
   ENDMETHOD.
@@ -1156,17 +1708,17 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
 
   METHOD capped.
-    IF line_exists( mt_findings[ object_key = |{ is_def-check_id }/{ iv_table }| ] ).
+    IF line_exists( mt_findings[ object_key = |{ ms_def-check_id }/{ iv_table }| ] ).
       RETURN.
     ENDIF.
-    INSERT VALUE #( object_key = |{ is_def-check_id }/{ iv_table }|
+    INSERT VALUE #( object_key = |{ ms_def-check_id }/{ iv_table }|
                     check_code = zif_cd_hck_runtime_types=>gc_code-read_capped
                     severity   = zif_cd_ops_types=>gc_severity-warning
                     action     = zif_cd_ops_types=>gc_action-notify
                     message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-read_capped
                                                         iv_v1    = iv_table
                                                         iv_v2    = mv_cap
-                                                        iv_v3    = is_def-check_id ) ) INTO TABLE mt_findings.
+                                                        iv_v3    = ms_def-check_id ) ) INTO TABLE mt_findings.
   ENDMETHOD.
 
 ENDCLASS.

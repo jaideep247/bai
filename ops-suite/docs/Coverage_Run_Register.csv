@@ -96,7 +96,7 @@ ZCL_CD_HCK_C_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_GENERIC_AGG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
-ZCL_CD_HCK_C_INFLIGHT,own test include,,55,90,,Not run in target SAP
+ZCL_CD_HCK_C_INFLIGHT,own test include,,62,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_CYCLE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_C_JOB_RUNTIME,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_NUMRANGE,own test include,,10,90,,Not run in target SAP

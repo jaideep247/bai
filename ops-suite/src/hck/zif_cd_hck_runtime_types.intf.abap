@@ -37,6 +37,8 @@
 *&            | (GC_PARAM; ZCD_HCK_EVSET retired, TY_SETTING / GC_SETTING removed).
 *& 2026-11-08 | Table consolidation: TY_PM_CLASS with key HBKID (blank = class row, filled = calendar of a
 *&            | house bank; ZCD_HCK_PMBANK merged); TY_PM_BANK removed.
+*& 2026-11-08 | A_INFLIGHT at scale: codes PAY_SNAPSHOT_STALE, PAY_EVALUATED_LIVE (message 374); PARAM4
+*&            | (TOP_N) retired - examples per finding are ZCA_PARAM PAYOUT_EXAMPLES.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -547,6 +549,11 @@ INTERFACE zif_cd_hck_runtime_types
       "! The bank evidence decides (or the bank ACK is in) but DPAYH-ZZ_PAYMENT_STATUS has not
       "! followed within the grace period (hourly payment status job): one finding per payment
       status_lag         TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_LAG',
+      "! The payment outcome snapshot is behind more than MON_STALE_AFTER_MIN_CORE (or never ran): the
+      "! counts may miss the newest evidence - evidence PARTIAL, never GREEN on stale data
+      snapshot_stale     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_SNAPSHOT_STALE',
+      "! Payments the snapshot has not reached (or whose versions all say AMBIGUOUS) evaluated live
+      evaluated_live     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_EVALUATED_LIVE',
     END OF gc_code.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM)
@@ -638,8 +645,6 @@ INTERFACE zif_cd_hck_runtime_types
       "! A_INFLIGHT PARAM2 / PARAM3: look-back of VALUE_DATE classes and of ISSUE_DATE classes
       inflight_days   TYPE i VALUE 10,
       cheque_days     TYPE i VALUE 120,
-      "! A_INFLIGHT PARAM4: payments listed per finding (oldest first)
-      top_n           TYPE i VALUE 10,
       "! Longest day range counted in business days (calendar reads per run)
       max_calendar    TYPE i VALUE 400,
       "! Evidence ZCL_CD_HCK_EV_STMT_CHEQUE PARAM1: FEBEP-CHECT = last 13 characters of ZTNUM
@@ -710,6 +715,7 @@ INTERFACE zif_cd_hck_runtime_types
       file_ack_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '301',
       file_ack_field      TYPE zif_cd_ops_types=>ty_msgno VALUE '312',
       file_ack_no_iface   TYPE zif_cd_ops_types=>ty_msgno VALUE '346',
+      evaluated_live      TYPE zif_cd_ops_types=>ty_msgno VALUE '374',
     END OF gc_msg.
 
 ENDINTERFACE.

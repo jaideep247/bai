@@ -1739,6 +1739,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>374</MSGNR>
+     <TEXT>&amp;1 not yet snapshotted, &amp;2 attribution ambiguous: evaluated live</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>375</MSGNR>
      <TEXT>Check &amp;1: PARAM1 (number range objects) is not maintained</TEXT>
     </T100>
@@ -2923,6 +2929,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>757</MSGNR>
      <TEXT>&amp;1 run date &amp;2: &amp;3 payment(s) - &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>758</MSGNR>
+     <TEXT>Amount &amp;1 &amp;2</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
