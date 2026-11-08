@@ -8,11 +8,13 @@
 *& generic adapter's rules (file key, digest, business date, stage map).
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - source adapter for PRISM status events</p>
 "! Differences to ZCL_CD_FMON_ADAPTER_GENERIC (deliberate, documented in FMON_FILE_MONITORING.md):
 "! <ul><li>reads the suite's own table through ZIF_CD_FMON_PRISM_DAO (no dynamic SQL, no
-"! ZCD_FMON_TABWL / S_TABU_NAM needed), window on RECEIVED_AT, PROCESSED_AT initial only;</li>
+"! ZCD_OPS_TABWL / S_TABU_NAM needed), window on RECEIVED_AT, PROCESSED_AT initial only;</li>
 "! <li>an interfaceId sent by PRISM selects the interface; without it the name pattern decides.</li></ul>
 CLASS zcl_cd_fmon_adapter_prism DEFINITION
   PUBLIC

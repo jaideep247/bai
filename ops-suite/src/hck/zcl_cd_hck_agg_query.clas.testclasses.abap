@@ -6,6 +6,7 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
+*& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
 *&---------------------------------------------------------------------*
 CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -129,7 +130,7 @@ CLASS ltc_agg_query IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a table missing from ZCD_HCK_TABWL is refused (message 302)
+  " Rule: a table not approved in ZCD_OPS_TABWL (HCK / READ) is refused (message 302)
   METHOD rejects_unlisted_table.
     mv_whitelisted = abap_false.
     assert_msgno( iv_msgno = '302' iv_msg = 'Non-whitelisted table must be refused' ).

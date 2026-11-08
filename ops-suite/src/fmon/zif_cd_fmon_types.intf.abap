@@ -38,6 +38,8 @@
 *&            | FMON_PRISM_DUP_NAME_CODES, messages 280-283 (284 raised by the adapter).
 *& 2026-11-08 | TY_GROUP_ACK: files of generation groups with their ACK_RECEIVED events (read of the
 *&            | status lag of HCK A_INFLIGHT for payments acknowledged per file, ZIF_CD_FMON_DAO=>GET_GROUP_ACKS).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -488,7 +490,7 @@ INTERFACE zif_cd_fmon_types
     END OF ty_chk.
   TYPES tt_chk TYPE SORTED TABLE OF ty_chk WITH UNIQUE KEY check_id.
 
-  "! Tables (and fields; '*' = all) the dynamic reader may read (ZCD_FMON_TABWL, audit A51)
+  "! Tables (and fields; blank = all) the dynamic reader may read (ZCD_OPS_TABWL FMON / SOURCE, A51)
   TYPES:
     BEGIN OF ty_tab_allow,
       table_name TYPE ty_tabname,

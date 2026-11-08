@@ -99,7 +99,7 @@ uncapped count.
 `A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars in `ZCD_HCK_PMCLASS` / `ZCD_HCK_PMBANK`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
 `A_RECON_3WAY` has no PARAM1-4: the window, timing, redeposit days, tolerance and the row cap are ZCA_PARAM `HCK_RECON_*` (§1); the sets and bank code roles are §10. It also reads EBS_FEB_CREDIT_IND / EBS_FEB_DEBIT_IND, EBS_GL_LEDGER (owned by EBS) and TRACE_GL_AWTYP (core) - one definition each.
 `E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
-`E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a ZCD_HCK_TABWL row for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
+`E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a `ZCD_OPS_TABWL` row HCK / READ for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
 
 `HCK_SELF` (health of the health check) is built in — no row needed.
 
@@ -162,7 +162,7 @@ longer dimensions (job names, log objects) use the `*` row.
 VERIFY-DDIC: DFKKOP-FAEDN, AUGST, HVORG, BUKRS (standard payment engine names, not in the confirmed list).
 Alternative after confirmation: returns items via DFKKRP (DFKKRP-SELW1 = DFKKOP-AUGBL is confirmed).
 Variant with amounts: `AGG_FUNC = SUM`, `SUM_FIELD = BETRH` (VERIFY-DDIC).
-Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
+Plus the `ZCD_OPS_TABWL` row HCK / READ `DFKKOP` (§5) and the threshold rows in §3.
 
 | CHECK_ID | AGG_ID | TABNAME | AGG_FUNC | DATE_FIELD | DATE_MODE | AGE_DAYS_MIN | GROUP_FIELD | COND1 | Note |
 |---|---|---|---|---|---|---|---|---|---|
@@ -186,38 +186,42 @@ finding and measures nothing — it never reads as zero volume. When a grouped r
 
 Maintained in the health check configuration app (entity *Expected groups*), table logging on.
 
-## 5. Table whitelist — `ZCD_HCK_TABWL`
+## 5. Table whitelist — `ZCD_OPS_TABWL`, area HCK, purpose READ
 
-| TABNAME | DESCRIPTION | ACTIVE | APPROVED_BY |
-|---|---|---|---|
-| DFKKOP | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
-| ZCD_STRP_POUT_LOG | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
-| DFKKRP | payment engine returns items | X | `<security reviewer>` |
-| FEBKO | Bank statement headers (volume) | X | `<security reviewer>` |
-| ZCD_PAYM_REQ_LOG | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
-| ZCD_SPE_EXCP_LOG | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
-| ZCD_CHECK_HIST | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
-| /SAPPO/ORDER_HDR | Postprocessing orders (backlog) | X | `<security reviewer>` |
-| `<bgRFC unit / error table, VERIFY>` | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
+Since the table consolidation of 2026-11-08 the HCK whitelist (was `ZCD_HCK_TABWL`), the drift list (was `ZCD_HCK_DRIFT`, §6) and the FMON approved tables (was `ZCD_FMON_TABWL`, `config/fmon_seed.md`) are one core table, `ZCD_OPS_TABWL`, maintained in the core configuration app (*Approved tables per reader*). Every HCK read of a configured table (generic aggregates, value queries `C_*`, the bgRFC queue source of `E_QUEUES`, the Stripe evidence of `A_INFLIGHT`) needs an active row `HCK` / `READ` of the whole table (`FIELD_NAME` blank - the app refuses a field on an HCK row, message 423); a row of another purpose (`DRIFT`) or area (`FMON` / `SOURCE`) never approves an HCK read.
+
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE | APPROVED_BY |
+|---|---|---|---|---|---|---|
+| HCK | READ | DFKKOP | (blank) | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
+| HCK | READ | ZCD_STRP_POUT_LOG | (blank) | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
+| HCK | READ | DFKKRP | (blank) | payment engine returns items | X | `<security reviewer>` |
+| HCK | READ | FEBKO | (blank) | Bank statement headers (volume) | X | `<security reviewer>` |
+| HCK | READ | ZCD_PAYM_REQ_LOG | (blank) | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
+| HCK | READ | ZCD_SPE_EXCP_LOG | (blank) | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
+| HCK | READ | ZCD_CHECK_HIST | (blank) | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
+| HCK | READ | /SAPPO/ORDER_HDR | (blank) | Postprocessing orders (backlog) | X | `<security reviewer>` |
+| HCK | READ | `<bgRFC unit / error table, VERIFY>` | (blank) | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the
 security boundary; every new row needs a reviewer.
 
-## 6. Configuration drift — `ZCD_HCK_DRIFT`
+## 6. Configuration drift — `ZCD_OPS_TABWL`, area HCK, purpose DRIFT
 
-| TABNAME | DESCRIPTION | ACTIVE |
-|---|---|---|
-| TFK042Z | Payment program: collections vs disbursements (XEINZ) | X |
-| TFK033D | Account determination (no `*` wildcard in this landscape) | X |
-| ZCD_HCK_DEF | Health check catalog | X |
-| ZCD_HCK_THRESH | Health check thresholds | X |
-| ZCD_HCK_AGG | Generic aggregates | X |
-| ZCD_HCK_AGGGRP | Expected groups of aggregates (A103) | X |
-| ZCD_JOB_STEP | Job cycle steps | X |
-| ZCD_FMON_DEADL | FMON stage deadlines | X |
-| ZCD_FMON_SLA | FMON stage SLAs | X |
-| ZCD_FMON_CAL | FMON expected files | X |
-| ZCD_OPS_ALRULE | Alert rules | X |
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|
+| HCK | DRIFT | TFK042Z | (blank) | Payment program: collections vs disbursements (XEINZ) | X |
+| HCK | DRIFT | TFK033D | (blank) | Account determination (no `*` wildcard in this landscape) | X |
+| HCK | DRIFT | ZCD_HCK_DEF | (blank) | Health check catalog | X |
+| HCK | DRIFT | ZCD_HCK_THRESH | (blank) | Health check thresholds | X |
+| HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates | X |
+| HCK | DRIFT | ZCD_HCK_AGGGRP | (blank) | Expected groups of aggregates (A103) | X |
+| HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
+| HCK | DRIFT | ZCD_FMON_DEADL | (blank) | FMON stage deadlines | X |
+| HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs | X |
+| HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
+| HCK | DRIFT | ZCD_OPS_ALRULE | (blank) | Alert rules | X |
+
+A drift row hashes the whole table; it approves no read (the hash is read by the HCK DAO with its own static rule, `ZCL_CD_HCK_DAO=>COMPUTE_TABLE_HASH`).
 
 Deadlines, SLAs, calendar and alert rules are listed on purpose (user decision 2026-11-07): new rows come only by transport from DV1, but support may edit existing rows in PS4 (due time, severity, ACTIVE, SO23 list; `Operations_Runbook.md` §5h). Such a production edit is exactly what drift control should show: the table is reported as `CONFIG_DRIFT` until the same change is transported from DV1 and the baseline is taken again.
 
@@ -329,9 +333,9 @@ What the card rows give: cleared G/L line without payout log row = `CLEARING_INC
 
 | SET_ID | NAME | VALUE | DESCRIPTION | ACTIVE |
 |---|---|---|---|---|
-| STRIPE | TABLE | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_HCK_TABWL` row | (blank until SE11) |
+| STRIPE | TABLE | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_OPS_TABWL` row HCK / READ | (blank until SE11) |
 | STRIPE | INTENT_FIELD | `‹SE11 payment intent ID field›` | Payout log: payment intent ID | (blank) |
-| STRIPE | DFKKOP_INTENT_FIELD | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_HCK_TABWL`) | (blank) |
+| STRIPE | DFKKOP_INTENT_FIELD | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_OPS_TABWL` HCK / READ) | (blank) |
 | STRIPE | REQ_INTENT_FIELD | `‹SE11 ZCD_PAYM_REQ_LOG payment intent field›` | Reserved (not read: the chain DFKKOP → payout log does not need it) | (blank) |
 | STRIPE | TYPE_FIELD | `‹SE11 record type field›` | Optional: record type | (blank) |
 | STRIPE | PAYOUT_FIELD | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout | (blank) |

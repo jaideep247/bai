@@ -9,6 +9,8 @@
 *& 2026-11-06 | Audit A38: one row beyond the cap is read; reaching it marks the batch truncated.
 *& 2026-11-06 | Performance fix 8: item counts by a grouped COUNT(*) per link / lot and status (exact, no cap);
 *&            | is_done stays in ABAP per distinct status; open keys sampled only for links with open items.
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - returns/NOC lot completeness reader</p>
 "! Two shapes: header table links lot to file and items are read by lot key
@@ -215,7 +217,7 @@ CLASS zcl_cd_fmon_lot_reader IMPLEMENTATION.
 
 
   METHOD run_count.
-    " Same validation as run_query; ZCD_FMON_TABWL and S_TABU_NAM are checked in the DAO
+    " Same validation as run_query; ZCD_OPS_TABWL (FMON / SOURCE) and S_TABU_NAM are checked in the DAO
     DATA(lt_fields) = zcl_cd_fmon_factory=>get_ddic( )->describe_table( is_query-table_name ).
     zcl_cd_fmon_query=>validate( is_query  = is_query
                                  it_fields = lt_fields ).

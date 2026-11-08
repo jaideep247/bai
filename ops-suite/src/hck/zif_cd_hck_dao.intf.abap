@@ -17,6 +17,8 @@
 *&              PCRE patterns (complete value, case ignored); job reads raise message 747 at the name cap.
 *& 2026-11-07 | GC_MAX_AGG_ROWS is the hard ceiling (50,000) of parameter HCK_MAX_AGG_ROWS (default 5,000).
 *& 2026-11-07 | get_monitor_cfg (ZCD_OPS_MONCFG, DEFAULT IGNORE for existing doubles).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -58,7 +60,7 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_groups) TYPE zif_cd_hck_types=>tt_agg_group.
 
-  "! Table is on the whitelist ZCD_HCK_TABWL and active
+  "! Table is approved for HCK reads (ZCD_OPS_TABWL HCK / READ, whole table) and active
   METHODS is_table_whitelisted
     IMPORTING
       iv_tabname        TYPE zif_cd_hck_types=>ty_tabname
@@ -115,7 +117,7 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Tables under configuration-drift control (ZCD_HCK_DRIFT)
+  "! Tables under configuration-drift control (ZCD_OPS_TABWL HCK / DRIFT, active)
   METHODS get_drift_tables
     RETURNING
       VALUE(rt_tables) TYPE zif_cd_hck_types=>tt_drift_def.

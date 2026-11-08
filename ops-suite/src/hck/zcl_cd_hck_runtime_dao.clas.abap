@@ -4,7 +4,7 @@
 *& SQL of the runtime checks of the morning report: NRIV intervals by
 *& object (internal intervals, current / next year), queue entries grouped
 *& per queue / destination / state / day (table and field names validated
-*& against the runtime DDIC and, for a configured table, ZCD_HCK_TABWL),
+*& against the runtime DDIC and, for a configured table, ZCD_OPS_TABWL),
 *& DPAYH payments in a run-date window with the collection indicator of
 *& their method (TFK042Z via T001), G/L lines by XREF2 (BSEG) and the
 *& active rows of the in-flight configuration (ZCD_HCK_PMCLASS, _CLRRULE,
@@ -17,6 +17,8 @@
 *& 2026-11-07 | BSAS assignment read replaced by BSEG XREF2; in-flight configuration reads.
 *& 2026-11-07 | get_issued_payments_by_doc: payment runs by payment document (canonical payment
 *&            | outcome, trace and 5-minute snapshot); one join for both reads.
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION

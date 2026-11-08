@@ -31,6 +31,8 @@
 *&            | hard ceilings); cap reached fails as before.
 *& 2026-11-07 | get_monitor_cfg: ZCD_OPS_MONCFG (stale threshold per area, shared with the dashboards).
 *& 2026-11-07 | save_results: verdict of each check per run (ZCD_HCK_RESULT, design review).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -133,9 +135,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~is_table_whitelisted.
     DATA(lv_tabname) = to_upper( iv_tabname ).
+    " Full key of the approved-table list: HCK reads a whole table (blank field) - 2026-11-08
     SELECT SINGLE active
-      FROM zcd_hck_tabwl
-      WHERE tabname = @lv_tabname
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-health_check
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-read
+        AND table_name = @lv_tabname
+        AND field_name = @space
       INTO @DATA(lv_active).
     rv_allowed = xsdbool( sy-subrc = 0 AND lv_active = abap_true ).
   ENDMETHOD.
@@ -314,10 +320,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_drift_tables.
-    SELECT tabname, description
-      FROM zcd_hck_drift
-      WHERE active = @abap_true
-      ORDER BY tabname
+    SELECT table_name AS tabname, description
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-health_check
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-drift
+        AND field_name = @space
+        AND active     = @abap_true
+      ORDER BY table_name
       INTO CORRESPONDING FIELDS OF TABLE @rt_tables.
   ENDMETHOD.
 

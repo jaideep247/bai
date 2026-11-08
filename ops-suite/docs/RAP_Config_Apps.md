@@ -10,9 +10,9 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 | App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
-| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar, FmonTableAllow (ZCD_FMON_*) | FMON |
-| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, HckDriftTable, HckWhitelist, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole, HckSeqOutcome (ZCD_HCK_*, ZCD_JOB_*) | HCK |
-| Alerting & monitor freshness | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*) | CORE |
+| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
+| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole, HckSeqOutcome (ZCD_HCK_*, ZCD_JOB_*) | HCK |
+| Alerting, freshness & approved tables | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*), ApprovedTable (ZCD_OPS_TABWL, *Approved tables per reader*: FMON SOURCE, HCK READ / DRIFT - table consolidation 2026-11-08) | CORE |
 
 **Runtime parameters are not maintained here** (2026-11-07): the OpsParam section (table ZCD_OPS_PARAM, draft table ZCD_D_PARAM, entities `ZR_/ZC_CD_OpsParam`) is retired. Parameters live in the global framework `ZCA_PARAM` and are maintained in its app *Parameter areas* (`ZUI_CA_PARAM_O4`, `param-framework/docs/ONBOARDING.md`), areas `CD_OPS`, `CD_EBS`, `CD_FMON`, `CD_HCK`; the framework has its own transport / production rules (definitions by transport only, values of released parameters adjustable in production).
 
@@ -51,12 +51,12 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | ZCD_FMON_CAL | File monitoring / FmonCalendar | `GET_CALENDARS` (field 2026-11-07) |
 | ZCD_OPS_ALRULE | Alerting / AlertRule | `ZCL_CD_OPS_ALERT_DAO->GET_RULES` (field existed) |
 
-- Health check drift (`ZCD_HCK_DRIFT`): these four tables are under drift control (`config/hck_seed.md` §6) — a production edit of an existing row (due time, severity, `ACTIVE`, SO23 list) is reported as `CONFIG_DRIFT` like any other table until the change is back-ported to DV1 and the baseline is taken again; that is exactly what drift control should show.
+- Health check drift (`ZCD_OPS_TABWL` rows HCK / DRIFT): these four tables are under drift control (`config/hck_seed.md` §6) — a production edit of an existing row (due time, severity, `ACTIVE`, SO23 list) is reported as `CONFIG_DRIFT` like any other table until the change is back-ported to DV1 and the baseline is taken again; that is exactly what drift control should show.
 - A new deadline or similar alert: `Operations_Runbook.md` §5h (DV1 → QA1 → PS4).
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 23 customizing tables, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 33 customizing tables of the apps, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -86,7 +86,6 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | HCK | HckCheckDef | Class implements `ZIF_CD_HCK_CHECK`; category A–E; priority H/M/L | 410, 413 |
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
-| HCK | HckDriftTable, HckWhitelist | Table exists | 411 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
 | HCK | HckPmClass, HckPmBank, HckBtcRole | Flow D / C; ageing basis VALUE_DATE / ISSUE_DATE; scheme BAI2 / ISO / PRTRY (method class, role: open lists) | 413 |
 | HCK | HckClrRule | Flow, purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT), required (blank, X, C, N); **evidence class implements ZIF_CD_HCK_EVIDENCE** | 413, 410 |
@@ -94,6 +93,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |
 | CORE | AlertChannel | Class implements `ZIF_CD_OPS_ALERT_CHANNEL` | 410 |
 | CORE | MonitorCfg | Payment engine area EBS / FMON / HCK; stale-after minutes > 0 (`ZCD_OPS_MONCFG`, read by the dashboards' as-of views and the HCK self-check) | 413, 417 |
+| CORE | ApprovedTable | Payment engine area FMON / HCK; purpose per area (FMON: SOURCE; HCK: READ, DRIFT); an HCK row approves the whole table (field blank); table exists; field exists in that table (`ZCD_OPS_TABWL`, table consolidation 2026-11-08) | 413, 423, 411, 412 |
 
 **Pattern fields (user decision 2026-11-06).** Generator check `('pcre', field)` in `tools/rap_generate.py` → `ZCL_CD_OPS_UTIL=>PCRE_VALID` (the one helper also used at runtime): the pattern must compile as PCRE (it is matched to the complete value, case ignored; blank allowed), else message 418 on the field. The suppression operations app checks its key pattern the same way (`ZCL_CD_HCK_SUPPRESSION=>CHECK_REQUEST`). Pattern lists inside ZCD_HCK_DEF parameters are not validated by the app (the same PARAM columns hold numbers for other checks) — the check raises E373 at runtime and `ZCD_OPS_PATTERN_CHECK` shows them. VERIFY-ADT: validation messages on the draft in Prepare / Activate (no offline RAP runtime; the generator fixture tests cover the template and the list of validated fields).
 

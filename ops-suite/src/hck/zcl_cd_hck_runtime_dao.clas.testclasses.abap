@@ -15,6 +15,7 @@
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
 *& 2026-11-07 | BSAS assignment test replaced; ltc_inflight_reads (user rules 1-5).
 *& 2026-11-07 | payments_by_document_all_runs: payment runs by payment document (canonical outcome).
+*& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -382,7 +383,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a configured table (bgRFC) must be on ZCD_HCK_TABWL
+  " Rule: a configured table (bgRFC) must be on ZCD_OPS_TABWL (HCK / READ)
   METHOD configured_needs_whitelist.
     DATA(ls_source) = qrfc_source( ).
     ls_source-configured = abap_true.
@@ -674,7 +675,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the configured table must be on ZCD_HCK_TABWL
+  " Rule: the configured table must be on ZCD_OPS_TABWL (HCK / READ)
   METHOD reference_needs_whitelist.
     mo_hck_dao->mv_whitelisted = abap_false.
     TRY.

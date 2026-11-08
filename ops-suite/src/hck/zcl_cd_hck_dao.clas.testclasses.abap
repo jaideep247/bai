@@ -19,6 +19,8 @@
 *& 2026-11-07 | monitor_cfg_positive_only (ZCD_OPS_MONCFG doubled).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | check_result_saved_by_key (ZCD_HCK_RESULT doubled, design review).
+*& 2026-11-08 | Table consolidation: whitelist and drift rows in ZCD_OPS_TABWL; purpose filtering (READ vs
+*&            | DRIFT vs FMON SOURCE).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -96,7 +98,7 @@ CLASS ltc_dao IMPLEMENTATION.
                                                                             ( 'DFKKSUMC' )
                                                                             ( 'DFKKKO' )
                                                                             ( 'BKPF' )
-                                                                            ( 'ZCD_HCK_TABWL' )
+                                                                            ( 'ZCD_OPS_TABWL' )
                                                                             ( 'ZCD_HCK_SUPPRESS' ) ) ).
   ENDMETHOD.
 
@@ -719,6 +721,16 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
     CLASS-METHODS class_teardown.
     METHODS setup.
 
+    "! A row of the approved-table list ZCD_OPS_TABWL (default: area HCK, active, whole table)
+    METHODS approved_row
+      IMPORTING
+        iv_pe_area    TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-health_check
+        iv_purpose    TYPE zif_cd_ops_types=>ty_tabwl_purpose
+        iv_table      TYPE zif_cd_hck_types=>ty_tabname
+        iv_active     TYPE abap_bool DEFAULT abap_true
+      RETURNING
+        VALUE(rs_row) TYPE zcd_ops_tabwl.
+
     METHODS check_defs_active_by_seq FOR TESTING.
     METHODS thresholds_of_one_check FOR TESTING.
     METHODS agg_defs_and_groups_of_check FOR TESTING.
@@ -738,7 +750,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' ) ( 'ZCD_HCK_AGGGRP' )
-                                   ( 'ZCD_HCK_TABWL' ) ( 'ZCD_HCK_DRIFT' ) ( 'ZCD_HCK_BASELINE' )
+                                   ( 'ZCD_OPS_TABWL' ) ( 'ZCD_HCK_BASELINE' )
                                    ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_JOB_STEP' ) ( 'BALHDR' )
                                    ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ( 'ZCD_OPS_MONCFG' ) ) ).
   ENDMETHOD.
@@ -875,49 +887,61 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule (A56): a table is readable only with an active whitelist row (name upper-cased)
+  " Rule (A56): a table is readable only with an active approved-table row of HCK / READ (name
+  " upper-cased); rows of the purpose DRIFT or of FMON never approve an HCK read (2026-11-08)
   METHOD whitelist_needs_active_row.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_tabwl WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_hck_tabwl.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
     TRY.
-        ls_row-tabname = gc_test-table_on.
-        ls_row-active  = abap_true.
-        INSERT ls_row INTO TABLE lt_rows.
-        ls_row-tabname = gc_test-table_off.
-        ls_row-active  = abap_false.
-        INSERT ls_row INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-read
+                             iv_table   = gc_test-table_on ) INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-read
+                             iv_table   = gc_test-table_off
+                             iv_active  = abap_false ) INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-drift
+                             iv_table   = gc_test-drift_tab ) INTO TABLE lt_rows.
+        INSERT approved_row( iv_pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor
+                             iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-source
+                             iv_table   = gc_test-drift_tab ) INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         cl_abap_unit_assert=>assert_true( act = mo_cut->is_table_whitelisted( gc_test-table_low )
                                           msg = 'Active row allows (lower-case name)' ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->is_table_whitelisted( gc_test-table_off )
                                            msg = 'Inactive row refuses' ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->is_table_whitelisted( gc_test-drift_tab )
-                                           msg = 'Missing row refuses' ).
+                                           msg = 'A DRIFT or FMON SOURCE row does not approve an HCK read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
 
-  " Rule: only active drift-controlled tables
+  " Rule: only active drift-controlled tables (HCK / DRIFT); READ rows are not under drift control
   METHOD drift_tables_only_active.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_hck_drift WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_hck_drift.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
     TRY.
-        ls_row-tabname = gc_test-drift_tab.
-        ls_row-active  = abap_true.
-        INSERT ls_row INTO TABLE lt_rows.
-        ls_row-tabname = gc_test-table_off.
-        ls_row-active  = abap_false.
-        INSERT ls_row INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-drift
+                             iv_table   = gc_test-drift_tab ) INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-drift
+                             iv_table   = gc_test-table_off
+                             iv_active  = abap_false ) INTO TABLE lt_rows.
+        INSERT approved_row( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-read
+                             iv_table   = gc_test-table_on ) INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_tables) = mo_cut->get_drift_tables( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_tables ) exp = 1 msg = 'Only the active table' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_tables ) exp = 1 msg = 'Only the active DRIFT table' ).
         cl_abap_unit_assert=>assert_equals( act = lt_tables[ 1 ]-tabname exp = gc_test-drift_tab
                                             msg = 'Active table returned' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD approved_row.
+    rs_row-pe_area    = iv_pe_area.
+    rs_row-purpose    = iv_purpose.
+    rs_row-table_name = iv_table.
+    rs_row-active     = iv_active.
   ENDMETHOD.
 
 

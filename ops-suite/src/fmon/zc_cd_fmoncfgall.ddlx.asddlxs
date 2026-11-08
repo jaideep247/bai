@@ -23,9 +23,7 @@ annotate entity ZC_CD_FmonCfgAll with
     { id: 'FmonLotCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Returns / NOC lots', position: 80, targetElement: '_FmonLotCfg' },
     { id: 'FmonCalendar', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Expected files per day type', position: 90, targetElement: '_FmonCalendar' },
-    { id: 'FmonTableAllow', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Approved tables', position: 100, targetElement: '_FmonTableAllow' }
+      label: 'Expected files per day type', position: 90, targetElement: '_FmonCalendar' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

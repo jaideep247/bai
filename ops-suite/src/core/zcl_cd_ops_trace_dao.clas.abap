@@ -9,7 +9,7 @@
 *& read repository; custom sources whose field names are not confirmed
 *& (request log, clearing-reset history, ZCDT_REGUT, ACK and cheque
 *& history, BUT000 source field) through the file monitoring reader, which
-*& validates names against the DDIC, ZCD_FMON_TABWL and S_TABU_NAM and
+*& validates names against the DDIC, ZCD_OPS_TABWL (FMON / SOURCE) and S_TABU_NAM and
 *& binds values. No dynamic SQL of its own. Every read is keyed and capped.
 *& Read-only: no INSERT / UPDATE / DELETE. Unconfirmed fields: VERIFY-SE11.
 *& Modification log:
@@ -23,6 +23,8 @@
 *& 2026-11-07 | get_bank_lines with the statement account (FEBKO BUKRS / HBKID / HKTID, join by KUKEY) for the
 *&            | cheque link by number and house bank account (design review).
 *& 2026-11-07 | read_configured_set: configured source for many keys in one read (payment outcome).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION

@@ -32,6 +32,8 @@
 *& 2026-11-07 | CONFIG_CHANGED_IN_PROD / message 374 withdrawn (user decision: new rows by transport, D-3).
 *& 2026-11-07 | Design review: verdict of each check per run persisted (ZCD_HCK_RESULT, TY_RESULT_ROW):
 *&            | check status, completion, evidence availability, baseline mode, run scope (message 300).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -560,7 +562,7 @@ INTERFACE zif_cd_hck_types
     END OF ty_fikey_gap.
   TYPES tt_fikey_gap TYPE STANDARD TABLE OF ty_fikey_gap WITH EMPTY KEY.
 
-  "! ZCD_HCK_DRIFT
+  "! ZCD_OPS_TABWL rows HCK / DRIFT (tables under configuration-drift control)
   TYPES:
     BEGIN OF ty_drift_def,
       tabname     TYPE ty_tabname,

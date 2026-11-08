@@ -7,6 +7,7 @@
 *& Static ABAP Unit only; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
 *&---------------------------------------------------------------------*
 CLASS ltc_value_query DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -128,7 +129,7 @@ CLASS ltc_value_query IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: only tables on the whitelist ZCD_HCK_TABWL are read (302)
+  " Rule: only tables approved in ZCD_OPS_TABWL (HCK / READ) are read (302)
   METHOD table_must_be_whitelisted.
     TRY.
         build( it_return = VALUE #( ( `REQ_ID` ) ) iv_whitelisted = abap_false ).

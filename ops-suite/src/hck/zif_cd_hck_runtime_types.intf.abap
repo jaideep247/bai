@@ -31,6 +31,8 @@
 *& 2026-11-08 | Status lag after a file-level ACK: parameters HCK_PAY_ACK_FILE_CLASSES (flow + classes
 *&            | acknowledged per file) and HCK_PAY_ACK_FILE_SRC (FMON source of the generation group),
 *&            | DPAYH payment run fields GC_RUN_FIELD, messages 301, 312, 346, 688, 689.
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -107,7 +109,7 @@ INTERFACE zif_cd_hck_runtime_types
       state_field TYPE zif_cd_hck_types=>ty_fieldname,
       date_field  TYPE zif_cd_hck_types=>ty_fieldname,
       time_field  TYPE zif_cd_hck_types=>ty_fieldname,
-      "! The table name is configuration (bgRFC): it must be on ZCD_HCK_TABWL
+      "! The table name is configuration (bgRFC): it must be on ZCD_OPS_TABWL (HCK / READ)
       configured  TYPE abap_bool,
     END OF ty_queue_source.
 
@@ -426,7 +428,7 @@ INTERFACE zif_cd_hck_runtime_types
   "! Setting names of the Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE): chain payment document
   "! (DFKKOP-AUGBL) -> payment intent ID (DFKKOP field DFKKOP_INTENT_FIELD) -> payout log row
   "! (TABLE, field INTENT_FIELD). *_FIELD / TABLE = names validated against the DDIC and
-  "! ZCD_HCK_TABWL; CHARGE .. ACK_PARTIAL = optional comma lists of record-type / ACK values
+  "! ZCD_OPS_TABWL; CHARGE .. ACK_PARTIAL = optional comma lists of record-type / ACK values
   CONSTANTS:
     BEGIN OF gc_setting,
       table         TYPE ty_set_name VALUE 'TABLE',

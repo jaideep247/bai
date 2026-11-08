@@ -12,9 +12,11 @@
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Cap reached against the effective cap ZCL_CD_HCK_PARAM=>AGG_ROWS_CAP (parameter HCK_MAX_AGG_ROWS).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
-"! Security: table must be whitelisted (ZCD_HCK_TABWL); every field name
+"! Security: table must be approved (ZCD_OPS_TABWL HCK / READ); every field name
 "! must exist in the runtime DDIC of that table; operators come from a
 "! fixed list; character literals go through CL_ABAP_DYN_PRG=>QUOTE and
 "! numeric literals must match a number pattern. Nothing from customizing

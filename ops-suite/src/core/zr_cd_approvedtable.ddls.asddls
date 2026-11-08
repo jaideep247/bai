@@ -1,10 +1,14 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Approved tables'
+@EndUserText.label: 'Approved tables per reader'
 @Metadata.ignorePropagatedAnnotations: true
-define view entity ZR_CD_FmonTableAllow
-  as select from zcd_fmon_tabwl
-  association to parent ZR_CD_FmonCfgAll as _FmonCfgAll on $projection.SingletonID = _FmonCfgAll.SingletonID
+define view entity ZR_CD_ApprovedTable
+  as select from zcd_ops_tabwl
+  association to parent ZR_CD_OpsCfgAll as _OpsCfgAll on $projection.SingletonID = _OpsCfgAll.SingletonID
 {
+      @EndUserText.label: 'Payment engine area'
+  key pe_area as PaymentEngineArea,
+      @EndUserText.label: 'Purpose'
+  key purpose as Purpose,
       @EndUserText.label: 'Table name'
   key table_name as TableName,
       @EndUserText.label: 'Field name'
@@ -12,6 +16,8 @@ define view entity ZR_CD_FmonTableAllow
       1 as SingletonID,
       @EndUserText.label: 'Active'
       active as Active,
+      @EndUserText.label: 'Approved by'
+      approved_by as ApprovedBy,
       @EndUserText.label: 'Description'
       description as Description,
       @Semantics.user.lastChangedBy: true
@@ -23,5 +29,5 @@ define view entity ZR_CD_FmonTableAllow
       @Semantics.systemDateTime.localInstanceLastChangedAt: true
       @EndUserText.label: 'Changed at (instance)'
       local_last_changed_at as LocalLastChangedAt,
-      _FmonCfgAll
+      _OpsCfgAll
 }

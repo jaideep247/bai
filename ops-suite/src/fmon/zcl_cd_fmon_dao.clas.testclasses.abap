@@ -15,6 +15,8 @@
 *&            | (get_group_files, index GRP).
 *& 2026-11-08 | get_group_acks: the files of a group with their ACK events in one read - a file without
 *&            | ACK once with ACK_AT initial, other stages, other groups and older files not read.
+*& 2026-11-08 | Table consolidation: approvals in ZCD_OPS_TABWL (FMON / SOURCE, blank field = whole table);
+*&            | rows of another area or purpose do not approve (other_purpose_not_approved).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -77,7 +79,11 @@ CLASS ltc_dao DEFINITION FINAL
       RETURNING
         VALUE(rv_msgno) TYPE symsgno.
 
-    METHODS approve_file_table.
+    "! A row of the approved-table list for ZCD_FMON_FILE (default: FMON / SOURCE, whole table)
+    METHODS approve_file_table
+      IMPORTING
+        iv_pe_area TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
+        iv_purpose TYPE zif_cd_ops_types=>ty_tabwl_purpose DEFAULT zif_cd_ops_types=>gc_tabwl_purpose-source.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -113,6 +119,7 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS unapproved_table_is_refused FOR TESTING.
     METHODS read_without_auth_is_refused FOR TESTING.
     METHODS approved_table_is_read FOR TESTING.
+    METHODS other_purpose_not_approved FOR TESTING.
     METHODS grouped_count_per_status FOR TESTING.
     METHODS grouped_count_needs_approval FOR TESTING.
     METHODS generations_found_by_group FOR TESTING.
@@ -127,7 +134,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lt_deps TYPE if_osql_test_environment=>ty_t_sobjnames.
     INSERT CONV #( 'ZCD_FMON_FILE' ) INTO TABLE lt_deps.
     INSERT CONV #( 'ZCD_FMON_EVENT' ) INTO TABLE lt_deps.
-    INSERT CONV #( 'ZCD_FMON_TABWL' ) INTO TABLE lt_deps.
+    INSERT CONV #( 'ZCD_OPS_TABWL' ) INTO TABLE lt_deps.
     go_env = cl_osql_test_environment=>create( i_dependency_list = lt_deps ).
   ENDMETHOD.
 
@@ -405,10 +412,12 @@ CLASS ltc_dao IMPLEMENTATION.
 
 
   METHOD approve_file_table.
-    DATA lt_allow TYPE STANDARD TABLE OF zcd_fmon_tabwl WITH EMPTY KEY.
-    DATA ls_allow TYPE zcd_fmon_tabwl.
+    DATA lt_allow TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
+    DATA ls_allow TYPE zcd_ops_tabwl.
+    ls_allow-pe_area    = iv_pe_area.
+    ls_allow-purpose    = iv_purpose.
     ls_allow-table_name = 'ZCD_FMON_FILE'.
-    ls_allow-field_name = zif_cd_fmon_types=>gc_wildcard.
+    " blank field = the whole table
     ls_allow-active     = abap_true.
     INSERT ls_allow INTO TABLE lt_allow.
     go_env->insert_test_data( lt_allow ).
@@ -555,7 +564,7 @@ CLASS ltc_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Audit A51: a valid table name that nobody approved in ZCD_FMON_TABWL is never read (244)
+  " Audit A51: a valid table name that nobody approved in ZCD_OPS_TABWL (FMON / SOURCE) is never read (244)
   METHOD unapproved_table_is_refused.
     cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '244'
                                         msg = 'An unapproved table must raise 244' ).
@@ -631,6 +640,17 @@ CLASS ltc_dao IMPLEMENTATION.
     approve_file_table( ).
     cl_abap_unit_assert=>assert_initial( act = msgno_of_read( )
                                          msg = 'An approved and authorised table must be read' ).
+  ENDMETHOD.
+
+
+  " Table consolidation 2026-11-08: the reader filters the approved-table list by its own area and
+  " purpose - an HCK READ row (or an FMON row of another purpose) never approves the FMON reader
+  METHOD other_purpose_not_approved.
+    approve_file_table( iv_pe_area = zif_cd_ops_types=>gc_pe_area-health_check
+                        iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-read ).
+    approve_file_table( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-drift ).
+    cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '244'
+                                        msg = 'Rows of another area or purpose must not approve the FMON read' ).
   ENDMETHOD.
 
 ENDCLASS.

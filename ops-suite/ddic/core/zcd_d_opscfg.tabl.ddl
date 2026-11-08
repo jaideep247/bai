@@ -1,4 +1,4 @@
-@EndUserText.label : 'Draft: Alerting and monitor freshness (singleton)'
+@EndUserText.label : 'Draft: Alerting, freshness and approved tables (singleton)'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A

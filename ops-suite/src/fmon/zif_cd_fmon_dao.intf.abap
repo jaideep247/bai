@@ -12,6 +12,8 @@
 *& 2026-11-07 | get_group_files (regenerated files: generations of a payment run, DEFAULT IGNORE).
 *& 2026-11-08 | get_group_acks (files of generation groups with their ACK events, one read; consumer
 *&            | HCK A_INFLIGHT status lag of payments acknowledged per file, DEFAULT IGNORE).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -148,7 +150,7 @@ INTERFACE zif_cd_fmon_dao
       zcx_cd_ops_error.
 
   "! Fix 8: the rows of the same read counted per distinct combination of the query's fields
-  "! (GROUP BY every field, COUNT(*)); same name validation, ZCD_FMON_TABWL approval and
+  "! (GROUP BY every field, COUNT(*)); same name validation, ZCD_OPS_TABWL approval (FMON / SOURCE) and
   "! S_TABU_NAM check as read_legacy. No row cap: one row per group
   METHODS count_legacy DEFAULT IGNORE
     IMPORTING

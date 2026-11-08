@@ -4,8 +4,8 @@
   <asx:values>
    <DDLX>
     <METADATA>
-     <NAME>ZC_CD_HCKWHITELIST</NAME>
-     <DESCRIPTION>Health check setup - Aggregate table whitelist</DESCRIPTION>
+     <NAME>ZC_CD_APPROVEDTABLE</NAME>
+     <DESCRIPTION>Alerting, freshness and approved tables - Approved tables pe</DESCRIPTION>
      <MASTER_LANGUAGE>EN</MASTER_LANGUAGE>
     </METADATA>
    </DDLX>

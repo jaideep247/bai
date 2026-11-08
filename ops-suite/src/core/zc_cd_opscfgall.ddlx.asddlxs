@@ -1,7 +1,7 @@
-// UI annotations: Alerting and monitor freshness
+// UI annotations: Alerting, freshness and approved tables
 @Metadata.layer: #CORE
-@UI: { headerInfo: { typeName: 'Alerting and monitor freshness',
-                     typeNamePlural: 'Alerting and monitor freshness',
+@UI: { headerInfo: { typeName: 'Alerting, freshness and approved tables',
+                     typeNamePlural: 'Alerting, freshness and approved tables',
                      title: { type: #STANDARD, value: 'SingletonID' } } }
 annotate entity ZC_CD_OpsCfgAll with
 {
@@ -13,7 +13,9 @@ annotate entity ZC_CD_OpsCfgAll with
     { id: 'AlertChannel', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Alert channels', position: 30, targetElement: '_AlertChannel' },
     { id: 'MonitorCfg', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Monitor freshness', position: 40, targetElement: '_MonitorCfg' }
+      label: 'Monitor freshness', position: 40, targetElement: '_MonitorCfg' },
+    { id: 'ApprovedTable', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Approved tables per reader', position: 50, targetElement: '_ApprovedTable' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

@@ -12,10 +12,12 @@
 *& CLEARING_INCONSISTENT. Settings in ZCD_HCK_EVSET (set id = PARAM1);
 *& while table or intent fields are not maintained the kind reports "not
 *& configured" (information) and its rows are ignored. Tables on
-*& ZCD_HCK_TABWL and fields in the DDIC are checked before each read. One
+*& ZCD_OPS_TABWL (HCK / READ) and fields in the DDIC are checked before each read. One
 *& read per table for all payments, capped. Read-only.
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction: link by Stripe payment intent ID, method B).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - Stripe payout log row of the payment intent</p>
 CLASS zcl_cd_hck_ev_stripe DEFINITION

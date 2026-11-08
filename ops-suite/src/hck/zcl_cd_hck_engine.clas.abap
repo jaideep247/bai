@@ -35,6 +35,8 @@
 *&            | active checks outside a filtered run's scope as SKIPPED. The dashboard reads these rows.
 *& 2026-11-07 | A check that reports evidence NONE (nothing to rate, e.g. A_RECON_3WAY without any leg) is
 *&            | grey, never an inherited GREEN.
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -64,7 +66,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! Take a new golden baseline (hash) of every table in ZCD_HCK_DRIFT.
+    "! Take a new golden baseline (hash) of every table in ZCD_OPS_TABWL (HCK / DRIFT).
     "! Requires S_TABU_NAM ACTVT 02 for table ZCD_HCK_BASELINE.
     "! @raising zcx_cd_ops_error | 041 no authorization, 303/311 hash errors
     METHODS take_baseline

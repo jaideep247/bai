@@ -42,8 +42,3 @@ union all
   {
     last_changed_at as LastChangedAt
   }
-union all
-  select from zcd_fmon_tabwl
-  {
-    last_changed_at as LastChangedAt
-  }

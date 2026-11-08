@@ -1050,7 +1050,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>244</MSGNR>
-     <TEXT>Table &amp;1 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+     <TEXT>Table &amp;1 not approved for file monitoring (ZCD_OPS_TABWL, FMON SOURCE)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1080,7 +1080,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>249</MSGNR>
-     <TEXT>Field &amp;1 of table &amp;2 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+     <TEXT>Field &amp;1 of table &amp;2 not approved for file monitoring (ZCD_OPS_TABWL)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1308,7 +1308,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
-     <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
+     <TEXT>Table &amp;1 not approved for health check reads (ZCD_OPS_TABWL, HCK READ)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1993,6 +1993,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>421</MSGNR>
      <TEXT>&amp;1 is not a finding code of the in-flight check (upper case)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>423</MSGNR>
+     <TEXT>&amp;1 must be blank when &amp;2 is '&amp;3'</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

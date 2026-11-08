@@ -20,6 +20,8 @@
 *&            | (index GRP), GROUP_FIELDS of the source rows.
 *& 2026-11-08 | get_group_acks: files of generation groups (index GRP) with their ACK_RECEIVED events in one
 *&            | statement (LEFT OUTER JOIN ZCD_FMON_EVENT) - status lag of HCK A_INFLIGHT, file-level ACK.
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -41,7 +43,7 @@ CLASS zcl_cd_fmon_dao DEFINITION
       CHANGING
         ct_files TYPE zif_cd_fmon_types=>tt_file.
 
-    "! Table and fields approved in ZCD_FMON_TABWL and display authorisation (audit A51)
+    "! Table and fields approved in ZCD_OPS_TABWL (FMON / SOURCE) and display authorisation (A51)
     METHODS check_read_allowed
       IMPORTING
         is_query TYPE zif_cd_fmon_types=>ty_query
@@ -569,9 +571,12 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
   METHOD check_read_allowed.
     DATA lt_allow TYPE zif_cd_fmon_types=>tt_tab_allow.
     DATA(lv_table) = CONV zif_cd_fmon_types=>ty_tabname( to_upper( condense( CONV string( is_query-table_name ) ) ) ).
+    " One approved-table list for every reader: the rows of FMON's dynamic reader (2026-11-08)
     SELECT table_name, field_name
-      FROM zcd_fmon_tabwl
-      WHERE table_name = @lv_table
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-file_monitor
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-source
+        AND table_name = @lv_table
         AND active     = @abap_true
       ORDER BY table_name, field_name
       INTO CORRESPONDING FIELDS OF TABLE @lt_allow.

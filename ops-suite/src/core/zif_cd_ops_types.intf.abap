@@ -25,6 +25,8 @@
 *& 2026-11-07 | Parameters in the framework ZCA_PARAM: areas GC_PARAM_AREA, name prefix -> area
 *&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CD_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
 *& 2026-11-07 | Transactions dashboard retention (400 days) and date kinds (canonical payment outcome).
+*& 2026-11-08 | Table consolidation: GC_TABWL_PURPOSE (ZCD_OPS_TABWL, one approved-table list per area and
+*&            | purpose).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -178,6 +180,19 @@ INTERFACE zif_cd_ops_types
       "! Cross-payment engine area objects: alerting, parameters, purge (authorisation object ZCD_OPS)
       core         TYPE ty_pe_area VALUE 'CORE',
     END OF gc_pe_area.
+
+  "! ZCD_OPS_TABWL-PURPOSE: what the reader of the payment engine area does with an approved
+  "! table (table consolidation 2026-11-08): FMON SOURCE, HCK READ / DRIFT
+  TYPES ty_tabwl_purpose TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_tabwl_purpose,
+      "! FMON dynamic reader (ZCD_FMON_SRC / _LOTCFG tables, payment trace sources; audit A51)
+      source TYPE ty_tabwl_purpose VALUE 'SOURCE',
+      "! HCK aggregates, value queries, queue and evidence sources (counts / references only)
+      read   TYPE ty_tabwl_purpose VALUE 'READ',
+      "! HCK configuration drift: the whole table is hashed against the golden baseline
+      drift  TYPE ty_tabwl_purpose VALUE 'DRIFT',
+    END OF gc_tabwl_purpose.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.

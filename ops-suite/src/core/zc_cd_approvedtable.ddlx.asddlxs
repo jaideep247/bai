@@ -1,27 +1,39 @@
-// UI annotations: File monitoring setup - Approved tables
+// UI annotations: Alerting, freshness and approved tables - Approved tables per reader
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Approved table',
-                     typeNamePlural: 'Approved tables',
-                     title: { type: #STANDARD, value: 'TableName' } } }
-annotate entity ZC_CD_FmonTableAllow with
+                     typeNamePlural: 'Approved tables per reader',
+                     title: { type: #STANDARD, value: 'PaymentEngineArea' } } }
+annotate entity ZC_CD_ApprovedTable with
 {
   @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
                 label: 'Details', position: 10 } ]
 
   @UI.lineItem: [{ position: 10 }]
   @UI.identification: [{ position: 10 }]
-  TableName;
+  PaymentEngineArea;
 
   @UI.lineItem: [{ position: 20 }]
   @UI.identification: [{ position: 20 }]
-  FieldName;
+  Purpose;
 
   @UI.lineItem: [{ position: 30 }]
   @UI.identification: [{ position: 30 }]
-  Active;
+  TableName;
 
   @UI.lineItem: [{ position: 40 }]
   @UI.identification: [{ position: 40 }]
+  FieldName;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Active;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  ApprovedBy;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
   Description;
 
   @UI.hidden: true

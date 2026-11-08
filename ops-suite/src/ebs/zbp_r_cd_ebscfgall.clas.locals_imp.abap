@@ -10,6 +10,7 @@
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
+*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals

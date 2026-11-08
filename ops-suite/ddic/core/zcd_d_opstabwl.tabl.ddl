@@ -1,17 +1,18 @@
-@EndUserText.label : 'Draft: Aggregate table whitelist'
+@EndUserText.label : 'Draft: Approved tables per reader'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A
 @AbapCatalog.dataMaintenance : #RESTRICTED
-define table zcd_d_hcktabwl {
+define table zcd_d_opstabwl {
   key mandt : abap.clnt not null;
-  key tabname : abap.char(30) not null;
+  key paymentenginearea : abap.char(4) not null;
+  key purpose : abap.char(10) not null;
+  key tablename : abap.char(30) not null;
+  key fieldname : abap.char(30) not null;
   singletonid : abap.int1;
-  description : abap.char(60);
   active : abap_boolean;
   approvedby : syuname;
-  changedby : syuname;
-  changedat : timestampl;
+  description : abap.char(60);
   lastchangedby : abp_lastchange_user;
   lastchangedat : abp_lastchange_tstmpl;
   locallastchangedat : abp_locinst_lastchange_tstmpl;

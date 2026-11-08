@@ -76,7 +76,7 @@ Reversal evidence used: `DFKKOP-AUGRD` = `05` (constant `ZIF_CD_OPS_TRACE_TYPES=
 | DFKKRP by SELW1 with DFKKRK-STARS and the return reason RLGRD | `GET_RETURN_ITEMS` (`:56`) |
 | DFKKNRP by INFOF with the NOC reason FLGRD (capped in the trace DAO at `TRACE_MAX_ROWS` + 1, as the cheque read) | `GET_NOC_ITEMS` (`:71`) |
 | ZCD_ACH_RTRV_LOG by AUGBL, status field `EBS_RTRV_STATUS_FIELD` (DDIC-validated) | `GET_RETRIEVALS` (`:136`) |
-| Configured sources (request log, history, ZCDT_REGUT, ACK, cheque history, BUT000 source field) | FMON reader: `ZCL_CD_FMON_QUERY=>VALIDATE` + `ZCL_CD_FMON_DAO=>READ_LEGACY` (DDIC, `ZCD_FMON_TABWL`, `S_TABU_NAM` 03, bound values) |
+| Configured sources (request log, history, ZCDT_REGUT, ACK, cheque history, BUT000 source field) | FMON reader: `ZCL_CD_FMON_QUERY=>VALIDATE` + `ZCL_CD_FMON_DAO=>READ_LEGACY` (DDIC, `ZCD_OPS_TABWL` FMON / SOURCE, `S_TABU_NAM` 03, bound values) |
 | FMON file correlation key / digest | `ZCL_CD_FMON_UTIL=>NORMALIZE_REF` / `IS_DIGEST_REF` / `CANONICAL_NAME` (A100) |
 | G/L transfer rule (AWTYP, BUKRS, STBLG) | `ZCL_CD_HCK_DAO=>GET_FIKEYS_WITHOUT_GL` (`src/hck/zcl_cd_hck_dao.clas.abap:517-533`, A43) |
 
@@ -104,7 +104,7 @@ Shared with the morning report (2026-11-07): the in-flight check `A_INFLIGHT` (`
 | `TRACE_BANK_LOOKBACK_DAYS` | 5 | Bank lines from clearing date minus n days; FMON file window ± n days around LAUFD |
 | `EBS_RTRV_STATUS_FIELD` | (EBS) | Shared with EBS: status field of ZCD_ACH_RTRV_LOG |
 
-Every configured table also needs a `ZCD_FMON_TABWL` row (table + fields or `*`) and `S_TABU_NAM` 03 for the users; otherwise the stage is UNAVAILABLE (`SOURCE_NOT_READABLE`), never VERIFIED.
+Every configured table also needs a `ZCD_OPS_TABWL` row FMON / SOURCE (table + fields, or blank field = whole table) and `S_TABU_NAM` 03 for the users; otherwise the stage is UNAVAILABLE (`SOURCE_NOT_READABLE`), never VERIFIED.
 
 ## 6. Access and masking
 

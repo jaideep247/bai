@@ -5,7 +5,7 @@
    <SRVD>
     <NAME>ZUI_CD_OPS_CFG</NAME>
     <TYPE>SRVD/SRV</TYPE>
-    <DESCRIPTION>Alerting and monitor freshness</DESCRIPTION>
+    <DESCRIPTION>Alerting, freshness and approved tables</DESCRIPTION>
     <LANGUAGE>EN</LANGUAGE>
     <MASTER_LANGUAGE>EN</MASTER_LANGUAGE>
     <SOURCE_URI>./zui_cd_ops_cfg/source/main</SOURCE_URI>

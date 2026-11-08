@@ -10,6 +10,7 @@
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
+*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -58,7 +59,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `HckBtcRole`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
       hckclrrule                     TYPE string VALUE `HckClrRule`,
-      hckdrifttable                  TYPE string VALUE `HckDriftTable`,
       hckevidenceset                 TYPE string VALUE `HckEvidenceSet`,
       hckpmbank                      TYPE string VALUE `HckPmBank`,
       hckpmclass                     TYPE string VALUE `HckPmClass`,
@@ -66,7 +66,6 @@ INTERFACE lif_c.
       hckreconset                    TYPE string VALUE `HckReconSet`,
       hckseqoutcome                  TYPE string VALUE `HckSeqOutcome`,
       hckthreshold                   TYPE string VALUE `HckThreshold`,
-      hckwhitelist                   TYPE string VALUE `HckWhitelist`,
       jobcycle                       TYPE string VALUE `JobCycle`,
       jobstep                        TYPE string VALUE `JobStep`,
     END OF gc_ent,
@@ -80,7 +79,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `ZCD_HCK_BTCROLE`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
       hckclrrule                     TYPE string VALUE `ZCD_HCK_CLRRULE`,
-      hckdrifttable                  TYPE string VALUE `ZCD_HCK_DRIFT`,
       hckevidenceset                 TYPE string VALUE `ZCD_HCK_EVSET`,
       hckpmbank                      TYPE string VALUE `ZCD_HCK_PMBANK`,
       hckpmclass                     TYPE string VALUE `ZCD_HCK_PMCLASS`,
@@ -88,7 +86,6 @@ INTERFACE lif_c.
       hckreconset                    TYPE string VALUE `ZCD_HCK_RCSET`,
       hckseqoutcome                  TYPE string VALUE `ZCD_HCK_SEQOUT`,
       hckthreshold                   TYPE string VALUE `ZCD_HCK_THRESH`,
-      hckwhitelist                   TYPE string VALUE `ZCD_HCK_TABWL`,
       jobcycle                       TYPE string VALUE `ZCD_JOB_CYCLE`,
       jobstep                        TYPE string VALUE `ZCD_JOB_STEP`,
     END OF gc_tab,
@@ -166,12 +163,6 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckAggGroup = if_abap_behv=>mk-on.
       result-%assoc-_HckAggGroup = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckDriftTable = if_abap_behv=>mk-on.
-      result-%assoc-_HckDriftTable = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckWhitelist = if_abap_behv=>mk-on.
-      result-%assoc-_HckWhitelist = lv_create.
     ENDIF.
     IF requested_features-%assoc-_JobCycle = if_abap_behv=>mk-on.
       result-%assoc-_JobCycle = lv_create.
@@ -641,204 +632,6 @@ CLASS lhc_hckagggroup IMPLEMENTATION.
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
         INTO TABLE reported-hckagggroup.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_hckdrifttable DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckDriftTable RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckDriftTable~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckDriftTable~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckdrifttable IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckDriftTable
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckdrifttable.
-      IF ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
-                        element = lif_c=>gc_el-tabname ) INTO TABLE lt_msg.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckdrifttable.
-        INSERT INITIAL LINE INTO TABLE reported-hckdrifttable ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-hckcfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckdrifttable.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckdrifttable.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckdrifttable.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_hckwhitelist DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckWhitelist RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckWhitelist~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckWhitelist~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckwhitelist IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckWhitelist
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckwhitelist.
-      IF ls_row-Tabname IS NOT INITIAL
-         AND zcl_cd_ops_cfg_checks=>table_exists( CONV #( ls_row-Tabname ) ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-table_invalid v1 = ls_row-Tabname
-                        element = lif_c=>gc_el-tabname ) INTO TABLE lt_msg.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckwhitelist.
-        INSERT INITIAL LINE INTO TABLE reported-hckwhitelist ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-hckcfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckwhitelist.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckwhitelist.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckwhitelist.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1846,8 +1639,6 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckthreshold table = lif_c=>gc_tab-hckthreshold )
             ( entity = lif_c=>gc_ent-hckaggregate table = lif_c=>gc_tab-hckaggregate )
             ( entity = lif_c=>gc_ent-hckagggroup table = lif_c=>gc_tab-hckagggroup )
-            ( entity = lif_c=>gc_ent-hckdrifttable table = lif_c=>gc_tab-hckdrifttable )
-            ( entity = lif_c=>gc_ent-hckwhitelist table = lif_c=>gc_tab-hckwhitelist )
             ( entity = lif_c=>gc_ent-jobcycle table = lif_c=>gc_tab-jobcycle )
             ( entity = lif_c=>gc_ent-jobstep table = lif_c=>gc_tab-jobstep )
             ( entity = lif_c=>gc_ent-hckpmclass table = lif_c=>gc_tab-hckpmclass )

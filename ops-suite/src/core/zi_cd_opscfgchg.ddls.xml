@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZI_CD_OPSCFGCHG</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Alerting and monitor freshness: change stamps</DDTEXT>
+    <DDTEXT>Alerting, freshness and approved tables: change stamps</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

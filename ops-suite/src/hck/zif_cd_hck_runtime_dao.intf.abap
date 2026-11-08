@@ -15,6 +15,8 @@
 *&            | ZCD_HCK_PMCLASS, _PMBANK, _EVSET, ZCD_HCK_CLRRULE, ZCD_HCK_BTCROLE, ZCD_HCK_SEQOUT (user rules
 *&            | 1-5); configured table by reference (Stripe payout log).
 *& 2026-11-07 | get_issued_payments_by_doc: payment runs of payment documents (canonical payment outcome).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -37,7 +39,7 @@ INTERFACE zif_cd_hck_runtime_dao
 
   "! Entries of a queue source grouped per queue, destination, state and day, with the
   "! oldest time of the day; at most iv_max_rows groups. Names are validated against the
-  "! DDIC (and ZCD_HCK_TABWL for a configured table) before the read.
+  "! DDIC (and ZCD_OPS_TABWL HCK / READ for a configured table) before the read.
   "! @raising zcx_cd_ops_error | unknown table / field, wrong field type, not whitelisted
   METHODS get_queue_groups
     IMPORTING
@@ -102,7 +104,7 @@ INTERFACE zif_cd_hck_runtime_dao
       VALUE(rt_settings) TYPE zif_cd_hck_runtime_types=>tt_setting.
 
   "! Rows of a configured table whose reference field is one of the values (e.g. the Stripe
-  "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_HCK_TABWL, fields in the DDIC - checked before
+  "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_OPS_TABWL (HCK / READ), fields in the DDIC - checked before
   "! the read; at most iv_max_rows rows (reaching it = capped)
   "! @raising zcx_cd_ops_error | table not whitelisted, unknown field, SQL error
   METHODS get_reference_rows
