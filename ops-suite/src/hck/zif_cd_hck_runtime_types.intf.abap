@@ -31,6 +31,12 @@
 *& 2026-11-08 | Status lag after a file-level ACK: parameters HCK_PAY_ACK_FILE_CLASSES (flow + classes
 *&            | acknowledged per file) and HCK_PAY_ACK_FILE_SRC (FMON source of the generation group),
 *&            | DPAYH payment run fields GC_RUN_FIELD, messages 301, 312, 346, 688, 689.
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: Stripe evidence settings are ZCA_PARAM parameters HCK_STRIPE_*
+*&            | (GC_PARAM; ZCD_HCK_EVSET retired, TY_SETTING / GC_SETTING removed).
+*& 2026-11-08 | Table consolidation: TY_PM_CLASS with key HBKID (blank = class row, filled = calendar of a
+*&            | house bank; ZCD_HCK_PMBANK merged); TY_PM_BANK removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -107,7 +113,7 @@ INTERFACE zif_cd_hck_runtime_types
       state_field TYPE zif_cd_hck_types=>ty_fieldname,
       date_field  TYPE zif_cd_hck_types=>ty_fieldname,
       time_field  TYPE zif_cd_hck_types=>ty_fieldname,
-      "! The table name is configuration (bgRFC): it must be on ZCD_HCK_TABWL
+      "! The table name is configuration (bgRFC): it must be on ZCD_OPS_TABWL (HCK / READ)
       configured  TYPE abap_bool,
     END OF ty_queue_source.
 
@@ -188,32 +194,28 @@ INTERFACE zif_cd_hck_runtime_types
       issue_date TYPE ty_age_basis VALUE 'ISSUE_DATE',
     END OF gc_age_basis.
 
-  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged
+  "! DPAYH-HBKID (house bank of the payment)
+  TYPES ty_hbkid TYPE c LENGTH 5.
+  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged (HBKID blank:
+  "! the class row), or the factory calendar of one house bank of the class (HBKID filled: only
+  "! CALENDAR, e.g. UK / German bank holidays of an international ACH bank; overrides the class
+  "! calendar - table consolidation 2026-11-08, was ZCD_HCK_PMBANK). A payment method maps to a
+  "! class by the class rows only, so it stays in exactly one class per flow.
   TYPES:
     BEGIN OF ty_pm_class,
       flow         TYPE ty_flow,
       method_class TYPE ty_method_class,
-      "! SAP payment methods of the class (comma list)
+      "! House bank of a calendar override; blank = the class row (all house banks)
+      hbkid        TYPE ty_hbkid,
+      "! SAP payment methods of the class (comma list; class row only)
       pay_methods  TYPE c LENGTH 40,
+      "! Ageing basis (class row only)
       age_basis    TYPE ty_age_basis,
-      "! Factory calendar of the business days (blank = PARAM1 of the check)
+      "! Factory calendar of the business days (class row: blank = PARAM1 of the check)
       calendar     TYPE zif_cd_hck_types=>ty_calendar,
       description  TYPE zif_cd_hck_types=>ty_text,
     END OF ty_pm_class.
-  TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class.
-
-  "! DPAYH-HBKID (house bank of the payment)
-  TYPES ty_hbkid TYPE c LENGTH 5.
-  "! ZCD_HCK_PMBANK: factory calendar of a house bank for a flow + method class (e.g. UK / German
-  "! bank holidays of an international ACH bank); overrides the calendar of the method class
-  TYPES:
-    BEGIN OF ty_pm_bank,
-      flow         TYPE ty_flow,
-      method_class TYPE ty_method_class,
-      hbkid        TYPE ty_hbkid,
-      calendar     TYPE zif_cd_hck_types=>ty_calendar,
-    END OF ty_pm_bank.
-  TYPES tt_pm_bank TYPE SORTED TABLE OF ty_pm_bank WITH UNIQUE KEY flow method_class hbkid.
+  TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class hbkid.
 
   "! Payment of a payment run (DPAYH, proposal runs excluded, DOC1R filled) with its flow.
   "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
@@ -224,7 +226,7 @@ INTERFACE zif_cd_hck_runtime_types
       laufi    TYPE c LENGTH 6,
       bukrs    TYPE c LENGTH 4,
       pymet    TYPE ty_pymet,
-      "! House bank (calendar override per bank, ZCD_HCK_PMBANK)
+      "! House bank (calendar override per bank, ZCD_HCK_PMCLASS row with HBKID)
       hbkid    TYPE ty_hbkid,
       valut    TYPE d,
       amount   TYPE zif_cd_ops_types=>ty_amount,
@@ -411,36 +413,7 @@ INTERFACE zif_cd_hck_runtime_types
       indeterminate    TYPE ty_outcome VALUE 'INDETERMINATE',
     END OF gc_outcome.
 
-  " ------------------------------------------------------------ evidence settings / configured source
-  "! ZCD_HCK_EVSET: named settings of an evidence kind (set id = PARAM1 of the rule), e.g. the
-  "! field names and record-type values of the Stripe payout log
-  TYPES ty_set_id TYPE c LENGTH 10.
-  TYPES ty_set_name TYPE c LENGTH 20.
-  TYPES:
-    BEGIN OF ty_setting,
-      name  TYPE ty_set_name,
-      value TYPE ty_rule_param,
-    END OF ty_setting.
-  TYPES tt_setting TYPE SORTED TABLE OF ty_setting WITH UNIQUE KEY name.
-
-  "! Setting names of the Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE): chain payment document
-  "! (DFKKOP-AUGBL) -> payment intent ID (DFKKOP field DFKKOP_INTENT_FIELD) -> payout log row
-  "! (TABLE, field INTENT_FIELD). *_FIELD / TABLE = names validated against the DDIC and
-  "! ZCD_HCK_TABWL; CHARGE .. ACK_PARTIAL = optional comma lists of record-type / ACK values
-  CONSTANTS:
-    BEGIN OF gc_setting,
-      table         TYPE ty_set_name VALUE 'TABLE',
-      intent_field  TYPE ty_set_name VALUE 'INTENT_FIELD',
-      dfkkop_intent TYPE ty_set_name VALUE 'DFKKOP_INTENT_FIELD',
-      type_field    TYPE ty_set_name VALUE 'TYPE_FIELD',
-      payout_field  TYPE ty_set_name VALUE 'PAYOUT_FIELD',
-      ack_field     TYPE ty_set_name VALUE 'ACK_FIELD',
-      charge        TYPE ty_set_name VALUE 'CHARGE',
-      refund        TYPE ty_set_name VALUE 'REFUND',
-      ack_full      TYPE ty_set_name VALUE 'ACK_FULL',
-      ack_partial   TYPE ty_set_name VALUE 'ACK_PARTIAL',
-    END OF gc_setting.
-
+  " ------------------------------------------------------------ configured source
   "! Confirmed: DFKKOP-AUGBL = payment document (the open items a payment cleared)
   CONSTANTS gc_dfkkop_augbl TYPE zif_cd_hck_types=>ty_fieldname VALUE 'AUGBL'.
 
@@ -604,6 +577,25 @@ INTERFACE zif_cd_hck_runtime_types
       ack_file_classes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
       "! FMON source (ZCD_FMON_SRC) whose GROUP_FIELDS name the payment run of a file
       ack_file_src      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_SRC',
+      "! Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE; table consolidation 2026-11-08, were the rows
+      "! of ZCD_HCK_EVSET set STRIPE): chain payment document (DFKKOP-AUGBL) -> payment intent ID
+      "! (DFKKOP field STRIPE_DFKKOP_FIELD) -> payout log row (STRIPE_TABLE, field
+      "! STRIPE_INTENT_FIELD). Table / field names are validated against the DDIC and ZCD_OPS_TABWL
+      "! (HCK / READ) before each read; delivered blank (landscape-specific, VERIFY-SE11) = the
+      "! evidence kind is not configured
+      stripe_table        TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TABLE',
+      stripe_intent_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_INTENT_FIELD',
+      stripe_dfkkop_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_DFKKOP_FIELD',
+      "! Optional fields of the payout log: record type, payout ID (filled = in a payout), ACK status
+      stripe_type_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TYPE_FIELD',
+      stripe_payout_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_PAYOUT_FIELD',
+      stripe_ack_field    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FIELD',
+      "! Optional comma lists: record types that count / refund (anomaly), ACK values that count /
+      "! partial ACK (anomaly); blank = condition not used
+      stripe_charge       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_CHARGE',
+      stripe_refund       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_REFUND',
+      stripe_ack_full     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FULL',
+      stripe_ack_partial  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_PARTIAL',
     END OF gc_param.
 
   "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of

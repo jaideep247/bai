@@ -2,7 +2,7 @@ managed implementation in class zbp_r_cd_opscfgall unique;
 strict ( 2 );
 with draft;
 
-// Alerting and monitor freshness: singleton root (virtual, nothing persisted) - lock, total ETag,
+// Alerting and approved tables: singleton root (virtual, nothing persisted) - lock, total ETag,
 // draft and the customizing request; every customizing table is a child.
 define behavior for ZR_CD_OpsCfgAll alias OpsCfgAll
 with unmanaged save
@@ -17,7 +17,7 @@ authorization master ( global )
 
   association _AlertRule { create ( features : global ); with draft; }
   association _AlertChannel { create ( features : global ); with draft; }
-  association _MonitorCfg { create ( features : global ); with draft; }
+  association _ApprovedTable { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -29,8 +29,8 @@ authorization master ( global )
     validation AlertRule ~ validateTransport;
     validation AlertChannel ~ validateFields;
     validation AlertChannel ~ validateTransport;
-    validation MonitorCfg ~ validateFields;
-    validation MonitorCfg ~ validateTransport;
+    validation ApprovedTable ~ validateFields;
+    validation ApprovedTable ~ validateTransport;
   }
 }
 
@@ -112,30 +112,32 @@ etag master LocalLastChangedAt
   }
 }
 
-define behavior for ZR_CD_MonitorCfg alias MonitorCfg
-persistent table zcd_ops_moncfg
+define behavior for ZR_CD_ApprovedTable alias ApprovedTable
+persistent table zcd_ops_tabwl
 with additional save
-draft table zcd_d_moncfg
+draft table zcd_d_opstabwl
 lock dependent by _OpsCfgAll
 authorization dependent by _OpsCfgAll
 etag master LocalLastChangedAt
 {
   update;
   delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) PaymentEngineArea;
-  field ( mandatory : create ) PaymentEngineArea;
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) PaymentEngineArea, Purpose, TableName, FieldName;
+  field ( mandatory : create ) PaymentEngineArea, Purpose, TableName;
   association _OpsCfgAll { with draft; }
   validation validateFields on save { create; update; }
   // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
   validation validateTransport on save { create; update; delete; }
-  mapping for zcd_ops_moncfg
+  mapping for zcd_ops_tabwl
   {
     PaymentEngineArea = pe_area;
-    StaleAfterMin = stale_after_min;
+    Purpose = purpose;
+    TableName = table_name;
+    FieldName = field_name;
+    Active = active;
+    ApprovedBy = approved_by;
     Description = description;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

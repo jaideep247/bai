@@ -1050,7 +1050,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>244</MSGNR>
-     <TEXT>Table &amp;1 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+     <TEXT>Table &amp;1 not approved for file monitoring (ZCD_OPS_TABWL, FMON SOURCE)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1080,7 +1080,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>249</MSGNR>
-     <TEXT>Field &amp;1 of table &amp;2 is not approved for file monitoring (ZCD_FMON_TABWL)</TEXT>
+     <TEXT>Field &amp;1 of table &amp;2 not approved for file monitoring (ZCD_OPS_TABWL)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1308,7 +1308,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
-     <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
+     <TEXT>Table &amp;1 not approved for health check reads (ZCD_OPS_TABWL, HCK READ)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1997,6 +1997,36 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>422</MSGNR>
+     <TEXT>&amp;1 is required when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>423</MSGNR>
+     <TEXT>&amp;1 must be blank when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>424</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 belongs to another usage (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>425</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 does not have the form &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>426</MSGNR>
+     <TEXT>&amp;1: expected groups must be a comma list of distinct values</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>
@@ -2382,7 +2412,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>667</MSGNR>
-     <TEXT>Evidence &amp;1 (&amp;2) not configured (ZCD_HCK_EVSET) - its rows are ignored</TEXT>
+     <TEXT>Evidence &amp;1 &amp;2 not configured (settings / parameters) - its rows are igno</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

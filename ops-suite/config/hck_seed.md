@@ -17,7 +17,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 |---|---|---|
 | HCK_WATCH_PE_AREAS | `EBS,FMON,HCK` | Payment engine areas whose last run is checked (health of the health check) |
 | HCK_MAX_AGE_HOURS | `26` | Default max age of a payment engine area's last run (daily run + 2 h slack) |
-| HCK_MAX_AGE_H_FMON | `1` (value row) | Fallback only: with the delivered `ZCD_OPS_MONCFG` row FMON = 15 min the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that row is deleted |
+| HCK_MAX_AGE_H_FMON | `1` (value row) | Fallback only: with the delivered parameter `MON_STALE_AFTER_MIN_FMON` = 15 min (area CD_OPS, was the `ZCD_OPS_MONCFG` row) the self-check and the dashboard both use 15 minutes (`config/alert_seed.md`); this hours value applies only when that parameter cannot be read (refused value) |
 | HCK_TIMEOUT_SEC | `300` | Default check timeout when `ZCD_HCK_DEF-TIMEOUT_SEC` = 0; item-wise checks stop between items once it has passed (BUDGET_EXHAUSTED, A18) |
 | HCK_LOOKBACK_RUNS | `8` | Default baseline history points (one point per finished, non-test run — A59) |
 | HCK_MAX_RUN_MIN | `120` | A run of a watched area in status R longer than this is HUNG (red self-check, A06); per area `HCK_MAX_RUN_MIN_<AREA>` |
@@ -96,10 +96,10 @@ uncapped count.
 | A_RECON_3WAY | Three-way reconciliation bank / G/L transit / payment engine | A | ZCL_CD_HCK_C_RECON3 | X | 27 | H | | | | 300 |
 | E_QUEUES | qRFC / bgRFC queues in error or stuck | E | ZCL_CD_HCK_C_QUEUES | X | 115 | H | `<payment engine queue patterns, e.g. ZCD_.*, confirm in SMQ1 / SMQ2>` (blank = all) | `<destination patterns, e.g. PRISM.*>` (blank = all) | `30` (stuck minutes) | 60 |
 
-`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars in `ZCD_HCK_PMCLASS` / `ZCD_HCK_PMBANK`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
+`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b, both rows of ZCD_HCK_PMCLASS), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars (class rows and house-bank rows) in `ZCD_HCK_PMCLASS`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
 `A_RECON_3WAY` has no PARAM1-4: the window, timing, redeposit days, tolerance and the row cap are ZCA_PARAM `HCK_RECON_*` (§1); the sets and bank code roles are §10. It also reads EBS_FEB_CREDIT_IND / EBS_FEB_DEBIT_IND, EBS_GL_LEDGER (owned by EBS) and TRACE_GL_AWTYP (core) - one definition each.
 `E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
-`E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a ZCD_HCK_TABWL row for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
+`E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a `ZCD_OPS_TABWL` row HCK / READ for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
 
 `HCK_SELF` (health of the health check) is built in — no row needed.
 
@@ -162,7 +162,7 @@ longer dimensions (job names, log objects) use the `*` row.
 VERIFY-DDIC: DFKKOP-FAEDN, AUGST, HVORG, BUKRS (standard payment engine names, not in the confirmed list).
 Alternative after confirmation: returns items via DFKKRP (DFKKRP-SELW1 = DFKKOP-AUGBL is confirmed).
 Variant with amounts: `AGG_FUNC = SUM`, `SUM_FIELD = BETRH` (VERIFY-DDIC).
-Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
+Plus the `ZCD_OPS_TABWL` row HCK / READ `DFKKOP` (§5) and the threshold rows in §3.
 
 | CHECK_ID | AGG_ID | TABNAME | AGG_FUNC | DATE_FIELD | DATE_MODE | AGE_DAYS_MIN | GROUP_FIELD | COND1 | Note |
 |---|---|---|---|---|---|---|---|---|---|
@@ -170,54 +170,60 @@ Plus `ZCD_HCK_TABWL` row `DFKKOP` and the threshold rows in §3.
 | B_VOLUME | FEB_STMT | FEBKO | COUNT | AZDAT (VERIFY-DDIC) | DAY | (set by check) | `<format/sender field, VERIFY-DDIC>` | | Statements loaded per day (BAI vs CAMT) |
 | B_VOLUME | PAY_REQ | ZCD_PAYM_REQ_LOG | COUNT | `<request date field (DATS), VERIFY-DDIC>` | DAY | (set by check) | `<source field, VERIFY-DDIC>` | ZZ_STATUS EQ `SUCCESS` | Never "highest COUNTER" — status SUCCESS per standards |
 
-### 4a. Expected groups — `ZCD_HCK_AGGGRP` (audit A103)
+### 4a. Expected groups — `ZCD_HCK_AGG-EXPECTED_GROUPS` (audit A103; was `ZCD_HCK_AGGGRP`, table consolidation 2026-11-08)
 
 A grouped aggregate only returns groups that have rows: a company code or source that delivered nothing
-would simply be absent. Each row below names a group value the aggregate must report; when the query
-returns no row for it, the check measures **0** for that group, so a lower-is-worse threshold on that
-company can fire while another company is active. A **failed** query is an `AGG_CONFIG_INVALID` error
+would simply be absent. `EXPECTED_GROUPS` of the aggregate row names the group values it must report -
+a comma list of distinct values (each at most 70 characters, CHAR 255 in all; the app refuses an empty
+element, a repeat or a too long value, message 426, and a list without `GROUP_FIELD`, message 423); when
+the query returns no row for a listed value, the check measures **0** for that group, so a
+lower-is-worse threshold on that company can fire while another company is active. The readers
+(`ZCL_CD_HCK_C_GENERIC_AGG`, `ZCL_CD_HCK_C_VOLUME`) parse the list once per aggregate
+(`ZCL_CD_HCK_AGG_QUERY=>EXPECTED_GROUPS`). A **failed** query is an `AGG_CONFIG_INVALID` error
 finding and measures nothing — it never reads as zero volume. When a grouped result reaches the row cap
 (5 000 groups) it may be cut off and missing groups are not filled.
 
-| CHECK_ID | AGG_ID | GROUP_VALUE | DESCRIPTION |
+| CHECK_ID | AGG_ID | EXPECTED_GROUPS | Meaning (was one ZCD_HCK_AGGGRP row per value) |
 |---|---|---|---|
-| B_VOLUME | PAY_REQ | `<source system 1, from ZCD_PAYM_REQ_LOG-SOURCE, VERIFY-SE16>` | Payment requests expected daily |
-| A_RET_AGED | RET_AGED | `<company code, VERIFY with Treasury>` | Company codes reported even when nothing is aged |
+| B_VOLUME | PAY_REQ | `<source system 1, from ZCD_PAYM_REQ_LOG-SOURCE, VERIFY-SE16>` (further sources comma-separated) | Payment requests expected daily |
+| A_RET_AGED | RET_AGED | `<company code, VERIFY with Treasury>` (further company codes comma-separated) | Company codes reported even when nothing is aged |
 
-Maintained in the health check configuration app (entity *Expected groups*), table logging on.
+Maintained in the health check configuration app (entity *Generic aggregates*, field *Expected groups*), table logging on.
 
-## 5. Table whitelist — `ZCD_HCK_TABWL`
+## 5. Table whitelist — `ZCD_OPS_TABWL`, area HCK, purpose READ
 
-| TABNAME | DESCRIPTION | ACTIVE | APPROVED_BY |
-|---|---|---|---|
-| DFKKOP | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
-| ZCD_STRP_POUT_LOG | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
-| DFKKRP | payment engine returns items | X | `<security reviewer>` |
-| FEBKO | Bank statement headers (volume) | X | `<security reviewer>` |
-| ZCD_PAYM_REQ_LOG | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
-| ZCD_SPE_EXCP_LOG | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
-| ZCD_CHECK_HIST | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
-| /SAPPO/ORDER_HDR | Postprocessing orders (backlog) | X | `<security reviewer>` |
-| `<bgRFC unit / error table, VERIFY>` | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
+Since the table consolidation of 2026-11-08 the HCK whitelist (was `ZCD_HCK_TABWL`), the drift list (was `ZCD_HCK_DRIFT`, §6) and the FMON approved tables (was `ZCD_FMON_TABWL`, `config/fmon_seed.md`) are one core table, `ZCD_OPS_TABWL`, maintained in the core configuration app (*Approved tables per reader*). Every HCK read of a configured table (generic aggregates, value queries `C_*`, the bgRFC queue source of `E_QUEUES`, the Stripe evidence of `A_INFLIGHT`) needs an active row `HCK` / `READ` of the whole table (`FIELD_NAME` blank - the app refuses a field on an HCK row, message 423); a row of another purpose (`DRIFT`) or area (`FMON` / `SOURCE`) never approves an HCK read.
+
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE | APPROVED_BY |
+|---|---|---|---|---|---|---|
+| HCK | READ | DFKKOP | (blank) | payment engine open items (aging; `A_INFLIGHT` Stripe evidence: payment intent ID by AUGBL) | X | `<security reviewer>` |
+| HCK | READ | ZCD_STRP_POUT_LOG | (blank) | Stripe payout log (`A_INFLIGHT` Stripe evidence, fields VERIFY-SE11) | X | `<security reviewer>` |
+| HCK | READ | DFKKRP | (blank) | payment engine returns items | X | `<security reviewer>` |
+| HCK | READ | FEBKO | (blank) | Bank statement headers (volume) | X | `<security reviewer>` |
+| HCK | READ | ZCD_PAYM_REQ_LOG | (blank) | Payment request log (volume; known-table checks C_PRQ_*) | X | `<security reviewer>` |
+| HCK | READ | ZCD_SPE_EXCP_LOG | (blank) | Payment request status updates to the source (C_PRQ_NO_SPE) | X | `<security reviewer>` |
+| HCK | READ | ZCD_CHECK_HIST | (blank) | Cheque status history from IRIS (C_CHQ_STATUS) | X | `<security reviewer>` |
+| HCK | READ | /SAPPO/ORDER_HDR | (blank) | Postprocessing orders (backlog) | X | `<security reviewer>` |
+| HCK | READ | `<bgRFC unit / error table, VERIFY>` | (blank) | bgRFC units in error (`E_QUEUES` PARAM4); counts only | X | `<security reviewer>` |
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the
 security boundary; every new row needs a reviewer.
 
-## 6. Configuration drift — `ZCD_HCK_DRIFT`
+## 6. Configuration drift — `ZCD_OPS_TABWL`, area HCK, purpose DRIFT
 
-| TABNAME | DESCRIPTION | ACTIVE |
-|---|---|---|
-| TFK042Z | Payment program: collections vs disbursements (XEINZ) | X |
-| TFK033D | Account determination (`*` wildcard works in FQC0 - confirmed by the user 2026-11-08) | X |
-| ZCD_HCK_DEF | Health check catalog | X |
-| ZCD_HCK_THRESH | Health check thresholds | X |
-| ZCD_HCK_AGG | Generic aggregates | X |
-| ZCD_HCK_AGGGRP | Expected groups of aggregates (A103) | X |
-| ZCD_JOB_STEP | Job cycle steps | X |
-| ZCD_FMON_DEADL | FMON stage deadlines | X |
-| ZCD_FMON_SLA | FMON stage SLAs | X |
-| ZCD_FMON_CAL | FMON expected files | X |
-| ZCD_OPS_ALRULE | Alert rules | X |
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|
+| HCK | DRIFT | TFK042Z | (blank) | Payment program: collections vs disbursements (XEINZ) | X |
+| HCK | DRIFT | TFK033D | (blank) | Account determination (`*` wildcard works in FQC0 - confirmed by the user 2026-11-08) | X |
+| HCK | DRIFT | ZCD_HCK_DEF | (blank) | Health check catalog | X |
+| HCK | DRIFT | ZCD_HCK_THRESH | (blank) | Health check thresholds | X |
+| HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates with their expected groups (A103) | X |
+| HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
+| HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
+| HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
+| HCK | DRIFT | ZCD_OPS_ALRULE | (blank) | Alert rules | X |
+
+A drift row hashes the whole table; it approves no read (the hash is read by the HCK DAO with its own static rule, `ZCL_CD_HCK_DAO=>COMPUTE_TABLE_HASH`).
 
 Deadlines, SLAs, calendar and alert rules are listed on purpose (user decision 2026-11-07): new rows come only by transport from DV1, but support may edit existing rows in PS4 (due time, severity, ACTIVE, SO23 list; `Operations_Runbook.md` §5h). Such a production edit is exactly what drift control should show: the table is reported as `CONFIG_DRIFT` until the same change is transported from DV1 and the baseline is taken again.
 
@@ -263,29 +269,31 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 ## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
 
-User rules 2026-11-07. All six tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Evidence settings*, *Bank transaction code roles*, *Role sequence outcomes*) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class**: a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+User rules 2026-11-07. All four tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes (and house-bank calendars)*, *Clearing / return evidence rules*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
 
 ### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
 
-| FLOW | METHOD_CLASS | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|
-| D | WIR | `E` | VALUE_DATE | | Wire disbursements | X |
-| D | ACH | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
-| D | CHQ | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
-| C | ACH | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
-| C | CRD | `B` | VALUE_DATE | | Card collections (Stripe) | X |
-| D | ACI | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
+| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| D | WIR | (blank) | `E` | VALUE_DATE | | Wire disbursements | X |
+| D | ACH | (blank) | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
+| D | CHQ | (blank) | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
+| C | ACH | (blank) | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
+| C | CRD | (blank) | `B` | VALUE_DATE | | Card collections (Stripe) | X |
+| D | ACI | (blank) | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
 
-CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise).
+Key FLOW + METHOD_CLASS + HBKID (table consolidation 2026-11-08: HBKID added, `ZCD_HCK_PMBANK` merged). The rows above are the **class rows** (HBKID blank = all house banks). CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise) - only class rows carry payment methods, so a house-bank row (§8b) never makes a second class of a method.
 
-### 8b. `ZCD_HCK_PMBANK` — factory calendar per house bank (optional override)
+### 8b. `ZCD_HCK_PMCLASS` rows with a house bank — factory calendar per house bank (optional override; was `ZCD_HCK_PMBANK`)
 
-| FLOW | METHOD_CLASS | HBKID | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|
-| D | ACI | `‹Barclays house bank, confirm›` | `‹UK calendar›` | UK bank holidays | (blank) |
-| D | ACI | `‹Commerzbank house bank, confirm›` | `‹DE calendar›` | German bank holidays | (blank) |
+A row with HBKID only overrides the calendar of its class for the payments of that house bank: CALENDAR is required, PAY_METHODS and AGE_BASIS must stay blank (configuration app, messages 422 / 423); the class row of the same flow + class must exist and be active for the class to be watched.
 
-Resolution per payment: this row (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
+| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| D | ACI | `‹Barclays house bank, confirm›` | (blank) | (blank) | `‹UK calendar›` | UK bank holidays | (blank) |
+| D | ACI | `‹Commerzbank house bank, confirm›` | (blank) | (blank) | `‹DE calendar›` | German bank holidays | (blank) |
+
+Resolution per payment (unchanged by the consolidation): the row with the payment's house bank (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class row (HBKID blank) → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
 
 ### 8c. `ZCD_HCK_CLRRULE` — clearing / return evidence rules
 
@@ -315,8 +323,8 @@ REQUIRED (design review 2026-11-07): `X` **mandatory**, must hold and indicates 
 | C | ACH | CLEARED | 020 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by ZUONR) | X |
 | C | ACH | CLEARED | 030 | ZCL_CD_HCK_EV_GL_ZUONR | `EQUAL` | `‹clearing accounts›` | (blank) | ZUONR stays AUGBL (changed = anomaly) | X |
 | C | CRD | CLEARED | 010 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by descriptor) | X |
-| C | CRD | CLEARED | 020 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | C | Stripe payout log row of the payment intent (mandatory corroboration; blank = explicit BSEG-only choice, below) | X |
-| C | CRD | IN_FLIGHT | 010 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | X | Payout processed ... | X |
+| C | CRD | CLEARED | 020 | ZCL_CD_HCK_EV_STRIPE | | | C | Stripe payout log row of the payment intent (mandatory corroboration; blank = explicit BSEG-only choice, below) | X |
+| C | CRD | IN_FLIGHT | 010 | ZCL_CD_HCK_EV_STRIPE | | | X | Payout processed ... | X |
 | C | CRD | IN_FLIGHT | 020 | ZCL_CD_HCK_EV_GL_ZUONR | `CHANGED` | `‹clearing accounts›` | X | ... and descriptor set (ZUONR no longer AUGBL) | X |
 
 **Payment status rows (confirmed DPAYH-ZZ_PAYMENT_STATUS values, user 2026-11-08: ISSUED file sent to the bank, CONFIRMED bank ACK received, CLEARED, RETURNED, RETRIEVED, STOPPED cheques only; the hourly payment status job updates them).** The RETURNED / RETRIEVED status rows stand next to the bank evidence the same way as the CLEARED rows (`X`): status RETURNED / RETRIEVED without the bank line is `RETURN_INCONSISTENT` / `CLEARING_INCONSISTENT`. PARAM2 of `ZCL_CD_HCK_EV_PAY_STATUS` lists the statuses the status job has not updated yet (`ISSUED,CONFIRMED`): a payment in such a status is **pending**, not missing - when the bank evidence of the purpose holds and the status is the only gap, the payment stays **IN_FLIGHT** (aged; never inconsistent; no later purpose decides) and the morning report lists it as `PAY_STATUS_LAG` (W) once `HCK_PAY_STATUS_LAG_MIN` (120) minutes have passed (`HCK_MORNING_REPORT.md` §7b-6). The CLEARED status rows keep PARAM2 blank (rule 1 unchanged: on the statement but status not CLEARED = `CLEARING_INCONSISTENT`); `ISSUED,CONFIRMED` in their PARAM2 would make that case in flight + `PAY_STATUS_LAG` as well - a customizing decision open for the user.
@@ -325,44 +333,49 @@ REQUIRED (design review 2026-11-07): `X` **mandatory**, must hold and indicates 
 
 What the card rows give: cleared G/L line without payout log row = `CLEARING_INCONSISTENT` (CLEARED, condition missing); payout log row but ZUONR still AUGBL = `CLEARING_INCONSISTENT` "payout processed but descriptor not set" (IN_FLIGHT); payout row + descriptor + line not yet cleared = in flight, aged - late after the `CCRD` limit ("F.13 not cleared"). **While the Stripe settings (§8d) are not maintained** the Stripe rows are mandatory but not evaluable: card payments are reported as "clearing not determinable: Stripe evidence not configured" (`CLEARING_UNDETERMINED` W per payment, `INFLIGHT_CONFIG` W for the kind), stay in flight and are aged - they are never cleared on BSEG alone. **Explicit switch (visible configuration choice, per row):** to let the BSEG XREF2 row decide alone until the Stripe field names are maintained, set REQUIRED of the CLEARED / 020 Stripe row to blank (informational) on a customizing request and set it back to `C` together with the §8d settings. Trade-off: with blank, a cleared G/L line without a payout log row is counted as cleared (no `CLEARING_INCONSISTENT` "cleared without payout row"), so a payout file that never arrived is not seen by this check; with `C` (delivered) the card class shows undetermined payments and, after the `CCRD` limit, late payments every day until the settings exist. The IN_FLIGHT rows stay `X`: without Stripe settings they are undetermined too (payment in flight, aged). Planned, not delivered: a 195 deposit on the JPMC collection account ending 16650 for the descriptor's payout date (needs a payout-date evidence kind; account from `ZCD_EBS_ACCT`, never hard-coded) - **confirm**; the group balance of a descriptor (sum of charges and fees = the 195 amount) is proven by the three-way reconciliation check `A_RECON_3WAY` (§10, `STRIPE_GROUP_BREAK`).
 
-### 8d. `ZCD_HCK_EVSET` — evidence settings (set `STRIPE`, field names VERIFY-SE11)
+### 8d. Stripe evidence settings — framework `ZCA_PARAM`, area `CD_HCK`, parameters `HCK_STRIPE_*` (field names VERIFY-SE11)
 
-| SET_ID | NAME | VALUE | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|
-| STRIPE | TABLE | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_HCK_TABWL` row | (blank until SE11) |
-| STRIPE | INTENT_FIELD | `‹SE11 payment intent ID field›` | Payout log: payment intent ID | (blank) |
-| STRIPE | DFKKOP_INTENT_FIELD | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_HCK_TABWL`) | (blank) |
-| STRIPE | REQ_INTENT_FIELD | `‹SE11 ZCD_PAYM_REQ_LOG payment intent field›` | Reserved (not read: the chain DFKKOP → payout log does not need it) | (blank) |
-| STRIPE | TYPE_FIELD | `‹SE11 record type field›` | Optional: record type | (blank) |
-| STRIPE | PAYOUT_FIELD | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout | (blank) |
-| STRIPE | ACK_FIELD | `‹SE11 ACK status field›` | Optional: ACK status | (blank) |
-| STRIPE | CHARGE | `‹charge record type›` | Optional: record types that count (record types: payout, refund, fees, network cost, charge) | (blank) |
-| STRIPE | REFUND | `‹refund record type›` | Optional: refund = anomaly `CLEARING_INCONSISTENT` | (blank) |
-| STRIPE | ACK_FULL | `‹ACK full value›` | Optional: ACK values that count | (blank) |
-| STRIPE | ACK_PARTIAL | `‹ACK partial value›` | Optional: partial ACK = anomaly | (blank) |
+Table consolidation 2026-11-08: the name / value rows of `ZCD_HCK_EVSET` (set `STRIPE`) are parameters of the framework, maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`, area `CD_HCK`). Definitions: `config/param_definitions.csv`; every parameter is **delivered blank** (landscape-specific) - blank table or intent field = Stripe evidence not configured (`INFLIGHT_CONFIG`, card payments undetermined, §8c). No set id dimension: one Stripe payout log per landscape (a second log would be a second evidence kind), so the Stripe rows of §8c no longer need PARAM1 (not read). The framework validates the value types (table name: DDIC; field names: name pattern; lists: comma lists); `ZCL_CD_HCK_EV_STRIPE` checks table and fields against the DDIC and `ZCD_OPS_TABWL` HCK / READ before each read; a refused value is `D_PARAM_INVALID` the next morning.
 
-### 8e. `ZCD_HCK_BTCROLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
+| Parameter (was SET STRIPE, NAME) | Value type | Value to maintain (VERIFY-SE11 / **confirm**) | Meaning |
+|---|---|---|---|
+| `HCK_STRIPE_TABLE` (TABLE) | DDIC, developer-owned | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_OPS_TABWL` row HCK / READ |
+| `HCK_STRIPE_INTENT_FIELD` (INTENT_FIELD) | CHAR `[A-Z][A-Z0-9_]*`, developer-owned | `‹SE11 payment intent ID field›` | Payout log: payment intent ID |
+| `HCK_STRIPE_DFKKOP_FIELD` (DFKKOP_INTENT_FIELD) | CHAR, developer-owned | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_OPS_TABWL` HCK / READ) |
+| `HCK_STRIPE_TYPE_FIELD` (TYPE_FIELD) | CHAR, developer-owned | `‹SE11 record type field›` | Optional: record type |
+| `HCK_STRIPE_PAYOUT_FIELD` (PAYOUT_FIELD) | CHAR, developer-owned | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout |
+| `HCK_STRIPE_ACK_FIELD` (ACK_FIELD) | CHAR, developer-owned | `‹SE11 ACK status field›` | Optional: ACK status |
+| `HCK_STRIPE_CHARGE` (CHARGE) | LIST | `‹charge record type›` | Optional: record types that count (record types: payout, refund, fees, network cost, charge) |
+| `HCK_STRIPE_REFUND` (REFUND) | LIST | `‹refund record type›` | Optional: refund = anomaly `CLEARING_INCONSISTENT` |
+| `HCK_STRIPE_ACK_FULL` (ACK_FULL) | LIST | `‹ACK full value›` | Optional: ACK values that count |
+| `HCK_STRIPE_ACK_PARTIAL` (ACK_PARTIAL) | LIST | `‹ACK partial value›` | Optional: partial ACK = anomaly |
 
-| FLOW | METHOD_CLASS | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
+The former reserved setting `REQ_INTENT_FIELD` (never read: the chain DFKKOP → payout log does not need it) has no parameter - nothing unused is delivered.
+
+### 8e. `ZCD_HCK_BTCROLE` usage `LIFECYCLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
+
+Since the table consolidation of 2026-11-08 one table holds the roles of both checks: `USAGE` `LIFECYCLE` (these rows; `A_INFLIGHT` and the payment outcome) and `RECON` (§10b; `A_RECON_3WAY`, was `ZCD_HCK_RCBTC`). Key USAGE + SCOPE + SCHEME + BTC_CODE: SCOPE of a lifecycle row = flow + method class (`DWIR`, `CACH`, … - the 4-character threshold key of §3; the app checks the form `[DC]` + class, message 425). Lifecycle roles are an open list, but a reconciliation role (LEG, DEPOSIT, CUTOFF, REDEPOSIT, CHEQUE, OTHER, IGNORE) is refused on a lifecycle row (message 424) and a lifecycle row needs a role (422); each check reads only its own usage.
+
+| USAGE | SCOPE (flow + class) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
 |---|---|---|---|---|---|---|---|
-| D | WIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
-| D | WIR | BAI2 | 195 | RETURNED | X | Wire return | X |
-| D | ACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
-| D | ACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
-| D | ACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
-| D | ACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
-| C | ACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
-| C | ACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
-| C | ACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
-| C | ACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
-| C | ACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
-| C | CRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
-| D | CHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
-| D | CHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
-| D | CHQ | BAI2 | 399 | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared | X |
-| D | CHQ | BAI2 | 699 | CORRECTION | C | Bank correction (confirmed); further correction codes = more rows (open list) | X |
-| D | ACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
-| D | ACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
+| LIFECYCLE | DWIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
+| LIFECYCLE | DWIR | BAI2 | 195 | RETURNED | X | Wire return | X |
+| LIFECYCLE | DACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
+| LIFECYCLE | DACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
+| LIFECYCLE | DACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
+| LIFECYCLE | DACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
+| LIFECYCLE | CACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
+| LIFECYCLE | CACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
+| LIFECYCLE | CACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
+| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
+| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
+| LIFECYCLE | CCRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
+| LIFECYCLE | DCHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
+| LIFECYCLE | DCHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
+| LIFECYCLE | DCHQ | BAI2 | 399 | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared | X |
+| LIFECYCLE | DCHQ | BAI2 | 699 | CORRECTION | C | Bank correction (confirmed); further correction codes = more rows (open list) | X |
+| LIFECYCLE | DACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
+| LIFECYCLE | DACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
 
 The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
 
@@ -412,9 +425,9 @@ No REDEPOSIT_PENDING row for wires (no delayed redeposit). Any other sequence is
 
 HCK messages are numbers 300–399 and 650–699 of class `ZCD_OPS`, listed with every other message in `config/zcd_ops_messages.md`.
 
-## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, `ZCD_HCK_RCBTC`
+## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, `ZCD_HCK_BTCROLE` (usage RECON)
 
-> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets* / *Reconciliation bank code roles*, D-3).
+> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets* / *Bank code roles (lifecycle and reconciliation)*, D-3).
 
 ### 10a. `ZCD_HCK_RCSET` — clearing account sets (one transit / clearing account in one currency)
 
@@ -430,26 +443,26 @@ HKONT in internal format is not required: the check converts it (ALPHA). The hou
 
 The JPMC account ending 16650 is an **example value**: it is the `ZCD_EBS_ACCT` row named by HBKID / HKTID of `STRIPE_US`, never a literal in code. A Stripe set compares only the descriptor groups (LEG_BANK / LEG_FICA are not used); the deposit code is its `DEPOSIT` row below.
 
-### 10b. `ZCD_HCK_RCBTC` — role of each bank code per set
+### 10b. `ZCD_HCK_BTCROLE` usage `RECON` — role of each bank code per set (was `ZCD_HCK_RCBTC`, table consolidation 2026-11-08)
 
-| SET_ID | BTC_CODE | ROLE | DESCRIPTION |
-|---|---|---|---|
-| COLL_ACH | 166 | LEG | ACH collected |
-| COLL_ACH | 143 | LEG | Collected (BAI 143, collections only) |
-| COLL_ACH | 468 | REDEPOSIT | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot |
-| DISB_ACH | 466 | LEG | ACH original |
-| DISB_ACH | 168 | CUTOFF | ACH return - processed in the next period (cut-off) |
-| DISB_ACH | 166 | CUTOFF | ACH retrieval - processed in the next period (cut-off) |
-| DISB_ACH | 468 | OTHER | Retrieval failure (stays paid) |
-| DISB_WIRE | 495 | LEG | Wire original |
-| DISB_WIRE | 195 | CUTOFF | Wire return |
-| DISB_CHQ | 581 | CHEQUE | Cheque cashed |
-| DISB_CHQ | 255 | CHEQUE | Cheque returned |
-| DISB_CHQ | 399 | CHEQUE | Correction (confirm) |
-| DISB_CHQ | 699 | CHEQUE | Correction (confirm) |
-| STRIPE_US | 195 | DEPOSIT | Stripe payout deposit |
+| USAGE | SCOPE (set id) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| RECON | COLL_ACH | BAI2 | 166 | LEG | | ACH collected | X |
+| RECON | COLL_ACH | BAI2 | 143 | LEG | | Collected (BAI 143, collections only) | X |
+| RECON | COLL_ACH | BAI2 | 468 | REDEPOSIT | | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot | X |
+| RECON | DISB_ACH | BAI2 | 466 | LEG | | ACH original | X |
+| RECON | DISB_ACH | BAI2 | 168 | CUTOFF | | ACH return - processed in the next period (cut-off) | X |
+| RECON | DISB_ACH | BAI2 | 166 | CUTOFF | | ACH retrieval - processed in the next period (cut-off) | X |
+| RECON | DISB_ACH | BAI2 | 468 | OTHER | | Retrieval failure (stays paid) | X |
+| RECON | DISB_WIRE | BAI2 | 495 | LEG | | Wire original | X |
+| RECON | DISB_WIRE | BAI2 | 195 | CUTOFF | | Wire return | X |
+| RECON | DISB_CHQ | BAI2 | 581 | CHEQUE | | Cheque cashed | X |
+| RECON | DISB_CHQ | BAI2 | 255 | CHEQUE | | Cheque returned | X |
+| RECON | DISB_CHQ | BAI2 | 399 | CHEQUE | | Correction (confirm) | X |
+| RECON | DISB_CHQ | BAI2 | 699 | CHEQUE | | Correction (confirm) | X |
+| RECON | STRIPE_US | BAI2 | 195 | DEPOSIT | | Stripe payout deposit | X |
 
-A code on the set's account without a row is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the row by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records). Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm** - roles of `ZCD_HCK_BTCROLE` §8e are a different question and are not merged).
+A code on the set's account without a row is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the row by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records). Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. SCOPE = the set id of §10a, SCHEME `BAI2`: the app refuses another scheme, a COMPARE_AMOUNT and any other role on a RECON row (messages 413 / 423), and these seven roles on a lifecycle row (424). BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm**). The lifecycle roles of §8e answer a different question: same table, usage `LIFECYCLE`, read only by `A_INFLIGHT` - a lifecycle row never reaches the reconciliation and a RECON row never reaches the lifecycle.
 
 ### 10c. Thresholds and alerts
 

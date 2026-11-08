@@ -9,6 +9,8 @@
 *& severity of the row. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (BAI processing deadline, user requirement 2026-11-07).
+*& 2026-11-08 | Table consolidation: deadline rows are ZCD_FMON_SLA rows of kind DEADLINE in the context's
+*&            | SLAs; a DURATION row of the stage is not a deadline (duration_row_is_no_deadline).
 *&---------------------------------------------------------------------*
 CLASS ltc_deadline DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -28,6 +30,8 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
         before_due TYPE timestampl VALUE '20261109095900',
         after_due  TYPE timestampl VALUE '20261109100100',
         check_id   TYPE zif_cd_fmon_types=>ty_check_id VALUE 'F_DEADLINE',
+        "! Maximum minutes of a DURATION row of the same stage
+        duration_min TYPE i VALUE 30,
       END OF gc_test.
 
     TYPES:
@@ -46,6 +50,8 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
         receipt_row  TYPE abap_bool,
         row_severity TYPE zif_cd_ops_types=>ty_severity,
         before_due   TYPE abap_bool,
+        "! The FULLY_PROCESSED row is a DURATION row of ZCD_FMON_SLA (no deadline of this stage)
+        duration_row TYPE abap_bool,
       END OF ty_flags.
 
     DATA ms_ctx TYPE zif_cd_fmon_types=>ty_check_ctx.
@@ -59,7 +65,8 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
         iv_stage    TYPE zif_cd_fmon_types=>ty_stage
         iv_day_type TYPE zif_cd_fmon_types=>ty_day_type
         iv_due      TYPE t
-        iv_severity TYPE zif_cd_ops_types=>ty_severity.
+        iv_severity TYPE zif_cd_ops_types=>ty_severity
+        iv_kind     TYPE zif_cd_fmon_types=>ty_sla_kind DEFAULT zif_cd_fmon_types=>gc_sla_kind-deadline.
     METHODS run_check
       RETURNING
         VALUE(rt_findings) TYPE zif_cd_ops_types=>tt_finding
@@ -82,6 +89,7 @@ CLASS ltc_deadline DEFINITION FINAL FOR TESTING
     METHODS one_finding_per_day          FOR TESTING.
     METHODS message_names_counts         FOR TESTING.
     METHODS registry_only_names_step     FOR TESTING.
+    METHODS duration_row_is_no_deadline  FOR TESTING.
 ENDCLASS.
 
 
@@ -119,7 +127,10 @@ CLASS ltc_deadline IMPLEMENTATION.
                                         ELSE CONV #( zif_cd_fmon_types=>gc_wildcard ) )
                   iv_due      = gc_test-due
                   iv_severity = COND #( WHEN is_flags-row_severity IS NOT INITIAL THEN is_flags-row_severity
-                                        ELSE zif_cd_ops_types=>gc_severity-error ) ).
+                                        ELSE zif_cd_ops_types=>gc_severity-error )
+                  iv_kind     = COND #( WHEN is_flags-duration_row = abap_true
+                                        THEN zif_cd_fmon_types=>gc_sla_kind-duration
+                                        ELSE zif_cd_fmon_types=>gc_sla_kind-deadline ) ).
     IF is_flags-receipt_row = abap_true.
       add_deadline( iv_stage    = zif_cd_fmon_types=>gc_stage-received
                     iv_day_type = CONV #( zif_cd_fmon_types=>gc_wildcard )
@@ -156,14 +167,20 @@ CLASS ltc_deadline IMPLEMENTATION.
 
 
   METHOD add_deadline.
-    DATA ls_deadline TYPE zif_cd_fmon_types=>ty_deadline.
+    DATA ls_deadline TYPE zif_cd_fmon_types=>ty_sla.
     ls_deadline-iface_id = gc_test-iface.
     ls_deadline-stage    = iv_stage.
+    ls_deadline-kind     = iv_kind.
     ls_deadline-day_type = iv_day_type.
-    ls_deadline-due_time = iv_due.
     ls_deadline-severity = iv_severity.
-    ls_deadline-active   = abap_true.
-    INSERT ls_deadline INTO TABLE ms_ctx-deadlines.
+    " A deadline has a clock time, a duration minutes from its basis (ZCD_FMON_SLA, 2026-11-08)
+    IF iv_kind = zif_cd_fmon_types=>gc_sla_kind-deadline.
+      ls_deadline-due_time = iv_due.
+    ELSE.
+      ls_deadline-max_minutes = gc_test-duration_min.
+      ls_deadline-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
+    ENDIF.
+    INSERT ls_deadline INTO TABLE ms_ctx-slas.
   ENDMETHOD.
 
 
@@ -253,6 +270,19 @@ CLASS ltc_deadline IMPLEMENTATION.
 
 
   " Non-business day: a holiday never fires, whatever is missing
+  " Table consolidation 2026-11-08: a DURATION row of ZCD_FMON_SLA (same interface and stage) is the
+  " stage SLA check's - the deadline check reads only DEADLINE rows, so nothing is due at 10:00
+  METHOD duration_row_is_no_deadline.
+    TRY.
+        configure_scenario( VALUE #( evidence = abap_true duration_row = abap_true ) ).
+        cl_abap_unit_assert=>assert_initial( act = run_check( )
+                                             msg = 'A DURATION row is never evaluated as a deadline' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD holiday_raises_nothing.
     TRY.
         configure_scenario( VALUE #( day_type = zif_cd_fmon_types=>gc_day_type-holiday expected = 1

@@ -15,6 +15,10 @@
 *&            | (get_group_files, index GRP).
 *& 2026-11-08 | get_group_acks: the files of a group with their ACK events in one read - a file without
 *&            | ACK once with ACK_AT initial, other stages, other groups and older files not read.
+*& 2026-11-08 | Table consolidation: approvals in ZCD_OPS_TABWL (FMON / SOURCE, blank field = whole table);
+*&            | rows of another area or purpose do not approve (other_purpose_not_approved).
+*& 2026-11-08 | Table consolidation: SLA rows with KIND / DAY_TYPE; deadlines_only_active reads DURATION and
+*&            | DEADLINE rows of ZCD_FMON_SLA in one read (ZCD_FMON_DEADL merged).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -77,7 +81,11 @@ CLASS ltc_dao DEFINITION FINAL
       RETURNING
         VALUE(rv_msgno) TYPE symsgno.
 
-    METHODS approve_file_table.
+    "! A row of the approved-table list for ZCD_FMON_FILE (default: FMON / SOURCE, whole table)
+    METHODS approve_file_table
+      IMPORTING
+        iv_pe_area TYPE zif_cd_ops_types=>ty_pe_area DEFAULT zif_cd_ops_types=>gc_pe_area-file_monitor
+        iv_purpose TYPE zif_cd_ops_types=>ty_tabwl_purpose DEFAULT zif_cd_ops_types=>gc_tabwl_purpose-source.
 
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
@@ -113,6 +121,7 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS unapproved_table_is_refused FOR TESTING.
     METHODS read_without_auth_is_refused FOR TESTING.
     METHODS approved_table_is_read FOR TESTING.
+    METHODS other_purpose_not_approved FOR TESTING.
     METHODS grouped_count_per_status FOR TESTING.
     METHODS grouped_count_needs_approval FOR TESTING.
     METHODS generations_found_by_group FOR TESTING.
@@ -127,7 +136,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA lt_deps TYPE if_osql_test_environment=>ty_t_sobjnames.
     INSERT CONV #( 'ZCD_FMON_FILE' ) INTO TABLE lt_deps.
     INSERT CONV #( 'ZCD_FMON_EVENT' ) INTO TABLE lt_deps.
-    INSERT CONV #( 'ZCD_FMON_TABWL' ) INTO TABLE lt_deps.
+    INSERT CONV #( 'ZCD_OPS_TABWL' ) INTO TABLE lt_deps.
     go_env = cl_osql_test_environment=>create( i_dependency_list = lt_deps ).
   ENDMETHOD.
 
@@ -405,10 +414,12 @@ CLASS ltc_dao IMPLEMENTATION.
 
 
   METHOD approve_file_table.
-    DATA lt_allow TYPE STANDARD TABLE OF zcd_fmon_tabwl WITH EMPTY KEY.
-    DATA ls_allow TYPE zcd_fmon_tabwl.
+    DATA lt_allow TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
+    DATA ls_allow TYPE zcd_ops_tabwl.
+    ls_allow-pe_area    = iv_pe_area.
+    ls_allow-purpose    = iv_purpose.
     ls_allow-table_name = 'ZCD_FMON_FILE'.
-    ls_allow-field_name = zif_cd_fmon_types=>gc_wildcard.
+    " blank field = the whole table
     ls_allow-active     = abap_true.
     INSERT ls_allow INTO TABLE lt_allow.
     go_env->insert_test_data( lt_allow ).
@@ -555,7 +566,7 @@ CLASS ltc_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Audit A51: a valid table name that nobody approved in ZCD_FMON_TABWL is never read (244)
+  " Audit A51: a valid table name that nobody approved in ZCD_OPS_TABWL (FMON / SOURCE) is never read (244)
   METHOD unapproved_table_is_refused.
     cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '244'
                                         msg = 'An unapproved table must raise 244' ).
@@ -633,6 +644,17 @@ CLASS ltc_dao IMPLEMENTATION.
                                          msg = 'An approved and authorised table must be read' ).
   ENDMETHOD.
 
+
+  " Table consolidation 2026-11-08: the reader filters the approved-table list by its own area and
+  " purpose - an HCK READ row (or an FMON row of another purpose) never approves the FMON reader
+  METHOD other_purpose_not_approved.
+    approve_file_table( iv_pe_area = zif_cd_ops_types=>gc_pe_area-health_check
+                        iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-read ).
+    approve_file_table( iv_purpose = zif_cd_ops_types=>gc_tabwl_purpose-drift ).
+    cl_abap_unit_assert=>assert_equals( act = msgno_of_read( ) exp = '244'
+                                        msg = 'Rows of another area or purpose must not approve the FMON read' ).
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -654,6 +676,7 @@ CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
         day_off   TYPE c LENGTH 12 VALUE 'HOLIDAY',
         stage_off TYPE c LENGTH 20 VALUE 'FORWARDED',
         due_time  TYPE t VALUE '100000',
+        minutes   TYPE i VALUE 30,
         src_on    TYPE c LENGTH 10 VALUE 'PRISM',
         src_off   TYPE c LENGTH 10 VALUE 'LEGACY',
         status_ok TYPE c LENGTH 40 VALUE 'DELIVERED',
@@ -688,7 +711,7 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_FMON_IFACE' ) ( 'ZCD_FMON_SLA' ) ( 'ZCD_FMON_CAL' )
                                    ( 'ZCD_FMON_SRC' ) ( 'ZCD_FMON_SRCMAP' ) ( 'ZCD_FMON_LOTCFG' )
-                                   ( 'ZCD_FMON_CHK' ) ( 'ZCD_FMON_DEADL' ) ) ).
+                                   ( 'ZCD_FMON_CHK' ) ) ).
   ENDMETHOD.
 
 
@@ -732,6 +755,8 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
     TRY.
         ls_row-iface_id = gc_test-iface_on.
         ls_row-stage    = gc_test-stage_snt.
+        ls_row-kind     = zif_cd_fmon_types=>gc_sla_kind-duration.
+        ls_row-day_type = zif_cd_fmon_types=>gc_wildcard.
         ls_row-active   = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-stage    = gc_test-stage_ack.
@@ -772,25 +797,39 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: only active stage deadlines are read (production switches a row off, never deletes it)
+  " Rule (table consolidation 2026-11-08): a DURATION and a DEADLINE row of the same interface and stage
+  " are both read in one read with their kind's fields; a switched-off deadline is not read
   METHOD deadlines_only_active.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_deadl WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_fmon_deadl.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_sla WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_sla.
     TRY.
-        ls_row-iface_id = gc_test-iface_on.
-        ls_row-stage    = gc_test-stage_snt.
+        ls_row-iface_id    = gc_test-iface_on.
+        ls_row-stage       = gc_test-stage_snt.
+        ls_row-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+        ls_row-day_type    = zif_cd_fmon_types=>gc_wildcard.
+        ls_row-max_minutes = gc_test-minutes.
+        ls_row-active      = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        CLEAR ls_row-max_minutes.
+        ls_row-kind     = zif_cd_fmon_types=>gc_sla_kind-deadline.
         ls_row-day_type = gc_test-day_work.
         ls_row-due_time = gc_test-due_time.
-        ls_row-active   = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-stage    = gc_test-stage_ack.
         ls_row-active   = abap_false.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
-        DATA(lt_deadlines) = mo_cut->get_deadlines( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_deadlines ) exp = 1 msg = 'Only the active deadline' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_deadlines[ 1 ]-due_time exp = gc_test-due_time
-                                            msg = 'Due time returned' ).
+        DATA(lt_slas) = mo_cut->get_slas( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_slas ) exp = 2
+                                            msg = 'Duration and active deadline, not the switched-off one' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_slas[ stage = gc_test-stage_snt kind = zif_cd_fmon_types=>gc_sla_kind-deadline ]-due_time
+          exp = gc_test-due_time
+          msg = 'Due time of the DEADLINE row' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_slas[ stage = gc_test-stage_snt kind = zif_cd_fmon_types=>gc_sla_kind-duration ]-max_minutes
+          exp = gc_test-minutes
+          msg = 'Minutes of the DURATION row' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

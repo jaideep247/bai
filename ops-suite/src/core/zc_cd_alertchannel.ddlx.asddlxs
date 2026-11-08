@@ -1,4 +1,4 @@
-// UI annotations: Alerting and monitor freshness - Alert channels
+// UI annotations: Alerting and approved tables - Alert channels
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Channel',
                      typeNamePlural: 'Alert channels',

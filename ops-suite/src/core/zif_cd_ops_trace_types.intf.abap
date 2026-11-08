@@ -19,6 +19,8 @@
 *&            | link by number and house bank account (design review, ZCL_CD_OPS_CHEQUE_LINK).
 *& 2026-11-07 | Stage OUTCOME (canonical payment outcome, ZIF_CD_OPS_PAY_OUTCOME), result outcome,
 *&            | TT_KEY_VALUE (keys of a set read of a configured source).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -169,7 +171,7 @@ INTERFACE zif_cd_ops_trace_types
   " ---------------------------------------------------------------- parameters
   "! ZCA_PARAM names. TRACE_SRC_* hold a source specification
   "! TABLE=..;KEY=..;KEY2=..;REF=..;STATUS=..;DATE=..;TIME=..;INFO=.. (names VERIFY-SE11,
-  "! validated against the DDIC and ZCD_FMON_TABWL at run time; blank = not configured)
+  "! validated against the DDIC and ZCD_OPS_TABWL (FMON / SOURCE) at run time; blank = not configured)
   CONSTANTS:
     BEGIN OF gc_param,
       max_rows          TYPE zif_cd_ops_types=>ty_param_name VALUE 'TRACE_MAX_ROWS',

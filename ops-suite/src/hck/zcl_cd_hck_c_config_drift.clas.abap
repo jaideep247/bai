@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_hck_c_config_drift.clas.abap
 *& Purpose:
-*& Configuration drift: SHA-256 of every table listed in ZCD_HCK_DRIFT
+*& Configuration drift: SHA-256 of every table listed in ZCD_OPS_TABWL (HCK / DRIFT)
 *& compared with the golden baseline in ZCD_HCK_BASELINE.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -10,6 +10,8 @@
 *& 2026-11-06 | Stops between tables when the time budget is used up (audit A18).
 *& 2026-11-06 | Sorted/hashed sweep: keyed lookups by sorted secondary keys / hashed tables (Performance_Review.md).
 *& 2026-11-07 | No per-table classification: every changed table is CONFIG_DRIFT (user decision, D-3).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - configuration drift vs golden baseline</p>
 "! A changed table = CONFIG_DRIFT (E), a table without baseline =

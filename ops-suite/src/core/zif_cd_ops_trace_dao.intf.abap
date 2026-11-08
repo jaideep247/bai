@@ -11,6 +11,8 @@
 *& 2026-11-06 | Return / NOC reasons: get_returns carries DFKKRP-RLGRD; get_noc_items (DFKKNRP by INFOF, capped).
 *& 2026-11-07 | Comment: source specifications from ZCA_PARAM (ZCD_OPS_PARAM retired).
 *& 2026-11-07 | read_configured_set: one read for many keys (source attribution of the payment outcome).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -19,7 +21,7 @@ INTERFACE zif_cd_ops_trace_dao
   "! Rows of a configured source (request log, clearing-reset history, generated-file
   "! register, payment-level ACK, cheque history) for one key. Table and field names come
   "! from ZCA_PARAM; the read goes through the file monitoring reader, which checks
-  "! them against the DDIC, the approved tables (ZCD_FMON_TABWL) and S_TABU_NAM first.
+  "! them against the DDIC, the approved tables (ZCD_OPS_TABWL, FMON / SOURCE) and S_TABU_NAM first.
   "! @parameter iv_match_key2 | abap_false: KEY2 is read but not used as a condition
   "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
   METHODS read_configured
@@ -48,7 +50,7 @@ INTERFACE zif_cd_ops_trace_dao
 
   "! Business partners by external number (BUT000-BPEXT = request ZZ_MEMBER_NO), with the
   "! configured source field when iv_source_field is given (VERIFY-SE11; read through the
-  "! approved reader, so BUT000 needs a ZCD_FMON_TABWL row)
+  "! approved reader, so BUT000 needs a ZCD_OPS_TABWL row FMON / SOURCE)
   "! @raising zcx_cd_ops_error | source field unknown, BUT000 not approved or not authorised
   METHODS get_partners
     IMPORTING

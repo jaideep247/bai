@@ -31,6 +31,12 @@
 *&            | hard ceilings); cap reached fails as before.
 *& 2026-11-07 | get_monitor_cfg: ZCD_OPS_MONCFG (stale threshold per area, shared with the dashboards).
 *& 2026-11-07 | save_results: verdict of each check per run (ZCD_HCK_RESULT, design review).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_monitor_cfg (ZCD_OPS_MONCFG) removed - the stale threshold per area
+*&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
+*& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
+*&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -113,8 +119,8 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_agg_defs.
     SELECT check_id, agg_id, description, tabname, agg_func, sum_field, date_field, date_mode,
-           age_days_min, group_field, cond1_field, cond1_op, cond1_value, cond2_field, cond2_op,
-           cond2_value, cond3_field, cond3_op, cond3_value
+           age_days_min, group_field, expected_groups, cond1_field, cond1_op, cond1_value, cond2_field,
+           cond2_op, cond2_value, cond3_field, cond3_op, cond3_value
       FROM zcd_hck_agg
       WHERE check_id = @iv_check_id
       ORDER BY agg_id
@@ -122,20 +128,15 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_hck_dao~get_agg_groups.
-    SELECT check_id, agg_id, group_value
-      FROM zcd_hck_agggrp
-      WHERE check_id = @iv_check_id
-      ORDER BY agg_id, group_value
-      INTO CORRESPONDING FIELDS OF TABLE @rt_groups.
-  ENDMETHOD.
-
-
   METHOD zif_cd_hck_dao~is_table_whitelisted.
     DATA(lv_tabname) = to_upper( iv_tabname ).
+    " Full key of the approved-table list: HCK reads a whole table (blank field) - 2026-11-08
     SELECT SINGLE active
-      FROM zcd_hck_tabwl
-      WHERE tabname = @lv_tabname
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-health_check
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-read
+        AND table_name = @lv_tabname
+        AND field_name = @space
       INTO @DATA(lv_active).
     rv_allowed = xsdbool( sy-subrc = 0 AND lv_active = abap_true ).
   ENDMETHOD.
@@ -314,10 +315,13 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_dao~get_drift_tables.
-    SELECT tabname, description
-      FROM zcd_hck_drift
-      WHERE active = @abap_true
-      ORDER BY tabname
+    SELECT table_name AS tabname, description
+      FROM zcd_ops_tabwl
+      WHERE pe_area    = @zif_cd_ops_types=>gc_pe_area-health_check
+        AND purpose    = @zif_cd_ops_types=>gc_tabwl_purpose-drift
+        AND field_name = @space
+        AND active     = @abap_true
+      ORDER BY table_name
       INTO CORRESPONDING FIELDS OF TABLE @rt_tables.
   ENDMETHOD.
 
@@ -752,14 +756,6 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
             previous = lx_digest.
     ENDTRY.
     rv_hash = lv_hash.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_dao~get_monitor_cfg.
-    SELECT pe_area, stale_after_min
-      FROM zcd_ops_moncfg
-      WHERE stale_after_min > 0
-      ORDER BY pe_area
-      INTO CORRESPONDING FIELDS OF TABLE @rt_cfg.
   ENDMETHOD.
 
 

@@ -15,6 +15,14 @@
 *&            | ZCD_HCK_PMCLASS, _PMBANK, _EVSET, ZCD_HCK_CLRRULE, ZCD_HCK_BTCROLE, ZCD_HCK_SEQOUT (user rules
 *&            | 1-5); configured table by reference (Stripe payout log).
 *& 2026-11-07 | get_issued_payments_by_doc: payment runs of payment documents (canonical payment outcome).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_btc_roles reads usage LIFECYCLE of ZCD_HCK_BTCROLE (flow + method
+*&            | class split from SCOPE).
+*& 2026-11-08 | Table consolidation: get_evidence_settings (ZCD_HCK_EVSET) removed - the Stripe settings are
+*&            | ZCA_PARAM parameters HCK_STRIPE_*.
+*& 2026-11-08 | Table consolidation: get_pm_classes returns the class rows and the house-bank calendar rows
+*&            | (key HBKID); get_pm_banks (ZCD_HCK_PMBANK) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -37,7 +45,7 @@ INTERFACE zif_cd_hck_runtime_dao
 
   "! Entries of a queue source grouped per queue, destination, state and day, with the
   "! oldest time of the day; at most iv_max_rows groups. Names are validated against the
-  "! DDIC (and ZCD_HCK_TABWL for a configured table) before the read.
+  "! DDIC (and ZCD_OPS_TABWL HCK / READ for a configured table) before the read.
   "! @raising zcx_cd_ops_error | unknown table / field, wrong field type, not whitelisted
   METHODS get_queue_groups
     IMPORTING
@@ -84,25 +92,15 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_lines) TYPE zif_cd_hck_runtime_types=>tt_gl_xref2_line.
 
-  "! Active method classes (ZCD_HCK_PMCLASS) with their payment methods and ageing basis
+  "! Active rows of ZCD_HCK_PMCLASS: the method classes (HBKID blank) with their payment methods
+  "! and ageing basis, and the house-bank calendars per flow + method class (HBKID filled;
+  "! table consolidation 2026-11-08, was ZCD_HCK_PMBANK)
   METHODS get_pm_classes
     RETURNING
       VALUE(rt_classes) TYPE zif_cd_hck_runtime_types=>tt_pm_class.
 
-  "! Active house-bank calendars per flow + method class (ZCD_HCK_PMBANK)
-  METHODS get_pm_banks
-    RETURNING
-      VALUE(rt_banks) TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
-
-  "! Active settings of an evidence kind (ZCD_HCK_EVSET by set id)
-  METHODS get_evidence_settings
-    IMPORTING
-      iv_set_id          TYPE zif_cd_hck_runtime_types=>ty_set_id
-    RETURNING
-      VALUE(rt_settings) TYPE zif_cd_hck_runtime_types=>tt_setting.
-
   "! Rows of a configured table whose reference field is one of the values (e.g. the Stripe
-  "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_HCK_TABWL, fields in the DDIC - checked before
+  "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_OPS_TABWL (HCK / READ), fields in the DDIC - checked before
   "! the read; at most iv_max_rows rows (reaching it = capped)
   "! @raising zcx_cd_ops_error | table not whitelisted, unknown field, SQL error
   METHODS get_reference_rows
@@ -120,7 +118,8 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_rules) TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
 
-  "! Active BAI code roles per flow + method class (ZCD_HCK_BTCROLE)
+  "! Active bank code roles of the payment lifecycle per flow + method class (ZCD_HCK_BTCROLE, usage
+  "! LIFECYCLE: flow and method class split from SCOPE; RECON rows are never returned)
   METHODS get_btc_roles
     RETURNING
       VALUE(rt_roles) TYPE zif_cd_hck_runtime_types=>tt_btc_role.

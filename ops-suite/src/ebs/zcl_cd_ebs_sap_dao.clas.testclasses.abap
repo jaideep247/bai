@@ -17,6 +17,8 @@
 *& 2026-11-07 | ZCD_OPS_PARAM retired: the lookup tests read ZCD_OPS_MONCFG as configured table; ltc_sap_dao
 *&            | injects the parameters (EBS_GL_LEDGER) and resets them.
 *& 2026-11-07 | Returns lot item amount (DFKKRP-BETRW) for the in-flight check.
+*& 2026-11-08 | Table consolidation: ZCD_JOB_CYCLE is the configured lookup table of the tests
+*&            | (ZCD_OPS_MONCFG retired).
 *&---------------------------------------------------------------------*
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -256,8 +258,8 @@ CLASS ltc_sap_dao IMPLEMENTATION.
 ENDCLASS.
 
 
-"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_OPS_MONCFG doubled;
-"! ZCD_OPS_MONCFG serves as the configured lookup table; parameters over ZCA_PARAM). get_retrievals is tested up to
+"! OSQL tests of the cheque, FI line and lookup reads (DFKKCR, BSEG and ZCD_JOB_CYCLE doubled;
+"! ZCD_JOB_CYCLE serves as the configured lookup table; parameters over ZCA_PARAM). get_retrievals is tested up to
 "! its DDIC field check, which raises before the SELECT on ZCD_ACH_RTRV_LOG
 "! (osql-not-reached: ZCD_ACH_RTRV_LOG).
 CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
@@ -277,8 +279,8 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
         hkont       TYPE c LENGTH 10 VALUE '0011000100',
         param       TYPE c LENGTH 30 VALUE 'TST1',
         param_text  TYPE c LENGTH 60 VALUE 'OPEN',
-        lookup_tab  TYPE c LENGTH 30 VALUE 'ZCD_OPS_MONCFG',
-        lookup_key  TYPE c LENGTH 30 VALUE 'PE_AREA',
+        lookup_tab  TYPE c LENGTH 30 VALUE 'ZCD_JOB_CYCLE',
+        lookup_key  TYPE c LENGTH 30 VALUE 'CYCLE_ID',
         lookup_stat TYPE c LENGTH 30 VALUE 'DESCRIPTION',
         bad_field   TYPE c LENGTH 30 VALUE 'NO_SUCH_FIELD',
         msgno_field TYPE symsgno VALUE '051',
@@ -308,7 +310,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_OPS_MONCFG' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_JOB_CYCLE' ) ) ).
   ENDMETHOD.
 
 
@@ -447,12 +449,12 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   " Rule (R21): configured table, key and status field are DDIC-checked, rows read by key
   METHOD lookup_rows_key_and_status.
-    DATA lt_param TYPE STANDARD TABLE OF zcd_ops_moncfg WITH EMPTY KEY.
-    DATA ls_param TYPE zcd_ops_moncfg.
+    DATA lt_param TYPE STANDARD TABLE OF zcd_job_cycle WITH EMPTY KEY.
+    DATA ls_param TYPE zcd_job_cycle.
     DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
     TRY.
-        ls_param-pe_area = gc_test-param.
+        ls_param-cycle_id = gc_test-param.
         ls_param-description = gc_test-param_text.
         INSERT ls_param INTO TABLE lt_param.
         go_env->insert_test_data( lt_param ).

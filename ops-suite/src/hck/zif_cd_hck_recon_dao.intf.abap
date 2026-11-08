@@ -2,7 +2,7 @@
 *& Artifact: zif_cd_hck_recon_dao.intf.abap
 *& Purpose:
 *& Reads of the three-way reconciliation check A_RECON_3WAY: the active
-*& configuration (ZCD_HCK_RCSET, ZCD_HCK_RCBTC) and the legs, every one
+*& configuration (ZCD_HCK_RCSET, ZCD_HCK_BTCROLE RECON) and the legs, every one
 *& aggregated on the database (GROUP BY, SUM, COUNT): bank lines of the
 *& payment engine accounts (ZI_CD_HckRcBankLine over FEBEP / FEBKO), G/L
 *& lines of the clearing accounts (ACDOCA), payment engine G/L transfer
@@ -12,6 +12,8 @@
 *& method.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
+*&            | ZCD_HCK_RCBTC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads</p>
 "! Implementation ZCL_CD_HCK_RECON_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RECON_DAO.
@@ -24,7 +26,7 @@ INTERFACE zif_cd_hck_recon_dao
     RETURNING
       VALUE(rt_sets) TYPE zif_cd_hck_recon_types=>tt_set.
 
-  "! Active bank code roles of the sets (ZCD_HCK_RCBTC)
+  "! Active bank code roles of the sets (ZCD_HCK_BTCROLE usage RECON, BAI2; never lifecycle rows)
   METHODS get_btc_roles
     RETURNING
       VALUE(rt_roles) TYPE zif_cd_hck_recon_types=>tt_btc_role.

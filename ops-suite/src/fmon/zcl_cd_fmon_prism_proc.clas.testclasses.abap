@@ -20,6 +20,7 @@
 *&            | generation was delivered is FILE_REGENERATED_NOT_FAILED in the unit, a failure answered
 *&            | by a later generation is FILE_REPLACED, a duplicate-name rejection PRISM_DUPLICATE_NAME
 *&            | (DAO doubles serve the generations of the group and the PRISM failures).
+*& 2026-11-08 | Table consolidation: SLA rows of the DAO double carry KIND DURATION and DAY_TYPE '*'.
 *&---------------------------------------------------------------------*
 CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -401,6 +402,8 @@ CLASS ltc_proc IMPLEMENTATION.
     INSERT ls_iface INTO TABLE mo_dao->mt_ifaces.
 
     ls_sla-iface_id    = gc_test-iface.
+    ls_sla-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+    ls_sla-day_type    = zif_cd_fmon_types=>gc_wildcard.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_received.
     ls_sla-max_minutes = gc_test-sla_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
@@ -529,6 +532,8 @@ CLASS ltc_proc IMPLEMENTATION.
     INSERT ls_iface INTO TABLE mo_dao->mt_ifaces.
 
     ls_sla-iface_id    = gc_test-iface.
+    ls_sla-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+    ls_sla-day_type    = zif_cd_fmon_types=>gc_wildcard.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-prism_delivered.
     ls_sla-max_minutes = gc_queue-base_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.

@@ -1,7 +1,7 @@
-// UI annotations: Health check setup - Payment method classes
+// UI annotations: Health check setup - Payment method classes (and house-bank calendars)
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Payment method class',
-                     typeNamePlural: 'Payment method classes',
+                     typeNamePlural: 'Payment method classes (and house-bank calendars)',
                      title: { type: #STANDARD, value: 'Flow' } } }
 annotate entity ZC_CD_HckPmClass with
 {
@@ -18,22 +18,26 @@ annotate entity ZC_CD_HckPmClass with
 
   @UI.lineItem: [{ position: 30 }]
   @UI.identification: [{ position: 30 }]
-  PayMethods;
+  Hbkid;
 
   @UI.lineItem: [{ position: 40 }]
   @UI.identification: [{ position: 40 }]
-  AgeBasis;
+  PayMethods;
 
   @UI.lineItem: [{ position: 50 }]
   @UI.identification: [{ position: 50 }]
-  Calendar;
+  AgeBasis;
 
   @UI.lineItem: [{ position: 60 }]
   @UI.identification: [{ position: 60 }]
-  Description;
+  Calendar;
 
   @UI.lineItem: [{ position: 70 }]
   @UI.identification: [{ position: 70 }]
+  Description;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
   Active;
 
   @UI.hidden: true

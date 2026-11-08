@@ -6,6 +6,9 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Expected group set: a missing group measures zero (audit A103).
+*& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
+*& 2026-11-08 | Table consolidation: ltc_group_list - expected group list parsed once (trimmed, distinct) and
+*&            | validated on save (blank element, repeat, overlong value).
 *&---------------------------------------------------------------------*
 CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -129,7 +132,7 @@ CLASS ltc_agg_query IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a table missing from ZCD_HCK_TABWL is refused (message 302)
+  " Rule: a table not approved in ZCD_OPS_TABWL (HCK / READ) is refused (message 302)
   METHOD rejects_unlisted_table.
     mv_whitelisted = abap_false.
     assert_msgno( iv_msgno = '302' iv_msg = 'Non-whitelisted table must be refused' ).
@@ -309,6 +312,106 @@ CLASS ltc_agg_query IMPLEMENTATION.
                                                   it_expected = lt_expected )
           exp = lt_exp
           msg = 'Every expected company must measure 0' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Table consolidation 2026-11-08: the expected groups of an aggregate are one comma list on the
+"! ZCD_HCK_AGG row (was ZCD_HCK_AGGGRP) - parsed once by the readers, validated on save
+CLASS ltc_group_list DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      gc_us01 TYPE zif_cd_hck_types=>ty_group_value VALUE 'US01',
+      gc_us02 TYPE zif_cd_hck_types=>ty_group_value VALUE 'US02',
+      gc_pclm TYPE zif_cd_hck_types=>ty_group_value VALUE 'PCLM'.
+
+    METHODS list_parsed_trimmed_distinct FOR TESTING.
+    METHODS blank_list_no_group FOR TESTING.
+    METHODS valid_list_accepted FOR TESTING.
+    METHODS blank_element_refused FOR TESTING.
+    METHODS repeat_refused FOR TESTING.
+    METHODS overlong_value_refused FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_group_list IMPLEMENTATION.
+
+  " Rule: the readers get each value once, trimmed, in the order of the list; ';' separates too
+  METHOD list_parsed_trimmed_distinct.
+    DATA lt_exp TYPE zif_cd_hck_types=>tt_group_value.
+    TRY.
+        INSERT gc_us01 INTO TABLE lt_exp.
+        INSERT gc_us02 INTO TABLE lt_exp.
+        INSERT gc_pclm INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals(
+          act = zcl_cd_hck_agg_query=>expected_groups( |{ gc_us01 } , { gc_us02 };{ gc_pclm },{ gc_us01 }| )
+          exp = lt_exp
+          msg = 'Three groups, trimmed, the repeat dropped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a blank list expects no group (no zero rows are added)
+  METHOD blank_list_no_group.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = zcl_cd_hck_agg_query=>expected_groups( space )
+                                             msg = 'Blank list: no expected group' ).
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_hck_agg_query=>group_list_valid( space )
+                                          msg = 'Blank list is valid' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a comma list of distinct values is accepted on save
+  METHOD valid_list_accepted.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_cd_hck_agg_query=>group_list_valid( |{ gc_us01 }, { gc_us02 }| )
+                                          msg = 'Distinct values are valid' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an empty element (',,') is refused - it would silently expect nothing
+  METHOD blank_element_refused.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_agg_query=>group_list_valid( |{ gc_us01 },,{ gc_us02 }| )
+                                           msg = 'An empty element is refused (426)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a repeated value is refused (no redundant data)
+  METHOD repeat_refused.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_agg_query=>group_list_valid( |{ gc_us01 },{ gc_us01 }| )
+                                           msg = 'A repeat is refused (426)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a value longer than a group value (70) would be cut and never match - refused
+  METHOD overlong_value_refused.
+    TRY.
+        DATA(lv_long) = repeat( val = `X` occ = 71 ).
+        cl_abap_unit_assert=>assert_false( act = zcl_cd_hck_agg_query=>group_list_valid( |{ gc_us01 },{ lv_long }| )
+                                           msg = 'A value over 70 characters is refused (426)' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

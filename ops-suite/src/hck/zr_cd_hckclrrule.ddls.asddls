@@ -9,7 +9,7 @@ define view entity ZR_CD_HckClrRule
   key flow as Flow,
       @EndUserText.label: 'Method class'
   key method_class as MethodClass,
-      @EndUserText.label: 'Purpose'
+      @EndUserText.label: 'Purpose (FMON: SOURCE; HCK: READ / DRIFT)'
   key purpose as Purpose,
       @EndUserText.label: 'Sequence'
   key seq as Seq,

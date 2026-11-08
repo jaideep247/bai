@@ -1,7 +1,7 @@
-// UI annotations: File monitoring setup - Stage SLAs
+// UI annotations: File monitoring setup - Stage SLAs (duration or deadline)
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Stage SLA',
-                     typeNamePlural: 'Stage SLAs',
+                     typeNamePlural: 'Stage SLAs (duration or deadline)',
                      title: { type: #STANDARD, value: 'IfaceId' } } }
 annotate entity ZC_CD_FmonSla with
 {
@@ -18,19 +18,33 @@ annotate entity ZC_CD_FmonSla with
 
   @UI.lineItem: [{ position: 30 }]
   @UI.identification: [{ position: 30 }]
-  MaxMinutes;
+  Kind;
 
   @UI.lineItem: [{ position: 40 }]
   @UI.identification: [{ position: 40 }]
-  Basis;
+  DayType;
 
   @UI.lineItem: [{ position: 50 }]
   @UI.identification: [{ position: 50 }]
-  Severity;
+  MaxMinutes;
 
   @UI.lineItem: [{ position: 60 }]
   @UI.identification: [{ position: 60 }]
+  Basis;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  DueTime;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  Severity;
+
+  @UI.identification: [{ position: 90 }]
   Active;
+
+  @UI.identification: [{ position: 100 }]
+  Description;
 
   @UI.hidden: true
   LastChangedBy;

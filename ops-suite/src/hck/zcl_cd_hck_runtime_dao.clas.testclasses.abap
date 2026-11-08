@@ -15,6 +15,13 @@
 *& 2026-11-07 | Initial version (checks E_NUMRANGE, E_QUEUES, A_INFLIGHT).
 *& 2026-11-07 | BSAS assignment test replaced; ltc_inflight_reads (user rules 1-5).
 *& 2026-11-07 | payments_by_document_all_runs: payment runs by payment document (canonical outcome).
+*& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
+*& 2026-11-08 | Table consolidation: bank code roles with usage LIFECYCLE / RECON; the lifecycle read splits
+*&            | SCOPE and never returns a RECON row (btc_roles_lifecycle_only).
+*& 2026-11-08 | Table consolidation: ZCD_HCK_EVSET no longer doubled or read (Stripe settings are ZCA_PARAM
+*&            | parameters).
+*& 2026-11-08 | Table consolidation: the house-bank calendar is a ZCD_HCK_PMCLASS row with HBKID, read with
+*&            | the classes (ZCD_HCK_PMBANK merged).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -382,7 +389,7 @@ CLASS ltc_runtime_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a configured table (bgRFC) must be on ZCD_HCK_TABWL
+  " Rule: a configured table (bgRFC) must be on ZCD_OPS_TABWL (HCK / READ)
   METHOD configured_needs_whitelist.
     DATA(ls_source) = qrfc_source( ).
     ls_source-configured = abap_true.
@@ -439,6 +446,7 @@ CLASS ltc_inflight_reads DEFINITION FINAL FOR TESTING
     METHODS gl_lines_by_xref2_window   FOR TESTING.
     METHODS gl_lines_by_account_capped FOR TESTING.
     METHODS configuration_active_only  FOR TESTING.
+    METHODS btc_roles_lifecycle_only   FOR TESTING.
     METHODS reference_rows_read        FOR TESTING.
     METHODS reference_needs_whitelist  FOR TESTING.
     METHODS reference_unknown_field    FOR TESTING.
@@ -449,8 +457,8 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_PMBANK' ) ( 'ZCD_HCK_CLRRULE' )
-                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ( 'ZCD_HCK_EVSET' ) ) ).
+      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_CLRRULE' )
+                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ) ).
   ENDMETHOD.
 
 
@@ -514,16 +522,12 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD insert_configuration.
     DATA lt_class TYPE STANDARD TABLE OF zcd_hck_pmclass WITH EMPTY KEY.
     DATA ls_class TYPE zcd_hck_pmclass.
-    DATA lt_bank TYPE STANDARD TABLE OF zcd_hck_pmbank WITH EMPTY KEY.
-    DATA ls_bank TYPE zcd_hck_pmbank.
     DATA lt_rule TYPE STANDARD TABLE OF zcd_hck_clrrule WITH EMPTY KEY.
     DATA ls_rule TYPE zcd_hck_clrrule.
     DATA lt_role TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
     DATA ls_role TYPE zcd_hck_btcrole.
     DATA lt_out TYPE STANDARD TABLE OF zcd_hck_seqout WITH EMPTY KEY.
     DATA ls_out TYPE zcd_hck_seqout.
-    DATA lt_set TYPE STANDARD TABLE OF zcd_hck_evset WITH EMPTY KEY.
-    DATA ls_set TYPE zcd_hck_evset.
     ls_class-flow = 'D'.
     ls_class-method_class = 'WIR'.
     ls_class-pay_methods = 'E'.
@@ -534,14 +538,13 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_class-method_class = 'ACI'.
     ls_class-active = abap_false.
     INSERT ls_class INTO TABLE lt_class.
+    " House-bank calendar of the ACI class: a row with HBKID, calendar only (ZCD_HCK_PMBANK merged)
+    CLEAR: ls_class-pay_methods, ls_class-age_basis.
+    ls_class-hbkid = 'BARC1'.
+    ls_class-calendar = 'GB'.
+    ls_class-active = abap_true.
+    INSERT ls_class INTO TABLE lt_class.
     go_env->insert_test_data( lt_class ).
-    ls_bank-flow = 'D'.
-    ls_bank-method_class = 'ACI'.
-    ls_bank-hbkid = 'BARC1'.
-    ls_bank-calendar = 'GB'.
-    ls_bank-active = abap_true.
-    INSERT ls_bank INTO TABLE lt_bank.
-    go_env->insert_test_data( lt_bank ).
     ls_rule-flow = 'D'.
     ls_rule-method_class = 'WIR'.
     ls_rule-purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared.
@@ -554,12 +557,18 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_rule-active = abap_false.
     INSERT ls_rule INTO TABLE lt_rule.
     go_env->insert_test_data( lt_rule ).
-    ls_role-flow = 'C'.
-    ls_role-method_class = 'CRD'.
+    " Lifecycle row: SCOPE = flow C + method class CRD (table consolidation 2026-11-08)
+    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-lifecycle.
+    ls_role-scope = 'CCRD'.
     ls_role-scheme = 'BAI2'.
     ls_role-btc_code = '195'.
     ls_role-role = 'PAYOUT_RECEIVED'.
     ls_role-active = abap_true.
+    INSERT ls_role INTO TABLE lt_role.
+    " Reconciliation row of the same code (set STRIPE_US): never a lifecycle role
+    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-recon.
+    ls_role-scope = 'STRIPE_US'.
+    ls_role-role = 'DEPOSIT'.
     INSERT ls_role INTO TABLE lt_role.
     go_env->insert_test_data( lt_role ).
     ls_out-flow = 'D'.
@@ -571,15 +580,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_out-active = abap_true.
     INSERT ls_out INTO TABLE lt_out.
     go_env->insert_test_data( lt_out ).
-    ls_set-set_id = 'STRIPE'.
-    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-table.
-    ls_set-value = 'ZCD_STRP_POUT_LOG'.
-    ls_set-active = abap_true.
-    INSERT ls_set INTO TABLE lt_set.
-    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-intent_field.
-    ls_set-active = abap_false.
-    INSERT ls_set INTO TABLE lt_set.
-    go_env->insert_test_data( lt_set ).
   ENDMETHOD.
 
 
@@ -638,18 +638,35 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD configuration_active_only.
     TRY.
         DATA(lt_classes) = mo_cut->get_pm_classes( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 1 msg = 'Active class only' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_classes[ 1 ]-calendar exp = 'US' msg = 'Calendar read' ).
-        DATA(lt_banks) = mo_cut->get_pm_banks( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 2
+                                            msg = 'Active class row and active house-bank row only' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'WIR' hbkid = space ]-calendar
+                                            exp = 'US' msg = 'Calendar of the class row' ).
         DATA(lt_roles) = mo_cut->get_btc_roles( ).
         DATA(lt_outcomes) = mo_cut->get_seq_outcomes( ).
-        cl_abap_unit_assert=>assert_equals( act = lt_banks[ 1 ]-calendar exp = 'GB' msg = 'Bank calendar' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'ACI' hbkid = 'BARC1' ]-calendar
+                                            exp = 'GB' msg = 'Calendar of the house-bank row (key HBKID)' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_clearing_rules( ) ) exp = 1 msg = 'Active rule only' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
                                             msg = 'Role per flow / class / scheme / code' ).
         cl_abap_unit_assert=>assert_equals( act = lt_outcomes[ 1 ]-outcome exp = 'CLEARED' msg = 'Outcome' ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_evidence_settings( 'STRIPE' ) ) exp = 1
-                                            msg = 'Active settings of the set only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (table consolidation 2026-11-08): the lifecycle reads only usage LIFECYCLE of ZCD_HCK_BTCROLE
+  " and splits SCOPE into flow and method class; a reconciliation role of the same code never leaks in
+  METHOD btc_roles_lifecycle_only.
+    TRY.
+        DATA(lt_roles) = mo_cut->get_btc_roles( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1 msg = 'Only the lifecycle row' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-flow exp = 'C' msg = 'Flow from SCOPE' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-method_class exp = 'CRD'
+                                            msg = 'Method class from SCOPE' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_roles[ role = 'DEPOSIT' ] ) )
+                                           msg = 'A reconciliation role never leaks into the lifecycle' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -674,7 +691,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the configured table must be on ZCD_HCK_TABWL
+  " Rule: the configured table must be on ZCD_OPS_TABWL (HCK / READ)
   METHOD reference_needs_whitelist.
     mo_hck_dao->mv_whitelisted = abap_false.
     TRY.

@@ -18,19 +18,13 @@ authorization master ( global )
   association _HckCheckDef { create ( features : global ); with draft; }
   association _HckThreshold { create ( features : global ); with draft; }
   association _HckAggregate { create ( features : global ); with draft; }
-  association _HckAggGroup { create ( features : global ); with draft; }
-  association _HckDriftTable { create ( features : global ); with draft; }
-  association _HckWhitelist { create ( features : global ); with draft; }
   association _JobCycle { create ( features : global ); with draft; }
   association _JobStep { create ( features : global ); with draft; }
   association _HckPmClass { create ( features : global ); with draft; }
-  association _HckPmBank { create ( features : global ); with draft; }
   association _HckClrRule { create ( features : global ); with draft; }
-  association _HckEvidenceSet { create ( features : global ); with draft; }
   association _HckBtcRole { create ( features : global ); with draft; }
   association _HckSeqOutcome { create ( features : global ); with draft; }
   association _HckReconSet { create ( features : global ); with draft; }
-  association _HckReconBtc { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -44,29 +38,19 @@ authorization master ( global )
     validation HckThreshold ~ validateTransport;
     validation HckAggregate ~ validateFields;
     validation HckAggregate ~ validateTransport;
-    validation HckAggGroup ~ validateTransport;
-    validation HckDriftTable ~ validateFields;
-    validation HckDriftTable ~ validateTransport;
-    validation HckWhitelist ~ validateFields;
-    validation HckWhitelist ~ validateTransport;
     validation JobCycle ~ validateTransport;
     validation JobStep ~ validateFields;
     validation JobStep ~ validateTransport;
     validation HckPmClass ~ validateFields;
     validation HckPmClass ~ validateTransport;
-    validation HckPmBank ~ validateFields;
-    validation HckPmBank ~ validateTransport;
     validation HckClrRule ~ validateFields;
     validation HckClrRule ~ validateTransport;
-    validation HckEvidenceSet ~ validateTransport;
     validation HckBtcRole ~ validateFields;
     validation HckBtcRole ~ validateTransport;
     validation HckSeqOutcome ~ validateFields;
     validation HckSeqOutcome ~ validateTransport;
     validation HckReconSet ~ validateFields;
     validation HckReconSet ~ validateTransport;
-    validation HckReconBtc ~ validateFields;
-    validation HckReconBtc ~ validateTransport;
   }
 }
 
@@ -175,6 +159,7 @@ etag master LocalLastChangedAt
     DateMode = date_mode;
     AgeDaysMin = age_days_min;
     GroupField = group_field;
+    ExpectedGroups = expected_groups;
     Cond1Field = cond1_field;
     Cond1Op = cond1_op;
     Cond1Value = cond1_value;
@@ -184,97 +169,6 @@ etag master LocalLastChangedAt
     Cond3Field = cond3_field;
     Cond3Op = cond3_op;
     Cond3Value = cond3_value;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckAggGroup alias HckAggGroup
-persistent table zcd_hck_agggrp
-with additional save
-draft table zcd_d_hckaggg
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) CheckId, AggId, GroupValue;
-  field ( mandatory : create ) CheckId, AggId, GroupValue;
-  association _HckCfgAll { with draft; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_agggrp
-  {
-    CheckId = check_id;
-    AggId = agg_id;
-    GroupValue = group_value;
-    Description = description;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckDriftTable alias HckDriftTable
-persistent table zcd_hck_drift
-with additional save
-draft table zcd_d_hckdrift
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Tabname;
-  field ( mandatory : create ) Tabname;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_drift
-  {
-    Tabname = tabname;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckWhitelist alias HckWhitelist
-persistent table zcd_hck_tabwl
-with additional save
-draft table zcd_d_hcktabwl
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Tabname;
-  field ( mandatory : create ) Tabname;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_tabwl
-  {
-    Tabname = tabname;
-    Description = description;
-    Active = active;
-    ApprovedBy = approved_by;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;
@@ -364,7 +258,7 @@ etag master LocalLastChangedAt
   update;
   delete ( features : global );
   field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Flow, MethodClass;
+  field ( readonly : update ) Flow, MethodClass, Hbkid;
   field ( mandatory : create ) Flow, MethodClass;
   association _HckCfgAll { with draft; }
   validation validateFields on save { create; update; }
@@ -374,41 +268,9 @@ etag master LocalLastChangedAt
   {
     Flow = flow;
     MethodClass = method_class;
+    Hbkid = hbkid;
     PayMethods = pay_methods;
     AgeBasis = age_basis;
-    Calendar = calendar;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckPmBank alias HckPmBank
-persistent table zcd_hck_pmbank
-with additional save
-draft table zcd_d_hckpmbnk
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Flow, MethodClass, Hbkid;
-  field ( mandatory : create ) Flow, MethodClass, Hbkid;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_pmbank
-  {
-    Flow = flow;
-    MethodClass = method_class;
-    Hbkid = hbkid;
     Calendar = calendar;
     Description = description;
     Active = active;
@@ -458,37 +320,6 @@ etag master LocalLastChangedAt
   }
 }
 
-define behavior for ZR_CD_HckEvidenceSet alias HckEvidenceSet
-persistent table zcd_hck_evset
-with additional save
-draft table zcd_d_hckevset
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) SetId, Name;
-  field ( mandatory : create ) SetId, Name;
-  association _HckCfgAll { with draft; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_evset
-  {
-    SetId = set_id;
-    Name = name;
-    Value = value;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
 define behavior for ZR_CD_HckBtcRole alias HckBtcRole
 persistent table zcd_hck_btcrole
 with additional save
@@ -500,16 +331,16 @@ etag master LocalLastChangedAt
   update;
   delete ( features : global );
   field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Flow, MethodClass, Scheme, BtcCode;
-  field ( mandatory : create ) Flow, MethodClass, Scheme, BtcCode;
+  field ( readonly : update ) Usage, Scope, Scheme, BtcCode;
+  field ( mandatory : create ) Usage, Scope, Scheme, BtcCode;
   association _HckCfgAll { with draft; }
   validation validateFields on save { create; update; }
   // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
   validation validateTransport on save { create; update; delete; }
   mapping for zcd_hck_btcrole
   {
-    Flow = flow;
-    MethodClass = method_class;
+    Usage = usage;
+    Scope = scope;
     Scheme = scheme;
     BtcCode = btc_code;
     Role = role;
@@ -594,38 +425,6 @@ etag master LocalLastChangedAt
     LegBank = leg_bank;
     LegFica = leg_fica;
     Tolerance = tolerance;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckReconBtc alias HckReconBtc
-persistent table zcd_hck_rcbtc
-with additional save
-draft table zcd_d_hckrcbtc
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) SetId, BtcCode;
-  field ( mandatory : create ) SetId, BtcCode;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_rcbtc
-  {
-    SetId = set_id;
-    BtcCode = btc_code;
-    Role = role;
     Description = description;
     Active = active;
     ChangedBy = changed_by;

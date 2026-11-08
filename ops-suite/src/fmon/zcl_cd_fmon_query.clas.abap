@@ -9,6 +9,8 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A51: CHECK_APPROVED against ZCD_FMON_TABWL.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-08 | Table consolidation: approved rows from ZCD_OPS_TABWL (FMON / SOURCE); blank field =
+*&            | the whole table (was '*').
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC validation of configured reads</p>
 CLASS zcl_cd_fmon_query DEFINITION
@@ -43,7 +45,7 @@ CLASS zcl_cd_fmon_query DEFINITION
         zcx_cd_ops_error.
 
     "! Audit A51: the table and every queried field (and the date / IN field) must be
-    "! approved in ZCD_FMON_TABWL (field '*' = all fields of the table)
+    "! approved in ZCD_OPS_TABWL, FMON / SOURCE (blank field = the whole table)
     CLASS-METHODS check_approved
       IMPORTING
         is_query TYPE zif_cd_fmon_types=>ty_query
@@ -147,7 +149,8 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e244(zcd_ops) WITH lv_table.
     ENDIF.
-    IF line_exists( lt_table_rows[ field_name = zif_cd_fmon_types=>gc_wildcard ] ).
+    " A row with blank field approves the whole table (ZCD_OPS_TABWL, 2026-11-08)
+    IF line_exists( lt_table_rows[ field_name = space ] ).
       RETURN.
     ENDIF.
     LOOP AT is_query-fields ASSIGNING FIELD-SYMBOL(<ls_field>).

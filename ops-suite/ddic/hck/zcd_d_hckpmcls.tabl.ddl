@@ -1,4 +1,4 @@
-@EndUserText.label : 'Draft: Payment method classes'
+@EndUserText.label : 'Draft: Payment method classes (and house-bank calendars)'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A
@@ -7,6 +7,7 @@ define table zcd_d_hckpmcls {
   key mandt : abap.clnt not null;
   key flow : abap.char(1) not null;
   key methodclass : abap.char(3) not null;
+  key hbkid : abap.char(5) not null;
   singletonid : abap.int1;
   paymethods : abap.char(40);
   agebasis : abap.char(10);

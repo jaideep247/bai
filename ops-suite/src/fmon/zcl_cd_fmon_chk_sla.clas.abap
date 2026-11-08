@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_fmon_chk_sla.clas.abap
 *& Purpose:
-*& Plug-in check for every ZCD_FMON_SLA row: NO_PRISM_HANDOFF, NO_BANK_ACK,
+*& Plug-in check for every DURATION row of ZCD_FMON_SLA: NO_PRISM_HANDOFF, NO_BANK_ACK,
 *& PRISM_HANDOFF_LATE, BANK_ACK_LATE, ... Optional parameter STAGE limits
 *& one configured check to one stage; LATE_SEVERITY (default W).
 *& PRISM throttle: a throttled file's delivery stage (and a later stage measured
@@ -14,6 +14,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | PRISM throttle (user 2026-11-06): queue allowance from the check context
 *&              (ZCL_CD_FMON_RULES=>QUEUE_POSITION), PRISM_QUEUE_LONG on the delivery stage.
+*& 2026-11-08 | Table consolidation: only rows of kind DURATION are evaluated (DEADLINE rows of ZCD_FMON_SLA
+*&            | belong to the deadline check).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - stage SLA (PRISM handoff, bank ack)</p>
 "! Rules: ZCL_CD_FMON_RULES=>SLA_VERDICT / SLA_CODE / QUEUE_POSITION. Params: STAGE=, LATE_SEVERITY=W
@@ -53,7 +55,9 @@ CLASS zcl_cd_fmon_chk_sla IMPLEMENTATION.
                                                          is_throttle = is_ctx-throttle ).
       DATA(lv_queue_length) = ls_queue-ahead + 1.
       lv_queue_reported = abap_false.
-      LOOP AT is_ctx-slas ASSIGNING FIELD-SYMBOL(<ls_sla>) WHERE iface_id = <ls_file>-iface_id.
+      " DURATION rows only: DEADLINE rows of the same table belong to ZCL_CD_FMON_CHK_DEADLINE
+      LOOP AT is_ctx-slas ASSIGNING FIELD-SYMBOL(<ls_sla>)
+           WHERE iface_id = <ls_file>-iface_id AND kind = zif_cd_fmon_types=>gc_sla_kind-duration.
         IF ( lv_stage IS NOT INITIAL AND <ls_sla>-stage <> lv_stage )
            OR ( <ls_sla>-stage = zif_cd_fmon_types=>gc_stage-ack AND ls_iface-ack_expected = abap_false ).
           CONTINUE.

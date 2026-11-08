@@ -75,7 +75,7 @@ RULE_PATTERN, CHECK_PATTERN, GROUP1_PATTERN and GROUP2_PATTERN are PCRE matched 
 | Send NOC aging to compliance daily | Rule: PE_AREA FMON, CHECK_PATTERN `NOC_AGING*`, THROTTLE_MIN 1440 |
 | Stop night e-mails for warnings | QUIET_FROM 22:00, QUIET_TO 06:00 on the rule (blocks still go out) |
 | Escalate a persisting red health check | ESCALATE_AFTER 2, ESCALATION_DEST = SO23 lead list (`ZCD_RTBLEAD`) |
-| Alert when a file is not processed by a clock time (e.g. BAI by 10:00, 2026-11-07) | Deadline row in ZCD_FMON_DEADL (`FMON_FILE_MONITORING.md` §A3b) + rule: PE_AREA FMON, MIN_SEVERITY E, CHECK_PATTERN `STAGE_DEADLINE_MISSED`, GROUP1_PATTERN = interface(s), EMAIL to an SO23 list, ESCALATE_AFTER in 5-minute runs — seed `FMON_BAIDL`. New rows of both tables by customizing transport from DV1; in PS4 only existing rows are edited (`Operations_Runbook.md` §5h). GROUP2 of the finding = `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED` (a second rule may send one condition to another list) |
+| Alert when a file is not processed by a clock time (e.g. BAI by 10:00, 2026-11-07) | DEADLINE row in ZCD_FMON_SLA (`FMON_FILE_MONITORING.md` §A3b) + rule: PE_AREA FMON, MIN_SEVERITY E, CHECK_PATTERN `STAGE_DEADLINE_MISSED`, GROUP1_PATTERN = interface(s), EMAIL to an SO23 list, ESCALATE_AFTER in 5-minute runs — seed `FMON_BAIDL`. New rows of both tables by customizing transport from DV1; in PS4 only existing rows are edited (`Operations_Runbook.md` §5h). GROUP2 of the finding = `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED` (a second rule may send one condition to another list) |
 | Add a new channel type (later phase) | One class implementing ZIF_CD_OPS_ALERT_CHANNEL + ZCD_OPS_ALCHN row |
 
 ### Deadline alerts and repeat suppression (2026-11-07)

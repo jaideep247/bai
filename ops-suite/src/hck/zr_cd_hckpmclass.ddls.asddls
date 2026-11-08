@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Payment method classes'
+@EndUserText.label: 'Payment method classes (and house-bank calendars)'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity ZR_CD_HckPmClass
   as select from zcd_hck_pmclass
@@ -9,6 +9,8 @@ define view entity ZR_CD_HckPmClass
   key flow as Flow,
       @EndUserText.label: 'Method class'
   key method_class as MethodClass,
+      @EndUserText.label: 'House bank'
+  key hbkid as Hbkid,
       1 as SingletonID,
       @EndUserText.label: 'Payment methods (comma list)'
       pay_methods as PayMethods,

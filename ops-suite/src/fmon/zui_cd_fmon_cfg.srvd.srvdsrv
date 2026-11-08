@@ -4,11 +4,9 @@ define service ZUI_CD_FMON_CFG {
   expose ZC_CD_FmonCfgAll as FmonCfgAll;
   expose ZC_CD_FmonIface as FmonIface;
   expose ZC_CD_FmonSla as FmonSla;
-  expose ZC_CD_FmonDeadline as FmonDeadline;
   expose ZC_CD_FmonSource as FmonSource;
   expose ZC_CD_FmonSourceMap as FmonSourceMap;
   expose ZC_CD_FmonCheck as FmonCheck;
   expose ZC_CD_FmonLotCfg as FmonLotCfg;
   expose ZC_CD_FmonCalendar as FmonCalendar;
-  expose ZC_CD_FmonTableAllow as FmonTableAllow;
 }

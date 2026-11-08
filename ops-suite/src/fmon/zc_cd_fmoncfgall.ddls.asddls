@@ -12,11 +12,9 @@ define root view entity ZC_CD_FmonCfgAll
       TransportRequestID,
       _FmonIface : redirected to composition child ZC_CD_FmonIface,
       _FmonSla : redirected to composition child ZC_CD_FmonSla,
-      _FmonDeadline : redirected to composition child ZC_CD_FmonDeadline,
       _FmonSource : redirected to composition child ZC_CD_FmonSource,
       _FmonSourceMap : redirected to composition child ZC_CD_FmonSourceMap,
       _FmonCheck : redirected to composition child ZC_CD_FmonCheck,
       _FmonLotCfg : redirected to composition child ZC_CD_FmonLotCfg,
-      _FmonCalendar : redirected to composition child ZC_CD_FmonCalendar,
-      _FmonTableAllow : redirected to composition child ZC_CD_FmonTableAllow
+      _FmonCalendar : redirected to composition child ZC_CD_FmonCalendar
 }

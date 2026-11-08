@@ -14,7 +14,7 @@ define behavior for ZC_CD_OpsCfgAll alias OpsCfgAll
 
   use association _AlertRule { create; with draft; }
   use association _AlertChannel { create; with draft; }
-  use association _MonitorCfg { create; with draft; }
+  use association _ApprovedTable { create; with draft; }
 }
 
 define behavior for ZC_CD_AlertRule alias AlertRule
@@ -35,7 +35,7 @@ use etag
   use association _OpsCfgAll { with draft; }
 }
 
-define behavior for ZC_CD_MonitorCfg alias MonitorCfg
+define behavior for ZC_CD_ApprovedTable alias ApprovedTable
 use etag
 {
   use update;

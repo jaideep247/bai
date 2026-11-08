@@ -25,6 +25,10 @@
 *& 2026-11-07 | Parameters in the framework ZCA_PARAM: areas GC_PARAM_AREA, name prefix -> area
 *&            | GC_PARAM_AREA_PREFIX, TT_PARAM_ERROR (ZIF_CD_OPS_PARAMS=>GET_ERRORS); TT_KV removed.
 *& 2026-11-07 | Transactions dashboard retention (400 days) and date kinds (canonical payment outcome).
+*& 2026-11-08 | Table consolidation: GC_TABWL_PURPOSE (ZCD_OPS_TABWL, one approved-table list per area and
+*&            | purpose).
+*& 2026-11-08 | Table consolidation: parameters MON_STALE_AFTER_MIN_<area> (area prefix MON_ -> CD_OPS; was
+*&            | ZCD_OPS_MONCFG).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -98,12 +102,17 @@ INTERFACE zif_cd_ops_types
     END OF gc_param.
 
   "! Parameter-name prefixes completed at run time (ALERT_<route>, RETENTION_DAYS_<target>,
-  "! SLA_DAYS_<area>_<severity>)
+  "! SLA_DAYS_<area>_<severity>, MON_STALE_AFTER_MIN_<area>)
   CONSTANTS:
     BEGIN OF gc_param_prefix,
-      alert          TYPE ty_param_name VALUE 'ALERT_',
-      retention_days TYPE ty_param_name VALUE 'RETENTION_DAYS_',
-      sla_days       TYPE ty_param_name VALUE 'SLA_DAYS_',
+      alert           TYPE ty_param_name VALUE 'ALERT_',
+      retention_days  TYPE ty_param_name VALUE 'RETENTION_DAYS_',
+      sla_days        TYPE ty_param_name VALUE 'SLA_DAYS_',
+      "! Minutes after the last completed run of a payment engine area before its monitor is stale
+      "! (table consolidation 2026-11-08, was ZCD_OPS_MONCFG): the HCK self-check reads it through
+      "! the parameter API, the "as of" CDS views of the dashboards through ZI_CD_OpsStaleCfg
+      "! (cds_abap_parity: the CDS holds this prefix and GC_PARAM_AREA-OPS as literals)
+      stale_after_min TYPE ty_param_name VALUE 'MON_STALE_AFTER_MIN_',
     END OF gc_param_prefix.
 
   "! Delivered defaults of the core parameters
@@ -124,7 +133,8 @@ INTERFACE zif_cd_ops_types
     END OF gc_param_area.
 
   "! Name prefixes that decide the area of a parameter (ZCL_CD_OPS_PARAMS_CA=>AREA_OF):
-  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ PAYOUT_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON, HCK_ -> CD_HCK
+  "! ALERT_ SLA_ RETENTION_ PURGE_ TRACE_ PAYOUT_ MON_ -> CD_OPS, EBS_ -> CD_EBS, FMON_ -> CD_FMON,
+  "! HCK_ -> CD_HCK
   CONSTANTS:
     BEGIN OF gc_param_area_prefix,
       alert     TYPE ty_param_name VALUE 'ALERT_',
@@ -134,6 +144,8 @@ INTERFACE zif_cd_ops_types
       trace     TYPE ty_param_name VALUE 'TRACE_',
       "! Payment outcome snapshot (canonical payment outcome, 2026-11-07)
       payout    TYPE ty_param_name VALUE 'PAYOUT_',
+      "! Monitor freshness of every area (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
+      monitor   TYPE ty_param_name VALUE 'MON_',
       ebs       TYPE ty_param_name VALUE 'EBS_',
       fmon      TYPE ty_param_name VALUE 'FMON_',
       hck       TYPE ty_param_name VALUE 'HCK_',
@@ -178,6 +190,19 @@ INTERFACE zif_cd_ops_types
       "! Cross-payment engine area objects: alerting, parameters, purge (authorisation object ZCD_OPS)
       core         TYPE ty_pe_area VALUE 'CORE',
     END OF gc_pe_area.
+
+  "! ZCD_OPS_TABWL-PURPOSE: what the reader of the payment engine area does with an approved
+  "! table (table consolidation 2026-11-08): FMON SOURCE, HCK READ / DRIFT
+  TYPES ty_tabwl_purpose TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_tabwl_purpose,
+      "! FMON dynamic reader (ZCD_FMON_SRC / _LOTCFG tables, payment trace sources; audit A51)
+      source TYPE ty_tabwl_purpose VALUE 'SOURCE',
+      "! HCK aggregates, value queries, queue and evidence sources (counts / references only)
+      read   TYPE ty_tabwl_purpose VALUE 'READ',
+      "! HCK configuration drift: the whole table is hashed against the golden baseline
+      drift  TYPE ty_tabwl_purpose VALUE 'DRIFT',
+    END OF gc_tabwl_purpose.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.

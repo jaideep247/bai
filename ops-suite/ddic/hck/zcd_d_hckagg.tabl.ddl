@@ -16,6 +16,7 @@ define table zcd_d_hckagg {
   datemode : abap.char(3);
   agedaysmin : abap.int4;
   groupfield : abap.char(30);
+  expectedgroups : abap.char(255);
   cond1field : abap.char(30);
   cond1op : abap.char(2);
   cond1value : abap.char(70);

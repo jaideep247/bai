@@ -35,6 +35,10 @@
 *&            | active checks outside a filtered run's scope as SKIPPED. The dashboard reads these rows.
 *& 2026-11-07 | A check that reports evidence NONE (nothing to rate, e.g. A_RECON_3WAY without any leg) is
 *&            | grey, never an inherited GREEN.
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: self-check stale threshold from the core parameter
+*&            | MON_STALE_AFTER_MIN_<area> (was ZCD_OPS_MONCFG), then the hours rule as before.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -64,7 +68,7 @@ CLASS zcl_cd_hck_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
-    "! Take a new golden baseline (hash) of every table in ZCD_HCK_DRIFT.
+    "! Take a new golden baseline (hash) of every table in ZCD_OPS_TABWL (HCK / DRIFT).
     "! Requires S_TABU_NAM ACTVT 02 for table ZCD_HCK_BASELINE.
     "! @raising zcx_cd_ops_error | 041 no authorization, 303/311 hash errors
     METHODS take_baseline
@@ -817,9 +821,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_default_run) = zcl_cd_ops_util=>param_int( io_params  = mo_params
                                                        iv_name    = zif_cd_hck_types=>gc_param-max_run_min
                                                        iv_default = zif_cd_hck_types=>gc_param_default-max_run_min ).
-    " Stale threshold: ZCD_OPS_MONCFG first (the dashboards read the same row), then
-    " HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS
-    DATA(lt_moncfg) = mo_dao->get_monitor_cfg( ).
+    " Stale threshold: core parameter MON_STALE_AFTER_MIN_<area> first (the dashboards read the same
+    " parameter), then HCK_MAX_AGE_H_<area>, then HCK_MAX_AGE_HOURS
     DATA(lt_pe_areas) = zcl_cd_ops_util=>split_list(
       mo_params->get_param( iv_name    = zif_cd_hck_types=>gc_param-watch_pe_areas
                             iv_default = zif_cd_hck_types=>gc_param_default-watch_pe_areas ) ).
@@ -857,7 +860,13 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                                iv_to   = lv_now ).
       ls_status-age_min       = minutes_between( iv_from = ls_last-started_at
                                                  iv_to   = lv_now ).
-      ls_status-stale_after_min = VALUE #( lt_moncfg[ pe_area = ls_status-pe_area ]-stale_after_min OPTIONAL ).
+      " The definition delivers the minutes (FMON 15, EBS / HCK 1560); 0 only when the parameter
+      " cannot be read (framework error, reported as PARAM_INVALID) - then the hours rule applies
+      ls_status-stale_after_min = zcl_cd_ops_util=>param_int(
+                                    io_params  = mo_params
+                                    iv_name    = CONV #( zif_cd_ops_types=>gc_param_prefix-stale_after_min
+                                                         && ls_status-pe_area )
+                                    iv_default = 0 ).
       ls_status-stale         = COND #( WHEN ls_status-stale_after_min > 0
                                         THEN xsdbool( ls_status-age_min > ls_status-stale_after_min )
                                         ELSE xsdbool( ls_status-age_hours > ls_status-max_age_hours ) ).

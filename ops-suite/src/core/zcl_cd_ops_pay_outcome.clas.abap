@@ -3,7 +3,7 @@
 *& Purpose:
 *& The canonical payment outcome evaluator (ZIF_CD_OPS_PAY_OUTCOME),
 *& extracted unchanged from the morning report check A_INFLIGHT: method
-*& classes and house-bank calendars (ZCD_HCK_PMCLASS / PMBANK), rules per
+*& classes and house-bank calendars (ZCD_HCK_PMCLASS, HBKID rows), rules per
 *& flow + class and purpose (ZCD_HCK_CLRRULE: VOIDED, RETURNED, RETRIEVED,
 *& PENDING, CLEARED, IN_FLIGHT - the first purpose with evidence decides;
 *& X mandatory indicator, C mandatory corroboration, N must not hold,
@@ -27,6 +27,8 @@
 *& 2026-11-08 | Pending evidence (confirmed DPAYH status values, hourly status job): an indicated purpose
 *&            | whose only gap is a pending row stays IN_FLIGHT with STATUS_PENDING; EVIDENCE_DATE of
 *&            | the deciding evidence in the verdict.
+*& 2026-11-08 | Table consolidation: class rows (HBKID blank) map the payment methods, rows with a house bank
+*&            | are calendar overrides (ZCD_HCK_PMBANK merged into ZCD_HCK_PMCLASS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -218,9 +220,12 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
     zcl_cd_hck_ev_support=>start_collection( ).
     DATA(lo_dao) = zcl_cd_hck_factory=>get_runtime_dao( ).
     DATA(lt_classes) = lo_dao->get_pm_classes( ).
-    ms_config-banks = lo_dao->get_pm_banks( ).
+    " A row with a house bank only overrides the calendar of its class (ZCD_HCK_PMBANK merged,
+    " 2026-11-08); payment methods map to classes by the class rows (HBKID blank) alone, so a method
+    " stays in exactly one class per flow
+    ms_config-banks = VALUE #( FOR ls_bank IN lt_classes WHERE ( hbkid IS NOT INITIAL ) ( ls_bank ) ).
     ms_config-rules = lo_dao->get_clearing_rules( ).
-    LOOP AT lt_classes ASSIGNING FIELD-SYMBOL(<ls_class>).
+    LOOP AT lt_classes ASSIGNING FIELD-SYMBOL(<ls_class>) WHERE hbkid IS INITIAL.
       DATA(lv_key) = CONV zif_cd_hck_runtime_types=>ty_flow_class( |{ <ls_class>-flow }{ <ls_class>-method_class }| ).
       DATA(lt_tokens) = zcl_cd_hck_ev_support=>tokens( <ls_class>-pay_methods ).
       IF lt_tokens IS INITIAL.

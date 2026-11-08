@@ -8,12 +8,13 @@
 *& 2026-11-06 | Initial version (audit A103).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-08 | Table consolidation: expected groups as the comma list EXPECTED_GROUPS of the aggregate row
+*&            | (DAO double without get_agg_groups).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
     DATA mt_defs TYPE zif_cd_hck_types=>tt_agg_def.
-    DATA mt_groups TYPE zif_cd_hck_types=>tt_agg_group.
     DATA mt_rows TYPE zif_cd_hck_types=>tt_agg_row.
     DATA mv_fail TYPE abap_bool.
 ENDCLASS.
@@ -21,10 +22,6 @@ ENDCLASS.
 CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_agg_defs.
     rt_defs = mt_defs.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_dao~get_agg_groups.
-    rt_groups = mt_groups.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~is_table_whitelisted.
@@ -84,9 +81,9 @@ CLASS ltc_volume IMPLEMENTATION.
                     tabname     = 'DFKKOP'
                     agg_func    = zif_cd_hck_types=>gc_agg_func-count
                     date_field  = 'BUDAT'
-                    group_field = 'BUKRS' ) INTO TABLE mo_dao->mt_defs.
-    INSERT VALUE #( check_id = gc_check agg_id = gc_agg group_value = gc_active ) INTO TABLE mo_dao->mt_groups.
-    INSERT VALUE #( check_id = gc_check agg_id = gc_agg group_value = gc_silent ) INTO TABLE mo_dao->mt_groups.
+                    group_field = 'BUKRS'
+                    " expected groups: one comma list on the aggregate row (2026-11-08, was ZCD_HCK_AGGGRP)
+                    expected_groups = |{ gc_active },{ gc_silent }| ) INTO TABLE mo_dao->mt_defs.
     zcl_cd_hck_injector=>inject_dao( mo_dao ).
   ENDMETHOD.
 

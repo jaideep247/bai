@@ -67,7 +67,7 @@ RTB operations, not delivered. In the table above `\|` is the PCRE alternation `
 **BAI processing deadline (user requirement 2026-11-07, "alert if BAI is not processed until 10 AM").**
 `FMON_BAIDL` additionally has GROUP1_PATTERN `BAI_(JPMC|BOA)_IN` (interfaces; PCRE, complete value) and
 GROUP2_PATTERN blank (every condition - GROUP2 carries `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED`, so a
-second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_DEADL`, `config/fmon_seed.md`)
+second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_SLA` kind DEADLINE, `config/fmon_seed.md`)
 make the finding due at 10:00 US Central (`FMON_TIME_ZONE` = CST); the 5-minute FMON job raises it in the first run after
 10:00 (10:00-10:05). Later runs carry the open exception forward and are **not alerted again** (status R in
 ZCD_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.
@@ -118,14 +118,14 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 
 Any value below 30 days is raised to 30 (`ZCL_CD_OPS_PURGE=>GC_MIN_DAYS`). A new purge target needs a definition `RETENTION_DAYS_<target>` (the portable check `param_definitions_complete` enumerates the targets).
 
-## Monitor freshness — `ZCD_OPS_MONCFG` (configuration app *Alerting and monitor freshness*, entity *Monitor freshness*)
+## Monitor freshness — `ZCA_PARAM` `MON_STALE_AFTER_MIN_<area>` (area `CD_OPS`; was `ZCD_OPS_MONCFG`, table consolidation 2026-11-08)
 
-One row per payment engine area: minutes after the last completed run before the monitor counts as **stale**. The "as of" CDS views of the dashboards (`ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`, overview `ZI_CD_OpsFreshU`) and the morning report's self-check (`HCK_SELF`, `PE_AREA_STALE`) read the **same** row, so they cannot disagree. Without a row the dashboards use the delivered value below and the self-check falls back to `HCK_MAX_AGE_H_<area>`, then `HCK_MAX_AGE_HOURS`.
+One parameter per payment engine area (INT, at least 1, app *Parameter areas* `ZUI_CA_PARAM_O4`): minutes after the last completed run before the monitor counts as **stale**. The "as of" CDS views of the dashboards (`ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`, overview `ZI_CD_OpsFreshU`, through `ZI_CD_OpsStaleCfg`, which reads the framework tables `ZCA_PARAM_DEF` / `ZCA_PARAM_VAL` because CDS cannot call the parameter API) and the morning report's self-check (`HCK_SELF`, `PE_AREA_STALE`, through the parameter API) read the **same** parameter with the same rule - maintained value, else definition default - so they cannot disagree. The delivered definition defaults below apply without a value row. Only when a parameter cannot be read (refused value, `D_PARAM_INVALID`) the self-check falls back to `HCK_MAX_AGE_H_<area>`, then `HCK_MAX_AGE_HOURS`; without a definition (not transported) the dashboards use the same values as literals.
 
-| PE_AREA | STALE_AFTER_MIN | Why |
+| Parameter | Delivered default (minutes) | Why |
 |---|---|---|
-| FMON | 15 | Native SAP job every 5 minutes: 3 missed runs |
-| EBS | 1560 | Daily run + 2 h slack (26 h) |
-| HCK | 1560 | Daily morning report + 2 h slack (26 h) |
+| `MON_STALE_AFTER_MIN_FMON` | 15 | Native SAP job every 5 minutes: 3 missed runs |
+| `MON_STALE_AFTER_MIN_EBS` | 1560 | Daily run + 2 h slack (26 h) |
+| `MON_STALE_AFTER_MIN_HCK` | 1560 | Daily morning report + 2 h slack (26 h) |
 
-The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable check `cds_abap_parity`. Time zone per area: not configurable (time stamps are UTC); future extension.
+The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable checks `cds_abap_parity` and `param_definitions_complete`. No value row is delivered (`config/param_values.csv`): a landscape changes a threshold with a value row. Time zone per area: not configurable (time stamps are UTC); future extension.

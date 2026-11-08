@@ -6,15 +6,17 @@
 *& maintained (not configured, nothing read), payout row found, no payout
 *& row, optional record-type / payout / ACK conditions, refund or partial
 *& ACK = anomaly, one read per table, configured names passed to the DAO.
-*& Runtime DAO is a double; does not prove live SAP runtime behavior
-*& (field names VERIFY-SE11).
+*& Runtime DAO is a double, the settings are the delivered ZCA_PARAM
+*& definitions in memory (ZCL_CD_OPS_PARAM_SEED); does not prove live SAP
+*& runtime behavior (field names VERIFY-SE11).
 *& Modification log:
 *& 2026-11-07 | Initial version (user correction: Stripe payment intent ID chain).
+*& 2026-11-08 | Table consolidation: settings are the parameters HCK_STRIPE_* (was ZCD_HCK_EVSET); the
+*&            | delivered definitions are blank = not configured (delivered_blank_not_configured).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_runtime_dao PARTIALLY IMPLEMENTED.
-    DATA mt_settings TYPE zif_cd_hck_runtime_types=>tt_setting.
     "! DFKKOP rows: REF = AUGBL, STATUS = payment intent ID
     DATA mt_items TYPE zif_cd_hck_runtime_types=>tt_ref_row.
     "! Payout log rows: REF = payment intent ID
@@ -23,10 +25,6 @@ CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
 ENDCLASS.
 
 CLASS ltd_runtime_dao IMPLEMENTATION.
-  METHOD zif_cd_hck_runtime_dao~get_evidence_settings.
-    rt_settings = mt_settings.
-  ENDMETHOD.
-
   METHOD zif_cd_hck_runtime_dao~get_reference_rows.
     INSERT is_source INTO TABLE mt_sources.
     DATA(lt_rows) = COND #( WHEN is_source-tabname = zif_cd_ops_trace_types=>gc_table-dfkkop THEN mt_items ELSE mt_log ).
@@ -45,17 +43,17 @@ CLASS ltc_ev_stripe DEFINITION FINAL FOR TESTING
 
   PRIVATE SECTION.
     CONSTANTS:
-      gc_set     TYPE zif_cd_hck_runtime_types=>ty_rule_param VALUE 'STRIPE',
       gc_paid    TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300001',
       gc_waiting TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300002',
       gc_refund  TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300003'.
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
+    DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
 
     METHODS setup.
     METHODS teardown.
     METHODS setting
       IMPORTING
-        iv_name  TYPE zif_cd_hck_runtime_types=>ty_set_name
+        iv_name  TYPE zif_cd_ops_types=>ty_param_name
         iv_value TYPE clike.
     METHODS configure
       IMPORTING
@@ -70,6 +68,7 @@ CLASS ltc_ev_stripe DEFINITION FINAL FOR TESTING
     METHODS conditions_when_maintained   FOR TESTING.
     METHODS refund_is_anomaly            FOR TESTING.
     METHODS names_passed_one_read_each   FOR TESTING.
+    METHODS delivered_blank_not_configured FOR TESTING.
 ENDCLASS.
 
 
@@ -79,6 +78,9 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
     DATA ls_row TYPE zif_cd_hck_runtime_types=>ty_ref_row.
     mo_dao = NEW #( ).
     zcl_cd_hck_injector=>inject_runtime_dao( mo_dao ).
+    " Delivered parameter definitions in memory (HCK_STRIPE_* blank until maintained)
+    mo_params = NEW #( ).
+    zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     " Open items cleared by the payment documents with their payment intent IDs
     ls_row-ref = gc_paid.
     ls_row-status = 'pi_001'.
@@ -108,28 +110,29 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
-    CLEAR mo_dao.
+    zcl_cd_ops_injector=>reset( ).
+    CLEAR: mo_dao, mo_params.
   ENDMETHOD.
 
 
   METHOD setting.
-    INSERT VALUE #( name = iv_name value = iv_value ) INTO TABLE mo_dao->mt_settings.
+    mo_params->set( iv_name = iv_name iv_value = iv_value ).
   ENDMETHOD.
 
 
   METHOD configure.
     " Names as maintained after the SE11 check (placeholders in the seed)
-    setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-table iv_value = 'ZCD_STRP_POUT_LOG' ).
-    setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-intent_field iv_value = 'PAYMENT_INTENT' ).
-    setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-dfkkop_intent iv_value = 'ZZ_PAYMENT_INTENT' ).
+    setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_table iv_value = 'ZCD_STRP_POUT_LOG' ).
+    setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_intent_field iv_value = 'PAYMENT_INTENT' ).
+    setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_dfkkop_field iv_value = 'ZZ_PAYMENT_INTENT' ).
     IF iv_conditions = abap_true.
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-type_field iv_value = 'RECORD_TYPE' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-payout_field iv_value = 'PAYOUT_ID' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-ack_field iv_value = 'ACK_STATUS' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-charge iv_value = 'CHARGE' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-refund iv_value = 'REFUND' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-ack_full iv_value = 'FULL' ).
-      setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-ack_partial iv_value = 'PARTIAL' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_type_field iv_value = 'RECORD_TYPE' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_payout_field iv_value = 'PAYOUT_ID' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_ack_field iv_value = 'ACK_STATUS' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_charge iv_value = 'CHARGE' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_refund iv_value = 'REFUND' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_ack_full iv_value = 'FULL' ).
+      setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_ack_partial iv_value = 'PARTIAL' ).
     ENDIF.
   ENDMETHOD.
 
@@ -142,7 +145,7 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
     INSERT VALUE #( doc1r = '000000300004' ) INTO TABLE lt_payments.
     rs_result = NEW zcl_cd_hck_ev_stripe( )->zif_cd_hck_evidence~collect(
                   it_payments = lt_payments
-                  is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_STRIPE' param1 = gc_set )
+                  is_rule     = VALUE #( evidence_class = 'ZCL_CD_HCK_EV_STRIPE' )
                   iv_max_rows = 100 ).
   ENDMETHOD.
 
@@ -150,7 +153,7 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
   " Rule: while table or intent fields are not maintained the kind is not configured and reads nothing
   METHOD not_configured_reads_nothing.
     TRY.
-        setting( iv_name = zif_cd_hck_runtime_types=>gc_setting-table iv_value = 'ZCD_STRP_POUT_LOG' ).
+        setting( iv_name = zif_cd_hck_runtime_types=>gc_param-stripe_table iv_value = 'ZCD_STRP_POUT_LOG' ).
         DATA(ls_result) = collect( ).
         cl_abap_unit_assert=>assert_true( act = ls_result-unconfigured msg = 'Not configured' ).
         cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_sources msg = 'Nothing read' ).
@@ -216,6 +219,33 @@ CLASS ltc_ev_stripe IMPLEMENTATION.
                                             msg = 'By AUGBL' ).
         cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_sources[ 2 ]-ref_field exp = 'PAYMENT_INTENT'
                                             msg = 'Payout log intent field' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (table consolidation 2026-11-08): the parameters replacing ZCD_HCK_EVSET are delivered blank
+  " (landscape-specific); with the delivered definitions only, the kind is not configured and reads
+  " nothing - the morning report says so instead of judging card payments on half the chain
+  METHOD delivered_blank_not_configured.
+    DATA lt_names TYPE STANDARD TABLE OF zif_cd_ops_types=>ty_param_name WITH EMPTY KEY.
+    TRY.
+        lt_names = VALUE #( ( zif_cd_hck_runtime_types=>gc_param-stripe_table )
+                            ( zif_cd_hck_runtime_types=>gc_param-stripe_intent_field )
+                            ( zif_cd_hck_runtime_types=>gc_param-stripe_dfkkop_field ) ).
+        DATA(lt_definitions) = zcl_cd_ops_param_seed=>definitions( ).
+        LOOP AT lt_names INTO DATA(lv_name).
+          cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_definitions[ name = lv_name ] ) )
+                                            msg = |{ lv_name } is a delivered definition| ).
+          cl_abap_unit_assert=>assert_initial( act = VALUE #( lt_definitions[ name = lv_name ]-default_value OPTIONAL )
+                                               msg = |{ lv_name } is delivered blank| ).
+        ENDLOOP.
+        DATA(ls_result) = collect( ).
+        cl_abap_unit_assert=>assert_true( act = ls_result-unconfigured msg = 'Delivered definitions: not configured' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_sources msg = 'Nothing read' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_params->params( )->get_errors( )
+                                             msg = 'Blank parameters are no framework error' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

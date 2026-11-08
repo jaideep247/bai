@@ -10,6 +10,8 @@
 *& VERIFY-DDIC marker (HCK_MORNING_REPORT.md section 15).
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
+*&            | ZCD_HCK_RCBTC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads (HANA)</p>
 "! Access paths and the SQL-trace items: Performance_Review.md, section "Three-way
@@ -55,10 +57,14 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_recon_dao~get_btc_roles.
-    SELECT set_id, btc_code AS btc, role
-      FROM zcd_hck_rcbtc
-      WHERE active = @abap_true
-      ORDER BY set_id, btc_code
+    " Reconciliation rows only (2026-11-08, was ZCD_HCK_RCBTC): SCOPE = set id, BAI2 type codes
+    " (FEBEP-VORGC); lifecycle roles (usage LIFECYCLE) never reach the reconciliation
+    SELECT scope AS set_id, btc_code AS btc, role
+      FROM zcd_hck_btcrole
+      WHERE usage  = @zif_cd_hck_types=>gc_btc_usage-recon
+        AND scheme = @zif_cd_ebs_types=>gc_scheme-bai2
+        AND active = @abap_true
+      ORDER BY scope, btc_code
       INTO CORRESPONDING FIELDS OF TABLE @rt_roles.
   ENDMETHOD.
 

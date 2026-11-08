@@ -4,7 +4,7 @@
 *& Financial integrity: payments issued by payment runs (DPAYH) that are
 *& still in flight, per flow (D disbursement / C collection,
 *& TFK042Z-XEINZ) and method class (configuration ZCD_HCK_PMCLASS: payment
-*& methods, ageing basis, calendar; ZCD_HCK_PMBANK: calendar per house
+*& methods, ageing basis, calendar; rows with HBKID: calendar per house
 *& bank). What takes a payment out of flight is configuration
 *& (ZCD_HCK_CLRRULE): per flow + class and purpose (VOIDED, RETURNED,
 *& RETRIEVED, PENDING, CLEARED, IN_FLIGHT - the first purpose with evidence decides)
@@ -54,6 +54,8 @@
 *&            | ACK_RECEIVED event; one FMON read for all candidates (ZIF_CD_FMON_DAO=>GET_GROUP_ACKS,
 *&            | index GRP). Link not configured: one INFLIGHT_CONFIG W per run, nothing judged; no ACK at
 *&            | all is FMON's finding, not a lag. Reads FMON through its factory only (one-way).
+*& 2026-11-08 | Table consolidation: house-bank calendars are ZCD_HCK_PMCLASS rows with HBKID (ZCD_HCK_PMBANK
+*&            | merged); resolution bank row, class row, PARAM1, none - unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -187,7 +189,8 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
 
     DATA mo_outcome TYPE REF TO zif_cd_ops_pay_outcome.
     DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
-    DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
+    "! Calendar overrides per house bank (ZCD_HCK_PMCLASS rows with HBKID)
+    DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_class.
     DATA mt_methods TYPE zif_cd_ops_payout_types=>tt_method.
     DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
     DATA mt_watched TYPE zif_cd_ops_payout_types=>tt_flow_class.
@@ -530,7 +533,8 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     rv_calendar = VALUE #( mt_banks[ flow = is_payment-flow method_class = is_payment-class hbkid = is_payment-hbkid ]-calendar
                            OPTIONAL ).
     IF rv_calendar IS INITIAL.
-      rv_calendar = VALUE #( mt_classes[ flow = is_payment-flow method_class = is_payment-class ]-calendar OPTIONAL ).
+      rv_calendar = VALUE #( mt_classes[ flow = is_payment-flow method_class = is_payment-class hbkid = space ]-calendar
+                             OPTIONAL ).
     ENDIF.
     IF rv_calendar IS INITIAL.
       rv_calendar = mv_calendar.

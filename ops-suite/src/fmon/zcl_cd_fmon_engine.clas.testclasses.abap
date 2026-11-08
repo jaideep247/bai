@@ -31,6 +31,8 @@
 *&            | was regenerated is FILE_REPLACED (not PRISM_FAILED) and its generation group is stored; an
 *&            | earlier generation found only in the registry (index GRP) is evaluated and reconciled; no
 *&            | generation group = PRISM_FAILED as before and no group read. DAO double: MT_GROUP_FILES.
+*& 2026-11-08 | Table consolidation: SLA rows of the doubles carry KIND DURATION / DEADLINE and DAY_TYPE; the
+*&            | deadline double read is gone (get_slas returns both kinds).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -41,7 +43,6 @@ CLASS ltd_dao DEFINITION FINAL FOR TESTING.
     DATA mt_lotcfgs TYPE zif_cd_fmon_types=>tt_lotcfg.
     DATA mt_checks TYPE zif_cd_fmon_types=>tt_chk.
     DATA mt_cals TYPE zif_cd_fmon_types=>tt_cal.
-    DATA mt_deadlines TYPE zif_cd_fmon_types=>tt_deadline.
     DATA mt_saved TYPE zif_cd_fmon_types=>tt_file.
     DATA mt_events TYPE zif_cd_fmon_types=>tt_event.
     DATA mv_save_calls TYPE i.
@@ -77,9 +78,6 @@ CLASS ltd_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_calendars.
     rt_cals = mt_cals.
-  ENDMETHOD.
-  METHOD zif_cd_fmon_dao~get_deadlines.
-    rt_deadlines = mt_deadlines.
   ENDMETHOD.
   METHOD zif_cd_fmon_dao~get_sources.
     rt_sources = mt_srcs.
@@ -513,6 +511,7 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS payment_acks_deduplicated FOR TESTING.
     METHODS partial_ack_count_is_reported FOR TESTING.
     METHODS prism_handoff_without_bank_ack FOR TESTING.
+    METHODS deadline_row_is_no_stage_sla FOR TESTING.
     METHODS ack_count_never_decreases FOR TESTING.
     METHODS truncated_lot_not_completed FOR TESTING.
     METHODS calendar_failure_no_aging FOR TESTING.
@@ -670,6 +669,8 @@ CLASS ltc_engine IMPLEMENTATION.
                iv_file_type = zif_cd_fmon_types=>gc_file_type-noc iv_pattern = 'NOC_.*' ).
 
     ls_sla-iface_id    = gc_out.
+    ls_sla-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+    ls_sla-day_type    = zif_cd_fmon_types=>gc_wildcard.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-sent.
     ls_sla-max_minutes = 30.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.
@@ -1294,6 +1295,37 @@ CLASS ltc_engine IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
+  " Table consolidation 2026-11-08: the stage SLA check reads only DURATION rows of ZCD_FMON_SLA - the
+  " same handoff as above with a DEADLINE row (later the same day) for the ACK stage instead of the
+  " 120-minute DURATION row is not overdue as a duration
+  METHOD deadline_row_is_no_stage_sla.
+    DATA ls_sla TYPE zif_cd_fmon_types=>ty_sla.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        DELETE mo_dao->mt_slas WHERE iface_id = gc_out AND stage = zif_cd_fmon_types=>gc_stage-ack.
+        ls_sla-iface_id = gc_out.
+        ls_sla-stage    = zif_cd_fmon_types=>gc_stage-ack.
+        ls_sla-kind     = zif_cd_fmon_types=>gc_sla_kind-deadline.
+        ls_sla-day_type = zif_cd_fmon_types=>gc_wildcard.
+        ls_sla-due_time = '235959'.
+        ls_sla-severity = zif_cd_ops_types=>gc_severity-error.
+        INSERT ls_sla INTO TABLE mo_dao->mt_slas.
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-generated
+                    iv_at = '20261102043000' iv_count = 2 ).
+        add_record( iv_src_id = gc_src_out iv_name = gc_out_file iv_stage = zif_cd_fmon_types=>gc_stage-sent
+                    iv_at = '20261102044000' ).
+
+        DATA(ls_result) = act( ).
+        DATA(lv_missing_ack) = zcl_cd_fmon_rules=>sla_code( iv_stage = zif_cd_fmon_types=>gc_stage-ack
+                                                           iv_state = zif_cd_fmon_types=>gc_sla_state-missing ).
+        cl_abap_unit_assert=>assert_false(
+          act = xsdbool( line_exists( ls_result-findings[ check_code = lv_missing_ack ] ) )
+          msg = 'A DEADLINE row is never evaluated as a duration SLA' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
   METHOD payment_acks_deduplicated.
     TRY.
         configure_scenario( VALUE #( ) ).
@@ -1573,7 +1605,7 @@ CLASS ltc_engine IMPLEMENTATION.
 
   METHOD add_statement_flow.
     DATA ls_cal TYPE zif_cd_fmon_types=>ty_cal.
-    DATA ls_deadline TYPE zif_cd_fmon_types=>ty_deadline.
+    DATA ls_deadline TYPE zif_cd_fmon_types=>ty_sla.
     DATA ls_src TYPE zif_cd_fmon_types=>ty_src.
     DATA ls_rec TYPE zif_cd_fmon_types=>ty_src_record.
 
@@ -1587,11 +1619,11 @@ CLASS ltc_engine IMPLEMENTATION.
     INSERT ls_cal INTO TABLE mo_dao->mt_cals.
     ls_deadline-iface_id = gc_bai.
     ls_deadline-stage    = zif_cd_fmon_types=>gc_stage-fully.
+    ls_deadline-kind     = zif_cd_fmon_types=>gc_sla_kind-deadline.
     ls_deadline-day_type = zif_cd_fmon_types=>gc_wildcard.
     ls_deadline-due_time = '010000'.
     ls_deadline-severity = zif_cd_ops_types=>gc_severity-error.
-    ls_deadline-active   = abap_true.
-    INSERT ls_deadline INTO TABLE mo_dao->mt_deadlines.
+    INSERT ls_deadline INTO TABLE mo_dao->mt_slas.
     add_check( iv_check_id = 'C_DEADL' iv_class = 'ZCL_CD_FMON_CHK_DEADLINE' ).
     ls_src-src_id = gc_src_feb.
     ls_src-active = abap_true.
@@ -1674,6 +1706,8 @@ CLASS ltc_engine IMPLEMENTATION.
     add_iface( iv_iface_id = gc_stmt iv_direction = zif_cd_fmon_types=>gc_direction-inbound
                iv_file_type = zif_cd_fmon_types=>gc_file_type-statement iv_pattern = 'STMT_PNC_.*' ).
     ls_sla-iface_id    = gc_stmt.
+    ls_sla-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+    ls_sla-day_type    = zif_cd_fmon_types=>gc_wildcard.
     ls_sla-stage       = zif_cd_fmon_types=>gc_stage-received.
     ls_sla-max_minutes = gc_sla_min.
     ls_sla-basis       = zif_cd_fmon_types=>gc_sla_basis-previous.

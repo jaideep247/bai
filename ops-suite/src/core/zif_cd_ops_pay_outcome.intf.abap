@@ -3,8 +3,8 @@
 *& Purpose:
 *& The one evaluator of a payment's outcome (canonical payment outcome
 *& model): the method classes, rules and evidence plug-ins of the morning
-*& report check A_INFLIGHT (ZCD_HCK_PMCLASS / PMBANK / CLRRULE / BTCROLE /
-*& SEQOUT / EVSET, ZIF_CD_HCK_EVIDENCE) decide per payment CLEARED,
+*& report check A_INFLIGHT (ZCD_HCK_PMCLASS / CLRRULE / BTCROLE /
+*& SEQOUT, ZCA_PARAM HCK_STRIPE_*, ZIF_CD_HCK_EVIDENCE) decide per payment CLEARED,
 *& RETURNED, RETRIEVED, VOIDED, PENDING, IN_FLIGHT, UNDETERMINED or
 *& INCONSISTENT; the source attribution of a FIN number decides AMBIGUOUS.
 *& Used by A_INFLIGHT, the payment trace and the 5-minute snapshot behind
@@ -12,6 +12,8 @@
 *& Read-only: never posts, clears or changes a status.
 *& Modification log:
 *& 2026-11-07 | Initial version (evaluation extracted from ZCL_CD_HCK_C_INFLIGHT).
+*& 2026-11-08 | Table consolidation: configuration tables named as after the merge (PMCLASS with house-bank
+*&            | rows, Stripe settings in ZCA_PARAM).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! Get the instance from ZCL_CD_OPS_FACTORY=>GET_PAY_OUTCOME (test double by

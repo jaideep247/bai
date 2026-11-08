@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Alerting and monitor freshness'
+@EndUserText.label: 'Alerting and approved tables'
 @Metadata.allowExtensions: true
 @ObjectModel.semanticKey: ['SingletonID']
 define root view entity ZC_CD_OpsCfgAll
@@ -12,5 +12,5 @@ define root view entity ZC_CD_OpsCfgAll
       TransportRequestID,
       _AlertRule : redirected to composition child ZC_CD_AlertRule,
       _AlertChannel : redirected to composition child ZC_CD_AlertChannel,
-      _MonitorCfg : redirected to composition child ZC_CD_MonitorCfg
+      _ApprovedTable : redirected to composition child ZC_CD_ApprovedTable
 }

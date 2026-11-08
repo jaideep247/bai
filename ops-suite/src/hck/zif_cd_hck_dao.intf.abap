@@ -17,6 +17,12 @@
 *&              PCRE patterns (complete value, case ignored); job reads raise message 747 at the name cap.
 *& 2026-11-07 | GC_MAX_AGG_ROWS is the hard ceiling (50,000) of parameter HCK_MAX_AGG_ROWS (default 5,000).
 *& 2026-11-07 | get_monitor_cfg (ZCD_OPS_MONCFG, DEFAULT IGNORE for existing doubles).
+*& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
+*&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_monitor_cfg (ZCD_OPS_MONCFG) removed - the stale threshold per area
+*&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
+*& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
+*&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -44,21 +50,15 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_thresholds) TYPE zif_cd_hck_types=>tt_threshold.
 
-  "! Generic aggregate definitions (ZCD_HCK_AGG) of a check
+  "! Generic aggregate definitions (ZCD_HCK_AGG) of a check, with their expected groups
+  "! (EXPECTED_GROUPS, A103; table consolidation 2026-11-08 - was ZCD_HCK_AGGGRP)
   METHODS get_agg_defs
     IMPORTING
       iv_check_id    TYPE zif_cd_hck_types=>ty_check_id
     RETURNING
       VALUE(rt_defs) TYPE zif_cd_hck_types=>tt_agg_def.
 
-  "! Expected GROUP_FIELD values (ZCD_HCK_AGGGRP) of the aggregates of a check (A103)
-  METHODS get_agg_groups DEFAULT IGNORE
-    IMPORTING
-      iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
-    RETURNING
-      VALUE(rt_groups) TYPE zif_cd_hck_types=>tt_agg_group.
-
-  "! Table is on the whitelist ZCD_HCK_TABWL and active
+  "! Table is approved for HCK reads (ZCD_OPS_TABWL HCK / READ, whole table) and active
   METHODS is_table_whitelisted
     IMPORTING
       iv_tabname        TYPE zif_cd_hck_types=>ty_tabname
@@ -115,7 +115,7 @@ INTERFACE zif_cd_hck_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Tables under configuration-drift control (ZCD_HCK_DRIFT)
+  "! Tables under configuration-drift control (ZCD_OPS_TABWL HCK / DRIFT, active)
   METHODS get_drift_tables
     RETURNING
       VALUE(rt_tables) TYPE zif_cd_hck_types=>tt_drift_def.
@@ -269,12 +269,6 @@ INTERFACE zif_cd_hck_dao
       VALUE(rt_rows) TYPE zif_cd_hck_value_types=>tt_value_row
     RAISING
       zcx_cd_ops_error.
-
-  "! Monitor freshness per area (ZCD_OPS_MONCFG, rows with a positive threshold): the
-  "! self-check reads it first, so it agrees with the dashboards' "as of" views
-  METHODS get_monitor_cfg DEFAULT IGNORE
-    RETURNING
-      VALUE(rt_cfg) TYPE zif_cd_hck_types=>tt_monitor_cfg.
 
   "! Active suppressions (status A, today within the period) - design 6.3
   METHODS get_suppressions DEFAULT IGNORE

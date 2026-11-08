@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Stage SLAs'
+@EndUserText.label: 'Stage SLAs (duration or deadline)'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity ZR_CD_FmonSla
   as select from zcd_fmon_sla
@@ -9,15 +9,23 @@ define view entity ZR_CD_FmonSla
   key iface_id as IfaceId,
       @EndUserText.label: 'Stage'
   key stage as Stage,
+      @EndUserText.label: 'Kind'
+  key kind as Kind,
+      @EndUserText.label: 'Day type'
+  key day_type as DayType,
       1 as SingletonID,
       @EndUserText.label: 'Maximum minutes'
       max_minutes as MaxMinutes,
       @EndUserText.label: 'Basis'
       basis as Basis,
+      @EndUserText.label: 'Due time'
+      due_time as DueTime,
       @EndUserText.label: 'Severity'
       severity as Severity,
       @EndUserText.label: 'Active'
       active as Active,
+      @EndUserText.label: 'Description'
+      description as Description,
       @Semantics.user.lastChangedBy: true
       @EndUserText.label: 'Last changed by'
       last_changed_by as LastChangedBy,

@@ -9,12 +9,13 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Parameters from the shared fake ZCL_CD_OPS_PARAMS_MEM (row caps at their delivered defaults).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-08 | Table consolidation: expected groups as the comma list EXPECTED_GROUPS of the aggregate row
+*&            | (DAO double without get_agg_groups).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
     DATA mt_defs TYPE zif_cd_hck_types=>tt_agg_def.
-    DATA mt_groups TYPE zif_cd_hck_types=>tt_agg_group.
     DATA mt_rows TYPE zif_cd_hck_types=>tt_agg_row.
     DATA mv_queries TYPE i.
 ENDCLASS.
@@ -22,10 +23,6 @@ ENDCLASS.
 CLASS ltd_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_agg_defs.
     rt_defs = mt_defs.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_dao~get_agg_groups.
-    rt_groups = mt_groups.
   ENDMETHOD.
 
   METHOD zif_cd_hck_dao~is_table_whitelisted.
@@ -155,13 +152,14 @@ CLASS ltc_generic_agg IMPLEMENTATION.
     ls_def-date_mode    = zif_cd_hck_types=>gc_date_mode-age.
     ls_def-age_days_min = gc_age_days.
     ls_def-group_field  = 'BUKRS'.
+    " Expected groups are a comma list of the aggregate row (table consolidation 2026-11-08)
+    IF is_flags-expected = abap_true.
+      ls_def-expected_groups = gc_us02.
+    ENDIF.
     INSERT ls_def INTO TABLE mo_dao->mt_defs.
     ls_row-group_value = gc_us01.
     ls_row-row_count   = gc_count.
     INSERT ls_row INTO TABLE mo_dao->mt_rows.
-    IF is_flags-expected = abap_true.
-      INSERT VALUE #( check_id = gc_check agg_id = gc_agg group_value = gc_us02 ) INTO TABLE mo_dao->mt_groups.
-    ENDIF.
     IF is_flags-exhausted = abap_true.
       ms_context-deadline = gc_deadline.
     ENDIF.

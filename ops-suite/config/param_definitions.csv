@@ -2,6 +2,9 @@ AREA,NAME,KIND,VALUE_TYPE,MIN_VALUE,MAX_VALUE,DEFAULT_VALUE,ALLOWED_PCRE,INTERFA
 CD_OPS,ALERT_DEFAULT,P,LIST,,,,,,,,SO23 shared lists when ALERT_<route> is blank (comma list),PE RTB
 CD_OPS,ALERT_ESCALATION_WINDOW_H,P,INT,1,,24,,,,,Escalation look-back window of an alert rule (hours),PE RTB
 CD_OPS,ALERT_MORNING,P,LIST,,,,,,,,SO23 shared lists of route MORNING (morning report),PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_EBS,P,INT,1,,1560,,,,,Minutes after the last EBS run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run before its monitor is stale,PE RTB
+CD_OPS,MON_STALE_AFTER_MIN_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB
 CD_OPS,PAYOUT_INITIAL_DAYS,P,INT,0,400,10,,,,,First outcome snapshot run: days read back (from go-live),PE RTB
 CD_OPS,PAYOUT_MAX_PACKAGES,P,INT,1,,20,,,,,Packages per evidence source and 5-minute snapshot run,PE RTB
 CD_OPS,PAYOUT_PACKAGE_SIZE,P,INT,100,50000,5000,,,,,Payment documents per package of the outcome snapshot,PE RTB
@@ -108,6 +111,16 @@ CD_HCK,HCK_RECON_TIMING_DAYS,P,INT,0,31,3,,,,,Days a reconciliation difference m
 CD_HCK,HCK_RECON_TOLERANCE,P,DEC,0,,0.00,,,,,Tolerance per group day when the set has none (amount),PE RTB
 CD_HCK,HCK_SCORE_AMBER_MIN,P,INT,0,100,70,,,,,Score from which the report is AMBER (below = RED),PE RTB
 CD_HCK,HCK_SCORE_GREEN_MIN,P,INT,0,100,90,,,,,Score from which the report is GREEN,PE RTB
+CD_HCK,HCK_STRIPE_ACK_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Stripe payout log: ACK status field (blank = not read),PE RTB
+CD_HCK,HCK_STRIPE_ACK_FULL,P,LIST,,,,,,,,Stripe ACK values that count as full (blank = any),PE RTB
+CD_HCK,HCK_STRIPE_ACK_PARTIAL,P,LIST,,,,,,,,Stripe ACK values of a partial ACK = anomaly (comma list),PE RTB
+CD_HCK,HCK_STRIPE_CHARGE,P,LIST,,,,,,,,Stripe record types that count as charge (blank = any),PE RTB
+CD_HCK,HCK_STRIPE_DFKKOP_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,DFKKOP field of the Stripe payment intent ID (blank = off),PE RTB
+CD_HCK,HCK_STRIPE_INTENT_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Stripe payout log: payment intent ID field (blank = off),PE RTB
+CD_HCK,HCK_STRIPE_PAYOUT_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Stripe payout log: payout ID field (blank = not read),PE RTB
+CD_HCK,HCK_STRIPE_REFUND,P,LIST,,,,,,,,Stripe record types of a refund = anomaly (comma list),PE RTB
+CD_HCK,HCK_STRIPE_TABLE,P,DDIC,,,,,,,X,Stripe payout log table (blank = Stripe evidence off),PE RTB
+CD_HCK,HCK_STRIPE_TYPE_FIELD,P,CHAR,,,,[A-Z][A-Z0-9_]*,,,X,Stripe payout log: record type field (blank = not read),PE RTB
 CD_HCK,HCK_SUPPRESS_MAX_DAYS,P,INT,1,,7,,,,,Longest suppression without a second user (days),PE RTB
 CD_HCK,HCK_TIMEOUT_SEC,P,INT,1,,300,,,,,Default check timeout (seconds),PE RTB
 CD_HCK,HCK_TOP_N,P,INT,0,,20,,,,,Open exceptions listed in the morning report,PE RTB

@@ -65,5 +65,57 @@ class PcreCheckTemplateTest(unittest.TestCase):
         self.assertEqual(found, expected)
 
 
+class ConditionalCheckTemplateTest(unittest.TestCase):
+    """Table consolidation 2026-11-08: one table holds several kinds / usages of a row; the checks of
+    a kind apply only to the rows of that kind ('when'), with messages 422-425."""
+
+    TABLE = dict(alias='Probe', fields=[dict(name=n, el=e) for n, e in (
+        ('kind', 'Kind'), ('max_minutes', 'MaxMinutes'), ('due_time', 'DueTime'), ('hbkid', 'Hbkid'),
+        ('role', 'Role'), ('scope', 'Scope'))])
+
+    def setUp(self):
+        rap_generate.CONST.clear()
+
+    def text(self, chk):
+        return chr(10).join(rap_generate.abap_check(self.TABLE, chk, 'Root'))
+
+    def test_when_values_guard_the_checks(self):
+        text = self.text(('when', 'kind', 'DURATION', [('required', 'max_minutes'), ('blank', 'due_time')]))
+        self.assertTrue(text.startswith('    IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )'))
+        self.assertIn('iv_list  = lif_c=>gc_when-probe_kind_duration ) = abap_true.', text)
+        self.assertIn('IF ls_row-MaxMinutes IS INITIAL.', text)
+        self.assertIn('gc_msg-required v1 = lif_c=>gc_el-maxminutes', text)
+        self.assertIn('IF ls_row-DueTime IS NOT INITIAL.', text)
+        self.assertIn('gc_msg-must_be_blank v1 = lif_c=>gc_el-duetime', text)
+        self.assertIn('v2 = lif_c=>gc_el-kind v3 = ls_row-Kind', text)
+        self.assertTrue(text.endswith('    ENDIF.'))
+        self.assertEqual(rap_generate.CONST['when']['probe_kind_duration'], 'DURATION')
+
+    def test_when_blank_and_filled(self):
+        self.assertIn('IF ls_row-Hbkid IS INITIAL.', self.text(('when', 'hbkid', rap_generate.BLANK, [])))
+        self.assertIn('IF ls_row-Hbkid IS NOT INITIAL.', self.text(('when', 'hbkid', rap_generate.FILLED, [])))
+
+    def test_enum_per_branch_has_its_own_constant(self):
+        self.text(('when', 'kind', 'DEADLINE', [('enum', 'role', 'A,B')]))
+        self.text(('when', 'kind', 'DURATION', [('enum', 'role', 'C')]))
+        self.assertEqual(rap_generate.CONST['val']['probe_role_deadline'], 'A,B')
+        self.assertEqual(rap_generate.CONST['val']['probe_role_duration'], 'C')
+
+    def test_reserved_values_of_the_other_usage(self):
+        text = self.text(('when', 'kind', 'X', [('reserved', 'role', 'LEG,CUTOFF')]))
+        self.assertIn('gc_msg-value_reserved v1 = ls_row-Role', text)
+        self.assertIn('= abap_true.', text)
+
+    def test_form_is_a_whole_value_pcre(self):
+        text = self.text(('when', 'kind', 'X', [('form', 'scope', '[DC].{3}')]))
+        self.assertIn('zcl_cd_ops_util=>pcre_match( iv_value   = ls_row-Scope', text)
+        self.assertIn('gc_msg-form_invalid', text)
+
+    def test_one_name_two_values_is_refused(self):
+        rap_generate.const('val', 'same', 'A')
+        with self.assertRaises(ValueError):
+            rap_generate.const('val', 'same', 'B')
+
+
 if __name__ == '__main__':
     unittest.main()

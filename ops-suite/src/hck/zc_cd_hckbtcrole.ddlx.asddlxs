@@ -1,8 +1,8 @@
-// UI annotations: Health check setup - Bank transaction code roles
+// UI annotations: Health check setup - Bank code roles (lifecycle and reconciliation)
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Bank code role',
-                     typeNamePlural: 'Bank transaction code roles',
-                     title: { type: #STANDARD, value: 'Flow' } } }
+                     typeNamePlural: 'Bank code roles (lifecycle and reconciliation)',
+                     title: { type: #STANDARD, value: 'Usage' } } }
 annotate entity ZC_CD_HckBtcRole with
 {
   @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
@@ -10,11 +10,11 @@ annotate entity ZC_CD_HckBtcRole with
 
   @UI.lineItem: [{ position: 10 }]
   @UI.identification: [{ position: 10 }]
-  Flow;
+  Usage;
 
   @UI.lineItem: [{ position: 20 }]
   @UI.identification: [{ position: 20 }]
-  MethodClass;
+  Scope;
 
   @UI.lineItem: [{ position: 30 }]
   @UI.identification: [{ position: 30 }]

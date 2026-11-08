@@ -38,6 +38,10 @@
 *&            | FMON_PRISM_DUP_NAME_CODES, messages 280-283 (284 raised by the adapter).
 *& 2026-11-08 | TY_GROUP_ACK: files of generation groups with their ACK_RECEIVED events (read of the
 *&            | status lag of HCK A_INFLIGHT for payments acknowledged per file, ZIF_CD_FMON_DAO=>GET_GROUP_ACKS).
+*& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
+*&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | Table consolidation: TY_SLA with KIND (DURATION / DEADLINE) and DAY_TYPE, ZCD_FMON_DEADL
+*&            | merged into ZCD_FMON_SLA; TY_DEADLINE and the context component DEADLINES removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -284,7 +288,7 @@ INTERFACE zif_cd_fmon_types
       prism_queue_long TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRISM_QUEUE_LONG',
       "! ZCD_FMON_IFACE-NAME_PATTERN does not compile as PCRE (configuration; never 'no match')
       pattern_invalid  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PATTERN_INVALID',
-      "! A stage of ZCD_FMON_DEADL not reached by its clock time on a business day
+      "! The stage of a DEADLINE row of ZCD_FMON_SLA not reached by its clock time on a business day
       deadline_missed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'STAGE_DEADLINE_MISSED',
       "! Information: the PRISM_FAILED file was replaced by a regenerated file of its generation group
       file_replaced    TYPE zif_cd_ops_types=>ty_check_code VALUE 'FILE_REPLACED',
@@ -386,15 +390,33 @@ INTERFACE zif_cd_fmon_types
     END OF ty_iface.
   TYPES tt_iface TYPE SORTED TABLE OF ty_iface WITH UNIQUE KEY iface_id.
 
+  "! ZCD_FMON_SLA-KIND (table consolidation 2026-11-08, ZCD_FMON_DEADL merged)
+  TYPES ty_sla_kind TYPE c LENGTH 8.
+  CONSTANTS:
+    BEGIN OF gc_sla_kind,
+      "! The stage within MAX_MINUTES of its basis (BASIS P previous stage / G generation);
+      "! DAY_TYPE '*' (every day) - ZCL_CD_FMON_CHK_SLA
+      duration TYPE ty_sla_kind VALUE 'DURATION',
+      "! The stage by DUE_TIME (FMON_TIME_ZONE) of a business day of DAY_TYPE (NORMAL /
+      "! MONTH_END / RETURNS_DAY, '*' = every business day) - ZCL_CD_FMON_CHK_DEADLINE
+      deadline TYPE ty_sla_kind VALUE 'DEADLINE',
+    END OF gc_sla_kind.
+
+  "! ZCD_FMON_SLA: a stage of an interface by a duration or by a clock-time deadline (KIND);
+  "! each check reads the rows of its own kind
   TYPES:
     BEGIN OF ty_sla,
       iface_id    TYPE ty_iface_id,
       stage       TYPE ty_stage,
+      kind        TYPE ty_sla_kind,
+      day_type    TYPE ty_day_type,
       max_minutes TYPE i,
       basis       TYPE ty_sla_basis,
+      due_time    TYPE t,
       severity    TYPE zif_cd_ops_types=>ty_severity,
+      description TYPE ty_text60,
     END OF ty_sla.
-  TYPES tt_sla TYPE SORTED TABLE OF ty_sla WITH UNIQUE KEY iface_id stage.
+  TYPES tt_sla TYPE SORTED TABLE OF ty_sla WITH UNIQUE KEY iface_id stage kind day_type.
 
   TYPES:
     BEGIN OF ty_cal,
@@ -406,20 +428,6 @@ INTERFACE zif_cd_fmon_types
       fcal_id        TYPE ty_fcal_id,
     END OF ty_cal.
   TYPES tt_cal TYPE SORTED TABLE OF ty_cal WITH UNIQUE KEY iface_id day_type.
-
-  "! ZCD_FMON_DEADL: a stage must be reached by a clock time (FMON_TIME_ZONE) of a business
-  "! day; DAY_TYPE NORMAL / MONTH_END / RETURNS_DAY or '*' (any business day)
-  TYPES:
-    BEGIN OF ty_deadline,
-      iface_id    TYPE ty_iface_id,
-      stage       TYPE ty_stage,
-      day_type    TYPE ty_day_type,
-      due_time    TYPE t,
-      severity    TYPE zif_cd_ops_types=>ty_severity,
-      active      TYPE abap_bool,
-      description TYPE ty_text60,
-    END OF ty_deadline.
-  TYPES tt_deadline TYPE SORTED TABLE OF ty_deadline WITH UNIQUE KEY iface_id stage day_type.
 
   TYPES:
     BEGIN OF ty_src,
@@ -488,7 +496,7 @@ INTERFACE zif_cd_fmon_types
     END OF ty_chk.
   TYPES tt_chk TYPE SORTED TABLE OF ty_chk WITH UNIQUE KEY check_id.
 
-  "! Tables (and fields; '*' = all) the dynamic reader may read (ZCD_FMON_TABWL, audit A51)
+  "! Tables (and fields; blank = all) the dynamic reader may read (ZCD_OPS_TABWL FMON / SOURCE, A51)
   TYPES:
     BEGIN OF ty_tab_allow,
       table_name TYPE ty_tabname,
@@ -869,6 +877,8 @@ INTERFACE zif_cd_fmon_types
       files         TYPE tt_file,
       events        TYPE tt_event,
       ifaces        TYPE tt_iface,
+      "! Active ZCD_FMON_SLA rows of both kinds (DURATION: stage SLA check, DEADLINE: stage
+      "! deadline check - each check reads its own kind)
       slas          TYPE tt_sla,
       expects       TYPE tt_expect,
       lots          TYPE tt_lot_status,
@@ -878,8 +888,7 @@ INTERFACE zif_cd_fmon_types
       throttle      TYPE ty_throttle,
       "! Throttled outbound files with PRISM receipt evidence (same business dates as the files)
       queue         TYPE tt_queue,
-      "! Stage deadlines (ZCD_FMON_DEADL, active rows) and the time zone of their clock times
-      deadlines     TYPE tt_deadline,
+      "! Time zone of the clock times of the DEADLINE rows (FMON_TIME_ZONE)
       time_zone     TYPE ty_time_zone,
       "! Statement evidence read by this run (FEB adapter)
       statements    TYPE tt_stmt_evidence,

@@ -34,31 +34,33 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 
 ## ZCD_FMON_SLA
 
-| IFACE_ID | STAGE | MAX_MINUTES | BASIS | SEVERITY | Note |
-|---|---|---|---|---|---|
-| ACH_PNC_DISB_OUT | SENT_TO_PRISM | 30 | P | E | PRISM pick-up after generation |
-| PAYREQ_PRISM_IN | FULLY_PROCESSED | 60 | P | E | request received but no SUCCESS row within an hour ‹confirm› |
-| ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | 60 | P | W | only if a source reports the forward |
-| ACH_PNC_DISB_OUT | ACK_RECEIVED | 240 | G | E | ‹confirm with bank cut-off› |
-| WIRE_JPMC_OUT | ACK_RECEIVED | 30 | G | E | requirements baseline: "wire ack within 30 minutes" |
-| ACH_RET_PNC_IN | FULLY_PROCESSED | 480 | G | E | FP09 lot complete same day ‹confirm› |
-| NOC_PNC_IN | FILE_LOADED | 60 | P | W | |
-| ACH_PNC_DISB_OUT | PRISM_RECEIVED | 15 | P | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |
-| ACH_PNC_DISB_OUT | PRISM_DELIVERED | 5 | P | E | **base** 5 min from PRISM's receipt + PRISM throttle 2 min × ACH / wire files ahead in the queue (added by FMON, see below) ‹confirm base with PRISM› |
-| WIRE_JPMC_OUT | PRISM_RECEIVED | 15 | P | E | |
-| WIRE_JPMC_OUT | PRISM_DELIVERED | 5 | P | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
-| BAI_JPMC_IN | FILE_RECEIVED | 30 | P | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
+Since the table consolidation of 2026-11-08 one table holds both kinds of stage SLA, key IFACE_ID + STAGE + KIND + DAY_TYPE: `DURATION` (below: the stage within MAX_MINUTES of its basis - P previous stage, G generation; DAY_TYPE `*`; check `ZCL_CD_FMON_CHK_SLA`) and `DEADLINE` (next section, was `ZCD_FMON_DEADL`: the stage by DUE_TIME of a business day; check `ZCL_CD_FMON_CHK_DEADLINE`). The configuration app checks each kind (messages 417 / 422 / 423 / 413): a DURATION row needs MAX_MINUTES > 0, DAY_TYPE `*` and no DUE_TIME; a DEADLINE row needs DUE_TIME, one of the deadline stages and a day type, and no MAX_MINUTES / BASIS. Each check reads only its own kind.
+
+| IFACE_ID | STAGE | KIND | DAY_TYPE | MAX_MINUTES | BASIS | DUE_TIME | SEVERITY | Note (DESCRIPTION) |
+|---|---|---|---|---|---|---|---|---|
+| ACH_PNC_DISB_OUT | SENT_TO_PRISM | DURATION | * | 30 | P | | E | PRISM pick-up after generation |
+| PAYREQ_PRISM_IN | FULLY_PROCESSED | DURATION | * | 60 | P | | E | request received but no SUCCESS row within an hour ‹confirm› |
+| ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | DURATION | * | 60 | P | | W | only if a source reports the forward |
+| ACH_PNC_DISB_OUT | ACK_RECEIVED | DURATION | * | 240 | G | | E | ‹confirm with bank cut-off› |
+| WIRE_JPMC_OUT | ACK_RECEIVED | DURATION | * | 30 | G | | E | requirements baseline: "wire ack within 30 minutes" |
+| ACH_RET_PNC_IN | FULLY_PROCESSED | DURATION | * | 480 | G | | E | FP09 lot complete same day ‹confirm› |
+| NOC_PNC_IN | FILE_LOADED | DURATION | * | 60 | P | | W | |
+| ACH_PNC_DISB_OUT | PRISM_RECEIVED | DURATION | * | 15 | P | | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |
+| ACH_PNC_DISB_OUT | PRISM_DELIVERED | DURATION | * | 5 | P | | E | **base** 5 min from PRISM's receipt + PRISM throttle 2 min × ACH / wire files ahead in the queue (added by FMON, see below) ‹confirm base with PRISM› |
+| WIRE_JPMC_OUT | PRISM_RECEIVED | DURATION | * | 15 | P | | E | |
+| WIRE_JPMC_OUT | PRISM_DELIVERED | DURATION | * | 5 | P | | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
+| BAI_JPMC_IN | FILE_RECEIVED | DURATION | * | 30 | P | | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
 
 Every SLA row is delivered with `ACTIVE = X`. New rows only by customizing transport from DV1 (`RAP_Config_Apps.md` §2, user decision 2026-11-07); in PS4 support may edit an existing row and switch it off with `ACTIVE` blank — never create or delete there.
 
-## ZCD_FMON_DEADL (stage reached by a clock time of a business day — user requirement 2026-11-07)
+## ZCD_FMON_SLA, kind DEADLINE (stage reached by a clock time of a business day — user requirement 2026-11-07; was ZCD_FMON_DEADL)
 
-"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*`). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
+"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*` - unchanged by the consolidation). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new DEADLINE row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
 
-| IFACE_ID | STAGE | DAY_TYPE | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
-|---|---|---|---|---|---|---|
-| BAI_JPMC_IN | FULLY_PROCESSED | * | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
-| BAI_BOA_IN | FULLY_PROCESSED | * | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
+| IFACE_ID | STAGE | KIND | DAY_TYPE | MAX_MINUTES | BASIS | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
+|---|---|---|---|---|---|---|---|---|---|
+| BAI_JPMC_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
+| BAI_BOA_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
 
 At 10:00 the finding `STAGE_DEADLINE_MISSED` names the earliest missing step (GROUP2): `NOT_RECEIVED` (no file, no statement), `NOT_IMPORTED` (received, statements of x of y payment engine accounts in FEBKO), `NOT_POSTED` (every account imported, n of m in-scope FEBEP lines not posted), with bank and statement date. Stages a deadline may name (configuration app): FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED.
 
@@ -103,9 +105,9 @@ Every calendar row is delivered with `ACTIVE = X` (new rows by transport from DV
 | FEB | (blank: every inbound STATEMENT interface with a bank key) | FEBKO | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_FEB | |
 | PRISM | (blank: `interfaceId` or name pattern) | ZCD_FMON_PRISM | (blank) | FILE_REF | (blank) | (blank) | OCCURRED_AT | MILESTONE | (blank) | (blank) | (blank) | (blank) | (blank) | ZCL_CD_FMON_ADAPTER_PRISM | |
 
-**Regenerated files (facts confirmed by the user 2026-11-07).** PRISM rejects a file name it has already received; a file PRISM could not deliver (to the bank, or the cheque print file to IRIS when the PRISM → IRIS call fails) is regenerated by SAP **under a new name for the same payments**. `GROUP_FIELDS` of the generating source (here `REGUT`) names the fields of the payment run that produced the file — comma list, at most 4, in a fixed order (e.g. `LAUFD,LAUFI,HBKID`; field names **VERIFY-SE11** on `ZCDT_REGUT`, validated against the DDIC at runtime; the fields must be approved in `ZCD_FMON_TABWL` like every other field). The values joined by `/` are the file's generation group (`ZCD_FMON_FILE-GEN_GROUP`, the only stored link); files of the same interface and group are generations of the same payments (`docs/FMON_FILE_MONITORING.md` §A2 rule 9). Include the house bank when one payment run produces one file per house bank — two different files of one group would be reported as `FILE_REGENERATED_NOT_FAILED`. Blank (every other row) = no link, behaviour unchanged.
+**Regenerated files (facts confirmed by the user 2026-11-07).** PRISM rejects a file name it has already received; a file PRISM could not deliver (to the bank, or the cheque print file to IRIS when the PRISM → IRIS call fails) is regenerated by SAP **under a new name for the same payments**. `GROUP_FIELDS` of the generating source (here `REGUT`) names the fields of the payment run that produced the file — comma list, at most 4, in a fixed order (e.g. `LAUFD,LAUFI,HBKID`; field names **VERIFY-SE11** on `ZCDT_REGUT`, validated against the DDIC at runtime; the fields must be approved in `ZCD_OPS_TABWL` (FMON / SOURCE) like every other field). The values joined by `/` are the file's generation group (`ZCD_FMON_FILE-GEN_GROUP`, the only stored link); files of the same interface and group are generations of the same payments (`docs/FMON_FILE_MONITORING.md` §A2 rule 9). Include the house bank when one payment run produces one file per house bank — two different files of one group would be reported as `FILE_REGENERATED_NOT_FAILED`. Blank (every other row) = no link, behaviour unchanged.
 
-**Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_FMON_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (the bank identifier as in the statement — the same value as `ZCD_EBS_ACCT-BANK_KEY`) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (1: Monday's file carries Friday's statement — confirmed 2026-11-07) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
+**Imported bank statements (FEB adapter, 2026-11-07).** The `FEB` row is confirmed (the suite's own adapter; `TABLE_NAME = FEBKO` documents the read, no field names, no `ZCD_FMON_SRCMAP` rows and no `ZCD_OPS_TABWL` row needed: the statement evidence is read by the EBS repository with static SQL, `ZIF_CD_EBS_STMT_EVIDENCE`). Per interface with `BANK_KEY` (the bank identifier as in the statement — the same value as `ZCD_EBS_ACCT-BANK_KEY`) and working business date B it reads the statements of the active `ZCD_EBS_ACCT` accounts with the same `BANK_KEY` dated the `FMON_FEB_STMT_OFFSET`-th working day before B (1: Monday's file carries Friday's statement — confirmed 2026-11-07) and reports the day's file instance: FILE_RECEIVED (some accounts imported), FILE_LOADED (all imported; posting state not read or read capped), PARTIALLY_PROCESSED (in-scope entries not posted, unprocessed count = entries), FULLY_PROCESSED. Evidence-only when nothing is imported. When another source (PRISM, load log) registered exactly one instance of the interface and day, the statement attaches to it; otherwise the adapter's own reference `FEB/<bank>/<statement date>`.
 
 **PRISM status API (`docs/PRISM_Status_API.md`).** The row above is confirmed (the suite's own table, `ddic/fmon/zcd_fmon_prism.tabl.ddl`). `ADAPTER_CLASS` must be `ZCL_CD_FMON_ADAPTER_PRISM`: the 5-minute run then reads only events no instant unit processed (`PROCESSED_AT` initial, window on `RECEIVED_AT`) and the instant unit finds its source by this class. `FILE_NAME_FIELD = FILE_REF` gives the generic key rules (upper-case canonical name, A100 digest for long names, business date from `OCCURRED_AT` in `FMON_TIME_ZONE`; the file instance by the file generation identity, `FMON_FILE_MONITORING.md` §A2 rule 8). `COUNT_FIELD` / `AMOUNT_FIELD` stay blank on purpose: PRISM's counts are evidence in `ZCD_FMON_PRISM`, not the file's control figures. An `interfaceId` sent by PRISM selects the interface; otherwise the name pattern decides; no match = `UNMAPPED_FILE`. For correlation the SAP-side source of the same flow must key the file by its name (`FILE_KEY_FIELD` blank or the name field), or PRISM must send the SAP file key.
 
@@ -138,24 +140,26 @@ Rows whose count, amount, size or date cannot be converted are quarantined (`MAL
 
 The three PRISM rows are confirmed (wire values of the API). `PRISM_*` stages fit both directions; their order per direction is in `docs/FMON_FILE_MONITORING.md` §A2.
 
-## ZCD_FMON_TABWL (tables approved for the dynamic reader — audit A51)
+## ZCD_OPS_TABWL, area FMON, purpose SOURCE (tables approved for the dynamic reader — audit A51)
 
-Every table named in `ZCD_FMON_SRC` or `ZCD_FMON_LOTCFG` must be approved here, and the batch user needs `S_TABU_NAM` (ACTVT 03, TABLE = the name) for it; otherwise the read is refused (messages 244 / 245 / 249). `FIELD_NAME = *` approves every field; list fields one row each to narrow it.
+Since the table consolidation of 2026-11-08 the approved tables of every reader are one core table, `ZCD_OPS_TABWL` (core configuration app *Alerting and approved tables* → *Approved tables per reader*; was `ZCD_FMON_TABWL`). The FMON reader reads only the rows with `PE_AREA = FMON` and `PURPOSE = SOURCE`. Every table named in `ZCD_FMON_SRC` or `ZCD_FMON_LOTCFG` (and every payment trace source, `Payment_Trace.md` §9) must be approved here, and the batch user needs `S_TABU_NAM` (ACTVT 03, TABLE = the name) for it; otherwise the read is refused (messages 244 / 245 / 249). `FIELD_NAME` **blank** approves every field of the table (was `*`); list fields one row each to narrow it. `APPROVED_BY` = the security reviewer of the row.
 
-| TABLE_NAME | FIELD_NAME | ACTIVE | DESCRIPTION |
-|---|---|---|---|
-| ZCDT_REGUT | * | X | Generated payment files |
-| ZCD_ACH_ACK | * | X | ACH bank acknowledgements |
-| ZCD_WIRE_ACK | * | X | Wire bank acknowledgements |
-| ZCD_CHECK_HIST | * | X | Check / positive pay history |
-| ZCD_ACH_RTRV_LOG | * | X | ACH returns retrieval log |
-| ZCD_STRP_POUT_LOG | * | X | Stripe payout log |
-| ZCD_PAYM_REQ_LOG | * | X | PRISM payment request log |
-| DFKKNRK | * | X | NOC lot header |
-| DFKKNRP | * | X | NOC lot items |
-| DFKKRP | * | X | Returns lot items |
-| ‹SE11: returns lot header› | * | X | Returns lot header |
-| ZCD_FMON_PRISM | * | X | PRISM status events (the PRISM adapter reads it through its own DAO; the row keeps the approval list complete and covers a generic source on the table) |
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | ACTIVE | APPROVED_BY | DESCRIPTION |
+|---|---|---|---|---|---|---|
+| FMON | SOURCE | ZCDT_REGUT | (blank) | X | `<security reviewer>` | Generated payment files |
+| FMON | SOURCE | ZCD_ACH_ACK | (blank) | X | `<security reviewer>` | ACH bank acknowledgements |
+| FMON | SOURCE | ZCD_WIRE_ACK | (blank) | X | `<security reviewer>` | Wire bank acknowledgements |
+| FMON | SOURCE | ZCD_CHECK_HIST | (blank) | X | `<security reviewer>` | Check / positive pay history |
+| FMON | SOURCE | ZCD_ACH_RTRV_LOG | (blank) | X | `<security reviewer>` | ACH returns retrieval log |
+| FMON | SOURCE | ZCD_STRP_POUT_LOG | (blank) | X | `<security reviewer>` | Stripe payout log |
+| FMON | SOURCE | ZCD_PAYM_REQ_LOG | (blank) | X | `<security reviewer>` | PRISM payment request log |
+| FMON | SOURCE | DFKKNRK | (blank) | X | `<security reviewer>` | NOC lot header |
+| FMON | SOURCE | DFKKNRP | (blank) | X | `<security reviewer>` | NOC lot items |
+| FMON | SOURCE | DFKKRP | (blank) | X | `<security reviewer>` | Returns lot items |
+| FMON | SOURCE | ‹SE11: returns lot header› | (blank) | X | `<security reviewer>` | Returns lot header |
+| FMON | SOURCE | ZCD_FMON_PRISM | (blank) | X | `<security reviewer>` | PRISM status events (the PRISM adapter reads it through its own DAO; the row keeps the approval list complete and covers a generic source on the table) |
+
+The HCK rows of the same table (purposes `READ` and `DRIFT`) are in `config/hck_seed.md` §5 / §6; a row of another area or purpose never approves the FMON reader.
 
 ## ZCD_FMON_LOTCFG
 
@@ -186,7 +190,7 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_FILERCV | ZCL_CD_FMON_CHK_SLA | E | STAGE=FILE_RECEIVED;LATE_SEVERITY=W |
 | F_PRFAIL | ZCL_CD_FMON_CHK_REJECT | E | OUTCOME=PRISM_FAILED |
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
-| F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - rows of ZCD_FMON_DEADL; row SEVERITY wins) |
+| F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - DEADLINE rows of ZCD_FMON_SLA; row SEVERITY wins) |
 | F_REGEN | ZCL_CD_FMON_CHK_REGEN | B | (none) - FILE_REGENERATED_NOT_FAILED: regenerated file while the earlier generation did not fail (possible duplicate payment file) |
 
 `F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled); for a file with a generation group it reports `FILE_REPLACED` (information) once a regenerated file exists, `REGENERATION_MISSING` (E) next to `PRISM_FAILED` after `FMON_REGEN_WAIT_MIN`, and `PRISM_DUPLICATE_NAME` (E) instead of `PRISM_FAILED` for an error code of `FMON_PRISM_DUP_NAME_CODES`. `F_REGEN` and `F_PRFAIL` also run in the instant PRISM unit. `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
@@ -200,7 +204,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_LOOKBACK_DAYS | 1 | days read back from legacy tables / files evaluated |
 | FMON_OPEN_DAYS | 30 | open or partially processed files kept under watch |
 | FMON_DUP_DAYS | 7 | duplicate-file history |
-| FMON_TIME_ZONE | CST | **business times are US Central** (user decision 2026-11-07; value row in `config/param_values.csv`, definition default stays UTC): calendar windows, deadlines (`ZCD_FMON_DEADL-DUE_TIME`), business date of timestamps and PRISM events, and the interpretation of legacy date/time fields (`FMON_FILE_MONITORING.md` §A3b — time zone) |
+| FMON_TIME_ZONE | CST | **business times are US Central** (user decision 2026-11-07; value row in `config/param_values.csv`, definition default stays UTC): calendar windows, deadlines (`ZCD_FMON_SLA-DUE_TIME` of the DEADLINE rows), business date of timestamps and PRISM events, and the interpretation of legacy date/time fields (`FMON_FILE_MONITORING.md` §A3b — time zone) |
 | FMON_FACTORY_CAL | ‹US› | factory calendar when ZCD_FMON_CAL has none |
 | FMON_RETURNS_WEEKDAYS | ‹1,2,3,4,5› | weekdays that are ACH returns cycle days |
 | FMON_NOC_SLA_DAYS | 6 | NACHA NOC limit in banking days |

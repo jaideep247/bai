@@ -47,30 +47,33 @@ annotate entity ZC_CD_HckAggregate with
   GroupField;
 
   @UI.identification: [{ position: 110 }]
-  Cond1Field;
+  ExpectedGroups;
 
   @UI.identification: [{ position: 120 }]
-  Cond1Op;
+  Cond1Field;
 
   @UI.identification: [{ position: 130 }]
-  Cond1Value;
+  Cond1Op;
 
   @UI.identification: [{ position: 140 }]
-  Cond2Field;
+  Cond1Value;
 
   @UI.identification: [{ position: 150 }]
-  Cond2Op;
+  Cond2Field;
 
   @UI.identification: [{ position: 160 }]
-  Cond2Value;
+  Cond2Op;
 
   @UI.identification: [{ position: 170 }]
-  Cond3Field;
+  Cond2Value;
 
   @UI.identification: [{ position: 180 }]
-  Cond3Op;
+  Cond3Field;
 
   @UI.identification: [{ position: 190 }]
+  Cond3Op;
+
+  @UI.identification: [{ position: 200 }]
   Cond3Value;
 
   @UI.hidden: true

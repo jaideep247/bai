@@ -24,7 +24,7 @@ Fiori elements **analytical list page** (OData V4, service `ZUI_CD_HCK_DASH`, ma
 
 - The dashboard reads what the morning report (`ZCD_MORNING_REPORT`, `ZCL_CD_HCK_ENGINE`) stored: `ZCD_OPS_RUN`, **`ZCD_HCK_RESULT`** (verdict of each check per run, design review 2026-11-07), `ZCD_OPS_FINDING` (area HCK, object CHECK - open exceptions, findings), `ZCD_HCK_METRIC` (history). It runs no check and derives no status.
 - **As of** = `ENDED_AT` of the last **completed** HCK run: not test mode, status S, W or E (GREEN closes S, AMBER W, RED and unrated E — A60). Running (R) and aborted (A — incl. a run refused because another held the lock, `ZCL_CD_OPS_RUN_GUARD`) runs never move it. Any report variant.
-- **Stale** after `STALE_AFTER_MIN` of the `ZCD_OPS_MONCFG` row of the area (configuration app *Alerting and monitor freshness*, entity *Monitor freshness*; the morning report self-check reads the same row) or when there is no completed run; without a row **26 hours** (`HCK_MAX_AGE_HOURS` default; fallback literal in `ZR_CD_HckAsOf`, portable check `cds_abap_parity`). Delivered row HCK = 1560. `AgeMinutes` and `StaleAfterMinutes` exposed.
+- **Stale** after the parameter `MON_STALE_AFTER_MIN_<area>` (ZCA_PARAM area `CD_OPS`: value row, else definition default, read through `ZI_CD_OpsStaleCfg`; was the `ZCD_OPS_MONCFG` row until the table consolidation of 2026-11-08; the morning report self-check reads the same parameter) or when there is no completed run; without a definition **26 hours** (`HCK_MAX_AGE_HOURS` default; fallback literal in `ZR_CD_HckAsOf`, portable check `cds_abap_parity`). Delivered definition default HCK = 1560. `AgeMinutes` and `StaleAfterMinutes` exposed.
 
 ## 3. Status of a check (last completed run)
 

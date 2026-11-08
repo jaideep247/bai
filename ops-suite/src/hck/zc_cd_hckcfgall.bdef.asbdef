@@ -15,19 +15,13 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _HckCheckDef { create; with draft; }
   use association _HckThreshold { create; with draft; }
   use association _HckAggregate { create; with draft; }
-  use association _HckAggGroup { create; with draft; }
-  use association _HckDriftTable { create; with draft; }
-  use association _HckWhitelist { create; with draft; }
   use association _JobCycle { create; with draft; }
   use association _JobStep { create; with draft; }
   use association _HckPmClass { create; with draft; }
-  use association _HckPmBank { create; with draft; }
   use association _HckClrRule { create; with draft; }
-  use association _HckEvidenceSet { create; with draft; }
   use association _HckBtcRole { create; with draft; }
   use association _HckSeqOutcome { create; with draft; }
   use association _HckReconSet { create; with draft; }
-  use association _HckReconBtc { create; with draft; }
 }
 
 define behavior for ZC_CD_HckCheckDef alias HckCheckDef
@@ -49,33 +43,6 @@ use etag
 }
 
 define behavior for ZC_CD_HckAggregate alias HckAggregate
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckAggGroup alias HckAggGroup
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckDriftTable alias HckDriftTable
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckWhitelist alias HckWhitelist
 use etag
 {
   use update;
@@ -111,25 +78,7 @@ use etag
   use association _HckCfgAll { with draft; }
 }
 
-define behavior for ZC_CD_HckPmBank alias HckPmBank
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
 define behavior for ZC_CD_HckClrRule alias HckClrRule
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckEvidenceSet alias HckEvidenceSet
 use etag
 {
   use update;
@@ -157,15 +106,6 @@ use etag
 }
 
 define behavior for ZC_CD_HckReconSet alias HckReconSet
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckReconBtc alias HckReconBtc
 use etag
 {
   use update;

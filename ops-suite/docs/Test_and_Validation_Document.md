@@ -102,7 +102,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | ALR-05b | Add a user to SO23 list `ZCD_RTBSUP`, trigger ALL_ABORT (test run stopped on the circuit breaker) | No rule change | The new member receives the e-mail (SOST shows the list expanded) | pending |
 | ALR-07 | Application log channel | ZCD_OPS/ALERT | Messages visible in SLG1 | pending |
 | ALR-08 | BAI deadline alert, no repeat spam (2026-11-07) | Rule FMON_BAIDL, deadline BAI_JPMC_IN 10:00, statement not imported | 10:00–10:05 one e-mail to ZCD_PAYOPS (log S); runs 10:05 … 10:25 log R, no mail; 10:30 escalation to ZCD_RTBLEAD; after import and posting the exception is resolved | pending |
-| ALR-09 | Deadline and alert rule: no create in production, existing rows editable (user decision 2026-11-07) | QA1 (production-like client, no changes): key user opens the FMON and alerting configuration apps; edits due time and ACTIVE of an existing ZCD_FMON_DEADL row and the SO23 list of an existing alert rule; tries to create a ZCD_FMON_DEADL row and an alert rule, and to delete a row | Edits saved without a request, visible in SCU3 with the user; *Create* and *Delete* greyed out for every table (also deadlines and alert rules); a user without ZCD_OPS 02 FMON cannot edit; next morning report CONFIG_DRIFT (E) for the drift-controlled table until the change is transported from DV1 and the baseline is retaken | pending |
+| ALR-09 | Deadline and alert rule: no create in production, existing rows editable (user decision 2026-11-07) | QA1 (production-like client, no changes): key user opens the FMON and alerting configuration apps; edits due time and ACTIVE of an existing ZCD_FMON_SLA DEADLINE row and the SO23 list of an existing alert rule; tries to create a ZCD_FMON_SLA row and an alert rule, and to delete a row | Edits saved without a request, visible in SCU3 with the user; *Create* and *Delete* greyed out for every table (also deadlines and alert rules); a user without ZCD_OPS 02 FMON cannot edit; next morning report CONFIG_DRIFT (E) for the drift-controlled table until the change is transported from DV1 and the baseline is retaken | pending |
 
 ### 6.5 Core controls (authorisation, run lock, exception carry-forward, purge)
 
@@ -143,7 +143,7 @@ Fourteen cases HCK-QA-01 … HCK-QA-14 plus HCK-QA-18 … 20 (2026-11-07: number
 | HCK-QA-42 | Timing next day: payment run on day D, the bank statement of D posted with booking date D+1; and the statement of yesterday not yet imported at report time | As 40, `HCK_RECON_TIMING_DAYS` 3 | Both days `RECON_TIMING` I (no alert); after the import the next report shows the day balanced; four days later without the statement → `RECON_BREAK` | pending |
 | HCK-QA-43 | 468 within 10 days without a returns lot (collections): one 468 five days ago, none in FP09; the same 468 after 11 days; a 468 with a returns lot | Role REDEPOSIT on 468, `HCK_RECON_REDEPOSIT_DAYS` 10 | Five days: `RECON_TIMING` naming REDEPOSIT; eleven days: `RECON_BREAK`; with lot: part of the leg (no bucket) | pending |
 | HCK-QA-44 | Stripe group balanced and off by the fees: one payout (charges 1 000.00, fees 30.00, BAI 195 deposit 970.00 on the JPMC account ending 16650, descriptor on the clearing lines); then the same payout without the fee posting | Set `STRIPE_US`, role DEPOSIT 195, the JPMC account row in `ZCD_EBS_ACCT` | Balanced: `RC_STRIPE_DIFF` 0, no finding; without fees: `STRIPE_GROUP_BREAK` E with charges / fees / deposit, amount 30.00; deposit not posted: timing for 3 days, then break | pending |
-| HCK-QA-45 | Unmapped bank code: a line with a code that has no `ZCD_HCK_RCBTC` row on the set's account | As 40 | `RECON_VARIANCE` W "bank code(s) without reconciliation role" naming the code and its amount; the day `RECON_VARIANCE` (bucket UNMAPPED); after the role row is transported the code is part of its role | pending |
+| HCK-QA-45 | Unmapped bank code: a line with a code that has no `ZCD_HCK_BTCROLE` RECON row on the set's account | As 40 | `RECON_VARIANCE` W "bank code(s) without reconciliation role" naming the code and its amount; the day `RECON_VARIANCE` (bucket UNMAPPED); after the role row is transported the code is part of its role | pending |
 | HCK-QA-46 | Multi-currency and two company codes: a USD and a CAD set on one account, a second company code with its own set; a difference only in CAD and only in the second company code | Three sets | One `RECON_BREAK` per affected group (CAD / second company code), no amount summed across currencies; USD and the first company code balanced | pending |
 | HCK-QA-47 | Tolerance boundary: difference of exactly `HCK_RECON_TOLERANCE` (e.g. 1.00), then 1.01; then the set's TOLERANCE 0.50 | Parameter value row 1.00 | 1.00 balanced; 1.01 `RECON_BREAK`; with the set tolerance 0.50 the 1.00 difference is a break (set wins) | pending |
 | HCK-QA-48 | Empty window: a set whose account had no statement, no posting and no transfer in the look-back days; then every set without data | As 40 | `RECON_NO_DATA` I for the set; with no data at all the check is GREY in the report and in `ZCD_HCK_RESULT` (evidence NONE) - never GREEN | pending |
@@ -184,8 +184,8 @@ Read-only analytical list page, tiles and OVP-ready KPI / failure entities. ABAP
 | FMD-10 | Drill-down file → events → open exceptions | Equal to ZCD_FMON_EVENT / open ZCD_OPS_FINDING rows of the file |
 | FMD-11 | Expected file not received | Tile *Missing files* = 1; no file row |
 | FMD-12 | ST05 during use | SELECT only on the FMON / ops store tables; no write, lock or job |
-| FMD-14 | Monitor freshness: set `ZCD_OPS_MONCFG` FMON = 600 in the configuration app, stop the SM36 job for 30 min | Dashboard, overview row and morning report self-check all **not** stale (600 min); reset to 15 → all three stale; delete the row → dashboard 15 min, self-check `HCK_MAX_AGE_H_FMON` |
-| CFG-MON-01 | App *Monitor freshness*: save area XYZ, or 0 minutes | Refused with 413 (area) / 417 (not positive) |
+| FMD-14 | Monitor freshness: value row `MON_STALE_AFTER_MIN_FMON` = 600 (ZCA_PARAM area CD_OPS, app *Parameter areas*; was `ZCD_OPS_MONCFG`), stop the SM36 job for 30 min | Dashboard, overview row and morning report self-check all **not** stale (600 min); delete the value row → definition default 15 → all three stale; value `ABC` refused by the framework (`D_PARAM_INVALID`), self-check falls back to `HCK_MAX_AGE_H_FMON` |
+| CFG-MON-01 | App *Parameter areas*, area CD_OPS: value 0 or `ABC` for `MON_STALE_AFTER_MIN_FMON`; a parameter `MON_STALE_AFTER_MIN_XYZ` without definition | Refused by the framework (INT, MIN 1; unknown name) - the core app no longer has a *Monitor freshness* entity |
 | CFG-EBS-FC | App *EBS rules and mapping* → Rule: FINDING_CLASS XYZ; then R09 blank | XYZ refused (413); with R09 blank the EBS dashboard no longer counts R09 findings as duplicates (EBD-07a) |
 | FMD-13 | PRISM status API live: PRISM_RECEIVED / _DELIVERED / _FAILED | AT_PRISM; SENT (out) / RECEIVED (in); REJECTED |
 
@@ -280,13 +280,25 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 
 | ID | Scenario | Setup | Expected | Result |
 |---|---|---|---|---|
-| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 92 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 129 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
 | PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |
 | PRM-05 | Definition missing | Delete the definition `EBS_GL_LEDGER` in a sandbox | EBS run uses ledger 0L (no SLG1 entry); `PARAM_INVALID` names `CD_EBS/EBS_GL_LEDGER` | pending |
 | PRM-06 | Production change | PS4 / QA1: change the value row of `HCK_SCORE_GREEN_MIN`; try to create a value row and to change `EBS_PARSER_BAI2` | Value change saved without request, visible in SCU3 (`ZCA_PARAM_VAL`); create refused; developer-owned change refused (ZCA_PARAM 045) | pending |
 | PRM-07 | Snapshot per run (A64) | Change `FMON_LOOKBACK_DAYS` while a 5-minute run is running | The running run keeps its value; the next run reads the new one | pending |
+
+### 6.15 Table consolidation 2026-11-08 (`Implementation_Order.md`, section *Table consolidation 2026-11-08*)
+
+| ID | Scenario | Setup | Expected | Result |
+|---|---|---|---|---|
+| CONS-01 | One approved-table list, filtered by reader | `ZCD_OPS_TABWL`: `ZCDT_REGUT` only as HCK / READ | FMON source REGUT refused (244); HCK aggregate on the table allowed; adding FMON / SOURCE allows the FMON read. App refuses purpose READ for FMON (413) and a field on an HCK row (423) | pending |
+| CONS-02 | Drift rows | `ZCD_OPS_TABWL` HCK / DRIFT `ZCD_HCK_DEF`; take baseline, change a check row | `CONFIG_DRIFT` for ZCD_HCK_DEF; a READ row of another table is not hashed | pending |
+| CONS-03 | Bank code role usages | `ZCD_HCK_BTCROLE`: LIFECYCLE `DACH` 166 RETRIEVED and RECON `DISB_ACH` 166 CUTOFF | `A_INFLIGHT` sees RETRIEVED, `A_RECON_3WAY` CUTOFF; app refuses role LEG on a LIFECYCLE row (424), scope `XACH` (425), role ORIGINAL or scheme ISO on a RECON row (413) | pending |
+| CONS-04 | Duration and deadline of one stage | `ZCD_FMON_SLA` BAI_JPMC_IN FULLY_PROCESSED: DURATION 60 P and DEADLINE `*` 10:00 | Both evaluated by their own check; 10:00 BAI rule `FMON_BAIDL` unchanged (FMON-QA-15..19). App refuses DURATION without minutes (417) or with a due time (423), DEADLINE without due time (422) | pending |
+| CONS-05 | Stripe settings as parameters | Definitions `HCK_STRIPE_*` imported, no value rows | Card payments `CLEARING_UNDETERMINED` ("Stripe evidence not configured"); after maintaining table / intent fields: evidence read | pending |
+| CONS-06 | Expected groups list | `ZCD_HCK_AGG` A_RET_AGED `EXPECTED_GROUPS` = two company codes, one without aged items | Silent company measures 0; app refuses `US01,,US02`, a repeat (426) and a list without group field (423) | pending |
+| CONS-07 | House-bank calendar row | `ZCD_HCK_PMCLASS` D ACI with HBKID Barclays, CALENDAR GB, no methods | Barclays payments aged in GB, other banks in the class / PARAM1 calendar; app refuses methods on the bank row (423) and a bank row without calendar (422); no 385 | pending |
 
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 

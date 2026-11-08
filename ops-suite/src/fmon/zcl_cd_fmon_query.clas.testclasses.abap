@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Audit A51: approved table / field checks.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
+*& 2026-11-08 | Table consolidation: a blank approved field means the whole table (ZCD_OPS_TABWL; was '*').
 *&---------------------------------------------------------------------*
 CLASS ltc_query DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -147,12 +148,12 @@ CLASS ltc_query IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Audit A51: an approved table with '*' allows every field of it
+  " Audit A51: an approved table with blank field allows every field of it (ZCD_OPS_TABWL, 2026-11-08)
   METHOD approved_read_passes.
     configure_scenario( VALUE #( ) ).
     cl_abap_unit_assert=>assert_initial(
-      act = act_approval( VALUE #( ( table_name = gc_table field_name = zif_cd_fmon_types=>gc_wildcard ) ) )
-      msg = 'A table approved with * must pass' ).
+      act = act_approval( VALUE #( ( table_name = gc_table ) ) )
+      msg = 'A table approved with a blank field must pass' ).
   ENDMETHOD.
 
 
@@ -160,9 +161,9 @@ CLASS ltc_query IMPLEMENTATION.
   METHOD unapproved_table_is_rejected.
     configure_scenario( VALUE #( ) ).
     cl_abap_unit_assert=>assert_equals(
-      act = act_approval( VALUE #( ( table_name = 'ZCD_OTHER_TABLE' field_name = zif_cd_fmon_types=>gc_wildcard ) ) )
+      act = act_approval( VALUE #( ( table_name = 'ZCD_OTHER_TABLE' ) ) )
       exp = '244'
-      msg = 'A table outside ZCD_FMON_TABWL must raise 244' ).
+      msg = 'A table outside the approved list must raise 244' ).
   ENDMETHOD.
 
 

@@ -179,12 +179,12 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 241 | &1: lot item scan stopped at &2 row(s) - completion not proven |
 | 242 | Reference &1 of &2 matches files of several business dates - not applied |
 | 243 | Source &1: &2 row(s) skipped, field &3 malformed |
-| 244 | Table &1 is not approved for file monitoring (ZCD_FMON_TABWL) |
+| 244 | Table &1 not approved for file monitoring (ZCD_OPS_TABWL, FMON SOURCE) |
 | 245 | No display authorization for table &1 (S_TABU_NAM) |
 | 246 | Database error in file monitoring, registry not saved: |
 | 247 | &1 of &2 &3 item(s) open |
 | 248 | Factory calendar &1: banking-day age unknown, no aging verdict: |
-| 249 | Field &1 of table &2 is not approved for file monitoring (ZCD_FMON_TABWL) |
+| 249 | Field &1 of table &2 not approved for file monitoring (ZCD_OPS_TABWL) |
 | 250 | Field &1 is required |
 | 251 | Field &1 has an invalid value |
 | 252 | Field &1 is longer than &2 characters |
@@ -222,7 +222,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 284 | Source &1: at most &2 generation group fields (GROUP_FIELDS) |
 | 300 | Variant &1, categories &2, priorities &3, checks: |
 | 301 | File ACK lag not evaluated: FMON source &1 has no GROUP_FIELDS |
-| 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
+| 302 | Table &1 not approved for health check reads (ZCD_OPS_TABWL, HCK READ) |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
 | 305 | Operator &1 for field &2 is not supported (EQ NE GT LT GE LE IN) |
@@ -337,6 +337,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
 | 420 | &1: each token must be BLANK or one register state character |
 | 421 | &1 is not a finding code of the in-flight check (upper case) |
+| 422 | &1 is required when &2 is '&3' |
+| 423 | &1 must be blank when &2 is '&3' |
+| 424 | Value &1 of &2 belongs to another usage (&3) |
+| 425 | Value &1 of &2 does not have the form &3 |
+| 426 | &1: expected groups must be a comma list of distinct values |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
@@ -401,7 +406,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 664 | returns lot item(s) &1 without a return line |
 | 665 | Evidence &1: parameter &2 required (&3 &4) |
 | 666 | Pattern &1 of ZCD_HCK_SEQOUT &2 is not a valid PCRE |
-| 667 | Evidence &1 (&2) not configured (ZCD_HCK_EVSET) - its rows are ignored |
+| 667 | Evidence &1 &2 not configured (settings / parameters) - its rows are ignored |
 | 668 | payout log &1 type &2 payout &3 ACK &4 |
 | 669 | G/L line &1 / &2 assignment &3 |
 | 670 | - assignment changed (no longer AUGBL) |

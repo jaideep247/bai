@@ -9,6 +9,9 @@
 *& 2026-11-06 | Message 418: a pattern field is not valid PCRE.
 *& 2026-11-07 | GC_PROD_MAINTAINABLE withdrawn: new rows only by transport from DV1 (user decision, D-3).
 *& 2026-11-07 | Messages 420 / 421: register state tokens and outcome finding codes of ZCD_HCK_SEQOUT.
+*& 2026-11-08 | Message 423: table consolidation, a field that must be blank for the row's kind / usage.
+*& 2026-11-08 | Messages 422 / 424 / 425: required for the kind, value of the other usage, form (PCRE).
+*& 2026-11-08 | Message 426: expected group list of ZCD_HCK_AGG (ZCD_HCK_AGGGRP merged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -147,6 +150,13 @@ INTERFACE zif_cd_ops_cfg_types
       "! ZCD_HCK_SEQOUT-REG_STATE / FINDING (code review of the cheque lifecycle, 2026-11-07)
       reg_state_invalid  TYPE ty_msg_number VALUE '420',
       finding_invalid    TYPE ty_msg_number VALUE '421',
+      "! Table consolidation 2026-11-08: checks per kind / usage of a row ('when' of the generator)
+      required           TYPE ty_msg_number VALUE '422',
+      must_be_blank      TYPE ty_msg_number VALUE '423',
+      value_reserved     TYPE ty_msg_number VALUE '424',
+      form_invalid       TYPE ty_msg_number VALUE '425',
+      "! ZCD_HCK_AGG-EXPECTED_GROUPS (expected groups of a grouped aggregate, audit A103)
+      group_list_invalid TYPE ty_msg_number VALUE '426',
     END OF gc_msg.
 
 ENDINTERFACE.

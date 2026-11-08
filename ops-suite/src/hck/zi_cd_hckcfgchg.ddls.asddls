@@ -18,21 +18,6 @@ union all
     last_changed_at as LastChangedAt
   }
 union all
-  select from zcd_hck_agggrp
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
-  select from zcd_hck_drift
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
-  select from zcd_hck_tabwl
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
   select from zcd_job_cycle
   {
     last_changed_at as LastChangedAt
@@ -48,17 +33,7 @@ union all
     last_changed_at as LastChangedAt
   }
 union all
-  select from zcd_hck_pmbank
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
   select from zcd_hck_clrrule
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
-  select from zcd_hck_evset
   {
     last_changed_at as LastChangedAt
   }
@@ -74,11 +49,6 @@ union all
   }
 union all
   select from zcd_hck_rcset
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
-  select from zcd_hck_rcbtc
   {
     last_changed_at as LastChangedAt
   }
