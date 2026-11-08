@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_FMONSLA</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Stage SLAs</DDTEXT>
+    <DDTEXT>Stage SLAs (duration or deadline)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

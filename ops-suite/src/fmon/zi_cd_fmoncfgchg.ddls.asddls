@@ -13,11 +13,6 @@ union all
     last_changed_at as LastChangedAt
   }
 union all
-  select from zcd_fmon_deadl
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
   select from zcd_fmon_src
   {
     last_changed_at as LastChangedAt

@@ -67,7 +67,7 @@ RTB operations, not delivered. In the table above `\|` is the PCRE alternation `
 **BAI processing deadline (user requirement 2026-11-07, "alert if BAI is not processed until 10 AM").**
 `FMON_BAIDL` additionally has GROUP1_PATTERN `BAI_(JPMC|BOA)_IN` (interfaces; PCRE, complete value) and
 GROUP2_PATTERN blank (every condition - GROUP2 carries `NOT_RECEIVED` / `NOT_IMPORTED` / `NOT_POSTED`, so a
-second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_DEADL`, `config/fmon_seed.md`)
+second rule may route one condition elsewhere). The deadline rows (`ZCD_FMON_SLA` kind DEADLINE, `config/fmon_seed.md`)
 make the finding due at 10:00 US Central (`FMON_TIME_ZONE` = CST); the 5-minute FMON job raises it in the first run after
 10:00 (10:00-10:05). Later runs carry the open exception forward and are **not alerted again** (status R in
 ZCD_OPS_ALLOG); after 6 consecutive runs (30 minutes) still open the escalation goes to `ZCD_RTBLEAD`.

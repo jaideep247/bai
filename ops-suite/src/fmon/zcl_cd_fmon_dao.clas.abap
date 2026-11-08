@@ -22,6 +22,8 @@
 *&            | statement (LEFT OUTER JOIN ZCD_FMON_EVENT) - status lag of HCK A_INFLIGHT, file-level ACK.
 *& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
 *&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | Table consolidation: get_slas reads both kinds of ZCD_FMON_SLA (DURATION, DEADLINE);
+*&            | get_deadlines (ZCD_FMON_DEADL) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -111,7 +113,8 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_fmon_dao~get_slas.
-    SELECT iface_id, stage, max_minutes, basis, severity
+    " Durations and clock-time deadlines in one read (ZCD_FMON_DEADL merged, 2026-11-08)
+    SELECT iface_id, stage, kind, day_type, max_minutes, basis, due_time, severity, description
       FROM zcd_fmon_sla
       WHERE active = @abap_true
       INTO CORRESPONDING FIELDS OF TABLE @rt_slas.
@@ -123,14 +126,6 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       FROM zcd_fmon_cal
       WHERE active = @abap_true
       INTO CORRESPONDING FIELDS OF TABLE @rt_cals.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_fmon_dao~get_deadlines.
-    SELECT iface_id, stage, day_type, due_time, severity, active, description
-      FROM zcd_fmon_deadl
-      WHERE active = @abap_true
-      INTO CORRESPONDING FIELDS OF TABLE @rt_deadlines.
   ENDMETHOD.
 
 

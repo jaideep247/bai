@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_fmon_chk_deadline.clas.abap
 *& Purpose:
-*& Plug-in check STAGE_DEADLINE_MISSED: a stage of ZCD_FMON_DEADL must be
+*& Plug-in check STAGE_DEADLINE_MISSED: the stage of a DEADLINE row of ZCD_FMON_SLA must be
 *& reached by its clock time (FMON_TIME_ZONE) on a business day. One finding
 *& per interface and business date naming the earliest missing step: not
 *& received / received but not imported (accounts imported x of y) /
@@ -11,6 +11,8 @@
 *& findings out; no SQL, no application log.
 *& Modification log:
 *& 2026-11-07 | Initial version (BAI processing deadline, user requirement 2026-11-07).
+*& 2026-11-08 | Table consolidation: deadline rows are ZCD_FMON_SLA rows of kind DEADLINE (ZCD_FMON_DEADL
+*&            | merged); resolution day type, NORMAL, '*' unchanged.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - stage deadline by clock time</p>
 "! Row choice per interface and stage: the day type of the expectation, MONTH_END / RETURNS_DAY
@@ -28,15 +30,15 @@ CLASS zcl_cd_fmon_chk_deadline DEFINITION
     INTERFACES zif_cd_fmon_check.
 
   PRIVATE SECTION.
-    "! Deadline row of the interface and stage for the day type ('*' = any business day)
+    "! DEADLINE row of the interface and stage for the day type (* = any business day)
     METHODS pick_row
       IMPORTING
-        it_deadlines       TYPE zif_cd_fmon_types=>tt_deadline
+        it_deadlines       TYPE zif_cd_fmon_types=>tt_sla
         iv_iface_id        TYPE zif_cd_fmon_types=>ty_iface_id
         iv_stage           TYPE zif_cd_fmon_types=>ty_stage
         iv_day_type        TYPE zif_cd_fmon_types=>ty_day_type
       RETURNING
-        VALUE(rs_deadline) TYPE zif_cd_fmon_types=>ty_deadline.
+        VALUE(rs_deadline) TYPE zif_cd_fmon_types=>ty_sla.
 
     "! A file instance of the interface and day has reached the stage
     METHODS reached
@@ -57,7 +59,7 @@ CLASS zcl_cd_fmon_chk_deadline DEFINITION
     METHODS message
       IMPORTING
         is_ctx         TYPE zif_cd_fmon_types=>ty_check_ctx
-        is_deadline    TYPE zif_cd_fmon_types=>ty_deadline
+        is_deadline    TYPE zif_cd_fmon_types=>ty_sla
         iv_cond        TYPE zif_cd_ops_types=>ty_group
         is_evidence    TYPE zif_cd_fmon_types=>ty_stmt_evidence
       RETURNING
@@ -71,7 +73,7 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
 
   METHOD zif_cd_fmon_check~execute.
     DATA lt_day TYPE zif_cd_fmon_types=>tt_file.
-    DATA ls_missed TYPE zif_cd_fmon_types=>ty_deadline.
+    DATA ls_missed TYPE zif_cd_fmon_types=>ty_sla.
     DATA lv_severity TYPE zif_cd_ops_types=>ty_severity.
     DATA lv_stage TYPE zif_cd_fmon_types=>ty_stage.
     DATA lv_due TYPE timestampl.
@@ -83,13 +85,14 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
       lt_day = VALUE #( FOR ls_file IN is_ctx-files USING KEY by_iface
                         WHERE ( iface_id = <ls_expect>-iface_id AND business_date = is_ctx-business_date )
                         ( ls_file ) ).
-      LOOP AT is_ctx-deadlines ASSIGNING FIELD-SYMBOL(<ls_any>) WHERE iface_id = <ls_expect>-iface_id.
+      LOOP AT is_ctx-slas ASSIGNING FIELD-SYMBOL(<ls_any>)
+           WHERE iface_id = <ls_expect>-iface_id AND kind = zif_cd_fmon_types=>gc_sla_kind-deadline.
         " Rows are sorted by interface and stage: one evaluation per stage
         IF <ls_any>-stage = lv_stage.
           CONTINUE.
         ENDIF.
         lv_stage = <ls_any>-stage.
-        DATA(ls_row) = pick_row( it_deadlines = is_ctx-deadlines
+        DATA(ls_row) = pick_row( it_deadlines = is_ctx-slas
                                  iv_iface_id  = <ls_expect>-iface_id
                                  iv_stage     = lv_stage
                                  iv_day_type  = <ls_expect>-day_type ).
@@ -143,7 +146,8 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
 
   METHOD pick_row.
     READ TABLE it_deadlines INTO rs_deadline
-         WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage day_type = iv_day_type.
+         WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage kind = zif_cd_fmon_types=>gc_sla_kind-deadline
+                        day_type = iv_day_type.
     IF sy-subrc = 0.
       RETURN.
     ENDIF.
@@ -151,13 +155,15 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
     IF iv_day_type = zif_cd_fmon_types=>gc_day_type-month_end
        OR iv_day_type = zif_cd_fmon_types=>gc_day_type-returns_day.
       READ TABLE it_deadlines INTO rs_deadline
-           WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage day_type = zif_cd_fmon_types=>gc_day_type-normal.
+           WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage kind = zif_cd_fmon_types=>gc_sla_kind-deadline
+                          day_type = zif_cd_fmon_types=>gc_day_type-normal.
       IF sy-subrc = 0.
         RETURN.
       ENDIF.
     ENDIF.
     READ TABLE it_deadlines INTO rs_deadline
-         WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage day_type = zif_cd_fmon_types=>gc_wildcard.
+         WITH TABLE KEY iface_id = iv_iface_id stage = iv_stage kind = zif_cd_fmon_types=>gc_sla_kind-deadline
+                        day_type = zif_cd_fmon_types=>gc_wildcard.
     IF sy-subrc <> 0.
       CLEAR rs_deadline.
     ENDIF.

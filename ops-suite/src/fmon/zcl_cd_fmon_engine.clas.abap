@@ -44,6 +44,8 @@
 *&            | records (GEN_GROUP), the other generations of the groups loaded by index GRP (batch:
 *&            | evaluated and reconciled; instant unit: context only), regeneration settings and PRISM
 *&            | duplicate-name failures in the check context, ZCL_CD_FMON_CHK_REGEN in the instant unit.
+*& 2026-11-08 | Table consolidation: stage deadlines are ZCD_FMON_SLA rows of kind DEADLINE in the context's
+*&            | SLAs (ZCD_FMON_DEADL merged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -199,7 +201,6 @@ CLASS zcl_cd_fmon_engine DEFINITION
     DATA mt_maps TYPE zif_cd_fmon_types=>tt_srcmap.
     DATA mt_lotcfgs TYPE zif_cd_fmon_types=>tt_lotcfg.
     DATA mt_checks TYPE zif_cd_fmon_types=>tt_chk.
-    DATA mt_deadlines TYPE zif_cd_fmon_types=>tt_deadline.
     "! Statement evidence read by this run (FEB adapter), for the deadline check
     DATA mt_statements TYPE zif_cd_fmon_types=>tt_stmt_evidence.
 
@@ -562,7 +563,6 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     mt_maps    = mo_dao->get_source_maps( ).
     mt_lotcfgs = mo_dao->get_lot_configs( ).
     mt_checks  = mo_dao->get_checks( ).
-    mt_deadlines = mo_dao->get_deadlines( ).
   ENDMETHOD.
 
 
@@ -1299,7 +1299,6 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     rs_ctx-lots          = mt_lots.
     rs_ctx-throttle      = throttle_settings( ).
     rs_ctx-queue         = build_queue( rs_ctx-throttle ).
-    rs_ctx-deadlines     = mt_deadlines.
     rs_ctx-time_zone     = mv_tz.
     rs_ctx-statements    = mt_statements.
     " Regenerated files: every known generation of the groups, settings and PRISM duplicate names

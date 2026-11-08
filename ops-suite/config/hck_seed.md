@@ -216,8 +216,7 @@ security boundary; every new row needs a reviewer.
 | HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates | X |
 | HCK | DRIFT | ZCD_HCK_AGGGRP | (blank) | Expected groups of aggregates (A103) | X |
 | HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
-| HCK | DRIFT | ZCD_FMON_DEADL | (blank) | FMON stage deadlines | X |
-| HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs | X |
+| HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
 | HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |
 | HCK | DRIFT | ZCD_OPS_ALRULE | (blank) | Alert rules | X |
 

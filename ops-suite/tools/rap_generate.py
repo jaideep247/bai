@@ -53,7 +53,7 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 # ---------------------------------------------------------------------------
 BLANK, FILLED = '<blank>', '<filled>'
 SEV = 'B,E,W,I'
-# Stages a clock-time deadline may name (ZCD_FMON_DEADL): inbound receipt / import / processing,
+# Stages a clock-time deadline may name (ZCD_FMON_SLA kind DEADLINE): inbound receipt / import / processing,
 # outbound generation / bank acknowledgement (one constant line of the pool: at most 84 characters)
 DEADLINE_STAGES = 'FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED'
 ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
@@ -89,12 +89,15 @@ SPEC = {
         title='File monitoring setup', tables=[
             ('zcd_fmon_iface', 'FmonIface', 'zcd_d_fmiface', 'Interface', 'Interfaces', [],
              [('enum', 'direction', 'I,O'), ('pcre', 'name_pattern')]),
-            ('zcd_fmon_sla', 'FmonSla', 'zcd_d_fmsla', 'Stage SLA', 'Stage SLAs', [],
-             [('positive', 'max_minutes'), ('enum', 'severity', ',' + SEV)]),
-            # User requirement 2026-11-07: a stage reached by a clock time of a business day
-            ('zcd_fmon_deadl', 'FmonDeadline', 'zcd_d_fmdeadl', 'Stage deadline', 'Stage deadlines (clock time)',
-             [], [('enum', 'stage', DEADLINE_STAGES), ('enum', 'day_type', 'NORMAL,MONTH_END,RETURNS_DAY,*'),
-                  ('enum', 'severity', ',' + SEV)]),
+            # Table consolidation 2026-11-08: a stage by a duration or by a clock time of a business day
+            # (user requirement 2026-11-07, was ZCD_FMON_DEADL) - one table, KIND says which
+            ('zcd_fmon_sla', 'FmonSla', 'zcd_d_fmsla', 'Stage SLA', 'Stage SLAs (duration or deadline)', [],
+             [('enum', 'kind', 'DURATION,DEADLINE'), ('enum', 'severity', ',' + SEV),
+              ('when', 'kind', 'DURATION', [('positive', 'max_minutes'), ('enum', 'basis', ',P,G'),
+                                            ('enum', 'day_type', '*'), ('blank', 'due_time')]),
+              ('when', 'kind', 'DEADLINE', [('required', 'due_time'), ('enum', 'stage', DEADLINE_STAGES),
+                                            ('enum', 'day_type', 'NORMAL,MONTH_END,RETURNS_DAY,*'),
+                                            ('blank', 'max_minutes'), ('blank', 'basis')])]),
             ('zcd_fmon_src', 'FmonSource', 'zcd_d_fmsrc', 'Source adapter', 'Source adapters', [],
              [('table', 'table_name')] + [('field', f, 'table_name') for f in (
                  'file_key_field', 'file_name_field', 'date_field', 'time_field', 'ts_field', 'status_field',

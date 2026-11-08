@@ -34,31 +34,33 @@ Landscape facts applied: disbursements are acknowledged per payment (`ACK_LEVEL 
 
 ## ZCD_FMON_SLA
 
-| IFACE_ID | STAGE | MAX_MINUTES | BASIS | SEVERITY | Note |
-|---|---|---|---|---|---|
-| ACH_PNC_DISB_OUT | SENT_TO_PRISM | 30 | P | E | PRISM pick-up after generation |
-| PAYREQ_PRISM_IN | FULLY_PROCESSED | 60 | P | E | request received but no SUCCESS row within an hour ‹confirm› |
-| ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | 60 | P | W | only if a source reports the forward |
-| ACH_PNC_DISB_OUT | ACK_RECEIVED | 240 | G | E | ‹confirm with bank cut-off› |
-| WIRE_JPMC_OUT | ACK_RECEIVED | 30 | G | E | requirements baseline: "wire ack within 30 minutes" |
-| ACH_RET_PNC_IN | FULLY_PROCESSED | 480 | G | E | FP09 lot complete same day ‹confirm› |
-| NOC_PNC_IN | FILE_LOADED | 60 | P | W | |
-| ACH_PNC_DISB_OUT | PRISM_RECEIVED | 15 | P | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |
-| ACH_PNC_DISB_OUT | PRISM_DELIVERED | 5 | P | E | **base** 5 min from PRISM's receipt + PRISM throttle 2 min × ACH / wire files ahead in the queue (added by FMON, see below) ‹confirm base with PRISM› |
-| WIRE_JPMC_OUT | PRISM_RECEIVED | 15 | P | E | |
-| WIRE_JPMC_OUT | PRISM_DELIVERED | 5 | P | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
-| BAI_JPMC_IN | FILE_RECEIVED | 30 | P | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
+Since the table consolidation of 2026-11-08 one table holds both kinds of stage SLA, key IFACE_ID + STAGE + KIND + DAY_TYPE: `DURATION` (below: the stage within MAX_MINUTES of its basis - P previous stage, G generation; DAY_TYPE `*`; check `ZCL_CD_FMON_CHK_SLA`) and `DEADLINE` (next section, was `ZCD_FMON_DEADL`: the stage by DUE_TIME of a business day; check `ZCL_CD_FMON_CHK_DEADLINE`). The configuration app checks each kind (messages 417 / 422 / 423 / 413): a DURATION row needs MAX_MINUTES > 0, DAY_TYPE `*` and no DUE_TIME; a DEADLINE row needs DUE_TIME, one of the deadline stages and a day type, and no MAX_MINUTES / BASIS. Each check reads only its own kind.
+
+| IFACE_ID | STAGE | KIND | DAY_TYPE | MAX_MINUTES | BASIS | DUE_TIME | SEVERITY | Note (DESCRIPTION) |
+|---|---|---|---|---|---|---|---|---|
+| ACH_PNC_DISB_OUT | SENT_TO_PRISM | DURATION | * | 30 | P | | E | PRISM pick-up after generation |
+| PAYREQ_PRISM_IN | FULLY_PROCESSED | DURATION | * | 60 | P | | E | request received but no SUCCESS row within an hour ‹confirm› |
+| ACH_PNC_DISB_OUT | FORWARDED_TO_BANK | DURATION | * | 60 | P | | W | only if a source reports the forward |
+| ACH_PNC_DISB_OUT | ACK_RECEIVED | DURATION | * | 240 | G | | E | ‹confirm with bank cut-off› |
+| WIRE_JPMC_OUT | ACK_RECEIVED | DURATION | * | 30 | G | | E | requirements baseline: "wire ack within 30 minutes" |
+| ACH_RET_PNC_IN | FULLY_PROCESSED | DURATION | * | 480 | G | | E | FP09 lot complete same day ‹confirm› |
+| NOC_PNC_IN | FILE_LOADED | DURATION | * | 60 | P | | W | |
+| ACH_PNC_DISB_OUT | PRISM_RECEIVED | DURATION | * | 15 | P | | E | PRISM status API: PRISM confirms receipt within 15 min of SENT_TO_PRISM |
+| ACH_PNC_DISB_OUT | PRISM_DELIVERED | DURATION | * | 5 | P | | E | **base** 5 min from PRISM's receipt + PRISM throttle 2 min × ACH / wire files ahead in the queue (added by FMON, see below) ‹confirm base with PRISM› |
+| WIRE_JPMC_OUT | PRISM_RECEIVED | DURATION | * | 15 | P | | E | |
+| WIRE_JPMC_OUT | PRISM_DELIVERED | DURATION | * | 5 | P | | E | base 5 min + throttle (wires are throttled like ACH) ‹confirm› |
+| BAI_JPMC_IN | FILE_RECEIVED | DURATION | * | 30 | P | | E | SAP receives the statement within 30 min of PRISM_DELIVERED (inbound PRISM evidence) |
 
 Every SLA row is delivered with `ACTIVE = X`. New rows only by customizing transport from DV1 (`RAP_Config_Apps.md` §2, user decision 2026-11-07); in PS4 support may edit an existing row and switch it off with `ACTIVE` blank — never create or delete there.
 
-## ZCD_FMON_DEADL (stage reached by a clock time of a business day — user requirement 2026-11-07)
+## ZCD_FMON_SLA, kind DEADLINE (stage reached by a clock time of a business day — user requirement 2026-11-07; was ZCD_FMON_DEADL)
 
-"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*`). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
+"Alert if BAI is not processed until 10 AM" (JPMC and BOA, **10:00 US Central** — `FMON_TIME_ZONE` = CST, Central time with US daylight saving, i.e. 10:00 local all year; normal business days). `DAY_TYPE` `*` = every business day; a `MONTH_END` / `RETURNS_DAY` row would win on such a day (fallback NORMAL, then `*` - unchanged by the consolidation). Evaluated only on a business day whose `ZCD_FMON_CAL` row expects at least one file — never on a holiday. A similar alert is a new DEADLINE row here (and, if needed, a rule in `ZCD_OPS_ALRULE`), created in DV1 on a customizing request, tested in QA1 and transported to PS4; in PS4 support only edits existing rows (due time, severity, ACTIVE) (`Operations_Runbook.md` §5h).
 
-| IFACE_ID | STAGE | DAY_TYPE | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
-|---|---|---|---|---|---|---|
-| BAI_JPMC_IN | FULLY_PROCESSED | * | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
-| BAI_BOA_IN | FULLY_PROCESSED | * | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
+| IFACE_ID | STAGE | KIND | DAY_TYPE | MAX_MINUTES | BASIS | DUE_TIME | SEVERITY | ACTIVE | DESCRIPTION |
+|---|---|---|---|---|---|---|---|---|---|
+| BAI_JPMC_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | JPMC BAI received, imported and posted by 10:00 |
+| BAI_BOA_IN | FULLY_PROCESSED | DEADLINE | * | | | 10:00 | E | X | BOA BAI received, imported and posted by 10:00 |
 
 At 10:00 the finding `STAGE_DEADLINE_MISSED` names the earliest missing step (GROUP2): `NOT_RECEIVED` (no file, no statement), `NOT_IMPORTED` (received, statements of x of y payment engine accounts in FEBKO), `NOT_POSTED` (every account imported, n of m in-scope FEBEP lines not posted), with bank and statement date. Stages a deadline may name (configuration app): FILE_RECEIVED, FILE_LOADED, FULLY_PROCESSED, GENERATED_IN_SAP, ACK_RECEIVED.
 
@@ -188,7 +190,7 @@ Confirmed facts used: DFKKNRK / DFKKNRP exist, lot key KEYN1, item key POSNA; DF
 | F_FILERCV | ZCL_CD_FMON_CHK_SLA | E | STAGE=FILE_RECEIVED;LATE_SEVERITY=W |
 | F_PRFAIL | ZCL_CD_FMON_CHK_REJECT | E | OUTCOME=PRISM_FAILED |
 | F_PRFILE | ZCL_CD_FMON_CHK_PRISM_FILE | W | GRACE_MIN=60 |
-| F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - rows of ZCD_FMON_DEADL; row SEVERITY wins) |
+| F_DEADLINE | ZCL_CD_FMON_CHK_DEADLINE | E | (none - DEADLINE rows of ZCD_FMON_SLA; row SEVERITY wins) |
 | F_REGEN | ZCL_CD_FMON_CHK_REGEN | B | (none) - FILE_REGENERATED_NOT_FAILED: regenerated file while the earlier generation did not fail (possible duplicate payment file) |
 
 `F_PRFAIL` reuses the reject check: with `OUTCOME=PRISM_FAILED` it reports only `PRISM_FAILED` (the existing `F_REJECT` row is unchanged and does not report it, so nothing is doubled); for a file with a generation group it reports `FILE_REPLACED` (information) once a regenerated file exists, `REGENERATION_MISSING` (E) next to `PRISM_FAILED` after `FMON_REGEN_WAIT_MIN`, and `PRISM_DUPLICATE_NAME` (E) instead of `PRISM_FAILED` for an error code of `FMON_PRISM_DUP_NAME_CODES`. `F_REGEN` and `F_PRFAIL` also run in the instant PRISM unit. `F_PRFILE` reports `PRISM_UNKNOWN_FILE` (outbound file only PRISM reported) and `PRISM_NOT_LOADED` (inbound file PRISM delivered, not received in SAP) after `GRACE_MIN` — longer than the 5-minute cycle, so PRISM being faster than SAP's next read is no finding. The instant PRISM unit runs only the SLA, reject and PRISM-file checks.
@@ -202,7 +204,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | FMON_LOOKBACK_DAYS | 1 | days read back from legacy tables / files evaluated |
 | FMON_OPEN_DAYS | 30 | open or partially processed files kept under watch |
 | FMON_DUP_DAYS | 7 | duplicate-file history |
-| FMON_TIME_ZONE | CST | **business times are US Central** (user decision 2026-11-07; value row in `config/param_values.csv`, definition default stays UTC): calendar windows, deadlines (`ZCD_FMON_DEADL-DUE_TIME`), business date of timestamps and PRISM events, and the interpretation of legacy date/time fields (`FMON_FILE_MONITORING.md` §A3b — time zone) |
+| FMON_TIME_ZONE | CST | **business times are US Central** (user decision 2026-11-07; value row in `config/param_values.csv`, definition default stays UTC): calendar windows, deadlines (`ZCD_FMON_SLA-DUE_TIME` of the DEADLINE rows), business date of timestamps and PRISM events, and the interpretation of legacy date/time fields (`FMON_FILE_MONITORING.md` §A3b — time zone) |
 | FMON_FACTORY_CAL | ‹US› | factory calendar when ZCD_FMON_CAL has none |
 | FMON_RETURNS_WEEKDAYS | ‹1,2,3,4,5› | weekdays that are ACH returns cycle days |
 | FMON_NOC_SLA_DAYS | 6 | NACHA NOC limit in banking days |

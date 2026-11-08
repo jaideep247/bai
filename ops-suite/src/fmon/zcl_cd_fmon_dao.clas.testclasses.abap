@@ -17,6 +17,8 @@
 *&            | ACK once with ACK_AT initial, other stages, other groups and older files not read.
 *& 2026-11-08 | Table consolidation: approvals in ZCD_OPS_TABWL (FMON / SOURCE, blank field = whole table);
 *&            | rows of another area or purpose do not approve (other_purpose_not_approved).
+*& 2026-11-08 | Table consolidation: SLA rows with KIND / DAY_TYPE; deadlines_only_active reads DURATION and
+*&            | DEADLINE rows of ZCD_FMON_SLA in one read (ZCD_FMON_DEADL merged).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -674,6 +676,7 @@ CLASS ltc_cfg_reads DEFINITION FINAL FOR TESTING
         day_off   TYPE c LENGTH 12 VALUE 'HOLIDAY',
         stage_off TYPE c LENGTH 20 VALUE 'FORWARDED',
         due_time  TYPE t VALUE '100000',
+        minutes   TYPE i VALUE 30,
         src_on    TYPE c LENGTH 10 VALUE 'PRISM',
         src_off   TYPE c LENGTH 10 VALUE 'LEGACY',
         status_ok TYPE c LENGTH 40 VALUE 'DELIVERED',
@@ -708,7 +711,7 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_FMON_IFACE' ) ( 'ZCD_FMON_SLA' ) ( 'ZCD_FMON_CAL' )
                                    ( 'ZCD_FMON_SRC' ) ( 'ZCD_FMON_SRCMAP' ) ( 'ZCD_FMON_LOTCFG' )
-                                   ( 'ZCD_FMON_CHK' ) ( 'ZCD_FMON_DEADL' ) ) ).
+                                   ( 'ZCD_FMON_CHK' ) ) ).
   ENDMETHOD.
 
 
@@ -752,6 +755,8 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
     TRY.
         ls_row-iface_id = gc_test-iface_on.
         ls_row-stage    = gc_test-stage_snt.
+        ls_row-kind     = zif_cd_fmon_types=>gc_sla_kind-duration.
+        ls_row-day_type = zif_cd_fmon_types=>gc_wildcard.
         ls_row-active   = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-stage    = gc_test-stage_ack.
@@ -792,25 +797,39 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: only active stage deadlines are read (production switches a row off, never deletes it)
+  " Rule (table consolidation 2026-11-08): a DURATION and a DEADLINE row of the same interface and stage
+  " are both read in one read with their kind's fields; a switched-off deadline is not read
   METHOD deadlines_only_active.
-    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_deadl WITH EMPTY KEY.
-    DATA ls_row TYPE zcd_fmon_deadl.
+    DATA lt_rows TYPE STANDARD TABLE OF zcd_fmon_sla WITH EMPTY KEY.
+    DATA ls_row TYPE zcd_fmon_sla.
     TRY.
-        ls_row-iface_id = gc_test-iface_on.
-        ls_row-stage    = gc_test-stage_snt.
+        ls_row-iface_id    = gc_test-iface_on.
+        ls_row-stage       = gc_test-stage_snt.
+        ls_row-kind        = zif_cd_fmon_types=>gc_sla_kind-duration.
+        ls_row-day_type    = zif_cd_fmon_types=>gc_wildcard.
+        ls_row-max_minutes = gc_test-minutes.
+        ls_row-active      = abap_true.
+        INSERT ls_row INTO TABLE lt_rows.
+        CLEAR ls_row-max_minutes.
+        ls_row-kind     = zif_cd_fmon_types=>gc_sla_kind-deadline.
         ls_row-day_type = gc_test-day_work.
         ls_row-due_time = gc_test-due_time.
-        ls_row-active   = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-stage    = gc_test-stage_ack.
         ls_row-active   = abap_false.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
-        DATA(lt_deadlines) = mo_cut->get_deadlines( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_deadlines ) exp = 1 msg = 'Only the active deadline' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_deadlines[ 1 ]-due_time exp = gc_test-due_time
-                                            msg = 'Due time returned' ).
+        DATA(lt_slas) = mo_cut->get_slas( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_slas ) exp = 2
+                                            msg = 'Duration and active deadline, not the switched-off one' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_slas[ stage = gc_test-stage_snt kind = zif_cd_fmon_types=>gc_sla_kind-deadline ]-due_time
+          exp = gc_test-due_time
+          msg = 'Due time of the DEADLINE row' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_slas[ stage = gc_test-stage_snt kind = zif_cd_fmon_types=>gc_sla_kind-duration ]-max_minutes
+          exp = gc_test-minutes
+          msg = 'Minutes of the DURATION row' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

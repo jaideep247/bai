@@ -14,6 +14,8 @@
 *&            | HCK A_INFLIGHT status lag of payments acknowledged per file, DEFAULT IGNORE).
 *& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
 *&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | Table consolidation: get_slas reads both kinds of ZCD_FMON_SLA (DURATION, DEADLINE);
+*&            | get_deadlines (ZCD_FMON_DEADL) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -24,7 +26,8 @@ INTERFACE zif_cd_fmon_dao
     RETURNING
       VALUE(rt_ifaces) TYPE zif_cd_fmon_types=>tt_iface.
 
-  "! Active stage SLAs (ZCD_FMON_SLA; production deactivates a row, never deletes it)
+  "! Active stage SLAs of both kinds (ZCD_FMON_SLA: DURATION and DEADLINE rows, one read;
+  "! production deactivates a row, never deletes it)
   METHODS get_slas
     RETURNING
       VALUE(rt_slas) TYPE zif_cd_fmon_types=>tt_sla.
@@ -33,11 +36,6 @@ INTERFACE zif_cd_fmon_dao
   METHODS get_calendars
     RETURNING
       VALUE(rt_cals) TYPE zif_cd_fmon_types=>tt_cal.
-
-  "! Active stage deadlines (ZCD_FMON_DEADL: stage reached by a clock time of a business day)
-  METHODS get_deadlines DEFAULT IGNORE
-    RETURNING
-      VALUE(rt_deadlines) TYPE zif_cd_fmon_types=>tt_deadline.
 
   "! Active legacy source adapters (ZCD_FMON_SRC)
   METHODS get_sources

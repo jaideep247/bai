@@ -10,7 +10,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 | App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
-| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
+| File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla (durations and deadlines - ZCD_FMON_DEADL merged 2026-11-08), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
 | Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole (usage LIFECYCLE / RECON, 2026-11-08), HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting, freshness & approved tables | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*), ApprovedTable (ZCD_OPS_TABWL, *Approved tables per reader*: FMON SOURCE, HCK READ / DRIFT - table consolidation 2026-11-08) | CORE |
 
@@ -46,8 +46,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 | Table | App / entity | Reader filtering `ACTIVE` |
 |---|---|---|
-| ZCD_FMON_DEADL | File monitoring / FmonDeadline | `ZCL_CD_FMON_DAO->GET_DEADLINES` |
-| ZCD_FMON_SLA | File monitoring / FmonSla | `GET_SLAS` (field 2026-11-07) |
+| ZCD_FMON_SLA | File monitoring / FmonSla (durations and deadlines) | `ZCL_CD_FMON_DAO->GET_SLAS` (field 2026-11-07; both kinds, 2026-11-08) |
 | ZCD_FMON_CAL | File monitoring / FmonCalendar | `GET_CALENDARS` (field 2026-11-07) |
 | ZCD_OPS_ALRULE | Alerting / AlertRule | `ZCL_CD_OPS_ALERT_DAO->GET_RULES` (field existed) |
 
@@ -56,7 +55,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 32 customizing tables of the apps, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 31 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -77,8 +76,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action; finding class DUPLICATE / POSTING or blank | 410, 413 |
 | EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
 | FMON | FmonIface | Direction I/O; **name pattern is valid PCRE** | 413, 418 |
-| FMON | FmonSla | Maximum minutes > 0; severity | 417, 413 |
-| FMON | FmonDeadline | Stage FILE_RECEIVED / FILE_LOADED / FULLY_PROCESSED / GENERATED_IN_SAP / ACK_RECEIVED; day type NORMAL / MONTH_END / RETURNS_DAY / `*`; severity | 413 |
+| FMON | FmonSla | Kind DURATION / DEADLINE; severity. DURATION: maximum minutes > 0, basis P / G or blank, day type `*`, due time blank. DEADLINE: due time required, stage FILE_RECEIVED / FILE_LOADED / FULLY_PROCESSED / GENERATED_IN_SAP / ACK_RECEIVED, day type NORMAL / MONTH_END / RETURNS_DAY / `*`, maximum minutes and basis blank (table consolidation 2026-11-08) | 413, 417, 422, 423 |
 | FMON | FmonSource | Table exists; each of the 12 field-name columns exists in that table; adapter class implements `ZIF_CD_FMON_ADAPTER` | 411, 412, 410 |
 | FMON | FmonCheck | Class implements `ZIF_CD_FMON_CHECK`; severity | 410, 413 |
 | FMON | FmonLotCfg | Header / item tables exist; their lot, link, key, status fields exist; link by N/R | 411, 412, 413 |

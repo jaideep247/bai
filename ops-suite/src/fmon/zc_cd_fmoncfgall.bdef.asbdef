@@ -14,7 +14,6 @@ define behavior for ZC_CD_FmonCfgAll alias FmonCfgAll
 
   use association _FmonIface { create; with draft; }
   use association _FmonSla { create; with draft; }
-  use association _FmonDeadline { create; with draft; }
   use association _FmonSource { create; with draft; }
   use association _FmonSourceMap { create; with draft; }
   use association _FmonCheck { create; with draft; }
@@ -32,15 +31,6 @@ use etag
 }
 
 define behavior for ZC_CD_FmonSla alias FmonSla
-use etag
-{
-  use update;
-  use delete;
-
-  use association _FmonCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_FmonDeadline alias FmonDeadline
 use etag
 {
   use update;

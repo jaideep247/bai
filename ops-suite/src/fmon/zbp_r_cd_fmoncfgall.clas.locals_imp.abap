@@ -19,12 +19,14 @@ INTERFACE lif_c.
     BEGIN OF gc_el,
       adapterclass                   TYPE string VALUE `ADAPTERCLASS`,
       amountfield                    TYPE string VALUE `AMOUNTFIELD`,
+      basis                          TYPE string VALUE `BASIS`,
       checksumfield                  TYPE string VALUE `CHECKSUMFIELD`,
       classname                      TYPE string VALUE `CLASSNAME`,
       countfield                     TYPE string VALUE `COUNTFIELD`,
       datefield                      TYPE string VALUE `DATEFIELD`,
       daytype                        TYPE string VALUE `DAYTYPE`,
       direction                      TYPE string VALUE `DIRECTION`,
+      duetime                        TYPE string VALUE `DUETIME`,
       filekeyfield                   TYPE string VALUE `FILEKEYFIELD`,
       filenamefield                  TYPE string VALUE `FILENAMEFIELD`,
       hdrlinkfield                   TYPE string VALUE `HDRLINKFIELD`,
@@ -35,6 +37,7 @@ INTERFACE lif_c.
       itemlotfield                   TYPE string VALUE `ITEMLOTFIELD`,
       itemstatusfield                TYPE string VALUE `ITEMSTATUSFIELD`,
       itemtable                      TYPE string VALUE `ITEMTABLE`,
+      kind                           TYPE string VALUE `KIND`,
       linkby                         TYPE string VALUE `LINKBY`,
       lobfield                       TYPE string VALUE `LOBFIELD`,
       maxminutes                     TYPE string VALUE `MAXMINUTES`,
@@ -53,7 +56,6 @@ INTERFACE lif_c.
     BEGIN OF gc_ent,
       fmoncalendar                   TYPE string VALUE `FmonCalendar`,
       fmoncheck                      TYPE string VALUE `FmonCheck`,
-      fmondeadline                   TYPE string VALUE `FmonDeadline`,
       fmoniface                      TYPE string VALUE `FmonIface`,
       fmonlotcfg                     TYPE string VALUE `FmonLotCfg`,
       fmonsla                        TYPE string VALUE `FmonSla`,
@@ -67,7 +69,6 @@ INTERFACE lif_c.
     BEGIN OF gc_tab,
       fmoncalendar                   TYPE string VALUE `ZCD_FMON_CAL`,
       fmoncheck                      TYPE string VALUE `ZCD_FMON_CHK`,
-      fmondeadline                   TYPE string VALUE `ZCD_FMON_DEADL`,
       fmoniface                      TYPE string VALUE `ZCD_FMON_IFACE`,
       fmonlotcfg                     TYPE string VALUE `ZCD_FMON_LOTCFG`,
       fmonsla                        TYPE string VALUE `ZCD_FMON_SLA`,
@@ -76,13 +77,19 @@ INTERFACE lif_c.
     END OF gc_tab,
     BEGIN OF gc_val,
       fmoncheck_severity             TYPE string VALUE `,B,E,W,I`,
-      fmondeadline_daytype           TYPE string VALUE `NORMAL,MONTH_END,RETURNS_DAY,*`,
-      fmondeadline_severity          TYPE string VALUE `,B,E,W,I`,
-      fmondeadline_stage             TYPE string VALUE `FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED`,
       fmoniface_direction            TYPE string VALUE `I,O`,
       fmonlotcfg_linkby              TYPE string VALUE `,N,R`,
+      fmonsla_basis_duration         TYPE string VALUE `,P,G`,
+      fmonsla_daytype_deadline       TYPE string VALUE `NORMAL,MONTH_END,RETURNS_DAY,*`,
+      fmonsla_daytype_duration       TYPE string VALUE `*`,
+      fmonsla_kind                   TYPE string VALUE `DURATION,DEADLINE`,
       fmonsla_severity               TYPE string VALUE `,B,E,W,I`,
-    END OF gc_val.
+      fmonsla_stage_deadline         TYPE string VALUE `FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED`,
+    END OF gc_val,
+    BEGIN OF gc_when,
+      fmonsla_kind_deadline          TYPE string VALUE `DEADLINE`,
+      fmonsla_kind_duration          TYPE string VALUE `DURATION`,
+    END OF gc_when.
 ENDINTERFACE.
 
 
@@ -126,9 +133,6 @@ CLASS lhc_fmoncfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_FmonSla = if_abap_behv=>mk-on.
       result-%assoc-_FmonSla = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_FmonDeadline = if_abap_behv=>mk-on.
-      result-%assoc-_FmonDeadline = lv_create.
     ENDIF.
     IF requested_features-%assoc-_FmonSource = if_abap_behv=>mk-on.
       result-%assoc-_FmonSource = lv_create.
@@ -294,15 +298,71 @@ CLASS lhc_fmonsla IMPLEMENTATION.
     LOOP AT lt_rows INTO DATA(ls_row).
       CLEAR lt_msg.
       INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmonsla.
-      IF ls_row-MaxMinutes <= 0.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-maxminutes
-                        element = lif_c=>gc_el-maxminutes ) INTO TABLE lt_msg.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
+                                        iv_list  = lif_c=>gc_val-fmonsla_kind ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Kind
+                        v2 = lif_c=>gc_el-kind v3 = lif_c=>gc_val-fmonsla_kind
+                        element = lif_c=>gc_el-kind ) INTO TABLE lt_msg.
       ENDIF.
       IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
                                         iv_list  = lif_c=>gc_val-fmonsla_severity ) = abap_false.
         INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Severity
                         v2 = lif_c=>gc_el-severity v3 = lif_c=>gc_val-fmonsla_severity
                         element = lif_c=>gc_el-severity ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
+                                        iv_list  = lif_c=>gc_when-fmonsla_kind_duration ) = abap_true.
+        IF ls_row-MaxMinutes <= 0.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-not_positive v1 = lif_c=>gc_el-maxminutes
+                          element = lif_c=>gc_el-maxminutes ) INTO TABLE lt_msg.
+        ENDIF.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Basis )
+                                          iv_list  = lif_c=>gc_val-fmonsla_basis_duration ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Basis
+                          v2 = lif_c=>gc_el-basis v3 = lif_c=>gc_val-fmonsla_basis_duration
+                          element = lif_c=>gc_el-basis ) INTO TABLE lt_msg.
+        ENDIF.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DayType )
+                                          iv_list  = lif_c=>gc_val-fmonsla_daytype_duration ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DayType
+                          v2 = lif_c=>gc_el-daytype v3 = lif_c=>gc_val-fmonsla_daytype_duration
+                          element = lif_c=>gc_el-daytype ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-DueTime IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-duetime
+                          v2 = lif_c=>gc_el-kind v3 = ls_row-Kind
+                          element = lif_c=>gc_el-duetime ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )
+                                        iv_list  = lif_c=>gc_when-fmonsla_kind_deadline ) = abap_true.
+        IF ls_row-DueTime IS INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-duetime
+                          v2 = lif_c=>gc_el-kind v3 = ls_row-Kind
+                          element = lif_c=>gc_el-duetime ) INTO TABLE lt_msg.
+        ENDIF.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Stage )
+                                          iv_list  = lif_c=>gc_val-fmonsla_stage_deadline ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Stage
+                          v2 = lif_c=>gc_el-stage v3 = lif_c=>gc_val-fmonsla_stage_deadline
+                          element = lif_c=>gc_el-stage ) INTO TABLE lt_msg.
+        ENDIF.
+        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DayType )
+                                          iv_list  = lif_c=>gc_val-fmonsla_daytype_deadline ) = abap_false.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DayType
+                          v2 = lif_c=>gc_el-daytype v3 = lif_c=>gc_val-fmonsla_daytype_deadline
+                          element = lif_c=>gc_el-daytype ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-MaxMinutes IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-maxminutes
+                          v2 = lif_c=>gc_el-kind v3 = ls_row-Kind
+                          element = lif_c=>gc_el-maxminutes ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-Basis IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-basis
+                          v2 = lif_c=>gc_el-kind v3 = ls_row-Kind
+                          element = lif_c=>gc_el-basis ) INTO TABLE lt_msg.
+        ENDIF.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
@@ -352,118 +412,6 @@ CLASS lhc_fmonsla IMPLEMENTATION.
                       %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
                                              fmoncfgall-SingletonID = 1 ) )
         INTO TABLE reported-fmonsla.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_fmondeadline DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR FmonDeadline RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR FmonDeadline~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR FmonDeadline~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_fmondeadline IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_fmoncfgall IN LOCAL MODE
-      ENTITY FmonDeadline
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-fmondeadline.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Stage )
-                                        iv_list  = lif_c=>gc_val-fmondeadline_stage ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Stage
-                        v2 = lif_c=>gc_el-stage v3 = lif_c=>gc_val-fmondeadline_stage
-                        element = lif_c=>gc_el-stage ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-DayType )
-                                        iv_list  = lif_c=>gc_val-fmondeadline_daytype ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-DayType
-                        v2 = lif_c=>gc_el-daytype v3 = lif_c=>gc_val-fmondeadline_daytype
-                        element = lif_c=>gc_el-daytype ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Severity )
-                                        iv_list  = lif_c=>gc_val-fmondeadline_severity ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Severity
-                        v2 = lif_c=>gc_el-severity v3 = lif_c=>gc_val-fmondeadline_severity
-                        element = lif_c=>gc_el-severity ) INTO TABLE lt_msg.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-fmondeadline.
-        INSERT INITIAL LINE INTO TABLE reported-fmondeadline ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-fmoncfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-fmoncfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_fmoncfgall IN LOCAL MODE
-      ENTITY FmonCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-fmondeadline.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-fmondeadline.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( fmoncfgall-%is_draft   = ls_key-%is_draft
-                                             fmoncfgall-SingletonID = 1 ) )
-        INTO TABLE reported-fmondeadline.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1079,7 +1027,6 @@ CLASS lsc_zr_cd_fmoncfgall IMPLEMENTATION.
           it_relations = VALUE #(
             ( entity = lif_c=>gc_ent-fmoniface table = lif_c=>gc_tab-fmoniface )
             ( entity = lif_c=>gc_ent-fmonsla table = lif_c=>gc_tab-fmonsla )
-            ( entity = lif_c=>gc_ent-fmondeadline table = lif_c=>gc_tab-fmondeadline )
             ( entity = lif_c=>gc_ent-fmonsource table = lif_c=>gc_tab-fmonsource )
             ( entity = lif_c=>gc_ent-fmonsourcemap table = lif_c=>gc_tab-fmonsourcemap )
             ( entity = lif_c=>gc_ent-fmoncheck table = lif_c=>gc_tab-fmoncheck )
