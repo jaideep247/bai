@@ -23,6 +23,8 @@
 *&            | ZCA_PARAM parameters HCK_STRIPE_*.
 *& 2026-11-08 | Table consolidation: get_pm_classes returns the class rows and the house-bank calendar rows
 *&            | (key HBKID); get_pm_banks (ZCD_HCK_PMBANK) removed.
+*& 2026-11-08 | Customer posting areas: get_pm_classes reads ZPMC, get_btc_roles ZBTR usage LIFECYCLE (were
+*&            | ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -92,9 +94,11 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_lines) TYPE zif_cd_hck_runtime_types=>tt_gl_xref2_line.
 
-  "! Active rows of ZCD_HCK_PMCLASS: the method classes (HBKID blank) with their payment methods
-  "! and ageing basis, and the house-bank calendars per flow + method class (HBKID filled;
-  "! table consolidation 2026-11-08, was ZCD_HCK_PMBANK)
+  "! Method classes of the customer posting area ZPMC (FQC0 keys FLOW / PAYMENT METHOD / HOUSE
+  "! BANK, results METHOD_CLASS / AGE_BASIS / CALENDAR): one class row (HBKID blank) per flow +
+  "! class with the payment methods of its '*' entries, ageing basis and calendar, and one
+  "! house-bank calendar row per flow + class + house bank (entries with a house bank).
+  "! Entries with flow or payment method '*' or without class are not used (configuration check)
   METHODS get_pm_classes
     RETURNING
       VALUE(rt_classes) TYPE zif_cd_hck_runtime_types=>tt_pm_class.
@@ -118,8 +122,9 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_rules) TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
 
-  "! Active bank code roles of the payment lifecycle per flow + method class (ZCD_HCK_BTCROLE, usage
-  "! LIFECYCLE: flow and method class split from SCOPE; RECON rows are never returned)
+  "! Bank code roles of the payment lifecycle per flow + method class: entries of the customer
+  "! posting area ZBTR with usage LIFECYCLE (flow and method class split from SCOPE, ISO code from
+  "! its three parts; RECON entries and entries with '*' are never returned)
   METHODS get_btc_roles
     RETURNING
       VALUE(rt_roles) TYPE zif_cd_hck_runtime_types=>tt_btc_role.

@@ -15,12 +15,10 @@ authorization master ( global )
   update;
   field ( readonly ) SingletonID, LastChangedAtMax;
 
-  association _BtcMap { create ( features : global ); with draft; }
   association _BtcRule { create ( features : global ); with draft; }
   association _RuleDef { create ( features : global ); with draft; }
   association _HouseBankAcct { create ( features : global ); with draft; }
   association _FlowPattern { create ( features : global ); with draft; }
-  association _ReasonMap { create ( features : global ); with draft; }
   association _EbsLookup { create ( features : global ); with draft; }
 
   draft action Edit;
@@ -29,8 +27,6 @@ authorization master ( global )
   draft action Resume;
   draft determine action Prepare
   {
-    validation BtcMap ~ validateFields;
-    validation BtcMap ~ validateTransport;
     validation BtcRule ~ validateFields;
     validation BtcRule ~ validateTransport;
     validation RuleDef ~ validateFields;
@@ -39,50 +35,8 @@ authorization master ( global )
     validation HouseBankAcct ~ validateTransport;
     validation FlowPattern ~ validateFields;
     validation FlowPattern ~ validateTransport;
-    validation ReasonMap ~ validateTransport;
     validation EbsLookup ~ validateFields;
     validation EbsLookup ~ validateTransport;
-  }
-}
-
-define behavior for ZR_CD_BtcMap alias BtcMap
-persistent table zcd_btc_map
-with additional save
-draft table zcd_d_btcmap
-lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Scheme, BtcCode, BankKey, FlowType;
-  field ( mandatory : create ) Scheme, BtcCode, FlowType;
-  association _EbsCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_btc_map
-  {
-    Scheme = scheme;
-    BtcCode = btc_code;
-    BankKey = bank_key;
-    FlowType = flow_type;
-    Category = category;
-    RuleGroup = rule_group;
-    ExpCdi = exp_cdi;
-    PayMethod = pay_method;
-    PostingRule = posting_rule;
-    RetReason = ret_reason;
-    ActionCode = action;
-    Active = active;
-    Description = description;
-    Disposition = disposition;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
   }
 }
 
@@ -91,7 +45,9 @@ persistent table zcd_btc_rule
 with additional save
 draft table zcd_d_btcrule
 lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -129,7 +85,9 @@ persistent table zcd_ebs_rule_def
 with additional save
 draft table zcd_d_ruledef
 lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -163,7 +121,9 @@ persistent table zcd_ebs_acct
 with additional save
 draft table zcd_d_ebsacct
 lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -198,7 +158,9 @@ persistent table zcd_ebs_flow_pat
 with additional save
 draft table zcd_d_flowpat
 lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -222,39 +184,14 @@ etag master LocalLastChangedAt
   }
 }
 
-define behavior for ZR_CD_ReasonMap alias ReasonMap
-persistent table zcd_ebs_rsn_map
-with additional save
-draft table zcd_d_rsnmap
-lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Reason;
-  field ( mandatory : create ) Reason;
-  association _EbsCfgAll { with draft; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_ebs_rsn_map
-  {
-    Reason = reason;
-    FicaReason = fica_reason;
-    IsNoc = is_noc;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
 define behavior for ZR_CD_EbsLookup alias EbsLookup
 persistent table zcd_ebs_lookup
 with additional save
 draft table zcd_d_ebslkp
 lock dependent by _EbsCfgAll
-authorization dependent by _EbsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;

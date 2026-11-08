@@ -17,9 +17,7 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _HckAggregate { create; with draft; }
   use association _JobCycle { create; with draft; }
   use association _JobStep { create; with draft; }
-  use association _HckPmClass { create; with draft; }
   use association _HckClrRule { create; with draft; }
-  use association _HckBtcRole { create; with draft; }
   use association _HckSeqOutcome { create; with draft; }
   use association _HckReconSet { create; with draft; }
 }
@@ -69,25 +67,7 @@ use etag
   use association _HckCfgAll { with draft; }
 }
 
-define behavior for ZC_CD_HckPmClass alias HckPmClass
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
 define behavior for ZC_CD_HckClrRule alias HckClrRule
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckBtcRole alias HckBtcRole
 use etag
 {
   use update;

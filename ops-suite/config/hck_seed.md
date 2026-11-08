@@ -31,7 +31,7 @@ Definitions (value type, limits, delivered default) of every parameter: `config/
 | HCK_QUEUE_ERR_STATES | `SYSFAIL,CPICERR` | qRFC / bgRFC states that are an error (`E_QUEUES`, finding E) |
 | HCK_QUEUE_HOLD_STATES | `STOP,WAITSTOP` | States that hold a queue (W) |
 | HCK_QUEUE_WAIT_STATES | `READY,RUNNING` | States that are STUCK (W) when older than PARAM3 minutes |
-| HCK_INFLIGHT_MAX_ROWS | `5000` | Payments per window and rows of every evidence read (`A_INFLIGHT`); hard ceiling 50 000. Payment methods per class are configuration (`ZCD_HCK_PMCLASS`, §8), no longer parameters (HCK_INFLIGHT_WIRE_ / _ACH_ / _CHQ_METHODS retired 2026-11-07) |
+| HCK_INFLIGHT_MAX_ROWS | `5000` | Payments per window and rows of every evidence read (`A_INFLIGHT`); hard ceiling 50 000. Payment methods per class are configuration (posting area `ZPMC`, §8), no longer parameters (HCK_INFLIGHT_WIRE_ / _ACH_ / _CHQ_METHODS retired 2026-11-07) |
 | HCK_RECON_LOOKBACK_DAYS | `7` | Days before the report date reconciled by `A_RECON_3WAY` (window = report date - 1 back these days) |
 | HCK_RECON_TIMING_DAYS | `3` | Days a reconciliation difference may stay open as timing (statement of the next day / month, transfer lag) |
 | HCK_RECON_REDEPOSIT_DAYS | `10` | Days a 468 without returns lot waits for its delayed redeposit (confirmed 10 days) |
@@ -85,6 +85,7 @@ uncapped count.
 | C_PPO_BACKLOG | Postprocessing (PPO) backlog older than 3 days | C | ZCL_CD_HCK_C_GENERIC_AGG | X | 80 | M | | | | 120 |
 | D_CONFIG_DRIFT | Customizing drift vs golden baseline | D | ZCL_CD_HCK_C_CONFIG_DRIFT | X | 90 | M | | | | 120 |
 | D_PARAM_INVALID | Parameters ZCA_PARAM refuses (areas CD_OPS / CD_EBS / CD_FMON / CD_HCK) | D | ZCL_CD_HCK_C_PARAM | X | 95 | H | | | | 60 |
+| D_POSTAREA_INVALID | Entries of the posting areas ZRSN / ZPMC / ZBTM / ZBTR the suite cannot use (2026-11-08) | D | ZCL_CD_HCK_C_POSTAREA | X | 96 | H | | | | 60 |
 | E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_.*` | `120` (min) | `30` (grace min) | 60 |
 | E_SYSTEM | Short dumps, update errors, locks | E | ZCL_CD_HCK_C_TECH_SYS | X | 110 | M | | | | 60 |
 | E_ALERT_DELIVERY | Alert delivery health (failed / throttled) | E | ZCL_CD_HCK_C_ALERT_HEALTH | X | 120 | M | `24` (hours) | | | 60 |
@@ -96,7 +97,7 @@ uncapped count.
 | A_RECON_3WAY | Three-way reconciliation bank / G/L transit / payment engine | A | ZCL_CD_HCK_C_RECON3 | X | 27 | H | | | | 300 |
 | E_QUEUES | qRFC / bgRFC queues in error or stuck | E | ZCL_CD_HCK_C_QUEUES | X | 115 | H | `<payment engine queue patterns, e.g. ZCD_.*, confirm in SMQ1 / SMQ2>` (blank = all) | `<destination patterns, e.g. PRISM.*>` (blank = all) | `30` (stuck minutes) | 60 |
 
-`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b, both rows of ZCD_HCK_PMCLASS), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars (class rows and house-bank rows) in `ZCD_HCK_PMCLASS`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
+`A_INFLIGHT` PARAM1 = factory calendar when the class / house bank has none (§8a / §8b, entries of the posting area ZPMC), PARAM4 = payments listed per finding (blank = 10). Flow D / C from TFK042Z-XEINZ; classes, ageing basis and calendars (`*` entries and house-bank entries) in the posting area `ZPMC`; VALUE_DATE classes aged in business days after the value date (DPAYH-VALUT, VERIFY-DDIC; run date when empty), ISSUE_DATE classes in calendar days since the run date. What takes a payment out of flight (cleared, returned, voided, pending) and what is inconsistent is configuration: `ZCD_HCK_CLRRULE` with the evidence kinds, roles and outcomes of §8. Reversed payments (DFKKKO-STBEL) are left out.
 `A_RECON_3WAY` has no PARAM1-4: the window, timing, redeposit days, tolerance and the row cap are ZCA_PARAM `HCK_RECON_*` (§1); the sets and bank code roles are §10. It also reads EBS_FEB_CREDIT_IND / EBS_FEB_DEBIT_IND, EBS_GL_LEDGER (owned by EBS) and TRACE_GL_AWTYP (core) - one definition each.
 `E_NUMRANGE` PARAM1 = exact SNRO object names (comma list, not patterns - NRIV is read by key); only internal intervals, current / next year or not year-dependent.
 `E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a `ZCD_OPS_TABWL` row HCK / READ for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
@@ -132,6 +133,7 @@ uncapped count.
 | E_SYSTEM | LOCK_MAX_AGE_MIN | * | 60 | 240 | X | NONE | | |
 | E_ALERT_DELIVERY | ALERT_FAILED | * | 1 | 5 | X | NONE | | |
 | D_PARAM_INVALID | PARAM_INVALID | * | 1 | 1 | X | NONE | | |
+| D_POSTAREA_INVALID | POSTAREA_INVALID | * | 1 | 1 | X | NONE | | |
 | E_NUMRANGE | NR_USED_PCT | * | 85 | 95 | X | NONE | | |
 | E_QUEUES | Q_ERROR | * | 1 | 10 | X | NONE | | |
 | E_QUEUES | Q_HOLD | * | 1 | 5 | X | NONE | | |
@@ -269,31 +271,43 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 ## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
 
-User rules 2026-11-07. All four tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes (and house-bank calendars)*, *Clearing / return evidence rules*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+User rules 2026-11-07. Method classes and bank code roles are entries of the FI-CA customer posting areas **ZPMC** and **ZBTR** (user decision 2026-11-08, were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE), maintained by the FI-CA team in FQC0 (`docs/FICA_Posting_Areas.md`); the evidence rules and role-sequence outcomes stay in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, *Clearing / return evidence rules*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d). Everything gets new entries / rows only in DV1 on a customizing request (D-3); production may switch app rows off (`ACTIVE`) - a posting area entry has no ACTIVE flag (it applies while it exists; a class or code not yet confirmed is not entered). Every row is keyed by **flow + method class** (in ZBTR usage `LIFECYCLE` the two are one key SCOPE, e.g. `DACH`): a new class (e.g. collection cheques, international ACH) is entries of ZPMC / ZBTR, rows in the two app tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values (the app for its tables, the morning check `D_POSTAREA_INVALID` for ZPMC / ZBTR); EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
 
-### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
+### 8a. Posting area `ZPMC` — payment method classes (payment methods confirmed by the user; was `ZCD_HCK_PMCLASS`)
 
-| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|---|
-| D | WIR | (blank) | `E` | VALUE_DATE | | Wire disbursements | X |
-| D | ACH | (blank) | `A,G` | VALUE_DATE | | ACH disbursements (A bulk vendor, G member) | X |
-| D | CHQ | (blank) | `C` | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) | X |
-| C | ACH | (blank) | `1,2,3,4,5,H,I,J,K,L` | VALUE_DATE | | ACH collections (1-5 CAMT statements, H-L BAI statements) | X |
-| C | CRD | (blank) | `B` | VALUE_DATE | | Card collections (Stripe) | X |
-| D | ACI | (blank) | `‹confirm›` | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm** | (blank) |
+FQC0 entries, keys FLOW / PAY_METHOD / HOUSE_BANK, results METHOD_CLASS / AGE_BASIS / CALENDAR (`docs/FICA_Posting_Areas.md` §2). **One entry per payment method** (the former comma list PAY_METHODS); HOUSE_BANK `*` = the class of the payment method at every house bank.
 
-Key FLOW + METHOD_CLASS + HBKID (table consolidation 2026-11-08: HBKID added, `ZCD_HCK_PMBANK` merged). The rows above are the **class rows** (HBKID blank = all house banks). CALENDAR blank = PARAM1 of `A_INFLIGHT`. Today there are no collection wires; a future collection wire or cheque class is a row here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method may be in one class per flow (message 385 stops the check otherwise) - only class rows carry payment methods, so a house-bank row (§8b) never makes a second class of a method.
+| FLOW | PAY_METHOD | HOUSE_BANK | METHOD_CLASS | AGE_BASIS | CALENDAR | Text (documentation only) |
+|---|---|---|---|---|---|---|
+| D | E | * | WIR | VALUE_DATE | | Wire disbursements |
+| D | A | * | ACH | VALUE_DATE | | ACH disbursements - bulk vendor |
+| D | G | * | ACH | VALUE_DATE | | ACH disbursements - member |
+| D | C | * | CHQ | ISSUE_DATE | | Disbursement cheques (cheque register DFKKCR) |
+| C | 1 | * | ACH | VALUE_DATE | | ACH collections (CAMT statements) |
+| C | 2 | * | ACH | VALUE_DATE | | ACH collections (CAMT statements) |
+| C | 3 | * | ACH | VALUE_DATE | | ACH collections (CAMT statements) |
+| C | 4 | * | ACH | VALUE_DATE | | ACH collections (CAMT statements) |
+| C | 5 | * | ACH | VALUE_DATE | | ACH collections (CAMT statements) |
+| C | H | * | ACH | VALUE_DATE | | ACH collections (BAI statements) |
+| C | I | * | ACH | VALUE_DATE | | ACH collections (BAI statements) |
+| C | J | * | ACH | VALUE_DATE | | ACH collections (BAI statements) |
+| C | K | * | ACH | VALUE_DATE | | ACH collections (BAI statements) |
+| C | L | * | ACH | VALUE_DATE | | ACH collections (BAI statements) |
+| C | B | * | CRD | VALUE_DATE | | Card collections (Stripe) |
+| D | `‹confirm›` | * | ACI | VALUE_DATE | `‹UK / DE factory calendar, confirm›` | International ACH disbursements (Barclays, Commerzbank) - **confirm; do not enter before** |
 
-### 8b. `ZCD_HCK_PMCLASS` rows with a house bank — factory calendar per house bank (optional override; was `ZCD_HCK_PMBANK`)
+CALENDAR blank = PARAM1 of `A_INFLIGHT`. The payment methods of one class share ageing basis and calendar (check message 433). Today there are no collection wires; a future collection wire or cheque class is entries here plus its rules (§8c), roles / outcomes (§8e / §8f) and limits (§3). One payment method is in one class per flow: the key FLOW + PAY_METHOD + `*` exists once, and a house-bank entry (§8b) must name the same class (message 385 in the morning check `D_POSTAREA_INVALID`; message 385 also stops `A_INFLIGHT` if the configuration ever disagrees).
 
-A row with HBKID only overrides the calendar of its class for the payments of that house bank: CALENDAR is required, PAY_METHODS and AGE_BASIS must stay blank (configuration app, messages 422 / 423); the class row of the same flow + class must exist and be active for the class to be watched.
+### 8b. Posting area `ZPMC` entries with a house bank — factory calendar per house bank (optional override; was `ZCD_HCK_PMBANK`, then ZCD_HCK_PMCLASS rows with HBKID)
 
-| FLOW | METHOD_CLASS | HBKID | PAY_METHODS | AGE_BASIS | CALENDAR | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|---|
-| D | ACI | `‹Barclays house bank, confirm›` | (blank) | (blank) | `‹UK calendar›` | UK bank holidays | (blank) |
-| D | ACI | `‹Commerzbank house bank, confirm›` | (blank) | (blank) | `‹DE calendar›` | German bank holidays | (blank) |
+An entry with a house bank only overrides the calendar of its class for the payments of that bank. FQC0 picks the house-bank entry for those payments (an exact key beats `*`), so it repeats the class of the payment method; CALENDAR is required and AGE_BASIS stays blank (messages 422 / 423); the `*` entry of the same flow + payment method must exist (431). One entry per payment method of the class.
 
-Resolution per payment (unchanged by the consolidation): the row with the payment's house bank (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class row (HBKID blank) → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
+| FLOW | PAY_METHOD | HOUSE_BANK | METHOD_CLASS | AGE_BASIS | CALENDAR | Text (documentation only) |
+|---|---|---|---|---|---|---|
+| D | `‹ACI method, confirm›` | `‹Barclays house bank, confirm›` | ACI | (blank) | `‹UK calendar›` | UK bank holidays - **confirm; do not enter before** |
+| D | `‹ACI method, confirm›` | `‹Commerzbank house bank, confirm›` | ACI | (blank) | `‹DE calendar›` | German bank holidays - **confirm; do not enter before** |
+
+Resolution per payment (unchanged): the house-bank entry of the payment's house bank (DPAYH-HBKID, VERIFY-DDIC) → CALENDAR of the class (`*` entries) → PARAM1 of the check → no calendar (every day counts, warning `INFLIGHT_CONFIG`).
 
 ### 8c. `ZCD_HCK_CLRRULE` — clearing / return evidence rules
 
@@ -352,34 +366,34 @@ Table consolidation 2026-11-08: the name / value rows of `ZCD_HCK_EVSET` (set `S
 
 The former reserved setting `REQ_INTENT_FIELD` (never read: the chain DFKKOP → payout log does not need it) has no parameter - nothing unused is delivered.
 
-### 8e. `ZCD_HCK_BTCROLE` usage `LIFECYCLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
+### 8e. Posting area `ZBTR` usage `LIFECYCLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`; was `ZCD_HCK_BTCROLE`)
 
-Since the table consolidation of 2026-11-08 one table holds the roles of both checks: `USAGE` `LIFECYCLE` (these rows; `A_INFLIGHT` and the payment outcome) and `RECON` (§10b; `A_RECON_3WAY`, was `ZCD_HCK_RCBTC`). Key USAGE + SCOPE + SCHEME + BTC_CODE: SCOPE of a lifecycle row = flow + method class (`DWIR`, `CACH`, … - the 4-character threshold key of §3; the app checks the form `[DC]` + class, message 425). Lifecycle roles are an open list, but a reconciliation role (LEG, DEPOSIT, CUTOFF, REDEPOSIT, CHEQUE, OTHER, IGNORE) is refused on a lifecycle row (message 424) and a lifecycle row needs a role (422); each check reads only its own usage.
+FQC0 entries of the customer posting area ZBTR (user decision 2026-11-08), keys USAGE / SCOPE / SCHEME / CODE / FAMILY / SUB_FAMILY, results ROLE / COMPARE_AMOUNT (`docs/FICA_Posting_Areas.md` §2). One posting area holds the roles of both checks: `USAGE` `LIFECYCLE` (these entries; `A_INFLIGHT` and the payment outcome) and `RECON` (§10b; `A_RECON_3WAY`). SCOPE of a lifecycle entry = flow + method class (`DWIR`, `CACH`, … - the 4-character threshold key of §3; form `[DC]` + class, message 425; the class must be in ZPMC for the flow, 430). An ISO code is entered as domain / family / sub-family (CODE / FAMILY / SUB_FAMILY); BAI2 leaves FAMILY and SUB_FAMILY blank. No `*` in ZBTR (427). Lifecycle roles are an open list, but a reconciliation role (LEG, DEPOSIT, CUTOFF, REDEPOSIT, CHEQUE, OTHER, IGNORE) is refused on a lifecycle entry (424) and a lifecycle entry needs a role (422); each check reads only its own usage.
 
-| USAGE | SCOPE (flow + class) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|---|
-| LIFECYCLE | DWIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
-| LIFECYCLE | DWIR | BAI2 | 195 | RETURNED | X | Wire return | X |
-| LIFECYCLE | DACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
-| LIFECYCLE | DACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
-| LIFECYCLE | DACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
-| LIFECYCLE | DACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
-| LIFECYCLE | CACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
-| LIFECYCLE | CACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
-| LIFECYCLE | CACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
-| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
-| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
-| LIFECYCLE | CCRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
-| LIFECYCLE | DCHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
-| LIFECYCLE | DCHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
-| LIFECYCLE | DCHQ | BAI2 | 399 | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared | X |
-| LIFECYCLE | DCHQ | BAI2 | 699 | CORRECTION | C | Bank correction (confirmed); further correction codes = more rows (open list) | X |
-| LIFECYCLE | DACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
-| LIFECYCLE | DACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
+| USAGE | SCOPE (flow + class) | SCHEME | CODE | FAMILY | SUB_FAMILY | ROLE | COMPARE_AMOUNT | Text (documentation only) |
+|---|---|---|---|---|---|---|---|---|
+| LIFECYCLE | DWIR | BAI2 | 495 | | | ORIGINAL | | Original wire (confirmed) |
+| LIFECYCLE | DWIR | BAI2 | 195 | | | RETURNED | X | Wire return |
+| LIFECYCLE | DACH | BAI2 | 466 | | | ORIGINAL | | Original ACH disbursement |
+| LIFECYCLE | DACH | BAI2 | 168 | | | RETURNED | X | Return of the original payment (DFKKRP expected) |
+| LIFECYCLE | DACH | BAI2 | 166 | | | RETRIEVED | | Retrieval succeeded |
+| LIFECYCLE | DACH | BAI2 | 468 | | | RETRIEVE_FAIL | | Retrieval failed |
+| LIFECYCLE | CACH | BAI2 | 166 | | | COLLECTED | | Successful collection |
+| LIFECYCLE | CACH | BAI2 | 143 | | | COLLECTED | | Successful collection |
+| LIFECYCLE | CACH | BAI2 | 468 | | | COLLECT_FAIL | X | Collection failure (delayed redeposit) |
+| LIFECYCLE | CACH | ISO | `‹domain›` | `‹family›` | `‹sub-family›` | COLLECTED | | CAMT methods 1-5, collection - **confirm; do not enter before** |
+| LIFECYCLE | CACH | ISO | `‹domain›` | `‹family›` | `‹sub-family›` | COLLECT_FAIL | X | CAMT methods 1-5, collection return - **confirm; do not enter before** |
+| LIFECYCLE | CCRD | BAI2 | 195 | | | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence |
+| LIFECYCLE | DCHQ | BAI2 | 581 | | | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) |
+| LIFECYCLE | DCHQ | BAI2 | 255 | | | RETURNED | | Cheque returned (confirmed) |
+| LIFECYCLE | DCHQ | BAI2 | 399 | | | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared |
+| LIFECYCLE | DCHQ | BAI2 | 699 | | | CORRECTION | C | Bank correction (confirmed); further correction codes = more entries (open list) |
+| LIFECYCLE | DACI | ISO | `‹domain›` | `‹family›` | `‹sub-family›` | ORIGINAL | | International ACH (Barclays / Commerzbank), original - **confirm; do not enter before** |
+| LIFECYCLE | DACI | ISO | `‹domain›` | `‹family›` | `‹sub-family›` | RETURNED | X | International ACH return - **confirm; do not enter before** |
 
-The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
+ROLE is up to 15 characters (`PAYOUT_RECEIVED`) - VERIFY-SE11 that TFK033D-FUNnn holds 15 (`docs/FICA_Posting_Areas.md` §4). The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
 
-**Codes without a role (design review 2026-11-07).** A monetary line (amount ≠ 0) on the payment reference whose code has no row here is `BTC_ROLE_MISSING` (E, lifecycle INDETERMINATE - the payment is never concluded CLEARED / RETURNED by the lifecycle) unless the code is an approved informational exclusion of its scheme in ZCA_PARAM (area `CD_HCK`, LIST, delivered blank - add a code only with the business confirmation that it never concerns the payment):
+**Codes without a role (design review 2026-11-07).** A monetary line (amount ≠ 0) on the payment reference whose code has no entry here is `BTC_ROLE_MISSING` (E, lifecycle INDETERMINATE - the payment is never concluded CLEARED / RETURNED by the lifecycle) unless the code is an approved informational exclusion of its scheme in ZCA_PARAM (area `CD_HCK`, LIST, delivered blank - add a code only with the business confirmation that it never concerns the payment):
 
 | Parameter | Value (example, **confirm**) | Meaning |
 |---|---|---|
@@ -425,9 +439,9 @@ No REDEPOSIT_PENDING row for wires (no delayed redeposit). Any other sequence is
 
 HCK messages are numbers 300–399 and 650–699 of class `ZCD_OPS`, listed with every other message in `config/zcd_ops_messages.md`.
 
-## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, `ZCD_HCK_BTCROLE` (usage RECON)
+## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, posting area `ZBTR` (usage RECON)
 
-> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets* / *Bank code roles (lifecycle and reconciliation)*, D-3).
+> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets*; the bank code roles are FQC0 entries of ZBTR, D-3).
 
 ### 10a. `ZCD_HCK_RCSET` — clearing account sets (one transit / clearing account in one currency)
 
@@ -443,26 +457,26 @@ HKONT in internal format is not required: the check converts it (ALPHA). The hou
 
 The JPMC account ending 16650 is an **example value**: it is the `ZCD_EBS_ACCT` row named by HBKID / HKTID of `STRIPE_US`, never a literal in code. A Stripe set compares only the descriptor groups (LEG_BANK / LEG_FICA are not used); the deposit code is its `DEPOSIT` row below.
 
-### 10b. `ZCD_HCK_BTCROLE` usage `RECON` — role of each bank code per set (was `ZCD_HCK_RCBTC`, table consolidation 2026-11-08)
+### 10b. Posting area `ZBTR` usage `RECON` — role of each bank code per set (was `ZCD_HCK_RCBTC`, then ZCD_HCK_BTCROLE)
 
-| USAGE | SCOPE (set id) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|---|---|---|
-| RECON | COLL_ACH | BAI2 | 166 | LEG | | ACH collected | X |
-| RECON | COLL_ACH | BAI2 | 143 | LEG | | Collected (BAI 143, collections only) | X |
-| RECON | COLL_ACH | BAI2 | 468 | REDEPOSIT | | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot | X |
-| RECON | DISB_ACH | BAI2 | 466 | LEG | | ACH original | X |
-| RECON | DISB_ACH | BAI2 | 168 | CUTOFF | | ACH return - processed in the next period (cut-off) | X |
-| RECON | DISB_ACH | BAI2 | 166 | CUTOFF | | ACH retrieval - processed in the next period (cut-off) | X |
-| RECON | DISB_ACH | BAI2 | 468 | OTHER | | Retrieval failure (stays paid) | X |
-| RECON | DISB_WIRE | BAI2 | 495 | LEG | | Wire original | X |
-| RECON | DISB_WIRE | BAI2 | 195 | CUTOFF | | Wire return | X |
-| RECON | DISB_CHQ | BAI2 | 581 | CHEQUE | | Cheque cashed | X |
-| RECON | DISB_CHQ | BAI2 | 255 | CHEQUE | | Cheque returned | X |
-| RECON | DISB_CHQ | BAI2 | 399 | CHEQUE | | Correction (confirm) | X |
-| RECON | DISB_CHQ | BAI2 | 699 | CHEQUE | | Correction (confirm) | X |
-| RECON | STRIPE_US | BAI2 | 195 | DEPOSIT | | Stripe payout deposit | X |
+| USAGE | SCOPE (set id) | SCHEME | CODE | FAMILY | SUB_FAMILY | ROLE | COMPARE_AMOUNT | Text (documentation only) |
+|---|---|---|---|---|---|---|---|---|
+| RECON | COLL_ACH | BAI2 | 166 | | | LEG | | ACH collected |
+| RECON | COLL_ACH | BAI2 | 143 | | | LEG | | Collected (BAI 143, collections only) |
+| RECON | COLL_ACH | BAI2 | 468 | | | REDEPOSIT | | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot |
+| RECON | DISB_ACH | BAI2 | 466 | | | LEG | | ACH original |
+| RECON | DISB_ACH | BAI2 | 168 | | | CUTOFF | | ACH return - processed in the next period (cut-off) |
+| RECON | DISB_ACH | BAI2 | 166 | | | CUTOFF | | ACH retrieval - processed in the next period (cut-off) |
+| RECON | DISB_ACH | BAI2 | 468 | | | OTHER | | Retrieval failure (stays paid) |
+| RECON | DISB_WIRE | BAI2 | 495 | | | LEG | | Wire original |
+| RECON | DISB_WIRE | BAI2 | 195 | | | CUTOFF | | Wire return |
+| RECON | DISB_CHQ | BAI2 | 581 | | | CHEQUE | | Cheque cashed |
+| RECON | DISB_CHQ | BAI2 | 255 | | | CHEQUE | | Cheque returned |
+| RECON | DISB_CHQ | BAI2 | 399 | | | CHEQUE | | Correction (confirm) |
+| RECON | DISB_CHQ | BAI2 | 699 | | | CHEQUE | | Correction (confirm) |
+| RECON | STRIPE_US | BAI2 | 195 | | | DEPOSIT | | Stripe payout deposit |
 
-A code on the set's account without a row is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the row by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records). Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. SCOPE = the set id of §10a, SCHEME `BAI2`: the app refuses another scheme, a COMPARE_AMOUNT and any other role on a RECON row (messages 413 / 423), and these seven roles on a lifecycle row (424). BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm**). The lifecycle roles of §8e answer a different question: same table, usage `LIFECYCLE`, read only by `A_INFLIGHT` - a lifecycle row never reaches the reconciliation and a RECON row never reaches the lifecycle.
+A code on the set's account without an entry is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the entry by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records); `*` is refused (427) because it would hide new codes. Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. SCOPE = the set id of §10a, SCHEME `BAI2`: the morning check `D_POSTAREA_INVALID` refuses another scheme, a COMPARE_AMOUNT and any other role on a RECON entry (messages 413 / 423), and these seven roles on a lifecycle entry (424). BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm**). The lifecycle roles of §8e answer a different question: same posting area, usage `LIFECYCLE`, read only by `A_INFLIGHT` - a lifecycle entry never reaches the reconciliation and a RECON entry never reaches the lifecycle.
 
 ### 10c. Thresholds and alerts
 

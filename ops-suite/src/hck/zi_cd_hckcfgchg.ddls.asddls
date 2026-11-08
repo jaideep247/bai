@@ -28,17 +28,7 @@ union all
     last_changed_at as LastChangedAt
   }
 union all
-  select from zcd_hck_pmclass
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
   select from zcd_hck_clrrule
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
-  select from zcd_hck_btcrole
   {
     last_changed_at as LastChangedAt
   }

@@ -20,9 +20,7 @@ authorization master ( global )
   association _HckAggregate { create ( features : global ); with draft; }
   association _JobCycle { create ( features : global ); with draft; }
   association _JobStep { create ( features : global ); with draft; }
-  association _HckPmClass { create ( features : global ); with draft; }
   association _HckClrRule { create ( features : global ); with draft; }
-  association _HckBtcRole { create ( features : global ); with draft; }
   association _HckSeqOutcome { create ( features : global ); with draft; }
   association _HckReconSet { create ( features : global ); with draft; }
 
@@ -41,12 +39,8 @@ authorization master ( global )
     validation JobCycle ~ validateTransport;
     validation JobStep ~ validateFields;
     validation JobStep ~ validateTransport;
-    validation HckPmClass ~ validateFields;
-    validation HckPmClass ~ validateTransport;
     validation HckClrRule ~ validateFields;
     validation HckClrRule ~ validateTransport;
-    validation HckBtcRole ~ validateFields;
-    validation HckBtcRole ~ validateTransport;
     validation HckSeqOutcome ~ validateFields;
     validation HckSeqOutcome ~ validateTransport;
     validation HckReconSet ~ validateFields;
@@ -59,7 +53,9 @@ persistent table zcd_hck_def
 with additional save
 draft table zcd_d_hckdef
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -99,7 +95,9 @@ persistent table zcd_hck_thresh
 with additional save
 draft table zcd_d_hckthr
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -135,7 +133,9 @@ persistent table zcd_hck_agg
 with additional save
 draft table zcd_d_hckagg
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -182,7 +182,9 @@ persistent table zcd_job_cycle
 with additional save
 draft table zcd_d_jobcyc
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -212,7 +214,9 @@ persistent table zcd_job_step
 with additional save
 draft table zcd_d_jobstep
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -247,47 +251,14 @@ etag master LocalLastChangedAt
   }
 }
 
-define behavior for ZR_CD_HckPmClass alias HckPmClass
-persistent table zcd_hck_pmclass
-with additional save
-draft table zcd_d_hckpmcls
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Flow, MethodClass, Hbkid;
-  field ( mandatory : create ) Flow, MethodClass;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_pmclass
-  {
-    Flow = flow;
-    MethodClass = method_class;
-    Hbkid = hbkid;
-    PayMethods = pay_methods;
-    AgeBasis = age_basis;
-    Calendar = calendar;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
 define behavior for ZR_CD_HckClrRule alias HckClrRule
 persistent table zcd_hck_clrrule
 with additional save
 draft table zcd_d_hckclr
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -320,47 +291,14 @@ etag master LocalLastChangedAt
   }
 }
 
-define behavior for ZR_CD_HckBtcRole alias HckBtcRole
-persistent table zcd_hck_btcrole
-with additional save
-draft table zcd_d_hckbtcr
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Usage, Scope, Scheme, BtcCode;
-  field ( mandatory : create ) Usage, Scope, Scheme, BtcCode;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_btcrole
-  {
-    Usage = usage;
-    Scope = scope;
-    Scheme = scheme;
-    BtcCode = btc_code;
-    Role = role;
-    CompareAmount = compare_amount;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
 define behavior for ZR_CD_HckSeqOutcome alias HckSeqOutcome
 persistent table zcd_hck_seqout
 with additional save
 draft table zcd_d_hckseqo
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -399,7 +337,9 @@ persistent table zcd_hck_rcset
 with additional save
 draft table zcd_d_hckrcset
 lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;

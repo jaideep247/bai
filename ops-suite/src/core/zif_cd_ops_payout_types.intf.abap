@@ -21,6 +21,8 @@
 *&            | GC_PKG_STATUS, PAYOUT_PARALLEL, PAYOUT_PARALLEL_WAIT_SEC), CURRENT_TO of a watermark and
 *&            | the snapshot lag (TY_LAG, threshold MON_STALE_AFTER_MIN_CORE), SEVERITY of a version,
 *&            | marker PAY_STATUS_PENDING, aggregated findings (PAYOUT_EXAMPLES, messages 757-765).
+*& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
+*&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -118,7 +120,7 @@ INTERFACE zif_cd_ops_payout_types
   TYPES tt_verdict TYPE STANDARD TABLE OF ty_verdict WITH EMPTY KEY
                    WITH NON-UNIQUE SORTED KEY by_doc COMPONENTS doc1r.
 
-  "! Method of a flow mapped to its method class (ZCD_HCK_PMCLASS)
+  "! Method of a flow mapped to its method class (posting area ZPMC)
   TYPES:
     BEGIN OF ty_method,
       flow  TYPE zif_cd_hck_runtime_types=>ty_flow,
@@ -133,7 +135,7 @@ INTERFACE zif_cd_ops_payout_types
   TYPES:
     BEGIN OF ty_config,
       classes  TYPE zif_cd_hck_runtime_types=>tt_pm_class,
-      "! House-bank calendar rows of ZCD_HCK_PMCLASS (HBKID filled; the class rows are CLASSES)
+      "! House-bank calendar entries of posting area ZPMC (HBKID filled; the class rows are CLASSES)
       banks    TYPE zif_cd_hck_runtime_types=>tt_pm_class,
       rules    TYPE zif_cd_hck_runtime_types=>tt_clr_rule,
       methods  TYPE tt_method,

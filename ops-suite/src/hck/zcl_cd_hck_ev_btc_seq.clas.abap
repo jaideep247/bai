@@ -3,7 +3,7 @@
 *& Purpose:
 *& Evidence kind "bank code lifecycle": every bank statement line of the
 *& payment reference (FEBEP-CHECT = AUGBL) gets its role from its scheme
-*& and code (ZCD_HCK_BTCROLE per flow + method class; scheme from the
+*& and code (posting area ZBTR usage LIFECYCLE per flow + method class; scheme from the
 *& statement format, one derivation with EBS: ZCL_CD_EBS_SRC_FEB=>
 *& LINE_CODE); the roles ordered by statement date / statement / line are
 *& matched (PCRE, whole value) against ZCD_HCK_SEQOUT in SEQ order; the
@@ -52,6 +52,7 @@
 *& 2026-11-08 | EV_DATE = posting date of the newest line of the lifecycle (basis of the status lag).
 *& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
 *&            | reissue creates a new payment document and cheque number (user 2026-11-08).
+*& 2026-11-08 | Customer posting area: the roles are entries of ZBTR (was ZCD_HCK_BTCROLE) - comment only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION

@@ -9,9 +9,9 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 
 | App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
-| EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
+| EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla (durations and deadlines - ZCD_FMON_DEADL merged 2026-11-08), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
-| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass (with house-bank calendar rows, 2026-11-08), HckClrRule, HckBtcRole (usage LIFECYCLE / RECON, 2026-11-08), HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
+| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckClrRule, HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting & approved tables | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), ApprovedTable (ZCD_OPS_TABWL, *Approved tables per reader*: FMON SOURCE, HCK READ / DRIFT - table consolidation 2026-11-08) | CORE |
 
 **Runtime parameters are not maintained here** (2026-11-07): the OpsParam section (table ZCD_OPS_PARAM, draft table ZCD_D_PARAM, entities `ZR_/ZC_CD_OpsParam`) is retired. Parameters live in the global framework `ZCA_PARAM` and are maintained in its app *Parameter areas* (`ZUI_CA_PARAM_O4`, `param-framework/docs/ONBOARDING.md`), areas `CD_OPS`, `CD_EBS`, `CD_FMON`, `CD_HCK`; the framework has its own transport / production rules (definitions by transport only, values of released parameters adjustable in production).
@@ -20,7 +20,7 @@ Shape — SAP's business-configuration maintenance object (verified against `SAP
 
 - **Singleton root** `ZR_CD_<Mod>CfgAll`: `key 1 as SingletonID` over `I_Language`; virtual (`with unmanaged save`, nothing persisted); `lock master`, `total etag LastChangedAtMax`, draft table `ZCD_D_<MOD>CFG`; carries the field **TransportRequestID** (customizing request, DV1).
 - **Total ETag** `LastChangedAtMax` = `max( LastChangedAt )` over the change-stamp view `ZI_CD_<Mod>CfgChg` (UNION ALL of `LAST_CHANGED_AT` of all tables of the app).
-- **Children** `ZR_CD_<Alias>`: managed, `persistent table` = the customizing table, own draft table `ZCD_D_*`, `lock dependent`, `authorization dependent`, `etag master LocalLastChangedAt`, `with additional save` (transport recording), explicit `mapping for`.
+- **Children** `ZR_CD_<Alias>`: managed, `persistent table` = the customizing table, own draft table `ZCD_D_*`, `lock dependent`, `authorization master ( global )` (ZCD_OPS per child entity, 2026-11-08), `etag master LocalLastChangedAt`, `with additional save` (transport recording), explicit `mapping for`.
 - Projections `ZC_CD_*` (`provider contract transactional_query`), metadata extensions `ZC_CD_*` (DDLX: one table section per child on the object page, list + identification per table), projection BDEFs `ZC_CD_<Mod>CfgAll`.
 - Behaviour pool `ZBP_R_CD_<MOD>CFGALL`: thin handlers, every decision in `ZCL_CD_OPS_CFG_GATE` / `ZCL_CD_OPS_CFG_CHECKS`.
 - Every customizing table got `LAST_CHANGED_BY` (`abp_lastchange_user`), `LAST_CHANGED_AT` (`abp_lastchange_tstmpl`), `LOCAL_LAST_CHANGED_AT` (`abp_locinst_lastchange_tstmpl`), filled by the RAP framework; engines and DAOs ignore them. Existing `CHANGED_BY` / `CHANGED_AT` (SM30 era) are read-only and hidden.
@@ -55,7 +55,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 27 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 23 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -65,13 +65,14 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 ## 3. Authorisation
 
-`authorization master ( global )` on each root: `ZCD_OPS` with `ACTVT 02` and `ZCD_PE_AREA` = the app's payment engine area covers update, Edit and create-by-association of every child. Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the adapter `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH`, which delegates to `ZCL_CD_OPS_AUTH` (design §1).
+`authorization master ( global )` on the root and on every child entity (user decision 2026-11-08), `ZCD_OPS` with `ZCD_PE_AREA` = the app's payment engine area: **create** of a child row (create-by-association of the root, `%assoc-_<child>`) needs `ACTVT 01`, **change** of a child row (`%update` of the child) `02`, **delete** (`%delete` of the child) `06`; **Edit** / update of the singleton needs at least one of the three (`ZCL_CD_OPS_CFG_GATE=>MAY_EDIT`). The local helper `LCL_AUTH` of each generated pool turns the gate's answer into the RAP result. The client policy (create / delete only in DV1, global feature control) is unchanged and independent of the activities. VERIFY-ADT: a child entity as global authorisation master in a draft BO and the result component `%assoc` of a global authorisation request (SAP_BASIS 7.58 SP01). Read access is granted by the service (start authorisation `S_SERVICE` through the business role / PFCG); CDS access control is `#NOT_REQUIRED` (customizing, no company-code data). The check runs through the adapter `ZIF_CD_OPS_CFG_AUTH` / `ZCL_CD_OPS_CFG_AUTH`, which delegates to `ZCL_CD_OPS_AUTH` (design §1).
 
 ## 4. Field validations (on save and in Prepare)
 
+The bank transaction codes, return reasons, payment method classes and bank code roles left the apps on 2026-11-08 (FI-CA customer posting areas ZBTM, ZRSN, ZPMC, ZBTR, maintained in FQC0, `FICA_Posting_Areas.md`): their former field validations (rule group with an active rule, role per usage, LIFECYCLE scope, RECON scheme BAI2, house-bank calendar …) are the morning check `D_POSTAREA_INVALID` (`ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS`).
+
 | App | Entity | Check | Message |
 |---|---|---|---|
-| EBS | BtcMap | Scheme BAI2/ISO/PRTRY; flow D/C/*; direction C/D/* or blank; action AUTO_POST / EXCEPTION / BLOCK / NOTIFY / ON_ACCOUNT or blank; **active non-BLOCK row needs a rule group (blank = category) with an active rule**, read across drafts of the same session | 413, 416 |
 | EBS | BtcRule | Severity B/E/W/I or blank; action as above | 413 |
 | EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action; finding class DUPLICATE / POSTING or blank | 410, 413 |
 | EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
@@ -85,8 +86,6 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators; expected groups a comma list of distinct values of at most 70 characters, blank without group field (table consolidation 2026-11-08, was ZCD_HCK_AGGGRP) | 411, 412, 413, 423, 426 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
-| HCK | HckPmClass | Flow D / C (method class: open list). Class row (house bank blank): ageing basis VALUE_DATE / ISSUE_DATE. House-bank row (key HBKID filled, was ZCD_HCK_PMBANK - table consolidation 2026-11-08): calendar required, payment methods and ageing basis blank, so a payment method stays in one class | 413, 422, 423 |
-| HCK | HckBtcRole | Usage LIFECYCLE / RECON; scheme BAI2 / ISO / PRTRY. LIFECYCLE: scope = flow D / C + method class (PCRE `[DC][A-Z0-9_]{1,3}`), role required, an open list but never a reconciliation role, compare amount X / R / C or blank. RECON: role LEG / DEPOSIT / CUTOFF / REDEPOSIT / CHEQUE / OTHER / IGNORE, scheme BAI2, compare amount blank (table consolidation 2026-11-08, was ZCD_HCK_RCBTC) | 413, 422, 423, 424, 425 |
 | HCK | HckClrRule | Flow, purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT), required (blank, X, C, N); **evidence class implements ZIF_CD_HCK_EVIDENCE** | 413, 410 |
 | HCK | HckSeqOutcome | Flow, expected returns lot items 0-9 or blank, severity; **sequence pattern is valid PCRE** (outcome: open list) | 413, 418 |
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |
@@ -103,7 +102,8 @@ Names are checked for DDIC syntax (letters, digits, `_`, `/`) **before** the dic
 |---|---|---|
 | `ZCL_CD_OPS_CFG_POLICY` | Domain | 11 — `dv1_allows_all_with_transport`, `production_updates_only`, `no_changes_client_updates_only`, `sandbox_needs_no_transport`, `production_role_wins`, `missing_request_is_rejected`, `unknown_request_is_rejected`, `workbench_request_rejected`, `released_request_rejected`, `open_cust_task_is_accepted`, `no_check_where_not_recorded` |
 | `ZCL_CD_OPS_CFG_CHECKS` | Domain (RTTI on T000 and suite classes) | 17 — DDIC name syntax, table / field existence, plug-in interface, allowed values incl. blank, time windows, threshold order both directions, missing rule groups |
-| `ZCL_CD_OPS_CFG_GATE` | Application (`LTD_CLIENT`, `LTD_TRANSPORT`, `LTD_AUTH` via `ZCL_CD_OPS_CFG_INJECTOR`) | 7 — production disables create/delete, DV1 enables, released request refused, no recording in production, DV1 records once on the request, ZCD_OPS asked with payment engine area + activity, T000 read once |
+| `ZCL_CD_OPS_CFG_GATE` | Application (`LTD_CLIENT`, `LTD_TRANSPORT`, `LTD_AUTH` via `ZCL_CD_OPS_CFG_INJECTOR`) | 9 — production disables create/delete, DV1 enables, released request refused, no recording in production, DV1 records once on the request, ZCD_OPS asked with payment engine area + activity, T000 read once, edit with delete (06) only, no edit without 01 / 02 / 06 |
+| Generated behaviour pools `ZBP_R_CD_*CFGALL` | Application (EML `GET PERMISSIONS ONLY GLOBAL AUTHORIZATION` on the root and the first child, gate doubles) | 4 each — `change_only_no_create_delete`, `create_only_no_change`, `delete_only_may_delete`, `no_activity_no_edit` |
 | Behaviour pools, CDS, BDEF, SRVD | — | Not unit tested (thin; generated). Covered by the gate / checks tests and the DV1 / QA1 cases below. A RAP BO test double (`cl_botd_txbufdbl_bo_test_env`) suite can be added after the first activation |
 
 Tests were written before the classes; the red state (47 "method not found" findings) was observed in abaplint before the implementations existed. No test has run in SAP yet.
@@ -120,7 +120,7 @@ Static checks: abaplint now also runs `cds_parser_error` and `bdef_parser_error`
 2. Activate in order: tables (incl. 23 changed + 27 draft tables) → `ZI_CD_*CfgChg` → `ZR_CD_*` → `ZC_CD_*` → DDLX → BDEF `ZR_` → behaviour pools → BDEF `ZC_` → service definitions.
 3. Create and **publish** the service bindings (ADT → New → Service Binding, binding type **OData V4 – UI**): `ZUI_CD_EBS_CFG_O4`, `ZUI_CD_FMON_CFG_O4`, `ZUI_CD_HCK_CFG_O4`, `ZUI_CD_OPS_CFG_O4`. Preview opens the Fiori elements object page of the singleton.
 4. Fiori launchpad: one tile per app (target mapping to the generated app or a Fiori tools app on the binding); business role per team (EBS — payment engine RTB, FMON — operations, HCK — RTB, alerting — RTB lead).
-5. Authorisation: SU21 object `ZCD_OPS` (fields `ACTVT`, `ZCD_PE_AREA`, `BUKRS`) from the core build; roles with `ACTVT 02` per payment engine area; `S_SERVICE` for the four services.
+5. Authorisation: SU21 object `ZCD_OPS` (fields `ACTVT`, `ZCD_PE_AREA`, `BUKRS`) from the core build; `Z_CD_OPS_CONFIG` with `ACTVT 01, 02, 03, 06` per payment engine area (create, change, display, delete each on its own; `config/auth_zcd_ops.md` §3); `S_SERVICE` for the four services. Case: a user with 02 only sees no *Create* / *Delete* result (authorisation refused), a user with 01 only cannot change an existing row.
 6. Basis: profile parameter `rec/client` so table logging records production edits (SCU3).
 7. Cases: DV1 create + update + delete on a request (E071K shows the keys); QA1 / PS4 create button greyed out, update of an existing row saved without request and visible in SCU3; each validation in §4 with one bad value.
 

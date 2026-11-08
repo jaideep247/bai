@@ -39,6 +39,8 @@
 *&            | house bank; ZCD_HCK_PMBANK merged); TY_PM_BANK removed.
 *& 2026-11-08 | A_INFLIGHT at scale: codes PAY_SNAPSHOT_STALE, PAY_EVALUATED_LIVE (message 374); PARAM4
 *&            | (TOP_N) retired - examples per finding are ZCA_PARAM PAYOUT_EXAMPLES.
+*& 2026-11-08 | Customer posting areas: method classes from ZPMC (PAY_METHODS string, built from one entry per payment
+*&            | method; GC_PAY_METHODS_SEP), lifecycle roles from ZBTR.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -166,7 +168,7 @@ INTERFACE zif_cd_hck_runtime_types
   " ------------------------------------------------------------ payments in flight
   "! D disbursement (TFK042Z-XEINZ blank), C collection (XEINZ = X)
   TYPES ty_flow TYPE c LENGTH 1.
-  "! Method class (ZCD_HCK_PMCLASS-METHOD_CLASS, e.g. WIR, ACH, CHQ, CRD): an open list of
+  "! Method class (result METHOD_CLASS of the posting area ZPMC, e.g. WIR, ACH, CHQ, CRD): an open list of
   "! configuration, never a fixed domain. Three characters: flow + class is the 4-character
   "! threshold key (ZCD_HCK_THRESH-BUKRS)
   TYPES ty_method_class TYPE c LENGTH 3.
@@ -198,19 +200,20 @@ INTERFACE zif_cd_hck_runtime_types
 
   "! DPAYH-HBKID (house bank of the payment)
   TYPES ty_hbkid TYPE c LENGTH 5.
-  "! ZCD_HCK_PMCLASS: payment methods of a flow + method class and how they are aged (HBKID blank:
-  "! the class row), or the factory calendar of one house bank of the class (HBKID filled: only
-  "! CALENDAR, e.g. UK / German bank holidays of an international ACH bank; overrides the class
-  "! calendar - table consolidation 2026-11-08, was ZCD_HCK_PMBANK). A payment method maps to a
-  "! class by the class rows only, so it stays in exactly one class per flow.
+  "! Method class of a flow from the customer posting area ZPMC (FQC0, 2026-11-08; was
+  "! ZCD_HCK_PMCLASS): the class row (HBKID blank) gathers the payment methods of the entries with
+  "! house bank '*' (one entry per payment method), or the factory calendar of one house bank of
+  "! the class (HBKID filled: an entry with that house bank; only CALENDAR is used, e.g. UK / German
+  "! bank holidays of an international ACH bank). A payment method maps to a class by the '*'
+  "! entries only - one entry per flow + payment method, so exactly one class per flow.
   TYPES:
     BEGIN OF ty_pm_class,
       flow         TYPE ty_flow,
       method_class TYPE ty_method_class,
       "! House bank of a calendar override; blank = the class row (all house banks)
       hbkid        TYPE ty_hbkid,
-      "! SAP payment methods of the class (comma list; class row only)
-      pay_methods  TYPE c LENGTH 40,
+      "! SAP payment methods of the class (comma list of the ZPMC entries; class row only)
+      pay_methods  TYPE string,
       "! Ageing basis (class row only)
       age_basis    TYPE ty_age_basis,
       "! Factory calendar of the business days (class row: blank = PARAM1 of the check)
@@ -218,6 +221,8 @@ INTERFACE zif_cd_hck_runtime_types
       description  TYPE zif_cd_hck_types=>ty_text,
     END OF ty_pm_class.
   TYPES tt_pm_class TYPE SORTED TABLE OF ty_pm_class WITH UNIQUE KEY flow method_class hbkid.
+  "! Separator of TY_PM_CLASS-PAY_METHODS
+  CONSTANTS gc_pay_methods_sep TYPE string VALUE `,`.
 
   "! Payment of a payment run (DPAYH, proposal runs excluded, DOC1R filled) with its flow.
   "! VERIFY-DDIC: DPAYH-BUKRS, PYMET, HBKID, VALUT, RWBTR, WAERS; TFK042Z-XEINZ via T001-LAND1
@@ -228,7 +233,7 @@ INTERFACE zif_cd_hck_runtime_types
       laufi    TYPE c LENGTH 6,
       bukrs    TYPE c LENGTH 4,
       pymet    TYPE ty_pymet,
-      "! House bank (calendar override per bank, ZCD_HCK_PMCLASS row with HBKID)
+      "! House bank (calendar override per bank, ZPMC entry with a house bank)
       hbkid    TYPE ty_hbkid,
       valut    TYPE d,
       amount   TYPE zif_cd_ops_types=>ty_amount,
@@ -337,7 +342,7 @@ INTERFACE zif_cd_hck_runtime_types
 
   " ------------------------------------------------------------ BAI lifecycle of a payment
   "! Code of a statement line in its scheme (BAI2 type code, ISO Domain-Family-Sub-family, PRTRY;
-  "! as ZCD_BTC_MAP) and its role in the lifecycle of one payment reference
+  "! as ZBTM) and its role in the lifecycle of one payment reference
   TYPES ty_scheme TYPE c LENGTH 5.
   TYPES ty_btc_code TYPE c LENGTH 35.
   TYPES ty_btc_role TYPE c LENGTH 15.
@@ -346,7 +351,8 @@ INTERFACE zif_cd_hck_runtime_types
   "! Separator of the ordered role sequence matched by ZCD_HCK_SEQOUT-SEQ_PATTERN
   CONSTANTS gc_role_sep TYPE string VALUE `,`.
 
-  "! ZCD_HCK_BTCROLE: the same code means different things per flow + method class; the scheme
+  "! Customer posting area ZBTR usage LIFECYCLE (was ZCD_HCK_BTCROLE): the same code means
+  "! different things per flow + method class; the scheme
   "! of a line comes from the statement format (ZCL_CD_EBS_SRC_FEB=>LINE_CODE: BAI2 / ISO / PRTRY)
   TYPES:
     BEGIN OF ty_btc_role_row,
@@ -534,7 +540,7 @@ INTERFACE zif_cd_hck_runtime_types
       "! A mandatory evidence row (REQUIRED X / C / N) is not configured or not usable: no
       "! positive conclusion for the payment, it stays in flight (design review 2026-11-07)
       undetermined       TYPE zif_cd_ops_types=>ty_check_code VALUE 'CLEARING_UNDETERMINED',
-      "! A monetary statement line of the payment has no role in ZCD_HCK_BTCROLE and is not an
+      "! A monetary statement line of the payment has no role in ZBTR (LIFECYCLE) and is not an
       "! approved exclusion (HCK_BTC_INFO_<scheme>): lifecycle INDETERMINATE
       btc_role_missing   TYPE zif_cd_ops_types=>ty_check_code VALUE 'BTC_ROLE_MISSING',
       "! A statement line fits several cheques of the same house bank account (cheque number

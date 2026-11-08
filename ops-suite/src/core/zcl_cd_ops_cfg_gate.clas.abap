@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-07 | Per-table create withdrawn: new rows only by transport from DV1 (user decision, D-3).
+*& 2026-11-08 | MAY_EDIT: editing the singleton needs ZCD_OPS 01, 02 or 06 of the area (activities per child).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - config apps: gate for behaviour pools</p>
 CLASS zcl_cd_ops_cfg_gate DEFINITION
@@ -41,6 +42,14 @@ CLASS zcl_cd_ops_cfg_gate DEFINITION
       IMPORTING
         iv_pe_area         TYPE zif_cd_ops_cfg_types=>ty_pe_area
         iv_actvt          TYPE zif_cd_ops_cfg_types=>ty_actvt
+      RETURNING
+        VALUE(rv_allowed) TYPE abap_bool.
+
+    "! Editing the singleton of an app: at least one of ZCD_OPS 01 (create), 02 (change) or
+    "! 06 (delete) for the payment engine area; each child operation checks its own activity
+    METHODS may_edit
+      IMPORTING
+        iv_pe_area        TYPE zif_cd_ops_cfg_types=>ty_pe_area
       RETURNING
         VALUE(rv_allowed) TYPE abap_bool.
 
@@ -112,6 +121,16 @@ CLASS zcl_cd_ops_cfg_gate IMPLEMENTATION.
   METHOD is_authorized.
     rv_allowed = mo_auth->is_authorized( iv_pe_area = iv_pe_area
                                          iv_actvt  = iv_actvt ).
+  ENDMETHOD.
+
+
+  METHOD may_edit.
+    rv_allowed = xsdbool( is_authorized( iv_pe_area = iv_pe_area
+                                         iv_actvt   = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
+                          OR is_authorized( iv_pe_area = iv_pe_area
+                                            iv_actvt   = zif_cd_ops_cfg_types=>gc_actvt-create ) = abap_true
+                          OR is_authorized( iv_pe_area = iv_pe_area
+                                            iv_actvt   = zif_cd_ops_cfg_types=>gc_actvt-delete ) = abap_true ).
   ENDMETHOD.
 
 

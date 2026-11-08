@@ -11,6 +11,8 @@
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
+*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
+*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -60,10 +62,47 @@ INTERFACE lif_c.
 ENDINTERFACE.
 
 
-CLASS lhc_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
+"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers
+CLASS lcl_auth DEFINITION FINAL.
+  PUBLIC SECTION.
     CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'CORE'.
 
+    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)
+    CLASS-METHODS answer
+      IMPORTING
+        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+
+    "! Editing the singleton: allowed with at least one of 01, 02 or 06 for the area
+    CLASS-METHODS edit
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+ENDCLASS.
+
+
+CLASS lcl_auth IMPLEMENTATION.
+
+  METHOD answer.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area
+                                                                               iv_actvt   = iv_actvt )
+                           = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+
+  METHOD edit.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR OpsCfgAll RESULT result.
 
@@ -75,17 +114,22 @@ ENDCLASS.
 CLASS lhc_opscfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child
-    DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(
-                                   iv_pe_area = gc_pe_area
-                                   iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
-                            THEN if_abap_behv=>auth-allowed
-                            ELSE if_abap_behv=>auth-unauthorized ).
+    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;
+    " a new child row needs 01 - change (02) and delete (06) are answered by each child entity
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lv_auth.
+      result-%update = lcl_auth=>edit( ).
     ENDIF.
     IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.
-      result-%action-Edit = lv_auth.
+      result-%action-Edit = lcl_auth=>edit( ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_AlertRule = if_abap_behv=>mk-on.
+      result-%assoc-_AlertRule = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_AlertChannel = if_abap_behv=>mk-on.
+      result-%assoc-_AlertChannel = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_ApprovedTable = if_abap_behv=>mk-on.
+      result-%assoc-_ApprovedTable = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
   ENDMETHOD.
 
@@ -114,6 +158,9 @@ CLASS lhc_alertrule DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR AlertRule RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR AlertRule RESULT result.
 
@@ -126,6 +173,17 @@ ENDCLASS.
 
 
 CLASS lhc_alertrule IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -254,6 +312,9 @@ CLASS lhc_alertchannel DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR AlertChannel RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR AlertChannel RESULT result.
 
@@ -266,6 +327,17 @@ ENDCLASS.
 
 
 CLASS lhc_alertchannel IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -361,6 +433,9 @@ CLASS lhc_approvedtable DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR ApprovedTable RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR ApprovedTable RESULT result.
 
@@ -373,6 +448,17 @@ ENDCLASS.
 
 
 CLASS lhc_approvedtable IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows

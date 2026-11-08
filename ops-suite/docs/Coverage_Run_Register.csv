@@ -1,14 +1,14 @@
 Object,Test path,Covered by,ABAP Unit methods supplied,Required statement coverage percent,Measured statement coverage percent,Status
-ZBP_R_CD_EBSCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
-ZBP_R_CD_FMONCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_EBSCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_FMONCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_FMONFILE,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
 ZBP_R_CD_FMONPRQWA,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
-ZBP_R_CD_HCKCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_HCKCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_HCKSUPPRESS,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes"
-ZBP_R_CD_OPSCFGALL,own test include,,2,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
+ZBP_R_CD_OPSCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZBP_R_CD_OPSEXCEPTION,exempt,,0,,,"Exempt: instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-08; every decision tested in ZCL_CD_OPS_EXC_POLICY"
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
-ZCL_CD_EBS_CFG_DAO,own test include,,13,90,,Not run in target SAP
+ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
 ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,own test include,,43,90,,Not run in target SAP
 ZCL_CD_EBS_FACTORY,own test include,,5,90,,Not run in target SAP
@@ -102,6 +102,7 @@ ZCL_CD_HCK_C_JOB_RUNTIME,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_NUMRANGE,own test include,,10,90,,Not run in target SAP
 ZCL_CD_HCK_C_OVERDUE_EXC,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_PARAM,own test include,,5,90,,Not run in target SAP
+ZCL_CD_HCK_C_POSTAREA,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_CANCEL,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_PRQ_SPE,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_C_QUEUES,own test include,,10,90,,Not run in target SAP
@@ -132,7 +133,7 @@ ZCL_CD_HCK_RECON_CDS_TEST,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_EVAL,own test include,,23,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,own test include,,8,90,,Not run in target SAP
-ZCL_CD_HCK_RUNTIME_DAO,own test include,,15,90,,Not run in target SAP
+ZCL_CD_HCK_RUNTIME_DAO,own test include,,16,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_STATS,own test include,,12,90,,Not run in target SAP
 ZCL_CD_HCK_SUPPRESSION,own test include,,11,90,,Not run in target SAP
@@ -143,10 +144,10 @@ ZCL_CD_OPS_ALERT_POLICY,own test include,,20,90,,Not run in target SAP
 ZCL_CD_OPS_ALERT_ROUTER,own test include,,15,90,,Not run in target SAP
 ZCL_CD_OPS_AUTH,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_AUTH,own test include,,2,90,,Not run in target SAP
-ZCL_CD_OPS_CFG_CHECKS,own test include,,22,90,,Not run in target SAP
+ZCL_CD_OPS_CFG_CHECKS,own test include,,38,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CLIENT,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_FACTORY,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_CFG_GATE (construction only: the gate test resolves through it)
-ZCL_CD_OPS_CFG_GATE,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_CFG_GATE,own test include,,9,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_CFG_GATE (test seam: injected and reset by the gate test)
 ZCL_CD_OPS_CFG_POLICY,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_TRANSPORT,own test include,,2,90,,Not run in target SAP
@@ -171,6 +172,11 @@ ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,16,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAP_OP,covered,ZCL_CD_OPS_PAY_SNAPSHOT,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_PAY_SNAPSHOT (bgPF operation (one call): the snapshot tests run it through their queue double (parallel packages); bgPF execution itself - QA case POC-14)
 ZCL_CD_OPS_PAY_SNAP_QUEUE,own test include,,2,90,,Not run in target SAP; partial exemption: CX_BGMC branch not injected: CX_BGMC instantiation is VERIFY-ADT on 7.58 SP01 - QA case POC-14
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)
+ZCL_CD_OPS_POSTAREA,own test include,,7,90,,Not run in target SAP
+ZCL_CD_OPS_POSTAREA_DAO,own test include,,3,90,,Not run in target SAP
+ZCL_CD_OPS_POSTAREA_FACTORY,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (construction only: every reader test resolves the reader and the repository through it)
+ZCL_CD_OPS_POSTAREA_INJECTOR,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (test seam: injected and reset by every reader test)
+ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_POSTAREA (test double (in-memory posting areas): every reader test adds entries and counts its reads)
 ZCL_CD_OPS_PURGE,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_PURGE_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_OPS_RUN_GUARD,own test include,,4,90,,Not run in target SAP

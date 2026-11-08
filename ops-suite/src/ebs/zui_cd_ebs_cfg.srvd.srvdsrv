@@ -2,11 +2,9 @@
 @ObjectModel.leadingEntity.name: 'ZC_CD_EBSCFGALL'
 define service ZUI_CD_EBS_CFG {
   expose ZC_CD_EbsCfgAll as EbsCfgAll;
-  expose ZC_CD_BtcMap as BtcMap;
   expose ZC_CD_BtcRule as BtcRule;
   expose ZC_CD_RuleDef as RuleDef;
   expose ZC_CD_HouseBankAcct as HouseBankAcct;
   expose ZC_CD_FlowPattern as FlowPattern;
-  expose ZC_CD_ReasonMap as ReasonMap;
   expose ZC_CD_EbsLookup as EbsLookup;
 }

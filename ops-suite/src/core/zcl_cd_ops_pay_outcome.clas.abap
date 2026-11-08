@@ -3,7 +3,7 @@
 *& Purpose:
 *& The canonical payment outcome evaluator (ZIF_CD_OPS_PAY_OUTCOME),
 *& extracted unchanged from the morning report check A_INFLIGHT: method
-*& classes and house-bank calendars (ZCD_HCK_PMCLASS, HBKID rows), rules per
+*& classes and house-bank calendars (posting area ZPMC, HBKID entries), rules per
 *& flow + class and purpose (ZCD_HCK_CLRRULE: VOIDED, RETURNED, RETRIEVED,
 *& PENDING, CLEARED, IN_FLIGHT - the first purpose with evidence decides;
 *& X mandatory indicator, C mandatory corroboration, N must not hold,
@@ -31,6 +31,8 @@
 *&            | are calendar overrides (ZCD_HCK_PMBANK merged into ZCD_HCK_PMCLASS).
 *& 2026-11-08 | FINAL_OUTCOMES: the one definition of a final outcome (CLEARED, RETURNED, RETRIEVED,
 *&            | VOIDED, REVERSED) used by the snapshot recheck, the purge and A_INFLIGHT.
+*& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
+*&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through

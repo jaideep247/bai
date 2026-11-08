@@ -42,6 +42,46 @@ class BpTestsTemplateTest(unittest.TestCase):
         self.assertEqual(len(names), len(rap_generate.SPEC))
 
 
+class ActivityPerChildTest(unittest.TestCase):
+    """ZCD_OPS per child entity (user 2026-11-08): create 01 on the root association, change 02 and
+    delete 06 on the child (authorization master), editing the singleton with one of the three."""
+
+    def setUp(self):
+        self.app = rap_generate.SPEC['hck']
+        self.app['chg'] = self.app['root'].replace('All', 'Chg')
+        self.tables = [dict(table=t[0], alias=t[1], draft=t[2], singular=t[3], plural=t[4], blank_keys=t[5],
+                            checks=[], fields=[dict(key=True, name='id', el='Id', type='abap.char(1)')])
+                       for t in self.app['tables']]
+
+    def test_every_child_is_authorization_master(self):
+        text = rap_generate.bdef_r(self.app, self.tables)
+        self.assertNotIn('authorization dependent by', text)
+        self.assertEqual(text.count('authorization master ( global )'), len(self.tables) + 1)
+
+    def test_root_create_needs_01_edit_needs_one(self):
+        text = rap_generate.bp_locals(self.app, self.tables)
+        for t in self.tables:
+            self.assertIn(f"result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create )",
+                          text)
+        self.assertIn('result-%action-Edit = lcl_auth=>edit( ).', text)
+        self.assertIn('->may_edit( gc_pe_area )', text)
+        self.assertIn("VALUE 'HCK'", text)
+
+    def test_child_change_02_delete_06(self):
+        text = rap_generate.bp_locals(self.app, self.tables)
+        self.assertEqual(text.count('result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change )'),
+                         len(self.tables))
+        self.assertEqual(text.count('result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete )'),
+                         len(self.tables))
+
+    def test_permission_tests_per_activity(self):
+        text = rap_generate.bp_tests(self.app)
+        for name in ('change_only_no_create_delete', 'create_only_no_change', 'delete_only_may_delete',
+                     'no_activity_no_edit'):
+            self.assertIn(f'METHODS {name} FOR TESTING.', text)
+        self.assertIn(f"GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_{self.tables[0]['alias'].lower()}", text)
+
+
 class PcreCheckTemplateTest(unittest.TestCase):
     """Pattern fields of the configuration apps are validated on save as PCRE (message 418)."""
 

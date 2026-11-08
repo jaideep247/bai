@@ -3,7 +3,7 @@
 *& Purpose:
 *& R05: return / NOC reason. Bank file (before import): the NACHA return reason
 *& (R01-R85) or NOC code (C01-C07) of the file must be mapped to a payment
-*& engine reason in ZCD_EBS_RSN_MAP (PARAM1 = REQUIRED also fails entries
+*& engine reason in the posting area ZRSN (PARAM1 = REQUIRED also fails entries
 *& without a reason; without any mapping only the format is checked). Imported
 *& statement (FEB source, FEBEP carries no reason): the reason of the returns
 *& lot item (DFKKRP-RLGRD by SELW1 = payment document) or of the NOC lot item
@@ -18,6 +18,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Return / NOC reason correction: FEB source checks the lot reasons DFKKRP-RLGRD and
 *&            | DFKKNRP-FLGRD (FEBEP carries no reason); the bank-file check is unchanged.
+*& 2026-11-08 | Customer posting area ZRSN: the reason of a bank file line is the entry that applies (get_reason:
+*&            | exact beats *), was a key read of ZCD_EBS_RSN_MAP.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R05 - valid return / NOC reason</p>
 CLASS zcl_cd_ebs_r_r05_reason DEFINITION
@@ -73,7 +75,7 @@ CLASS zcl_cd_ebs_r_r05_reason DEFINITION
       CHANGING
         ct_findings TYPE zif_cd_ops_types=>tt_finding.
 
-    "! Configured payment engine reasons of one kind (ZCD_EBS_RSN_MAP-FICA_REASON of the
+    "! Configured payment engine reasons of one kind (ZRSN result FICA_REASON of the
     "! return rows or of the NOC rows); placeholders and blank values are no reason
     METHODS valid_reasons
       IMPORTING
@@ -258,8 +260,9 @@ CLASS zcl_cd_ebs_r_r05_reason IMPLEMENTATION.
       RETURN.
     ENDIF.
     IF it_reasons IS NOT INITIAL.
-      READ TABLE it_reasons INTO DATA(ls_map) WITH TABLE KEY reason = is_line-return_reason.
-      IF sy-subrc <> 0.
+      " The entry that applies (FQC0: the exact reason beats a '*' entry of ZRSN)
+      DATA(ls_map) = zcl_cd_ebs_factory=>get_cfg_dao( )->get_reason( is_line-return_reason ).
+      IF ls_map IS INITIAL.
         INSERT zcl_cd_ebs_finding=>for_rule_line(
                  is_rule = is_rule is_line = is_line iv_check_code = zif_cd_ebs_types=>gc_check_code-reason_unmapped
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-reason_unmapped

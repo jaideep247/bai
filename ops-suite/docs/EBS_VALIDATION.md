@@ -24,7 +24,7 @@ It **reports findings and never stops a posting**: by the time it runs every lin
 
 | Finding | What it means after posting | Correction route (operator, runbook) | Owner |
 |---|---|---|---|
-| **R14 UNMAPPED_BTC** | No posting rule fired — the line is still open in post-processing | Map the code (ZCD_BTC_MAP, §B6a), then post the line from FEBAN (reprocess) | Payment engine support + Treasury |
+| **R14 UNMAPPED_BTC** | No posting rule fired — the line is still open in post-processing | Map the code (posting area ZBTM in FQC0, §B6a), then post the line from FEBAN (reprocess) | Payment engine support + Treasury |
 | **R07 / R07C / R07L / R07R / R21** not found or wrong status | The line posted, but the payment engine record it should match (payment run, cheque, retrieval, returns lot, lookup table) is missing or in another status | Clarify the payment lot in FPCPL, or reverse and repost the line with the correct reference | Disbursement ops |
 | **R08 / R12** amount or total differs | Posted amount differs from the cheque register | Clarify with the bank; reversal / repost if the posting is wrong | Disbursement ops |
 | **R19 FI_DOC_NOT_FOUND / FI_DOC_NOT_CLEARED / NOT_POSTED** | Posting flags complete but no FI document, or the document is not cleared after the clearing job | Check the clearing job; clarify in FPCPL; FEBAN reprocess for a line without document | Payment engine support |
@@ -113,7 +113,7 @@ Production codes used today (legacy validators, disbursement accounts) keep thei
 
 | Signal | Meaning | First action | Owner |
 |---|---|---|---|
-| **R14 UNMAPPED_BTC** (B) | The bank used a code nobody configured | Do not post manually. Identify the code on the bank's code sheet, add a ZCD_BTC_MAP row (category + rule group), re-run validation | Payment engine support + Treasury |
+| **R14 UNMAPPED_BTC** (B) | The bank used a code nobody configured | Do not post manually. Identify the code on the bank's code sheet, add a ZBTM entry in FQC0 by transport (category + rule group, `FICA_Posting_Areas.md` §5), re-run validation | Payment engine support + Treasury |
 | **S01 OPENING_NE_PRIOR_CLOSING** | A statement is missing or was loaded twice | Check FEBKO for the account; request the missing statement from the bank | Treasury |
 | **S02 BALANCE_ARITHMETIC** (B) | The file does not add up | Reject the file, ask the bank to resend | Treasury |
 | **S06 control totals** (B, from parser) | File corrupted / truncated in transit | Do not import; request resend via PRISM | Payment engine support |
@@ -133,7 +133,7 @@ Production codes used today (legacy validators, disbursement accounts) keep thei
 | **CAMT_DOCUMENT / INVALID_AMOUNT / INVALID_COUNT** (B, CAMT) | Namespace / version not approved, second message body, wrong statement element, or a value that is not a number | Request a corrected file; a new CAMT version is a parser change (§B6a) | Payment engine support |
 | **ENTRY_NOT_BOOKED** (W, CAMT) | Entry with status PDNG / INFO (or none) — quarantined, not posted | Wait for the booked entry in a later statement | Treasury |
 | **CAMT_BATCH_MISMATCH** (B) / **CAMT_DETAIL_AMOUNT_MISSING** (E) | Transaction details do not add up to their entry, or a detail has no amount | Post the entry manually from the bank advice; the detail lines are not emitted | Payment engine support |
-| **MAP_CONFLICT** (B) | ZCD_BTC_MAP has a blank-flow row and a `*` row for the same code that contradict each other | Delete one row (the app stores `*`) | Payment engine support |
+| **MAP_CONFLICT** (B) | ZBTM has a blank and a `*` entry (flow or bank) for the same code that contradict each other | Remove the blank entry by transport (`*` = any; `D_POSTAREA_INVALID` reports a blank bank key / flow) | Payment engine support |
 
 ## Part B — Technical
 
@@ -148,7 +148,7 @@ flowchart LR
   F -->|ZCL_CD_EBS_SRC_FILE + parser| P[Package: statements, lines, parser findings S00/S06/S11/S12]
   I -->|ZCL_CD_EBS_SRC_FEB, N statements per package| P
   P --> E0[0. Scope: FEB statements whose lines are not all payment engine accounts XBLNR → removed, counted out of scope]
-  E0 --> E1[1. Resolver: account config, flow, ZCD_BTC_MAP → category / rule group; unmapped → R14 BLOCK]
+  E0 --> E1[1. Resolver: account config, flow, posting area ZBTM → category / rule group; unmapped → R14 BLOCK]
   E1 --> E2[2. Statement rules S01–S12, R18]
   E2 --> E3[3. Line rules per rule group + '*' — blocked lines skipped]
   E3 --> ST[(ZCD_OPS_RUN / ZCD_OPS_FINDING)]
@@ -175,15 +175,15 @@ Points of no return: the commit after each package (findings durable) and the al
 
 | Table | Key | Holds |
 |---|---|---|
-| ZCD_BTC_MAP | SCHEME, BTC_CODE, BANK_KEY, FLOW_TYPE | Category, rule group, expected direction, payment method, posting rule, action, **disposition** (blank = posted as usual, NOT_POSTED = never posted, A26) |
+| Posting area **ZBTM** (FI-CA customer posting area, FQC0; was ZCD_BTC_MAP, user decision 2026-11-08) | SCHEME, CODE (ISO: domain), FAMILY, SUB_FAMILY (ISO `*` = family row), BANK_KEY (`*` = every bank), FLOW (`*` = any) | Category, rule group, expected direction, payment method, posting rule, action, **disposition** (blank = posted as usual, NOT_POSTED = never posted, A26); an entry that exists applies (no ACTIVE flag); `FICA_Posting_Areas.md` |
 | ZCD_EBS_RULE_DEF | RULE_ID | Rule registry: level S/L, class, default severity/action, **NEEDS_POSTING** (rule reads posting evidence — not evaluated for a line expected to post but not posted, §A0), **FINDING_CLASS** (dashboard class of the rule's findings: DUPLICATE — seed S07, R09, R22; POSTING — seed S13; blank = neither; read by `ZI_CD_EbsFinding`) |
 | ZCD_BTC_RULE | RULE_GROUP, RULE_ID | Rule assignment per group (`*` = all) with severity, action, PARAM1–3, tolerance, window. RULE_ID **NONE** marks a group that intentionally has no code-specific rule (A03) |
 | ZCD_EBS_ACCT | BUKRS, HBKID, HKTID | **ACCOUNT_NO = 10-character payment engine account as derived from FEBEP-XBLNR** (§A0a; upper case, no leading blank — the active rows are the scope of validation and dashboard), bank key, format, default flow, currency, bank G/L, ACTIVE |
 | ZCD_EBS_FLOW_PAT | PRIORITY, PATTERN | XBLNR pattern → flow (ported ZB_BAI_GL_CONFIG); PATTERN is PCRE, matched to the **complete value** (`matches( )` — never a partial `find`), **case ignored** (as the former CP wildcards), blank keeps its meaning at each place — see §B3a |
-| ZCD_EBS_RSN_MAP | REASON | NACHA R01–R85 / NOC C01–C07 → payment engine return reason |
+| Posting area **ZRSN** (FQC0; was posting area ZRSN (FQC0, was ZCD_EBS_RSN_MAP)) | REASON (`*` = every other reason) | NACHA R01–R85 / NOC C01–C07 → payment engine return reason, NOC flag |
 | ZCD_EBS_LOOKUP | LOOKUP_ID | Generic lookups of rule R21: table, key field, key kind (DOCNO / ZTNUM / REFERENCE), key length, status field, allowed values, check codes |
 
-Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow → blank bank + `*`; ISO codes then fall back to the family row (`PMNT-ICDT`), then the proprietary code (BAI type codes in CAMT `Prtry` with issuer BAI reuse the BAI2 rows when `EBS_CAMT_BAI_FALLBACK` = X), then scheme PRTRY. Nothing found → X01.
+Lookup order in ZBTM (the FQC0 order, `FICA_Posting_Areas.md` §1 - bank `*` arrives as the blank bank): bank + flow → bank + `*` → every bank + flow → every bank + `*`; ISO codes then fall back to the family row (`PMNT-ICDT`), then the proprietary code (BAI type codes in CAMT `Prtry` with issuer BAI reuse the BAI2 rows when `EBS_CAMT_BAI_FALLBACK` = X), then scheme PRTRY. Nothing found → X01.
 
 ### B3a. Flow patterns (PCRE, user decision 2026-11-06)
 
@@ -231,7 +231,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 
 **Configuration gaps (A03).** A finding carries the severity and action of its rule assignment (registry default when blank). A mapped rule group without usable rule, or an assignment whose definition is missing or inactive, is a configuration gap (action BLOCK).
 
-**R05 — return / NOC reason (correction 2026-11-06).** FEBEP carries **no** return or NOC reason. *Bank file before import* (BAI2 / CAMT): the NACHA code delivered in the file (R01–R85, C01–C07) must be mapped in ZCD_EBS_RSN_MAP — unchanged (A28: placeholder = REASON_MAP_INCOMPLETE, NOC vs return = REASON_KIND, PARAM1 REQUIRED, format check without mapping). *Imported statement (FEB source)*: the reason is read from the lot the return / NOC processing created — returns: **DFKKRP-RLGRD** of the returns lot items with SELW1 = payment document (FEBEP-CHECT, methods E G H I J K L; the same read as R07R); NOC: **DFKKNRP-FLGRD** of the NOC lot items whose **INFOF** (CHAR 50) holds the payment document (AUGBL) or the payment reference — read with every form the reference can take (as delivered, without leading zeros, as 12-digit document key) and matched after condensing and removing leading zeros of all-digit values (`EBS_ZTNUM_IGNORE_ZEROS`); exact INFOF content VERIFY-SE11. The reason must be filled (else REASON_MISSING), one and the same for all items of the payment (else REASON_AMBIGUOUS, listing the reasons) and a configured payment engine reason of its kind — FICA_REASON of a ZCD_EBS_RSN_MAP return row for RLGRD, of a NOC row (C01–C07) for FLGRD, never a placeholder (else REASON_UNMAPPED). PARAM2 RETURN reads only the returns lot, NOC only the NOC lot, blank both. A payment without lot item is **not evaluated** by R05 (R07R / S13 own a missing lot — no second failure). R05 is seeded **NEEDS_POSTING**: the lots exist only after return / NOC processing, so an entry that is not posted yet is never judged.
+**R05 — return / NOC reason (correction 2026-11-06).** FEBEP carries **no** return or NOC reason. *Bank file before import* (BAI2 / CAMT): the NACHA code delivered in the file (R01–R85, C01–C07) must be mapped in posting area ZRSN (FQC0, was ZCD_EBS_RSN_MAP) — unchanged (A28: placeholder = REASON_MAP_INCOMPLETE, NOC vs return = REASON_KIND, PARAM1 REQUIRED, format check without mapping). *Imported statement (FEB source)*: the reason is read from the lot the return / NOC processing created — returns: **DFKKRP-RLGRD** of the returns lot items with SELW1 = payment document (FEBEP-CHECT, methods E G H I J K L; the same read as R07R); NOC: **DFKKNRP-FLGRD** of the NOC lot items whose **INFOF** (CHAR 50) holds the payment document (AUGBL) or the payment reference — read with every form the reference can take (as delivered, without leading zeros, as 12-digit document key) and matched after condensing and removing leading zeros of all-digit values (`EBS_ZTNUM_IGNORE_ZEROS`); exact INFOF content VERIFY-SE11. The reason must be filled (else REASON_MISSING), one and the same for all items of the payment (else REASON_AMBIGUOUS, listing the reasons) and a configured payment engine reason of its kind — FICA_REASON of a posting area ZRSN (FQC0, was ZCD_EBS_RSN_MAP) return row for RLGRD, of a NOC row (C01–C07) for FLGRD, never a placeholder (else REASON_UNMAPPED). PARAM2 RETURN reads only the returns lot, NOC only the NOC lot, blank both. A payment without lot item is **not evaluated** by R05 (R07R / S13 own a missing lot — no second failure). R05 is seeded **NEEDS_POSTING**: the lots exist only after return / NOC processing, so an entry that is not posted yet is never judged.
 
 **Posting-dependent rules (operating model 2026-11-06).** Seeded NEEDS_POSTING: R05, R07, R07L, R07R, R18, R19, R21, S10 (reasons in §A0). For an imported entry expected to post but not posted they are not evaluated; S13 reports the statement.
 
@@ -262,10 +262,10 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 
 | Change | Rows to add | Code? |
 |---|---|---|
-| New bank transaction code (acceptance test 3) | ZCD_BTC_MAP row (scheme, code, bank or blank, flow, category, rule group); optional ZCD_BTC_RULE rows for a new rule group | No |
-| New bank | ZCD_EBS_ACCT rows with BANK_KEY = the bank identifier as in the statement (user decision 2026-11-07); bank-specific ZCD_BTC_MAP rows (same BANK_KEY) only where the bank deviates; the FMON interface rows of the bank carry the same value | No |
+| New bank transaction code (acceptance test 3) | ZBTM entry in FQC0 (scheme, code, bank or `*`, flow, category, rule group); optional ZCD_BTC_RULE rows for a new rule group | No |
+| New bank | ZCD_EBS_ACCT rows with BANK_KEY = the bank identifier as in the statement (user decision 2026-11-07); bank-specific ZBTM entries (same BANK_KEY) only where the bank deviates; the FMON interface rows of the bank carry the same value | No |
 | New validation rule parameterisation (acceptance test 4: closing deviates > 0.01) | ZCD_BTC_RULE row `*` / S01 with TOLERANCE 0.01, SEVERITY B, ACTION BLOCK | No |
-| New return reason | ZCD_EBS_RSN_MAP row | No |
+| New return reason | ZRSN entry in FQC0 | No |
 | New collection/disbursement account | ZCD_EBS_ACCT row (ACTIVE, ACCOUNT_NO = payment engine account from XBLNR, §A0a); ZCD_EBS_FLOW_PAT if XBLNR identifies the flow | No |
 | New bank text in XBLNR (letters before the account) | Nothing — any leading letters are removed | No |
 | Account part of XBLNR not 10 characters / bank text with digits | `GC_PE_ACCOUNT` in `ZIF_CD_EBS_TYPES` **and** the literals in `ZI_CD_EbsLineAcct` (+ tests) | Yes — both together |
@@ -279,7 +279,7 @@ Lookup order in ZCD_BTC_MAP: bank + flow → bank + `*` → blank bank + flow �
 All steps in the **EBS configuration app** (`ZUI_CD_EBS_CFG_O4`). New rows are created in DV1 and transported (design D-3).
 
 1. **Is the code already handled?** The morning report / EBS run shows R14 `UNMAPPED_BTC` for it (blocked, never posted). Check the bank's code sheet with Treasury: meaning, debit or credit, collection or disbursement.
-2. **Map the code** — one ZCD_BTC_MAP row: scheme, code, bank (blank = all banks), flow (D / C / `*`), category, expected direction, rule group.
+2. **Map the code** — one ZBTM entry in FQC0 (FI-CA team, customizing request): scheme, code (ISO: domain / family / sub-family), bank (`*` = all banks), flow (D / C / `*`), category, expected direction, rule group.
    - Same behaviour as an existing code → reuse its rule group (examples, decision 2026-11-06: **143 → BAI166C on collection accounts only**; **452 → BAI468D**).
    - No code-specific checks → leave the rule group blank (= category, generic `*` rules only; example: **275 / 575 sweeps**).
 3. **Validations with existing rules** — ZCD_BTC_RULE rows for the rule group: R01–R19 with PARAM1–3, tolerance and window (catalog B4).
@@ -297,7 +297,7 @@ Syntax and typing checked offline with abaplint (v758 rules, SAP stub library). 
 
 ## Overlap with the morning report check A_INFLIGHT (2026-11-07)
 
-EBS validates each statement line at import (rule groups BAI166 / 168 / 195D / 466 / 468D: payment present, retrieval status, returns lot). The morning report check `A_INFLIGHT` evaluates the **whole lifecycle** of one payment reference across lines and days (roles per flow + class in `ZCD_HCK_BTCROLE`, sequences in `ZCD_HCK_SEQOUT`, `HCK_MORNING_REPORT.md` §7b-2) - e.g. 468 is a collection failure (redeposit pending) for collections and a retrieval failure for disbursement ACH, 195 a wire return on disbursement accounts and the Stripe payout deposit on the collection account. No EBS logic is duplicated: the scheme / code of a line comes from `ZCL_CD_EBS_SRC_FEB=>LINE_CODE` (also used by EBS), the returns lot from `ZIF_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS` (now with the item amount DFKKRP-BETRW, VERIFY-DDIC), DPAYH status from `GET_PAYMENTS`; the dependency is one-way (HCK → EBS readers). `ZCD_BTC_MAP` (line categories and rule groups) and `ZCD_HCK_BTCROLE` (payment lifecycle) answer different questions and stay separate.
+EBS validates each statement line at import (rule groups BAI166 / 168 / 195D / 466 / 468D: payment present, retrieval status, returns lot). The morning report check `A_INFLIGHT` evaluates the **whole lifecycle** of one payment reference across lines and days (roles per flow + class in the posting area `ZBTR`, sequences in `ZCD_HCK_SEQOUT`, `HCK_MORNING_REPORT.md` §7b-2) - e.g. 468 is a collection failure (redeposit pending) for collections and a retrieval failure for disbursement ACH, 195 a wire return on disbursement accounts and the Stripe payout deposit on the collection account. No EBS logic is duplicated: the scheme / code of a line comes from `ZCL_CD_EBS_SRC_FEB=>LINE_CODE` (also used by EBS), the returns lot from `ZIF_CD_EBS_SAP_DAO=>GET_RETURN_ITEMS` (now with the item amount DFKKRP-BETRW, VERIFY-DDIC), DPAYH status from `GET_PAYMENTS`; the dependency is one-way (HCK → EBS readers). posting area `ZBTM` (line categories and rule groups) and posting area `ZBTR` (payment lifecycle) answer different questions and stay separate.
 
 **Cheques (581 / 255 / corrections).** `A_INFLIGHT` evaluates the cheque lifecycle of a payment (DFKKCR-DOC1R = AUGBL → ZTNUM → last 13 characters = FEBEP-CHECT: clarification for several 581 / 255, manual clearing in FPCHR after a correction 399 / 699, 581 amount against the payment amount). A 581 or correction line whose cheque number matches **no** cheque in the register cannot be tied to a payment there; it is reported by EBS at import (rule group BAI581D: R08 against the register by ZTNUM; BAI255D: R07C) - no second implementation.
 

@@ -19,6 +19,7 @@
 *& 2026-11-06 | Return / NOC reason correction: TY_RETURN_ITEM-RLGRD (DFKKRP return reason, same read);
 *&            | get_noc_items - NOC lot items (DFKKNRP) by INFOF with their NOC reason FLGRD.
 *& 2026-11-07 | TY_RETURN_ITEM-AMOUNT (DFKKRP-BETRW) for the in-flight check (shared read, A_INFLIGHT).
+*& 2026-11-08 | Customer posting area: FICA_REASON is a result of ZRSN (was ZCD_EBS_RSN_MAP) - comment only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -35,7 +36,7 @@ INTERFACE zif_cd_ebs_sap_dao
   TYPES tt_ztnum TYPE SORTED TABLE OF ty_ztnum WITH UNIQUE KEY table_line.
   TYPES ty_status TYPE c LENGTH 20.
   "! Payment engine return / NOC reason of a lot item (DFKKRP-RLGRD, DFKKNRP-FLGRD; VERIFY-SE11
-  "! length 3 as ZCD_EBS_RSN_MAP-FICA_REASON)
+  "! length 3 as the ZRSN result FICA_REASON)
   TYPES ty_lot_reason TYPE c LENGTH 3.
   "! DFKKNRP-INFOF (CHAR 50): the payment document (AUGBL) or the payment reference
   TYPES ty_infof TYPE c LENGTH 50.

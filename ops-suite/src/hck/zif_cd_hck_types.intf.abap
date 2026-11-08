@@ -40,6 +40,7 @@
 *&            | parameter MON_STALE_AFTER_MIN_<area>).
 *& 2026-11-08 | Table consolidation: TY_AGG_DEF-EXPECTED_GROUPS (comma list, TY_GROUP_LIST) replaces
 *&            | ZCD_HCK_AGGGRP; TY_AGG_GROUP removed.
+*& 2026-11-08 | Customer posting areas: GC_BTC_USAGE is key USAGE of ZBTR; check code POSTAREA_INVALID.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -218,6 +219,9 @@ INTERFACE zif_cd_hck_types
       suppression_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'SUPPRESSION_PATTERN_INVALID',
       "! A parameter of the suite that ZCA_PARAM refuses (ZCL_CD_HCK_C_PARAM)
       param_invalid    TYPE zif_cd_ops_types=>ty_check_code VALUE 'PARAM_INVALID',
+      "! An entry of a customer posting area ZRSN / ZPMC / ZBTM / ZBTR its reader cannot use
+      "! (ZCL_CD_HCK_C_POSTAREA, ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS)
+      postarea_invalid TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTAREA_INVALID',
     END OF gc_code.
 
   CONSTANTS:
@@ -831,7 +835,8 @@ INTERFACE zif_cd_hck_types
       run_scope                   TYPE zif_cd_ops_types=>ty_msgno VALUE '300',
     END OF gc_msg.
 
-  "! ZCD_HCK_BTCROLE-USAGE (table consolidation 2026-11-08): the role of a bank code in the payment
+  "! Usage of a bank code role, key USAGE of the customer posting area ZBTR (was ZCD_HCK_BTCROLE-USAGE,
+  "! table consolidation 2026-11-08): the role of a bank code in the payment
   "! lifecycle (A_INFLIGHT; SCOPE = flow + method class) or in a reconciliation set (A_RECON_3WAY;
   "! SCOPE = set id, was ZCD_HCK_RCBTC). Each reader reads only its own usage.
   TYPES ty_btc_usage TYPE c LENGTH 10.

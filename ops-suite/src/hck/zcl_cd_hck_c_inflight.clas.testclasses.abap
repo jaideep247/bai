@@ -50,6 +50,8 @@
 *&            | marker PAY_STATUS_PENDING after the grace is PAY_STATUS_LAG, final outcomes only within
 *&            | the window, a stale or never-run snapshot is PAY_SNAPSHOT_STALE with evidence PARTIAL,
 *&            | snapshotted documents are not evaluated live (PAY_NOT_SNAPSHOT counts the others).
+*& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
+*&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -552,7 +554,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_methods  TYPE clike
         iv_basis    TYPE zif_cd_hck_runtime_types=>ty_age_basis DEFAULT zif_cd_hck_runtime_types=>gc_age_basis-value_date
         iv_calendar TYPE zif_cd_hck_types=>ty_calendar OPTIONAL.
-    "! ZCD_HCK_PMCLASS row of house bank Barclays (UK calendar) for the wire class: HBKID filled,
+    "! ZPMC entry (posting area, was ZCD_HCK_PMCLASS) of house bank Barclays (UK calendar) for the wire class: HBKID filled,
     "! calendar only (table consolidation 2026-11-08, was ZCD_HCK_PMBANK)
     METHODS add_bank_calendar.
     METHODS add_rule
@@ -937,7 +939,7 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the calendar of the house bank (ZCD_HCK_PMCLASS row with HBKID; table consolidation
+  " Rule: the calendar of the house bank (posting area ZPMC entry with HBKID; table consolidation
   " 2026-11-08, was ZCD_HCK_PMBANK) wins over the class and the check calendar - UK holiday Monday,
   " US holiday Tuesday (international ACH via Barclays); the bank row maps no payment method
   METHOD bank_calendar_overrides.

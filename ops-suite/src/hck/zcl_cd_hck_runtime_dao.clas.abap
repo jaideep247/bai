@@ -7,8 +7,9 @@
 *& against the runtime DDIC and, for a configured table, ZCD_OPS_TABWL),
 *& DPAYH payments in a run-date window with the collection indicator of
 *& their method (TFK042Z via T001), G/L lines by XREF2 (BSEG) and the
-*& active rows of the in-flight configuration (ZCD_HCK_PMCLASS, _CLRRULE,
-*& HBKID rows = house-bank calendars, _BTCROLE usage LIFECYCLE, _SEQOUT).
+*& in-flight configuration: active rows of ZCD_HCK_CLRRULE / _SEQOUT and the
+*& entries of the customer posting areas ZPMC (method classes, house-bank
+*& calendars) and ZBTR usage LIFECYCLE (ZCL_CD_OPS_POSTAREA, one read per run).
 *& Every read is keyed or window-bounded and capped. Read-only: no INSERT
 *& / UPDATE / DELETE, no lock, no queue or interval is changed.
 *& Unconfirmed names: VERIFY-DDIC (Release_Readiness.md).
@@ -25,6 +26,9 @@
 *&            | ZCA_PARAM parameters HCK_STRIPE_*.
 *& 2026-11-08 | Table consolidation: get_pm_classes returns the class rows and the house-bank calendar rows
 *&            | (key HBKID); get_pm_banks (ZCD_HCK_PMBANK) removed.
+*& 2026-11-08 | Customer posting areas: get_pm_classes from ZPMC (one entry per payment method, house bank * = class,
+*&            | a house bank = calendar) and get_btc_roles from ZBTR usage LIFECYCLE through ZCL_CD_OPS_POSTAREA (were
+*&            | SELECTs on ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -36,6 +40,13 @@ CLASS zcl_cd_hck_runtime_dao DEFINITION
     INTERFACES zif_cd_hck_runtime_dao.
 
   PRIVATE SECTION.
+    "! Code of a ZBTR entry in its scheme: ISO = domain-family-sub-family, else the code key
+    CLASS-METHODS code_of
+      IMPORTING
+        is_entry       TYPE zif_cd_ops_postarea_types=>ty_entry
+      RETURNING
+        VALUE(rv_code) TYPE zif_cd_hck_runtime_types=>ty_btc_code.
+
     "! Fragments of the dynamic queue statement (aliases = components of TY_QUEUE_GROUP)
     CONSTANTS:
       BEGIN OF gc_sql,
@@ -261,13 +272,31 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_runtime_dao~get_pm_classes.
-    " Class rows (HBKID blank) and the calendar overrides of house banks in one read (ZCD_HCK_PMBANK
-    " merged, 2026-11-08); the caller separates them
-    SELECT flow, method_class, hbkid, pay_methods, age_basis, calendar, description
-      FROM zcd_hck_pmclass
-      WHERE active = @abap_true
-      ORDER BY flow, method_class, hbkid
-      INTO CORRESPONDING FIELDS OF TABLE @rt_classes.
+    " ZPMC (FQC0): one entry per flow + payment method + house bank; house bank '*' = the class of the
+    " payment method, a house bank = the calendar of that bank. The caller separates class rows
+    " (HBKID blank) and house-bank rows; an entry that cannot be used is a configuration finding
+    LOOP AT zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-pm_class )
+         ASSIGNING FIELD-SYMBOL(<ls_entry>)
+         WHERE key01 <> zif_cd_ops_postarea_types=>gc_generic AND key02 <> zif_cd_ops_postarea_types=>gc_generic
+           AND key02 IS NOT INITIAL AND fun01 IS NOT INITIAL.
+      IF <ls_entry>-key03 <> zif_cd_ops_postarea_types=>gc_generic.
+        " Calendar of a house bank: the first entry of the class and bank counts (the check
+        " reports entries of one class and bank with different calendars)
+        INSERT VALUE #( flow = <ls_entry>-key01 method_class = <ls_entry>-fun01 hbkid = <ls_entry>-key03
+                        calendar = <ls_entry>-fun03 ) INTO TABLE rt_classes.
+        CONTINUE.
+      ENDIF.
+      READ TABLE rt_classes ASSIGNING FIELD-SYMBOL(<ls_class>)
+        WITH TABLE KEY flow = CONV #( <ls_entry>-key01 ) method_class = CONV #( <ls_entry>-fun01 ) hbkid = space.
+      IF sy-subrc <> 0.
+        INSERT VALUE #( flow = <ls_entry>-key01 method_class = <ls_entry>-fun01 age_basis = <ls_entry>-fun02
+                        calendar = <ls_entry>-fun03 ) INTO TABLE rt_classes ASSIGNING <ls_class>.
+        <ls_class>-pay_methods = <ls_entry>-key02.
+      ELSE.
+        <ls_class>-pay_methods = |{ <ls_class>-pay_methods }{ zif_cd_hck_runtime_types=>gc_pay_methods_sep }|
+                              && <ls_entry>-key02.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -344,15 +373,32 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_runtime_dao~get_btc_roles.
-    " Lifecycle rows only (2026-11-08): SCOPE = flow (1) + method class (3); reconciliation roles
-    " (usage RECON) are read by ZCL_CD_HCK_RECON_DAO and never reach the lifecycle
-    SELECT substring( scope, 1, 1 ) AS flow, substring( scope, 2, 3 ) AS method_class,
-           scheme, btc_code, role, compare_amount
-      FROM zcd_hck_btcrole
-      WHERE usage  = @zif_cd_hck_types=>gc_btc_usage-lifecycle
-        AND active = @abap_true
-      ORDER BY scope, scheme, btc_code
-      INTO CORRESPONDING FIELDS OF TABLE @rt_roles.
+    " ZBTR keys USAGE / SCOPE / SCHEME / CODE (ISO domain) / FAMILY / SUB-FAMILY, results ROLE /
+    " COMPARE_AMOUNT. Lifecycle entries only: SCOPE = flow (1) + method class (3); reconciliation
+    " roles (usage RECON) are read by ZCL_CD_HCK_RECON_DAO and never reach the lifecycle; '*' is not
+    " a lifecycle key (an unmapped code is BTC_ROLE_MISSING - configuration check POSTAREA_INVALID)
+    LOOP AT zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-btc_role )
+         ASSIGNING FIELD-SYMBOL(<ls_entry>)
+         WHERE key01 = zif_cd_hck_types=>gc_btc_usage-lifecycle
+           AND key02 <> zif_cd_ops_postarea_types=>gc_generic AND key03 <> zif_cd_ops_postarea_types=>gc_generic
+           AND key04 <> zif_cd_ops_postarea_types=>gc_generic AND key05 <> zif_cd_ops_postarea_types=>gc_generic
+           AND key06 <> zif_cd_ops_postarea_types=>gc_generic.
+      DATA(lv_scope) = CONV zif_cd_hck_runtime_types=>ty_flow_class( <ls_entry>-key02 ).
+      INSERT VALUE #( flow           = lv_scope(1)
+                      method_class   = lv_scope+1
+                      scheme         = <ls_entry>-key03
+                      btc_code       = code_of( <ls_entry> )
+                      role           = <ls_entry>-fun01
+                      compare_amount = <ls_entry>-fun02 ) INTO TABLE rt_roles.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD code_of.
+    rv_code = COND #( WHEN is_entry-key03 = zif_cd_ebs_types=>gc_scheme-iso
+                      THEN |{ is_entry-key04 }{ zif_cd_ebs_types=>gc_iso_separator }{ is_entry-key05 }| &&
+                           |{ zif_cd_ebs_types=>gc_iso_separator }{ is_entry-key06 }|
+                      ELSE is_entry-key04 ).
   ENDMETHOD.
 
 

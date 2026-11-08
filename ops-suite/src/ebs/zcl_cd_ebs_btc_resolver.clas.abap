@@ -2,7 +2,9 @@
 *& Artifact: zcl_cd_ebs_btc_resolver.clas.abap
 *& Purpose:
 *& Maps every statement line to a semantic category and rule group through
-*& ZCD_BTC_MAP and derives the flow (XBLNR pattern, else account default).
+*& the posting area ZBTM (FQC0; bank '*' arrives as the blank-bank row, an ISO
+*& family row as sub-family '*' - the lookup order below is the FQC0 order)
+*& and derives the flow (XBLNR pattern, else account default).
 *& An unmapped or deactivated code is blocked with an R14 finding: nothing is
 *& ever left to post to suspense. Pure logic over configuration passed in.
 *& Modification log:
@@ -17,6 +19,8 @@
 *& 2026-11-06 | Flow patterns and the BAI issuer are PCRE matched to the complete value (case ignored);
 *&              an invalid flow pattern reached before a match blocks the line (FLOW_PATTERN_INVALID).
 *& 2026-11-07 | map_action no longer copied to the line (posting disposition removed).
+*& 2026-11-08 | Customer posting area ZBTM (was ZCD_BTC_MAP): the lookup order (exact code, family row; bank row
+*&            | before every-bank row, flow row before * row) is the FQC0 precedence - comment only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - BTC resolver (zero suspense)</p>
 CLASS zcl_cd_ebs_btc_resolver DEFINITION

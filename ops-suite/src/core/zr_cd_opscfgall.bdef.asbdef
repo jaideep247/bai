@@ -39,7 +39,9 @@ persistent table zcd_ops_alrule
 with additional save
 draft table zcd_d_alrule
 lock dependent by _OpsCfgAll
-authorization dependent by _OpsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -86,7 +88,9 @@ persistent table zcd_ops_alchn
 with additional save
 draft table zcd_d_alchn
 lock dependent by _OpsCfgAll
-authorization dependent by _OpsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;
@@ -117,7 +121,9 @@ persistent table zcd_ops_tabwl
 with additional save
 draft table zcd_d_opstabwl
 lock dependent by _OpsCfgAll
-authorization dependent by _OpsCfgAll
+// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   update;

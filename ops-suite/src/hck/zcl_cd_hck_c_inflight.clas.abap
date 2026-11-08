@@ -3,7 +3,7 @@
 *& Purpose:
 *& Financial integrity: payments issued by payment runs (DPAYH) that are
 *& still in flight, per flow (D disbursement / C collection,
-*& TFK042Z-XEINZ) and method class (configuration ZCD_HCK_PMCLASS: payment
+*& TFK042Z-XEINZ) and method class (configuration: posting area ZPMC, payment
 *& methods, ageing basis, calendar; rows with HBKID: calendar per house
 *& bank). The verdict of every payment is the canonical outcome of the
 *& shared evaluator ZIF_CD_OPS_PAY_OUTCOME (rules ZCD_HCK_CLRRULE, evidence
@@ -73,6 +73,8 @@
 *&            | (PARAM4 retired); PAY_STATUS_LAG (b) from the version marker PAY_STATUS_PENDING (grace
 *&            | from its VALID_FROM), (a) per file from the grouped runs, (a) per payment from the
 *&            | candidates still ISSUED (bounded by HCK_INFLIGHT_MAX_ROWS).
+*& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
+*&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -251,7 +253,7 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
     DATA mo_dao TYPE REF TO zif_cd_ops_pay_outcome_dao.
     DATA ms_def TYPE zif_cd_hck_types=>ty_check_def.
     DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
-    "! Calendar overrides per house bank (ZCD_HCK_PMCLASS rows with HBKID)
+    "! Calendar overrides per house bank (posting area ZPMC entries with HBKID)
     DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_class.
     DATA mt_methods TYPE zif_cd_ops_payout_types=>tt_method.
     DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.

@@ -3,7 +3,7 @@
 *& Purpose:
 *& The one evaluator of a payment's outcome (canonical payment outcome
 *& model): the method classes, rules and evidence plug-ins of the morning
-*& report check A_INFLIGHT (ZCD_HCK_PMCLASS / CLRRULE / BTCROLE /
+*& report check A_INFLIGHT (posting areas ZPMC / ZBTR, ZCD_HCK_CLRRULE /
 *& SEQOUT, ZCA_PARAM HCK_STRIPE_*, ZIF_CD_HCK_EVIDENCE) decide per payment CLEARED,
 *& RETURNED, RETRIEVED, VOIDED, PENDING, IN_FLIGHT, UNDETERMINED or
 *& INCONSISTENT; the source attribution of a FIN number decides AMBIGUOUS.
@@ -14,6 +14,8 @@
 *& 2026-11-07 | Initial version (evaluation extracted from ZCL_CD_HCK_C_INFLIGHT).
 *& 2026-11-08 | Table consolidation: configuration tables named as after the merge (PMCLASS with house-bank
 *&            | rows, Stripe settings in ZCA_PARAM).
+*& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
+*&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! Get the instance from ZCL_CD_OPS_FACTORY=>GET_PAY_OUTCOME (test double by

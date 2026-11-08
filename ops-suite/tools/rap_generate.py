@@ -29,14 +29,16 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
                   '\n*& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE, no trailing RETURN (generator templates).'
                   '\n*& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).'
                   '\n*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).'
-                  '\n*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).')
+                  '\n*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).'
+                  '\n*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).'
+                  '\n*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).')
 
 # ---------------------------------------------------------------------------
 # Spec: pe_area -> app; per table: alias, draft table, labels, keys that may be
 # blank (not mandatory on create), checks.
 # Checks: ('enum', field, 'A,B' | ',A,B' blank allowed) ('class', field, interface)
 #         ('table', field) ('field', field, table_field) ('window', from, to)
-#         ('thresholds',) ('positive', field) ('rulegroups',)
+#         ('thresholds',) ('positive', field)
 #         ('pcre', field): a pattern field must compile as PCRE (ZCL_CD_OPS_UTIL=>PCRE_VALID;
 #         matched at runtime to the complete value, case ignored; blank allowed) - message 418
 #         ('dest', ('channel'|'class', field), dest_field, ...): the alert channel plug-in checks
@@ -57,18 +59,14 @@ SEV = 'B,E,W,I'
 # outbound generation / bank acknowledgement (one constant line of the pool: at most 84 characters)
 DEADLINE_STAGES = 'FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED'
 ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
-# ZCD_HCK_BTCROLE (table consolidation 2026-11-08): the roles of a code in a reconciliation set
-# (ZIF_CD_HCK_RECON_TYPES=>GC_ROLE) and the form of a lifecycle scope (flow D / C + method class)
-RECON_ROLES = 'LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE'
-LIFECYCLE_SCOPE = '[DC][A-Z0-9_]{1,3}'
+# Customer posting areas (user decision 2026-11-08): ZCD_BTC_MAP, ZCD_EBS_RSN_MAP, ZCD_HCK_PMCLASS and
+# ZCD_HCK_BTCROLE are FI-CA customer posting areas ZBTM, ZRSN, ZPMC, ZBTR maintained in FQC0 - no app
+# entity; their checks are the configuration check ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS
+# (morning report D_POSTAREA_INVALID). Rule groups of ZBTM are checked there against ZCD_BTC_RULE.
 SPEC = {
     'ebs': dict(
         folder='ebs', pe_area='EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
         title='EBS rules and mapping', tables=[
-            ('zcd_btc_map', 'BtcMap', 'zcd_d_btcmap', 'Bank transaction code', 'Bank transaction codes',
-             ['bank_key'], [('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'flow_type', 'D,C,*'),
-                            ('enum', 'exp_cdi', ',C,D,*'), ('enum', 'action', ',' + ACTIONS),
-                            ('enum', 'disposition', ',NOT_POSTED'), ('rulegroups',)]),
             ('zcd_btc_rule', 'BtcRule', 'zcd_d_btcrule', 'Rule assignment', 'Rule assignments', [],
              [('enum', 'severity', ',' + SEV), ('enum', 'action', ',' + ACTIONS)]),
             ('zcd_ebs_rule_def', 'RuleDef', 'zcd_d_ruledef', 'Rule', 'Rule registry', [],
@@ -79,7 +77,6 @@ SPEC = {
              [('enum', 'flow_default', ',D,C')]),
             ('zcd_ebs_flow_pat', 'FlowPattern', 'zcd_d_flowpat', 'Flow pattern', 'Flow patterns (XBLNR)',
              ['priority'], [('enum', 'flow_type', 'D,C'), ('pcre', 'pattern')]),
-            ('zcd_ebs_rsn_map', 'ReasonMap', 'zcd_d_rsnmap', 'Return reason', 'Return / NOC reasons', [], []),
             ('zcd_ebs_lookup', 'EbsLookup', 'zcd_d_ebslkp', 'Lookup (rule R21)', 'Lookups (rule R21)', [],
              [('enum', 'key_kind', 'DOCNO,ZTNUM,REFERENCE'), ('table', 'table_name'),
               ('field', 'key_field', 'table_name'), ('field', 'status_field', 'table_name')]),
@@ -139,32 +136,12 @@ SPEC = {
             ('zcd_job_cycle', 'JobCycle', 'zcd_d_jobcyc', 'Job cycle', 'Job cycles', [], []),
             ('zcd_job_step', 'JobStep', 'zcd_d_jobstep', 'Job step', 'Job cycle steps', [],
              [('window', 'window_from', 'window_to'), ('pcre', 'jobname')]),
-            # User rules 2026-11-07 (in-flight check A_INFLIGHT): method classes, evidence rules, BAI roles
-            # and role-sequence outcomes - all keyed by flow + method class (an open list: a new class is
-            # rows in these tables, never a code or domain change)
-            # Table consolidation 2026-11-08: a row with a house bank (HBKID) only overrides the
-            # calendar of its class (was ZCD_HCK_PMBANK); the class row (HBKID blank) keeps the payment
-            # methods, so a payment method still maps to exactly one class per flow
-            ('zcd_hck_pmclass', 'HckPmClass', 'zcd_d_hckpmcls', 'Payment method class',
-             'Payment method classes (and house-bank calendars)', ['hbkid'],
-             [('enum', 'flow', 'D,C'),
-              ('when', 'hbkid', BLANK, [('enum', 'age_basis', 'VALUE_DATE,ISSUE_DATE')]),
-              ('when', 'hbkid', FILLED, [('required', 'calendar'), ('blank', 'pay_methods'),
-                                         ('blank', 'age_basis')])]),
+            # User rules 2026-11-07 (in-flight check A_INFLIGHT): evidence rules and role-sequence
+            # outcomes keyed by flow + method class (an open list: a new class is rows in these tables
+            # and entries of the posting areas ZPMC / ZBTR, never a code or domain change)
             ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
              [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
-            # Table consolidation 2026-11-08: one table of bank code roles with a USAGE - LIFECYCLE (scope =
-            # flow + method class, open list of roles) and RECON (scope = reconciliation set, fixed roles;
-            # was ZCD_HCK_RCBTC); the roles of one usage are refused for the other
-            ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role',
-             'Bank code roles (lifecycle and reconciliation)', [],
-             [('enum', 'usage', 'LIFECYCLE,RECON'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'),
-              ('when', 'usage', 'LIFECYCLE', [('form', 'scope', LIFECYCLE_SCOPE), ('required', 'role'),
-                                              ('reserved', 'role', RECON_ROLES),
-                                              ('enum', 'compare_amount', ',X,R,C')]),
-              ('when', 'usage', 'RECON', [('enum', 'role', RECON_ROLES), ('enum', 'scheme', 'BAI2'),
-                                          ('blank', 'compare_amount')])]),
             ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
              [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
               ('enum', 'severity', ',' + SEV),
@@ -488,7 +465,9 @@ def bdef_r(app, tables):
                 'with additional save',
                 f"draft table {t['draft']}",
                 f"lock dependent by _{root}",
-                f"authorization dependent by _{root}",
+                '// ZCD_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root',
+                '// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).',
+                'authorization master ( global )',
                 'etag master LocalLastChangedAt',
                 '{',
                 '  update;',
@@ -679,17 +658,6 @@ def abap_check(t, chk, root, when=None):
                 f"      INSERT VALUE #( number = {msg}thresholds_order v1 = ls_row-Amber v2 = ls_row-Red",
                 f"                      v3 = ls_row-Metric element = {el('Red')} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
-    if kind == 'rulegroups':
-        return ["    \" An active row that is not BLOCK needs a rule group (blank = category) with an active rule",
-                "    DATA(lv_group) = COND zif_cd_ops_cfg_types=>ty_name( WHEN ls_row-RuleGroup IS INITIAL",
-                "                                                         THEN ls_row-Category",
-                "                                                         ELSE ls_row-RuleGroup ).",
-                "    IF ls_row-Active = abap_true AND ls_row-ActionCode <> zif_cd_ops_types=>gc_action-block",
-                "       AND zcl_cd_ops_cfg_checks=>missing_names( it_needed    = VALUE #( ( lv_group ) )",
-                "                                                 it_available = lt_groups ) IS NOT INITIAL.",
-                f"      INSERT VALUE #( number = {msg}rule_group_empty v1 = lv_group",
-                f"                      element = {el('RuleGroup')} ) INTO TABLE lt_msg.",
-                '    ENDIF.']
     raise ValueError(chk)
 
 
@@ -724,10 +692,38 @@ def bp_locals(app, tables):
          '*& Modification log:',
          HDR_LOG_LOCALS,
          '*&---------------------------------------------------------------------*',
-         f'CLASS lhc_{rl} DEFINITION INHERITING FROM cl_abap_behavior_handler.',
-         '  PRIVATE SECTION.',
+         '"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers',
+         'CLASS lcl_auth DEFINITION FINAL.',
+         '  PUBLIC SECTION.',
          f"    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE '{app['pe_area']}'.",
          '',
+         '    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)',
+         '    CLASS-METHODS answer',
+         '      IMPORTING',
+         '        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt',
+         '      RETURNING',
+         '        VALUE(rv_auth) TYPE abp_behv_auth.',
+         '',
+         '    "! Editing the singleton: allowed with at least one of 01, 02 or 06 for the area',
+         '    CLASS-METHODS edit',
+         '      RETURNING',
+         '        VALUE(rv_auth) TYPE abp_behv_auth.',
+         'ENDCLASS.', '', '',
+         'CLASS lcl_auth IMPLEMENTATION.', '',
+         '  METHOD answer.',
+         '    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area',
+         '                                                                               iv_actvt   = iv_actvt )',
+         '                           = abap_true',
+         '                      THEN if_abap_behv=>auth-allowed',
+         '                      ELSE if_abap_behv=>auth-unauthorized ).',
+         '  ENDMETHOD.', '', '',
+         '  METHOD edit.',
+         '    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true',
+         '                      THEN if_abap_behv=>auth-allowed',
+         '                      ELSE if_abap_behv=>auth-unauthorized ).',
+         '  ENDMETHOD.', '', 'ENDCLASS.', '', '',
+         f'CLASS lhc_{rl} DEFINITION INHERITING FROM cl_abap_behavior_handler.',
+         '  PRIVATE SECTION.',
          '    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION',
          f'      IMPORTING REQUEST requested_authorizations FOR {root} RESULT result.',
          '',
@@ -736,19 +732,19 @@ def bp_locals(app, tables):
          'ENDCLASS.', '', '',
          f'CLASS lhc_{rl} IMPLEMENTATION.', '',
          '  METHOD get_global_authorizations.',
-         '    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child',
-         '    DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(',
-         '                                   iv_pe_area = gc_pe_area',
-         '                                   iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true',
-         '                            THEN if_abap_behv=>auth-allowed',
-         '                            ELSE if_abap_behv=>auth-unauthorized ).',
+         '    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;',
+         '    " a new child row needs 01 - change (02) and delete (06) are answered by each child entity',
          '    IF requested_authorizations-%update = if_abap_behv=>mk-on.',
-         '      result-%update = lv_auth.',
+         '      result-%update = lcl_auth=>edit( ).',
          '    ENDIF.',
          '    IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.',
-         '      result-%action-Edit = lv_auth.',
-         '    ENDIF.',
-         '  ENDMETHOD.', '', '',
+         '      result-%action-Edit = lcl_auth=>edit( ).',
+         '    ENDIF.']
+    for t in tables:
+        o.append(f"    IF requested_authorizations-%assoc-_{t['alias']} = if_abap_behv=>mk-on.")
+        o.append(f"      result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).")
+        o.append('    ENDIF.')
+    o += ['  ENDMETHOD.', '', '',
          '  METHOD get_global_features.',
          '    " D-3: new entries only where the client records changes (DV1)',
          '    DATA(lv_create) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true',
@@ -769,6 +765,9 @@ def bp_locals(app, tables):
             o.append("    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.")
         o += ["    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.",
               '',
+              '    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION',
+              f'      IMPORTING REQUEST requested_authorizations FOR {a} RESULT result.',
+              '',
               '    METHODS get_global_features FOR GLOBAL FEATURES',
               f'      IMPORTING REQUEST requested_features FOR {a} RESULT result.']
         if t['checks']:
@@ -778,6 +777,15 @@ def bp_locals(app, tables):
               f'      IMPORTING keys FOR {a}~validateTransport.',
               'ENDCLASS.', '', '',
               f'CLASS lhc_{al} IMPLEMENTATION.', '',
+              '  METHOD get_global_authorizations.',
+              '    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)',
+              '    IF requested_authorizations-%update = if_abap_behv=>mk-on.',
+              '      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).',
+              '    ENDIF.',
+              '    IF requested_authorizations-%delete = if_abap_behv=>mk-on.',
+              '      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).',
+              '    ENDIF.',
+              '  ENDMETHOD.', '', '',
               '  METHOD get_global_features.',
               '    " D-3: delete only where new entries are allowed (DV1); production keeps rows',
               '    IF requested_features-%delete = if_abap_behv=>mk-on.',
@@ -789,25 +797,12 @@ def bp_locals(app, tables):
         if t['checks']:
             o += ['', '  METHOD validatefields.',
                   '    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.']
-            if any(c[0] == 'rulegroups' for c in t['checks']):
-                o += ['    DATA lt_groups TYPE zif_cd_ops_cfg_types=>ty_names.']
             o += ['',
                   f'    READ ENTITIES OF zr_cd_{low} IN LOCAL MODE',
                   f'      ENTITY {a}',
                   '        ALL FIELDS WITH CORRESPONDING #( keys )',
                   '      RESULT DATA(lt_rows).',
                   '    CHECK lt_rows IS NOT INITIAL.']
-            if any(c[0] == 'rulegroups' for c in t['checks']):
-                o += ['',
-                      '    " Active rule groups, including unsaved draft rows of the same edit session',
-                      f'    READ ENTITIES OF zr_cd_{low} IN LOCAL MODE',
-                      f'      ENTITY {root} BY \\_BtcRule',
-                      '        FIELDS ( RuleGroup Active )',
-                      '        WITH VALUE #( ( %is_draft = lt_rows[ 1 ]-%is_draft SingletonID = 1 ) )',
-                      '      RESULT DATA(lt_rules).',
-                      '    LOOP AT lt_rules INTO DATA(ls_rule) WHERE Active = abap_true.',
-                      '      INSERT CONV #( ls_rule-RuleGroup ) INTO TABLE lt_groups.',
-                      '    ENDLOOP.']
             o += ['', '    LOOP AT lt_rows INTO DATA(ls_row).',
                   '      CLEAR lt_msg.',
                   f'      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-{al}.']
@@ -902,7 +897,7 @@ def bp_locals(app, tables):
             iface.append(f"      {name:<30} TYPE string VALUE `{value}`,")
         iface.append(f'    END OF gc_{sec}' + ('.' if k == len(secs) - 1 else ','))
     iface += ['ENDINTERFACE.', '', '']
-    idx = o.index(f'CLASS lhc_{rl} DEFINITION INHERITING FROM cl_abap_behavior_handler.')
+    idx = o.index('"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers')
     o[idx:idx] = iface
     return '\n'.join(o)
 
@@ -910,21 +905,28 @@ def bp_locals(app, tables):
 def bp_tests(app):
     """Test include of a generated behaviour pool: global authorization through EML
     GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (the handler runs, nothing is read or written),
-    with the configuration-gate doubles of ZCL_CD_OPS_CFG_INJECTOR."""
+    with the configuration-gate doubles of ZCL_CD_OPS_CFG_INJECTOR. ZCD_OPS per child entity
+    (2026-11-08): create 01 (association of the root), change 02 and delete 06 (the child, here
+    the first child of the app), editing the singleton with one of them."""
     low = app['root'].lower()
+    child = app['tables'][0][1]
+    child_low = child.lower()
     o = ['*&---------------------------------------------------------------------*',
          f'*& Artifact: zbp_r_cd_{low}.clas.testclasses.abap',
          '*& Purpose:',
          f"*& Permission tests of the {app['title']} behaviour pool through EML",
-         '*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCD_OPS change for the payment',
-         '*& engine area, gate doubles of ZCL_CD_OPS_CFG_INJECTOR). Global features,',
-         '*& validations and the saver need GET PERMISSIONS ... FEATURES (not parsed by',
-         '*& the offline lint) or draft EML with COMMIT ENTITIES on doubled tables: DV1',
-         '*& cases RAP_Config_Apps.md 6; their decisions are tested in ZCL_CD_OPS_CFG_GATE /',
-         '*& _CHECKS / _POLICY. VERIFY-ADT: result component GLOBAL on SAP_BASIS 7.58 SP01.',
+         '*& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCD_OPS of the payment engine',
+         '*& area per activity: edit with 01 / 02 / 06, create 01 on the root association,',
+         '*& change 02 and delete 06 on a child entity; gate doubles of',
+         '*& ZCL_CD_OPS_CFG_INJECTOR). Global features, validations and the saver need GET',
+         '*& PERMISSIONS ... FEATURES (not parsed by the offline lint) or draft EML with',
+         '*& COMMIT ENTITIES on doubled tables: DV1 cases RAP_Config_Apps.md 6; their',
+         '*& decisions are tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY. VERIFY-ADT:',
+         '*& result component GLOBAL and %ASSOC on SAP_BASIS 7.58 SP01.',
          '*& Does not prove live SAP runtime behavior.',
          '*& Modification log:',
          f'*& {DATE} | Generated by tools/rap_generate.py (coverage gap closure: permission tests).',
+         '*& 2026-11-08 | Activities per child entity: 02 only, 01 only, 06 only, none (user 2026-11-08).',
          '*&---------------------------------------------------------------------*',
          'CLASS ltd_client DEFINITION FINAL FOR TESTING.',
          '  PUBLIC SECTION.',
@@ -941,15 +943,15 @@ def bp_tests(app):
          'CLASS ltd_auth DEFINITION FINAL FOR TESTING.',
          '  PUBLIC SECTION.',
          '    INTERFACES zif_cd_ops_cfg_auth.',
-         '    DATA mv_allowed TYPE abap_bool.',
-         '    DATA mv_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area.',
-         '    DATA mv_actvt TYPE zif_cd_ops_cfg_types=>ty_actvt.',
+         '    "! Activities the user holds for the area',
+         '    DATA mt_actvt TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_actvt WITH EMPTY KEY.',
+         '    "! Payment engine areas asked',
+         '    DATA mt_pe_area TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_pe_area WITH EMPTY KEY.',
          'ENDCLASS.', '',
          'CLASS ltd_auth IMPLEMENTATION.',
          '  METHOD zif_cd_ops_cfg_auth~is_authorized.',
-         '    mv_pe_area = iv_pe_area.',
-         '    mv_actvt   = iv_actvt.',
-         '    rv_allowed = mv_allowed.',
+         '    INSERT iv_pe_area INTO TABLE mt_pe_area.',
+         '    rv_allowed = xsdbool( line_exists( mt_actvt[ table_line = iv_actvt ] ) ).',
          '  ENDMETHOD.',
          'ENDCLASS.', '', '',
          'CLASS ltc_permissions DEFINITION FINAL FOR TESTING',
@@ -959,19 +961,32 @@ def bp_tests(app):
          f"    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE '{app['pe_area']}'.", '',
          '    TYPES:',
          '      BEGIN OF ty_flags,',
-         '        authorized TYPE abap_bool,',
-         '      END OF ty_flags.', '',
+         '        create TYPE abap_bool,',
+         '        change TYPE abap_bool,',
+         '        delete TYPE abap_bool,',
+         '      END OF ty_flags.',
+         '    "! Answers of the handlers: singleton (update, Edit, create of a child row) and a child',
+         '    TYPES:',
+         '      BEGIN OF ty_answers,',
+         '        update TYPE abp_behv_auth,',
+         '        edit   TYPE abp_behv_auth,',
+         '        create TYPE abp_behv_auth,',
+         '        change TYPE abp_behv_auth,',
+         '        delete TYPE abp_behv_auth,',
+         '      END OF ty_answers.', '',
          '    DATA mo_auth TYPE REF TO ltd_auth.', '',
          '    METHODS setup.',
          '    METHODS teardown.',
-         '    METHODS authorized_user_may_edit FOR TESTING.',
-         '    METHODS refused_user_may_not_edit FOR TESTING.', '',
+         '    METHODS change_only_no_create_delete FOR TESTING.',
+         '    METHODS create_only_no_change FOR TESTING.',
+         '    METHODS delete_only_may_delete FOR TESTING.',
+         '    METHODS no_activity_no_edit FOR TESTING.', '',
          '    METHODS configure_scenario',
          '      IMPORTING',
          '        is_flags TYPE ty_flags.',
-         '    METHODS edit_permission',
+         '    METHODS answers',
          '      RETURNING',
-         '        VALUE(rv_auth) TYPE abp_behv_auth.',
+         '        VALUE(rs_answers) TYPE ty_answers.',
          'ENDCLASS.', '', '',
          'CLASS ltc_permissions IMPLEMENTATION.', '',
          '  METHOD setup.',
@@ -985,41 +1000,97 @@ def bp_tests(app):
          '    CLEAR mo_auth.',
          '  ENDMETHOD.', '', '',
          '  METHOD configure_scenario.',
-         '    mo_auth->mv_allowed = is_flags-authorized.',
+         '    IF is_flags-create = abap_true.',
+         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-create INTO TABLE mo_auth->mt_actvt.',
+         '    ENDIF.',
+         '    IF is_flags-change = abap_true.',
+         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-change INTO TABLE mo_auth->mt_actvt.',
+         '    ENDIF.',
+         '    IF is_flags-delete = abap_true.',
+         '      INSERT zif_cd_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.',
+         '    ENDIF.',
          '  ENDMETHOD.', '', '',
-         '  METHOD edit_permission.',
+         '  METHOD answers.',
          f'    GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_{low}',
-         '      REQUEST VALUE #( %update = if_abap_behv=>mk-on )',
-         '      RESULT DATA(ls_result)',
+         f'      REQUEST VALUE #( %update = if_abap_behv=>mk-on %action-Edit = if_abap_behv=>mk-on',
+         f'                       %assoc-_{child} = if_abap_behv=>mk-on )',
+         '      RESULT DATA(ls_root)',
          '      FAILED DATA(ls_failed)',
          '      REPORTED DATA(ls_reported).',
          "    cl_abap_unit_assert=>assert_initial( act = ls_failed msg = 'A permission request never fails' ).",
          "    cl_abap_unit_assert=>assert_initial( act = ls_reported msg = 'No message for a permission request' ).",
-         '    rv_auth = ls_result-global-%update.',
+         f'    GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_{child_low}',
+         '      REQUEST VALUE #( %update = if_abap_behv=>mk-on %delete = if_abap_behv=>mk-on )',
+         '      RESULT DATA(ls_child)',
+         '      FAILED DATA(ls_child_failed)',
+         '      REPORTED DATA(ls_child_reported).',
+         "    cl_abap_unit_assert=>assert_initial( act = ls_child_failed msg = 'A child permission request never fails' ).",
+         "    cl_abap_unit_assert=>assert_initial( act = ls_child_reported msg = 'No message for a child request' ).",
+         '    rs_answers-update = ls_root-global-%update.',
+         '    rs_answers-edit   = ls_root-global-%action-Edit.',
+         f'    rs_answers-create = ls_root-global-%assoc-_{child}.',
+         '    rs_answers-change = ls_child-global-%update.',
+         '    rs_answers-delete = ls_child-global-%delete.',
          '  ENDMETHOD.', '', '',
-         '  " Rule: ZCD_OPS change for the payment engine area allows editing the singleton',
-         '  METHOD authorized_user_may_edit.',
+         '  " Rule: change (02) only - rows may be changed, never created or deleted',
+         '  METHOD change_only_no_create_delete.',
          '    TRY.',
-         '        configure_scenario( VALUE #( authorized = abap_true ) ).',
-         '        cl_abap_unit_assert=>assert_equals( act = edit_permission( )',
-         '                                            exp = if_abap_behv=>auth-allowed',
-         "                                            msg = 'Change allowed: the singleton may be edited' ).",
-         '        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_pe_area exp = gc_pe_area',
+         '        configure_scenario( VALUE #( change = abap_true ) ).',
+         '        DATA(ls_act) = answers( ).',
+         '        DATA(ls_exp) = VALUE ty_answers( update = if_abap_behv=>auth-allowed',
+         '                                         edit   = if_abap_behv=>auth-allowed',
+         '                                         create = if_abap_behv=>auth-unauthorized',
+         '                                         change = if_abap_behv=>auth-allowed',
+         '                                         delete = if_abap_behv=>auth-unauthorized ).',
+         "        cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = '02 only: edit and change' ).",
+         '        cl_abap_unit_assert=>assert_equals( act = line_exists( mo_auth->mt_pe_area[ table_line = gc_pe_area ] )',
+         '                                            exp = abap_true',
          "                                            msg = 'Checked for the payment engine area of the app' ).",
-         '        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_actvt',
-         '                                            exp = zif_cd_ops_cfg_types=>gc_actvt-change',
-         "                                            msg = 'Checked with activity change' ).",
          '      CATCH cx_root INTO DATA(lx_error).',
          '        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).',
          '    ENDTRY.',
          '  ENDMETHOD.', '', '',
-         '  " Rule: without ZCD_OPS change the singleton cannot be edited',
-         '  METHOD refused_user_may_not_edit.',
+         '  " Rule: create (01) only - new rows may be added, existing rows not changed or deleted',
+         '  METHOD create_only_no_change.',
+         '    TRY.',
+         '        configure_scenario( VALUE #( create = abap_true ) ).',
+         '        DATA(ls_act) = answers( ).',
+         '        DATA(ls_exp) = VALUE ty_answers( update = if_abap_behv=>auth-allowed',
+         '                                         edit   = if_abap_behv=>auth-allowed',
+         '                                         create = if_abap_behv=>auth-allowed',
+         '                                         change = if_abap_behv=>auth-unauthorized',
+         '                                         delete = if_abap_behv=>auth-unauthorized ).',
+         "        cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = '01 only: edit and create' ).",
+         '      CATCH cx_root INTO DATA(lx_error).',
+         '        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).',
+         '    ENDTRY.',
+         '  ENDMETHOD.', '', '',
+         '  " Rule: delete (06) - rows may be deleted (and the singleton edited for it)',
+         '  METHOD delete_only_may_delete.',
+         '    TRY.',
+         '        configure_scenario( VALUE #( delete = abap_true ) ).',
+         '        DATA(ls_act) = answers( ).',
+         '        DATA(ls_exp) = VALUE ty_answers( update = if_abap_behv=>auth-allowed',
+         '                                         edit   = if_abap_behv=>auth-allowed',
+         '                                         create = if_abap_behv=>auth-unauthorized',
+         '                                         change = if_abap_behv=>auth-unauthorized',
+         '                                         delete = if_abap_behv=>auth-allowed ).',
+         "        cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = '06 only: edit and delete' ).",
+         '      CATCH cx_root INTO DATA(lx_error).',
+         '        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).',
+         '    ENDTRY.',
+         '  ENDMETHOD.', '', '',
+         '  " Rule: without 01, 02 or 06 nothing may be edited',
+         '  METHOD no_activity_no_edit.',
          '    TRY.',
          '        configure_scenario( VALUE #( ) ).',
-         '        cl_abap_unit_assert=>assert_equals( act = edit_permission( )',
-         '                                            exp = if_abap_behv=>auth-unauthorized',
-         "                                            msg = 'Change refused: no edit' ).",
+         '        DATA(ls_act) = answers( ).',
+         '        DATA(ls_exp) = VALUE ty_answers( update = if_abap_behv=>auth-unauthorized',
+         '                                         edit   = if_abap_behv=>auth-unauthorized',
+         '                                         create = if_abap_behv=>auth-unauthorized',
+         '                                         change = if_abap_behv=>auth-unauthorized',
+         '                                         delete = if_abap_behv=>auth-unauthorized ).',
+         "        cl_abap_unit_assert=>assert_equals( act = ls_act exp = ls_exp msg = 'No activity: no edit' ).",
          '      CATCH cx_root INTO DATA(lx_error).',
          '        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).',
          '    ENDTRY.',

@@ -30,6 +30,7 @@
 *& 2026-11-08 | Table consolidation: parameters MON_STALE_AFTER_MIN_<area> (area prefix MON_ -> CD_OPS; was
 *&            | ZCD_OPS_MONCFG).
 *& 2026-11-08 | GC_RANGE-SIGN_EXCLUDE (a range that leaves a value out, e.g. the PAY_STATUS_PENDING marker).
+*& 2026-11-08 | Prefix POSTAREA_ -> CD_OPS: posting areas of the mapping tables (customer posting areas).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -147,6 +148,8 @@ INTERFACE zif_cd_ops_types
       payout    TYPE ty_param_name VALUE 'PAYOUT_',
       "! Monitor freshness of every area (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
       monitor   TYPE ty_param_name VALUE 'MON_',
+      "! Customer posting areas of the mapping tables (2026-11-08, ZIF_CD_OPS_POSTAREA_TYPES)
+      postarea  TYPE ty_param_name VALUE 'POSTAREA_',
       ebs       TYPE ty_param_name VALUE 'EBS_',
       fmon      TYPE ty_param_name VALUE 'FMON_',
       hck       TYPE ty_param_name VALUE 'HCK_',

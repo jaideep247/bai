@@ -11,19 +11,18 @@
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
+*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
+*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
 INTERFACE lif_c.
   CONSTANTS:
     BEGIN OF gc_el,
-      agebasis                       TYPE string VALUE `AGEBASIS`,
       aggfunc                        TYPE string VALUE `AGGFUNC`,
       baselinemode                   TYPE string VALUE `BASELINEMODE`,
-      calendar                       TYPE string VALUE `CALENDAR`,
       category                       TYPE string VALUE `CATEGORY`,
       classname                      TYPE string VALUE `CLASSNAME`,
-      compareamount                  TYPE string VALUE `COMPAREAMOUNT`,
       cond1field                     TYPE string VALUE `COND1FIELD`,
       cond1op                        TYPE string VALUE `COND1OP`,
       cond2field                     TYPE string VALUE `COND2FIELD`,
@@ -38,52 +37,39 @@ INTERFACE lif_c.
       finding                        TYPE string VALUE `FINDING`,
       flow                           TYPE string VALUE `FLOW`,
       groupfield                     TYPE string VALUE `GROUPFIELD`,
-      hbkid                          TYPE string VALUE `HBKID`,
       jobname                        TYPE string VALUE `JOBNAME`,
       kind                           TYPE string VALUE `KIND`,
-      paymethods                     TYPE string VALUE `PAYMETHODS`,
       priority                       TYPE string VALUE `PRIORITY`,
       purpose                        TYPE string VALUE `PURPOSE`,
       red                            TYPE string VALUE `RED`,
       regstate                       TYPE string VALUE `REGSTATE`,
       required                       TYPE string VALUE `REQUIRED`,
-      role                           TYPE string VALUE `ROLE`,
-      scheme                         TYPE string VALUE `SCHEME`,
-      scope                          TYPE string VALUE `SCOPE`,
       seqpattern                     TYPE string VALUE `SEQPATTERN`,
       severity                       TYPE string VALUE `SEVERITY`,
       side                           TYPE string VALUE `SIDE`,
       sumfield                       TYPE string VALUE `SUMFIELD`,
       tabname                        TYPE string VALUE `TABNAME`,
-      usage                          TYPE string VALUE `USAGE`,
       windowfrom                     TYPE string VALUE `WINDOWFROM`,
       windowto                       TYPE string VALUE `WINDOWTO`,
     END OF gc_el,
     BEGIN OF gc_ent,
       hckaggregate                   TYPE string VALUE `HckAggregate`,
-      hckbtcrole                     TYPE string VALUE `HckBtcRole`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
       hckclrrule                     TYPE string VALUE `HckClrRule`,
-      hckpmclass                     TYPE string VALUE `HckPmClass`,
       hckreconset                    TYPE string VALUE `HckReconSet`,
       hckseqoutcome                  TYPE string VALUE `HckSeqOutcome`,
       hckthreshold                   TYPE string VALUE `HckThreshold`,
       jobcycle                       TYPE string VALUE `JobCycle`,
       jobstep                        TYPE string VALUE `JobStep`,
     END OF gc_ent,
-    BEGIN OF gc_form,
-      hckbtcrole_scope               TYPE string VALUE `[DC][A-Z0-9_]{1,3}`,
-    END OF gc_form,
     BEGIN OF gc_if,
       zif_cd_hck_check               TYPE string VALUE `ZIF_CD_HCK_CHECK`,
       zif_cd_hck_evidence            TYPE string VALUE `ZIF_CD_HCK_EVIDENCE`,
     END OF gc_if,
     BEGIN OF gc_tab,
       hckaggregate                   TYPE string VALUE `ZCD_HCK_AGG`,
-      hckbtcrole                     TYPE string VALUE `ZCD_HCK_BTCROLE`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
       hckclrrule                     TYPE string VALUE `ZCD_HCK_CLRRULE`,
-      hckpmclass                     TYPE string VALUE `ZCD_HCK_PMCLASS`,
       hckreconset                    TYPE string VALUE `ZCD_HCK_RCSET`,
       hckseqoutcome                  TYPE string VALUE `ZCD_HCK_SEQOUT`,
       hckthreshold                   TYPE string VALUE `ZCD_HCK_THRESH`,
@@ -96,37 +82,62 @@ INTERFACE lif_c.
       hckaggregate_cond2op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_cond3op           TYPE string VALUE `,EQ,NE,GT,LT,GE,LE,IN`,
       hckaggregate_datemode          TYPE string VALUE `,AGE,DAY`,
-      hckbtcrole_compareamount_lifec TYPE string VALUE `,X,R,C`,
-      hckbtcrole_role_recon          TYPE string VALUE `LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE`,
-      hckbtcrole_role_reserved       TYPE string VALUE `LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE`,
-      hckbtcrole_scheme              TYPE string VALUE `BAI2,ISO,PRTRY`,
-      hckbtcrole_scheme_recon        TYPE string VALUE `BAI2`,
-      hckbtcrole_usage               TYPE string VALUE `LIFECYCLE,RECON`,
       hckcheckdef_category           TYPE string VALUE `A,B,C,D,E`,
       hckcheckdef_priority           TYPE string VALUE `H,M,L`,
       hckclrrule_flow                TYPE string VALUE `D,C`,
       hckclrrule_purpose             TYPE string VALUE `CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT`,
       hckclrrule_required            TYPE string VALUE `,X,C,N`,
-      hckpmclass_agebasis_blank      TYPE string VALUE `VALUE_DATE,ISSUE_DATE`,
-      hckpmclass_flow                TYPE string VALUE `D,C`,
       hckreconset_kind               TYPE string VALUE `THREEWAY,ACH_ZUONR,STRIPE`,
       hckreconset_side               TYPE string VALUE `C,D`,
       hckseqoutcome_expecteddfkkrp   TYPE string VALUE `,0,1,2,3,4,5,6,7,8,9`,
       hckseqoutcome_flow             TYPE string VALUE `D,C`,
       hckseqoutcome_severity         TYPE string VALUE `,B,E,W,I`,
       hckthreshold_baselinemode      TYPE string VALUE `,NONE,ZSCORE`,
-    END OF gc_val,
-    BEGIN OF gc_when,
-      hckbtcrole_usage_lifecycle     TYPE string VALUE `LIFECYCLE`,
-      hckbtcrole_usage_recon         TYPE string VALUE `RECON`,
-    END OF gc_when.
+    END OF gc_val.
 ENDINTERFACE.
+
+
+"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers
+CLASS lcl_auth DEFINITION FINAL.
+  PUBLIC SECTION.
+    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'HCK'.
+
+    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)
+    CLASS-METHODS answer
+      IMPORTING
+        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+
+    "! Editing the singleton: allowed with at least one of 01, 02 or 06 for the area
+    CLASS-METHODS edit
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+ENDCLASS.
+
+
+CLASS lcl_auth IMPLEMENTATION.
+
+  METHOD answer.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area
+                                                                               iv_actvt   = iv_actvt )
+                           = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+
+  METHOD edit.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+ENDCLASS.
 
 
 CLASS lhc_hckcfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
-    CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'HCK'.
-
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR HckCfgAll RESULT result.
 
@@ -138,17 +149,37 @@ ENDCLASS.
 CLASS lhc_hckcfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child
-    DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(
-                                   iv_pe_area = gc_pe_area
-                                   iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
-                            THEN if_abap_behv=>auth-allowed
-                            ELSE if_abap_behv=>auth-unauthorized ).
+    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;
+    " a new child row needs 01 - change (02) and delete (06) are answered by each child entity
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lv_auth.
+      result-%update = lcl_auth=>edit( ).
     ENDIF.
     IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.
-      result-%action-Edit = lv_auth.
+      result-%action-Edit = lcl_auth=>edit( ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckCheckDef = if_abap_behv=>mk-on.
+      result-%assoc-_HckCheckDef = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckThreshold = if_abap_behv=>mk-on.
+      result-%assoc-_HckThreshold = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckAggregate = if_abap_behv=>mk-on.
+      result-%assoc-_HckAggregate = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_JobCycle = if_abap_behv=>mk-on.
+      result-%assoc-_JobCycle = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_JobStep = if_abap_behv=>mk-on.
+      result-%assoc-_JobStep = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckClrRule = if_abap_behv=>mk-on.
+      result-%assoc-_HckClrRule = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckSeqOutcome = if_abap_behv=>mk-on.
+      result-%assoc-_HckSeqOutcome = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HckReconSet = if_abap_behv=>mk-on.
+      result-%assoc-_HckReconSet = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
   ENDMETHOD.
 
@@ -173,14 +204,8 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     IF requested_features-%assoc-_JobStep = if_abap_behv=>mk-on.
       result-%assoc-_JobStep = lv_create.
     ENDIF.
-    IF requested_features-%assoc-_HckPmClass = if_abap_behv=>mk-on.
-      result-%assoc-_HckPmClass = lv_create.
-    ENDIF.
     IF requested_features-%assoc-_HckClrRule = if_abap_behv=>mk-on.
       result-%assoc-_HckClrRule = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckBtcRole = if_abap_behv=>mk-on.
-      result-%assoc-_HckBtcRole = lv_create.
     ENDIF.
     IF requested_features-%assoc-_HckSeqOutcome = if_abap_behv=>mk-on.
       result-%assoc-_HckSeqOutcome = lv_create.
@@ -198,6 +223,9 @@ CLASS lhc_hckcheckdef DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckCheckDef RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckCheckDef RESULT result.
 
@@ -210,6 +238,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckcheckdef IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -310,6 +349,9 @@ CLASS lhc_hckthreshold DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckThreshold RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckThreshold RESULT result.
 
@@ -322,6 +364,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckthreshold IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -417,6 +470,9 @@ CLASS lhc_hckaggregate DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckAggregate RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckAggregate RESULT result.
 
@@ -429,6 +485,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckaggregate IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -592,6 +659,9 @@ CLASS lhc_jobcycle DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR JobCycle RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR JobCycle RESULT result.
 
@@ -601,6 +671,17 @@ ENDCLASS.
 
 
 CLASS lhc_jobcycle IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -648,6 +729,9 @@ CLASS lhc_jobstep DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR JobStep RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR JobStep RESULT result.
 
@@ -660,6 +744,17 @@ ENDCLASS.
 
 
 CLASS lhc_jobstep IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -746,135 +841,13 @@ CLASS lhc_jobstep IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_hckpmclass DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckPmClass RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckPmClass~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckPmClass~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckpmclass IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckPmClass
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckpmclass.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Flow )
-                                        iv_list  = lif_c=>gc_val-hckpmclass_flow ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Flow
-                        v2 = lif_c=>gc_el-flow v3 = lif_c=>gc_val-hckpmclass_flow
-                        element = lif_c=>gc_el-flow ) INTO TABLE lt_msg.
-      ENDIF.
-      IF ls_row-Hbkid IS INITIAL.
-        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-AgeBasis )
-                                          iv_list  = lif_c=>gc_val-hckpmclass_agebasis_blank ) = abap_false.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-AgeBasis
-                          v2 = lif_c=>gc_el-agebasis v3 = lif_c=>gc_val-hckpmclass_agebasis_blank
-                          element = lif_c=>gc_el-agebasis ) INTO TABLE lt_msg.
-        ENDIF.
-      ENDIF.
-      IF ls_row-Hbkid IS NOT INITIAL.
-        IF ls_row-Calendar IS INITIAL.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-calendar
-                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
-                          element = lif_c=>gc_el-calendar ) INTO TABLE lt_msg.
-        ENDIF.
-        IF ls_row-PayMethods IS NOT INITIAL.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-paymethods
-                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
-                          element = lif_c=>gc_el-paymethods ) INTO TABLE lt_msg.
-        ENDIF.
-        IF ls_row-AgeBasis IS NOT INITIAL.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-agebasis
-                          v2 = lif_c=>gc_el-hbkid v3 = ls_row-Hbkid
-                          element = lif_c=>gc_el-agebasis ) INTO TABLE lt_msg.
-        ENDIF.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckpmclass.
-        INSERT INITIAL LINE INTO TABLE reported-hckpmclass ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-hckcfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckpmclass.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckpmclass.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckpmclass.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
 CLASS lhc_hckclrrule DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckClrRule RESULT result.
 
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckClrRule RESULT result.
@@ -888,6 +861,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckclrrule IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -989,163 +973,13 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_hckbtcrole DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckBtcRole RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckBtcRole~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckBtcRole~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckbtcrole IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckBtcRole
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-hckbtcrole.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Usage )
-                                        iv_list  = lif_c=>gc_val-hckbtcrole_usage ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Usage
-                        v2 = lif_c=>gc_el-usage v3 = lif_c=>gc_val-hckbtcrole_usage
-                        element = lif_c=>gc_el-usage ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Scheme )
-                                        iv_list  = lif_c=>gc_val-hckbtcrole_scheme ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Scheme
-                        v2 = lif_c=>gc_el-scheme v3 = lif_c=>gc_val-hckbtcrole_scheme
-                        element = lif_c=>gc_el-scheme ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Usage )
-                                        iv_list  = lif_c=>gc_when-hckbtcrole_usage_lifecycle ) = abap_true.
-        IF zcl_cd_ops_util=>pcre_match( iv_value   = ls_row-Scope
-                                        iv_pattern = lif_c=>gc_form-hckbtcrole_scope ) = abap_false.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-form_invalid v1 = ls_row-Scope
-                          v2 = lif_c=>gc_el-scope v3 = lif_c=>gc_form-hckbtcrole_scope
-                          element = lif_c=>gc_el-scope ) INTO TABLE lt_msg.
-        ENDIF.
-        IF ls_row-Role IS INITIAL.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-role
-                          v2 = lif_c=>gc_el-usage v3 = ls_row-Usage
-                          element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
-        ENDIF.
-        IF ls_row-Role IS NOT INITIAL
-           AND zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
-                                              iv_list  = lif_c=>gc_val-hckbtcrole_role_reserved ) = abap_true.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_reserved v1 = ls_row-Role
-                          v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-hckbtcrole_role_reserved
-                          element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
-        ENDIF.
-        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-CompareAmount )
-                                          iv_list  = lif_c=>gc_val-hckbtcrole_compareamount_lifec ) = abap_false.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-CompareAmount
-                          v2 = lif_c=>gc_el-compareamount v3 = lif_c=>gc_val-hckbtcrole_compareamount_lifec
-                          element = lif_c=>gc_el-compareamount ) INTO TABLE lt_msg.
-        ENDIF.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Usage )
-                                        iv_list  = lif_c=>gc_when-hckbtcrole_usage_recon ) = abap_true.
-        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Role )
-                                          iv_list  = lif_c=>gc_val-hckbtcrole_role_recon ) = abap_false.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Role
-                          v2 = lif_c=>gc_el-role v3 = lif_c=>gc_val-hckbtcrole_role_recon
-                          element = lif_c=>gc_el-role ) INTO TABLE lt_msg.
-        ENDIF.
-        IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Scheme )
-                                          iv_list  = lif_c=>gc_val-hckbtcrole_scheme_recon ) = abap_false.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Scheme
-                          v2 = lif_c=>gc_el-scheme v3 = lif_c=>gc_val-hckbtcrole_scheme_recon
-                          element = lif_c=>gc_el-scheme ) INTO TABLE lt_msg.
-        ENDIF.
-        IF ls_row-CompareAmount IS NOT INITIAL.
-          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-compareamount
-                          v2 = lif_c=>gc_el-usage v3 = ls_row-Usage
-                          element = lif_c=>gc_el-compareamount ) INTO TABLE lt_msg.
-        ENDIF.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckbtcrole.
-        INSERT INITIAL LINE INTO TABLE reported-hckbtcrole ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-hckcfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-hckcfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckbtcrole.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckbtcrole.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckbtcrole.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
 CLASS lhc_hckseqoutcome DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckSeqOutcome RESULT result.
 
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckSeqOutcome RESULT result.
@@ -1159,6 +993,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckseqoutcome IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -1271,6 +1116,9 @@ CLASS lhc_hckreconset DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HckReconSet RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HckReconSet RESULT result.
 
@@ -1283,6 +1131,17 @@ ENDCLASS.
 
 
 CLASS lhc_hckreconset IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -1395,9 +1254,7 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckaggregate table = lif_c=>gc_tab-hckaggregate )
             ( entity = lif_c=>gc_ent-jobcycle table = lif_c=>gc_tab-jobcycle )
             ( entity = lif_c=>gc_ent-jobstep table = lif_c=>gc_tab-jobstep )
-            ( entity = lif_c=>gc_ent-hckpmclass table = lif_c=>gc_tab-hckpmclass )
             ( entity = lif_c=>gc_ent-hckclrrule table = lif_c=>gc_tab-hckclrrule )
-            ( entity = lif_c=>gc_ent-hckbtcrole table = lif_c=>gc_tab-hckbtcrole )
             ( entity = lif_c=>gc_ent-hckseqoutcome table = lif_c=>gc_tab-hckseqoutcome )
             ( entity = lif_c=>gc_ent-hckreconset table = lif_c=>gc_tab-hckreconset ) )
           ir_create    = REF #( create )
