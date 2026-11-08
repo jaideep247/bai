@@ -208,7 +208,7 @@ security boundary; every new row needs a reviewer.
 | TABNAME | DESCRIPTION | ACTIVE |
 |---|---|---|
 | TFK042Z | Payment program: collections vs disbursements (XEINZ) | X |
-| TFK033D | Account determination (no `*` wildcard in this landscape) | X |
+| TFK033D | Account determination (`*` wildcard works in FQC0 - confirmed by the user 2026-11-08) | X |
 | ZCD_HCK_DEF | Health check catalog | X |
 | ZCD_HCK_THRESH | Health check thresholds | X |
 | ZCD_HCK_AGG | Generic aggregates | X |
