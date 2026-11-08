@@ -18,6 +18,8 @@
 *& 2026-11-07 | Design review: link by suffix AND house bank account, every eligible cheque kept,
 *&            | ambiguous lines attributed to none; suffix moved to ZCL_CD_OPS_CHEQUE_LINK.
 *& 2026-11-07 | Code review: lines of the deciding (live) cheque only.
+*& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
+*&            | reissue creates a new payment document and cheque number (user 2026-11-08).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - statement line with CHECT = cheque no. suffix</p>
 CLASS zcl_cd_hck_ev_stmt_cheque DEFINITION
@@ -45,7 +47,8 @@ CLASS zcl_cd_hck_ev_stmt_cheque IMPLEMENTATION.
     rs_result-source = zif_cd_ops_trace_types=>gc_table-febep.
     DATA(lt_live) = zcl_cd_hck_ev_support=>live_cheques( ls_lines-checks ).
     LOOP AT ls_lines-lines ASSIGNING FIELD-SYMBOL(<ls_line>).
-      " A line of another cheque of the payment (e.g. voided before a reissue) is shown, not counted
+      " A line of another cheque of the same payment document is shown, not counted (defensive: a stop
+      " and reissue creates a new payment document, user 2026-11-08)
       DATA(ls_live) = VALUE zif_cd_ops_trace_types=>ty_check( lt_live[ doc1r = <ls_line>-doc1r ] OPTIONAL ).
       zcl_cd_hck_ev_support=>add_hit( EXPORTING iv_doc1r    = <ls_line>-doc1r
                                                 iv_found    = xsdbool( ls_live-ztnum = <ls_line>-ztnum

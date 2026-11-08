@@ -50,6 +50,8 @@
 *&            | (CHEQUE_REGISTER_MISSING); amount from the payment; outcome states tokenised once;
 *&            | one evaluation per link and run, found per PARAM1 (memo of the collection).
 *& 2026-11-08 | EV_DATE = posting date of the newest line of the lifecycle (basis of the status lag).
+*& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
+*&            | reissue creates a new payment document and cheque number (user 2026-11-08).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - outcome of the bank code sequence of a payment</p>
 CLASS zcl_cd_hck_ev_btc_seq DEFINITION
@@ -402,7 +404,8 @@ CLASS zcl_cd_hck_ev_btc_seq IMPLEMENTATION.
             ls_live_life = ls_cheque_life.
             CONTINUE.
           ENDIF.
-          " Another cheque of the payment (e.g. voided before a reissue) keeps its own outcome
+          " Another cheque of the same payment document keeps its own outcome (defensive: a stop and
+          " reissue creates a new payment document with its own lifecycle, user 2026-11-08)
           IF ls_cheque_life-evidence-doc1r IS INITIAL.
             CONTINUE.
           ENDIF.

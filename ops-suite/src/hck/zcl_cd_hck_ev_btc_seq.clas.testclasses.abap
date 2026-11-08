@@ -21,6 +21,8 @@
 *& 2026-11-07 | Code review: correction stops the amount comparison, live cheque of a reissue decides,
 *&            | every anomaly of a finding outcome, REG_STATE without register = CHEQUE_REGISTER_MISSING,
 *&            | one read of lines / lots / cheques per link and run shared with the cheque status.
+*& 2026-11-08 | Stop and reissue creates a new payment document (user 2026-11-08): the test of two
+*&            | cheques on one payment document renamed two_cheques_live_decides (defensive path).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -611,7 +613,8 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
       "! Second cheque of the same account with the same last 13 characters
       gc_twin_doc   TYPE zif_cd_hck_runtime_types=>ty_docno VALUE '000000300009',
       gc_twin_ztnum TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0091234567890123',
-      "! Cheque voided before the reissue gc_ztnum (older number, own suffix)
+      "! Older cheque of the same payment document, voided before gc_ztnum (own suffix; defensive path -
+      "! a stop and reissue creates a new payment document, user 2026-11-08)
       gc_old_ztnum  TYPE zif_cd_ops_trace_types=>ty_ref VALUE 'JPMC0001111111111111',
       gc_old_chect  TYPE zif_cd_ops_trace_types=>ty_ref VALUE '1111111111111',
       gc_bukrs  TYPE zif_cd_ops_trace_types=>ty_bukrs VALUE 'US01',
@@ -669,7 +672,7 @@ CLASS ltc_ev_btc_seq_chq DEFINITION FINAL FOR TESTING
     METHODS unexpected_cheque_order   FOR TESTING.
     METHODS ambiguous_line_not_evaluated FOR TESTING.
     METHODS correction_skips_amount   FOR TESTING.
-    METHODS reissue_live_cheque_decides FOR TESTING.
+    METHODS two_cheques_live_decides FOR TESTING.
     METHODS finding_keeps_every_anomaly FOR TESTING.
     METHODS cheque_read_shared        FOR TESTING.
     "! Collect of the cheque lifecycle on the data in the doubles (no new collection)
@@ -957,9 +960,11 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Code review 2: a voided cheque (returned, V) and its reissue (581, B) on one payment - the live
-  " cheque decides (CLEARED), the voided one keeps its own outcome in the detail
-  METHOD reissue_live_cheque_decides.
+  " Code review 2 (defensive path): two cheques on one payment document - a voided one (returned, V)
+  " and a newer one (581, B): the live cheque decides (CLEARED), the voided one keeps its own outcome
+  " in the detail. A stop and reissue never looks like this: it creates a new payment document (new
+  " AUGBL) with its own cheque (user 2026-11-08)
+  METHOD two_cheques_live_decides.
     DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
     DATA ls_line TYPE zif_cd_ops_trace_types=>ty_bank_line.
     TRY.
@@ -982,7 +987,7 @@ CLASS ltc_ev_btc_seq_chq IMPLEMENTATION.
         ls_line-hktid = gc_hktid.
         INSERT ls_line INTO TABLE mo_trace->mt_lines.
         DATA(ls_evidence) = collect_chq( `CLEARED` ).
-        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'The reissued cheque decides: cleared' ).
+        cl_abap_unit_assert=>assert_true( act = ls_evidence-found msg = 'The live cheque decides: cleared' ).
         cl_abap_unit_assert=>assert_initial( act = ls_evidence-anomaly msg = 'Both lifecycles consistent' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = ls_evidence-detail sub = CONV string( gc_old_ztnum ) ) >= 0 )
                                           msg = 'The voided cheque is shown with its own outcome' ).

@@ -26,6 +26,8 @@
 *&            | (newest record of the evidence); message 682 (waiting for the payment status job).
 *& 2026-11-08 | Status lag: check code PAY_STATUS_LAG, parameters HCK_PAY_STATUS_LAG_MIN (grace, 120 min)
 *&            | and HCK_PAY_STATUS_ACK_OPEN (statuses that must change after the bank ACK), messages 683-687.
+*& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
+*&            | reissue creates a new payment document and cheque number (user 2026-11-08).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -367,7 +369,8 @@ INTERFACE zif_cd_hck_runtime_types
   "! Token of a status list (PARAM1 of the cheque status evidence) for the blank (open) state
   CONSTANTS gc_state_blank TYPE string VALUE `BLANK`.
   "! DFKKCR-STATE of a voided cheque (confirmed 2026-11-07): of several cheques of one payment
-  "! (void and reissue) the newest cheque not voided decides the payment
+  "! document the newest cheque not voided decides the payment (defensive: a stop and reissue
+  "! creates a new payment document and cheque number, user 2026-11-08)
   CONSTANTS gc_state_voided TYPE string VALUE `V`.
 
   "! ZCD_HCK_SEQOUT: the first active pattern (by SEQ) matching the whole role sequence decides

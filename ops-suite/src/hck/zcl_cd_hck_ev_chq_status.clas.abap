@@ -6,8 +6,9 @@
 *& list; confirmed values B = cashed, V = voided, blank = open or returned;
 *& token BLANK = the blank state; required).
 *& Every cheque read adds its status to the detail; found only for a
-*& listed value of the deciding cheque of the payment (newest not voided:
-*& a voided cheque and its reissue never make the payment voided). The
+*& listed value of the deciding cheque of the payment (newest not voided;
+*& defensive for several cheques on one payment document - a stop and
+*& reissue creates a new payment document, user 2026-11-08). The
 *& cheques come from the read shared with the other cheque kinds
 *& (ZCL_CD_HCK_EV_SUPPORT=>CHECKS_OF: one DFKKCR read per payment and run).
 *& PARAM2 (optional): live payment statuses DPAYH-ZZ_PAYMENT_STATUS that
@@ -20,6 +21,8 @@
 *& 2026-11-07 | Token BLANK for the blank state (a returned cheque keeps STATE blank today).
 *& 2026-11-07 | Code review: the deciding (live) cheque only; DFKKCR read shared (checks_of).
 *& 2026-11-08 | PARAM2: payment statuses that hold alone (stopped cheque = voided, user decision).
+*& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
+*&            | reissue creates a new payment document and cheque number (user 2026-11-08).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Evidence - cheque status DFKKCR-STATE in a list of values</p>
 CLASS zcl_cd_hck_ev_chq_status DEFINITION

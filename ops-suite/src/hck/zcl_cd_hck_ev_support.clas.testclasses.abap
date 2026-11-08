@@ -11,6 +11,8 @@
 *& 2026-11-07 | Initial version (clearing / return evidence as plug-ins, user rule 5).
 *& 2026-11-07 | Code review: register state tokens and outcome finding catalogue (save validation of
 *&            | ZCD_HCK_SEQOUT), live cheque of a reissue.
+*& 2026-11-08 | Comment: several cheques on one payment document are a defensive path - a stop and
+*&            | reissue creates a new payment document (user 2026-11-08).
 *&---------------------------------------------------------------------*
 CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -144,7 +146,8 @@ CLASS ltc_ev_support IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Code review 2: of a voided cheque and its reissue the cheque not voided decides; all voided = newest
+  " Code review 2 (defensive path): of several cheques of one payment document the cheque not voided
+  " decides; all voided = newest. A stop and reissue creates a new payment document (user 2026-11-08)
   METHOD live_cheque_not_voided.
     DATA lt_checks TYPE zif_cd_ops_trace_types=>tt_check.
     DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.

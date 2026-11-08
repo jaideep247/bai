@@ -16,11 +16,14 @@
 *& IN_FLIGHT (status pending, never inconsistent); status RETURNED without
 *& the bank line is RETURN_INCONSISTENT; cheques: V without STOPPED, STOPPED
 *& with state blank, STOPPED and V are VOIDED; STOPPED and cashed is
-*& CLEARING_INCONSISTENT "stopped cheque cashed".
+*& CLEARING_INCONSISTENT "stopped cheque cashed"; a stopped payment and
+*& its reissue (new payment document and cheque number) are judged apart.
 *& Modification log:
 *& 2026-11-07 | Initial version (one canonical payment outcome model).
 *& 2026-11-08 | Status rows of RETURNED / RETRIEVED (pending statuses), cheques stopped = voided (user
 *&            | decision); cheque register rows served by the trace double.
+*& 2026-11-08 | Stop and reissue (user 2026-11-08: new payment document and cheque number): the stopped
+*&            | payment (VOIDED) and its cashed reissue (CLEARED) judged apart (stop_reissue_judged_apart).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -177,6 +180,7 @@ CLASS ltc_outcome DEFINITION FINAL FOR TESTING
     METHODS stopped_cheque_blank_voided FOR TESTING.
     METHODS stopped_and_voided_cheque   FOR TESTING.
     METHODS stopped_cheque_cashed       FOR TESTING.
+    METHODS stop_reissue_judged_apart   FOR TESTING.
 
     "! Verdict of a cheque scenario: VOIDED, consistent (excluded)
     METHODS assert_voided
@@ -519,6 +523,43 @@ CLASS ltc_outcome IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( find( val = ls_verdict-listings[ 1 ]-line sub = zcl_cd_ops_pay_fixture=>gc_stopped_cashed ) >= 0 )
           msg = 'The detail says stopped cheque cashed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User fact 2026-11-08: a stop and reissue creates a new payment document (AUGBL) and a new cheque
+  " number. The stopped payment keeps STOPPED (VOIDED) and its cashed reissue is CLEARED - evaluated
+  " together, each on its own document; neither is "stopped cheque cashed"
+  METHOD stop_reissue_judged_apart.
+    TRY.
+        DATA(ls_stopped) = load( zcl_cd_ops_pay_fixture=>gc_scenario-chq_stopped ).
+        DATA(ls_reissue) = load( zcl_cd_ops_pay_fixture=>gc_scenario-chq_reissue ).
+        cl_abap_unit_assert=>assert_differs( act = ls_reissue-augbl exp = ls_stopped-augbl
+                                             msg = 'The reissue has its own payment document' ).
+        cl_abap_unit_assert=>assert_differs( act = ls_reissue-checks[ 1 ]-ztnum exp = ls_stopped-checks[ 1 ]-ztnum
+                                             msg = 'The reissue has its own cheque number' ).
+        DATA(lo_cut) = zcl_cd_ops_factory=>get_pay_outcome( ).
+        lo_cut->load( iv_context = gc_context iv_max_rows = gc_cap ).
+        DATA(ls_evaluation) = lo_cut->evaluate_documents( VALUE #( ( ls_stopped-augbl ) ( ls_reissue-augbl ) ) ).
+        DATA(ls_stop_verdict) = ls_evaluation-verdicts[ KEY by_doc doc1r = ls_stopped-augbl ].
+        DATA(ls_reissue_verdict) = ls_evaluation-verdicts[ KEY by_doc doc1r = ls_reissue-augbl ].
+        cl_abap_unit_assert=>assert_equals( act = ls_stop_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-voided
+                                            msg = 'Stopped payment: VOIDED' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_stop_verdict-finding msg = 'Stopped payment: no finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_reissue_verdict-outcome exp = zif_cd_ops_payout_types=>gc_outcome-cleared
+                                            msg = 'Reissue cashed: CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_reissue_verdict-status exp = zif_cd_ops_payout_types=>gc_status-excluded
+                                            msg = 'Reissue out of flight' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_reissue_verdict-finding msg = 'Reissue: no finding' ).
+        LOOP AT ls_evaluation-verdicts ASSIGNING FIELD-SYMBOL(<ls_verdict>).
+          LOOP AT <ls_verdict>-listings ASSIGNING FIELD-SYMBOL(<ls_listing>).
+            cl_abap_unit_assert=>assert_false(
+              act = xsdbool( find( val = <ls_listing>-line sub = zcl_cd_ops_pay_fixture=>gc_stopped_cashed ) >= 0 )
+              msg = |{ <ls_verdict>-doc1r }: never stopped cheque cashed| ).
+          ENDLOOP.
+        ENDLOOP.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

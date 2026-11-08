@@ -11,6 +11,8 @@
 *& 2026-11-07 | Code review: a voided cheque and its reissue - the live cheque decides; one shared read
 *&            | per collection (start_collection before each collect).
 *& 2026-11-08 | PARAM2 payment status STOPPED holds alone (user decision: a stopped cheque is voided).
+*& 2026-11-08 | Stop and reissue creates a new payment document (user 2026-11-08): the test of two
+*&            | cheques on one payment document renamed other_voided_not_decisive (defensive path).
 *&---------------------------------------------------------------------*
 CLASS ltd_trace_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -60,7 +62,7 @@ CLASS ltc_ev_chq_status DEFINITION FINAL FOR TESTING
     METHODS voided_holds_for_v     FOR TESTING.
     METHODS blank_never_holds      FOR TESTING.
     METHODS blank_param1_raises    FOR TESTING.
-    METHODS reissue_voided_not_decisive FOR TESTING.
+    METHODS other_voided_not_decisive FOR TESTING.
     METHODS stopped_status_holds_alone FOR TESTING.
     METHODS status_list_blank_no_read  FOR TESTING.
 ENDCLASS.
@@ -144,9 +146,10 @@ CLASS ltc_ev_chq_status IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Code review 2: the voided cheque of a payment that was reissued (newer cheque, state B) does not
-  " make the payment voided - the live cheque decides
-  METHOD reissue_voided_not_decisive.
+  " Code review 2 (defensive path): a voided cheque of a payment document that also has a newer cheque
+  " (state B) does not make the payment voided - the live cheque decides. A stop and reissue never
+  " looks like this: it creates a new payment document with its own cheque (user 2026-11-08)
+  METHOD other_voided_not_decisive.
     DATA ls_check TYPE zif_cd_ops_trace_types=>ty_check.
     TRY.
         ls_check-doc1r = gc_voided.
@@ -158,7 +161,7 @@ CLASS ltc_ev_chq_status IMPLEMENTATION.
                                            msg = 'Voided cheque not decisive' ).
         ls_result = collect( 'B' ).
         cl_abap_unit_assert=>assert_true( act = ls_result-evidence[ doc1r = gc_voided ]-found
-                                          msg = 'The reissue decides' ).
+                                          msg = 'The live cheque decides' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

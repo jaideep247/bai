@@ -165,7 +165,7 @@ ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,7,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,0,90,,"Not run in target SAP; measured in ZCL_CD_OPS_PAY_OUTCOME (test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS)"
-ZCL_CD_OPS_PAY_OUTCOME,own test include,,16,90,,Not run in target SAP
+ZCL_CD_OPS_PAY_OUTCOME,own test include,,17,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_OUTCOME_DAO,own test include,,10,90,,Not run in target SAP
 ZCL_CD_OPS_PAY_SNAPSHOT,own test include,,9,90,,Not run in target SAP
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test helper class of the plug-in creation tests)

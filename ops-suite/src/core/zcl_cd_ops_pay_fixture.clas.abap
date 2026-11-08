@@ -22,11 +22,15 @@
 *&            | stopped and cashed; cheque register rows and cheque lines. Defect fixed: the ACH
 *&            | CLEARED rows were added with the purpose of the wire RETURNED row before them (duplicate
 *&            | keys dropped the ACH RETURNED row; class D ACH had no CLEARED rule, so not watched).
+*& 2026-11-08 | Scenario CHEQUE_REISSUED (user 2026-11-08: a stop and reissue creates a new payment
+*&            | document and cheque number): the reissue of CHEQUE_STOPPED, cashed - CLEARED, judged
+*&            | apart from the stopped payment (which stays STOPPED = VOIDED).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - shared test fixtures</p>
 "! Scenarios GC_SCENARIO: retrieval without return, bank line without clearing, two DPAYH runs,
 "! FIN in two sources, SUCCESS older than 30 days, wire returned, return whose status the status
-"! job has not updated yet, cheque voided / stopped / stopped and voided / stopped and cashed;
+"! job has not updated yet, cheque voided / stopped / stopped and voided / stopped and cashed,
+"! reissue of the stopped cheque (new payment document and cheque number, cashed);
 "! HISTORY: two versions of one payment.
 CLASS zcl_cd_ops_pay_fixture DEFINITION
   PUBLIC
@@ -61,6 +65,9 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         chq_stop_void TYPE ty_scenario_id VALUE 'CHEQUE_STOP_VOIDED',
         "! Status STOPPED, cheque cashed (581, state B): INCONSISTENT - stopped cheque cashed
         chq_stop_cash TYPE ty_scenario_id VALUE 'CHEQUE_STOP_CASHED',
+        "! Reissue of CHEQUE_STOPPED (user 2026-11-08): a new payment document (AUGBL) and a new cheque
+        "! number, cashed (581, state B), status CLEARED - CLEARED; the stopped payment keeps STOPPED
+        chq_reissue TYPE ty_scenario_id VALUE 'CHEQUE_REISSUED',
       END OF gc_scenario.
 
     CONSTANTS gc_bukrs TYPE c LENGTH 4 VALUE 'US01'.
@@ -258,6 +265,8 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         chq_stopped TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009009',
         chq_stop_void TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009010',
         chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009011',
+        "! Own request and open item in the fixture so that every scenario stands alone
+        chq_reissue TYPE zif_cd_ops_trace_types=>ty_fin VALUE 'FIN0000009012',
       END OF gc_fin.
     CONSTANTS:
       BEGIN OF gc_opbel,
@@ -272,6 +281,7 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         chq_stopped TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009009',
         chq_stop_void TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009010',
         chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009011',
+        chq_reissue TYPE zif_cd_ops_trace_types=>ty_docno VALUE '100000009012',
       END OF gc_opbel.
     CONSTANTS:
       BEGIN OF gc_augbl,
@@ -286,6 +296,7 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         chq_stopped TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900009',
         chq_stop_void TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900010',
         chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900011',
+        chq_reissue TYPE zif_cd_ops_trace_types=>ty_docno VALUE '000000900012',
       END OF gc_augbl.
     "! Cheque numbers (DFKKCR-ZTNUM, 13 characters = the statement reference FEBEP-CHECT)
     CONSTANTS:
@@ -294,6 +305,7 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
         chq_stopped   TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000009',
         chq_stop_void TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000010',
         chq_stop_cash TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000011',
+        chq_reissue   TYPE zif_cd_ops_trace_types=>ty_ref VALUE '0000004000012',
       END OF gc_ztnum.
     "! Paying house bank account of the cheques and of their statement lines
     CONSTANTS:
@@ -619,6 +631,18 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
                                    iv_state    = gc_cheque_state-cashed
                                    iv_expected = zif_cd_ops_payout_types=>gc_outcome-inconsistent ).
     add_cheque_line( EXPORTING iv_ztnum = gc_ztnum-chq_stop_cash iv_esnum = 11 CHANGING cs_scenario = ls_scenario ).
+    INSERT ls_scenario INTO TABLE mt_scenarios.
+    " Stop and reissue (user 2026-11-08): the reissue is a separate payment - its own payment document and
+    " cheque number, cashed; the stopped payment (CHEQUE_STOPPED) keeps STOPPED and stays VOIDED
+    ls_scenario = cheque_scenario( iv_id       = gc_scenario-chq_reissue
+                                   iv_fin      = gc_fin-chq_reissue
+                                   iv_opbel    = gc_opbel-chq_reissue
+                                   iv_augbl    = gc_augbl-chq_reissue
+                                   iv_ztnum    = gc_ztnum-chq_reissue
+                                   iv_status   = gc_pay_status-cleared
+                                   iv_state    = gc_cheque_state-cashed
+                                   iv_expected = zif_cd_ops_payout_types=>gc_outcome-cleared ).
+    add_cheque_line( EXPORTING iv_ztnum = gc_ztnum-chq_reissue iv_esnum = 12 CHANGING cs_scenario = ls_scenario ).
     INSERT ls_scenario INTO TABLE mt_scenarios.
 
     " The run judged: the latest one (run date, then run ID)
