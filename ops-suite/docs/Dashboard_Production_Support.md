@@ -11,7 +11,7 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 
 | Card | Card type | Entity (overview service) | Shows | Navigates to |
 |---|---|---|---|---|
-| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold (ZCA_PARAM `MON_STALE_AFTER_MIN_<area>`, delivered 15 min / 26 h / 26 h; the same parameter the morning report self-check uses - was `ZCD_OPS_MONCFG`), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
+| **Monitor freshness** | List (table) | `MonitorFreshness` | FMON, EBS, HCK: end of the last completed run, age, threshold; **CORE (2026-11-08): the payment outcome snapshot lag** - processed up to (`AsOfAt`), lag in minutes (`AgeMinutes`), threshold `MON_STALE_AFTER_MIN_CORE` (30), last snapshot run and its status; (ZCA_PARAM `MON_STALE_AFTER_MIN_<area>`, delivered 15 min / 26 h / 26 h; the same parameter the morning report self-check uses - was `ZCD_OPS_MONCFG`), **stale** (red) | The area's dashboard (row) / `ZCDFileFlow-analyze` (card header) |
 | **Open critical exceptions** | List | `CriticalException` (selection variant `Overdue` as tab) | Open / assigned B and E findings of every area, overdue first: area, check code, object, owner, due date, days overdue | Owned-exceptions app (`ZCDOpsException-manage`, `ZUI_CD_OPS_EXC_O4`) |
 | **Files** | KPI + analytical | `FileFlowKpi` (variant `Today`, chart `FilesByBucket`, data points `Rejected`, `Unprocessed`, `Breached`, `MonitorAge`) | Files per flow bucket today, rejected / unprocessed / breached | `ZCDFileFlow-analyze` (file monitoring ALP) |
 | Files – latest failures | List | `FileFailure` | Rejected, partial, SLA-breached files | `ZCDFileFlow-analyze` |
@@ -37,7 +37,7 @@ Alternative: an OVP over the four area services as separate data sources (`dataS
 
 | Entity | CDS | Rule |
 |---|---|---|
-| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf`) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions: the items are live, the outcomes come from the 5-minute snapshot (CORE run variant `PAY_OUTCOME`, watermarks `ZCD_PAY_OUTWM-UPDATED_AT`); a freshness row for it is proposed, not built (`Operations_Runbook.md` §5m) |
+| `MonitorFreshness` | `ZR_CD_OpsFreshness` over `ZI_CD_OpsFreshU` (UNION of `ZR_CD_FmonAsOf`, `ZR_CD_EbsAsOf`, `ZR_CD_HckAsOf` and, since 2026-11-08, `ZI_CD_PayOutLag` - row CORE: minutes since the oldest `ZCD_PAY_OUTWM-CURRENT_TO` of the evidence sources, recheck left out; never run = stale) | One row per batch monitor; each area's completion rule and threshold (FMON: full run, variant ALL, 15 min; EBS: any variant, S/W/E/N, 26 h; HCK: S/W/E, 26 h); no completed run = stale. Transactions: the items are live, the outcomes come from the 5-minute snapshot (CORE run variant `PAY_OUTCOME`, watermarks `ZCD_PAY_OUTWM-UPDATED_AT`); a freshness row for it is proposed, not built (`Operations_Runbook.md` §5m) |
 | `CriticalException` | `ZR_CD_OpsCritExc` over `ZCD_OPS_FINDING` | Disposition O / A, severity B / E, all areas; GROUP1 never exposed; EBS bank-file statement messages hidden; `DaysOverdue` = today − due date |
 
 DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, ACTVT = '03' )` on both — the area of each row.

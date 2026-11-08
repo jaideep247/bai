@@ -10,7 +10,8 @@ Status 2026-11-07: written and statically checked offline (abaplint 0 issues for
 | Piece | Object | What it does |
 |---|---|---|
 | Evaluator | `ZIF_CD_OPS_PAY_OUTCOME` / `ZCL_CD_OPS_PAY_OUTCOME` (core factory `GET_PAY_OUTCOME`) | The A_INFLIGHT rules and evidence plug-ins (`HCK_MORNING_REPORT.md` §7b, posting areas `ZPMC` (method classes and house-bank calendars) and `ZBTR` (bank code roles) in FQC0, tables / `CLRRULE` / `BTCROLE` / `SEQOUT`, Stripe parameters `HCK_STRIPE_*`, plug-ins `ZCL_CD_HCK_EV_*`) moved unchanged into one shared service. Verdict per payment: outcome, deciding evidence kind and reference, finding. Source attribution: a FIN in two sources is **AMBIGUOUS** |
-| 5-minute snapshot | `ZCL_CD_OPS_PAY_SNAPSHOT`, job step `ZCD_OPS_PAY_SNAPSHOT` (step 2 of SM36 `ZCD_FMON_MONITOR_ALL`) | Only payments with new evidence since the watermark of each source; a new version only when the outcome changed |
+| 5-minute snapshot | `ZCL_CD_OPS_PAY_SNAPSHOT`, job step `ZCD_OPS_PAY_SNAPSHOT` (step 2 of SM36 `ZCD_FMON_MONITOR_ALL`) | Only payments with new evidence since the watermark of each source; a new version only when the outcome or its finding changed (2026-11-08: also the marker `PAY_STATUS_PENDING` - in flight, the status job has not followed the bank). Every payment of a watched method gets a version (without an item with a FIN: FIN and source blank). Packages in parallel as bgPF units (`PAYOUT_PARALLEL`, default 4; 1 = one by one as before) with **ordered watermarks**: a source's watermark advances only to the end of its last contiguous completed package, never past a failed one (package rows `ZCD_PAY_OUTPKG`) |
+| Snapshot lag (2026-11-08) | `ZCD_PAY_OUTWM-CURRENT_TO`, `ZI_CD_PayOutLagMin` / `ZI_CD_PayOutRunLast` / `ZI_CD_PayOutLag` | Minutes since the oldest instant up to which every evidence source is processed (RECHECK left out); stale above `MON_STALE_AFTER_MIN_CORE` (30). Shown in the **header of this dashboard** (data point `SnapshotLag`, object-page header facet; measures `SnapshotLagMinutes`, `SnapshotIsStale`, `SnapshotCriticality` on `Transaction`), as the fourth row (CORE) of the production-support freshness card, and A_INFLIGHT reports a stale snapshot (`PAY_SNAPSHOT_STALE`, evidence PARTIAL) |
 | History | `ZCD_PAY_OUTCOME` (keys only) + `ZCD_PAY_OUTWM` (watermarks) | Valid from / to; "as of" any instant within the retention (90 days, user decision 2026-11-08); the purge deletes closed versions and the current version of a **final** outcome after 90 days, never the current version of a payment that is not final |
 | Views | `ZI_CD_PayOutcome`, `ZI_CD_PayOutcomeTs`, `ZI_CD_PayOutcomeAt`, `ZI_CD_PayOutcomeItm` | The version valid at the instant, per FIN + source (request side) or per FIN + company code + payment (item side) |
 
@@ -34,7 +35,7 @@ Fiori elements **analytical list page** (OData V4, main entity `Transaction`, pa
 | Area | Content |
 |---|---|
 | Parameters | **Date kind** `POSTING` (DFKKOP-BUDAT), `RUN` (latest DPAYH-LAUFD) or `VALUE` (its DPAYH-VALUT); **date from / to** - any day within the 400-day retention, default today; **outcome as of** date + time (system time zone), default now |
-| Header | "Transactions (outcome history from go-live)" |
+| Header | "Transactions (outcome history from go-live)"; data point **Outcome snapshot lag (minutes)** with its criticality (red when stale, `MON_STALE_AFTER_MIN_CORE`): an outcome older than the lag is never read as current |
 | Filter bar | FIN, company code, posting date, posted today, payment method, direction, payment status, return reason, flow bucket |
 | Chart (default) | Transactions by **flow bucket** (= canonical outcome), stacked by payment method. Alternatives: funnel per posting date (transactions, paid, cleared, returned); by company code and direction |
 | Table | One row per payment-engine open item with a FIN number of the chosen day(s): FIN (→ payment trace), document, company code, posting date, payment method, direction, amount, clearing document and date, payment status, return reason, bucket, outcome finding |
@@ -102,7 +103,9 @@ Area **CORE** with **company code**: `pfcg_auth( ZCD_OPS, ZCD_PE_AREA, BUKRS, AC
 
 | Object | Folder | Type | Role |
 |---|---|---|---|
-| `ZCD_PAY_OUTCOME`, `ZCD_PAY_OUTWM` | ddic/core | tables (A) | Outcome versions (keys only), watermarks per evidence source |
+| `ZCD_PAY_OUTCOME`, `ZCD_PAY_OUTWM`, `ZCD_PAY_OUTPKG` | ddic/core | tables (A) | Outcome versions (keys, outcome, finding, severity), watermarks per evidence source (with CURRENT_TO), parallel package rows of a run |
+| `ZIF_CD_OPS_PAY_SNAP_QUEUE`, `ZCL_CD_OPS_PAY_SNAP_QUEUE`, `ZCL_CD_OPS_PAY_SNAP_OP` | src/core | interface, bgPF queue, bgPF operation | Parallel snapshot packages (2026-11-08) |
+| `ZI_CD_PayOutLagMin`, `ZI_CD_PayOutRunLast`, `ZI_CD_PayOutLag` | src/core | views | Snapshot lag (header of `ZR_CD_TrxFlow`, freshness row CORE) |
 | `ZIF_CD_OPS_PAYOUT_TYPES`, `ZIF_CD_OPS_PAY_OUTCOME`, `ZCL_CD_OPS_PAY_OUTCOME` | src/core | types, interface, class | Canonical evaluator |
 | `ZIF_CD_OPS_PAY_OUTCOME_DAO`, `ZCL_CD_OPS_PAY_OUTCOME_DAO`, `ZCL_CD_OPS_PAY_SNAPSHOT`, `ZCD_OPS_PAY_SNAPSHOT` | src/core | DAO, class, program | 5-minute snapshot |
 | `ZCL_CD_OPS_PAY_FIXTURE` | src/core | class (test support) | Shared negative fixtures of every consumer's tests |

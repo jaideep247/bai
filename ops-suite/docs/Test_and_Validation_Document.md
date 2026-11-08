@@ -255,6 +255,10 @@ ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (16 tests on the shared fixtures with the de
 | POC-09 | Test mode | `P_TEST` = X | Counts per source, no version, no watermark, no commit | pending |
 | POC-10 | Overlapping start | Two starts | Second refused RUN_LOCKED | pending |
 | POC-11 | Purge PAY_OUTCOME on a QA1 copy, `RETENTION_DAYS_PAY_OUTCOME` 90 (2026-11-08) | — | Closed versions before the cutoff deleted; current versions of final outcomes (CLEARED, RETURNED, RETRIEVED, VOIDED, REVERSED) of runs before the cutoff deleted; the current version of every payment not final kept however old (an open cheque of 120 days stays); unit tests `open_cheque_keeps_current`, `cleared_old_payment_purged`, `closed_old_version_purged` | pending |
+| POC-13 | `PAYOUT_PARALLEL` 4, bgPF configured; 3 packages of DOCUMENTS, the unit of package 2 cancelled | `PAYOUT_PACKAGE_SIZE` 100 | Package rows D / F / D; DOCUMENTS watermark at the end of package 1, never past package 2; next run judges 2 and 3 again (unit tests `failed_middle_holds_wm`, `unfinished_package_holds`, `contiguous_done_rule`) | pending |
+| POC-14 | bgPF execution of `ZCL_CD_OPS_PAY_SNAP_OP` (SBGRFCMON process `ZCD_PAY_SNAPSHOT_PACKAGE`); bgPF not configured | — | Units run, rows D; without bgPF the run judges the packages one by one with `PAY_OUTCOME_SERIAL` W; `PAYOUT_PARALLEL` 1 dispatches nothing (`serial_never_dispatches`) | pending |
+| POC-15 | Snapshot lag: stop step 2 for 40 minutes | — | Freshness row CORE red (`ZI_CD_PayOutLag`, threshold `MON_STALE_AFTER_MIN_CORE` 30), transactions dashboard header red, job log message 761 after the restart; `lag_oldest_source`, `snapshot_lag_row` | pending |
+| POC-16 | A_INFLIGHT on the snapshot: a wire 30 business days in flight, 100 000 payments with one inconsistency, a document not yet snapshotted | — | Wire counted and critical (`agg_old_wire_still_counted`); one finding with count 100 000 and 10 examples (`agg_100k_one_finding`); PAY_NOT_SNAPSHOT 1 (`snapshotted_not_live`); drill-down to the full list from the dashboard / `ZCD_PAY_OUTCOME` | pending |
 | POC-12 | Runtime at peak (gate 3) | Production-like volume | Step 2 well within 5 minutes; ST05: no SELECT per payment, indexes DAT / OUT / FIN used | pending |
 
 ### 6.12 Production-support overview page (`ZUI_CD_OPS_OVERVIEW_O4`, `Dashboard_Production_Support.md`)
@@ -331,6 +335,20 @@ Two `ZCD_FMON_MONITOR` jobs started together: the second is refused (run lock fo
 | Detail check runtime | < 10 min | ST12 | pending |
 | DB load during peak (FPY1 window) | < 5 % | ST04 / DBACOCKPIT | pending |
 | EBS validation of 50k statement lines | to be baselined | Run runtime in ZCD_OPS_RUN | pending |
+
+### 11a. QA1 volume test — a 2 000 000-payment day (2026-11-08)
+
+Volume confirmed by the user: about 200 000 payments a normal day, two peak days of about 2 000 000, 90 days of outcome history (≈ 60 million versions, `Performance_Review.md` §10a). Set-up on QA1: a client copy or mass test data with one day of 2 000 000 payments (payment runs FPY1 over generated open items, all watched methods, both flows, several house banks and currencies), statement lines for about 70 % of them, and `ZCD_PAY_OUTCOME` pre-filled to about 60 million rows (89 earlier days at the normal volume plus one earlier peak day). Snapshot step 2 of `ZCD_FMON_MONITOR_ALL` every 5 minutes; record the parameter values of each run.
+
+| ID | Scenario | Measure | Pass criterion | Result |
+|---|---|---|---|---|
+| VOL-01 | Snapshot catch-up after the last payment run of the 2 million day; `PAYOUT_PARALLEL` 1, 4, 8 and `PAYOUT_MAX_PACKAGES` 20 / 40 / 80 | Minutes from the end of the last payment run until the freshness row CORE is green (lag < `MON_STALE_AFTER_MIN_CORE`); runtime of each 5-minute run (SM37); bgRFC units (SBGRFCMON); work processes used | Snapshot back within **60 minutes** after the last payment run with the chosen values; no run longer than 15 minutes; no `PAY_OUTCOME_FAILED`; the chosen `PAYOUT_PARALLEL` × package size within the bgRFC / work process budget agreed with Basis | pending |
+| VOL-02 | Morning report the next morning with the 2 million day in flight (snapshot current) | `A_INFLIGHT` runtime (ZCD_HCK_RESULT RUNTIME_MS, SAT), memory peak (SAT / ST02), ST05: one aggregate, one examples read, no SELECT per payment; whole morning report runtime | `A_INFLIGHT` < **5 minutes** and < 500 MB extended memory; the morning report finishes inside its window (by 07:00, `Operations_Runbook.md` §1); counts equal an independent SQL count of the current versions not final (± 0) | pending |
+| VOL-03 | Transactions dashboard during and after the peak | Response time of the ALP (main entity, date kind RUN = the peak day), the KPI tile and the header snapshot lag (browser network trace, ST05 / PlanViz) | Every request **< 3 seconds** (p95) | pending |
+| VOL-04 | Stale snapshot: stop step 2 for 45 minutes during the peak, run the morning report | `PAY_SNAPSHOT_STALE` W, evidence PARTIAL, freshness row CORE red, dashboard header red; live evaluation capped (`TECH_READ_CAPPED`) | Never GREEN on stale data; after the restart the lag is green within the VOL-01 time | pending |
+| VOL-05 | Size of `ZCD_PAY_OUTCOME` at ≈ 60 million rows | Memory (M_CS_TABLES), indexes OUT / DOC / FIN / DAT | Within the sizing of `Performance_Review.md` §10a or partitioning decided | pending |
+| VOL-06 | Purge of PAY_OUTCOME with `RETENTION_DAYS_PAY_OUTCOME` 90 on the 60 million rows | Runtime of `ZCD_OPS_PURGE` target PAY_OUTCOME, rows deleted, locks / log volume | One night's purge (≈ 700 000 rows) < **30 minutes**; no current version of a payment not final deleted (SQL check before / after) | pending |
+| VOL-07 | Failed middle package: cancel the bgRFC unit of package 2 of a source (SBGRFCMON) during VOL-01 | `ZCD_PAY_OUTPKG` statuses, `ZCD_PAY_OUTWM` of the source | Watermark stops at the end of package 1; the next run judges packages 2 … again; no duplicate current version (SQL: one row per FIN / source / company code / payment with VALID_TO open) | pending |
 
 ## 12. Operations and recovery
 Runbook `Operations_Runbook.md` walked through by IT support on QA1 findings (one per triage row).

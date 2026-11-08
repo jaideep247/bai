@@ -127,5 +127,6 @@ One parameter per payment engine area (INT, at least 1, app *Parameter areas* `Z
 | `MON_STALE_AFTER_MIN_FMON` | 15 | Native SAP job every 5 minutes: 3 missed runs |
 | `MON_STALE_AFTER_MIN_EBS` | 1560 | Daily run + 2 h slack (26 h) |
 | `MON_STALE_AFTER_MIN_HCK` | 1560 | Daily morning report + 2 h slack (26 h) |
+| `MON_STALE_AFTER_MIN_CORE` | 30 | Payment outcome snapshot lag (2026-11-08): minutes behind the evidence, 6 x the 5-minute cadence; also A_INFLIGHT `PAY_SNAPSHOT_STALE` |
 
 The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable checks `cds_abap_parity` and `param_definitions_complete`. No value row is delivered (`config/param_values.csv`): a landscape changes a threshold with a value row. Time zone per area: not configurable (time stamps are UTC); future extension.
