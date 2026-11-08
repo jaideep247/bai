@@ -19,7 +19,7 @@ Facts below were confirmed in production work in 2026 (payment engine reference)
 | `FEBEP` | `BUDAT` always populated; `XBLNR` never blank for BAI 452; **`XBLNR` = bank text (letters, e.g. JPMC, BOA, PNC) + 10-character payment engine bank account + counter**, e.g. `JPMC8XX1174412334` → account `8XX1174412` (confirmed by the user 2026-11-06; the EBS scope and dashboard use it, `EBS_VALIDATION.md` §A0a); **carries no return / NOC reason** (confirmed 2026-11-06 — the reason is in DFKKRP-RLGRD / DFKKNRP-FLGRD) | `FEBEP-CHECT = BSEG-XREF2 = DFKKOP-AUGBL` (methods E G H I J K L); `DFKKCR-ZTNUM = FEBEP-CHECT` (method C) |
 | `DFKKSUMC` / `DFKKKO` / `BSEG` | — | `DFKKSUMC-FIKEY = DFKKKO-FIKEY = BSEG-AWKEY` |
 | `TFK042Z` | `XEINZ` separates collections from disbursements | — |
-| `TFK033D` | Wildcard `*` **works** in FQC0 (confirmed by the user 2026-11-08; corrects the earlier "enumerate" note) | — |
+| `TFK033D` | Wildcard `*` **works** in FQC0 (confirmed by the user 2026-11-08; corrects the earlier "enumerate" note). **Customer posting areas are allowed, names start with Z** (user 2026-11-08): the suite's mappings ZRSN, ZPMC, ZBTM, ZBTR are FQC0 entries, read only (`ZCL_CD_OPS_POSTAREA_DAO`, set-based by APPLK + BUBER + KTOPL; field names / lengths VERIFY-SE11; precedence of several `*` VERIFY, `FICA_Posting_Areas.md`) | `APPLK` = `POSTAREA_APPLK`, `BUBER` = `POSTAREA_RSN` / `_PMC` / `_BTM` / `_BTR`, `KTOPL` = `POSTAREA_KTOPL` |
 | `TVARVC` | Refuses two type-P rows with the same name | — |
 | `EFKKCLEGPI` | FPY1 locks per partner **interval** (GPART_V..GPART_B, one RUNKEY + BUKRS, `_SCOPE 3`) | — |
 | **Do not exist** | `DFKKRNIT`, `DFKKRAFT` — never configure | — |

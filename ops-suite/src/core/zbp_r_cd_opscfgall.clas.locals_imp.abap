@@ -12,6 +12,7 @@
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
 *& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
+*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals

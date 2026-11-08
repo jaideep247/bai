@@ -58,6 +58,9 @@ ZCL_CD_OPS_CFG_INJECTOR,covered,ZCL_CD_OPS_CFG_GATE,test seam: injected and rese
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,test seam: every slot injected and reset in the factory test
 ZCL_CD_OPS_PAY_FIXTURE,covered,ZCL_CD_OPS_PAY_OUTCOME,"test support (shared negative fixtures, no logic): used by the tests of the evaluator, A_INFLIGHT, the trace, the snapshot and the dashboard CDS"
 ZCL_CD_OPS_PLUGIN_PROBE,covered,ZCL_CD_OPS_FACTORY,test helper class of the plug-in creation tests
+ZCL_CD_OPS_POSTAREA_FACTORY,covered,ZCL_CD_OPS_POSTAREA,construction only: every reader test resolves the reader and the repository through it
+ZCL_CD_OPS_POSTAREA_INJECTOR,covered,ZCL_CD_OPS_POSTAREA,test seam: injected and reset by every reader test
+ZCL_CD_OPS_POSTAREA_MEM,covered,ZCL_CD_OPS_POSTAREA,test double (in-memory posting areas): every reader test adds entries and counts its reads
 ZCL_CD_OPS_STORE,own,,COMMIT / ROLLBACK (one statement each) - covered by the engine LUW tests with the store double
 ZCL_CD_OPS_TRACE_DAO,own,,"reads delegated to the EBS SAP DAO and the FMON reader (cheques by number, configured reads, returns, retrievals) are tested in those classes"
 ZCX_CD_OPS_ERROR,covered,ZCL_CD_OPS_FACTORY,exception class: raised and caught in every application test

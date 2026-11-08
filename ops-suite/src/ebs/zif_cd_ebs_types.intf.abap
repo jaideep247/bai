@@ -40,6 +40,8 @@
 *& 2026-11-07 | EBS_ZTNUM_IGNORE_ZEROS and EBS_CAMT_BAI_FALLBACK are BOOL in ZCA_PARAM (a blank value row is
 *&            | off); GC_PARAM_DEFAULT-ZTNUM_IGNORE_ZEROS.
 *& 2026-11-07 | FEBEP-VB1OK / VB2OK confirmed as the posted flags (user, 2026-11-07).
+*& 2026-11-08 | Customer posting areas: TY_BTC_MAP (ZBTM, RET_REASON dropped - read by no rule) and TY_REASON_MAP
+*&            | (ZRSN) are entries of FI-CA posting areas; GC_ISO_SEPARATOR.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - format-neutral statement model</p>
 "! One model for BAI2 and CAMT.053/054. Parsers (file, pre-import) and the
@@ -304,7 +306,9 @@ INTERFACE zif_cd_ebs_types
 
   "! ---- Configuration (customizing) ----
 
-  "! ZCD_BTC_MAP
+  "! Bank transaction code map: one entry of the customer posting area ZBTM (FQC0; was ZCD_BTC_MAP,
+  "! 2026-11-08) - keys scheme, code (ISO: domain, family, sub-family), bank key ('*' = blank =
+  "! every bank), flow ('*' any); ACTIVE is always X (an entry that exists applies), no description
   TYPES:
     BEGIN OF ty_btc_map,
       scheme      TYPE ty_scheme,
@@ -316,7 +320,6 @@ INTERFACE zif_cd_ebs_types
       exp_cdi     TYPE ty_cdi,
       pay_method  TYPE ty_paymeth,
       posting_rule TYPE c LENGTH 4,
-      ret_reason  TYPE c LENGTH 4,
       action      TYPE zif_cd_ops_types=>ty_action,
       active      TYPE abap_bool,
       description TYPE c LENGTH 60,
@@ -324,7 +327,7 @@ INTERFACE zif_cd_ebs_types
       disposition TYPE c LENGTH 10,
     END OF ty_btc_map.
 
-  "! Expected disposition of a bank transaction code (ZCD_BTC_MAP-DISPOSITION)
+  "! Expected disposition of a bank transaction code (posting area ZBTM, result DISPOSITION)
   CONSTANTS:
     BEGIN OF gc_disposition,
       not_posted TYPE c LENGTH 10 VALUE 'NOT_POSTED',
@@ -397,7 +400,8 @@ INTERFACE zif_cd_ebs_types
     END OF ty_flow_pattern.
   TYPES tt_flow_pattern TYPE STANDARD TABLE OF ty_flow_pattern WITH EMPTY KEY.
 
-  "! ZCD_EBS_RSN_MAP - NACHA return / NOC reason to payment engine return reason
+  "! NACHA return / NOC reason to payment engine return reason: one entry of the customer
+  "! posting area ZRSN (FQC0; was ZCD_EBS_RSN_MAP, 2026-11-08); reason '*' = every other reason
   TYPES:
     BEGIN OF ty_reason_map,
       reason      TYPE c LENGTH 4,
@@ -524,6 +528,10 @@ INTERFACE zif_cd_ebs_types
       noc      TYPE string VALUE `NOC`,
     END OF gc_rule_keyword.
 
+  "! Separator of the parts of an ISO bank transaction code (Domain-Family-Sub-family); the
+  "! posting areas ZBTM / ZBTR hold the parts in three key fields
+  CONSTANTS gc_iso_separator TYPE c LENGTH 1 VALUE '-'.
+
   "! First character of a seeded placeholder in configuration (e.g. <payment engine reason>)
   CONSTANTS gc_placeholder_prefix TYPE c LENGTH 1 VALUE '<'.
 
@@ -564,7 +572,7 @@ INTERFACE zif_cd_ebs_types
       posting_incomplete             TYPE zif_cd_ops_types=>ty_check_code VALUE 'POSTING_INCOMPLETE',
       "! FS-CD review: not found yet, statement within EBS_INFLIGHT_HOURS (W, NOTIFY)
       awaiting_lot_transfer          TYPE zif_cd_ops_types=>ty_check_code VALUE 'AWAITING_LOT_TRANSFER',
-      "! A98: ZCD_BTC_MAP rows that normalise to one key (blank flow = '*') but differ
+      "! A98: ZBTM entries that normalise to one key (blank flow / bank = '*') but differ
       map_conflict                   TYPE zif_cd_ops_types=>ty_check_code VALUE 'MAP_CONFLICT',
       "! PCRE patterns: a ZCD_EBS_FLOW_PAT pattern that does not compile (line blocked)
       flow_pattern_invalid           TYPE zif_cd_ops_types=>ty_check_code VALUE 'FLOW_PATTERN_INVALID',

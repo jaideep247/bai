@@ -22,6 +22,9 @@
 *&            | parameters).
 *& 2026-11-08 | Table consolidation: the house-bank calendar is a ZCD_HCK_PMCLASS row with HBKID, read with
 *&            | the classes (ZCD_HCK_PMBANK merged).
+*& 2026-11-08 | Customer posting areas: method classes from ZPMC and lifecycle roles from ZBTR with the
+*&            | in-memory posting areas (pm_classes_from_posting_area, btc_roles_lifecycle_only); the
+*&            | reference read uses ZCD_HCK_CLRRULE as stand-in table.
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -446,6 +449,7 @@ CLASS ltc_inflight_reads DEFINITION FINAL FOR TESTING
     METHODS gl_lines_by_xref2_window   FOR TESTING.
     METHODS gl_lines_by_account_capped FOR TESTING.
     METHODS configuration_active_only  FOR TESTING.
+    METHODS pm_classes_from_posting_area FOR TESTING.
     METHODS btc_roles_lifecycle_only   FOR TESTING.
     METHODS reference_rows_read        FOR TESTING.
     METHODS reference_needs_whitelist  FOR TESTING.
@@ -457,8 +461,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_CLRRULE' )
-                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ) ).
+      i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_CLRRULE' ) ( 'ZCD_HCK_SEQOUT' ) ) ).
   ENDMETHOD.
 
 
@@ -474,7 +477,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     mo_hck_dao = NEW #( ).
     mo_hck_dao->mt_fields = VALUE #( ( fieldname = 'METHOD_CLASS' type_kind = cl_abap_typedescr=>typekind_char )
                                      ( fieldname = 'FLOW' type_kind = cl_abap_typedescr=>typekind_char )
-                                     ( fieldname = 'PAY_METHODS' type_kind = cl_abap_typedescr=>typekind_char ) ).
+                                     ( fieldname = 'PURPOSE' type_kind = cl_abap_typedescr=>typekind_char ) ).
     mo_hck_dao->mv_whitelisted = abap_true.
     zcl_cd_hck_injector=>inject_dao( mo_hck_dao ).
     mo_cut = NEW zcl_cd_hck_runtime_dao( ).
@@ -483,6 +486,8 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
 
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
+    zcl_cd_ops_postarea_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
     CLEAR: mo_cut, mo_hck_dao.
   ENDMETHOD.
 
@@ -520,31 +525,32 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
 
 
   METHOD insert_configuration.
-    DATA lt_class TYPE STANDARD TABLE OF zcd_hck_pmclass WITH EMPTY KEY.
-    DATA ls_class TYPE zcd_hck_pmclass.
     DATA lt_rule TYPE STANDARD TABLE OF zcd_hck_clrrule WITH EMPTY KEY.
     DATA ls_rule TYPE zcd_hck_clrrule.
-    DATA lt_role TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
-    DATA ls_role TYPE zcd_hck_btcrole.
     DATA lt_out TYPE STANDARD TABLE OF zcd_hck_seqout WITH EMPTY KEY.
     DATA ls_out TYPE zcd_hck_seqout.
-    ls_class-flow = 'D'.
-    ls_class-method_class = 'WIR'.
-    ls_class-pay_methods = 'E'.
-    ls_class-age_basis = zif_cd_hck_runtime_types=>gc_age_basis-value_date.
-    ls_class-calendar = 'US'.
-    ls_class-active = abap_true.
-    INSERT ls_class INTO TABLE lt_class.
-    ls_class-method_class = 'ACI'.
-    ls_class-active = abap_false.
-    INSERT ls_class INTO TABLE lt_class.
-    " House-bank calendar of the ACI class: a row with HBKID, calendar only (ZCD_HCK_PMBANK merged)
-    CLEAR: ls_class-pay_methods, ls_class-age_basis.
-    ls_class-hbkid = 'BARC1'.
-    ls_class-calendar = 'GB'.
-    ls_class-active = abap_true.
-    INSERT ls_class INTO TABLE lt_class.
-    go_env->insert_test_data( lt_class ).
+    " Customer posting area ZPMC (FLOW / PAYMENT METHOD / HOUSE BANK -> CLASS / AGE BASIS / CALENDAR):
+    " two payment methods of WIR, one of ACI with the calendar of house bank BARC1, and entries that
+    " cannot be used (flow '*', no class)
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
+    DATA(lo_mem) = NEW zcl_cd_ops_postarea_mem( ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = 'D/E/*' iv_results = |WIR/{ zif_cd_hck_runtime_types=>gc_age_basis-value_date }/US| ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = 'D/F/*' iv_results = |WIR/{ zif_cd_hck_runtime_types=>gc_age_basis-value_date }/US| ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = 'D/X/*' iv_results = |ACI/{ zif_cd_hck_runtime_types=>gc_age_basis-value_date }/| ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = 'D/X/BARC1' iv_results = 'ACI//GB' ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = '*/Y/*' iv_results = 'OTH' ).
+    lo_mem->add( iv_area = 'ZPMC' iv_keys = 'C/Z/*' ).
+    " Customer posting area ZBTR (USAGE / SCOPE / SCHEME / CODE / FAMILY / SUB-FAMILY -> ROLE / COMPARE)
+    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/CCRD/BAI2/195|
+                 iv_results = 'PAYOUT_RECEIVED' ).
+    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACI/ISO/PMNT/ICDT/ARET|
+                 iv_results = |RETURNED/{ zif_cd_hck_runtime_types=>gc_compare-returns_lot }| ).
+    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/DACH/BAI2/*|
+                 iv_results = 'ORIGINAL' ).
+    " Reconciliation entry of the same code (set STRIPE_US): never a lifecycle role
+    lo_mem->add( iv_area = 'ZBTR' iv_keys = |{ zif_cd_hck_types=>gc_btc_usage-recon }/STRIPE_US/BAI2/195|
+                 iv_results = 'DEPOSIT' ).
+    zcl_cd_ops_postarea_injector=>inject_dao( lo_mem ).
     ls_rule-flow = 'D'.
     ls_rule-method_class = 'WIR'.
     ls_rule-purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared.
@@ -557,20 +563,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_rule-active = abap_false.
     INSERT ls_rule INTO TABLE lt_rule.
     go_env->insert_test_data( lt_rule ).
-    " Lifecycle row: SCOPE = flow C + method class CRD (table consolidation 2026-11-08)
-    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-lifecycle.
-    ls_role-scope = 'CCRD'.
-    ls_role-scheme = 'BAI2'.
-    ls_role-btc_code = '195'.
-    ls_role-role = 'PAYOUT_RECEIVED'.
-    ls_role-active = abap_true.
-    INSERT ls_role INTO TABLE lt_role.
-    " Reconciliation row of the same code (set STRIPE_US): never a lifecycle role
-    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-recon.
-    ls_role-scope = 'STRIPE_US'.
-    ls_role-role = 'DEPOSIT'.
-    INSERT ls_role INTO TABLE lt_role.
-    go_env->insert_test_data( lt_role ).
     ls_out-flow = 'D'.
     ls_out-method_class = 'ACH'.
     ls_out-seq = '010'.
@@ -634,21 +626,11 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: every configuration read returns the active rows only (production switches rows off)
+  " Rule: the table configuration reads return the active rows only (production switches rows off)
   METHOD configuration_active_only.
     TRY.
-        DATA(lt_classes) = mo_cut->get_pm_classes( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 2
-                                            msg = 'Active class row and active house-bank row only' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'WIR' hbkid = space ]-calendar
-                                            exp = 'US' msg = 'Calendar of the class row' ).
-        DATA(lt_roles) = mo_cut->get_btc_roles( ).
         DATA(lt_outcomes) = mo_cut->get_seq_outcomes( ).
-        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'ACI' hbkid = 'BARC1' ]-calendar
-                                            exp = 'GB' msg = 'Calendar of the house-bank row (key HBKID)' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_clearing_rules( ) ) exp = 1 msg = 'Active rule only' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
-                                            msg = 'Role per flow / class / scheme / code' ).
         cl_abap_unit_assert=>assert_equals( act = lt_outcomes[ 1 ]-outcome exp = 'CLEARED' msg = 'Outcome' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -656,15 +638,45 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule (table consolidation 2026-11-08): the lifecycle reads only usage LIFECYCLE of ZCD_HCK_BTCROLE
-  " and splits SCOPE into flow and method class; a reconciliation role of the same code never leaks in
+  " Rule (posting area ZPMC): one class row per flow + class with the payment methods of its '*'
+  " entries, one house-bank row per entry with a house bank (calendar only); unusable entries skipped
+  METHOD pm_classes_from_posting_area.
+    TRY.
+        DATA(lt_classes) = mo_cut->get_pm_classes( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_classes ) exp = 3
+                                            msg = 'WIR and ACI class rows, the BARC1 row; flow * and no class skipped' ).
+        DATA(ls_wir) = lt_classes[ flow = 'D' method_class = 'WIR' hbkid = space ].
+        cl_abap_unit_assert=>assert_equals( act = ls_wir-pay_methods exp = `E,F`
+                                            msg = 'Payment methods of the class (one entry each)' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_wir-calendar exp = 'US' msg = 'Calendar of the class' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_wir-age_basis exp = zif_cd_hck_runtime_types=>gc_age_basis-value_date
+                                            msg = 'Ageing basis of the class' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_classes[ flow = 'D' method_class = 'ACI' hbkid = 'BARC1' ]-calendar
+                                            exp = 'GB' msg = 'Calendar of the house bank (key HBKID)' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_classes[ flow = 'D' method_class = 'ACI' hbkid = 'BARC1' ]-pay_methods
+                                             msg = 'A house-bank row carries no payment method' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (posting area ZBTR): the lifecycle reads only usage LIFECYCLE and splits SCOPE into flow and
+  " method class, joins the ISO code; a reconciliation role of the same code and a '*' entry never leak in
   METHOD btc_roles_lifecycle_only.
     TRY.
         DATA(lt_roles) = mo_cut->get_btc_roles( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1 msg = 'Only the lifecycle row' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 2 msg = 'The two lifecycle entries' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-flow exp = 'C' msg = 'Flow from SCOPE' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-method_class exp = 'CRD'
                                             msg = 'Method class from SCOPE' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
+                                            msg = 'Role per flow / class / scheme / code' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 2 ]-btc_code exp = 'PMNT-ICDT-ARET'
+                                            msg = 'ISO code from domain, family and sub-family' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 2 ]-compare_amount
+                                            exp = zif_cd_hck_runtime_types=>gc_compare-returns_lot
+                                            msg = 'Compare amount of the role' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_roles[ role = 'DEPOSIT' ] ) )
                                            msg = 'A reconciliation role never leaks into the lifecycle' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -673,18 +685,19 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a configured table is read by its reference field for the given values (here the method
-  " class table as stand-in for the Stripe payout log), roles without a field are not selected
+  " Rule: a configured table is read by its reference field for the given values (here the clearing
+  " rule table as stand-in for the Stripe payout log), roles without a field are not selected
   METHOD reference_rows_read.
     TRY.
         DATA(lt_rows) = mo_cut->get_reference_rows(
-                          is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'METHOD_CLASS'
-                                                 type_field = 'FLOW' status_field = 'PAY_METHODS' )
+                          is_source   = VALUE #( tabname = 'ZCD_HCK_CLRRULE' ref_field = 'METHOD_CLASS'
+                                                 type_field = 'FLOW' status_field = 'PURPOSE' )
                           it_refs     = VALUE #( ( CONV #( 'WIR' ) ) ( CONV #( 'XYZ' ) ) )
                           iv_max_rows = 100 ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One row by reference' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'The rows of the reference' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-rtype exp = 'D' msg = 'Role field read' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = 'E' msg = 'Status field read' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = zif_cd_hck_runtime_types=>gc_purpose-cleared
+                                            msg = 'Status field read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -695,7 +708,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD reference_needs_whitelist.
     mo_hck_dao->mv_whitelisted = abap_false.
     TRY.
-        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'METHOD_CLASS' )
+        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_CLRRULE' ref_field = 'METHOD_CLASS' )
                                     it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
                                     iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Table off the whitelist must raise' ).
@@ -708,7 +721,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   " Rule: a field name that is not in the DDIC raises before any SQL
   METHOD reference_unknown_field.
     TRY.
-        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_PMCLASS' ref_field = 'NO_SUCH_FIELD' )
+        mo_cut->get_reference_rows( is_source   = VALUE #( tabname = 'ZCD_HCK_CLRRULE' ref_field = 'NO_SUCH_FIELD' )
                                     it_refs     = VALUE #( ( CONV #( 'WIR' ) ) )
                                     iv_max_rows = 100 ).
         cl_abap_unit_assert=>fail( msg = 'Unknown field must raise' ).

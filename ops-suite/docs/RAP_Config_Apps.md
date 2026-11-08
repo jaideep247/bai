@@ -9,9 +9,9 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 
 | App | Service definition (binding to create) | Root (singleton) | Children (customizing tables) | Payment engine area (ZCD_OPS) |
 |---|---|---|---|---|
-| EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
+| EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla (durations and deadlines - ZCD_FMON_DEADL merged 2026-11-08), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
-| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass (with house-bank calendar rows, 2026-11-08), HckClrRule, HckBtcRole (usage LIFECYCLE / RECON, 2026-11-08), HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
+| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckClrRule, HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting & approved tables | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), ApprovedTable (ZCD_OPS_TABWL, *Approved tables per reader*: FMON SOURCE, HCK READ / DRIFT - table consolidation 2026-11-08) | CORE |
 
 **Runtime parameters are not maintained here** (2026-11-07): the OpsParam section (table ZCD_OPS_PARAM, draft table ZCD_D_PARAM, entities `ZR_/ZC_CD_OpsParam`) is retired. Parameters live in the global framework `ZCA_PARAM` and are maintained in its app *Parameter areas* (`ZUI_CA_PARAM_O4`, `param-framework/docs/ONBOARDING.md`), areas `CD_OPS`, `CD_EBS`, `CD_FMON`, `CD_HCK`; the framework has its own transport / production rules (definitions by transport only, values of released parameters adjustable in production).
@@ -55,7 +55,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 27 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 23 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -69,9 +69,10 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 ## 4. Field validations (on save and in Prepare)
 
+The bank transaction codes, return reasons, payment method classes and bank code roles left the apps on 2026-11-08 (FI-CA customer posting areas ZBTM, ZRSN, ZPMC, ZBTR, maintained in FQC0, `FICA_Posting_Areas.md`): their former field validations (rule group with an active rule, role per usage, LIFECYCLE scope, RECON scheme BAI2, house-bank calendar …) are the morning check `D_POSTAREA_INVALID` (`ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS`).
+
 | App | Entity | Check | Message |
 |---|---|---|---|
-| EBS | BtcMap | Scheme BAI2/ISO/PRTRY; flow D/C/*; direction C/D/* or blank; action AUTO_POST / EXCEPTION / BLOCK / NOTIFY / ON_ACCOUNT or blank; **active non-BLOCK row needs a rule group (blank = category) with an active rule**, read across drafts of the same session | 413, 416 |
 | EBS | BtcRule | Severity B/E/W/I or blank; action as above | 413 |
 | EBS | RuleDef | Class exists and implements `ZIF_CD_EBS_RULE`; level L/S; default severity / action; finding class DUPLICATE / POSTING or blank | 410, 413 |
 | EBS | HouseBankAcct, FlowPattern | Flow values; **flow pattern is valid PCRE** | 413, 418 |
@@ -85,8 +86,6 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators; expected groups a comma list of distinct values of at most 70 characters, blank without group field (table consolidation 2026-11-08, was ZCD_HCK_AGGGRP) | 411, 412, 413, 423, 426 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
-| HCK | HckPmClass | Flow D / C (method class: open list). Class row (house bank blank): ageing basis VALUE_DATE / ISSUE_DATE. House-bank row (key HBKID filled, was ZCD_HCK_PMBANK - table consolidation 2026-11-08): calendar required, payment methods and ageing basis blank, so a payment method stays in one class | 413, 422, 423 |
-| HCK | HckBtcRole | Usage LIFECYCLE / RECON; scheme BAI2 / ISO / PRTRY. LIFECYCLE: scope = flow D / C + method class (PCRE `[DC][A-Z0-9_]{1,3}`), role required, an open list but never a reconciliation role, compare amount X / R / C or blank. RECON: role LEG / DEPOSIT / CUTOFF / REDEPOSIT / CHEQUE / OTHER / IGNORE, scheme BAI2, compare amount blank (table consolidation 2026-11-08, was ZCD_HCK_RCBTC) | 413, 422, 423, 424, 425 |
 | HCK | HckClrRule | Flow, purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT), required (blank, X, C, N); **evidence class implements ZIF_CD_HCK_EVIDENCE** | 413, 410 |
 | HCK | HckSeqOutcome | Flow, expected returns lot items 0-9 or blank, severity; **sequence pattern is valid PCRE** (outcome: open list) | 413, 418 |
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |

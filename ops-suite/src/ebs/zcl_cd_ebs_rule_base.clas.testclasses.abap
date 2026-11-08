@@ -34,6 +34,7 @@
 *& 2026-11-08 | User decision: BAI166D = ACH retrieval succeeded (R07 RETRIEVED, no returns lot: R07L without
 *&            | PARAM3 LOT), BAI195D = wire return (R07 RETURNED) - seeded rows tested; PARAM3 LOT tests kept
 *&            | as the rule capability (helper run_lot_chain).
+*& 2026-11-08 | Configuration double: get_reason (R05 asks the DAO for the ZRSN entry of a reason).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -194,6 +195,10 @@ CLASS ltd_cfg_dao IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_reason_map.
     rt_reasons = mt_reasons.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_cfg_dao~get_reason.
+    " The posting area's precedence (exact beats '*') is the DAO's, tested in ZCL_CD_EBS_CFG_DAO
+    rs_reason = VALUE #( mt_reasons[ reason = iv_reason ] OPTIONAL ).
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_lookups.
     rt_lookups = mt_lookups.

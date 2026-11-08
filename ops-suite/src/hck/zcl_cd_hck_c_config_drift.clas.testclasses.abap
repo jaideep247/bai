@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Production-table classification test withdrawn (user decision, D-3).
+*& 2026-11-08 | Drift table example ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -66,7 +67,7 @@ CLASS ltc_config_drift DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_check     TYPE zif_cd_hck_types=>ty_check_id VALUE 'D_DRIFT',
-      gc_table     TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_MAP',
+      gc_table     TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_RULE',
       gc_hash_old  TYPE zif_cd_hck_types=>ty_hash VALUE 'AAAA',
       gc_hash_new  TYPE zif_cd_hck_types=>ty_hash VALUE 'BBBB',
       gc_version_1 TYPE zif_cd_hck_types=>ty_hash_version VALUE '01',

@@ -5,13 +5,16 @@
 *& aggregated on HANA in one set-based statement (GROUP BY with SUM / COUNT
 *& / MIN / MAX, JOIN of the key table, NOT EXISTS for the returns lot,
 *& HAVING for unmatched assignment groups); configuration rows are read
-*& once per run. No SELECT per document, no line-level copy, nothing
+*& once per run (bank code roles: posting area ZBTR through ZCL_CD_OPS_POSTAREA).
+*& No SELECT per document, no line-level copy, nothing
 *& written. Field names not confirmed in this landscape carry a
 *& VERIFY-DDIC marker (HCK_MORNING_REPORT.md section 15).
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
 *& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
 *&            | ZCD_HCK_RCBTC).
+*& 2026-11-08 | Customer posting areas: get_btc_roles from ZBTR usage RECON through ZCL_CD_OPS_POSTAREA (was a SELECT
+*&            | on ZCD_HCK_BTCROLE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation reads (HANA)</p>
 "! Access paths and the SQL-trace items: Performance_Review.md, section "Three-way
@@ -57,15 +60,17 @@ CLASS zcl_cd_hck_recon_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_recon_dao~get_btc_roles.
-    " Reconciliation rows only (2026-11-08, was ZCD_HCK_RCBTC): SCOPE = set id, BAI2 type codes
-    " (FEBEP-VORGC); lifecycle roles (usage LIFECYCLE) never reach the reconciliation
-    SELECT scope AS set_id, btc_code AS btc, role
-      FROM zcd_hck_btcrole
-      WHERE usage  = @zif_cd_hck_types=>gc_btc_usage-recon
-        AND scheme = @zif_cd_ebs_types=>gc_scheme-bai2
-        AND active = @abap_true
-      ORDER BY scope, btc_code
-      INTO CORRESPONDING FIELDS OF TABLE @rt_roles.
+    " ZBTR (FQC0) keys USAGE / SCOPE / SCHEME / CODE, result ROLE. Reconciliation entries only: SCOPE =
+    " set id, BAI2 type codes (FEBEP-VORGC); lifecycle roles never reach the reconciliation; '*' is
+    " not a reconciliation key (an unmapped code is a variance - configuration check POSTAREA_INVALID)
+    LOOP AT zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-btc_role )
+         ASSIGNING FIELD-SYMBOL(<ls_entry>)
+         WHERE key01 = zif_cd_hck_types=>gc_btc_usage-recon
+           AND key03 = zif_cd_ebs_types=>gc_scheme-bai2
+           AND key02 <> zif_cd_ops_postarea_types=>gc_generic
+           AND key04 <> zif_cd_ops_postarea_types=>gc_generic.
+      INSERT VALUE #( set_id = <ls_entry>-key02 btc = <ls_entry>-key04 role = <ls_entry>-fun01 ) INTO TABLE rt_roles.
+    ENDLOOP.
   ENDMETHOD.
 
 

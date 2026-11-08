@@ -30,14 +30,15 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
                   '\n*& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).'
                   '\n*& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).'
                   '\n*& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).'
-                  '\n*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).')
+                  '\n*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).'
+                  '\n*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).')
 
 # ---------------------------------------------------------------------------
 # Spec: pe_area -> app; per table: alias, draft table, labels, keys that may be
 # blank (not mandatory on create), checks.
 # Checks: ('enum', field, 'A,B' | ',A,B' blank allowed) ('class', field, interface)
 #         ('table', field) ('field', field, table_field) ('window', from, to)
-#         ('thresholds',) ('positive', field) ('rulegroups',)
+#         ('thresholds',) ('positive', field)
 #         ('pcre', field): a pattern field must compile as PCRE (ZCL_CD_OPS_UTIL=>PCRE_VALID;
 #         matched at runtime to the complete value, case ignored; blank allowed) - message 418
 #         ('dest', ('channel'|'class', field), dest_field, ...): the alert channel plug-in checks
@@ -58,18 +59,14 @@ SEV = 'B,E,W,I'
 # outbound generation / bank acknowledgement (one constant line of the pool: at most 84 characters)
 DEADLINE_STAGES = 'FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED'
 ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
-# ZCD_HCK_BTCROLE (table consolidation 2026-11-08): the roles of a code in a reconciliation set
-# (ZIF_CD_HCK_RECON_TYPES=>GC_ROLE) and the form of a lifecycle scope (flow D / C + method class)
-RECON_ROLES = 'LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE'
-LIFECYCLE_SCOPE = '[DC][A-Z0-9_]{1,3}'
+# Customer posting areas (user decision 2026-11-08): ZCD_BTC_MAP, ZCD_EBS_RSN_MAP, ZCD_HCK_PMCLASS and
+# ZCD_HCK_BTCROLE are FI-CA customer posting areas ZBTM, ZRSN, ZPMC, ZBTR maintained in FQC0 - no app
+# entity; their checks are the configuration check ZCL_CD_OPS_CFG_CHECKS=>CHECK_POSTING_AREAS
+# (morning report D_POSTAREA_INVALID). Rule groups of ZBTM are checked there against ZCD_BTC_RULE.
 SPEC = {
     'ebs': dict(
         folder='ebs', pe_area='EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
         title='EBS rules and mapping', tables=[
-            ('zcd_btc_map', 'BtcMap', 'zcd_d_btcmap', 'Bank transaction code', 'Bank transaction codes',
-             ['bank_key'], [('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'flow_type', 'D,C,*'),
-                            ('enum', 'exp_cdi', ',C,D,*'), ('enum', 'action', ',' + ACTIONS),
-                            ('enum', 'disposition', ',NOT_POSTED'), ('rulegroups',)]),
             ('zcd_btc_rule', 'BtcRule', 'zcd_d_btcrule', 'Rule assignment', 'Rule assignments', [],
              [('enum', 'severity', ',' + SEV), ('enum', 'action', ',' + ACTIONS)]),
             ('zcd_ebs_rule_def', 'RuleDef', 'zcd_d_ruledef', 'Rule', 'Rule registry', [],
@@ -80,7 +77,6 @@ SPEC = {
              [('enum', 'flow_default', ',D,C')]),
             ('zcd_ebs_flow_pat', 'FlowPattern', 'zcd_d_flowpat', 'Flow pattern', 'Flow patterns (XBLNR)',
              ['priority'], [('enum', 'flow_type', 'D,C'), ('pcre', 'pattern')]),
-            ('zcd_ebs_rsn_map', 'ReasonMap', 'zcd_d_rsnmap', 'Return reason', 'Return / NOC reasons', [], []),
             ('zcd_ebs_lookup', 'EbsLookup', 'zcd_d_ebslkp', 'Lookup (rule R21)', 'Lookups (rule R21)', [],
              [('enum', 'key_kind', 'DOCNO,ZTNUM,REFERENCE'), ('table', 'table_name'),
               ('field', 'key_field', 'table_name'), ('field', 'status_field', 'table_name')]),
@@ -140,32 +136,12 @@ SPEC = {
             ('zcd_job_cycle', 'JobCycle', 'zcd_d_jobcyc', 'Job cycle', 'Job cycles', [], []),
             ('zcd_job_step', 'JobStep', 'zcd_d_jobstep', 'Job step', 'Job cycle steps', [],
              [('window', 'window_from', 'window_to'), ('pcre', 'jobname')]),
-            # User rules 2026-11-07 (in-flight check A_INFLIGHT): method classes, evidence rules, BAI roles
-            # and role-sequence outcomes - all keyed by flow + method class (an open list: a new class is
-            # rows in these tables, never a code or domain change)
-            # Table consolidation 2026-11-08: a row with a house bank (HBKID) only overrides the
-            # calendar of its class (was ZCD_HCK_PMBANK); the class row (HBKID blank) keeps the payment
-            # methods, so a payment method still maps to exactly one class per flow
-            ('zcd_hck_pmclass', 'HckPmClass', 'zcd_d_hckpmcls', 'Payment method class',
-             'Payment method classes (and house-bank calendars)', ['hbkid'],
-             [('enum', 'flow', 'D,C'),
-              ('when', 'hbkid', BLANK, [('enum', 'age_basis', 'VALUE_DATE,ISSUE_DATE')]),
-              ('when', 'hbkid', FILLED, [('required', 'calendar'), ('blank', 'pay_methods'),
-                                         ('blank', 'age_basis')])]),
+            # User rules 2026-11-07 (in-flight check A_INFLIGHT): evidence rules and role-sequence
+            # outcomes keyed by flow + method class (an open list: a new class is rows in these tables
+            # and entries of the posting areas ZPMC / ZBTR, never a code or domain change)
             ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
              [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
-            # Table consolidation 2026-11-08: one table of bank code roles with a USAGE - LIFECYCLE (scope =
-            # flow + method class, open list of roles) and RECON (scope = reconciliation set, fixed roles;
-            # was ZCD_HCK_RCBTC); the roles of one usage are refused for the other
-            ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role',
-             'Bank code roles (lifecycle and reconciliation)', [],
-             [('enum', 'usage', 'LIFECYCLE,RECON'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'),
-              ('when', 'usage', 'LIFECYCLE', [('form', 'scope', LIFECYCLE_SCOPE), ('required', 'role'),
-                                              ('reserved', 'role', RECON_ROLES),
-                                              ('enum', 'compare_amount', ',X,R,C')]),
-              ('when', 'usage', 'RECON', [('enum', 'role', RECON_ROLES), ('enum', 'scheme', 'BAI2'),
-                                          ('blank', 'compare_amount')])]),
             ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
              [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
               ('enum', 'severity', ',' + SEV),
@@ -682,17 +658,6 @@ def abap_check(t, chk, root, when=None):
                 f"      INSERT VALUE #( number = {msg}thresholds_order v1 = ls_row-Amber v2 = ls_row-Red",
                 f"                      v3 = ls_row-Metric element = {el('Red')} ) INTO TABLE lt_msg.",
                 '    ENDIF.']
-    if kind == 'rulegroups':
-        return ["    \" An active row that is not BLOCK needs a rule group (blank = category) with an active rule",
-                "    DATA(lv_group) = COND zif_cd_ops_cfg_types=>ty_name( WHEN ls_row-RuleGroup IS INITIAL",
-                "                                                         THEN ls_row-Category",
-                "                                                         ELSE ls_row-RuleGroup ).",
-                "    IF ls_row-Active = abap_true AND ls_row-ActionCode <> zif_cd_ops_types=>gc_action-block",
-                "       AND zcl_cd_ops_cfg_checks=>missing_names( it_needed    = VALUE #( ( lv_group ) )",
-                "                                                 it_available = lt_groups ) IS NOT INITIAL.",
-                f"      INSERT VALUE #( number = {msg}rule_group_empty v1 = lv_group",
-                f"                      element = {el('RuleGroup')} ) INTO TABLE lt_msg.",
-                '    ENDIF.']
     raise ValueError(chk)
 
 
@@ -832,25 +797,12 @@ def bp_locals(app, tables):
         if t['checks']:
             o += ['', '  METHOD validatefields.',
                   '    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.']
-            if any(c[0] == 'rulegroups' for c in t['checks']):
-                o += ['    DATA lt_groups TYPE zif_cd_ops_cfg_types=>ty_names.']
             o += ['',
                   f'    READ ENTITIES OF zr_cd_{low} IN LOCAL MODE',
                   f'      ENTITY {a}',
                   '        ALL FIELDS WITH CORRESPONDING #( keys )',
                   '      RESULT DATA(lt_rows).',
                   '    CHECK lt_rows IS NOT INITIAL.']
-            if any(c[0] == 'rulegroups' for c in t['checks']):
-                o += ['',
-                      '    " Active rule groups, including unsaved draft rows of the same edit session',
-                      f'    READ ENTITIES OF zr_cd_{low} IN LOCAL MODE',
-                      f'      ENTITY {root} BY \\_BtcRule',
-                      '        FIELDS ( RuleGroup Active )',
-                      '        WITH VALUE #( ( %is_draft = lt_rows[ 1 ]-%is_draft SingletonID = 1 ) )',
-                      '      RESULT DATA(lt_rules).',
-                      '    LOOP AT lt_rules INTO DATA(ls_rule) WHERE Active = abap_true.',
-                      '      INSERT CONV #( ls_rule-RuleGroup ) INTO TABLE lt_groups.',
-                      '    ENDLOOP.']
             o += ['', '    LOOP AT lt_rows INTO DATA(ls_row).',
                   '      CLEAR lt_msg.',
                   f'      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-{al}.']

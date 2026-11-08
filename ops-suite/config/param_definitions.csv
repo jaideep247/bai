@@ -8,6 +8,12 @@ CD_OPS,MON_STALE_AFTER_MIN_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run 
 CD_OPS,PAYOUT_INITIAL_DAYS,P,INT,0,400,10,,,,,First outcome snapshot run: days read back (from go-live),PE RTB
 CD_OPS,PAYOUT_MAX_PACKAGES,P,INT,1,,20,,,,,Packages per evidence source and 5-minute snapshot run,PE RTB
 CD_OPS,PAYOUT_PACKAGE_SIZE,P,INT,100,50000,5000,,,,,Payment documents per package of the outcome snapshot,PE RTB
+CD_OPS,POSTAREA_APPLK,P,CHAR,,,V,[A-Z],,X,X,Application area of the posting area entries (TFK033D-APPLK),PE RTB
+CD_OPS,POSTAREA_BTM,P,CHAR,,,ZBTM,Z[A-Z0-9]{3},,X,X,Posting area of the bank transaction codes (was ZCD_BTC_MAP),PE RTB
+CD_OPS,POSTAREA_BTR,P,CHAR,,,ZBTR,Z[A-Z0-9]{3},,X,X,Posting area of the bank code roles (was ZCD_HCK_BTCROLE),PE RTB
+CD_OPS,POSTAREA_KTOPL,P,CHAR,,,,"[A-Z0-9]{1,4}",,,X,Chart of accounts of the posting area entries (blank = none),PE RTB
+CD_OPS,POSTAREA_PMC,P,CHAR,,,ZPMC,Z[A-Z0-9]{3},,X,X,Posting area of the method classes (was ZCD_HCK_PMCLASS),PE RTB
+CD_OPS,POSTAREA_RSN,P,CHAR,,,ZRSN,Z[A-Z0-9]{3},,X,X,Posting area of return / NOC reasons (was ZCD_EBS_RSN_MAP),PE RTB
 CD_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,PE RTB
 CD_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),PE RTB
 CD_OPS,RETENTION_DAYS_FMON_EVENT,P,INT,,,400,,,,,Retention of file monitoring events (days; >= 30),PE RTB

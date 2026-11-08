@@ -8,9 +8,7 @@ define root view entity ZR_CD_HckCfgAll
   composition [0..*] of ZR_CD_HckAggregate as _HckAggregate
   composition [0..*] of ZR_CD_JobCycle as _JobCycle
   composition [0..*] of ZR_CD_JobStep as _JobStep
-  composition [0..*] of ZR_CD_HckPmClass as _HckPmClass
   composition [0..*] of ZR_CD_HckClrRule as _HckClrRule
-  composition [0..*] of ZR_CD_HckBtcRole as _HckBtcRole
   composition [0..*] of ZR_CD_HckSeqOutcome as _HckSeqOutcome
   composition [0..*] of ZR_CD_HckReconSet as _HckReconSet
 {
@@ -23,9 +21,7 @@ define root view entity ZR_CD_HckCfgAll
       _HckAggregate,
       _JobCycle,
       _JobStep,
-      _HckPmClass,
       _HckClrRule,
-      _HckBtcRole,
       _HckSeqOutcome,
       _HckReconSet
 }

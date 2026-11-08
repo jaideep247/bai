@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ebs_r_s09_coverage.clas.abap
 *& Purpose:
-*& S09: every entry of a statement must be mapped in ZCD_BTC_MAP. One finding
+*& S09: every entry of a statement must be mapped in ZBTM. One finding
 *& per statement summarising unmapped (X01) entries; each entry already has its
 *& own R14 block. Pure.
 *& Modification log:
@@ -10,6 +10,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A35: lines read by statement key.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-08 | Customer posting area: the map is ZBTM (FQC0; was ZCD_BTC_MAP) - comment only.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S09 - 100 % BTC mapping coverage</p>
 CLASS zcl_cd_ebs_r_s09_coverage DEFINITION

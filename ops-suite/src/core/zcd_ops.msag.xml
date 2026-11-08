@@ -222,7 +222,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>100</MSGNR>
-     <TEXT>Code &amp;1 &amp;2 bank &amp;3 flow &amp;4 not in ZCD_BTC_MAP: blocked, never suspense</TEXT>
+     <TEXT>Code &amp;1 &amp;2 bank &amp;3 flow &amp;4 not mapped in ZBTM: blocked, never suspense</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -504,7 +504,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>148</MSGNR>
-     <TEXT>No posting rule in ZCD_BTC_MAP for &amp;1</TEXT>
+     <TEXT>No posting rule in posting area ZBTM for &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1794,7 +1794,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>384</MSGNR>
-     <TEXT>Check &amp;1: no payment method is mapped to a method class (ZCD_HCK_PMCLASS)</TEXT>
+     <TEXT>Check &amp;1: no payment method is mapped to a method class (posting area)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1848,7 +1848,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>393</MSGNR>
-     <TEXT>&amp;1 is not monitored: no payment methods in ZCD_HCK_PMCLASS</TEXT>
+     <TEXT>&amp;1 is not monitored: no payment methods in the method class posting area</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2027,6 +2027,48 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>427</MSGNR>
+     <TEXT>&amp;1 must not be * here (generic key not supported by this mapping)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>428</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 is longer than &amp;3 characters</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>429</MSGNR>
+     <TEXT>&amp;1 must not be blank - enter a value or * (any)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>430</MSGNR>
+     <TEXT>Method class &amp;1 of flow &amp;2 has no entry in posting area &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>431</MSGNR>
+     <TEXT>Payment method &amp;1 of flow &amp;2 has no entry with house bank * (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>432</MSGNR>
+     <TEXT>Posting area &amp;1 has no entries - nothing is mapped</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>433</MSGNR>
+     <TEXT>&amp;1 differs between the entries of &amp;2 (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>
@@ -2160,7 +2202,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>522</MSGNR>
-     <TEXT>Reason &amp;1: mapping in ZCD_EBS_RSN_MAP incomplete (&amp;2)</TEXT>
+     <TEXT>Reason &amp;1: mapping in posting area ZRSN incomplete (&amp;2)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2226,7 +2268,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>534</MSGNR>
-     <TEXT>ZCD_BTC_MAP rows for &amp;1 &amp;2 bank &amp;3 flow &amp;4 contradict each other (blank f</TEXT>
+     <TEXT>ZBTM entries for &amp;1 &amp;2 bank &amp;3 flow &amp;4 contradict each other (blank = *)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2478,7 +2520,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>678</MSGNR>
-     <TEXT>no role for code &amp;1 posted &amp;2 amount &amp;3 (&amp;4) - add ZCD_HCK_BTCROLE row</TEXT>
+     <TEXT>no role for code &amp;1 posted &amp;2 amount &amp;3 (&amp;4) - add a ZBTR entry</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

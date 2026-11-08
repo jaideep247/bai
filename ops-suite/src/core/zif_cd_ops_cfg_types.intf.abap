@@ -12,6 +12,7 @@
 *& 2026-11-08 | Message 423: table consolidation, a field that must be blank for the row's kind / usage.
 *& 2026-11-08 | Messages 422 / 424 / 425: required for the kind, value of the other usage, form (PCRE).
 *& 2026-11-08 | Message 426: expected group list of ZCD_HCK_AGG (ZCD_HCK_AGGGRP merged).
+*& 2026-11-08 | Messages 427-433 (and 385 shared): configuration check of the customer posting areas.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -157,6 +158,16 @@ INTERFACE zif_cd_ops_cfg_types
       form_invalid       TYPE ty_msg_number VALUE '425',
       "! ZCD_HCK_AGG-EXPECTED_GROUPS (expected groups of a grouped aggregate, audit A103)
       group_list_invalid TYPE ty_msg_number VALUE '426',
+      "! Customer posting areas ZRSN / ZPMC / ZBTM / ZBTR (configuration check POSTAREA_INVALID, 2026-11-08)
+      generic_key        TYPE ty_msg_number VALUE '427',
+      value_too_long     TYPE ty_msg_number VALUE '428',
+      key_blank          TYPE ty_msg_number VALUE '429',
+      class_unknown      TYPE ty_msg_number VALUE '430',
+      class_entry_none   TYPE ty_msg_number VALUE '431',
+      area_empty         TYPE ty_msg_number VALUE '432',
+      entries_differ     TYPE ty_msg_number VALUE '433',
+      "! Shared with the in-flight check (HCK): one payment method in two method classes
+      method_two_classes TYPE ty_msg_number VALUE '385',
     END OF gc_msg.
 
 ENDINTERFACE.

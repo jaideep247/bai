@@ -123,13 +123,13 @@ CLASS ltc_permissions IMPLEMENTATION.
   METHOD answers.
     GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_ebscfgall
       REQUEST VALUE #( %update = if_abap_behv=>mk-on %action-Edit = if_abap_behv=>mk-on
-                       %assoc-_BtcMap = if_abap_behv=>mk-on )
+                       %assoc-_BtcRule = if_abap_behv=>mk-on )
       RESULT DATA(ls_root)
       FAILED DATA(ls_failed)
       REPORTED DATA(ls_reported).
     cl_abap_unit_assert=>assert_initial( act = ls_failed msg = 'A permission request never fails' ).
     cl_abap_unit_assert=>assert_initial( act = ls_reported msg = 'No message for a permission request' ).
-    GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_btcmap
+    GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_btcrule
       REQUEST VALUE #( %update = if_abap_behv=>mk-on %delete = if_abap_behv=>mk-on )
       RESULT DATA(ls_child)
       FAILED DATA(ls_child_failed)
@@ -138,7 +138,7 @@ CLASS ltc_permissions IMPLEMENTATION.
     cl_abap_unit_assert=>assert_initial( act = ls_child_reported msg = 'No message for a child request' ).
     rs_answers-update = ls_root-global-%update.
     rs_answers-edit   = ls_root-global-%action-Edit.
-    rs_answers-create = ls_root-global-%assoc-_BtcMap.
+    rs_answers-create = ls_root-global-%assoc-_BtcRule.
     rs_answers-change = ls_child-global-%update.
     rs_answers-delete = ls_child-global-%delete.
   ENDMETHOD.

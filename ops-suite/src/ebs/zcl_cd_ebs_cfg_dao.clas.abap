@@ -1,9 +1,14 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_cd_ebs_cfg_dao.clas.abap
 *& Purpose:
-*& SQL for EBS customizing: ZCD_BTC_MAP, ZCD_BTC_RULE joined with the rule
-*& registry ZCD_EBS_RULE_DEF (assignment severity/action override the registry
-*& defaults), ZCD_EBS_ACCT, ZCD_EBS_FLOW_PAT and ZCD_EBS_RSN_MAP.
+*& SQL for EBS customizing: ZCD_BTC_RULE joined with the rule registry
+*& ZCD_EBS_RULE_DEF (assignment severity/action override the registry
+*& defaults), ZCD_EBS_ACCT, ZCD_EBS_FLOW_PAT. The bank transaction codes and
+*& the return / NOC reasons are entries of the customer posting areas ZBTM /
+*& ZRSN (FQC0), read through ZCL_CD_OPS_POSTAREA (one read per run):
+*& ZBTM keys SCHEME / CODE (ISO: domain) / FAMILY / SUB-FAMILY / BANK / FLOW,
+*& results CATEGORY / RULE_GROUP / EXP_CDI / PAY_METHOD / POSTING_RULE /
+*& ACTION / DISPOSITION; ZRSN key REASON, results FICA_REASON / IS_NOC.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | ATC-equivalent fixes: ORDER BY, CHECK before FOR ALL ENTRIES, sy-subrc, keyless SORT.
@@ -12,6 +17,8 @@
 *& 2026-11-06 | Operating model: NEEDS_POSTING of the rule registry carried on the assignment.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Read-only scope: blocks-posting flag (A27) removed.
+*& 2026-11-08 | Customer posting areas: BTC map from ZBTM and reasons from ZRSN (ZCL_CD_OPS_POSTAREA, were ZCD_BTC_MAP
+*&            | / ZCD_EBS_RSN_MAP); get_reason (exact reason beats *).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - customizing repository</p>
 CLASS zcl_cd_ebs_cfg_dao DEFINITION
@@ -22,6 +29,14 @@ CLASS zcl_cd_ebs_cfg_dao DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_cd_ebs_cfg_dao.
 
+  PRIVATE SECTION.
+    "! A ZRSN entry as reason map row
+    CLASS-METHODS reason_of
+      IMPORTING
+        is_entry         TYPE zif_cd_ops_postarea_types=>ty_entry
+      RETURNING
+        VALUE(rs_reason) TYPE zif_cd_ebs_types=>ty_reason_map.
+
 ENDCLASS.
 
 
@@ -29,11 +44,29 @@ ENDCLASS.
 CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
 
   METHOD zif_cd_ebs_cfg_dao~get_btc_map.
-    SELECT scheme, btc_code, bank_key, flow_type, category, rule_group, exp_cdi, pay_method,
-           posting_rule, ret_reason, action, active, description, disposition
-      FROM zcd_btc_map
-      ORDER BY scheme, btc_code, bank_key, flow_type
-      INTO CORRESPONDING FIELDS OF TABLE @rt_map.
+    " ZBTM (FQC0): an entry that exists applies (no ACTIVE flag); bank '*' = the default row of every
+    " bank (blank bank key); an ISO family row has sub-family '*'
+    LOOP AT zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-btc_map )
+         ASSIGNING FIELD-SYMBOL(<ls_entry>).
+      DATA(ls_map) = VALUE zif_cd_ebs_types=>ty_btc_map(
+        scheme       = <ls_entry>-key01
+        btc_code     = COND #( WHEN <ls_entry>-key01 <> zif_cd_ebs_types=>gc_scheme-iso THEN <ls_entry>-key02
+                               WHEN <ls_entry>-key04 = zif_cd_ops_postarea_types=>gc_generic
+                               THEN |{ <ls_entry>-key02 }{ zif_cd_ebs_types=>gc_iso_separator }{ <ls_entry>-key03 }|
+                               ELSE |{ <ls_entry>-key02 }{ zif_cd_ebs_types=>gc_iso_separator }{ <ls_entry>-key03 }| &&
+                                    |{ zif_cd_ebs_types=>gc_iso_separator }{ <ls_entry>-key04 }| )
+        bank_key     = COND #( WHEN <ls_entry>-key05 <> zif_cd_ops_postarea_types=>gc_generic THEN <ls_entry>-key05 )
+        flow_type    = <ls_entry>-key06
+        category     = <ls_entry>-fun01
+        rule_group   = <ls_entry>-fun02
+        exp_cdi      = <ls_entry>-fun03
+        pay_method   = <ls_entry>-fun04
+        posting_rule = <ls_entry>-fun05
+        action       = <ls_entry>-fun06
+        disposition  = <ls_entry>-fun07
+        active       = abap_true ).
+      INSERT ls_map INTO TABLE rt_map.
+    ENDLOOP.
   ENDMETHOD.
 
 
@@ -85,9 +118,27 @@ CLASS zcl_cd_ebs_cfg_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ebs_cfg_dao~get_reason_map.
-    SELECT reason, fica_reason, is_noc
-      FROM zcd_ebs_rsn_map
-      INTO CORRESPONDING FIELDS OF TABLE @rt_reasons.
+    LOOP AT zcl_cd_ops_postarea_factory=>get_reader( )->entries( zif_cd_ops_postarea_types=>gc_purpose-reason )
+         ASSIGNING FIELD-SYMBOL(<ls_entry>).
+      INSERT reason_of( <ls_entry> ) INTO TABLE rt_reasons.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ebs_cfg_dao~get_reason.
+    DATA(ls_entry) = zcl_cd_ops_postarea_factory=>get_reader( )->find(
+                       iv_purpose = zif_cd_ops_postarea_types=>gc_purpose-reason
+                       is_keys    = VALUE #( key01 = condense( iv_reason ) ) ).
+    IF ls_entry IS NOT INITIAL.
+      rs_reason = reason_of( ls_entry ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD reason_of.
+    rs_reason-reason      = is_entry-key01.
+    rs_reason-fica_reason = is_entry-fun01.
+    rs_reason-is_noc      = xsdbool( is_entry-fun02 = abap_true ).
   ENDMETHOD.
 
 

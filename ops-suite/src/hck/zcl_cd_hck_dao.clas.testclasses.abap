@@ -25,6 +25,7 @@
 *&            | retired).
 *& 2026-11-08 | Table consolidation: expected groups read as ZCD_HCK_AGG-EXPECTED_GROUPS with the definitions
 *&            | (ZCD_HCK_AGGGRP no longer doubled).
+*& 2026-11-08 | Drift table example ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -693,7 +694,7 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
         table_on   TYPE zif_cd_hck_types=>ty_tabname VALUE 'DFKKOP',
         table_off  TYPE zif_cd_hck_types=>ty_tabname VALUE 'DFKKKO',
         table_low  TYPE zif_cd_hck_types=>ty_tabname VALUE 'dfkkop',
-        drift_tab  TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_MAP',
+        drift_tab  TYPE zif_cd_hck_types=>ty_tabname VALUE 'ZCD_BTC_RULE',
         hash_1     TYPE zif_cd_hck_types=>ty_hash VALUE 'AAAA',
         hash_2     TYPE zif_cd_hck_types=>ty_hash VALUE 'BBBB',
         cycle_on   TYPE zif_cd_hck_types=>ty_cycle_id VALUE 'PAYRUN',

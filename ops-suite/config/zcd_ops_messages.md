@@ -41,7 +41,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 065 | Waiver end date &1 is in the past |
 | 066 | An owner (user) is required |
 | 067 | A waiver request by &1 is already pending |
-| 100 | Code &1 &2 bank &3 flow &4 not in ZCD_BTC_MAP: blocked, never suspense |
+| 100 | Code &1 &2 bank &3 flow &4 not mapped in ZBTM: blocked, never suspense |
 | 101 | Category &1 is configured never to post |
 | 102 | Run stopped: &1 consecutive packages above &2 % failures |
 | 104 | Rule &1 (&2) failed: |
@@ -88,7 +88,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 145 | Group &1: statement has no house bank, totals not comparable |
 | 146 | Group &1: bank total &2, register &3 |
 | 147 | Group &1: &2 bank entries, &3 in register |
-| 148 | No posting rule in ZCD_BTC_MAP for &1 |
+| 148 | No posting rule in posting area ZBTM for &1 |
 | 149 | Posted with &1, map prescribes &2 |
 | 150 | Content is not a BAI2 file: first record &1 (expected type 01) |
 | 151 | XML content could not be parsed: &1 |
@@ -303,7 +303,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 381 | &1 entry(ies), oldest &2 min - look in &3 |
 | 382 | Queue source &1 (&2) was not read: |
 | 383 | bgRFC is not monitored: PARAM4 (bgRFC source) of check &1 is blank |
-| 384 | Check &1: no payment method is mapped to a method class (ZCD_HCK_PMCLASS) |
+| 384 | Check &1: no payment method is mapped to a method class (posting area) |
 | 385 | Payment method &1 is mapped to two method classes (&2, &3) |
 | 386 | Check &1: no limits in ZCD_HCK_THRESH for &2 - not evaluated |
 | 387 | Check &1: no factory calendar (PARAM1) - business days = calendar days |
@@ -312,7 +312,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 390 | age &1, amount &2 &3 |
 | 391 | (no value date: run date used) |
 | 392 | &1 payment(s) without value date aged from the run date (&2) |
-| 393 | &1 is not monitored: no payment methods in ZCD_HCK_PMCLASS |
+| 393 | &1 is not monitored: no payment methods in the method class posting area |
 | 394 | Time field &1 of table &2 is not of type TIMS |
 | 395 | &1: &2 payment(s) - &3 |
 | 396 | Payment &1, method &2, run date &3 (&4): |
@@ -342,6 +342,13 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 424 | Value &1 of &2 belongs to another usage (&3) |
 | 425 | Value &1 of &2 does not have the form &3 |
 | 426 | &1: expected groups must be a comma list of distinct values |
+| 427 | &1 must not be * here (generic key not supported by this mapping) |
+| 428 | Value &1 of &2 is longer than &3 characters |
+| 429 | &1 must not be blank - enter a value or * (any) |
+| 430 | Method class &1 of flow &2 has no entry in posting area &3 |
+| 431 | Payment method &1 of flow &2 has no entry with house bank * (&3) |
+| 432 | Posting area &1 has no entries - nothing is mapped |
+| 433 | &1 differs between the entries of &2 (&3) |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |
@@ -364,7 +371,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 519 | Declared credits &1, entries &2 |
 | 520 | Declared debits &1, entries &2 |
 | 521 | Entry &1 imported without posting rule; map prescribes &2 |
-| 522 | Reason &1: mapping in ZCD_EBS_RSN_MAP incomplete (&2) |
+| 522 | Reason &1: mapping in posting area ZRSN incomplete (&2) |
 | 523 | Reason &1 is not a &2 code |
 | 524 | &1: not declared on the trailer (computed value not accepted) |
 | 525 | Reference &1 has &2 characters; the key holds &3 |
@@ -375,7 +382,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 530 | File &1 is not valid UTF-8 (after line &2) - not validated |
 | 531 | File &1: read error (return code &2) after line &3 - not validated |
 | 532 | Entry &1: &2 not found yet - statement within the &3 h in-flight window |
-| 534 | ZCD_BTC_MAP rows for &1 &2 bank &3 flow &4 contradict each other (blank flow = *) |
+| 534 | ZBTM entries for &1 &2 bank &3 flow &4 contradict each other (blank = *) |
 | 535 | Entry type &1 in line &2: funds-type layout invalid (&3) - entry not read |
 | 536 | CAMT document &1: &2 &3 not accepted |
 | 537 | Element &1: '&2' is not a count |
@@ -417,7 +424,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 675 | - not determinable (mandatory evidence unavailable): |
 | 676 | &1 not configured |
 | 677 | &1 not usable |
-| 678 | no role for code &1 posted &2 amount &3 (&4) - add ZCD_HCK_BTCROLE row |
+| 678 | no role for code &1 posted &2 amount &3 (&4) - add a ZBTR entry |
 | 679 | - lifecycle &1: monetary line without role |
 | 680 | - cheque &1 (state &2), not the deciding cheque: |
 | 681 | - outcome row &1 needs the cheque register state: no DFKKCR row |

@@ -29,6 +29,7 @@
 *&            | missing trailer and end-to-end tests assert the findings of VALIDATE_PACKAGE.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
+*& 2026-11-08 | Configuration double: get_reason (customer posting area ZRSN).
 *&---------------------------------------------------------------------*
 CLASS ltd_source DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -68,6 +69,9 @@ CLASS ltd_cfg IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ebs_cfg_dao~get_reason_map.
     CLEAR rt_reasons.
+  ENDMETHOD.
+  METHOD zif_cd_ebs_cfg_dao~get_reason.
+    CLEAR rs_reason.
   ENDMETHOD.
 ENDCLASS.
 

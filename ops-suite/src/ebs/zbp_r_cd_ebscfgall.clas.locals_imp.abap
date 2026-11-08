@@ -12,6 +12,7 @@
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
 *& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
+*& 2026-11-08 | BTC map, reasons, method classes, code roles left the apps (FI-CA posting areas, FQC0).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -22,48 +23,35 @@ INTERFACE lif_c.
       classname                      TYPE string VALUE `CLASSNAME`,
       defaultaction                  TYPE string VALUE `DEFAULTACTION`,
       defaultseverity                TYPE string VALUE `DEFAULTSEVERITY`,
-      disposition                    TYPE string VALUE `DISPOSITION`,
-      expcdi                         TYPE string VALUE `EXPCDI`,
       findingclass                   TYPE string VALUE `FINDINGCLASS`,
       flowdefault                    TYPE string VALUE `FLOWDEFAULT`,
       flowtype                       TYPE string VALUE `FLOWTYPE`,
       keyfield                       TYPE string VALUE `KEYFIELD`,
       keykind                        TYPE string VALUE `KEYKIND`,
       pattern                        TYPE string VALUE `PATTERN`,
-      rulegroup                      TYPE string VALUE `RULEGROUP`,
       rulelevel                      TYPE string VALUE `RULELEVEL`,
-      scheme                         TYPE string VALUE `SCHEME`,
       severity                       TYPE string VALUE `SEVERITY`,
       statusfield                    TYPE string VALUE `STATUSFIELD`,
       tablename                      TYPE string VALUE `TABLENAME`,
     END OF gc_el,
     BEGIN OF gc_ent,
-      btcmap                         TYPE string VALUE `BtcMap`,
       btcrule                        TYPE string VALUE `BtcRule`,
       ebslookup                      TYPE string VALUE `EbsLookup`,
       flowpattern                    TYPE string VALUE `FlowPattern`,
       housebankacct                  TYPE string VALUE `HouseBankAcct`,
-      reasonmap                      TYPE string VALUE `ReasonMap`,
       ruledef                        TYPE string VALUE `RuleDef`,
     END OF gc_ent,
     BEGIN OF gc_if,
       zif_cd_ebs_rule                TYPE string VALUE `ZIF_CD_EBS_RULE`,
     END OF gc_if,
     BEGIN OF gc_tab,
-      btcmap                         TYPE string VALUE `ZCD_BTC_MAP`,
       btcrule                        TYPE string VALUE `ZCD_BTC_RULE`,
       ebslookup                      TYPE string VALUE `ZCD_EBS_LOOKUP`,
       flowpattern                    TYPE string VALUE `ZCD_EBS_FLOW_PAT`,
       housebankacct                  TYPE string VALUE `ZCD_EBS_ACCT`,
-      reasonmap                      TYPE string VALUE `ZCD_EBS_RSN_MAP`,
       ruledef                        TYPE string VALUE `ZCD_EBS_RULE_DEF`,
     END OF gc_tab,
     BEGIN OF gc_val,
-      btcmap_actioncode              TYPE string VALUE `,AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
-      btcmap_disposition             TYPE string VALUE `,NOT_POSTED`,
-      btcmap_expcdi                  TYPE string VALUE `,C,D,*`,
-      btcmap_flowtype                TYPE string VALUE `D,C,*`,
-      btcmap_scheme                  TYPE string VALUE `BAI2,ISO,PRTRY`,
       btcrule_actioncode             TYPE string VALUE `,AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT`,
       btcrule_severity               TYPE string VALUE `,B,E,W,I`,
       ebslookup_keykind              TYPE string VALUE `DOCNO,ZTNUM,REFERENCE`,
@@ -137,9 +125,6 @@ CLASS lhc_ebscfgall IMPLEMENTATION.
     IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.
       result-%action-Edit = lcl_auth=>edit( ).
     ENDIF.
-    IF requested_authorizations-%assoc-_BtcMap = if_abap_behv=>mk-on.
-      result-%assoc-_BtcMap = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
     IF requested_authorizations-%assoc-_BtcRule = if_abap_behv=>mk-on.
       result-%assoc-_BtcRule = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
@@ -152,9 +137,6 @@ CLASS lhc_ebscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_FlowPattern = if_abap_behv=>mk-on.
       result-%assoc-_FlowPattern = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
-    IF requested_authorizations-%assoc-_ReasonMap = if_abap_behv=>mk-on.
-      result-%assoc-_ReasonMap = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
-    ENDIF.
     IF requested_authorizations-%assoc-_EbsLookup = if_abap_behv=>mk-on.
       result-%assoc-_EbsLookup = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
@@ -166,9 +148,6 @@ CLASS lhc_ebscfgall IMPLEMENTATION.
     DATA(lv_create) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->create_allowed( ) = abap_true
                               THEN if_abap_behv=>fc-o-enabled
                               ELSE if_abap_behv=>fc-o-disabled ).
-    IF requested_features-%assoc-_BtcMap = if_abap_behv=>mk-on.
-      result-%assoc-_BtcMap = lv_create.
-    ENDIF.
     IF requested_features-%assoc-_BtcRule = if_abap_behv=>mk-on.
       result-%assoc-_BtcRule = lv_create.
     ENDIF.
@@ -181,171 +160,9 @@ CLASS lhc_ebscfgall IMPLEMENTATION.
     IF requested_features-%assoc-_FlowPattern = if_abap_behv=>mk-on.
       result-%assoc-_FlowPattern = lv_create.
     ENDIF.
-    IF requested_features-%assoc-_ReasonMap = if_abap_behv=>mk-on.
-      result-%assoc-_ReasonMap = lv_create.
-    ENDIF.
     IF requested_features-%assoc-_EbsLookup = if_abap_behv=>mk-on.
       result-%assoc-_EbsLookup = lv_create.
     ENDIF.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_btcmap DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
-      IMPORTING REQUEST requested_authorizations FOR BtcMap RESULT result.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR BtcMap RESULT result.
-
-    METHODS validatefields FOR VALIDATE ON SAVE
-      IMPORTING keys FOR BtcMap~validateFields.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR BtcMap~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_btcmap IMPLEMENTATION.
-
-  METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
-    IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
-    ENDIF.
-    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatefields.
-    DATA lt_msg TYPE zif_cd_ops_cfg_types=>tt_field_message.
-    DATA lt_groups TYPE zif_cd_ops_cfg_types=>ty_names.
-
-    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
-      ENTITY BtcMap
-        ALL FIELDS WITH CORRESPONDING #( keys )
-      RESULT DATA(lt_rows).
-    CHECK lt_rows IS NOT INITIAL.
-
-    " Active rule groups, including unsaved draft rows of the same edit session
-    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
-      ENTITY EbsCfgAll BY \_BtcRule
-        FIELDS ( RuleGroup Active )
-        WITH VALUE #( ( %is_draft = lt_rows[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_rules).
-    LOOP AT lt_rules INTO DATA(ls_rule) WHERE Active = abap_true.
-      INSERT CONV #( ls_rule-RuleGroup ) INTO TABLE lt_groups.
-    ENDLOOP.
-
-    LOOP AT lt_rows INTO DATA(ls_row).
-      CLEAR lt_msg.
-      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-btcmap.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Scheme )
-                                        iv_list  = lif_c=>gc_val-btcmap_scheme ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Scheme
-                        v2 = lif_c=>gc_el-scheme v3 = lif_c=>gc_val-btcmap_scheme
-                        element = lif_c=>gc_el-scheme ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-FlowType )
-                                        iv_list  = lif_c=>gc_val-btcmap_flowtype ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-FlowType
-                        v2 = lif_c=>gc_el-flowtype v3 = lif_c=>gc_val-btcmap_flowtype
-                        element = lif_c=>gc_el-flowtype ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ExpCdi )
-                                        iv_list  = lif_c=>gc_val-btcmap_expcdi ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ExpCdi
-                        v2 = lif_c=>gc_el-expcdi v3 = lif_c=>gc_val-btcmap_expcdi
-                        element = lif_c=>gc_el-expcdi ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-ActionCode )
-                                        iv_list  = lif_c=>gc_val-btcmap_actioncode ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-ActionCode
-                        v2 = lif_c=>gc_el-actioncode v3 = lif_c=>gc_val-btcmap_actioncode
-                        element = lif_c=>gc_el-actioncode ) INTO TABLE lt_msg.
-      ENDIF.
-      IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Disposition )
-                                        iv_list  = lif_c=>gc_val-btcmap_disposition ) = abap_false.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Disposition
-                        v2 = lif_c=>gc_el-disposition v3 = lif_c=>gc_val-btcmap_disposition
-                        element = lif_c=>gc_el-disposition ) INTO TABLE lt_msg.
-      ENDIF.
-      " An active row that is not BLOCK needs a rule group (blank = category) with an active rule
-      DATA(lv_group) = COND zif_cd_ops_cfg_types=>ty_name( WHEN ls_row-RuleGroup IS INITIAL
-                                                           THEN ls_row-Category
-                                                           ELSE ls_row-RuleGroup ).
-      IF ls_row-Active = abap_true AND ls_row-ActionCode <> zif_cd_ops_types=>gc_action-block
-         AND zcl_cd_ops_cfg_checks=>missing_names( it_needed    = VALUE #( ( lv_group ) )
-                                                   it_available = lt_groups ) IS NOT INITIAL.
-        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-rule_group_empty v1 = lv_group
-                        element = lif_c=>gc_el-rulegroup ) INTO TABLE lt_msg.
-      ENDIF.
-
-      LOOP AT lt_msg INTO DATA(ls_msg).
-        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-btcmap.
-        INSERT INITIAL LINE INTO TABLE reported-btcmap ASSIGNING FIELD-SYMBOL(<ls_reported>).
-        <ls_reported>-%tky        = ls_row-%tky.
-        <ls_reported>-%state_area = gc_area_fields.
-        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1
-                                                 v2       = ls_msg-v2
-                                                 v3       = ls_msg-v3 ).
-        <ls_reported>-%path-ebscfgall-%is_draft   = ls_row-%is_draft.
-        <ls_reported>-%path-ebscfgall-SingletonID = 1.
-        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
-        IF sy-subrc = 0.
-          <lv_flag> = if_abap_behv=>mk-on.
-        ENDIF.
-      ENDLOOP.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
-      ENTITY EbsCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-btcmap.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-btcmap.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
-                                             ebscfgall-SingletonID = 1 ) )
-        INTO TABLE reported-btcmap.
-    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.
@@ -841,75 +658,6 @@ CLASS lhc_flowpattern IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_reasonmap DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
-      IMPORTING REQUEST requested_authorizations FOR ReasonMap RESULT result.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR ReasonMap RESULT result.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR ReasonMap~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_reasonmap IMPLEMENTATION.
-
-  METHOD get_global_authorizations.
-    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
-    IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
-    ENDIF.
-    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
-      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_ebscfgall IN LOCAL MODE
-      ENTITY EbsCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-reasonmap.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-reasonmap.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( ebscfgall-%is_draft   = ls_key-%is_draft
-                                             ebscfgall-SingletonID = 1 ) )
-        INTO TABLE reported-reasonmap.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
 CLASS lhc_ebslookup DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
@@ -1059,12 +807,10 @@ CLASS lsc_zr_cd_ebscfgall IMPLEMENTATION.
         zcl_cd_ops_cfg_factory=>get_gate( )->record(
           iv_request   = lv_request
           it_relations = VALUE #(
-            ( entity = lif_c=>gc_ent-btcmap table = lif_c=>gc_tab-btcmap )
             ( entity = lif_c=>gc_ent-btcrule table = lif_c=>gc_tab-btcrule )
             ( entity = lif_c=>gc_ent-ruledef table = lif_c=>gc_tab-ruledef )
             ( entity = lif_c=>gc_ent-housebankacct table = lif_c=>gc_tab-housebankacct )
             ( entity = lif_c=>gc_ent-flowpattern table = lif_c=>gc_tab-flowpattern )
-            ( entity = lif_c=>gc_ent-reasonmap table = lif_c=>gc_tab-reasonmap )
             ( entity = lif_c=>gc_ent-ebslookup table = lif_c=>gc_tab-ebslookup ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )

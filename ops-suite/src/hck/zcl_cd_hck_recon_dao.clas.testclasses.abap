@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_hck_recon_dao.clas.testclasses.abap
 *& Purpose:
 *& OSQL tests of the three-way reconciliation reads on doubles of
-*& ZCD_HCK_RCSET / ZCD_HCK_BTCROLE (active RECON rows), the bank line view
+*& ZCD_HCK_RCSET, the posting area ZBTR (RECON entries, in memory), the bank line view
 *& ZI_CD_HckRcBankLine (grouped per account / currency / day / code /
 *& direction, last day, lines without returns lot - DFKKRP, deposits per
 *& posting document), ACDOCA (per day and reference procedure, deposit
@@ -14,6 +14,8 @@
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
 *& 2026-11-08 | Table consolidation: roles from ZCD_HCK_BTCROLE usage RECON; a lifecycle row of the same code
 *&            | is not read (roles_active_only).
+*& 2026-11-08 | Customer posting areas: roles are ZBTR entries (ZCL_CD_OPS_POSTAREA_MEM); roles_recon_entries_only
+*&            | - RECON / BAI2 entries only, never a lifecycle entry or a '*' entry.
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -54,9 +56,10 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
         zuonr_op TYPE zif_cd_hck_recon_types=>ty_zuonr VALUE '000000500002',
         hbkid    TYPE zif_cd_hck_recon_types=>ty_hbkid VALUE 'JPMC1',
         hktid    TYPE zif_cd_hck_recon_types=>ty_hktid VALUE 'DISB1',
-        "! Lifecycle row of ZCD_HCK_BTCROLE (flow + method class, open role list)
+        "! Lifecycle entry of ZBTR (flow + method class, open role list)
         lifecycle TYPE zif_cd_hck_recon_types=>ty_set_id VALUE 'CCRD',
         collected TYPE zif_cd_hck_recon_types=>ty_role VALUE 'COLLECTED',
+        btr       TYPE zif_cd_ops_postarea_types=>ty_area VALUE 'ZBTR',
       END OF gc_test.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -65,6 +68,7 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
     CLASS-METHODS class_setup.
     CLASS-METHODS class_teardown.
     METHODS setup.
+    METHODS teardown.
     METHODS insert_config.
     METHODS insert_bank_lines.
     METHODS insert_gl_lines.
@@ -104,7 +108,7 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
         VALUE(rs_key) TYPE zif_cd_hck_recon_types=>ty_gl_key.
 
     METHODS sets_active_ordered        FOR TESTING.
-    METHODS roles_active_only          FOR TESTING.
+    METHODS roles_recon_entries_only   FOR TESTING.
     METHODS bank_days_grouped          FOR TESTING.
     METHODS bank_last_day_per_account  FOR TESTING.
     METHODS bank_no_lot_skips_lot      FOR TESTING.
@@ -123,7 +127,7 @@ CLASS ltc_recon_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZCD_HCK_BTCROLE' ) ( 'ZI_CD_HCKRCBANKLINE' )
+      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZI_CD_HCKRCBANKLINE' )
                                    ( 'DFKKRP' ) ( 'ACDOCA' ) ( 'DFKKSUMC' ) ( 'DPAYH' ) ) ).
   ENDMETHOD.
 
@@ -143,11 +147,15 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD teardown.
+    zcl_cd_ops_postarea_injector=>reset( ).
+    zcl_cd_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
   METHOD insert_config.
     DATA lt_sets TYPE STANDARD TABLE OF zcd_hck_rcset WITH EMPTY KEY.
     DATA ls_set TYPE zcd_hck_rcset.
-    DATA lt_roles TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
-    DATA ls_role TYPE zcd_hck_btcrole.
     ls_set-set_id   = gc_test-set_b.
     ls_set-kind     = zif_cd_hck_recon_types=>gc_kind-threeway.
     ls_set-bukrs    = gc_test-bukrs.
@@ -162,26 +170,29 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     ls_set-active = abap_false.
     INSERT ls_set INTO TABLE lt_sets.
     go_env->insert_test_data( lt_sets ).
-    ls_role-usage    = zif_cd_hck_types=>gc_btc_usage-recon.
-    ls_role-scope    = gc_test-set_a.
-    ls_role-scheme   = zif_cd_ebs_types=>gc_scheme-bai2.
-    ls_role-btc_code = gc_test-leg.
-    ls_role-role     = zif_cd_hck_recon_types=>gc_role-leg.
-    ls_role-active   = abap_true.
-    INSERT ls_role INTO TABLE lt_roles.
-    ls_role-btc_code = gc_test-redep.
-    ls_role-role     = zif_cd_hck_recon_types=>gc_role-redeposit.
-    ls_role-active   = abap_false.
-    INSERT ls_role INTO TABLE lt_roles.
+    " Bank code roles: entries of the customer posting area ZBTR (USAGE / SCOPE / SCHEME / CODE -> ROLE)
+    zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
+    DATA(lo_mem) = NEW zcl_cd_ops_postarea_mem( ).
+    lo_mem->add( iv_area    = gc_test-btr
+                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
+                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-leg }|
+                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-leg }| ).
+    " An ISO entry and a '*' entry are no reconciliation roles (configuration check POSTAREA_INVALID)
+    lo_mem->add( iv_area    = gc_test-btr
+                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_a }/| &&
+                              |{ zif_cd_ebs_types=>gc_scheme-iso }/{ gc_test-redep }|
+                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-redeposit }| ).
+    lo_mem->add( iv_area    = gc_test-btr
+                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-recon }/{ gc_test-set_b }/| &&
+                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ zif_cd_ops_postarea_types=>gc_generic }|
+                 iv_results = |{ zif_cd_hck_recon_types=>gc_role-ignore }| ).
     " Table consolidation 2026-11-08: a lifecycle role of the same code (usage LIFECYCLE, scope =
     " flow + method class) must never reach the reconciliation
-    ls_role-usage    = zif_cd_hck_types=>gc_btc_usage-lifecycle.
-    ls_role-scope    = gc_test-lifecycle.
-    ls_role-btc_code = gc_test-deposit.
-    ls_role-role     = gc_test-collected.
-    ls_role-active   = abap_true.
-    INSERT ls_role INTO TABLE lt_roles.
-    go_env->insert_test_data( lt_roles ).
+    lo_mem->add( iv_area    = gc_test-btr
+                 iv_keys    = |{ zif_cd_hck_types=>gc_btc_usage-lifecycle }/{ gc_test-lifecycle }/| &&
+                              |{ zif_cd_ebs_types=>gc_scheme-bai2 }/{ gc_test-deposit }|
+                 iv_results = |{ gc_test-collected }| ).
+    zcl_cd_ops_postarea_injector=>inject_dao( lo_mem ).
   ENDMETHOD.
 
 
@@ -358,12 +369,12 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: active code roles only
-  METHOD roles_active_only.
+  " Rule: the RECON / BAI2 entries of ZBTR are the roles of the sets
+  METHOD roles_recon_entries_only.
     TRY.
         DATA(lt_roles) = mo_cut->get_btc_roles( ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1
-                                            msg = 'Inactive role and the lifecycle row not read' ).
+                                            msg = 'ISO entry, * entry and the lifecycle entry not read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-btc exp = gc_test-leg msg = 'Code read as BTC' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-set_id exp = gc_test-set_a msg = 'Scope read as set id' ).
         cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_roles[ role = gc_test-collected ] ) )
