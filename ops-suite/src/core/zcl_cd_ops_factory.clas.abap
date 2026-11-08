@@ -18,6 +18,7 @@
 *& 2026-11-07 | Exception and pattern DAO without test-double slot (injector seams removed, unused).
 *& 2026-11-07 | get_params: the session adapter ZCL_CD_OPS_PARAMS_CA over ZCA_PARAM (store serves no parameters).
 *& 2026-11-07 | get_pay_outcome (canonical payment outcome evaluator), get_pay_outcome_dao (snapshot SQL).
+*& 2026-11-08 | get_pay_snap_queue (bgPF units of the parallel outcome snapshot packages).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -86,6 +87,11 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_cd_ops_pay_outcome_dao.
 
+    "! bgPF queue of the parallel packages of the payment outcome snapshot
+    CLASS-METHODS get_pay_snap_queue
+      RETURNING
+        VALUE(ro_queue) TYPE REF TO zif_cd_ops_pay_snap_queue.
+
     "! Repository of the pattern check and the pattern migration
     CLASS-METHODS get_pattern_dao
       RETURNING
@@ -127,6 +133,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_trace_dao_double TYPE REF TO zif_cd_ops_trace_dao.
     CLASS-DATA go_pay_outcome_double TYPE REF TO zif_cd_ops_pay_outcome.
     CLASS-DATA go_pay_outcome_dao_double TYPE REF TO zif_cd_ops_pay_outcome_dao.
+    CLASS-DATA go_pay_snap_queue_double TYPE REF TO zif_cd_ops_pay_snap_queue.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
 
     CLASS-METHODS describe_interface
@@ -228,6 +235,12 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
   METHOD get_pay_outcome_dao.
     ro_dao = COND #( WHEN go_pay_outcome_dao_double IS BOUND THEN go_pay_outcome_dao_double
                      ELSE NEW zcl_cd_ops_pay_outcome_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_pay_snap_queue.
+    ro_queue = COND #( WHEN go_pay_snap_queue_double IS BOUND THEN go_pay_snap_queue_double
+                       ELSE NEW zcl_cd_ops_pay_snap_queue( ) ).
   ENDMETHOD.
 
 

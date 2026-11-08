@@ -17,6 +17,10 @@
 *&            | (ZCD_HCK_PMBANK merged).
 *& 2026-11-08 | TT_OUTCOME_RANGE: the final outcomes (ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) as a range
 *&            | for the recheck, the purge and A_INFLIGHT.
+*& 2026-11-08 | Scale (2 million payments a peak day): parallel snapshot packages (TY_PACKAGE, status
+*&            | GC_PKG_STATUS, PAYOUT_PARALLEL, PAYOUT_PARALLEL_WAIT_SEC), CURRENT_TO of a watermark and
+*&            | the snapshot lag (TY_LAG, threshold MON_STALE_AFTER_MIN_CORE), SEVERITY of a version,
+*&            | marker PAY_STATUS_PENDING, aggregated findings (PAYOUT_EXAMPLES, messages 757-765).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -190,6 +194,9 @@ INTERFACE zif_cd_ops_payout_types
       wm_seq     TYPE i,
       updated_at TYPE ty_timestamp,
       last_rows  TYPE i,
+      "! Evidence of the source processed completely up to this instant (UTC): the run time when the
+      "! run caught up, else the watermark's own entry time; basis of the snapshot lag
+      current_to TYPE timestampl,
     END OF ty_watermark.
   TYPES tt_watermark TYPE SORTED TABLE OF ty_watermark WITH UNIQUE KEY source.
 
@@ -228,6 +235,8 @@ INTERFACE zif_cd_ops_payout_types
       evidence_kind TYPE zif_cd_ops_types=>ty_class_name,
       evidence_ref  TYPE ty_evidence_ref,
       finding       TYPE zif_cd_ops_types=>ty_check_code,
+      "! Severity of the primary finding as the evaluator listed it (blank: no finding)
+      severity      TYPE zif_cd_ops_types=>ty_severity,
       evaluated_at  TYPE ty_timestamp,
     END OF ty_version.
   TYPES tt_version TYPE STANDARD TABLE OF ty_version WITH EMPTY KEY.
@@ -250,6 +259,7 @@ INTERFACE zif_cd_ops_payout_types
     BEGIN OF gc_table,
       outcome   TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTCOME',
       watermark TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTWM',
+      package   TYPE zif_cd_ops_trace_types=>ty_tabname VALUE 'ZCD_PAY_OUTPKG',
     END OF gc_table.
 
   "! Run lock variant and evaluation context of the snapshot (object keys of its findings)
@@ -265,7 +275,137 @@ INTERFACE zif_cd_ops_payout_types
       source_ambiguous TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_SOURCE_AMBIGUOUS',
       "! A snapshot package could not be evaluated (configuration, read): nothing written for it
       snapshot_failed  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_FAILED',
+      "! Marker of a version (ZCD_PAY_OUTCOME-FINDING, outcome IN_FLIGHT), not a finding of its own:
+      "! the bank evidence decides the purpose but the payment status job has not followed yet; the
+      "! morning report reports PAY_STATUS_LAG once HCK_PAY_STATUS_LAG_MIN has passed since VALID_FROM
+      status_pending   TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_PENDING',
+      "! Parallel packages could not be dispatched (bgPF): the packages of the run were judged one by one
+      parallel_off     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_SERIAL',
     END OF gc_code.
+
+  " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
+  "! Status of a parallel package: P planned (dispatched), D done (its versions committed), F failed
+  "! (nothing written), A abandoned (not finished within PAYOUT_PARALLEL_WAIT_SEC - the unit writes
+  "! nothing any more)
+  TYPES ty_pkg_status TYPE c LENGTH 1.
+  CONSTANTS:
+    BEGIN OF gc_pkg_status,
+      planned   TYPE ty_pkg_status VALUE 'P',
+      done      TYPE ty_pkg_status VALUE 'D',
+      failed    TYPE ty_pkg_status VALUE 'F',
+      abandoned TYPE ty_pkg_status VALUE 'A',
+    END OF gc_pkg_status.
+
+  "! One package of a snapshot run: the payment documents to judge and, once the unit ran, its
+  "! status and counts (ZCD_PAY_OUTPKG). The watermark after the package stays with the run
+  TYPES:
+    BEGIN OF ty_package,
+      run_id    TYPE zif_cd_ops_types=>ty_run_id,
+      source    TYPE ty_source_id,
+      pkg_no    TYPE i,
+      status    TYPE ty_pkg_status,
+      "! Time of the run: VALID_FROM / VALID_TO of the versions the package writes
+      run_at    TYPE ty_timestamp,
+      docno     TYPE zif_cd_ops_trace_types=>tt_docno,
+      documents TYPE i,
+      evaluated TYPE i,
+      inserted  TYPE i,
+      closed    TYPE i,
+      message   TYPE zif_cd_ops_types=>ty_message,
+    END OF ty_package.
+  TYPES tt_package TYPE STANDARD TABLE OF ty_package WITH EMPTY KEY.
+
+  "! Snapshot lag: minutes between now and the oldest instant up to which an evidence source is
+  "! processed completely (MIN of CURRENT_TO, RECHECK excluded). KNOWN = blank: no source has run
+  "! yet - the snapshot is treated as stale
+  TYPES:
+    BEGIN OF ty_lag,
+      minutes    TYPE i,
+      known      TYPE abap_bool,
+      "! The source furthest behind and its CURRENT_TO
+      source     TYPE ty_source_id,
+      current_to TYPE timestampl,
+    END OF ty_lag.
+
+  "! A version written by this run with the payment's method and flow indicator (aggregated
+  "! findings of the snapshot per flow + method class + run date)
+  TYPES:
+    BEGIN OF ty_new_version,
+      version TYPE ty_version,
+      pymet   TYPE zif_cd_hck_runtime_types=>ty_pymet,
+      xeinz   TYPE abap_bool,
+    END OF ty_new_version.
+  TYPES tt_new_version TYPE STANDARD TABLE OF ty_new_version WITH EMPTY KEY.
+
+  " ------------------------------------------------------------ A_INFLIGHT aggregate reads
+  "! Live payment status DPAYH-ZZ_PAYMENT_STATUS (confirmed values ISSUED, CONFIRMED, CLEARED,
+  "! RETURNED, RETRIEVED, STOPPED; field length VERIFY-SE11)
+  TYPES ty_pay_status TYPE c LENGTH 20.
+  TYPES tt_pay_status_range TYPE RANGE OF ty_pay_status.
+  TYPES tt_check_code_range TYPE RANGE OF zif_cd_ops_types=>ty_check_code.
+  TYPES tt_date_range TYPE RANGE OF d.
+  TYPES tt_pymet_range TYPE RANGE OF zif_cd_hck_runtime_types=>ty_pymet.
+
+  "! Which current versions an aggregate read covers
+  TYPES:
+    BEGIN OF ty_group_query,
+      "! Payment methods of the watched method classes (DPAYH-PYMET)
+      methods     TYPE zif_cd_hck_runtime_types=>tt_pymet,
+      "! Outcomes counted however old the payment is (in flight, undetermined, inconsistent)
+      all_ages    TYPE tt_outcome_range,
+      "! Outcomes counted only for payment runs on or after FINAL_FROM (excluded purposes)
+      recent      TYPE tt_outcome_range,
+      final_from  TYPE d,
+      "! Optional filters (empty = any): primary finding, live payment status, run dates
+      findings    TYPE tt_check_code_range,
+      statuses    TYPE tt_pay_status_range,
+      days        TYPE tt_date_range,
+      "! A version valid from at or before this instant is DUE (grace of PAY_STATUS_PENDING passed)
+      lag_limit   TYPE ty_timestamp,
+    END OF ty_group_query.
+
+  "! Payments of current versions grouped on HANA (each payment counted once)
+  TYPES:
+    BEGIN OF ty_outcome_group,
+      xeinz      TYPE abap_bool,
+      pymet      TYPE zif_cd_hck_runtime_types=>ty_pymet,
+      hbkid      TYPE zif_cd_hck_runtime_types=>ty_hbkid,
+      laufd      TYPE d,
+      laufi      TYPE c LENGTH 6,
+      valut      TYPE d,
+      currency   TYPE zif_cd_ops_types=>ty_currency,
+      outcome    TYPE ty_outcome,
+      finding    TYPE zif_cd_ops_types=>ty_check_code,
+      severity   TYPE zif_cd_ops_types=>ty_severity,
+      pay_status TYPE ty_pay_status,
+      due        TYPE abap_bool,
+      payments   TYPE i,
+      "! Sum of the absolute payment amounts (DPAYH-RWBTR) in the currency
+      amount     TYPE zif_cd_ops_types=>ty_amount,
+    END OF ty_outcome_group.
+  TYPES tt_outcome_group TYPE STANDARD TABLE OF ty_outcome_group WITH EMPTY KEY.
+
+  "! One payment of the current versions with its DPAYH values (example of a finding, candidate)
+  TYPES:
+    BEGIN OF ty_outcome_example,
+      doc1r        TYPE zif_cd_hck_runtime_types=>ty_docno,
+      laufd        TYPE d,
+      laufi        TYPE c LENGTH 6,
+      bukrs        TYPE c LENGTH 4,
+      xeinz        TYPE abap_bool,
+      pymet        TYPE zif_cd_hck_runtime_types=>ty_pymet,
+      hbkid        TYPE zif_cd_hck_runtime_types=>ty_hbkid,
+      valut        TYPE d,
+      currency     TYPE zif_cd_ops_types=>ty_currency,
+      amount       TYPE zif_cd_ops_types=>ty_amount,
+      outcome      TYPE ty_outcome,
+      finding      TYPE zif_cd_ops_types=>ty_check_code,
+      severity     TYPE zif_cd_ops_types=>ty_severity,
+      pay_status   TYPE ty_pay_status,
+      due          TYPE abap_bool,
+      evidence_ref TYPE ty_evidence_ref,
+    END OF ty_outcome_example.
+  TYPES tt_outcome_example TYPE STANDARD TABLE OF ty_outcome_example WITH EMPTY KEY.
 
   " ------------------------------------------------------------ parameters (ZCA_PARAM, CD_OPS)
   CONSTANTS:
@@ -276,6 +416,13 @@ INTERFACE zif_cd_ops_payout_types
       max_packages TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_MAX_PACKAGES',
       "! First run (no watermark): days before today read once [10]
       initial_days TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_INITIAL_DAYS',
+      "! Packages judged at the same time as bgPF units [4]; 1 = one by one in the job step, as before
+      parallel     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL',
+      "! Seconds a wave of parallel packages may take before its unfinished packages are abandoned [600]
+      wait_sec     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_PARALLEL_WAIT_SEC',
+      "! Payment documents listed as examples in an aggregated finding (oldest first) [10]; also read
+      "! by A_INFLIGHT
+      examples     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_EXAMPLES',
     END OF gc_param.
 
   CONSTANTS:
@@ -283,7 +430,20 @@ INTERFACE zif_cd_ops_payout_types
       package_size TYPE i VALUE 5000,
       max_packages TYPE i VALUE 20,
       initial_days TYPE i VALUE 10,
+      parallel     TYPE i VALUE 4,
+      wait_sec     TYPE i VALUE 600,
+      examples     TYPE i VALUE 10,
+      "! Snapshot lag (minutes) above which it is stale: MON_STALE_AFTER_MIN_CORE (core freshness row of
+      "! the production-support overview, A_INFLIGHT evidence PARTIAL); 6 x the 5-minute cadence
+      stale_after_min TYPE i VALUE 30,
     END OF gc_param_default.
+
+  "! Hard ceiling of the parallel packages of one wave (bgPF units at the same time)
+  CONSTANTS gc_max_parallel TYPE i VALUE 20.
+  "! Seconds between two looks at the packages of a wave
+  CONSTANTS gc_poll_seconds TYPE i VALUE 5.
+  "! bgPF process name of a parallel package (SBGRFCMON)
+  CONSTANTS gc_process_name TYPE c LENGTH 30 VALUE 'ZCD_PAY_SNAPSHOT_PACKAGE'.
 
   "! Hard ceiling of the package size (one FOR ALL ENTRIES / IN list per package)
   CONSTANTS gc_max_package TYPE i VALUE 50000.
@@ -309,6 +469,22 @@ INTERFACE zif_cd_ops_payout_types
       trace_unavailable TYPE zif_cd_ops_types=>ty_msgno VALUE '755',
       "! evidence &1: &2
       evidence_text    TYPE zif_cd_ops_types=>ty_msgno VALUE '756',
+      "! &1 run date &2: &3 payment(s) - &4
+      aggregated       TYPE zif_cd_ops_types=>ty_msgno VALUE '757',
+      "! First &1 of &2 payment(s), oldest first:
+      examples_head    TYPE zif_cd_ops_types=>ty_msgno VALUE '759',
+      "! Full list: transactions dashboard or ZCD_PAY_OUTCOME current versions, finding &1, run date &2
+      drill_down       TYPE zif_cd_ops_types=>ty_msgno VALUE '760',
+      "! Payment outcome snapshot &1 minute(s) behind (limit &2): &3 processed up to &4
+      snapshot_lag     TYPE zif_cd_ops_types=>ty_msgno VALUE '761',
+      "! Payment outcome snapshot has not run yet: no outcome of &1 is current
+      snapshot_never   TYPE zif_cd_ops_types=>ty_msgno VALUE '762',
+      "! Package &1 / &2 not finished within &3 seconds: abandoned, the watermark stays before it
+      pkg_abandoned    TYPE zif_cd_ops_types=>ty_msgno VALUE '763',
+      "! Parallel packages not available (bgPF), judged one by one:
+      parallel_off     TYPE zif_cd_ops_types=>ty_msgno VALUE '764',
+      "! FIN &1 source &2 payment &3: &4
+      ambiguous_line   TYPE zif_cd_ops_types=>ty_msgno VALUE '765',
     END OF gc_msg.
 
 ENDINTERFACE.

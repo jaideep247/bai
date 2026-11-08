@@ -1,9 +1,12 @@
 // Artifact: zr_cd_opsfreshness.ddls.asddls
 // Purpose: "Monitor freshness" card of the production-support overview page: one row per batch
 //          monitor area (FMON, EBS, HCK) with the end of its last completed run, age, threshold
+//          (and the payment outcome snapshot, CORE: processed up to, lag in minutes, threshold)
 //          and stale flag, plus a count measure for the stale tile. A monitor that stopped shows
 //          red here before anyone reads its dashboard. Read-only.
 // Modification log: 2026-11-06 | Initial version (production-support overview page).
+//                   2026-11-08 | Row CORE: payment outcome snapshot lag (AsOfAt = processed up to,
+//                                AgeMinutes = lag, threshold MON_STALE_AFTER_MIN_CORE).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Production support - monitor freshness'
 @Metadata.ignorePropagatedAnnotations: true

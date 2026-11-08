@@ -19,6 +19,8 @@
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
 //                   2026-11-07 | Review defect: SETTLED from any bank / encashment line - the bucket is now
 //                   the canonical outcome (ZI_CD_TrxItemFlow); date kind and as-of parameters.
+//                   2026-11-08 | Header: the payment outcome snapshot lag (ZI_CD_PayOutLag - minutes,
+//                   stale flag, criticality), so a stale outcome is never read as current.
 // VERIFY-ADT: OR of parameter comparisons in WHERE is pruned by HANA per date kind (PlanViz, TXD-12).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Transactions dashboard - transaction'
@@ -42,6 +44,8 @@ define root view entity ZR_CD_TrxFlow
     P_AsOfTime : abap.tims
   as select from ZI_CD_TrxItemFlow( P_AsOfDate : $parameters.P_AsOfDate,
                                     P_AsOfTime : $parameters.P_AsOfTime ) as Flow
+    // One row (area CORE = the dashboard's area): the snapshot lag shown in the header
+    left outer join ZI_CD_PayOutLag as Lag on Lag.PaymentEngineArea = Flow.PaymentEngineArea
   association [0..*] to ZR_CD_TrxPayRun as _PaymentRuns on $projection.ClearingDoc = _PaymentRuns.PaymentDocument
   association [0..*] to ZR_CD_TrxRetNoc as _ReturnsNoc  on  $projection.DocumentNo     = _ReturnsNoc.DocumentNo
                                                         and $projection.RepetitionItem = _ReturnsNoc.RepetitionItem
@@ -88,6 +92,11 @@ define root view entity ZR_CD_TrxFlow
       Flow.OutcomeSourceCount,
       Flow.FlowBucket,
       Flow.FlowCriticality,
+      // ---------------------------------------------------------------- header: snapshot lag
+      Lag.AgeMinutes                                        as SnapshotLagMinutes,
+      Lag.StaleAfterMinutes                                 as SnapshotStaleAfterMinutes,
+      Lag.IsStale                                           as SnapshotIsStale,
+      Lag.StaleCriticality                                  as SnapshotCriticality,
       // ---------------------------------------------------------------- measures
       Flow.ItemCount,
       Flow.PaidReachedCount,

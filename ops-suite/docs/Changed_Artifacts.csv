@@ -61,6 +61,7 @@ ddic/core/zcd_ops_lock.tabl.ddl,DDIC,
 ddic/core/zcd_ops_run.tabl.ddl,DDIC,
 ddic/core/zcd_ops_tabwl.tabl.ddl,DDIC,
 ddic/core/zcd_pay_outcome.tabl.ddl,DDIC,
+ddic/core/zcd_pay_outpkg.tabl.ddl,DDIC,
 ddic/core/zcd_pay_outwm.tabl.ddl,DDIC,
 ddic/ebs/zcd_btc_map.tabl.ddl,DDIC,
 ddic/ebs/zcd_btc_rule.tabl.ddl,DDIC,
@@ -264,6 +265,7 @@ src/core/zcd_ops_purge.prog.xml,abapGit,
 src/core/zcd_ops_run.tabl.xml,abapGit,
 src/core/zcd_ops_tabwl.tabl.xml,abapGit,
 src/core/zcd_pay_outcome.tabl.xml,abapGit,
+src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
 src/core/zcl_cd_ops_alert_dao.clas.testclasses.abap,ABAP,SQL tests of the alert DAO claim / repeat-key logic on cl_osql_test_environment
@@ -348,6 +350,11 @@ src/core/zcl_cd_ops_pay_outcome.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_outcome_dao.clas.abap,ABAP,All SQL of the incremental payment outcome snapshot. Change reads per
 src/core/zcl_cd_ops_pay_outcome_dao.clas.testclasses.abap,ABAP,OSQL tests of the snapshot SQL on cl_osql_test_environment doubles: the
 src/core/zcl_cd_ops_pay_outcome_dao.clas.xml,abapGit,
+src/core/zcl_cd_ops_pay_snap_op.clas.abap,ABAP,"bgPF operation (transactional, uncontrolled - the unit commits itself) of"
+src/core/zcl_cd_ops_pay_snap_op.clas.xml,abapGit,
+src/core/zcl_cd_ops_pay_snap_queue.clas.abap,ABAP,bgPF implementation of ZIF_CD_OPS_PAY_SNAP_QUEUE (as the FMON PRISM queue):
+src/core/zcl_cd_ops_pay_snap_queue.clas.testclasses.abap,ABAP,Unit test of the bgPF queue of the snapshot packages through the test
+src/core/zcl_cd_ops_pay_snap_queue.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_snapshot.clas.abap,ABAP,Incremental 5-minute snapshot of the canonical payment outcome (job step
 src/core/zcl_cd_ops_pay_snapshot.clas.testclasses.abap,ABAP,Unit tests of the incremental 5-minute payment outcome snapshot with LTD
 src/core/zcl_cd_ops_pay_snapshot.clas.xml,abapGit,
@@ -395,6 +402,12 @@ src/core/zi_cd_payoutcomeitm.ddls.asddls,CDS,
 src/core/zi_cd_payoutcomeitm.ddls.xml,abapGit,
 src/core/zi_cd_payoutcomets.ddls.asddls,CDS,
 src/core/zi_cd_payoutcomets.ddls.xml,abapGit,
+src/core/zi_cd_payoutlag.ddls.asddls,CDS,
+src/core/zi_cd_payoutlag.ddls.xml,abapGit,
+src/core/zi_cd_payoutlagmin.ddls.asddls,CDS,
+src/core/zi_cd_payoutlagmin.ddls.xml,abapGit,
+src/core/zi_cd_payoutrunlast.ddls.asddls,CDS,
+src/core/zi_cd_payoutrunlast.ddls.xml,abapGit,
 src/core/zi_cd_returnitem.ddls.asddls,CDS,
 src/core/zi_cd_returnitem.ddls.xml,abapGit,
 src/core/zi_cd_trxitem.ddls.asddls,CDS,
@@ -449,6 +462,8 @@ src/core/zif_cd_ops_pay_outcome.intf.abap,ABAP,The one evaluator of a payment's 
 src/core/zif_cd_ops_pay_outcome.intf.xml,abapGit,
 src/core/zif_cd_ops_pay_outcome_dao.intf.abap,ABAP,SQL of the incremental payment outcome snapshot: watermarks per evidence
 src/core/zif_cd_ops_pay_outcome_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_pay_snap_queue.intf.abap,ABAP,Seam for the parallel packages of the payment outcome snapshot (real
+src/core/zif_cd_ops_pay_snap_queue.intf.xml,abapGit,
 src/core/zif_cd_ops_payout_types.intf.abap,ABAP,Types and constants of the canonical payment outcome: the outcome
 src/core/zif_cd_ops_payout_types.intf.xml,abapGit,
 src/core/zif_cd_ops_purge_dao.intf.abap,ABAP,"SQL for the retention purge: count and delete, one package at a time, the"

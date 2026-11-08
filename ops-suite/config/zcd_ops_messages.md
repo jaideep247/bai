@@ -491,3 +491,11 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 754 | Payment &1: method not in a watched method class - no outcome |
 | 755 | Outcome of payment &1 could not be evaluated: |
 | 756 | evidence &1: &2 |
+| 757 | &1 run date &2: &3 payment(s) - &4 |
+| 759 | First &1 of &2 payment(s), oldest first: |
+| 760 | Full list: transactions dashboard / ZCD_PAY_OUTCOME, &1, run date &2 |
+| 761 | Outcome snapshot &1 min behind (limit &2): &3 processed up to &4 |
+| 762 | Outcome snapshot has not run yet: outcomes of &1 not current |
+| 763 | Package &1 / &2 not finished in &3 s: abandoned, watermark kept |
+| 764 | Parallel packages not available (bgPF), judged one by one: |
+| 765 | FIN &1 source &2 payment &3: &4 |

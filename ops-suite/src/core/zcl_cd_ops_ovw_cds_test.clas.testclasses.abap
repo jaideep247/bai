@@ -12,6 +12,8 @@
 *& of the three as-of views on 7.58.
 *& Modification log:
 *& 2026-11-06 | Initial version (production-support overview page).
+*& 2026-11-08 | Fourth freshness row CORE: the payment outcome snapshot lag (ZCD_PAY_OUTWM-CURRENT_TO,
+*&            | the recheck left out, stale after 30 minutes without parameter definition).
 *&---------------------------------------------------------------------*
 "! ZR_CD_OPSFRESHNESS: one row per batch monitor, area threshold, stale
 CLASS ltc_freshness DEFINITION FINAL
@@ -29,7 +31,13 @@ CLASS ltc_freshness DEFINITION FINAL
     CONSTANTS gc_seconds_fresh TYPE i VALUE 600.
     CONSTANTS gc_seconds_old TYPE i VALUE 108000.
     CONSTANTS gc_fmon_minutes TYPE i VALUE 15.
-    CONSTANTS gc_areas TYPE i VALUE 3.
+    CONSTANTS gc_areas TYPE i VALUE 4.
+    "! Snapshot lag: documents processed up to 40 minutes ago, statement 10 minutes ago, recheck far
+    "! behind (no time: left out) - lag 40 minutes, stale after the delivered 30
+    CONSTANTS gc_seconds_lag TYPE i VALUE 2400.
+    CONSTANTS gc_seconds_recent TYPE i VALUE 600.
+    CONSTANTS gc_lag_minutes TYPE i VALUE 40.
+    CONSTANTS gc_lag_limit TYPE i VALUE 30.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
 
@@ -39,6 +47,7 @@ CLASS ltc_freshness DEFINITION FINAL
 
     METHODS one_row_per_monitor_area FOR TESTING.
     METHODS stale_by_area_threshold FOR TESTING.
+    METHODS snapshot_lag_row        FOR TESTING.
 
     METHODS run
       IMPORTING
@@ -97,7 +106,7 @@ CLASS ltc_freshness IMPLEMENTATION.
           ORDER BY paymentenginearea INTO TABLE @DATA(lt_rows).
 
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = gc_areas
-                                            msg = 'FMON, EBS and HCK each have one row, also without a run' ).
+                                            msg = 'FMON, EBS, HCK and the snapshot lag: one row each, also without a run' ).
         DATA(ls_fmon) = VALUE #( lt_rows[ paymentenginearea = zif_cd_ops_types=>gc_pe_area-file_monitor ] OPTIONAL ).
         cl_abap_unit_assert=>assert_equals( act = ls_fmon-runid exp = gc_run-fmon
                                             msg = 'FMON freshness = last full run, not a single-interface run' ).
@@ -124,6 +133,39 @@ CLASS ltc_freshness IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_hck-isstale exp = abap_true
                                             msg = 'No morning report run at all is stale' ).
         cl_abap_unit_assert=>assert_initial( act = ls_hck-asofat msg = 'No completed run: no as-of time' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): the CORE row is the snapshot lag - minutes since the oldest processed-to instant
+  " of the evidence sources (recheck left out), stale above MON_STALE_AFTER_MIN_CORE (30 delivered)
+  METHOD snapshot_lag_row.
+    DATA lt_watermarks TYPE STANDARD TABLE OF zcd_pay_outwm WITH EMPTY KEY.
+    DATA ls_watermark TYPE zcd_pay_outwm.
+    TRY.
+        GET TIME STAMP FIELD DATA(lv_now).
+        ls_watermark-source     = zif_cd_ops_payout_types=>gc_source-documents.
+        ls_watermark-current_to = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( lv_now ) secs = gc_seconds_lag ).
+        INSERT ls_watermark INTO TABLE lt_watermarks.
+        ls_watermark-source     = zif_cd_ops_payout_types=>gc_source-statement.
+        ls_watermark-current_to = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( lv_now ) secs = gc_seconds_recent ).
+        INSERT ls_watermark INTO TABLE lt_watermarks.
+        ls_watermark-source     = zif_cd_ops_payout_types=>gc_source-recheck.
+        ls_watermark-current_to = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( lv_now ) secs = gc_seconds_old ).
+        INSERT ls_watermark INTO TABLE lt_watermarks.
+        go_env->insert_test_data( i_data = lt_watermarks ).
+        SELECT paymentenginearea, ageminutes, isstale, staleafterminutes FROM zr_cd_opsfreshness
+          WHERE paymentenginearea = @zif_cd_ops_types=>gc_pe_area-core
+          ORDER BY paymentenginearea
+          INTO TABLE @DATA(lt_rows).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One snapshot lag row' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-ageminutes exp = gc_lag_minutes
+                                            msg = 'Lag of the source furthest behind, recheck left out' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-staleafterminutes exp = gc_lag_limit
+                                            msg = 'Delivered threshold 30 minutes' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-isstale exp = abap_true msg = 'Stale above the threshold' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

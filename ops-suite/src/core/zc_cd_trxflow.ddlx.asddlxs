@@ -4,6 +4,8 @@
 // ZCDPaymentTrace-display, Dashboard_Transactions.md section 6). VERIFY-ADT: rendering.
 // 2026-11-07: flow bucket = canonical payment outcome as of the chosen instant (history from
 // go-live only - the header text says so); funnel measures from the outcome, never from bank lines.
+// 2026-11-08: header data point "Outcome snapshot lag (minutes)" with its criticality (stale after
+// MON_STALE_AFTER_MIN_CORE): a stale outcome is never read as current.
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Transactions (outcome history from go-live)',
                   title: { type: #STANDARD, value: 'FinId' },
@@ -55,7 +57,9 @@ annotate entity ZC_CD_TrxFlow with
                { id: 'ReturnsNoc', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_ReturnsNoc',
                  label: 'Returns / NOC lot items', position: 30 },
                { id: 'HeaderBucket', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'FlowBucket',
-                 position: 10 } ]
+                 position: 10 },
+               { id: 'HeaderSnapshotLag', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'SnapshotLag',
+                 position: 20 } ]
   @EndUserText.label: 'Document (OPBEL)'
   @UI.lineItem: [ { position: 20, importance: #HIGH } ]
   @UI.identification: [ { position: 20 } ]
@@ -193,6 +197,17 @@ annotate entity ZC_CD_TrxFlow with
   FlowBucket;
   @UI.hidden: true
   FlowCriticality;
+  @EndUserText.label: 'Outcome snapshot lag (minutes)'
+  @UI.dataPoint: { qualifier: 'SnapshotLag', title: 'Outcome snapshot lag (minutes)', criticality: 'SnapshotCriticality' }
+  SnapshotLagMinutes;
+  @EndUserText.label: 'Snapshot stale after (minutes)'
+  @UI.hidden: true
+  SnapshotStaleAfterMinutes;
+  @EndUserText.label: 'Outcome snapshot stale'
+  @UI.hidden: true
+  SnapshotIsStale;
+  @UI.hidden: true
+  SnapshotCriticality;
   @EndUserText.label: 'Transactions'
   ItemCount;
   @EndUserText.label: 'Paid (payment run or cheque)'

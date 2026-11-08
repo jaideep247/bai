@@ -2918,6 +2918,54 @@
      <MSGNR>756</MSGNR>
      <TEXT>evidence &amp;1: &amp;2</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>757</MSGNR>
+     <TEXT>&amp;1 run date &amp;2: &amp;3 payment(s) - &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>759</MSGNR>
+     <TEXT>First &amp;1 of &amp;2 payment(s), oldest first:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>760</MSGNR>
+     <TEXT>Full list: transactions dashboard / ZCD_PAY_OUTCOME, &amp;1, run date &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>761</MSGNR>
+     <TEXT>Outcome snapshot &amp;1 min behind (limit &amp;2): &amp;3 processed up to &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>762</MSGNR>
+     <TEXT>Outcome snapshot has not run yet: outcomes of &amp;1 not current</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>763</MSGNR>
+     <TEXT>Package &amp;1 / &amp;2 not finished in &amp;3 s: abandoned, watermark kept</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>764</MSGNR>
+     <TEXT>Parallel packages not available (bgPF), judged one by one:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>765</MSGNR>
+     <TEXT>FIN &amp;1 source &amp;2 payment &amp;3: &amp;4</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

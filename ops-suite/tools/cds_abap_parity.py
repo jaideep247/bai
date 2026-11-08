@@ -89,7 +89,8 @@ PAIRS = [
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error', 'gc_run_status-no_data'],
      'set', None),
     ('fmon_hck_completed_run_status',
-     ['src/fmon/zi_cd_fmonrunlast.ddls.asddls', 'src/hck/zi_cd_hckrunlast.ddls.asddls'], _RUN_STATUS,
+     ['src/fmon/zi_cd_fmonrunlast.ddls.asddls', 'src/hck/zi_cd_hckrunlast.ddls.asddls',
+      'src/core/zi_cd_payoutrunlast.ddls.asddls'], _RUN_STATUS,
      'src/core/zif_cd_ops_types.intf.abap',
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error'], 'set', None),
     # Stale thresholds (table consolidation 2026-11-08): ZCA_PARAM MON_STALE_AFTER_MIN_<area> through
@@ -103,6 +104,14 @@ PAIRS = [
      'src/core/zif_cd_ops_types.intf.abap', 'gc_param_prefix-stale_after_min', 'equal', None),
     ('fmon_stale_fallback_minutes', 'src/fmon/zr_cd_fmonasof.ddls.asddls', _STALE_FALLBACK,
      'src/fmon/zif_cd_fmon_types.intf.abap', 'gc_dashboard-stale_after_min', 'equal', None),
+    # Payment outcome snapshot lag (2026-11-08): fallback threshold, variant and the recheck source
+    # (no time, left out of the lag) as the snapshot holds them
+    ('payout_stale_fallback_minutes', 'src/core/zi_cd_payoutlag.ddls.asddls', _STALE_FALLBACK,
+     'src/core/zif_cd_ops_payout_types.intf.abap', 'gc_param_default-stale_after_min', 'equal', None),
+    ('payout_snapshot_variant', ['src/core/zi_cd_payoutlag.ddls.asddls', 'src/core/zi_cd_payoutrunlast.ddls.asddls'],
+     r"variant\s*=\s*'(\w+)'", 'src/core/zif_cd_ops_payout_types.intf.abap', 'gc_variant', 'equal', None),
+    ('payout_recheck_source', 'src/core/zi_cd_payoutlagmin.ddls.asddls', r"source\s*<>\s*'(\w+)'",
+     'src/core/zif_cd_ops_payout_types.intf.abap', 'gc_source-recheck', 'equal', None),
     ('ebs_hck_stale_fallback_minutes', ['src/ebs/zr_cd_ebsasof.ddls.asddls', 'src/hck/zr_cd_hckasof.ddls.asddls'],
      _STALE_FALLBACK, 'src/hck/zif_cd_hck_types.intf.abap', 'gc_param_default-max_age_hours', 'equal', 60),
     ('fmon_stale_seed_minutes', 'config/alert_seed.md', r"^\| `MON_STALE_AFTER_MIN_FMON` \| (\d+) \|",

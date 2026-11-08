@@ -17,6 +17,13 @@ define table zcd_pay_outwm {
   updated_at  : timestamp;
   // payment documents picked up by the last run of the source
   last_rows   : abap.int4;
+  // evidence of the source processed completely up to this instant (UTC, 2026-11-08): the run time
+  // when the run caught up, else the watermark's own entry date / time; basis of the snapshot lag
+  current_to  : timestampl;
 }
 // One row per evidence source, written by the 5-minute snapshot after each committed package.
 // A missing row = first run: the source starts PAYOUT_INITIAL_DAYS before today.
+// Parallel packages (PAYOUT_PARALLEL > 1, 2026-11-08): the watermark advances only to the end of
+// the last contiguous completed package of the source (ZCD_PAY_OUTPKG), never past a failed one.
+// Snapshot lag = now - MIN( CURRENT_TO ) of the evidence sources (RECHECK excluded): the
+// production-support freshness row (ZI_CD_PayOutLag) and A_INFLIGHT (stale = evidence PARTIAL).

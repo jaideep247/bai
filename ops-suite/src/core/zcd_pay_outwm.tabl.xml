@@ -93,6 +93,12 @@
      <LENG>000010</LENG>
      <MASK>  INT4</MASK>
     </DD03P>
+    <DD03P>
+     <FIELDNAME>CURRENT_TO</FIELDNAME>
+     <ROLLNAME>TIMESTAMPL</ROLLNAME>
+     <ADMINFIELD>0</ADMINFIELD>
+     <COMPTYPE>E</COMPTYPE>
+    </DD03P>
    </DD03P_TABLE>
   </asx:values>
  </asx:abap>

@@ -25,18 +25,24 @@ define table zcd_pay_outcome {
   // deciding evidence kind (ZCD_HCK_CLRRULE-EVIDENCE_CLASS) and its short reference
   evidence_kind   : abap.char(30);
   evidence_ref    : abap.char(100);
-  // primary finding code of the payment (blank = none)
+  // primary finding code of the payment (blank = none); PAY_STATUS_PENDING = in flight, the bank
+  // evidence decides but the payment status job has not followed yet (A_INFLIGHT PAY_STATUS_LAG)
   finding         : abap.char(30);
+  // severity of the primary finding (E / W / I, blank = none), as the evaluator listed it
+  severity        : abap.char(1);
   // time of the evaluation that wrote the version (UTC)
   evaluated_at    : timestamp;
 }
 // Written only by the 5-minute snapshot ZCL_CD_OPS_PAY_SNAPSHOT (job step ZCD_OPS_PAY_SNAPSHOT of
 // ZCD_FMON_MONITOR_ALL); read by the transactions dashboard (ZI_CD_PayOutcome*) and the purge.
 // No copies: amounts, dates, partner and method stay in DPAYH / DFKKOP / FEBEP / ZCD_PAYM_REQ_LOG
-// and are joined by key. History exists from go-live only.
+// and are joined by key. History exists from go-live only. A payment without an item with a FIN
+// (e.g. a collection) has one version with FIN_ID and SOURCE blank (2026-11-08), so A_INFLIGHT
+// counts every payment of a watched method class from this table.
 // @index DAT: MANDT, BUKRS, LAUFD
 // @index OUT: MANDT, OUTCOME, VALID_TO
 // @index FIN: MANDT, FIN_ID, SOURCE
+// @index DOC: MANDT, AUGBL
 // Retention (2026-11-08): ZCD_OPS_PURGE deletes versions closed before the cutoff and the current
 // version of a payment whose outcome is final (CLEARED, RETURNED, RETRIEVED, VOIDED, REVERSED -
 // ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) and whose run is before the cutoff (parameter

@@ -10,6 +10,7 @@
 //          Read access: DCL ZC_CD_TRXDASH (ZCD_OPS, ZCD_PE_AREA = CORE and BUKRS, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
 //                   2026-11-07 | Canonical outcome, date kind and as-of parameters (ZR_CD_TrxFlow).
+//                   2026-11-08 | Header: payment outcome snapshot lag (maximum over the rows: one value).
 // VERIFY-ADT: parameters of a transactional_query projection in an analytical list page (OData V4).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Transactions dashboard'
@@ -78,6 +79,11 @@ define root view entity ZC_CD_TrxFlow
       OutcomeSourceCount,
       FlowBucket,
       FlowCriticality,
+      @Aggregation.default: #MAX
+      SnapshotLagMinutes,
+      SnapshotStaleAfterMinutes,
+      SnapshotIsStale,
+      SnapshotCriticality,
       @Aggregation.default: #SUM
       ItemCount,
       @Aggregation.default: #SUM

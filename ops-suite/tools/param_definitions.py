@@ -29,6 +29,7 @@ Modification log:
 2026-11-07 | RETENTION_DAYS_PAY_OUTCOME default from the purge target (canonical payment outcome).
 2026-11-08 | Table consolidation: generated DEFINITIONS( ) in parts of PART_ROWS rows; DEFAULTS may scale
            | a constant ('const', file, constant, factor - e.g. hours to minutes).
+2026-11-08 | MON_STALE_AFTER_MIN_CORE: snapshot lag threshold of the payment outcome (core freshness row).
 """
 import csv
 import io
@@ -66,7 +67,7 @@ RUNTIME = {
                     ('struct', OPS_TYPES, 'gc_severity', ['block', 'error', 'warning'])),
     # Monitor freshness per area (table consolidation 2026-11-08, was ZCD_OPS_MONCFG)
     (OPS_TYPES, 'gc_param_prefix-stale_after_min'):
-        ('struct', OPS_TYPES, 'gc_pe_area', ['ebs', 'file_monitor', 'health_check']),
+        ('struct', OPS_TYPES, 'gc_pe_area', ['ebs', 'file_monitor', 'health_check', 'core']),
     (os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_prefix-max_age'):
         ('list', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_default-watch_pe_areas'),
     (os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'), 'gc_param_prefix-max_run'):
@@ -124,6 +125,9 @@ DEFAULTS = {
                                 'gc_param_default-max_age_hours', 60),
     'MON_STALE_AFTER_MIN_HCK': ('const', os.path.join('src', 'hck', 'zif_cd_hck_types.intf.abap'),
                                 'gc_param_default-max_age_hours', 60),
+    # CORE = the payment outcome snapshot lag (2026-11-08): 6 x its 5-minute cadence
+    'MON_STALE_AFTER_MIN_CORE': ('const', os.path.join('src', 'core', 'zif_cd_ops_payout_types.intf.abap'),
+                                 'gc_param_default-stale_after_min'),
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')

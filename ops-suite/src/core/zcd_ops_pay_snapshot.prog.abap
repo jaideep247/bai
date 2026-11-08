@@ -10,6 +10,8 @@
 *& ALV result in dialog. No WRITE lists. Changes nothing in file monitoring.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
+*& 2026-11-08 | Job log: the snapshot lag after the run (message 761, limit MON_STALE_AFTER_MIN_CORE) or
+*&            | "not run yet" (762); parallel packages are the class's (PAYOUT_PARALLEL).
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_pay_snapshot.
 
@@ -48,6 +50,19 @@ CLASS lcl_app IMPLEMENTATION.
          WHERE check_code = zif_cd_ops_payout_types=>gc_code-snapshot_failed.
       MESSAGE <ls_finding>-message TYPE 'S' DISPLAY LIKE 'E'.
     ENDLOOP.
+    " The snapshot lag after the run (the production-support freshness row shows the same)
+    IF ls_result-lag-known = abap_true.
+      DATA(lv_limit) = zcl_cd_ops_util=>param_int(
+                         io_params  = zcl_cd_ops_factory=>get_params( )
+                         iv_name    = CONV #( |{ zif_cd_ops_types=>gc_param_prefix-stale_after_min }| &&
+                                              |{ zif_cd_ops_types=>gc_pe_area-core }| )
+                         iv_default = zif_cd_ops_payout_types=>gc_param_default-stale_after_min ).
+      MESSAGE ID zif_cd_ops_types=>gc_message_class TYPE 'S' NUMBER zif_cd_ops_payout_types=>gc_msg-snapshot_lag
+        WITH ls_result-lag-minutes lv_limit ls_result-lag-source |{ ls_result-lag-current_to TIMESTAMP = ISO }|.
+    ELSE.
+      MESSAGE ID zif_cd_ops_types=>gc_message_class TYPE 'S' NUMBER zif_cd_ops_payout_types=>gc_msg-snapshot_never
+        WITH zif_cd_ops_types=>gc_pe_area-core.
+    ENDIF.
 
     IF sy-batch = abap_false.
       display( ).
