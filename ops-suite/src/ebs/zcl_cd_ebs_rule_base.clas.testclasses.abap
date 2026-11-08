@@ -31,6 +31,9 @@
 *& 2026-11-07 | r08_zero_flag_off_rows_apart: off = N (a blank value is the default X in ZCL_CD_OPS_STORE).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED): EBS_ZTNUM_IGNORE_ZEROS is BOOL, off = a
 *&            | value row with blank value (N would be an invalid value).
+*& 2026-11-08 | User decision: BAI166D = ACH retrieval succeeded (R07 RETRIEVED, no returns lot: R07L without
+*&            | PARAM3 LOT), BAI195D = wire return (R07 RETURNED) - seeded rows tested; PARAM3 LOT tests kept
+*&            | as the rule capability (helper run_lot_chain).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -637,6 +640,15 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
   DURATION SHORT.
 
   PRIVATE SECTION.
+    "! Seeded parameters (config/zcd_btc_rule.csv) and DPAYH-ZZ_PAYMENT_STATUS values (confirmed 2026-11-08)
+    CONSTANTS:
+      BEGIN OF gc_seed,
+        retrieval_ok TYPE zif_cd_ebs_sap_dao=>ty_retrieval-status VALUE 'AF',
+        retrieval_ap TYPE zif_cd_ebs_sap_dao=>ty_retrieval-status VALUE 'AP',
+        retrieved    TYPE zif_cd_ebs_sap_dao=>ty_payment-status VALUE 'RETRIEVED',
+        returned     TYPE zif_cd_ebs_sap_dao=>ty_payment-status VALUE 'RETURNED',
+        confirmed    TYPE zif_cd_ebs_sap_dao=>ty_payment-status VALUE 'CONFIRMED',
+      END OF gc_seed.
     METHODS setup.
     METHODS teardown.
     METHODS keys_padded_to_doc_length    FOR TESTING.
@@ -658,10 +670,23 @@ CLASS ltc_lookup_rules DEFINITION FINAL FOR TESTING
     METHODS r07l_af_without_lot_fails    FOR TESTING.
     METHODS r07l_chain_no_retrieval      FOR TESTING.
     METHODS r07l_chain_other_status      FOR TESTING.
-    METHODS run_166d_chain
+    METHODS run_lot_chain
       IMPORTING
         iv_status TYPE zif_cd_ebs_sap_dao=>ty_retrieval-status OPTIONAL
         iv_lot    TYPE abap_bool DEFAULT abap_false.
+    METHODS bai166d_retrieved_no_lot_ok  FOR TESTING.
+    METHODS bai166d_returned_fails       FOR TESTING.
+    METHODS bai195d_returned_passes      FOR TESTING.
+    METHODS bai195d_status_not_returned  FOR TESTING.
+    "! The seeded BAI166D chain (R07L PARAM1 AF / PARAM2 AP, no PARAM3; R07 PARAM1 RETRIEVED) on a
+    "! line whose retrieval is logged AF and whose payment run has iv_status - no returns lot item
+    METHODS run_seeded_166d
+      IMPORTING
+        iv_status TYPE zif_cd_ebs_sap_dao=>ty_payment-status.
+    "! The seeded BAI195D rule (R07 PARAM1 RETURNED) on a payment run with iv_status
+    METHODS run_seeded_195d
+      IMPORTING
+        iv_status TYPE zif_cd_ebs_sap_dao=>ty_payment-status.
     METHODS r07r_any_done_lot_passes     FOR TESTING.
     METHODS r07c_any_cancelled_row_fails FOR TESTING.
     METHODS r08_unknown_bank_ambiguous   FOR TESTING.
@@ -901,9 +926,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11 (business decision): 166 disbursement - retrieval-log chain. R07L with PARAM1 AF,
-  " PARAM2 AP (passes alone) and PARAM3 LOT (AF needs a returns-lot entry by SELW1)
-  METHOD run_166d_chain.
+  " R07L capability PARAM3 LOT (A11, the former 166D chain; no seeded group uses it since the user
+  " decision 2026-11-08): PARAM1 AF, PARAM2 AP (passes alone), PARAM3 LOT (AF needs a returns-lot
+  " entry by SELW1)
+  METHOD run_lot_chain.
     DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
     DATA ls_item      TYPE zif_cd_ebs_sap_dao=>ty_return_item.
     IF iv_status IS NOT INITIAL.
@@ -924,10 +950,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11: retrieval status AP passes on its own - no returns lot needed
+  " PARAM3 LOT: retrieval status AP (PARAM2) passes on its own - no returns lot needed
   METHOD r07l_ap_passes_without_lot.
     TRY.
-        run_166d_chain( iv_status = 'AP' ).
+        run_lot_chain( iv_status = 'AP' ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AP must pass without a returns lot' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -935,10 +961,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11: retrieval status AF plus a returns-lot entry passes
+  " PARAM3 LOT: retrieval status AF plus a returns-lot entry passes
   METHOD r07l_af_with_lot_passes.
     TRY.
-        run_166d_chain( iv_status = 'AF' iv_lot = abap_true ).
+        run_lot_chain( iv_status = 'AF' iv_lot = abap_true ).
         cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'AF with a returns lot must pass' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -946,10 +972,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11: AF without a returns-lot entry fails
+  " PARAM3 LOT: AF without a returns-lot entry fails
   METHOD r07l_af_without_lot_fails.
     TRY.
-        run_166d_chain( iv_status = 'AF' ).
+        run_lot_chain( iv_status = 'AF' ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-return_item_not_found
                          iv_msg        = 'AF without a returns lot must fail' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -958,10 +984,10 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11: no retrieval at all fails, even when a returns lot exists
+  " PARAM3 LOT: no retrieval at all fails, even when a returns lot exists
   METHOD r07l_chain_no_retrieval.
     TRY.
-        run_166d_chain( iv_lot = abap_true ).
+        run_lot_chain( iv_lot = abap_true ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_not_found
                          iv_msg        = 'A missing retrieval must fail the chain' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -970,12 +996,94 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " A11: a retrieval in another status (neither AP nor AF) fails
+  " PARAM3 LOT: a retrieval in another status (neither AP nor AF) fails
   METHOD r07l_chain_other_status.
     TRY.
-        run_166d_chain( iv_status = 'ER' iv_lot = abap_true ).
+        run_lot_chain( iv_status = 'ER' iv_lot = abap_true ).
         assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-retrieval_status
                          iv_msg        = 'A retrieval neither AP nor AF must fail the chain' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD run_seeded_166d.
+    DATA lt_all TYPE zif_cd_ops_types=>tt_finding.
+    DATA ls_payment TYPE zif_cd_ebs_sap_dao=>ty_payment.
+    DATA ls_retrieval TYPE zif_cd_ebs_sap_dao=>ty_retrieval.
+    ls_retrieval-augbl  = gc_test-docno.
+    ls_retrieval-status = gc_seed-retrieval_ok.
+    INSERT ls_retrieval INTO TABLE mo_sap_dao->mt_retrievals.
+    ls_payment-doc1r  = gc_test-docno.
+    ls_payment-status = iv_status.
+    INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+    add_statement( ).
+    add_line( ).
+    run( iv_class = 'ZCL_CD_EBS_R_R07L_RETRIEVAL'
+         is_rule  = rule( iv_rule_id = 'R07L' iv_param1 = gc_seed-retrieval_ok iv_param2 = gc_seed-retrieval_ap ) ).
+    INSERT LINES OF mt_findings INTO TABLE lt_all.
+    run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( iv_rule_id = 'R07' iv_param1 = gc_seed-retrieved ) ).
+    INSERT LINES OF lt_all INTO TABLE mt_findings.
+  ENDMETHOD.
+
+
+  METHOD run_seeded_195d.
+    DATA ls_payment TYPE zif_cd_ebs_sap_dao=>ty_payment.
+    ls_payment-doc1r  = gc_test-docno.
+    ls_payment-status = iv_status.
+    INSERT ls_payment INTO TABLE mo_sap_dao->mt_payments.
+    add_statement( ).
+    add_line( iv_category = 'W04' ).
+    run( iv_class = 'ZCL_CD_EBS_R_R07_PAYMENT' is_rule = rule( iv_rule_id = 'R07' iv_param1 = gc_seed-returned ) ).
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: 166 on a disbursement account = ACH retrieval succeeded. The seeded
+  " chain passes with DPAYH status RETRIEVED and NO returns lot item (DFKKRP is never created for a
+  " retrieval); legacy ZCL_BAI_166_DISB required the returns lot (parity D16)
+  METHOD bai166d_retrieved_no_lot_ok.
+    TRY.
+        run_seeded_166d( gc_seed-retrieved ).
+        cl_abap_unit_assert=>assert_initial( act = mo_sap_dao->mt_items msg = 'No returns lot item in the test data' ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings
+                                             msg = 'Retrieval AF and status RETRIEVED pass without a returns lot' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: a 166 whose payment shows RETURNED is not a retrieval - R07 fails
+  METHOD bai166d_returned_fails.
+    TRY.
+        run_seeded_166d( gc_seed-returned ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
+                         iv_msg        = 'Status RETURNED fails the 166D chain (RETRIEVED expected)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: 195 on a disbursement account = wire return, DPAYH status RETURNED
+  METHOD bai195d_returned_passes.
+    TRY.
+        run_seeded_195d( gc_seed-returned ).
+        cl_abap_unit_assert=>assert_initial( act = mt_findings msg = 'A returned wire passes BAI195D' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-08: a wire return whose payment is still CONFIRMED fails R07 (legacy only
+  " checked that DPAYH exists - parity row BAI195D)
+  METHOD bai195d_status_not_returned.
+    TRY.
+        run_seeded_195d( gc_seed-confirmed ).
+        assert_one_code( iv_check_code = zif_cd_ebs_types=>gc_check_code-payment_status
+                         iv_msg        = 'A 195 on a payment still CONFIRMED fails R07' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -1178,7 +1286,7 @@ CLASS ltc_lookup_rules IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " FS-CD review: 166D chain - retrieval AF logged, returns lot not yet created, inside the window
+  " FS-CD review: PARAM3 LOT - retrieval AF logged, returns lot not yet created, inside the window
   METHOD r07l_lot_in_flight_awaits.
     TRY.
         mo_params->set( iv_name = zif_cd_ebs_types=>gc_param-inflight_hours iv_value = '24' ).

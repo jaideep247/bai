@@ -2,12 +2,12 @@
   "_artifact": {
     "name": "portable_checks.json",
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
-    "generated": "2026-11-07"
+    "generated": "2026-11-08"
   },
   "passed": 27,
   "total": 27,
   "abap_files": 378,
-  "declared_unit_methods": 1497,
+  "declared_unit_methods": 1501,
   "measured_coverage": null,
   "checks": [
     {

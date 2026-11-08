@@ -3,7 +3,8 @@
 *& Purpose:
 *& R07: the payment document behind the bank reference must exist in the
 *& payment run (DPAYH-DOC1R). PARAM1 = allowed payment statuses (comma list,
-*& e.g. RETURNED for BAI 168). Legacy parity: v4 195D and 168D.
+*& e.g. RETURNED for BAI 168 / 195D, RETRIEVED for BAI 166D). Legacy parity:
+*& v4 195D and 168D.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Any productive run with an allowed status passes; message lists every status (audit 2026-11-06).
@@ -12,6 +13,7 @@
 *& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
 *& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *& 2026-11-06 | Performance fix 4: register rows by sorted secondary key (USING KEY); field symbols.
+*& 2026-11-08 | Header only: seeded statuses RETRIEVED (166D) / RETURNED (195D), user decision; no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07 - payment exists in DPAYH (status)</p>
 CLASS zcl_cd_ebs_r_r07_payment DEFINITION

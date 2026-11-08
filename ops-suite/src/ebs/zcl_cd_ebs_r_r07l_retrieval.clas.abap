@@ -4,8 +4,9 @@
 *& R07L: the ACH retrieval (ZCD_ACH_RTRV_LOG by clearing document) must exist
 *& with a status in PARAM1 (default AF). Legacy parity: v4 168D and 468D.
 *& PARAM2: statuses that pass on their own (166D: AP). PARAM3 = LOT: a retrieval
-*& passing on PARAM1 also needs a returns-lot entry (DFKKRP-SELW1) - the 166D
-*& retrieval-log chain of the first framework (business decision A11).
+*& passing on PARAM1 also needs a returns-lot entry (DFKKRP-SELW1) - the
+*& capability of the former 166D chain (A11); no seeded group uses it since
+*& the user decision 2026-11-08 (166D = retrieval succeeded, no DFKKRP).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Any logged attempt with an allowed status passes (audit 2026-11-06).
@@ -15,6 +16,7 @@
 *& 2026-11-06 | Audit A65: overlength / malformed reference rejected (REF_TOO_LONG / REF_FORMAT / KEY_LENGTH_CONFIG).
 *& 2026-11-06 | FS-CD review: not found within EBS_INFLIGHT_HOURS of the statement is AWAITING_LOT_TRANSFER.
 *& 2026-11-06 | Performance fix 4: register rows by sorted secondary key (USING KEY); field symbols.
+*& 2026-11-08 | Header only: PARAM3 LOT no longer seeded for BAI166D (user decision); no code change.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS rule R07L - ACH retrieval log status</p>
 CLASS zcl_cd_ebs_r_r07l_retrieval DEFINITION

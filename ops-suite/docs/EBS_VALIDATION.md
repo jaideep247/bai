@@ -39,8 +39,8 @@ It **reports findings and never stops a posting**: by the time it runs every lin
 
 | Rule | Why it needs the posting | Seed |
 |---|---|---|
-| R07 | DPAYH status such as RETURNED is set by the return / clearing processing | X |
-| R07L | the 166D chain needs the returns-lot item created when the return is posted (PARAM3 LOT); AF statuses follow the bank confirmation | X |
+| R07 | DPAYH status such as RETURNED / RETRIEVED is set by the return / clearing processing and the hourly payment status job | X |
+| R07L | the retrieval-log status (AF / AP) follows the bank confirmation of the retrieval; PARAM3 LOT (returns-lot item created when a return is posted) is a capability no seeded group uses since 2026-11-08 | X |
 | R07R | returns lot item and lot status come from posting the return | X |
 | R05 | FEB source: the return / NOC reason is read from the returns lot (DFKKRP-RLGRD) / NOC lot (DFKKNRP-FLGRD), created by return / NOC processing (bank file: the file's own code, unchanged) | X |
 | R19 | FI document (FEBEP-BELNR) exists / is cleared | X |
@@ -107,7 +107,7 @@ For a POSTING_OPEN line these rules are **not evaluated** (a line rule does not 
 | M01/M02 | Miscellaneous credit / debit | PMNT-RCDT/ICDT-ADJT | 399 · 699 | On account — never suspense |
 | X01 | Unmapped code | anything not in the map | anything | **BLOCK + exception** |
 
-Production codes used today (legacy validators, disbursement accounts) keep their own rule groups: 166, 168, 195, 255, 466, 468, 581 (and 166 on collection accounts; 143 on collection accounts like 166, 452 like 468). 275 / 575 (ZBA sweeps) are mapped without code-specific validation (business decision 2026-11-06) and carry disposition **NOT_POSTED**: they are never posted, and S10 accepts them unposted (audit A26). 166 disbursement follows the retrieval-log chain (business decision, audit A11): retrieval AP passes alone; AF needs the returns lot item; then DPAYH RETURNED. See `Legacy_Parity_Comparison.md`.
+Production codes used today (legacy validators, disbursement accounts) keep their own rule groups: 166, 168, 195, 255, 466, 468, 581 (and 166 on collection accounts; 143 on collection accounts like 166, 452 like 468). 275 / 575 (ZBA sweeps) are mapped without code-specific validation (business decision 2026-11-06) and carry disposition **NOT_POSTED**: they are never posted, and S10 accepts them unposted (audit A26). **166 disbursement = ACH retrieval succeeded (user decision 2026-11-08):** rule group BAI166D checks the retrieval log (R07L, AF or AP) and DPAYH status **RETRIEVED** (R07); a successful retrieval creates **no** returns lot (DFKKRP), so no lot is required (the former PARAM3 LOT of A11 is no longer seeded). **195 disbursement = wire return (user decision 2026-11-08):** BAI195D checks DPAYH status **RETURNED** (R07; before: the payment run only). Payment lifecycle confirmed by the user: ACH 466 original, 168 return (one DFKKRP), 166 retrieval success (no DFKKRP), 468 retrieval failure; wire 495 original, 195 return; DPAYH-ZZ_PAYMENT_STATUS values ISSUED, CONFIRMED, CLEARED, RETURNED, RETRIEVED, STOPPED (`USAA_Known_Tables.md` §1). Both deviate from the legacy validators: `Legacy_Parity_Comparison.md` D16 / D23.
 
 ### A3. Triage playbook (RAG)
 
