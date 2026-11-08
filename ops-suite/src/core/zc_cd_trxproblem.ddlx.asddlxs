@@ -1,65 +1,70 @@
-// UI annotations: Transactions dashboard - errored / stuck transactions
+// UI annotations: Transactions dashboard - exceptions of the payment worklist
 // 2026-11-07: problem types from the canonical payment outcome (outcome finding shown).
+// 2026-11-08: exceptions-only worklist - the problem type is the finding code of the row.
 @Metadata.layer: #CORE
-@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Errored / stuck transactions',
+@UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions (payments and requests)',
                   title: { type: #STANDARD, value: 'FinId' },
                   description: { type: #STANDARD, value: 'ProblemType' } }
-@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
+@UI.presentationVariant: [ { sortOrder: [ { by: 'WorklistDate', direction: #ASC } ],
                              maxItems: 10,
                              visualizations: [ { type: #AS_LINEITEM } ] } ]
 annotate entity ZC_CD_TrxProblem with
 {
-  @EndUserText.label: 'Document (OPBEL)'
-  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
-  DocumentNo;
-  @EndUserText.label: 'Repetition item'
-  @UI.hidden: true
-  RepetitionItem;
-  @EndUserText.label: 'Item'
-  @UI.hidden: true
-  ItemNo;
-  @EndUserText.label: 'Sub-item'
-  @UI.hidden: true
-  SubItem;
-  @UI.hidden: true
-  PaymentEngineArea;
   @EndUserText.label: 'FIN number'
   @UI.lineItem: [ { position: 10, importance: #HIGH } ]
   @UI.selectionField: [ { position: 10 } ]
   @Consumption.semanticObject: 'ZCDPaymentTrace'
   FinId;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 15, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 15 } ]
+  SourceSystem;
   @EndUserText.label: 'Company code'
   @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
   @UI.selectionField: [ { position: 20 } ]
   CompanyCode;
-  @EndUserText.label: 'Posting date'
+  @EndUserText.label: 'Payment document'
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  ClearingDoc;
+  @EndUserText.label: 'Payment run date'
+  RunDate;
+  @EndUserText.label: 'Payment run ID'
+  @UI.hidden: true
+  RunId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Kind (payment / request)'
+  @UI.lineItem: [ { position: 7, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 5 } ]
+  WorkKind;
+  @EndUserText.label: 'Worklist date (run / due)'
   @UI.lineItem: [ { position: 40, importance: #HIGH } ]
   @UI.selectionField: [ { position: 30 } ]
-  PostingDate;
-  @EndUserText.label: 'Payment method'
+  WorklistDate;
+  @EndUserText.label: 'Exception since (UTC)'
+  @UI.lineItem: [ { position: 45, importance: #MEDIUM } ]
+  ExceptionSince;
+  @EndUserText.label: 'Outcome'
   @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  Outcome;
+  @EndUserText.label: 'Evidence kind / request stage'
+  @UI.lineItem: [ { position: 55, importance: #MEDIUM } ]
+  EvidenceKind;
+  @EndUserText.label: 'Evidence'
+  EvidenceRef;
+  @EndUserText.label: 'Flow + method class'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
   @UI.selectionField: [ { position: 40 } ]
+  FlowClass;
+  @EndUserText.label: 'Payment method'
   PaymentMethod;
   @EndUserText.label: 'Direction'
-  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
   Direction;
-  @EndUserText.label: 'Clearing / payment document'
-  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
-  ClearingDoc;
-  @EndUserText.label: 'Clearing date'
-  ClearingDate;
   @EndUserText.label: 'Payment status (DPAYH)'
   @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
   PaymentStatus;
-  @EndUserText.label: 'Return reason (DFKKRP-RLGRD)'
-  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
-  ReturnReason;
-  @EndUserText.label: 'Flow bucket (canonical outcome)'
-  FlowBucket;
-  @EndUserText.label: 'Outcome finding'
-  @UI.lineItem: [ { position: 95, importance: #MEDIUM } ]
-  OutcomeFinding;
-  @EndUserText.label: 'Problem'
+  @EndUserText.label: 'Problem (finding code)'
   @UI.lineItem: [ { position: 5, importance: #HIGH, criticality: 'ProblemCriticality' } ]
   @UI.selectionField: [ { position: 50 } ]
   ProblemType;
@@ -67,7 +72,7 @@ annotate entity ZC_CD_TrxProblem with
   ProblemCriticality;
   @EndUserText.label: 'Currency'
   Currency;
-  @EndUserText.label: 'Amount (signed)'
+  @EndUserText.label: 'Amount (payment run)'
   @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
   Amount;
 }

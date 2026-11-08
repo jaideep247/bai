@@ -25,13 +25,16 @@
 *& 2026-11-08 | Scenario CHEQUE_REISSUED (user 2026-11-08: a stop and reissue creates a new payment
 *&            | document and cheque number): the reissue of CHEQUE_STOPPED, cashed - CLEARED, judged
 *&            | apart from the stopped payment (which stays STOPPED = VOIDED).
+*& 2026-11-08 | Exceptions-only worklist: OUTCOME_ROWS gives the worklist rows the snapshot writes
+*&            | (none for a clean final outcome; the finding of an exception); HISTORY removed (no
+*&            | "as of" consumer any more).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - shared test fixtures</p>
 "! Scenarios GC_SCENARIO: retrieval without return, bank line without clearing, two DPAYH runs,
 "! FIN in two sources, SUCCESS older than 30 days, wire returned, return whose status the status
 "! job has not updated yet, cheque voided / stopped / stopped and voided / stopped and cashed,
 "! reissue of the stopped cheque (new payment document and cheque number, cashed);
-"! HISTORY: two versions of one payment.
+"! OUTCOME_ROWS: the worklist rows the snapshot writes for a scenario.
 CLASS zcl_cd_ops_pay_fixture DEFINITION
   PUBLIC
   FINAL
@@ -233,7 +236,9 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
       RETURNING
         VALUE(rt_rows) TYPE tt_febep.
 
-    "! The current version the snapshot writes for each source of the FIN (expected outcome)
+    "! The current worklist row the snapshot writes for each source of the FIN (expected outcome):
+    "! none for a clean final outcome (cleared, returned, retrieved, voided, reversed without finding),
+    "! else the row with the finding of the exception (as ZCL_CD_OPS_PAY_SNAPSHOT)
     METHODS outcome_rows
       IMPORTING
         is_scenario    TYPE ty_scenario
@@ -241,14 +246,6 @@ CLASS zcl_cd_ops_pay_fixture DEFINITION
       RETURNING
         VALUE(rt_rows) TYPE tt_outcome_row.
 
-    "! Two versions of the cleared wire of TWO_DPAYH_RUNS: IN_FLIGHT from iv_first, CLEARED from
-    "! iv_second (the first closed at iv_second)
-    METHODS history
-      IMPORTING
-        iv_first       TYPE zif_cd_ops_payout_types=>ty_timestamp
-        iv_second      TYPE zif_cd_ops_payout_types=>ty_timestamp
-      RETURNING
-        VALUE(rt_rows) TYPE tt_outcome_row.
 
   PRIVATE SECTION.
     "! Fixture data (declarations: the only place values belong)
@@ -1028,6 +1025,15 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
     LOOP AT is_scenario-requests ASSIGNING FIELD-SYMBOL(<ls_request>).
       INSERT <ls_request>-source INTO TABLE lt_sources.
     ENDLOOP.
+    IF is_scenario-status_pending = abap_false
+       AND ( is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-cleared
+          OR is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-returned
+          OR is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-retrieved
+          OR is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-voided
+          OR is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-reversed ).
+      " A clean final payment leaves the worklist (user decision 2026-11-08)
+      RETURN.
+    ENDIF.
     LOOP AT lt_sources ASSIGNING FIELD-SYMBOL(<lv_source>).
       CLEAR ls_row.
       ls_row-fin_id       = is_scenario-fin.
@@ -1040,24 +1046,25 @@ CLASS zcl_cd_ops_pay_fixture IMPLEMENTATION.
       ls_row-valid_to     = zif_cd_ops_payout_types=>gc_valid_to_open.
       ls_row-outcome      = is_scenario-expected.
       ls_row-evaluated_at = iv_valid_from.
-      IF is_scenario-expected = zif_cd_ops_payout_types=>gc_outcome-ambiguous.
-        ls_row-finding = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
-      ENDIF.
+      CASE is_scenario-expected.
+        WHEN zif_cd_ops_payout_types=>gc_outcome-ambiguous.
+          ls_row-finding  = zif_cd_ops_payout_types=>gc_code-source_ambiguous.
+          ls_row-severity = zif_cd_ops_types=>gc_severity-warning.
+        WHEN zif_cd_ops_payout_types=>gc_outcome-inconsistent.
+          ls_row-finding  = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist.
+          ls_row-severity = zif_cd_ops_types=>gc_severity-error.
+        WHEN zif_cd_ops_payout_types=>gc_outcome-undetermined.
+          ls_row-finding  = zif_cd_hck_runtime_types=>gc_code-undetermined.
+          ls_row-severity = zif_cd_ops_types=>gc_severity-warning.
+        WHEN OTHERS.
+          IF is_scenario-status_pending = abap_true.
+            ls_row-finding = zif_cd_ops_payout_types=>gc_code-status_pending.
+          ENDIF.
+      ENDCASE.
       INSERT ls_row INTO TABLE rt_rows.
     ENDLOOP.
   ENDMETHOD.
 
 
-  METHOD history.
-    DATA(ls_scenario) = scenario( gc_scenario-two_runs ).
-    DATA(lt_current) = outcome_rows( is_scenario = ls_scenario iv_valid_from = iv_second ).
-    DATA(ls_first) = lt_current[ 1 ].
-    ls_first-valid_from   = iv_first.
-    ls_first-valid_to     = iv_second.
-    ls_first-outcome      = zif_cd_ops_payout_types=>gc_outcome-in_flight.
-    ls_first-evaluated_at = iv_first.
-    INSERT ls_first INTO TABLE rt_rows.
-    INSERT LINES OF lt_current INTO TABLE rt_rows.
-  ENDMETHOD.
 
 ENDCLASS.

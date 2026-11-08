@@ -52,6 +52,9 @@
 *&            | snapshotted documents are not evaluated live (PAY_NOT_SNAPSHOT counts the others).
 *& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
 *&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
+*& 2026-11-08 | Exceptions-only worklist: PAY_EXCLUDED retired - the purposes the check used to count are asserted
+*&            | on the shared evaluator (EXCLUDED helper: left out of the check); agg_excluded_in_window removed;
+*&            | not yet snapshotted = after the DOCUMENTS watermark (double).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -302,7 +305,10 @@ CLASS ltd_outcome_dao IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_cd_ops_pay_outcome_dao~get_unsnapshotted.
-    LOOP AT mo_runtime->mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>) WHERE laufd >= iv_from.
+    " Entered after the DOCUMENTS watermark = every scenario payment without a snapshotted document (the
+    " double has no entry times); before the first run the window by run date
+    LOOP AT mo_runtime->mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>)
+         WHERE laufd >= iv_from OR laufd >= is_after-wm_date.
       IF line_exists( it_methods[ table_line = <ls_payment>-pymet ] )
          AND NOT line_exists( mt_snapshotted[ table_line = <ls_payment>-doc1r ] ).
         INSERT <ls_payment>-doc1r INTO TABLE rt_docno.
@@ -339,6 +345,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       gc_check    TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_INFLIGHT',
+      gc_cap      TYPE i VALUE 5000,
       gc_calendar TYPE zif_cd_hck_types=>ty_param VALUE 'US',
       gc_uk       TYPE zif_cd_hck_types=>ty_calendar VALUE 'GB',
       gc_wire     TYPE zif_cd_hck_runtime_types=>ty_pymet VALUE 'E',
@@ -495,7 +502,6 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS agg_old_wire_still_counted  FOR TESTING.
     METHODS agg_100k_one_finding        FOR TESTING.
     METHODS agg_pending_marker_lags     FOR TESTING.
-    METHODS agg_excluded_in_window      FOR TESTING.
     METHODS stale_snapshot_partial      FOR TESTING.
     METHODS never_run_snapshot_partial  FOR TESTING.
     METHODS snapshotted_not_live        FOR TESTING.
@@ -606,6 +612,14 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_dim2         TYPE clike OPTIONAL
       RETURNING
         VALUE(rv_value) TYPE zif_cd_hck_types=>ty_value.
+    "! Payments of the key that the shared evaluator excludes with the purpose (status X): the check
+    "! counts them nowhere since the worklist holds no clean payment (PAY_EXCLUDED retired 2026-11-08)
+    METHODS excluded
+      IMPORTING
+        iv_key          TYPE zif_cd_hck_runtime_types=>ty_flow_class DEFAULT gc_key-d_wire
+        iv_purpose      TYPE zif_cd_hck_runtime_types=>ty_purpose
+      RETURNING
+        VALUE(rv_count) TYPE i.
     METHODS finding
       IMPORTING
         is_result         TYPE zif_cd_hck_types=>ty_check_result
@@ -869,6 +883,26 @@ CLASS ltc_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD excluded.
+    DATA lt_docno TYPE zif_cd_ops_trace_types=>tt_docno.
+    LOOP AT mo_dao->mt_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      INSERT <ls_payment>-doc1r INTO TABLE lt_docno.
+    ENDLOOP.
+    DATA(lo_outcome) = NEW zcl_cd_ops_pay_outcome( ).
+    TRY.
+        lo_outcome->zif_cd_ops_pay_outcome~load( iv_context = gc_check iv_max_rows = gc_cap ).
+        LOOP AT lo_outcome->zif_cd_ops_pay_outcome~evaluate_documents( lt_docno )-verdicts ASSIGNING FIELD-SYMBOL(<ls_verdict>)
+             WHERE status = zif_cd_ops_payout_types=>gc_status-excluded AND purpose = iv_purpose.
+          IF |{ <ls_verdict>-flow }{ <ls_verdict>-class }| = iv_key.
+            rv_count = rv_count + 1.
+          ENDIF.
+        ENDLOOP.
+      CATCH zcx_cd_ops_error.
+        CLEAR rv_count.
+    ENDTRY.
+  ENDMETHOD.
+
+
   METHOD finding.
     rs_finding = VALUE #( is_result-findings[ check_code = iv_code reference = iv_key ] OPTIONAL ).
   ENDMETHOD.
@@ -1062,9 +1096,9 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD empty_data_measures_zero.
     TRY.
         DATA(ls_result) = act( ).
-        " 5 classes x (4 counts + PAY_INCONSISTENT + PAY_UNDETERMINED + PAY_STATUS_LAG + PAY_NOT_SNAPSHOT
-        " + PAY_EXCLUDED of CLEARED)
-        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 45 msg = 'Nine metrics x five keys' ).
+        " 5 classes x (4 counts + PAY_INCONSISTENT + PAY_UNDETERMINED + PAY_STATUS_LAG + PAY_NOT_SNAPSHOT;
+        " PAY_EXCLUDED retired 2026-11-08)
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 40 msg = 'Eight metrics x five keys' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
         cl_abap_unit_assert=>assert_equals( act = mo_ev_a->mv_calls exp = 0 msg = 'No payments: no evidence read' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1187,9 +1221,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
                                             exp = 0 msg = 'Cleared: not open' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Counted as cleared' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1251,9 +1283,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc1 ) msg = 'Forbidden evidence' ).
         cl_abap_unit_assert=>assert_false( act = lists( is_finding = ls_finding iv_doc = gc_doc2 ) msg = 'Absent: consistent' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'One cleared' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1272,9 +1302,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
         INSERT gc_doc1 INTO TABLE mo_ev_c->mt_found.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned )
                                             exp = 1 msg = 'Returned decides' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'No clearing inconsistency' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1364,9 +1392,7 @@ CLASS ltc_inflight IMPLEMENTATION.
           act = VALUE #( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config ]-severity OPTIONAL )
           exp = zif_cd_ops_types=>gc_severity-info
           msg = 'Not configured: information' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Kind A alone decides' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1387,9 +1413,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         add_payment( iv_doc = gc_doc1 iv_valut = gc_monday ).
         INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 0 msg = 'Never CLEARED on the indicator alone' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
                                             exp = 1 msg = 'Stays in flight' ).
@@ -1426,9 +1450,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         add_payment( iv_doc = gc_doc1 iv_valut = gc_friday ).
         INSERT gc_doc1 INTO TABLE mo_ev_a->mt_found.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 0 msg = 'No CLEARED while RETURNED is undetermined' ).
         cl_abap_unit_assert=>assert_true(
           act = lists( is_finding = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-undetermined )
@@ -1515,10 +1537,8 @@ CLASS ltc_inflight IMPLEMENTATION.
         ls_check-state = 'B'.
         INSERT ls_check INTO TABLE mo_trace->mt_checks.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-c_cheque
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-c_cheque
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Cashed collection cheque cleared' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-age_oldest
@@ -1548,9 +1568,7 @@ CLASS ltc_inflight IMPLEMENTATION.
         INSERT VALUE #( doc1r = gc_doc3 laufd = gc_friday status = 'CLEARED' ) INTO TABLE mo_trace->mt_runs.
         DATA(ls_result) = act( ).
         DATA(ls_finding) = finding( is_result = ls_result iv_code = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Line and status: cleared' ).
         cl_abap_unit_assert=>assert_true( act = lists( is_finding = ls_finding iv_doc = gc_doc2 )
                                           msg = 'On the statement but status not CLEARED' ).
@@ -1594,15 +1612,11 @@ CLASS ltc_inflight IMPLEMENTATION.
         DATA(ls_finding) = finding( is_result = ls_result
                                     iv_code   = zif_cd_hck_runtime_types=>gc_code-clearing_inconsist
                                     iv_key    = gc_key-d_cheque ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_cheque
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_cheque
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'B with line: cashed' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_cheque
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-voided )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_cheque
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-voided )
                                             exp = 1 msg = 'V without line: voided, counted apart' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
@@ -1637,10 +1651,8 @@ CLASS ltc_inflight IMPLEMENTATION.
         CLEAR ls_gl-augbl.
         INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-c_ach
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-c_ach
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'Collected and G/L line cleared' ).
         cl_abap_unit_assert=>assert_true(
           act = lists( is_finding = finding( is_result = ls_result
@@ -1666,10 +1678,8 @@ CLASS ltc_inflight IMPLEMENTATION.
         ls_return-amount = abs( gc_amount ).
         INSERT ls_return INTO TABLE mo_trace->mt_returns.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_ach
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_ach
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned )
                                             exp = 1 msg = 'Consistent return excluded' ).
         cl_abap_unit_assert=>assert_initial( act = ls_result-findings msg = 'Nothing to report' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -1719,10 +1729,8 @@ CLASS ltc_inflight IMPLEMENTATION.
         ls_gl-augbl = '0200000001'.
         INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-c_card
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-c_card
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 0 msg = 'Not cleared on BSEG alone' ).
         cl_abap_unit_assert=>assert_true(
           act = lists( is_finding = finding( is_result = ls_result
@@ -1759,10 +1767,8 @@ CLASS ltc_inflight IMPLEMENTATION.
         ls_gl-augbl = '0200000001'.
         INSERT ls_gl INTO TABLE mo_dao->mt_gl_lines.
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-c_card
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-c_card
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = 1 msg = 'BSEG decides by configuration choice' ).
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( ls_result-findings[ check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
@@ -1795,16 +1801,12 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD fixture_retrieval_not_return.
     TRY.
         load_fixtures( ).
-        DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_ach
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-retrieved )
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_ach
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-retrieved )
                                             exp = 1 msg = 'Retrieval excluded as RETRIEVED' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_ach
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_ach
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned )
                                             exp = 0 msg = 'Not counted as a return' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1845,9 +1847,7 @@ CLASS ltc_inflight IMPLEMENTATION.
               lv_in_flight = lv_in_flight + 1.
           ENDCASE.
         ENDLOOP.
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-cleared )
                                             exp = lv_cleared msg = 'Every cleared wire excluded once' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
                                             exp = lv_in_flight msg = 'Only the wire whose status is not updated in flight' ).
@@ -1861,11 +1861,9 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD fixture_returned_excluded.
     TRY.
         load_fixtures( ).
-        DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_wire
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-returned )
+        act( ).
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_wire
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-returned )
                                             exp = 1 msg = 'Returned wire excluded as RETURNED' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -1902,10 +1900,8 @@ CLASS ltc_inflight IMPLEMENTATION.
     TRY.
         load_fixtures( ).
         DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_key    = gc_key-d_cheque
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-voided )
+        cl_abap_unit_assert=>assert_equals( act = excluded( iv_key = gc_key-d_cheque
+                                                            iv_purpose = zif_cd_hck_runtime_types=>gc_purpose-voided )
                                             exp = 3 msg = 'Voided and stopped cheques excluded as VOIDED' ).
         cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
                                                           iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open
@@ -2329,11 +2325,9 @@ CLASS ltc_inflight IMPLEMENTATION.
                 msg = |{ <ls_scenario>-id }: in flight in the check| ).
             WHEN OTHERS.
               cl_abap_unit_assert=>assert_true(
-                act = xsdbool( metric( is_result = ls_result
-                                       iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                       iv_key    = |{ ls_verdict-flow }{ ls_verdict-class }|
-                                       iv_dim2   = ls_verdict-purpose ) > 0 )
-                msg = |{ <ls_scenario>-id }: excluded by the check as { ls_verdict-purpose }| ).
+                act = xsdbool( excluded( iv_key     = |{ ls_verdict-flow }{ ls_verdict-class }|
+                                         iv_purpose = ls_verdict-purpose ) > 0 )
+                msg = |{ <ls_scenario>-id }: left out of the check as { ls_verdict-purpose }| ).
           ENDCASE.
         ENDLOOP.
       CATCH cx_root INTO DATA(lx_error).
@@ -2463,23 +2457,6 @@ CLASS ltc_inflight IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
-
-  " Rule: a final outcome counts for PAY_EXCLUDED within the look-back window of the class only
-  METHOD agg_excluded_in_window.
-    TRY.
-        add_group( iv_laufd = gc_friday iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared iv_payments = 4 ).
-        add_group( iv_laufd = gc_old_wire iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared iv_payments = 7 ).
-        DATA(ls_result) = act( ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
-                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-excluded
-                                                          iv_dim2   = zif_cd_hck_runtime_types=>gc_purpose-cleared )
-                                            exp = 4 msg = 'Only the run within the window' ).
-        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result iv_metric = zcl_cd_hck_c_inflight=>gc_metric-open )
-                                            exp = 0 msg = 'Cleared payments are not in flight' ).
-      CATCH cx_root INTO DATA(lx_error).
-        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
-    ENDTRY.
-  ENDMETHOD.
 
 
   " Rule (2026-11-08): a snapshot behind more than MON_STALE_AFTER_MIN_CORE (30) is said - warning

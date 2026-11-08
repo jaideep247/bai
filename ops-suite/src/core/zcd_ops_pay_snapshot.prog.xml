@@ -12,8 +12,56 @@
    <TPOOL>
     <item>
      <ID>R</ID>
-     <ENTRY>Payment outcome snapshot (5-minute job step)</ENTRY>
-     <LENGTH>44</LENGTH>
+     <ENTRY>Payment worklist snapshot (FAST / NIGHTLY / SWEEP)</ENTRY>
+     <LENGTH>50</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>B01</KEY>
+     <ENTRY>Mode</ENTRY>
+     <LENGTH>4</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>B02</KEY>
+     <ENTRY>Sweep: date range and evidence sources</ENTRY>
+     <LENGTH>38</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_FAST</KEY>
+     <ENTRY>        FAST (new evidence)</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_NIGHT</KEY>
+     <ENTRY>        NIGHTLY (re-evaluate rows)</ENTRY>
+     <LENGTH>34</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_SWEEP</KEY>
+     <ENTRY>        SWEEP (date range)</ENTRY>
+     <LENGTH>26</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_FROM</KEY>
+     <ENTRY>        Sweep from date</ENTRY>
+     <LENGTH>23</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_TO</KEY>
+     <ENTRY>        Sweep to date</ENTRY>
+     <LENGTH>21</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_SRC</KEY>
+     <ENTRY>        Sweep evidence sources</ENTRY>
+     <LENGTH>30</LENGTH>
     </item>
     <item>
      <ID>S</ID>

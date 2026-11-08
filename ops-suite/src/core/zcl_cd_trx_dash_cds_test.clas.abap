@@ -7,6 +7,7 @@
 *& methods: the dashboard is CDS only; the tests live in the test include.
 *& Modification log:
 *& 2026-11-06 | Initial version (transactions dashboard).
+*& 2026-11-08 | Tests on the exceptions-only payment worklist (test include).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Transactions dashboard - CDS unit test holder</p>
 "! The transactions dashboard (docs/Dashboard_Transactions.md) is read-only CDS; this class

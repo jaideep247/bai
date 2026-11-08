@@ -18,17 +18,9 @@ define root view entity ZC_CD_TrxReqFlow
     P_DateFrom : abap.dats,
     @EndUserText.label: 'Request date to'
     @Environment.systemField: #SYSTEM_DATE
-    P_DateTo   : abap.dats,
-    @EndUserText.label: 'Outcome as of (date, from go-live)'
-    @Environment.systemField: #SYSTEM_DATE
-    P_AsOfDate : abap.dats,
-    @EndUserText.label: 'Outcome as of (time, system time zone)'
-    @Environment.systemField: #SYSTEM_TIME
-    P_AsOfTime : abap.tims
+    P_DateTo   : abap.dats
   as projection on ZR_CD_TrxReqFlow( P_DateFrom : $parameters.P_DateFrom,
-                                     P_DateTo   : $parameters.P_DateTo,
-                                     P_AsOfDate : $parameters.P_AsOfDate,
-                                     P_AsOfTime : $parameters.P_AsOfTime )
+                                     P_DateTo   : $parameters.P_DateTo )
 {
   key FinId,
   key SourceSystem,
@@ -61,15 +53,11 @@ define root view entity ZC_CD_TrxReqFlow
       @Aggregation.default: #SUM
       AcknowledgedCount,
       @Aggregation.default: #SUM
-      ClearedCount,
-      @Aggregation.default: #SUM
       ErroredCount,
       @Aggregation.default: #SUM
       RejectedCount,
       @Aggregation.default: #SUM
-      ReturnedCount,
-      @Aggregation.default: #SUM
-      RetrievedCount,
+      ExceptionCount,
       @Aggregation.default: #SUM
       AmbiguousCount,
       @Aggregation.default: #SUM

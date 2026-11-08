@@ -17,6 +17,8 @@
 *& 2026-11-06 | Initial version (transactions dashboard, request side).
 *& 2026-11-07 | Canonical payment outcome and review defects: window after the SUCCESS rule,
 *&            | retrieval not a return, ambiguous source, identity FIN + source + company code.
+*& 2026-11-08 | Exceptions-only worklist: a clean final payment has no worklist row - its stage
+*&            | is the evidence stage (PAID); the retrieval is shown, never RETURNED.
 *&---------------------------------------------------------------------*
 "! ZI_CD_TRXREQUEST / ZR_CD_TRXREQFLOW
 CLASS ltc_request DEFINITION FINAL
@@ -49,13 +51,15 @@ CLASS ltc_request DEFINITION FINAL
     CONSTANTS gc_item2 TYPE c LENGTH 12 VALUE '100000000042'.
     CONSTANTS gc_item1 TYPE c LENGTH 12 VALUE '100000000041'.
     CONSTANTS gc_rtrv_status TYPE c LENGTH 20 VALUE 'RETRIEVED'.
+    "! Stage of a paid request without worklist row (clean final payment)
+    CONSTANTS gc_stage_paid TYPE c LENGTH 20 VALUE 'PAID'.
 
     TYPES:
       BEGIN OF ty_param,
         from       TYPE d,
         to         TYPE d,
+        "! Day of the worklist rows of the fixture (written the day before)
         as_of_date TYPE d,
-        as_of_time TYPE t,
       END OF ty_param.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
@@ -123,7 +127,6 @@ CLASS ltc_request IMPLEMENTATION.
     ms_param-from       = lv_today.
     ms_param-to         = lv_today.
     ms_param-as_of_date = lv_today.
-    ms_param-as_of_time = zif_cd_ops_types=>gc_time-day_end.
     ls_t001-bukrs = zcl_cd_ops_pay_fixture=>gc_bukrs.
     ls_t001-land1 = zcl_cd_ops_pay_fixture=>gc_country.
     INSERT ls_t001 INTO TABLE lt_t001.
@@ -245,16 +248,15 @@ CLASS ltc_request IMPLEMENTATION.
         " Only today is chosen: the request is selected by its failed retry of today
         ms_param-from = ms_param-to.
         SELECT requestoutcome, requeststage
-          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to,
-                                 p_asofdate = @ms_param-as_of_date, p_asoftime = @ms_param-as_of_time )
+          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to )
           WHERE finid = @ls_scenario-fin
           ORDER BY sourcesystem
           INTO TABLE @DATA(lt_rows).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'The request is listed' ).
         cl_abap_unit_assert=>assert_equals( act = condense( lt_rows[ 1 ]-requestoutcome ) exp = gc_outcome-processed
                                             msg = 'SUCCESS 40 days ago still counts: PROCESSED' ).
-        cl_abap_unit_assert=>assert_equals( act = condense( lt_rows[ 1 ]-requeststage ) exp = CONV string( ls_scenario-expected )
-                                            msg = 'Stage = canonical outcome CLEARED' ).
+        cl_abap_unit_assert=>assert_equals( act = condense( lt_rows[ 1 ]-requeststage ) exp = condense( gc_stage_paid )
+                                            msg = 'Cleared: no worklist row, stage PAID' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -262,7 +264,7 @@ CLASS ltc_request IMPLEMENTATION.
 
 
   " Review defect: RETURNED when IsReturned > 0 OR RetrievalCount > 0. A retrieval (logged in
-  " ZCD_ACH_RTRV_LOG) is RETRIEVED - the canonical outcome - and never counted as a return
+  " ZCD_ACH_RTRV_LOG) is shown, never a return; RETRIEVED is final, so no worklist row
   METHOD retrieval_is_not_returned.
     DATA lt_rtrv TYPE STANDARD TABLE OF zcd_ach_rtrv_log WITH EMPTY KEY.
     DATA ls_rtrv TYPE zcd_ach_rtrv_log.
@@ -272,17 +274,19 @@ CLASS ltc_request IMPLEMENTATION.
         ls_rtrv-zz_rtrvl_status = gc_rtrv_status.
         INSERT ls_rtrv INTO TABLE lt_rtrv.
         go_env->insert_test_data( i_data = lt_rtrv ).
-        SELECT requeststage, returnedcount, retrievedcount
-          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to,
-                                 p_asofdate = @ms_param-as_of_date, p_asoftime = @ms_param-as_of_time )
+        SELECT requeststage, retrievalstatus, exceptioncount
+          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to )
           WHERE finid = @ls_scenario-fin
           ORDER BY sourcesystem
           INTO TABLE @DATA(lt_rows).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One request row' ).
-        cl_abap_unit_assert=>assert_equals( act = condense( lt_rows[ 1 ]-requeststage ) exp = CONV string( ls_scenario-expected )
-                                            msg = 'RETRIEVED' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-returnedcount exp = 0 msg = 'Not a return' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-retrievedcount exp = 1 msg = 'Counted as retrieved' ).
+        cl_abap_unit_assert=>assert_differs( act = condense( lt_rows[ 1 ]-requeststage )
+                                             exp = CONV string( zif_cd_ops_payout_types=>gc_outcome-returned )
+                                             msg = 'Never RETURNED' ).
+        cl_abap_unit_assert=>assert_equals( act = condense( lt_rows[ 1 ]-retrievalstatus ) exp = condense( gc_rtrv_status )
+                                            msg = 'The retrieval is shown' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-exceptioncount exp = 0
+                                            msg = 'RETRIEVED is final: no worklist exception' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -294,8 +298,7 @@ CLASS ltc_request IMPLEMENTATION.
     TRY.
         DATA(ls_scenario) = given_fixture( zcl_cd_ops_pay_fixture=>gc_scenario-two_sources ).
         SELECT sourcesystem, requeststage, sourcecount
-          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to,
-                                 p_asofdate = @ms_param-as_of_date, p_asoftime = @ms_param-as_of_time )
+          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to )
           WHERE finid = @ls_scenario-fin
           ORDER BY sourcesystem
           INTO TABLE @DATA(lt_rows).
@@ -330,8 +333,7 @@ CLASS ltc_request IMPLEMENTATION.
         INSERT ls_item INTO TABLE lt_items.
         go_env->insert_test_data( i_data = lt_items ).
         SELECT companycode
-          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to,
-                                 p_asofdate = @ms_param-as_of_date, p_asoftime = @ms_param-as_of_time )
+          FROM zr_cd_trxreqflow( p_datefrom = @ms_param-from, p_dateto = @ms_param-to )
           WHERE finid = @gc_fin-two_company
           ORDER BY companycode
           INTO TABLE @DATA(lt_rows).

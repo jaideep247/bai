@@ -31,6 +31,10 @@
 *&            | two sources = AMBIGUOUS; informational for the evidence verdict (as NOC); result outcome.
 *& 2026-11-08 | TO_DATE / TO_TIME public: the status-lag finding of A_INFLIGHT reads the ACK time of the
 *&            | same configured ACK source (TRACE_SRC_ACK) with the same conversion; no behaviour change.
+*& 2026-11-08 | Source spec keys DUE and AMOUNT (request log: requested payment date, amount).
+*& 2026-11-08 | Search by payment reference / cheque number (REFERENCE_DOCUMENTS: the payment document, the cheque
+*&            | number full or its last 13 characters - keyed DFKKCR reads only); stage REQUEST_DUE: due date and
+*&            | stage of every request seen (one rule with the payment worklist, information only).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -137,6 +141,8 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
 
     DATA mo_dao TYPE REF TO zif_cd_ops_trace_dao.
     DATA ms_cfg TYPE ty_config.
+    "! Requests (FIN + source) with a SUCCESS row seen by the trace: their due date and stage are shown
+    DATA mt_req_keys TYPE zif_cd_ops_payout_types=>tt_req_key.
     DATA mt_rows TYPE zif_cd_ops_trace_types=>tt_trace_row.
     DATA mt_items TYPE zif_cd_ops_trace_types=>tt_item.
     DATA mt_headers TYPE zif_cd_ops_trace_types=>tt_doc_header.
@@ -244,6 +250,20 @@ CLASS zcl_cd_ops_trace_engine DEFINITION
       CHANGING
         cs_result TYPE zif_cd_ops_trace_types=>ty_trace_result.
 
+    "! Due date and stage of every request seen (the one rule of the payment worklist): information
+    "! like the outcome - VERIFIED paid on time, open and not due or cancelled; FAILED not paid by the end
+    "! of its due date or paid late; UNAVAILABLE when the request rule cannot be evaluated
+    METHODS stage_request_due.
+
+    "! Payment documents of a payment reference: the document itself (as given and zero-padded) and the
+    "! payment documents of the cheques whose number is the reference, full or its last 13 characters
+    "! (as given, without leading zeros, zero-padded) - keyed reads of DFKKCR-ZTNUM only, capped
+    METHODS reference_documents
+      IMPORTING
+        iv_ref          TYPE zif_cd_ops_trace_types=>ty_ref
+      RETURNING
+        VALUE(rt_docno) TYPE zif_cd_ops_trace_types=>tt_docno.
+
     "! Evidence status of an outcome row: VERIFIED (outcome known), AMBIGUOUS, FAILED
     "! (inconsistent evidence), UNAVAILABLE (undetermined)
     CLASS-METHODS outcome_status
@@ -338,12 +358,13 @@ ENDCLASS.
 CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
   METHOD trace.
-    CLEAR: mt_rows, mt_items, mt_headers, mt_attempts, mv_found.
+    CLEAR: mt_rows, mt_items, mt_headers, mt_attempts, mv_found, mt_req_keys.
     rs_result-input = is_input.
     mo_dao = zcl_cd_ops_factory=>get_trace_dao( ).
     load_config( ).
 
     find_items( is_input ).
+    stage_request_due( ).
     IF mt_items IS NOT INITIAL.
       trace_history( ).
       LOOP AT mt_attempts INTO DATA(ls_attempt).
@@ -410,6 +431,10 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
           rs_cfg-time_field = lv_value.
         WHEN zif_cd_ops_trace_types=>gc_spec-info.
           rs_cfg-info_field = lv_value.
+        WHEN zif_cd_ops_trace_types=>gc_spec-due.
+          rs_cfg-due_field = lv_value.
+        WHEN zif_cd_ops_trace_types=>gc_spec-amount.
+          rs_cfg-amount_field = lv_value.
       ENDCASE.
     ENDLOOP.
   ENDMETHOD.
@@ -471,10 +496,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
       IF is_input-clearing_doc IS NOT INITIAL.
         INSERT is_input-clearing_doc INTO TABLE lt_docno.
       ELSEIF is_input-check_no IS NOT INITIAL.
-        LOOP AT mo_dao->get_checks_by_number( iv_ztnum = is_input-check_no iv_max_rows = ms_cfg-max_rows )
-             ASSIGNING FIELD-SYMBOL(<ls_check>).
-          INSERT <ls_check>-doc1r INTO TABLE lt_docno.
-        ENDLOOP.
+        lt_docno = reference_documents( is_input-check_no ).
       ENDIF.
       LOOP AT lt_docno ASSIGNING FIELD-SYMBOL(<lv_docno>).
         INSERT LINES OF mo_dao->get_items_by_clearing( iv_augbl = <lv_docno> iv_max_rows = ms_cfg-max_rows )
@@ -512,6 +534,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     LOOP AT ls_read-rows INTO DATA(ls_row).
       IF condense( ls_row-status ) = ms_cfg-success.
         INSERT ls_row INTO TABLE lt_success.
+        INSERT VALUE #( fin = iv_fin source = to_upper( condense( ls_row-key2 ) ) ) INTO TABLE mt_req_keys.
       ENDIF.
     ENDLOOP.
     candidate_status( EXPORTING iv_count  = COND #( WHEN lines( ls_read-rows ) >= ms_cfg-max_rows
@@ -1543,6 +1566,82 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD stage_request_due.
+    IF mt_req_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lv_now) = CONV zif_cd_ops_payout_types=>ty_timestamp( trunc( zcl_cd_ops_factory=>get_clock( )->now( ) ) ).
+    TRY.
+        DATA(lt_requests) = zcl_cd_ops_factory=>get_pay_request( )->evaluate( it_keys = mt_req_keys iv_now = lv_now ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        add_row( is_row = VALUE #( stage        = zif_cd_ops_trace_types=>gc_stage-request_due
+                                   status       = zif_cd_ops_trace_types=>gc_status-unavailable
+                                   reason       = zif_cd_ops_trace_types=>gc_reason-not_readable
+                                   source_table = ms_cfg-request-table_name
+                                   detail       = lx_error->get_text( ) ) ).
+        RETURN.
+    ENDTRY.
+    LOOP AT lt_requests ASSIGNING FIELD-SYMBOL(<ls_request>) WHERE stage IS NOT INITIAL.
+      " Not paid by the end of the due date, or paid only after it: the request missed its date
+      DATA(lv_missed) = xsdbool( <ls_request>-overdue = abap_true
+                                 OR <ls_request>-stage = zif_cd_ops_payout_types=>gc_req_stage-paid_late ).
+      add_row( is_row = VALUE #( stage         = zif_cd_ops_trace_types=>gc_stage-request_due
+                                 status        = COND #( WHEN lv_missed = abap_true
+                                                         THEN zif_cd_ops_trace_types=>gc_status-failed
+                                                         ELSE zif_cd_ops_trace_types=>gc_status-verified )
+                                 reason        = zif_cd_ops_trace_types=>gc_reason-request_due
+                                 source_table  = ms_cfg-request-table_name
+                                 record_key    = key_text( iv_part1 = <ls_request>-fin iv_part2 = <ls_request>-source )
+                                 evidence_date = <ls_request>-due_date
+                                 detail        = zcl_cd_ops_util=>text(
+                                                   iv_msgno = zif_cd_ops_payout_types=>gc_msg-trace_request
+                                                   iv_v1    = <ls_request>-fin
+                                                   iv_v2    = <ls_request>-source
+                                                   iv_v3    = <ls_request>-stage
+                                                   iv_v4    = |{ <ls_request>-due_date DATE = ISO }|
+                                                   iv_tail  = CONV string( <ls_request>-text ) ) ) ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD reference_documents.
+    DATA lt_forms TYPE zif_cd_ops_trace_types=>tt_ref.
+    DATA lv_doc TYPE n LENGTH 12.
+    DATA lv_suffix TYPE n LENGTH 13.
+    DATA(lv_ref) = condense( CONV string( iv_ref ) ).
+    DATA(lv_key) = zcl_cd_ops_cheque_link=>ref_key( lv_ref ).
+    DATA(lv_digits) = xsdbool( lv_ref CO gc_digits ).
+    " The payment document itself (FEBEP-CHECT = AUGBL for methods E G H I J K L): as given and with the
+    " leading zeros of the document number; get_items_by_clearing keeps only real clearing documents
+    IF strlen( lv_ref ) <= zif_cd_ops_payout_types=>gc_docno_length.
+      INSERT CONV #( lv_ref ) INTO TABLE rt_docno.
+      IF lv_digits = abap_true.
+        lv_doc = lv_ref.
+        INSERT CONV #( lv_doc ) INTO TABLE rt_docno.
+      ENDIF.
+    ENDIF.
+    " The cheque number (method C): full, without leading zeros, and the last 13 characters zero-padded
+    INSERT CONV #( lv_ref ) INTO TABLE lt_forms.
+    INSERT CONV #( lv_key ) INTO TABLE lt_forms.
+    IF lv_digits = abap_true AND strlen( lv_ref ) <= zif_cd_hck_runtime_types=>gc_check_default-ztnum_suffix.
+      lv_suffix = lv_ref.
+      INSERT CONV #( lv_suffix ) INTO TABLE lt_forms.
+    ENDIF.
+    LOOP AT lt_forms ASSIGNING FIELD-SYMBOL(<lv_form>).
+      LOOP AT mo_dao->get_checks_by_number( iv_ztnum = <lv_form> iv_max_rows = ms_cfg-max_rows )
+           ASSIGNING FIELD-SYMBOL(<ls_check>) WHERE doc1r IS NOT INITIAL.
+        " The register number is the reference, or ends with it (the statement shows the last 13)
+        IF zcl_cd_ops_cheque_link=>ref_key( <ls_check>-ztnum ) = lv_key
+           OR zcl_cd_ops_cheque_link=>ref_key( zcl_cd_ops_cheque_link=>suffix(
+                iv_ztnum  = <ls_check>-ztnum
+                iv_length = zif_cd_hck_runtime_types=>gc_check_default-ztnum_suffix ) ) = lv_key.
+          INSERT <ls_check>-doc1r INTO TABLE rt_docno.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
   METHOD outcome_status.
     rv_status = SWITCH #( iv_outcome
                           WHEN zif_cd_ops_payout_types=>gc_outcome-ambiguous    THEN zif_cd_ops_trace_types=>gc_status-ambiguous
@@ -1615,7 +1714,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     LOOP AT mt_rows ASSIGNING FIELD-SYMBOL(<ls_row>) WHERE status <> zif_cd_ops_trace_types=>gc_status-verified
                                                       AND status <> zif_cd_ops_trace_types=>gc_status-not_applicable
                                                       AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
-                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome.
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due.
       IF NOT line_exists( mt_rows[ attempt = <ls_row>-attempt first_gap = abap_true ] ).
         <ls_row>-first_gap = abap_true.
       ENDIF.
@@ -1626,7 +1726,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     " The canonical outcome (OUTCOME rows) is shown and returned, but the verdict judges the evidence
     LOOP AT mt_rows INTO DATA(ls_row) WHERE attempt_kind <> zif_cd_ops_trace_types=>gc_attempt-historical
                                         AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
-                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome.
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due.
       CASE ls_row-status.
         WHEN zif_cd_ops_trace_types=>gc_status-failed.
           lv_failed = abap_true.
@@ -1665,6 +1766,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
   METHOD stage_seq.
     rv_seq = SWITCH #( iv_stage
                        WHEN zif_cd_ops_trace_types=>gc_stage-request    THEN 1
+                       WHEN zif_cd_ops_trace_types=>gc_stage-request_due THEN 1
                        WHEN zif_cd_ops_trace_types=>gc_stage-sap_item   THEN 2
                        WHEN zif_cd_ops_trace_types=>gc_stage-history    THEN 3
                        WHEN zif_cd_ops_trace_types=>gc_stage-payment    THEN 4

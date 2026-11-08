@@ -1,6 +1,6 @@
 // Artifact: zi_cd_trxreqwin.ddls.asddls
 // Purpose: The requests (FIN number + source) with at least one attempt on the chosen request
-//          date(s) - any day within the 400-day retention. The window selects requests; it never
+//          date(s) - any day of the 45-day evidence window (2026-11-08, was the 400-day outcome retention). The window selects requests; it never
 //          removes an attempt from the SUCCESS row rule (ZI_CD_TrxRequest judges every attempt of a
 //          selected request, also a SUCCESS attempt older than the window). ADT only (cds/).
 //          Read-only.
@@ -22,4 +22,4 @@ define view entity ZI_CD_TrxReqWin
   key SourceSystem
 }
 where RequestDate between $parameters.P_DateFrom and $parameters.P_DateTo
-  and RequestDate >= dats_add_days( $session.system_date, -400, 'INITIAL' )
+  and RequestDate >= dats_add_days( $session.system_date, -45, 'INITIAL' )

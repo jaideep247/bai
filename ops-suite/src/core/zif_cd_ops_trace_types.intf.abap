@@ -21,6 +21,8 @@
 *&            | TT_KEY_VALUE (keys of a set read of a configured source).
 *& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
 *&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | Payment worklist (requests not paid on the due date): source spec keys DUE (requested payment date)
+*&            | and AMOUNT of the request log, TY_CFG_ROW-DUE / AMOUNT, keyset position TY_CFG_SEEK.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - types and constants</p>
 INTERFACE zif_cd_ops_trace_types
@@ -76,6 +78,9 @@ INTERFACE zif_cd_ops_trace_types
       "! Canonical outcome of the attempt's payment (ZIF_CD_OPS_PAY_OUTCOME, the same verdict as
       "! the morning report check A_INFLIGHT and the transactions dashboard)
       outcome    TYPE ty_stage VALUE 'OUTCOME',
+      "! Due date and stage of the payment request (ZIF_CD_OPS_PAY_REQUEST, the rule of the payment
+      "! worklist and of the morning report check A_PRQ_NOT_PAID) - information, never the verdict
+      request_due TYPE ty_stage VALUE 'REQUEST_DUE',
     END OF gc_stage.
 
   "! Evidence status of a stage row. There is no PENDING: no deterministic SLA rule exists
@@ -138,6 +143,8 @@ INTERFACE zif_cd_ops_trace_types
       "! The payment method is in no watched method class: no canonical outcome
       not_watched      TYPE ty_reason VALUE 'METHOD_NOT_WATCHED',
       sent_to_prism    TYPE ty_reason VALUE 'SENT_TO_PRISM',
+      "! Due date and stage of the payment request (requests not paid on their requested payment date)
+      request_due      TYPE ty_reason VALUE 'REQUEST_DUE_DATE',
     END OF gc_reason.
 
   "! Overall verdict: COMPLETE only when every applicable stage of every current attempt,
@@ -218,6 +225,9 @@ INTERFACE zif_cd_ops_trace_types
       date   TYPE string VALUE `DATE`,
       time   TYPE string VALUE `TIME`,
       info   TYPE string VALUE `INFO`,
+      "! Request log only (2026-11-08): requested payment date (DATS) and amount of the request
+      due    TYPE string VALUE `DUE`,
+      amount TYPE string VALUE `AMOUNT`,
     END OF gc_spec.
   CONSTANTS gc_spec_pair_sep TYPE c LENGTH 1 VALUE ';'.
   CONSTANTS gc_spec_value_sep TYPE c LENGTH 1 VALUE '='.
@@ -254,6 +264,8 @@ INTERFACE zif_cd_ops_trace_types
       fin          TYPE ty_fin,
       source       TYPE ty_source,
       clearing_doc TYPE ty_docno,
+      "! Payment reference or cheque number: the payment document (FEBEP-CHECT = AUGBL) or the cheque
+      "! number DFKKCR-ZTNUM, full or its last 13 characters (ZCL_CD_OPS_CHEQUE_LINK) - keyed reads only
       check_no     TYPE ty_ref,
     END OF ty_trace_input.
 
@@ -304,6 +316,10 @@ INTERFACE zif_cd_ops_trace_types
       date_field   TYPE ty_fieldname,
       time_field   TYPE ty_fieldname,
       info_field   TYPE ty_fieldname,
+      "! Request log (TRACE_SRC_REQUEST): requested payment date (DUE=, DATS) and amount (AMOUNT=);
+      "! field names VERIFY-SE11 - the payment worklist reads them (requests not paid on the due date)
+      due_field    TYPE ty_fieldname,
+      amount_field TYPE ty_fieldname,
     END OF ty_source_cfg.
 
   TYPES:
@@ -312,7 +328,15 @@ INTERFACE zif_cd_ops_trace_types
       key2 TYPE ty_key_value,
     END OF ty_cfg_key.
 
-  "! Row of a configured source (aliases KEY1, KEY2, REF, STATUS, EV_DATE, EV_TIME, INFO)
+  "! Keyset position of a watermark read of a configured source: rows after (DATE, TIME, KEY1)
+  TYPES:
+    BEGIN OF ty_cfg_seek,
+      date TYPE d,
+      time TYPE t,
+      key  TYPE ty_key_value,
+    END OF ty_cfg_seek.
+
+  "! Row of a configured source (aliases KEY1, KEY2, REF, STATUS, EV_DATE, EV_TIME, INFO, DUE, AMOUNT)
   TYPES:
     BEGIN OF ty_cfg_row,
       key1    TYPE ty_key_value,
@@ -322,6 +346,9 @@ INTERFACE zif_cd_ops_trace_types
       ev_date TYPE c LENGTH 8,
       ev_time TYPE c LENGTH 6,
       info    TYPE ty_key_value,
+      "! Requested payment date (YYYYMMDD) and amount as stored (request log, DUE= / AMOUNT=)
+      due     TYPE c LENGTH 8,
+      amount  TYPE c LENGTH 40,
     END OF ty_cfg_row.
   TYPES tt_cfg_row TYPE STANDARD TABLE OF ty_cfg_row WITH EMPTY KEY.
 

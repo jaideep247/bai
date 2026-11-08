@@ -1,5 +1,5 @@
 // Artifact: zr_cd_trxretnoc.ddls.asddls
-// Purpose: Returns and NOCs by reason of the transactions of the last 31 days (transactions
+// Purpose: Returns and NOCs by reason of the transactions of the 45-day evidence window (transactions
 //          dashboard): one row per open item and lot item, kind RETURN (DFKKRP, reason RLGRD) or
 //          NOC (DFKKNRP, reason FLGRD), with FIN, company code, payment method, direction, amount.
 //          Chart "returns / NOC by reason"; drill-down from the transaction. Read-only.

@@ -17,6 +17,10 @@
 *&            | count a payment once and keep every payment not final however old, examples per
 *&            | partition oldest first, candidate rows by status, AMBIGUOUS-only payments, payment runs
 *&            | not yet snapshotted.
+*& 2026-11-08 | Exceptions-only worklist: delete and in-place update of open rows, every row by payment document,
+*&            | NIGHTLY / NIGHTLYREQ cursors, request keys and items (payment run, block), due requests with item
+*&            | sums, SWEEP upper date, package rows per mode, not yet snapshotted after the DOCUMENTS watermark
+*&            | (and the first-run window).
 *&---------------------------------------------------------------------*
 CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -91,6 +95,23 @@ CLASS ltc_pay_outcome_dao DEFINITION FINAL FOR TESTING
     METHODS rows_by_payment_status      FOR TESTING.
     METHODS ambiguous_only_payments     FOR TESTING.
     METHODS unsnapshotted_runs          FOR TESTING.
+    METHODS unsnapshotted_first_run     FOR TESTING.
+    METHODS worklist_delete_and_update  FOR TESTING.
+    METHODS nightly_cursor_rows         FOR TESTING.
+    METHODS nightly_request_rows        FOR TESTING.
+    METHODS request_items_with_run      FOR TESTING.
+    METHODS due_requests_with_amount    FOR TESTING.
+    METHODS sweep_stops_at_upper_date   FOR TESTING.
+    METHODS packages_of_other_mode_kept FOR TESTING.
+
+    "! A worklist row of a payment request (payment document blank)
+    METHODS request_row
+      IMPORTING
+        iv_fin         TYPE clike
+        iv_outcome     TYPE zif_cd_ops_payout_types=>ty_outcome
+        iv_due         TYPE d
+      RETURNING
+        VALUE(rs_row)  TYPE zif_cd_ops_payout_types=>ty_version.
 
     "! A DPAYH payment of method W (company code US01 in the US: disbursement) with its country rows
     METHODS given_payment
@@ -405,7 +426,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         DATA(ls_second) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-cleared ).
         ls_second-valid_from = gc-now.
         mo_cut->save_versions( it_close = VALUE #( ( ls_closed ) ) it_insert = VALUE #( ( ls_second ) ) ).
-        DATA(lt_open) = mo_cut->get_open_versions( VALUE #( ( gc-doc_old ) ) ).
+        DATA(lt_open) = mo_cut->get_versions( VALUE #( ( gc-doc_old ) ) ).
+        DELETE lt_open WHERE valid_to <> zif_cd_ops_payout_types=>gc_valid_to_open.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_open ) exp = 1 msg = 'One current version' ).
         cl_abap_unit_assert=>assert_equals( act = lt_open[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-cleared
                                             msg = 'The new outcome is current' ).
@@ -435,6 +457,17 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD request_row.
+    rs_row-fin_id        = iv_fin.
+    rs_row-source        = gc-source.
+    rs_row-valid_from    = gc-from.
+    rs_row-valid_to      = zif_cd_ops_payout_types=>gc_valid_to_open.
+    rs_row-outcome       = iv_outcome.
+    rs_row-evidence_kind = zif_cd_ops_payout_types=>gc_req_stage-not_in_run.
+    rs_row-due_date      = iv_due.
   ENDMETHOD.
 
 
@@ -543,7 +576,8 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
         mo_cut->finish_package( ls_first ).
         mo_cut->abandon_packages( ls_first-run_id ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->claim_package( ls_second ) msg = 'Abandoned: not claimed' ).
-        mo_cut->delete_packages( ls_first-run_id ).
+        mo_cut->delete_packages( iv_keep_run_id = ls_first-run_id
+                                 it_sources     = VALUE #( ( zif_cd_ops_payout_types=>gc_source-documents ) ) ).
         DATA(lt_rows) = mo_cut->get_packages( ls_first-run_id ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Rows of the run kept' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status exp = zif_cd_ops_payout_types=>gc_pkg_status-done
@@ -695,21 +729,230 @@ CLASS ltc_pay_outcome_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: payment runs since the date without a current version are not yet snapshotted
+  " Rule (2026-11-08): not yet snapshotted = the payment document entered after the DOCUMENTS
+  " watermark (a clean payment has no row, so "no row" is not the test)
   METHOD unsnapshotted_runs.
     TRY.
         given_payment( gc-doc_old ).
         given_payment( gc-doc_new ).
-        given_payment( iv_doc = gc_agg-doc_eur iv_laufd = gc_agg-old_day ).
-        mo_cut->save_versions( it_close  = VALUE #( )
-                               it_insert = VALUE #( ( version( iv_augbl = gc-doc_old
-                                                               iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) ) ) ).
+        given_header( iv_opbel = gc-doc_old iv_time = gc-early ).
+        given_header( iv_opbel = gc-doc_new iv_time = gc-late ).
         DATA(lt_docno) = mo_cut->get_unsnapshotted( it_methods = VALUE #( ( gc_agg-wire ) )
+                                                    is_after   = watermark( zif_cd_ops_payout_types=>gc_source-documents )
                                                     iv_from    = gc-day
                                                     iv_max     = 100 ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_docno ) exp = 1 msg = 'One payment not snapshotted' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_docno[ table_line = gc-doc_new ] ) )
-                                          msg = 'The payment without version, in the window' ).
+                                          msg = 'The payment entered after the watermark' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: before the first snapshot run (no watermark) the payment runs of the window are evaluated
+  METHOD unsnapshotted_first_run.
+    TRY.
+        given_payment( gc-doc_new ).
+        given_payment( iv_doc = gc_agg-doc_eur iv_laufd = gc_agg-old_day ).
+        DATA(lt_docno) = mo_cut->get_unsnapshotted( it_methods = VALUE #( ( gc_agg-wire ) )
+                                                    is_after   = VALUE #( )
+                                                    iv_from    = gc-day
+                                                    iv_max     = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lt_docno exp = VALUE zif_cd_ops_trace_types=>tt_docno( ( gc-doc_new ) )
+                                            msg = 'The run of the window only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Rule (exceptions-only worklist): an open row of a payment that left the worklist is deleted, an open
+  " row that changed is updated in place - one current row, no history
+  METHOD worklist_delete_and_update.
+    TRY.
+        DATA(ls_open) = version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        DATA(ls_other) = version( iv_augbl = gc-doc_new iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
+        mo_cut->save_versions( it_close = VALUE #( ) it_insert = VALUE #( ( ls_open ) ( ls_other ) ) ).
+        DATA(ls_changed) = ls_open.
+        ls_changed-outcome = zif_cd_ops_payout_types=>gc_outcome-pending.
+        mo_cut->save_versions( it_close  = VALUE #( )
+                               it_insert = VALUE #( )
+                               it_delete = VALUE #( ( ls_other ) )
+                               it_update = VALUE #( ( ls_changed ) ) ).
+        DATA(lt_rows) = mo_cut->get_versions( VALUE #( ( gc-doc_old ) ( gc-doc_new ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'The clean payment has no row' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-outcome exp = zif_cd_ops_payout_types=>gc_outcome-pending
+                                            msg = 'Changed in place' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-valid_from exp = gc-from msg = 'Open since kept' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: NIGHTLY reads every current payment row after its cursor (closed rows and request rows not);
+  " the end of the list clears the cursor
+  METHOD nightly_cursor_rows.
+    TRY.
+        mo_cut->save_versions(
+          it_close  = VALUE #( )
+          it_insert = VALUE #( ( version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) )
+                               ( version( iv_augbl    = gc-doc_new
+                                          iv_outcome  = zif_cd_ops_payout_types=>gc_outcome-inconsistent
+                                          iv_valid_to = gc-now ) )
+                               ( request_row( iv_fin = gc-fin iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_open
+                                              iv_due = gc-day ) ) ) ).
+        DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-nightly
+                                                is_watermark = VALUE #( source = zif_cd_ops_payout_types=>gc_source-nightly )
+                                                iv_max       = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_changes-docno exp = VALUE zif_cd_ops_trace_types=>tt_docno( ( gc-doc_old ) )
+                                            msg = 'The current payment row only' ).
+        cl_abap_unit_assert=>assert_initial( act = ls_changes-watermark-wm_key msg = 'End of the list: cursor cleared' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: NIGHTLYREQ reads the current request rows (payment document blank) by FIN + source
+  METHOD nightly_request_rows.
+    TRY.
+        mo_cut->save_versions(
+          it_close  = VALUE #( )
+          it_insert = VALUE #( ( request_row( iv_fin = gc-fin iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_open
+                                              iv_due = gc-day ) )
+                               ( request_row( iv_fin = gc_agg-fin2 iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_not_paid
+                                              iv_due = gc-day ) )
+                               ( version( iv_augbl = gc-doc_old iv_outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ) ) ) ).
+        DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-nightly_req
+                                                is_watermark = VALUE #( source = zif_cd_ops_payout_types=>gc_source-nightly_req )
+                                                iv_max       = 1 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_changes-requests ) exp = 1 msg = 'One request per package' ).
+        cl_abap_unit_assert=>assert_true( act = ls_changes-more msg = 'More requests wait' ).
+        DATA(ls_next) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-nightly_req
+                                             is_watermark = ls_changes-watermark
+                                             iv_max       = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = ls_next-requests
+                                            exp = VALUE zif_cd_ops_payout_types=>tt_req_key( ( fin = gc_agg-fin2 source = gc-source ) )
+                                            msg = 'The next request after the cursor' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->get_request_keys( VALUE #( ( gc-fin ) ) )
+          exp = VALUE zif_cd_ops_payout_types=>tt_req_key( ( fin = gc-fin source = gc-source ) )
+          msg = 'Request of a FIN' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the items of a request's FIN carry their payment block and the run date of their payment run
+  " (DPAYH by DOC1R = AUGBL, proposal runs ignored)
+  METHOD request_items_with_run.
+    DATA lt_items TYPE STANDARD TABLE OF dfkkop WITH EMPTY KEY.
+    DATA ls_item TYPE dfkkop.
+    TRY.
+        ls_item-opbel            = gc-ret_doc.
+        ls_item-bukrs            = gc-bukrs.
+        ls_item-augbl            = gc-doc_old.
+        ls_item-betrw            = gc_agg-amount.
+        ls_item-waers            = gc_agg-usd.
+        ls_item-zz_fin_trans_num = gc-fin.
+        INSERT ls_item INTO TABLE lt_items.
+        CLEAR ls_item.
+        ls_item-opbel            = gc-reversal.
+        ls_item-bukrs            = gc-bukrs.
+        ls_item-spzah            = gc_agg-wire.
+        ls_item-zz_fin_trans_num = gc_agg-fin2.
+        INSERT ls_item INTO TABLE lt_items.
+        go_env->insert_test_data( lt_items ).
+        given_payment( iv_doc = gc-doc_old iv_laufd = gc_agg-old_day ).
+        given_payment( gc-doc_old ).
+        DATA(lt_found) = mo_cut->get_request_items( VALUE #( ( gc-fin ) ( gc_agg-fin2 ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_found ) exp = 2 msg = 'One row per item' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_found[ fin = gc-fin ]-laufd exp = gc-day
+                                            msg = 'The latest payment run of the clearing document' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_found[ fin = gc_agg-fin2 ]-spzah exp = gc_agg-wire
+                                            msg = 'Payment block of the open item' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: A_PRQ_NOT_PAID reads the current request rows due before the date (open or not paid) with the
+  " item sum of their FIN; rows due today and payment rows are not read
+  METHOD due_requests_with_amount.
+    DATA lt_items TYPE STANDARD TABLE OF dfkkop WITH EMPTY KEY.
+    DATA ls_item TYPE dfkkop.
+    TRY.
+        mo_cut->save_versions(
+          it_close  = VALUE #( )
+          it_insert = VALUE #( ( request_row( iv_fin = gc-fin iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_not_paid
+                                              iv_due = gc_agg-old_day ) )
+                               ( request_row( iv_fin = gc_agg-fin2 iv_outcome = zif_cd_ops_payout_types=>gc_outcome-req_open
+                                              iv_due = gc-day ) ) ) ).
+        ls_item-opbel            = gc-ret_doc.
+        ls_item-betrw            = gc_agg-amount.
+        ls_item-waers            = gc_agg-usd.
+        ls_item-zz_fin_trans_num = gc-fin.
+        INSERT ls_item INTO TABLE lt_items.
+        go_env->insert_test_data( lt_items ).
+        DATA(lt_rows) = mo_cut->get_due_requests( iv_before = gc-day iv_max = 100 ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'Due before the day only' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-amount exp = gc_agg-amount msg = 'Item sum of the FIN' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-stage exp = zif_cd_ops_payout_types=>gc_req_stage-not_in_run
+                                            msg = 'Stage of the row' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: SWEEP reads up to the last date of its range only
+  METHOD sweep_stops_at_upper_date.
+    DATA lt_headers TYPE STANDARD TABLE OF dfkkko WITH EMPTY KEY.
+    DATA ls_header TYPE dfkkko.
+    TRY.
+        given_header( iv_opbel = gc-doc_new iv_time = gc-late ).
+        ls_header-opbel = gc-doc_nofin.
+        ls_header-cpudt = gc-day + 1.
+        ls_header-cputm = gc-early.
+        INSERT ls_header INTO TABLE lt_headers.
+        go_env->insert_test_data( lt_headers ).
+        given_item( iv_augbl = gc-doc_new iv_fin = gc-fin ).
+        given_item( iv_augbl = gc-doc_nofin iv_fin = gc-fin ).
+        DATA(ls_changes) = mo_cut->get_changes( iv_source    = zif_cd_ops_payout_types=>gc_source-documents
+                                                is_watermark = watermark( zif_cd_ops_payout_types=>gc_source-documents )
+                                                iv_max       = 100
+                                                iv_to        = gc-day ).
+        cl_abap_unit_assert=>assert_equals( act = ls_changes-docno exp = VALUE zif_cd_ops_trace_types=>tt_docno( ( gc-doc_new ) )
+                                            msg = 'The day after the range is not read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a run deletes the package rows of its own mode's sources only (a NIGHTLY run's rows survive a
+  " FAST run)
+  METHOD packages_of_other_mode_kept.
+    DATA ls_fast TYPE zif_cd_ops_payout_types=>ty_package.
+    TRY.
+        ls_fast-run_id = '000000000000000000000000000000C1'.
+        ls_fast-source = zif_cd_ops_payout_types=>gc_source-documents.
+        ls_fast-pkg_no = 1.
+        DATA(ls_night) = ls_fast.
+        ls_night-run_id = '000000000000000000000000000000C2'.
+        ls_night-source = zif_cd_ops_payout_types=>gc_source-nightly.
+        mo_cut->save_packages( VALUE #( ( ls_fast ) ( ls_night ) ) ).
+        DATA(lv_deleted) = mo_cut->delete_packages(
+                             iv_keep_run_id = '000000000000000000000000000000C3'
+                             it_sources     = VALUE #( ( zif_cd_ops_payout_types=>gc_source-documents ) ) ).
+        cl_abap_unit_assert=>assert_equals( act = lv_deleted exp = 1 msg = 'The FAST row only' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_packages( ls_night-run_id ) ) exp = 1
+                                            msg = 'The NIGHTLY row kept' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

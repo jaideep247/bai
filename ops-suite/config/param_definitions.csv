@@ -6,12 +6,14 @@ CD_OPS,MON_STALE_AFTER_MIN_CORE,P,INT,1,,30,,,,,Minutes of payment outcome snaps
 CD_OPS,MON_STALE_AFTER_MIN_EBS,P,INT,1,,1560,,,,,Minutes after the last EBS run before its monitor is stale,PE RTB
 CD_OPS,MON_STALE_AFTER_MIN_FMON,P,INT,1,,15,,,,,Minutes after the last FMON run before its monitor is stale,PE RTB
 CD_OPS,MON_STALE_AFTER_MIN_HCK,P,INT,1,,1560,,,,,Minutes after the last HCK run before its monitor is stale,PE RTB
+CD_OPS,PAYOUT_BATCH_MAX_PACKAGES,P,INT,1,,1000,,,,,Packages per NIGHTLY / SWEEP run of the payment worklist,PE RTB
 CD_OPS,PAYOUT_EXAMPLES,P,INT,1,100,10,,,,,Payments listed per aggregated finding (oldest first),PE RTB
 CD_OPS,PAYOUT_INITIAL_DAYS,P,INT,0,400,10,,,,,First outcome snapshot run: days read back (from go-live),PE RTB
 CD_OPS,PAYOUT_MAX_PACKAGES,P,INT,1,,20,,,,,Packages per evidence source and 5-minute snapshot run,PE RTB
 CD_OPS,PAYOUT_PACKAGE_SIZE,P,INT,100,50000,5000,,,,,Payment documents per package of the outcome snapshot,PE RTB
 CD_OPS,PAYOUT_PARALLEL,P,INT,1,20,4,,,,,Parallel snapshot packages (bgPF units; 1 = one by one),PE RTB
 CD_OPS,PAYOUT_PARALLEL_WAIT_SEC,P,INT,30,3600,600,,,,,Seconds a wave of parallel snapshot packages may run,PE RTB
+CD_OPS,PAYOUT_REQ_CUTOFF,P,LIST,,,*=190000,"(\*|[A-Z0-9_]{1,10})=([01][0-9]|2[0-3])[0-5][0-9][0-5][0-9]",,,,Request cut-off per source (SOURCE=HHMMSS, * = others),PE RTB
 CD_OPS,POSTAREA_APPLK,P,CHAR,,,V,[A-Z],,X,X,Application area of the posting area entries (TFK033D-APPLK),PE RTB
 CD_OPS,POSTAREA_BTM,P,CHAR,,,ZBTM,Z[A-Z0-9]{3},,X,X,Posting area of the bank transaction codes (was ZCD_BTC_MAP),PE RTB
 CD_OPS,POSTAREA_BTR,P,CHAR,,,ZBTR,Z[A-Z0-9]{3},,X,X,Posting area of the bank code roles (was ZCD_HCK_BTCROLE),PE RTB

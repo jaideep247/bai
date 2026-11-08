@@ -31,6 +31,8 @@
 *&            | ZCD_OPS_MONCFG).
 *& 2026-11-08 | GC_RANGE-SIGN_EXCLUDE (a range that leaves a value out, e.g. the PAY_STATUS_PENDING marker).
 *& 2026-11-08 | Prefix POSTAREA_ -> CD_OPS: posting areas of the mapping tables (customer posting areas).
+*& 2026-11-08 | Transactions dashboard on the payment worklist: GC_TRX_DASHBOARD-RETENTION_DAYS retired (no 400-day
+*&            | driver), date kinds WORKLIST / RUN / VALUE / DUE (POSTING retired).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -67,27 +69,26 @@ INTERFACE zif_cd_ops_types
     END OF gc_time.
   CONSTANTS gc_time_zone_utc TYPE tznzone VALUE 'UTC'.
 
-  "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): KPI / problem cards of the last
-  "! ITEM_WINDOW_DAYS days (ZR_CD_TrxKpi / ZR_CD_TrxProblem) and the evidence of later steps
-  "! (payment runs, bank lines, cheque encashment, ACK) of the last EVIDENCE_WINDOW_DAYS days.
-  "! CDS cannot read constants: the literals there are compared by the portable check
-  "! cds_abap_parity (tools/cds_abap_parity.py)
+  "! Transactions dashboard (CDS, docs/Dashboard_Transactions.md): KPI cards and the returns / NOC
+  "! items of the last ITEM_WINDOW_DAYS days (ZR_CD_TrxKpi, ZI_CD_TrxItem, cds/ZI_CD_TrxReqWin) and the
+  "! payment runs of the last EVIDENCE_WINDOW_DAYS days. The worklist rows themselves have no window
+  "! (the worklist bounds them, 2026-11-08). CDS cannot read constants: the literals there are compared
+  "! by the portable check cds_abap_parity (tools/cds_abap_parity.py)
   CONSTANTS:
     BEGIN OF gc_trx_dashboard,
       item_window_days     TYPE i VALUE 30,
       evidence_window_days TYPE i VALUE 45,
-      "! Any day of the payment outcome retention can be chosen (ZI_CD_TrxItem, cds/ZI_CD_TrxReqWin;
-      "! the default of RETENTION_DAYS_PAY_OUTCOME)
-      retention_days       TYPE i VALUE 400,
     END OF gc_trx_dashboard.
 
-  "! Date kinds of the transactions dashboard filter (ZR_CD_TrxFlow parameter P_DateKind): posting
-  "! date (DFKKOP-BUDAT), payment run date (latest DPAYH-LAUFD), value date (its DPAYH-VALUT)
+  "! Date kinds of the transactions dashboard filter (ZR_CD_TrxFlow parameter P_DateKind): the
+  "! worklist date (run date of a payment, due date of a request), the payment run date (DPAYH-LAUFD of
+  "! the row), its value date (DPAYH-VALUT), the due date of a payment request
   CONSTANTS:
     BEGIN OF gc_trx_date_kind,
-      posting TYPE c LENGTH 10 VALUE 'POSTING',
-      run     TYPE c LENGTH 10 VALUE 'RUN',
-      value   TYPE c LENGTH 10 VALUE 'VALUE',
+      worklist TYPE c LENGTH 10 VALUE 'WORKLIST',
+      run      TYPE c LENGTH 10 VALUE 'RUN',
+      value    TYPE c LENGTH 10 VALUE 'VALUE',
+      due      TYPE c LENGTH 10 VALUE 'DUE',
     END OF gc_trx_date_kind.
 
   "! Core parameters (area CD_OPS of ZCA_PARAM): alerting, purge, exception SLA

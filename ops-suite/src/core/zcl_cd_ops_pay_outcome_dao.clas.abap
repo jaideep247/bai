@@ -11,10 +11,14 @@
 *& DFKKKO entry time (DFKKRP-OPBEL) with DFKKRP-SELW1 = AUGBL; GL = G/L
 *& clearing documents by BKPF entry time with BSEG lines whose clearing is
 *& that document and whose XREF2 carries the payment document; RECHECK =
-*& current versions of outcomes that are not final, by AUGBL after the
-*& cursor (index OUT). Versions: current versions by FIN (index FIN),
-*& closed by UPDATE FROM TABLE and inserted FROM TABLE (no commit). Reads
-*& business tables only; writes ZCD_PAY_OUTCOME and ZCD_PAY_OUTWM only.
+*& current rows of outcomes that are not final, by AUGBL after the cursor
+*& (index OUT); NIGHTLY / NIGHTLYREQ = every current row of a payment /
+*& request after the cursor. The worklist (open payments, open requests,
+*& exceptions): every row of payments (index DOC) and requests (index FIN),
+*& deleted / closed / updated / inserted FROM TABLE (no commit). Request
+*& items (DFKKOP by FIN with their payment run), due requests with item
+*& sums (A_PRQ_NOT_PAID). Reads business tables only; writes
+*& ZCD_PAY_OUTCOME, ZCD_PAY_OUTWM and ZCD_PAY_OUTPKG only.
 *& Modification log:
 *& 2026-11-07 | Initial version (incremental 5-minute payment outcome snapshot).
 *& 2026-11-08 | RECHECK reads the outcomes that are not final by the one definition
@@ -27,6 +31,13 @@
 *&            | method; A_INFLIGHT reads on HANA - current versions grouped per payment (CTE) joined to
 *&            | DPAYH by key, examples per partition (ROW_NUMBER), candidate rows, AMBIGUOUS-only
 *&            | payments, payment runs not yet snapshotted. Never one SELECT per payment.
+*& 2026-11-08 | Exceptions-only worklist (user decision 2026-11-08): every row of payments and requests
+*&            | (GET_VERSIONS, GET_REQUEST_VERSIONS), request keys of FINs, DELETE of open rows and in-place UPDATE
+*&            | (SAVE_VERSIONS; FLOW_CLASS, DUE_DATE), request items (DFKKOP by FIN with the payment run, payment
+*&            | block SPZAH VERIFY-SE11), due requests with item sums (A_PRQ_NOT_PAID), NIGHTLY / NIGHTLYREQ cursors
+*&            | over the current rows, SWEEP upper date of every change read, package rows deleted per mode's
+*&            | sources, not yet snapshotted = entered after the DOCUMENTS watermark (no NOT EXISTS on the
+*&            | worklist).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot SQL</p>
 CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
@@ -39,6 +50,10 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
 
   PRIVATE SECTION.
     TYPES ty_docno TYPE c LENGTH 12.
+    "! No upper date bound of a change read (FAST, NIGHTLY)
+    CONSTANTS gc_open_date TYPE d VALUE '99991231'.
+    "! Cursor of NIGHTLYREQ in the watermark key: FIN (35 characters), then the source
+    CONSTANTS gc_fin_length TYPE i VALUE 35.
     "! G/L clearing document key in the watermark: company code, document, fiscal year
     TYPES:
       BEGIN OF ty_gl_key,
@@ -51,6 +66,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
+        iv_to             TYPE d
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
@@ -58,6 +74,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
+        iv_to             TYPE d
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
@@ -65,6 +82,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
+        iv_to             TYPE d
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
@@ -72,6 +90,7 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
+        iv_to             TYPE d
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
@@ -79,10 +98,27 @@ CLASS zcl_cd_ops_pay_outcome_dao DEFINITION
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
+        iv_to             TYPE d
       RETURNING
         VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
     METHODS recheck
+      IMPORTING
+        is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
+        iv_max            TYPE i
+      RETURNING
+        VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
+
+    "! NIGHTLY: every current worklist row of a payment, by AUGBL after the cursor
+    METHODS nightly
+      IMPORTING
+        is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
+        iv_max            TYPE i
+      RETURNING
+        VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
+
+    "! NIGHTLYREQ: every current worklist row of a payment request, by FIN + source after the cursor
+    METHODS nightly_requests
       IMPORTING
         is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
         iv_max            TYPE i
@@ -139,19 +175,25 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       rs_changes-watermark = is_watermark.
       RETURN.
     ENDIF.
+    " SWEEP: the last date of the range (FAST / NIGHTLY: no upper bound)
+    DATA(lv_to) = COND d( WHEN iv_to IS INITIAL THEN gc_open_date ELSE iv_to ).
     rs_changes = SWITCH #( iv_source
                            WHEN zif_cd_ops_payout_types=>gc_source-documents
-                             THEN documents( is_watermark = is_watermark iv_max = iv_max )
+                             THEN documents( is_watermark = is_watermark iv_max = iv_max iv_to = lv_to )
                            WHEN zif_cd_ops_payout_types=>gc_source-reversals
-                             THEN reversals( is_watermark = is_watermark iv_max = iv_max )
+                             THEN reversals( is_watermark = is_watermark iv_max = iv_max iv_to = lv_to )
                            WHEN zif_cd_ops_payout_types=>gc_source-statement
-                             THEN statement( is_watermark = is_watermark iv_max = iv_max )
+                             THEN statement( is_watermark = is_watermark iv_max = iv_max iv_to = lv_to )
                            WHEN zif_cd_ops_payout_types=>gc_source-returns
-                             THEN returns( is_watermark = is_watermark iv_max = iv_max )
+                             THEN returns( is_watermark = is_watermark iv_max = iv_max iv_to = lv_to )
                            WHEN zif_cd_ops_payout_types=>gc_source-gl
-                             THEN gl( is_watermark = is_watermark iv_max = iv_max )
+                             THEN gl( is_watermark = is_watermark iv_max = iv_max iv_to = lv_to )
                            WHEN zif_cd_ops_payout_types=>gc_source-recheck
-                             THEN recheck( is_watermark = is_watermark iv_max = iv_max ) ).
+                             THEN recheck( is_watermark = is_watermark iv_max = iv_max )
+                           WHEN zif_cd_ops_payout_types=>gc_source-nightly
+                             THEN nightly( is_watermark = is_watermark iv_max = iv_max )
+                           WHEN zif_cd_ops_payout_types=>gc_source-nightly_req
+                             THEN nightly_requests( is_watermark = is_watermark iv_max = iv_max ) ).
     rs_changes-watermark-source = iv_source.
   ENDMETHOD.
 
@@ -168,6 +210,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       WHERE ( k~cpudt > @is_watermark-wm_date
            OR ( k~cpudt = @is_watermark-wm_date AND k~cputm > @is_watermark-wm_time )
            OR ( k~cpudt = @is_watermark-wm_date AND k~cputm = @is_watermark-wm_time AND k~opbel > @lv_key ) )
+        AND k~cpudt <= @iv_to
         AND ( EXISTS ( SELECT doc1r FROM dpayh
                          WHERE doc1r = k~opbel
                            AND xvorl = @space )
@@ -198,6 +241,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       WHERE ( r~cpudt > @is_watermark-wm_date
            OR ( r~cpudt = @is_watermark-wm_date AND r~cputm > @is_watermark-wm_time )
            OR ( r~cpudt = @is_watermark-wm_date AND r~cputm = @is_watermark-wm_time AND r~opbel > @lv_key ) )
+        AND r~cpudt <= @iv_to
         AND ( EXISTS ( SELECT doc1r FROM dpayh
                          WHERE doc1r = o~opbel
                            AND xvorl = @space )
@@ -240,6 +284,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       FROM febep
       WHERE ( kukey > @lv_kukey OR ( kukey = @lv_kukey AND esnum > @lv_esnum ) )
         AND chect <> @space
+        AND budat <= @iv_to
       ORDER BY kukey, esnum
       INTO TABLE @DATA(lt_lines)
       UP TO @iv_max ROWS.
@@ -264,6 +309,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
       WHERE ( k~cpudt > @is_watermark-wm_date
            OR ( k~cpudt = @is_watermark-wm_date AND k~cputm > @is_watermark-wm_time )
            OR ( k~cpudt = @is_watermark-wm_date AND k~cputm = @is_watermark-wm_time AND k~opbel > @lv_key ) )
+        AND k~cpudt <= @iv_to
         AND EXISTS ( SELECT opbel FROM dfkkrp
                        WHERE opbel = k~opbel
                          AND selw1 <> @space )
@@ -308,6 +354,7 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
                 AND h~belnr > @ls_key-belnr )
            OR ( h~cpudt = @is_watermark-wm_date AND h~cputm = @is_watermark-wm_time AND h~bukrs = @ls_key-bukrs
                 AND h~belnr = @ls_key-belnr AND h~gjahr > @ls_key-gjahr ) )
+        AND h~cpudt <= @iv_to
       ORDER BY h~cpudt, h~cputm, h~bukrs, h~belnr, h~gjahr
       INTO TABLE @DATA(lt_docs)
       UP TO @iv_max ROWS.
@@ -380,6 +427,59 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD nightly.
+    DATA(lv_cursor) = CONV ty_docno( is_watermark-wm_key ).
+    " Every current worklist row of a payment (open and exceptions; index DOC): time passing makes a
+    " payment late without new evidence
+    SELECT DISTINCT augbl
+      FROM zcd_pay_outcome
+      WHERE valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+        AND augbl    > @lv_cursor
+      ORDER BY augbl
+      INTO TABLE @DATA(lt_docs)
+      UP TO @iv_max ROWS.
+    rs_changes-watermark = is_watermark.
+    LOOP AT lt_docs ASSIGNING FIELD-SYMBOL(<ls_doc>).
+      INSERT CONV #( <ls_doc>-augbl ) INTO TABLE rs_changes-docno.
+      rs_changes-watermark-wm_key = <ls_doc>-augbl.
+    ENDLOOP.
+    rs_changes-more = xsdbool( lines( lt_docs ) >= iv_max ).
+    " End of the list: the next night starts again from the first payment
+    IF rs_changes-more = abap_false.
+      CLEAR rs_changes-watermark-wm_key.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD nightly_requests.
+    DATA lv_fin TYPE zif_cd_ops_trace_types=>ty_fin.
+    DATA lv_source TYPE zif_cd_ops_trace_types=>ty_source.
+    lv_fin    = is_watermark-wm_key(gc_fin_length).
+    lv_source = is_watermark-wm_key+gc_fin_length.
+    " Every current worklist row of a payment request (payment document blank; index FIN): a request
+    " passes its due date without new evidence
+    SELECT DISTINCT fin_id, source
+      FROM zcd_pay_outcome
+      WHERE valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+        AND augbl    = @space
+        AND ( fin_id > @lv_fin OR ( fin_id = @lv_fin AND source > @lv_source ) )
+      ORDER BY fin_id, source
+      INTO TABLE @DATA(lt_requests)
+      UP TO @iv_max ROWS.
+    rs_changes-watermark = is_watermark.
+    LOOP AT lt_requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+      INSERT VALUE #( fin = <ls_request>-fin_id source = <ls_request>-source ) INTO TABLE rs_changes-requests.
+      CLEAR rs_changes-watermark-wm_key.
+      rs_changes-watermark-wm_key(gc_fin_length) = <ls_request>-fin_id.
+      rs_changes-watermark-wm_key+gc_fin_length  = <ls_request>-source.
+    ENDLOOP.
+    rs_changes-more = xsdbool( lines( lt_requests ) >= iv_max ).
+    IF rs_changes-more = abap_false.
+      CLEAR rs_changes-watermark-wm_key.
+    ENDIF.
+  ENDMETHOD.
+
+
   METHOD zif_cd_ops_pay_outcome_dao~get_cheque_documents.
     CHECK it_refs IS NOT INITIAL.
     " Confirmed: DFKKCR-DOC1R = AUGBL; DFKKCR-ZTNUM = FEBEP-CHECT (cheque number as on the
@@ -411,30 +511,143 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_cd_ops_pay_outcome_dao~get_open_versions.
+  METHOD zif_cd_ops_pay_outcome_dao~get_versions.
     CHECK it_docno IS NOT INITIAL.
-    " Every FIN and source of the payment documents (index DOC, 2026-11-08): also the version of a
-    " payment without FIN (FIN_ID blank) and a version of a FIN that is no longer on the payment
+    " Every row of the payment documents, current and closed (index DOC): the worklist holds open
+    " payments and exceptions only, so a payment has few rows; also the row of a payment without FIN
+    " (FIN_ID blank) and of a FIN that is no longer on the payment
     SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from, valid_to, outcome,
-           evidence_kind, evidence_ref, finding, severity, evaluated_at
+           evidence_kind, evidence_ref, finding, severity, evaluated_at, flow_class, due_date
       FROM zcd_pay_outcome
       FOR ALL ENTRIES IN @it_docno
-      WHERE augbl    = @it_docno-table_line
-        AND valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+      WHERE augbl = @it_docno-table_line
       INTO CORRESPONDING FIELDS OF TABLE @rt_versions.
     SORT rt_versions BY fin_id source bukrs augbl laufd laufi valid_from.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_request_versions.
+    CHECK it_keys IS NOT INITIAL.
+    " Rows of the payment requests: payment document blank (index FIN)
+    SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from, valid_to, outcome,
+           evidence_kind, evidence_ref, finding, severity, evaluated_at, flow_class, due_date
+      FROM zcd_pay_outcome
+      FOR ALL ENTRIES IN @it_keys
+      WHERE fin_id = @it_keys-fin
+        AND source = @it_keys-source
+        AND augbl  = @space
+      INTO CORRESPONDING FIELDS OF TABLE @rt_versions.
+    SORT rt_versions BY fin_id source bukrs augbl laufd laufi valid_from.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_request_keys.
+    CHECK it_fin IS NOT INITIAL.
+    SELECT fin_id, source
+      FROM zcd_pay_outcome
+      FOR ALL ENTRIES IN @it_fin
+      WHERE fin_id   = @it_fin-table_line
+        AND augbl    = @space
+        AND valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+      INTO TABLE @DATA(lt_rows).
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT VALUE #( fin = <ls_row>-fin_id source = <ls_row>-source ) INTO TABLE rt_keys.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_request_items.
+    CHECK it_fin IS NOT INITIAL.
+    " Confirmed: FIN = DFKKOP-ZZ_FIN_TRANS_NUM (secondary index expected, as the trace). The payment
+    " run of the clearing document: DPAYH-DOC1R = AUGBL without proposal runs, the latest run date.
+    " VERIFY-SE11: DFKKOP-SPZAH is the payment block of the item (Release_Readiness.md section 5)
+    " (no aggregate with FOR ALL ENTRIES: an item paid in two runs is reduced to its latest run below)
+    SELECT o~zz_fin_trans_num AS fin, o~opbel, o~opupw, o~opupk, o~opupz, o~bukrs, o~augbl, o~spzah,
+           o~betrw AS amount, o~waers AS currency, p~laufd
+      FROM dfkkop AS o
+      LEFT OUTER JOIN dpayh AS p ON  p~doc1r = o~augbl
+                                 AND p~xvorl = @space
+      FOR ALL ENTRIES IN @it_fin
+      WHERE o~zz_fin_trans_num = @it_fin-table_line
+      INTO TABLE @DATA(lt_rows).
+    SORT lt_rows BY fin opbel opupw opupk opupz laufd DESCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_rows COMPARING fin opbel opupw opupk opupz.
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      INSERT VALUE #( fin      = <ls_row>-fin
+                      opbel    = <ls_row>-opbel
+                      bukrs    = <ls_row>-bukrs
+                      augbl    = <ls_row>-augbl
+                      spzah    = <ls_row>-spzah
+                      amount   = <ls_row>-amount
+                      currency = <ls_row>-currency
+                      laufd    = <ls_row>-laufd ) INTO TABLE rt_items.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_pay_outcome_dao~get_due_requests.
+    CHECK iv_max > 0.
+    " Current request rows due before the date (open: the nightly has not judged them yet; not paid),
+    " each with the sum of the items of its FIN per currency (DFKKOP by FIN). Exceptions only: the
+    " request rows of the worklist, bounded by iv_max
+    WITH
+      +req AS ( SELECT fin_id, source, outcome, evidence_kind, due_date, evidence_ref
+                  FROM zcd_pay_outcome
+                  WHERE valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open
+                    AND augbl    = @space
+                    AND due_date < @iv_before
+                    AND ( outcome = @zif_cd_ops_payout_types=>gc_outcome-req_open
+                       OR outcome = @zif_cd_ops_payout_types=>gc_outcome-req_not_paid ) ),
+      +amt AS ( SELECT r~fin_id, o~waers, SUM( o~betrw ) AS amount
+                  FROM +req AS r
+                  INNER JOIN dfkkop AS o ON o~zz_fin_trans_num = r~fin_id
+                  GROUP BY r~fin_id, o~waers )
+      SELECT r~fin_id, r~source, r~outcome, r~evidence_kind AS stage, r~due_date, r~evidence_ref,
+             a~waers AS currency, a~amount
+        FROM +req AS r
+        LEFT OUTER JOIN +amt AS a ON a~fin_id = r~fin_id
+        ORDER BY r~due_date, r~source, r~evidence_kind, r~fin_id
+        INTO CORRESPONDING FIELDS OF TABLE @rt_rows
+        UP TO @iv_max ROWS.
   ENDMETHOD.
 
 
   METHOD zif_cd_ops_pay_outcome_dao~save_versions.
     DATA lt_close TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
     DATA lt_insert TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
+    DATA lt_delete TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
+    DATA lt_update TYPE STANDARD TABLE OF zcd_pay_outcome WITH EMPTY KEY.
     LOOP AT it_close ASSIGNING FIELD-SYMBOL(<ls_close>).
       INSERT to_db( <ls_close> ) INTO TABLE lt_close.
     ENDLOOP.
     LOOP AT it_insert ASSIGNING FIELD-SYMBOL(<ls_insert>).
       INSERT to_db( <ls_insert> ) INTO TABLE lt_insert.
     ENDLOOP.
+    LOOP AT it_delete ASSIGNING FIELD-SYMBOL(<ls_delete>).
+      INSERT to_db( <ls_delete> ) INTO TABLE lt_delete.
+    ENDLOOP.
+    LOOP AT it_update ASSIGNING FIELD-SYMBOL(<ls_update>).
+      INSERT to_db( <ls_update> ) INTO TABLE lt_update.
+    ENDLOOP.
+    " Open rows of payments that left the worklist (clean, or an exception now): no history. A row a
+    " concurrent run (FAST and NIGHTLY) already removed means the evaluation is stale: the package fails
+    " and is judged again by the next run
+    IF lt_delete IS NOT INITIAL.
+      DELETE zcd_pay_outcome FROM TABLE @lt_delete.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e011(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-outcome.
+      ENDIF.
+    ENDIF.
+    " An open row changed in place: the row must still be there (else a concurrent run changed it - the
+    " package fails and is retried)
+    IF lt_update IS NOT INITIAL.
+      UPDATE zcd_pay_outcome FROM TABLE @lt_update.
+      IF sy-dbcnt <> lines( lt_update ).
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e011(zcd_ops) WITH zif_cd_ops_payout_types=>gc_table-outcome.
+      ENDIF.
+    ENDIF.
     IF lt_close IS NOT INITIAL.
       UPDATE zcd_pay_outcome FROM TABLE @lt_close.
       IF sy-dbcnt <> lines( lt_close ).
@@ -467,6 +680,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     rs_db-finding       = is_version-finding.
     rs_db-severity      = is_version-severity.
     rs_db-evaluated_at  = is_version-evaluated_at.
+    rs_db-flow_class    = is_version-flow_class.
+    rs_db-due_date      = is_version-due_date.
   ENDMETHOD.
 
 
@@ -550,7 +765,13 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_ops_pay_outcome_dao~delete_packages.
-    DELETE FROM zcd_pay_outpkg WHERE run_id <> @iv_keep_run_id.
+    DATA lt_sources TYPE RANGE OF zif_cd_ops_payout_types=>ty_source_id.
+    CHECK it_sources IS NOT INITIAL.
+    " Only the sources of the mode whose run lock is held: a NIGHTLY run's packages survive a FAST run
+    lt_sources = VALUE #( FOR lv_source IN it_sources ( sign   = zif_cd_ops_types=>gc_range-sign_include
+                                                        option = zif_cd_ops_types=>gc_range-option_equal
+                                                        low    = lv_source ) ).
+    DELETE FROM zcd_pay_outpkg WHERE run_id <> @iv_keep_run_id AND source IN @lt_sources.
     rv_count = sy-dbcnt.
   ENDMETHOD.
 
@@ -558,7 +779,8 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
   METHOD zif_cd_ops_pay_outcome_dao~get_new_versions.
     " The versions of one run carry its time as VALID_FROM (index OUT: VALID_TO, then filtered)
     SELECT o~fin_id, o~source, o~bukrs, o~augbl, o~laufd, o~laufi, o~valid_from, o~valid_to, o~outcome,
-           o~evidence_kind, o~evidence_ref, o~finding, o~severity, o~evaluated_at, p~pymet, z~xeinz
+           o~evidence_kind, o~evidence_ref, o~finding, o~severity, o~evaluated_at, o~flow_class, o~due_date,
+           p~pymet, z~xeinz
       FROM zcd_pay_outcome AS o
       INNER JOIN dpayh AS p ON  p~laufd = o~laufd
                             AND p~laufi = o~laufi
@@ -732,18 +954,36 @@ CLASS zcl_cd_ops_pay_outcome_dao IMPLEMENTATION.
     DATA(lt_methods) = method_range( it_methods ).
     CHECK lt_methods IS NOT INITIAL.
     CHECK iv_max > 0.
-    " Payment runs since the date whose document has no current version yet (index DOC of
-    " ZCD_PAY_OUTCOME; DPAYH by LAUFD)
-    SELECT p~doc1r, p~laufd
+    IF is_after-wm_date IS INITIAL.
+      " Before the first snapshot run: the payment runs of the look-back window (DPAYH by LAUFD)
+      SELECT p~doc1r, p~laufd
+        FROM dpayh AS p
+        WHERE p~laufd >= @iv_from
+          AND p~xvorl  = @space
+          AND p~doc1r <> @space
+          AND p~pymet IN @lt_methods
+        ORDER BY p~laufd, p~doc1r
+        INTO TABLE @DATA(lt_first)
+        UP TO @iv_max ROWS.
+      LOOP AT lt_first ASSIGNING FIELD-SYMBOL(<ls_first>).
+        INSERT CONV #( <ls_first>-doc1r ) INTO TABLE rt_docno.
+      ENDLOOP.
+      RETURN.
+    ENDIF.
+    " Not reached yet: the payment document entered after the DOCUMENTS watermark (DFKKKO CPUDT /
+    " CPUTM / OPBEL - the order the snapshot reads in); a clean payment has no row, so "no row" is never
+    " the test (2026-11-08)
+    DATA(lv_key) = CONV ty_docno( is_after-wm_key ).
+    SELECT p~doc1r, k~cpudt, k~cputm
       FROM dpayh AS p
-      WHERE p~laufd >= @iv_from
-        AND p~xvorl  = @space
+      INNER JOIN dfkkko AS k ON k~opbel = p~doc1r
+      WHERE p~xvorl  = @space
         AND p~doc1r <> @space
         AND p~pymet IN @lt_methods
-        AND NOT EXISTS ( SELECT augbl FROM zcd_pay_outcome
-                           WHERE augbl    = p~doc1r
-                             AND valid_to = @zif_cd_ops_payout_types=>gc_valid_to_open )
-      ORDER BY p~laufd, p~doc1r
+        AND ( k~cpudt > @is_after-wm_date
+           OR ( k~cpudt = @is_after-wm_date AND k~cputm > @is_after-wm_time )
+           OR ( k~cpudt = @is_after-wm_date AND k~cputm = @is_after-wm_time AND k~opbel > @lv_key ) )
+      ORDER BY k~cpudt, k~cputm, p~doc1r
       INTO TABLE @DATA(lt_docs)
       UP TO @iv_max ROWS.
     LOOP AT lt_docs ASSIGNING FIELD-SYMBOL(<ls_doc>).

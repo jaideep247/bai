@@ -508,3 +508,17 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 763 | Package &1 / &2 not finished in &3 s: abandoned, watermark kept |
 | 764 | Parallel packages not available (bgPF), judged one by one: |
 | 765 | FIN &1 source &2 payment &3: &4 |
+| 766 | Requested &1, received &2 &3, due &4: |
+| 767 | No payment engine item for the FIN |
+| 768 | Item &1 has payment block &2 |
+| 769 | Item &1 open, not in a payment run |
+| 770 | Item &1 cleared by &2 without payment run |
+| 771 | Paid by &1 in the payment run of &2 |
+| 772 | &1 &2 due &3: &4 request(s) not paid in a payment run |
+| 773 | FIN &1 source &2 due &3: |
+| 774 | Full list: transactions dashboard, request &1 &2 due &3 |
+| 775 | Sweep needs a date range and evidence sources of: &1 |
+| 776 | &1 stopped after &2 package(s); the next run continues |
+| 777 | Worklist re-check &1 not completed today (&2): requests unchecked |
+| 778 | Cancelled after SUCCESS (&1): not expected to be paid |
+| 779 | Request &1 &2: stage &3, &4 |

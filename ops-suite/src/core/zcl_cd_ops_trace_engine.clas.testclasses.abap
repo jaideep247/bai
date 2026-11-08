@@ -26,6 +26,8 @@
 *&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
 *& 2026-11-08 | Table consolidation: runtime DAO double without get_pm_banks (house-bank calendars are
 *&            | ZCD_HCK_PMCLASS rows).
+*& 2026-11-08 | Payment worklist: request rule double (stage REQUEST_DUE shown as information), search by payment
+*&            | reference (cheque number, payment document).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -72,6 +74,9 @@ CLASS ltd_dao IMPLEMENTATION.
         INSERT ls_cfg-row INTO TABLE rt_rows.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+  METHOD zif_cd_ops_trace_dao~read_configured_after.
+    CLEAR rt_rows.
   ENDMETHOD.
   METHOD zif_cd_ops_trace_dao~get_partners.
     rt_partners = COND #( WHEN iv_source_field IS NOT INITIAL THEN mt_partners_src ELSE mt_partners ).
@@ -190,6 +195,24 @@ ENDCLASS.
 
 
 "! Evaluator double of the evidence-chain tests: no verdict (OUTCOME row NOT_APPLICABLE, verdict unchanged)
+"! Request rule double: the due date and stage of the requests of the scenario
+CLASS ltd_request DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_pay_request PARTIALLY IMPLEMENTED.
+    DATA mt_requests TYPE zif_cd_ops_payout_types=>tt_request.
+ENDCLASS.
+
+CLASS ltd_request IMPLEMENTATION.
+  METHOD zif_cd_ops_pay_request~evaluate.
+    LOOP AT mt_requests ASSIGNING FIELD-SYMBOL(<ls_request>).
+      IF line_exists( it_keys[ fin = <ls_request>-fin source = <ls_request>-source ] ).
+        INSERT <ls_request> INTO TABLE rt_requests.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltd_no_outcome DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_ops_pay_outcome PARTIALLY IMPLEMENTED.
@@ -286,6 +309,7 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     DATA mo_dao TYPE REF TO ltd_dao.
     DATA mo_params TYPE REF TO zcl_cd_ops_param_seed.
     DATA mo_auth TYPE REF TO ltd_auth.
+    DATA mo_request TYPE REF TO ltd_request.
 
     METHODS setup.
     METHODS teardown.
@@ -356,6 +380,9 @@ CLASS ltc_trace DEFINITION FINAL FOR TESTING
     METHODS noc_found_by_payment_ref      FOR TESTING.
     METHODS no_noc_is_not_applicable      FOR TESTING.
     METHODS noc_never_changes_verdict     FOR TESTING.
+    METHODS request_due_shown_as_info     FOR TESTING.
+    METHODS reference_finds_cheque        FOR TESTING.
+    METHODS reference_is_payment_doc      FOR TESTING.
 ENDCLASS.
 
 
@@ -370,6 +397,9 @@ CLASS ltc_trace IMPLEMENTATION.
     zcl_cd_ops_injector=>inject_auth( mo_auth ).
     " The canonical outcome is tested in ltc_outcome: no verdict here, the evidence chain unchanged
     zcl_cd_ops_injector=>inject_pay_outcome( NEW ltd_no_outcome( ) ).
+    " The request rule is tested in ZCL_CD_OPS_PAY_REQUEST: here only what it says is shown
+    mo_request = NEW #( ).
+    zcl_cd_ops_injector=>inject_pay_request( mo_request ).
   ENDMETHOD.
 
 
@@ -1089,6 +1119,53 @@ CLASS ltc_trace IMPLEMENTATION.
   ENDMETHOD.
 
 
+  " Rule (2026-11-08): the due date and stage of the request are shown (the worklist's rule) - a request
+  " not paid by its due date is a FAILED information row that never changes the evidence verdict
+  METHOD request_due_shown_as_info.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        INSERT VALUE #( fin = gc-fin source = gc-source due_date = gc-laufd overdue = abap_true
+                        stage = zif_cd_ops_payout_types=>gc_req_stage-not_in_run ) INTO TABLE mo_request->mt_requests.
+        DATA(ls_result) = run_trace( ).
+        cl_abap_unit_assert=>assert_equals( act = statuses( is_result = ls_result
+                                                            iv_stage  = zif_cd_ops_trace_types=>gc_stage-request_due )
+                                            exp = VALUE tt_status( ( zif_cd_ops_trace_types=>gc_status-failed ) )
+                                            msg = 'Not paid by the due date' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
+                                            msg = 'Information only: the evidence chain is complete' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): a payment reference that is a cheque number finds the cheque's payment (keyed
+  " DFKKCR read by the number as given / without leading zeros / its last 13 characters zero-padded)
+  METHOD reference_finds_cheque.
+    TRY.
+        configure_scenario( VALUE #( cheque = abap_true ) ).
+        DATA(ls_result) = run_trace( VALUE #( check_no = gc-ztnum ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
+                                            msg = 'Traced from the cheque number' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a payment reference that is the payment document (FEBEP-CHECT = AUGBL) traces it
+  METHOD reference_is_payment_doc.
+    TRY.
+        configure_scenario( VALUE #( ) ).
+        DATA(ls_result) = run_trace( VALUE #( check_no = gc-current ) ).
+        cl_abap_unit_assert=>assert_equals( act = ls_result-verdict exp = zif_cd_ops_trace_types=>gc_verdict-complete
+                                            msg = 'Traced from the payment document' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
   " Rule: nothing found for the keys is NOT_FOUND, not an empty COMPLETE
   METHOD unknown_fin_is_not_found.
     TRY.
@@ -1350,6 +1427,7 @@ CLASS ltc_outcome IMPLEMENTATION.
     zcl_cd_hck_injector=>inject_runtime_dao( mo_runtime ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
     zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+    zcl_cd_ops_injector=>inject_pay_request( NEW ltd_request( ) ).
     mo_params = NEW #( ).
     mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_request iv_value = gc_request_spec ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).

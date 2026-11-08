@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_TRXFLOW</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Transactions dashboard - transaction</DDTEXT>
+    <DDTEXT>Transactions dashboard - worklist row</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

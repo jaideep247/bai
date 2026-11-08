@@ -1,5 +1,5 @@
 // Artifact: zi_cd_trxretnocu.ddls.asddls
-// Purpose: Returns and NOCs of the transactions of the last 31 days (transactions dashboard,
+// Purpose: Returns and NOCs of the transactions of the 45-day evidence window (transactions dashboard,
 //          "returns / NOC by reason"): branch RETURN = open item x returns lot item on
 //          DFKKRP-SELW1 = DFKKOP-AUGBL (confirmed), reason DFKKRP-RLGRD; branch NOC = open item x NOC
 //          lot item on DFKKNRP-INFOF = AUGBL, both without leading zeros, reason DFKKNRP-FLGRD. The

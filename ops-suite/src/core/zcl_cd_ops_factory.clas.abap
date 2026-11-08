@@ -19,6 +19,7 @@
 *& 2026-11-07 | get_params: the session adapter ZCL_CD_OPS_PARAMS_CA over ZCA_PARAM (store serves no parameters).
 *& 2026-11-07 | get_pay_outcome (canonical payment outcome evaluator), get_pay_outcome_dao (snapshot SQL).
 *& 2026-11-08 | get_pay_snap_queue (bgPF units of the parallel outcome snapshot packages).
+*& 2026-11-08 | get_pay_request (due date and stage of payment requests: worklist and payment trace).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -82,6 +83,11 @@ CLASS zcl_cd_ops_factory DEFINITION
       RETURNING
         VALUE(ro_outcome) TYPE REF TO zif_cd_ops_pay_outcome.
 
+    "! Due date and stage of payment requests (one rule: worklist and payment trace)
+    CLASS-METHODS get_pay_request
+      RETURNING
+        VALUE(ro_request) TYPE REF TO zif_cd_ops_pay_request.
+
     "! Repository of the payment outcome snapshot (versions, watermarks, changed documents)
     CLASS-METHODS get_pay_outcome_dao
       RETURNING
@@ -132,6 +138,7 @@ CLASS zcl_cd_ops_factory DEFINITION
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_cd_ops_purge_dao.
     CLASS-DATA go_trace_dao_double TYPE REF TO zif_cd_ops_trace_dao.
     CLASS-DATA go_pay_outcome_double TYPE REF TO zif_cd_ops_pay_outcome.
+    CLASS-DATA go_pay_request_double TYPE REF TO zif_cd_ops_pay_request.
     CLASS-DATA go_pay_outcome_dao_double TYPE REF TO zif_cd_ops_pay_outcome_dao.
     CLASS-DATA go_pay_snap_queue_double TYPE REF TO zif_cd_ops_pay_snap_queue.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
@@ -229,6 +236,12 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
   METHOD get_pay_outcome.
     ro_outcome = COND #( WHEN go_pay_outcome_double IS BOUND THEN go_pay_outcome_double
                          ELSE NEW zcl_cd_ops_pay_outcome( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_pay_request.
+    ro_request = COND #( WHEN go_pay_request_double IS BOUND THEN go_pay_request_double
+                         ELSE NEW zcl_cd_ops_pay_request( ) ).
   ENDMETHOD.
 
 

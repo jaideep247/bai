@@ -33,6 +33,8 @@
 *&            | VOIDED, REVERSED) used by the snapshot recheck, the purge and A_INFLIGHT.
 *& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
 *&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
+*& 2026-11-08 | Verdict carries the value date and house bank of the payment run (age of a payment in flight for the
+*&            | worklist).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - canonical evaluator</p>
 "! One instance per run (configuration and listing state); create it through
@@ -332,6 +334,8 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                         bukrs   = <ls_payment>-bukrs
                         flow    = <ls_payment>-flow
                         class   = <ls_payment>-class
+                        valut   = <ls_payment>-valut
+                        hbkid   = <ls_payment>-hbkid
                         outcome = zif_cd_ops_payout_types=>gc_outcome-reversed
                         status  = zif_cd_ops_payout_types=>gc_status-reversed ) INTO TABLE rs_evaluation-verdicts.
         CONTINUE.
@@ -529,6 +533,8 @@ CLASS zcl_cd_ops_pay_outcome IMPLEMENTATION.
                           bukrs   = is_payment-bukrs
                           flow    = is_payment-flow
                           class   = is_payment-class
+                          valut   = is_payment-valut
+                          hbkid   = is_payment-hbkid
                           status  = zif_cd_ops_payout_types=>gc_status-open
                           outcome = zif_cd_ops_payout_types=>gc_outcome-in_flight ).
 

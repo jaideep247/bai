@@ -11,6 +11,9 @@
 *& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-08 | CANCEL_RULE: the cancellation rule (PARAM2 CANCELLED= / SRC=) as one public method, reused by the
+*&            | payment worklist - a request cancelled after SUCCESS is not expected to be paid; no behaviour change
+*&            | of the check.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - paid payment request left CANCELLED</p>
 "! PARAM1 TABLE=ZCD_PAYM_REQ_LOG;KEY=<FIN number>;STATUS=ZZ_STATUS;SOURCE=SOURCE;DATE=..
@@ -26,6 +29,26 @@ CLASS zcl_cd_hck_c_prq_cancel DEFINITION
 
     CONSTANTS gc_metric TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PRQ_PAID_CANCELLED'.
     CONSTANTS gc_code TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRQ_PAID_CANCELLED'.
+
+    "! The cancellation rule of the check (PARAM2 CANCELLED= / SRC=, defaults CANCELLED / PCLM): a
+    "! request of one of the sources with an attempt in the cancelled status is not expected to be paid.
+    "! The payment worklist reuses it (requests not paid on their due date, 2026-11-08)
+    TYPES:
+      BEGIN OF ty_cancel_rule,
+        "! Status value of ZCD_PAYM_REQ_LOG meaning cancelled
+        value   TYPE string,
+        "! Sources whose cancellation counts (comma list as configured, and as tokens)
+        list    TYPE string,
+        sources TYPE string_table,
+      END OF ty_cancel_rule.
+
+    "! Cancellation rule from PARAM2 of the check definition (blank values: the delivered defaults)
+    CLASS-METHODS cancel_rule
+      IMPORTING
+        iv_param2      TYPE zif_cd_hck_types=>ty_param
+      RETURNING
+        VALUE(rs_rule) TYPE ty_cancel_rule.
+
   PRIVATE SECTION.
     "! Keys of the check definition (PARAM1-4 key=value specs) and their defaults: field
     "! ZZ_STATUS / value CANCELLED of ZCD_PAYM_REQ_LOG and source PCLM (USAA_Known_Tables)
@@ -46,6 +69,18 @@ ENDCLASS.
 
 CLASS zcl_cd_hck_c_prq_cancel IMPLEMENTATION.
 
+  METHOD cancel_rule.
+    DATA(lt_opt) = zcl_cd_hck_value_query=>parse( iv_param2 ).
+    rs_rule-value = to_upper( condense( zcl_cd_hck_value_query=>value( it_spec    = lt_opt
+                                                                       iv_name    = gc_spec-cancelled
+                                                                       iv_default = gc_default-cancelled ) ) ).
+    rs_rule-list = zcl_cd_hck_value_query=>value( it_spec    = lt_opt
+                                                  iv_name    = gc_spec-source_values
+                                                  iv_default = gc_default-sources ).
+    rs_rule-sources = zcl_cd_hck_ev_support=>tokens( rs_rule-list ).
+  ENDMETHOD.
+
+
   METHOD zif_cd_hck_check~execute.
     DATA lt_conditions TYPE zif_cd_hck_value_types=>tt_condition.
     DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
@@ -60,21 +95,18 @@ CLASS zcl_cd_hck_c_prq_cancel IMPLEMENTATION.
     DATA(lv_rows) = zcl_cd_hck_param=>int( iv_value = zcl_cd_hck_value_query=>value( it_spec = lt_opt iv_name = 'ROWS' )
                                            iv_default = 50000 ).
 
+    DATA(ls_rule) = cancel_rule( is_def-param2 ).
     INSERT VALUE #( field    = zcl_cd_hck_value_query=>value( it_spec    = lt_log
                                                               iv_name    = gc_spec-status
                                                               iv_default = gc_default-status_field )
                     operator = zif_cd_hck_types=>gc_operator-eq
-                    value    = zcl_cd_hck_value_query=>value( it_spec    = lt_opt
-                                                              iv_name    = gc_spec-cancelled
-                                                              iv_default = gc_default-cancelled ) )
+                    value    = ls_rule-value )
       INTO TABLE lt_conditions.
     DATA(lv_source_field) = zcl_cd_hck_value_query=>value( it_spec = lt_log iv_name = 'SOURCE' ).
     IF lv_source_field IS NOT INITIAL.
       INSERT VALUE #( field    = lv_source_field
                       operator = zif_cd_hck_types=>gc_operator-in_set
-                      value    = zcl_cd_hck_value_query=>value( it_spec    = lt_opt
-                                                                iv_name    = gc_spec-source_values
-                                                                iv_default = gc_default-sources ) )
+                      value    = ls_rule-list )
         INTO TABLE lt_conditions.
     ENDIF.
     DATA(lt_cancelled) = zcl_cd_hck_value_query=>keys( zcl_cd_hck_value_query=>read(

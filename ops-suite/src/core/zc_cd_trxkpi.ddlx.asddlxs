@@ -1,43 +1,42 @@
-// UI annotations: Transactions dashboard - KPI per day (funnel, canonical outcome now)
-// Overview-page cards: analytical card on chart Funnel, KPI card on data point Returned;
+// UI annotations: Transactions dashboard - KPI per day of the payment worklist
+// Overview-page cards: analytical card on chart Worklist, KPI card on data point Exceptions;
 // selection variant Today. VERIFY-ADT: card rendering.
 // 2026-11-07: measures from the canonical payment outcome (settled from bank lines removed).
+// 2026-11-08: exceptions-only worklist - no cleared / returned counts (clean payments have no row).
 @Metadata.layer: #CORE
-@UI.headerInfo: { typeName: 'Posting date', typeNamePlural: 'Posting dates',
-                  title: { type: #STANDARD, value: 'PostingDate' } }
-@UI.chart: [ { qualifier: 'Funnel',
-               title: 'Funnel: posted, paid, cleared, returned, open',
+@UI.headerInfo: { typeName: 'Worklist date', typeNamePlural: 'Worklist dates',
+                  title: { type: #STANDARD, value: 'WorklistDate' } }
+@UI.chart: [ { qualifier: 'Worklist',
+               title: 'Open and exceptions per direction',
                chartType: #COLUMN,
                dimensions: [ 'Direction' ],
-               measures: [ 'ItemCount', 'PaidReachedCount', 'ClearedCount', 'ReturnedCount', 'OpenCount' ],
+               measures: [ 'OpenCount', 'ExceptionCount', 'LateCount', 'RequestNotPaidCount' ],
                dimensionAttributes: [ { dimension: 'Direction', role: #CATEGORY } ],
-               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 },
-                                    { measure: 'PaidReachedCount', role: #AXIS_1 },
-                                    { measure: 'ClearedCount', role: #AXIS_1 },
-                                    { measure: 'ReturnedCount', role: #AXIS_1 },
-                                    { measure: 'OpenCount', role: #AXIS_1 } ] },
-             { qualifier: 'ByOutcome',
-               title: 'Transactions by canonical outcome per posting date',
+               measureAttributes: [ { measure: 'OpenCount', role: #AXIS_1 },
+                                    { measure: 'ExceptionCount', role: #AXIS_1 },
+                                    { measure: 'LateCount', role: #AXIS_1 },
+                                    { measure: 'RequestNotPaidCount', role: #AXIS_1 } ] },
+             { qualifier: 'ByDay',
+               title: 'Worklist per worklist date',
                chartType: #COLUMN_STACKED,
-               dimensions: [ 'PostingDate' ],
-               measures: [ 'ClearedCount', 'InFlightCount', 'ReturnedCount', 'RetrievedCount', 'ProblemCount', 'ReversedCount' ],
-               dimensionAttributes: [ { dimension: 'PostingDate', role: #CATEGORY } ],
-               measureAttributes: [ { measure: 'ClearedCount', role: #AXIS_1 },
-                                    { measure: 'InFlightCount', role: #AXIS_1 },
-                                    { measure: 'ReturnedCount', role: #AXIS_1 },
-                                    { measure: 'RetrievedCount', role: #AXIS_1 },
+               dimensions: [ 'WorklistDate' ],
+               measures: [ 'InFlightCount', 'LateCount', 'ProblemCount', 'RequestOpenCount', 'RequestNotPaidCount' ],
+               dimensionAttributes: [ { dimension: 'WorklistDate', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'InFlightCount', role: #AXIS_1 },
+                                    { measure: 'LateCount', role: #AXIS_1 },
                                     { measure: 'ProblemCount', role: #AXIS_1 },
-                                    { measure: 'ReversedCount', role: #AXIS_1 } ] } ]
-@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
-                             visualizations: [ { type: #AS_CHART, qualifier: 'Funnel' },
+                                    { measure: 'RequestOpenCount', role: #AXIS_1 },
+                                    { measure: 'RequestNotPaidCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'WorklistDate', direction: #DESC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Worklist' },
                                                { type: #AS_LINEITEM } ] } ]
-@UI.selectionVariant: [ { qualifier: 'Today', text: 'Posted today', filter: 'IsToday EQ X' } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Today', filter: 'IsToday EQ X' } ]
 annotate entity ZC_CD_TrxKpi with
 {
-  @EndUserText.label: 'Posting date'
+  @EndUserText.label: 'Worklist date (run / due)'
   @UI.lineItem: [ { position: 10, importance: #HIGH } ]
   @UI.selectionField: [ { position: 10 } ]
-  PostingDate;
+  WorklistDate;
   @EndUserText.label: 'Company code'
   @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
   @UI.selectionField: [ { position: 20 } ]
@@ -48,52 +47,39 @@ annotate entity ZC_CD_TrxKpi with
   Direction;
   @UI.hidden: true
   PaymentEngineArea;
-  @EndUserText.label: 'Posted today'
+  @EndUserText.label: 'Today'
   IsToday;
-  @EndUserText.label: 'Transactions'
+  @EndUserText.label: 'Entries'
   @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Transactions', title: 'Transactions' }
-  ItemCount;
+  @UI.dataPoint: { qualifier: 'Entries', title: 'Worklist entries' }
+  EntryCount;
   @EndUserText.label: 'FIN numbers'
   @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
   FinCount;
-  @EndUserText.label: 'Paid (payment run or cheque)'
+  @EndUserText.label: 'Open'
   @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Paid', title: 'Paid' }
-  PaidReachedCount;
-  @EndUserText.label: 'Cleared (canonical outcome)'
-  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Cleared', title: 'Cleared' }
-  ClearedCount;
-  @EndUserText.label: 'Returned'
-  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Returned', title: 'Returned', criticality: 'DayCriticality' }
-  ReturnedCount;
-  @EndUserText.label: 'Retrieved (not a return)'
-  @UI.lineItem: [ { position: 85, importance: #MEDIUM } ]
-  RetrievedCount;
-  @EndUserText.label: 'Voided'
-  @UI.lineItem: [ { position: 87, importance: #LOW } ]
-  VoidedCount;
-  @EndUserText.label: 'In flight / pending'
-  @UI.lineItem: [ { position: 88, importance: #MEDIUM } ]
-  InFlightCount;
-  @EndUserText.label: 'Undetermined, inconsistent or ambiguous'
-  @UI.lineItem: [ { position: 89, importance: #MEDIUM } ]
-  ProblemCount;
-  @EndUserText.label: 'Reversed'
-  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
-  ReversedCount;
-  @EndUserText.label: 'Open (not cleared)'
-  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
-  @UI.dataPoint: { qualifier: 'Open', title: 'Open (not cleared)' }
+  @UI.dataPoint: { qualifier: 'Open', title: 'Open' }
   OpenCount;
-  @EndUserText.label: 'With NOC'
-  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
-  NocItemCount;
-  @EndUserText.label: 'Paid, not evaluated'
-  @UI.lineItem: [ { position: 120, importance: #LOW } ]
-  NotEvaluatedCount;
+  @EndUserText.label: 'Exceptions'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'Exceptions', title: 'Exceptions', criticality: 'DayCriticality' }
+  ExceptionCount;
+  @EndUserText.label: 'In flight / pending'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  InFlightCount;
+  @EndUserText.label: 'Late payments'
+  @UI.lineItem: [ { position: 85, importance: #MEDIUM } ]
+  LateCount;
+  @EndUserText.label: 'Undetermined, inconsistent or ambiguous'
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  ProblemCount;
+  @EndUserText.label: 'Requests open (not due)'
+  @UI.lineItem: [ { position: 100, importance: #LOW } ]
+  RequestOpenCount;
+  @EndUserText.label: 'Requests not paid on due date'
+  @UI.lineItem: [ { position: 110, importance: #HIGH } ]
+  @UI.dataPoint: { qualifier: 'RequestsNotPaid', title: 'Requests not paid on due date' }
+  RequestNotPaidCount;
   @UI.hidden: true
   DayCriticality;
 }

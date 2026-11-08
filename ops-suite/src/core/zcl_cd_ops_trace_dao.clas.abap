@@ -25,6 +25,8 @@
 *& 2026-11-07 | read_configured_set: configured source for many keys in one read (payment outcome).
 *& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
 *&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | READ_CONFIGURED_AFTER (keyset paging through the file monitoring reader); set reads also return the
+*&            | date, time, requested payment date and amount of the request log.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository (SQL)</p>
 CLASS zcl_cd_ops_trace_dao DEFINITION
@@ -47,6 +49,20 @@ CLASS zcl_cd_ops_trace_dao DEFINITION
         VALUE(rt_rows) TYPE zif_cd_fmon_types=>tt_raw_row
       RAISING
         zcx_cd_ops_error.
+
+    "! Request log fields of a set / watermark read: date, time, requested payment date, amount
+    CLASS-METHODS add_request_fields
+      IMPORTING
+        is_source TYPE zif_cd_ops_trace_types=>ty_source_cfg
+      CHANGING
+        cs_query  TYPE zif_cd_fmon_types=>ty_query.
+
+    "! Rows of a set / watermark read by role
+    CLASS-METHODS to_rows
+      IMPORTING
+        it_raw         TYPE zif_cd_fmon_types=>tt_raw_row
+      RETURNING
+        VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row.
 
     CLASS-METHODS same_value
       IMPORTING
@@ -126,10 +142,68 @@ CLASS zcl_cd_ops_trace_dao IMPLEMENTATION.
     zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-status
                                             iv_field = is_source-status_field
                                   CHANGING  cs_query = ls_query ).
-    LOOP AT run_query( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_raw>).
-      INSERT VALUE #( key1   = <ls_raw>-item_key
-                      key2   = <ls_raw>-source
-                      status = <ls_raw>-status ) INTO TABLE rt_rows.
+    add_request_fields( EXPORTING is_source = is_source
+                        CHANGING  cs_query  = ls_query ).
+    rt_rows = to_rows( run_query( ls_query ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_trace_dao~read_configured_after.
+    DATA ls_query TYPE zif_cd_fmon_types=>ty_query.
+    CHECK is_source-date_field IS NOT INITIAL AND is_source-key_field IS NOT INITIAL.
+    " Keyset paging on (DATE, TIME, KEY) by the file monitoring reader (DDIC, approval, S_TABU_NAM)
+    ls_query-table_name      = to_upper( condense( is_source-table_name ) ).
+    ls_query-date_field      = to_upper( condense( is_source-date_field ) ).
+    ls_query-date_kind       = zif_cd_fmon_types=>gc_date_kind-date.
+    ls_query-date_from       = is_after-date.
+    ls_query-date_to         = iv_date_to.
+    ls_query-seek_key_field  = to_upper( condense( is_source-key_field ) ).
+    ls_query-seek_time_field = to_upper( condense( is_source-time_field ) ).
+    ls_query-seek_date       = is_after-date.
+    ls_query-seek_time       = is_after-time.
+    ls_query-seek_key        = is_after-key.
+    ls_query-max_rows        = iv_max_rows.
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-item_key
+                                            iv_field = is_source-key_field
+                                  CHANGING  cs_query = ls_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-source
+                                            iv_field = is_source-key2_field
+                                  CHANGING  cs_query = ls_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-status
+                                            iv_field = is_source-status_field
+                                  CHANGING  cs_query = ls_query ).
+    add_request_fields( EXPORTING is_source = is_source
+                        CHANGING  cs_query  = ls_query ).
+    rt_rows = to_rows( run_query( ls_query ) ).
+  ENDMETHOD.
+
+
+  METHOD add_request_fields.
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-ev_date
+                                            iv_field = is_source-date_field
+                                  CHANGING  cs_query = cs_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-ev_time
+                                            iv_field = is_source-time_field
+                                  CHANGING  cs_query = cs_query ).
+    " The reader's role names are its own: GROUP_1 carries the requested payment date here
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-group_1
+                                            iv_field = is_source-due_field
+                                  CHANGING  cs_query = cs_query ).
+    zcl_cd_fmon_query=>add_field( EXPORTING iv_role  = zif_cd_fmon_types=>gc_role-amount
+                                            iv_field = is_source-amount_field
+                                  CHANGING  cs_query = cs_query ).
+  ENDMETHOD.
+
+
+  METHOD to_rows.
+    LOOP AT it_raw ASSIGNING FIELD-SYMBOL(<ls_raw>).
+      INSERT VALUE #( key1    = <ls_raw>-item_key
+                      key2    = <ls_raw>-source
+                      status  = <ls_raw>-status
+                      ev_date = <ls_raw>-ev_date
+                      ev_time = <ls_raw>-ev_time
+                      due     = <ls_raw>-group_1
+                      amount  = <ls_raw>-amount ) INTO TABLE rt_rows.
     ENDLOOP.
   ENDMETHOD.
 

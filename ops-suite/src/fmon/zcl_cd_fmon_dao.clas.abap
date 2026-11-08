@@ -24,6 +24,8 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | Table consolidation: get_slas reads both kinds of ZCD_FMON_SLA (DURATION, DEADLINE);
 *&            | get_deadlines (ZCD_FMON_DEADL) removed.
+*& 2026-11-08 | READ_LEGACY: optional keyset paging (rows after date, time, key in that order -
+*&            | ZCL_CD_FMON_QUERY=>SEEK_CONDITION) for the watermark read of the payment request log.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -426,6 +428,9 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     DATA(lv_date_to)   = is_query-date_to ##NEEDED.
     DATA(lv_ts_from)   = is_query-ts_from ##NEEDED.
     DATA(lv_ts_to)     = is_query-ts_to ##NEEDED.
+    DATA(lv_seek_date) = is_query-seek_date ##NEEDED.
+    DATA(lv_seek_time) = is_query-seek_time ##NEEDED.
+    DATA(lv_seek_key)  = is_query-seek_key ##NEEDED.
     lt_in = VALUE #( FOR lv_value IN is_query-in_values ( sign = 'I' option = 'EQ' low = lv_value ) ).
 
     DATA(lv_where) = ``.
@@ -450,6 +455,12 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
     " UP TO n ROWS needs a defined order on HANA: the validated date field, else the IN field
     DATA(lv_order) = COND string( WHEN is_query-date_field IS NOT INITIAL THEN is_query-date_field
                                   ELSE is_query-in_field ).
+    " Keyset paging of a watermark read: the rows after (date, time, key), in that order
+    DATA(lv_seek) = zcl_cd_fmon_query=>seek_condition( is_query ).
+    IF lv_seek IS NOT INITIAL AND lv_where IS NOT INITIAL.
+      lv_where = |{ lv_where } AND { lv_seek }|.
+      lv_order = zcl_cd_fmon_query=>seek_order( is_query ).
+    ENDIF.
 
     TRY.
         IF iv_count = abap_true.

@@ -3020,6 +3020,90 @@
      <MSGNR>765</MSGNR>
      <TEXT>FIN &amp;1 source &amp;2 payment &amp;3: &amp;4</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>766</MSGNR>
+     <TEXT>Requested &amp;1, received &amp;2 &amp;3, due &amp;4:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>767</MSGNR>
+     <TEXT>No payment engine item for the FIN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>768</MSGNR>
+     <TEXT>Item &amp;1 has payment block &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>769</MSGNR>
+     <TEXT>Item &amp;1 open, not in a payment run</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>770</MSGNR>
+     <TEXT>Item &amp;1 cleared by &amp;2 without payment run</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>771</MSGNR>
+     <TEXT>Paid by &amp;1 in the payment run of &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>772</MSGNR>
+     <TEXT>&amp;1 &amp;2 due &amp;3: &amp;4 request(s) not paid in a payment run</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>773</MSGNR>
+     <TEXT>FIN &amp;1 source &amp;2 due &amp;3:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>774</MSGNR>
+     <TEXT>Full list: transactions dashboard, request &amp;1 &amp;2 due &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>775</MSGNR>
+     <TEXT>Sweep needs a date range and evidence sources of: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>776</MSGNR>
+     <TEXT>&amp;1 stopped after &amp;2 package(s); the next run continues</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>777</MSGNR>
+     <TEXT>Worklist re-check &amp;1 not completed today (&amp;2): requests unchecked</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>778</MSGNR>
+     <TEXT>Cancelled after SUCCESS (&amp;1): not expected to be paid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>779</MSGNR>
+     <TEXT>Request &amp;1 &amp;2: stage &amp;3, &amp;4</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

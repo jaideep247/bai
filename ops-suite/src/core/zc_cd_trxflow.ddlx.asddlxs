@@ -1,80 +1,77 @@
-// UI annotations: Transactions dashboard (analytical list page)
-// Charts: transactions by flow bucket and payment method (default), funnel per posting
-// date, by direction and company code. Navigation: payment trace (proposed intent
-// ZCDPaymentTrace-display, Dashboard_Transactions.md section 6). VERIFY-ADT: rendering.
-// 2026-11-07: flow bucket = canonical payment outcome as of the chosen instant (history from
-// go-live only - the header text says so); funnel measures from the outcome, never from bank lines.
+// UI annotations: Transactions dashboard (analytical list page) on the payment worklist
+// Charts: worklist rows by outcome and flow + method class (default), exceptions by finding code
+// per worklist date, requests not paid on their due date by source and stage, by company code and
+// direction. Navigation: payment trace (proposed intent ZCDPaymentTrace-display,
+// Dashboard_Transactions.md section 6). VERIFY-ADT: rendering.
 // 2026-11-08: header data point "Outcome snapshot lag (minutes)" with its criticality (stale after
 // MON_STALE_AFTER_MIN_CORE): a stale outcome is never read as current.
+// 2026-11-08: exceptions-only worklist (user decision): open payments, open requests and exceptions
+// only - a clean payment is not listed (its detail: payment trace); no "outcome as of" history.
 @Metadata.layer: #CORE
-@UI.headerInfo: { typeName: 'Transaction', typeNamePlural: 'Transactions (outcome history from go-live)',
+@UI.headerInfo: { typeName: 'Worklist entry', typeNamePlural: 'Open payments, requests and exceptions',
                   title: { type: #STANDARD, value: 'FinId' },
-                  description: { type: #STANDARD, value: 'DocumentNo' } }
-@UI.chart: [ { qualifier: 'ByBucket',
-               title: 'Transactions by flow bucket and payment method',
+                  description: { type: #STANDARD, value: 'ClearingDoc' } }
+@UI.chart: [ { qualifier: 'ByOutcome',
+               title: 'Worklist by outcome and flow + method class',
                chartType: #COLUMN_STACKED,
-               dimensions: [ 'FlowBucket', 'PaymentMethod' ],
-               measures: [ 'ItemCount' ],
-               dimensionAttributes: [ { dimension: 'FlowBucket', role: #CATEGORY },
-                                      { dimension: 'PaymentMethod', role: #SERIES } ],
-               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 } ] },
-             { qualifier: 'Funnel',
-               title: 'Posted, paid, cleared, returned per posting date (canonical outcome)',
-               chartType: #LINE,
-               dimensions: [ 'PostingDate' ],
-               measures: [ 'ItemCount', 'PaidReachedCount', 'ClearedCount', 'ReturnedCount' ],
-               dimensionAttributes: [ { dimension: 'PostingDate', role: #CATEGORY } ],
-               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 },
-                                    { measure: 'PaidReachedCount', role: #AXIS_1 },
-                                    { measure: 'ClearedCount', role: #AXIS_1 },
-                                    { measure: 'ReturnedCount', role: #AXIS_1 } ] },
+               dimensions: [ 'Outcome', 'FlowClass' ],
+               measures: [ 'EntryCount' ],
+               dimensionAttributes: [ { dimension: 'Outcome', role: #CATEGORY },
+                                      { dimension: 'FlowClass', role: #SERIES } ],
+               measureAttributes: [ { measure: 'EntryCount', role: #AXIS_1 } ] },
+             { qualifier: 'Exceptions',
+               title: 'Exceptions by finding per worklist date',
+               chartType: #COLUMN_STACKED,
+               dimensions: [ 'WorklistDate', 'Finding' ],
+               measures: [ 'ExceptionCount' ],
+               dimensionAttributes: [ { dimension: 'WorklistDate', role: #CATEGORY },
+                                      { dimension: 'Finding', role: #SERIES } ],
+               measureAttributes: [ { measure: 'ExceptionCount', role: #AXIS_1 } ] },
+             { qualifier: 'RequestsNotPaid',
+               title: 'Requests not paid on their due date by source and stage',
+               chartType: #BAR_STACKED,
+               dimensions: [ 'SourceSystem', 'EvidenceKind' ],
+               measures: [ 'RequestNotPaidCount' ],
+               dimensionAttributes: [ { dimension: 'SourceSystem', role: #CATEGORY },
+                                      { dimension: 'EvidenceKind', role: #SERIES } ],
+               measureAttributes: [ { measure: 'RequestNotPaidCount', role: #AXIS_1 } ] },
              { qualifier: 'ByCompany',
-               title: 'Transactions by company code and direction',
+               title: 'Worklist by company code and direction',
                chartType: #BAR_STACKED,
                dimensions: [ 'CompanyCode', 'Direction' ],
-               measures: [ 'ItemCount' ],
+               measures: [ 'EntryCount' ],
                dimensionAttributes: [ { dimension: 'CompanyCode', role: #CATEGORY },
                                       { dimension: 'Direction', role: #SERIES } ],
-               measureAttributes: [ { measure: 'ItemCount', role: #AXIS_1 } ] } ]
-@UI.presentationVariant: [ { sortOrder: [ { by: 'PostingDate', direction: #DESC } ],
-                             visualizations: [ { type: #AS_CHART, qualifier: 'ByBucket' },
+               measureAttributes: [ { measure: 'EntryCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { sortOrder: [ { by: 'WorklistDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'ByOutcome' },
                                                { type: #AS_LINEITEM } ] },
-                           { qualifier: 'Funnel',
-                             sortOrder: [ { by: 'PostingDate', direction: #ASC } ],
-                             visualizations: [ { type: #AS_CHART, qualifier: 'Funnel' },
+                           { qualifier: 'Exceptions',
+                             sortOrder: [ { by: 'WorklistDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Exceptions' },
+                                               { type: #AS_LINEITEM } ] },
+                           { qualifier: 'RequestsNotPaid',
+                             sortOrder: [ { by: 'DueDate', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'RequestsNotPaid' },
                                                { type: #AS_LINEITEM } ] },
                            { qualifier: 'ByCompany',
                              visualizations: [ { type: #AS_CHART, qualifier: 'ByCompany' },
                                                { type: #AS_LINEITEM } ] } ]
 annotate entity ZC_CD_TrxFlow with
 {
-  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'Transaction', position: 10 },
-               { id: 'Item', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Open item', position: 10 },
-               { id: 'Evidence', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Evidence',
-                 label: 'Payment, settlement, return', position: 20 },
+  @UI.facet: [ { id: 'General', purpose: #STANDARD, type: #COLLECTION, label: 'Worklist entry', position: 10 },
+               { id: 'Entry', parentId: 'General', type: #IDENTIFICATION_REFERENCE, label: 'Payment / request',
+                 position: 10 },
+               { id: 'Verdict', parentId: 'General', type: #FIELDGROUP_REFERENCE, targetQualifier: 'Verdict',
+                 label: 'Outcome, finding, evidence', position: 20 },
                { id: 'Runs', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_PaymentRuns',
                  label: 'Payment runs (DPAYH)', position: 20 },
                { id: 'ReturnsNoc', purpose: #STANDARD, type: #LINEITEM_REFERENCE, targetElement: '_ReturnsNoc',
                  label: 'Returns / NOC lot items', position: 30 },
-               { id: 'HeaderBucket', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'FlowBucket',
+               { id: 'HeaderOutcome', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'Outcome',
                  position: 10 },
                { id: 'HeaderSnapshotLag', purpose: #HEADER, type: #DATAPOINT_REFERENCE, targetQualifier: 'SnapshotLag',
                  position: 20 } ]
-  @EndUserText.label: 'Document (OPBEL)'
-  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
-  @UI.identification: [ { position: 20 } ]
-  DocumentNo;
-  @EndUserText.label: 'Repetition item'
-  @UI.identification: [ { position: 30 } ]
-  RepetitionItem;
-  @EndUserText.label: 'Item'
-  @UI.identification: [ { position: 40 } ]
-  ItemNo;
-  @EndUserText.label: 'Sub-item'
-  @UI.identification: [ { position: 50 } ]
-  SubItem;
-  @UI.hidden: true
-  PaymentEngineArea;
   @EndUserText.label: 'FIN number'
   @UI.identification: [ { position: 10 } ]
   @UI.selectionField: [ { position: 10 } ]
@@ -83,161 +80,133 @@ annotate entity ZC_CD_TrxFlow with
                   { type: #FOR_INTENT_BASED_NAVIGATION, semanticObjectAction: 'display',
                     label: 'Payment trace' } ]
   FinId;
-  @EndUserText.label: 'Bill plan'
-  @UI.identification: [ { position: 60 } ]
-  BillPlanId;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 15, importance: #HIGH } ]
+  @UI.identification: [ { position: 15 } ]
+  @UI.selectionField: [ { position: 15 } ]
+  SourceSystem;
   @EndUserText.label: 'Company code'
   @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
-  @UI.identification: [ { position: 70 } ]
+  @UI.identification: [ { position: 30 } ]
   @UI.selectionField: [ { position: 20 } ]
   CompanyCode;
-  @EndUserText.label: 'Posting date'
-  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
-  @UI.identification: [ { position: 80 } ]
+  @EndUserText.label: 'Payment document'
+  @Consumption.semanticObject: 'ZCDPaymentTrace'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.identification: [ { position: 20 } ]
+  ClearingDoc;
+  @EndUserText.label: 'Payment run date'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  RunDate;
+  @EndUserText.label: 'Payment run ID'
+  @UI.identification: [ { position: 45 } ]
+  RunId;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Kind (payment / request)'
+  @UI.lineItem: [ { position: 5, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 5 } ]
+  WorkKind;
+  @EndUserText.label: 'Exception'
+  @UI.selectionField: [ { position: 25 } ]
+  IsException;
+  @EndUserText.label: 'Open / exception since (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Verdict', position: 60 } ]
+  OpenSince;
+  @EndUserText.label: 'Outcome'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'FlowCriticality' } ]
   @UI.selectionField: [ { position: 30 } ]
-  PostingDate;
-  @EndUserText.label: 'Posted today'
+  @UI.dataPoint: { qualifier: 'Outcome', title: 'Outcome', criticality: 'FlowCriticality' }
+  Outcome;
+  @EndUserText.label: 'Finding (code)'
+  @UI.lineItem: [ { position: 55, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 35 } ]
+  @UI.fieldGroup: [ { qualifier: 'Verdict', position: 10 } ]
+  Finding;
+  @EndUserText.label: 'Severity'
+  @UI.fieldGroup: [ { qualifier: 'Verdict', position: 20 } ]
+  Severity;
+  @EndUserText.label: 'Evidence kind / request stage'
+  @UI.lineItem: [ { position: 58, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Verdict', position: 30 } ]
+  EvidenceKind;
+  @EndUserText.label: 'Evidence'
+  @UI.fieldGroup: [ { qualifier: 'Verdict', position: 40 } ]
+  EvidenceRef;
+  @EndUserText.label: 'Flow + method class'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
   @UI.selectionField: [ { position: 40 } ]
+  FlowClass;
+  @EndUserText.label: 'Due date (request)'
+  @UI.lineItem: [ { position: 65, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  DueDate;
+  @EndUserText.label: 'Worklist date'
+  @UI.lineItem: [ { position: 35, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 45 } ]
+  WorklistDate;
+  @EndUserText.label: 'Worklist date today'
+  @UI.selectionField: [ { position: 50 } ]
   IsToday;
   @EndUserText.label: 'Payment method'
-  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
-  @UI.identification: [ { position: 90 } ]
-  @UI.selectionField: [ { position: 50 } ]
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 55 } ]
   PaymentMethod;
-  @EndUserText.label: 'Direction (collection / disbursement)'
-  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
-  @UI.identification: [ { position: 100 } ]
-  @UI.selectionField: [ { position: 60 } ]
-  Direction;
-  @EndUserText.label: 'Local currency'
-  @UI.identification: [ { position: 110 } ]
-  LocalCurrency;
-  @EndUserText.label: 'Amount (local currency, signed)'
-  @UI.identification: [ { position: 120 } ]
-  AmountInLocalCurrency;
-  @EndUserText.label: 'Currency'
-  @UI.identification: [ { position: 130 } ]
-  Currency;
-  @EndUserText.label: 'Amount (signed)'
-  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
-  @UI.identification: [ { position: 140 } ]
-  Amount;
-  @EndUserText.label: 'Clearing status'
-  @UI.identification: [ { position: 150 } ]
-  ClearingStatus;
-  @EndUserText.label: 'Clearing / payment document'
-  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
-  @UI.identification: [ { position: 160 } ]
-  ClearingDoc;
-  @EndUserText.label: 'Clearing date'
-  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
-  @UI.identification: [ { position: 170 } ]
-  ClearingDate;
-  @EndUserText.label: 'Clearing reason'
-  @UI.identification: [ { position: 180 } ]
-  ClearingReason;
-  @EndUserText.label: 'Last payment run date'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 10 } ]
-  LastRunDate;
-  @EndUserText.label: 'Last payment run ID'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 20 } ]
-  LastRunId;
-  @EndUserText.label: 'Value date (latest run)'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 25 } ]
+  @EndUserText.label: 'House bank'
+  @UI.identification: [ { position: 60 } ]
+  HouseBank;
+  @EndUserText.label: 'Value date'
+  @UI.identification: [ { position: 70 } ]
   ValueDate;
   @EndUserText.label: 'Payment status (DPAYH)'
-  @UI.lineItem: [ { position: 100, importance: #MEDIUM } ]
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 30 } ]
-  @UI.selectionField: [ { position: 70 } ]
+  @UI.lineItem: [ { position: 75, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 60 } ]
   PaymentStatus;
-  @EndUserText.label: 'Cheque number'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 40 } ]
-  ChequeNo;
-  @EndUserText.label: 'Cheque house bank'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 50 } ]
-  ChequeHouseBank;
-  @EndUserText.label: 'Bank settlement date'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 60 } ]
-  SettlementDate;
-  @EndUserText.label: 'Cheque encashment date'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 70 } ]
-  EncashDate;
-  @EndUserText.label: 'Return reason (DFKKRP-RLGRD)'
-  @UI.lineItem: [ { position: 110, importance: #MEDIUM } ]
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 80 } ]
-  @UI.selectionField: [ { position: 80 } ]
-  ReturnReason;
-  @EndUserText.label: 'NOC reason (DFKKNRP-FLGRD)'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 90 } ]
-  NocReason;
-  @EndUserText.label: 'Canonical outcome (ZCD_PAY_OUTCOME)'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 100 } ]
-  Outcome;
-  @EndUserText.label: 'Outcome finding'
-  @UI.lineItem: [ { position: 125, importance: #MEDIUM } ]
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 110 } ]
-  OutcomeFinding;
-  @EndUserText.label: 'Deciding evidence kind'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 120 } ]
-  OutcomeEvidenceKind;
-  @EndUserText.label: 'Deciding evidence'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 130 } ]
-  OutcomeEvidenceRef;
-  @EndUserText.label: 'Outcome valid from (UTC)'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 140 } ]
-  OutcomeValidFrom;
-  @EndUserText.label: 'Sources of the FIN'
-  @UI.fieldGroup: [ { qualifier: 'Evidence', position: 150 } ]
-  OutcomeSourceCount;
-  @EndUserText.label: 'Flow bucket (canonical outcome)'
-  @UI.lineItem: [ { position: 120, importance: #HIGH, criticality: 'FlowCriticality' } ]
-  @UI.identification: [ { position: 190, criticality: 'FlowCriticality' } ]
-  @UI.selectionField: [ { position: 90 } ]
-  @UI.dataPoint: { qualifier: 'FlowBucket', title: 'Flow bucket', criticality: 'FlowCriticality' }
-  FlowBucket;
+  @EndUserText.label: 'Direction (collection / disbursement)'
+  @UI.lineItem: [ { position: 80, importance: #LOW } ]
+  @UI.selectionField: [ { position: 65 } ]
+  Direction;
+  @EndUserText.label: 'Currency'
+  @UI.identification: [ { position: 80 } ]
+  Currency;
+  @EndUserText.label: 'Amount (payment run)'
+  @UI.lineItem: [ { position: 85, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 90 } ]
+  Amount;
   @UI.hidden: true
   FlowCriticality;
-  @EndUserText.label: 'Outcome snapshot lag (minutes)'
   @UI.dataPoint: { qualifier: 'SnapshotLag', title: 'Outcome snapshot lag (minutes)', criticality: 'SnapshotCriticality' }
+  @EndUserText.label: 'Outcome snapshot lag (minutes)'
   SnapshotLagMinutes;
-  @EndUserText.label: 'Snapshot stale after (minutes)'
-  @UI.hidden: true
+  @EndUserText.label: 'Stale after (minutes)'
   SnapshotStaleAfterMinutes;
-  @EndUserText.label: 'Outcome snapshot stale'
-  @UI.hidden: true
+  @EndUserText.label: 'Snapshot stale'
   SnapshotIsStale;
   @UI.hidden: true
   SnapshotCriticality;
-  @EndUserText.label: 'Transactions'
-  ItemCount;
-  @EndUserText.label: 'Paid (payment run or cheque)'
-  PaidReachedCount;
-  @EndUserText.label: 'Cleared'
-  ClearedCount;
-  @EndUserText.label: 'Returned'
-  ReturnedCount;
-  @EndUserText.label: 'Retrieved (not a return)'
-  RetrievedCount;
-  @EndUserText.label: 'Voided'
-  VoidedCount;
-  @EndUserText.label: 'Pending outcome'
-  PendingCount;
+  @EndUserText.label: 'Entries'
+  EntryCount;
+  @EndUserText.label: 'Open'
+  OpenCount;
+  @EndUserText.label: 'Exceptions'
+  ExceptionCount;
   @EndUserText.label: 'In flight'
   InFlightCount;
+  @EndUserText.label: 'Pending'
+  PendingCount;
   @EndUserText.label: 'Undetermined'
   UndeterminedCount;
   @EndUserText.label: 'Inconsistent'
   InconsistentCount;
   @EndUserText.label: 'Ambiguous source'
   AmbiguousCount;
-  @EndUserText.label: 'Reversed'
-  ReversedCount;
-  @EndUserText.label: 'Paid, not evaluated'
-  NotEvaluatedCount;
-  @EndUserText.label: 'Open (not cleared)'
-  OpenCount;
-  @EndUserText.label: 'With NOC'
-  NocItemCount;
-  @EndUserText.label: 'Paid by cheque'
-  ChequeItemCount;
+  @EndUserText.label: 'Requests open (not due)'
+  RequestOpenCount;
+  @EndUserText.label: 'Requests not paid on due date'
+  RequestNotPaidCount;
+  @EndUserText.label: 'Late payments'
+  LateCount;
+  @EndUserText.label: 'Status job pending'
+  StatusPendingCount;
 }

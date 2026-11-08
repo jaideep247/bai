@@ -24,8 +24,8 @@
     <item>
      <ID>I</ID>
      <KEY>B02</KEY>
-     <ENTRY>Or: payment engine document / cheque</ENTRY>
-     <LENGTH>36</LENGTH>
+     <ENTRY>Or: payment document / payment reference or cheque</ENTRY>
+     <LENGTH>50</LENGTH>
     </item>
     <item>
      <ID>I</ID>
@@ -126,8 +126,8 @@
     <item>
      <ID>S</ID>
      <KEY>P_CHECT</KEY>
-     <ENTRY>        Cheque number</ENTRY>
-     <LENGTH>21</LENGTH>
+     <ENTRY>        Payment ref. / cheque no.</ENTRY>
+     <LENGTH>33</LENGTH>
     </item>
    </TPOOL>
   </asx:values>

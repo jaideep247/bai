@@ -42,6 +42,8 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | Table consolidation: TY_SLA with KIND (DURATION / DEADLINE) and DAY_TYPE, ZCD_FMON_DEADL
 *&            | merged into ZCD_FMON_SLA; TY_DEADLINE and the context component DEADLINES removed.
+*& 2026-11-08 | TY_QUERY-SEEK_*: keyset paging of a date read (watermark read of the payment request log, source
+*&            | REQUESTS of the payment worklist).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -628,6 +630,14 @@ INTERFACE zif_cd_fmon_types
       in_field   TYPE ty_fieldname,
       in_values  TYPE tt_key_value,
       max_rows   TYPE i,
+      "! Keyset paging of a date read (optional, date kind D): with SEEK_KEY_FIELD only the rows after
+      "! (DATE_FIELD, SEEK_TIME_FIELD, SEEK_KEY_FIELD) = (SEEK_DATE, SEEK_TIME, SEEK_KEY), ordered by
+      "! these fields - a watermark read of a configured table (time field optional)
+      seek_time_field TYPE ty_fieldname,
+      seek_key_field  TYPE ty_fieldname,
+      seek_date       TYPE d,
+      seek_time       TYPE t,
+      seek_key        TYPE ty_key_value,
     END OF ty_query.
 
   "! One row of a configured table, values as unformatted text, by role

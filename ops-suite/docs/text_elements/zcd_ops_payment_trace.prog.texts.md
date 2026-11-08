@@ -4,7 +4,7 @@
 |---|---|---|
 | Title | — | 360 degree payment trace (read-only) |
 | Text symbol | B01 | Payment request |
-| Text symbol | B02 | Or: payment engine document / cheque |
+| Text symbol | B02 | Or: payment document / payment reference or cheque |
 | Text symbol | C01 | Attempt |
 | Text symbol | C02 | Kind |
 | Text symbol | C03 | Clearing |
@@ -21,4 +21,4 @@
 | Selection text | P_FIN | FIN ID |
 | Selection text | P_SRC | Source (e.g. PCLM) |
 | Selection text | P_AUGBL | Clearing / payment document |
-| Selection text | P_CHECT | Cheque number |
+| Selection text | P_CHECT | Payment ref. / cheque no. |

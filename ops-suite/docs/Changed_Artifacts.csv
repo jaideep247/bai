@@ -249,7 +249,7 @@ src/core/zcd_ops_pattern_check.prog.abap,ABAP,"Pattern check (read-only, user de
 src/core/zcd_ops_pattern_check.prog.xml,abapGit,
 src/core/zcd_ops_pattern_migrate.prog.abap,ABAP,One-off migration of the configured CP wildcard patterns to PCRE (user
 src/core/zcd_ops_pattern_migrate.prog.xml,abapGit,
-src/core/zcd_ops_pay_snapshot.prog.abap,ABAP,"Job step of the 5-minute SM36 job ZCD_FMON_MONITOR_ALL (step 2, after"
+src/core/zcd_ops_pay_snapshot.prog.abap,ABAP,"The payment worklist (ZCL_CD_OPS_PAY_SNAPSHOT, open payments, open"
 src/core/zcd_ops_pay_snapshot.prog.xml,abapGit,
 src/core/zcd_ops_payment_trace.prog.abap,ABAP,360 degree payment trace for L1 / L2 support (read-only): enter a FIN
 src/core/zcd_ops_payment_trace.prog.xml,abapGit,
@@ -343,13 +343,16 @@ src/core/zcl_cd_ops_pay_outcome.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_outcome_dao.clas.abap,ABAP,All SQL of the incremental payment outcome snapshot. Change reads per
 src/core/zcl_cd_ops_pay_outcome_dao.clas.testclasses.abap,ABAP,OSQL tests of the snapshot SQL on cl_osql_test_environment doubles: the
 src/core/zcl_cd_ops_pay_outcome_dao.clas.xml,abapGit,
+src/core/zcl_cd_ops_pay_request.clas.abap,ABAP,"Due date and stage of payment requests (ZIF_CD_OPS_PAY_REQUEST, user"
+src/core/zcl_cd_ops_pay_request.clas.testclasses.abap,ABAP,Unit tests of the payment request rule (due date and stage) with LTD
+src/core/zcl_cd_ops_pay_request.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_snap_op.clas.abap,ABAP,"bgPF operation (transactional, uncontrolled - the unit commits itself) of"
 src/core/zcl_cd_ops_pay_snap_op.clas.xml,abapGit,
 src/core/zcl_cd_ops_pay_snap_queue.clas.abap,ABAP,bgPF implementation of ZIF_CD_OPS_PAY_SNAP_QUEUE (as the FMON PRISM queue):
 src/core/zcl_cd_ops_pay_snap_queue.clas.testclasses.abap,ABAP,Unit test of the bgPF queue of the snapshot packages through the test
 src/core/zcl_cd_ops_pay_snap_queue.clas.xml,abapGit,
-src/core/zcl_cd_ops_pay_snapshot.clas.abap,ABAP,Incremental 5-minute snapshot of the canonical payment outcome (job step
-src/core/zcl_cd_ops_pay_snapshot.clas.testclasses.abap,ABAP,Unit tests of the incremental 5-minute payment outcome snapshot with LTD
+src/core/zcl_cd_ops_pay_snapshot.clas.abap,ABAP,"The payment worklist ZCD_PAY_OUTCOME: open payments, open payment"
+src/core/zcl_cd_ops_pay_snapshot.clas.testclasses.abap,ABAP,Unit tests of the payment worklist snapshot (FAST / NIGHTLY / SWEEP) with
 src/core/zcl_cd_ops_pay_snapshot.clas.xml,abapGit,
 src/core/zcl_cd_ops_plugin_probe.clas.abap,ABAP,Test support for ZCL_CD_OPS_FACTORY=>GET_PLUGIN (audit A62): a class that
 src/core/zcl_cd_ops_plugin_probe.clas.xml,abapGit,
@@ -401,36 +404,22 @@ src/core/zi_cd_opsstalecfg.ddls.asddls,CDS,
 src/core/zi_cd_opsstalecfg.ddls.xml,abapGit,
 src/core/zi_cd_payoutcome.ddls.asddls,CDS,
 src/core/zi_cd_payoutcome.ddls.xml,abapGit,
-src/core/zi_cd_payoutcomeat.ddls.asddls,CDS,
-src/core/zi_cd_payoutcomeat.ddls.xml,abapGit,
-src/core/zi_cd_payoutcomeitm.ddls.asddls,CDS,
-src/core/zi_cd_payoutcomeitm.ddls.xml,abapGit,
-src/core/zi_cd_payoutcomets.ddls.asddls,CDS,
-src/core/zi_cd_payoutcomets.ddls.xml,abapGit,
 src/core/zi_cd_payoutlag.ddls.asddls,CDS,
 src/core/zi_cd_payoutlag.ddls.xml,abapGit,
 src/core/zi_cd_payoutlagmin.ddls.asddls,CDS,
 src/core/zi_cd_payoutlagmin.ddls.xml,abapGit,
 src/core/zi_cd_payoutrunlast.ddls.asddls,CDS,
 src/core/zi_cd_payoutrunlast.ddls.xml,abapGit,
+src/core/zi_cd_payworkitem.ddls.asddls,CDS,
+src/core/zi_cd_payworkitem.ddls.xml,abapGit,
 src/core/zi_cd_returnitem.ddls.asddls,CDS,
 src/core/zi_cd_returnitem.ddls.xml,abapGit,
 src/core/zi_cd_trxitem.ddls.asddls,CDS,
 src/core/zi_cd_trxitem.ddls.xml,abapGit,
-src/core/zi_cd_trxitembank.ddls.asddls,CDS,
-src/core/zi_cd_trxitembank.ddls.xml,abapGit,
 src/core/zi_cd_trxitemchq.ddls.asddls,CDS,
 src/core/zi_cd_trxitemchq.ddls.xml,abapGit,
-src/core/zi_cd_trxitemenc.ddls.asddls,CDS,
-src/core/zi_cd_trxitemenc.ddls.xml,abapGit,
-src/core/zi_cd_trxitemflow.ddls.asddls,CDS,
-src/core/zi_cd_trxitemflow.ddls.xml,abapGit,
-src/core/zi_cd_trxitemnoc.ddls.asddls,CDS,
-src/core/zi_cd_trxitemnoc.ddls.xml,abapGit,
 src/core/zi_cd_trxitempay.ddls.asddls,CDS,
 src/core/zi_cd_trxitempay.ddls.xml,abapGit,
-src/core/zi_cd_trxitemret.ddls.asddls,CDS,
-src/core/zi_cd_trxitemret.ddls.xml,abapGit,
 src/core/zi_cd_trxretnocu.ddls.asddls,CDS,
 src/core/zi_cd_trxretnocu.ddls.xml,abapGit,
 src/core/zif_cd_ops_alert.intf.abap,ABAP,Alert router port used by every payment engine area. dispatch( ) applies the alert
@@ -467,6 +456,8 @@ src/core/zif_cd_ops_pay_outcome.intf.abap,ABAP,The one evaluator of a payment's 
 src/core/zif_cd_ops_pay_outcome.intf.xml,abapGit,
 src/core/zif_cd_ops_pay_outcome_dao.intf.abap,ABAP,SQL of the incremental payment outcome snapshot: watermarks per evidence
 src/core/zif_cd_ops_pay_outcome_dao.intf.xml,abapGit,
+src/core/zif_cd_ops_pay_request.intf.abap,ABAP,The one rule of a payment request's due date and stage (requests not
+src/core/zif_cd_ops_pay_request.intf.xml,abapGit,
 src/core/zif_cd_ops_pay_snap_queue.intf.abap,ABAP,Seam for the parallel packages of the payment outcome snapshot (real
 src/core/zif_cd_ops_pay_snap_queue.intf.xml,abapGit,
 src/core/zif_cd_ops_payout_types.intf.abap,ABAP,Types and constants of the canonical payment outcome: the outcome
@@ -1223,6 +1214,9 @@ src/hck/zcl_cd_hck_c_postarea.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_cancel.clas.abap,ABAP,Check: paid payment request left CANCELLED (PCLM). CANCELLED means money
 src/hck/zcl_cd_hck_c_prq_cancel.clas.testclasses.abap,ABAP,Unit tests of the paid-but-cancelled payment request check: a cancelled
 src/hck/zcl_cd_hck_c_prq_cancel.clas.xml,abapGit,
+src/hck/zcl_cd_hck_c_prq_not_paid.clas.abap,ABAP,"Financial integrity: payment requests (ZCD_PAYM_REQ_LOG, a SUCCESS"
+src/hck/zcl_cd_hck_c_prq_not_paid.clas.testclasses.abap,ABAP,Unit tests of the morning report check A_PRQ_NOT_PAID with LTD doubles of
+src/hck/zcl_cd_hck_c_prq_not_paid.clas.xml,abapGit,
 src/hck/zcl_cd_hck_c_prq_spe.clas.abap,ABAP,Check: PRISM payment request failed without an SPE row. Every failure
 src/hck/zcl_cd_hck_c_prq_spe.clas.testclasses.abap,ABAP,Unit tests of the failed-request-without-SPE check: a failed request
 src/hck/zcl_cd_hck_c_prq_spe.clas.xml,abapGit,
@@ -1299,6 +1293,9 @@ src/hck/zcl_cd_hck_injector.clas.xml,abapGit,
 src/hck/zcl_cd_hck_param.clas.abap,ABAP,Parsing of check parameters (PARAM1-4 of ZCD_HCK_DEF): comma or
 src/hck/zcl_cd_hck_param.clas.testclasses.abap,ABAP,"Unit tests of check parameter parsing (PCRE pattern lists, validation,"
 src/hck/zcl_cd_hck_param.clas.xml,abapGit,
+src/hck/zcl_cd_hck_pay_ageing.clas.abap,ABAP,"The one ageing rule of a payment in flight, shared by the morning report"
+src/hck/zcl_cd_hck_pay_ageing.clas.testclasses.abap,ABAP,Unit tests of the shared ageing rule of a payment in flight with an LTD
+src/hck/zcl_cd_hck_pay_ageing.clas.xml,abapGit,
 src/hck/zcl_cd_hck_payreq_rules.clas.abap,ABAP,"Known-table rules of the payment engine (USAA reference), pure:"
 src/hck/zcl_cd_hck_payreq_rules.clas.testclasses.abap,ABAP,Pure tests of the known-table rules (USAA payment engine reference):
 src/hck/zcl_cd_hck_payreq_rules.clas.xml,abapGit,

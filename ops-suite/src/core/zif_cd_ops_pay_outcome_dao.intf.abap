@@ -15,6 +15,11 @@
 *&            | delete); versions written by a run (aggregated findings); A_INFLIGHT aggregate reads
 *&            | (grouped current versions with DPAYH by key, examples per partition, ACK candidates,
 *&            | payment documents not yet snapshotted).
+*& 2026-11-08 | Exceptions-only worklist: every row of payments / requests (GET_VERSIONS, GET_REQUEST_VERSIONS),
+*&            | request keys of FIN numbers, deletes and in-place updates of open rows (SAVE_VERSIONS), request
+*&            | items with payment run and block, due requests of A_PRQ_NOT_PAID, NIGHTLY / NIGHTLYREQ cursors and
+*&            | the SWEEP upper date (GET_CHANGES iv_to), package rows per mode's sources, not yet snapshotted =
+*&            | after the DOCUMENTS watermark.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - snapshot repository</p>
 "! Implementation ZCL_CD_OPS_PAY_OUTCOME_DAO, factory ZCL_CD_OPS_FACTORY=>GET_PAY_OUTCOME_DAO.
@@ -34,15 +39,19 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RAISING
       zcx_cd_ops_error.
 
-  "! Payment documents (and, for STATEMENT, statement references) with new evidence of the
-  "! source after the watermark, in watermark order, at most iv_max keys; the watermark of
-  "! the last key read and whether more keys wait. A watermark without key starts at its date
+  "! Payment documents (and, for STATEMENT, statement references; for NIGHTLYREQ, payment requests)
+  "! with new evidence of the source after the watermark, in watermark order, at most iv_max keys; the
+  "! watermark of the last key read and whether more keys wait. A watermark without key starts at its
+  "! date. NIGHTLY / NIGHTLYREQ: the current worklist rows after the cursor (payments / requests).
+  "! REQUESTS is read by the request service (configured request log), not here
   "! @parameter iv_source | ZIF_CD_OPS_PAYOUT_TYPES=>GC_SOURCE
+  "! @parameter iv_to | SWEEP: last entry / posting date read (initial: no upper bound)
   METHODS get_changes
     IMPORTING
       iv_source         TYPE zif_cd_ops_payout_types=>ty_source_id
       is_watermark      TYPE zif_cd_ops_payout_types=>ty_watermark
       iv_max            TYPE i
+      iv_to             TYPE d OPTIONAL
     RETURNING
       VALUE(rs_changes) TYPE zif_cd_ops_payout_types=>ty_changes.
 
@@ -61,21 +70,60 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RETURNING
       VALUE(rt_items) TYPE zif_cd_ops_payout_types=>tt_fin_item.
 
-  "! Current versions (VALID_TO open) of the payment documents, every FIN and source (index DOC)
-  METHODS get_open_versions
+  "! Every worklist row (current and closed) of the payment documents, every FIN and source (index
+  "! DOC): the current rows to compare and whether the payment has exception history
+  METHODS get_versions
     IMPORTING
       it_docno           TYPE zif_cd_ops_trace_types=>tt_docno
     RETURNING
       VALUE(rt_versions) TYPE zif_cd_ops_payout_types=>tt_version.
 
-  "! Close versions (their VALID_TO set) and insert new ones, set-based, no commit
-  "! @raising zcx_cd_ops_error | a version could not be written
+  "! Every worklist row (current and closed) of the payment requests (FIN + source, payment document
+  "! blank; index FIN)
+  METHODS get_request_versions
+    IMPORTING
+      it_keys            TYPE zif_cd_ops_payout_types=>tt_req_key
+    RETURNING
+      VALUE(rt_versions) TYPE zif_cd_ops_payout_types=>tt_version.
+
+  "! Payment requests with a current worklist row of the FIN numbers (index FIN): re-judged when a
+  "! payment of the FIN is judged, so a request paid on time leaves the worklist within one run
+  METHODS get_request_keys
+    IMPORTING
+      it_fin         TYPE zif_cd_ops_payout_types=>tt_fin
+    RETURNING
+      VALUE(rt_keys) TYPE zif_cd_ops_payout_types=>tt_req_key.
+
+  "! Write the worklist, set-based, no commit: delete rows (open rows of a payment that left the
+  "! worklist), close versions (VALID_TO set), update open rows in place, insert new rows
+  "! @raising zcx_cd_ops_error | a row could not be written (a concurrent run changed it: retried)
   METHODS save_versions
     IMPORTING
       it_close  TYPE zif_cd_ops_payout_types=>tt_version
       it_insert TYPE zif_cd_ops_payout_types=>tt_version
+      it_delete TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
+      it_update TYPE zif_cd_ops_payout_types=>tt_version OPTIONAL
     RAISING
       zcx_cd_ops_error.
+
+  "! Items of the FIN numbers of payment requests (DFKKOP-ZZ_FIN_TRANS_NUM) with the payment run of
+  "! their clearing document (DPAYH-DOC1R = AUGBL, no proposal run) and the payment block
+  "! (DFKKOP-SPZAH, VERIFY-SE11) - the stage of a request
+  METHODS get_request_items
+    IMPORTING
+      it_fin          TYPE zif_cd_ops_payout_types=>tt_fin
+    RETURNING
+      VALUE(rt_items) TYPE zif_cd_ops_payout_types=>tt_req_item.
+
+  "! Current request rows of the worklist due before iv_before (open or not paid), with the sum of
+  "! their items per currency (DFKKOP by FIN; none = no item), oldest due date first, at most iv_max -
+  "! the morning report check A_PRQ_NOT_PAID
+  METHODS get_due_requests
+    IMPORTING
+      iv_before      TYPE d
+      iv_max         TYPE i
+    RETURNING
+      VALUE(rt_rows) TYPE zif_cd_ops_payout_types=>tt_due_request.
 
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
   "! Plan the packages of a run (status P), no commit
@@ -117,10 +165,12 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RETURNING
       VALUE(rv_count) TYPE i.
 
-  "! Delete the package rows of every run but this one (run lock held), no commit; rows deleted
+  "! Delete the package rows of the sources of every run but this one (run lock of the mode held - the
+  "! rows of another mode's sources stay), no commit; rows deleted
   METHODS delete_packages
     IMPORTING
       iv_keep_run_id  TYPE zif_cd_ops_types=>ty_run_id
+      it_sources      TYPE zif_cd_ops_payout_types=>tt_source_id
     RETURNING
       VALUE(rv_count) TYPE i.
 
@@ -172,12 +222,14 @@ INTERFACE zif_cd_ops_pay_outcome_dao
     RETURNING
       VALUE(rt_docno) TYPE zif_cd_ops_trace_types=>tt_docno.
 
-  "! Payment documents of payment runs (DPAYH, no proposal run) of the methods with run date from
-  "! iv_from that have no current version yet (not reached by the snapshot), oldest first, at most
-  "! iv_max
+  "! Payment documents of payment runs (DPAYH, no proposal run) of the methods not reached by the
+  "! snapshot yet: entered (DFKKKO CPUDT / CPUTM / OPBEL) after the DOCUMENTS watermark is_after; without
+  "! watermark (first run not done) the runs from iv_from. Oldest first, at most iv_max. A clean
+  "! payment has no worklist row (2026-11-08), so "no row" never means "not reached"
   METHODS get_unsnapshotted
     IMPORTING
       it_methods      TYPE zif_cd_hck_runtime_types=>tt_pymet
+      is_after        TYPE zif_cd_ops_payout_types=>ty_watermark
       iv_from         TYPE d
       iv_max          TYPE i
     RETURNING

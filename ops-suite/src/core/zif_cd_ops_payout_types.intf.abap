@@ -23,6 +23,12 @@
 *&            | marker PAY_STATUS_PENDING, aggregated findings (PAYOUT_EXAMPLES, messages 757-765).
 *& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
 *&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
+*& 2026-11-08 | Exceptions-only worklist (user decision 2026-11-08): modes FAST / NIGHTLY / SWEEP (TY_SELECTION, own
+*&            | run lock variants), sources REQUESTS / NIGHTLY / NIGHTLYREQ, payment requests (TY_REQ_KEY,
+*&            | TY_REQUEST, stages GC_REQ_STAGE, outcomes REQ_OPEN / REQ_NOT_PAID / REQ_PAID_LATE, items
+*&            | TY_REQ_ITEM), FLOW_CLASS and DUE_DATE of a row, VALUT / HBKID of a verdict, codes PRQ_NOT_PAID /
+*&            | PAY_BATCH_INCOMPLETE / PAY_NIGHTLY_MISSING, parameters PAYOUT_BATCH_MAX_PACKAGES /
+*&            | PAYOUT_REQ_CUTOFF, messages 766-780, reused check configuration GC_CHECK.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -62,6 +68,14 @@ INTERFACE zif_cd_ops_payout_types
       inconsistent TYPE ty_outcome VALUE 'INCONSISTENT',
       ambiguous    TYPE ty_outcome VALUE 'AMBIGUOUS',
       reversed     TYPE ty_outcome VALUE 'REVERSED',
+      "! Payment request of the worklist (row without payment document, 2026-11-08): received with a
+      "! SUCCESS attempt, not yet paid and not yet due (open)
+      req_open     TYPE ty_outcome VALUE 'REQ_OPEN',
+      "! Not paid in a payment run by the end of its due date (exception, finding PRQ_NOT_PAID; the stage
+      "! reached is the evidence kind of the row)
+      req_not_paid TYPE ty_outcome VALUE 'REQ_NOT_PAID',
+      "! Closing version of a request exception: paid in a payment run after the due date (history only)
+      req_paid_late TYPE ty_outcome VALUE 'REQ_PAID_LATE',
     END OF gc_outcome.
 
   CONSTANTS:
@@ -97,6 +111,9 @@ INTERFACE zif_cd_ops_payout_types
       bukrs         TYPE c LENGTH 4,
       flow          TYPE zif_cd_hck_runtime_types=>ty_flow,
       class         TYPE zif_cd_hck_runtime_types=>ty_method_class,
+      "! Value date and house bank of the payment run (age of a payment in flight, worklist lateness)
+      valut         TYPE d,
+      hbkid         TYPE zif_cd_hck_runtime_types=>ty_hbkid,
       outcome       TYPE ty_outcome,
       status        TYPE ty_status,
       "! Purpose of the rules that decided (blank: none)
@@ -183,7 +200,128 @@ INTERFACE zif_cd_ops_payout_types
       "! State without change stamp (DPAYH-ZZ_PAYMENT_STATUS, DFKKCR-STATE): open versions of
       "! payments not final, a package per run after the cursor (key order)
       recheck   TYPE ty_source_id VALUE 'RECHECK',
+      "! Payment requests with a SUCCESS attempt received since the watermark (request log, keyset on
+      "! received date / time / FIN): new requests enter the worklist (2026-11-08)
+      requests  TYPE ty_source_id VALUE 'REQUESTS',
+      "! NIGHTLY mode: every current worklist row of a payment, by AUGBL after the cursor (time passing:
+      "! a payment becomes late without new evidence)
+      nightly   TYPE ty_source_id VALUE 'NIGHTLY',
+      "! NIGHTLY mode: every current worklist row of a payment request, by FIN after the cursor (a request
+      "! passes its due date without new evidence)
+      nightly_req TYPE ty_source_id VALUE 'NIGHTLYREQ',
     END OF gc_source.
+
+  "! Modes of the snapshot program ZCD_OPS_PAY_SNAPSHOT (2026-11-08). FAST: every 5 minutes, watermark
+  "! driven - new payments, requests and evidence only. NIGHTLY: once a night, every open and exception
+  "! row of the worklist re-evaluated (lateness, due dates). SWEEP: on demand, the evidence sources
+  "! chosen re-read for a date range (no watermark moved) - catches what FAST missed
+  TYPES ty_mode TYPE c LENGTH 7.
+  CONSTANTS:
+    BEGIN OF gc_mode,
+      fast    TYPE ty_mode VALUE 'FAST',
+      nightly TYPE ty_mode VALUE 'NIGHTLY',
+      sweep   TYPE ty_mode VALUE 'SWEEP',
+    END OF gc_mode.
+  TYPES tt_source_id TYPE SORTED TABLE OF ty_source_id WITH UNIQUE KEY table_line.
+
+  "! What one run of the snapshot does: the mode and, for SWEEP, the date range and evidence sources
+  TYPES:
+    BEGIN OF ty_selection,
+      mode    TYPE ty_mode,
+      "! SWEEP: entry / posting / received dates of the evidence read (both required)
+      date_from TYPE d,
+      date_to   TYPE d,
+      "! SWEEP: evidence sources re-read (DOCUMENTS, REVERSALS, STATEMENT, RETURNS, GL, REQUESTS)
+      sources TYPE tt_source_id,
+    END OF ty_selection.
+
+  "! Kind of a worklist row: a payment (payment document filled) or a payment request (row without
+  "! payment document, FIN + source)
+  TYPES:
+    BEGIN OF ty_req_key,
+      fin    TYPE zif_cd_ops_trace_types=>ty_fin,
+      source TYPE zif_cd_ops_trace_types=>ty_source,
+    END OF ty_req_key.
+  TYPES tt_req_key TYPE SORTED TABLE OF ty_req_key WITH UNIQUE KEY fin source.
+
+  "! Stage a payment request reached (ZCD_PAY_OUTCOME-EVIDENCE_KIND of a request row): no payment engine
+  "! item for the FIN, item with a payment block, item open and not in a payment run, item cleared
+  "! without a payment run, paid in a payment run (on time = clean, after the due date = paid late)
+  TYPES ty_req_stage TYPE c LENGTH 30.
+  CONSTANTS:
+    BEGIN OF gc_req_stage,
+      no_item        TYPE ty_req_stage VALUE 'PRQ_NO_ITEM',
+      payment_block  TYPE ty_req_stage VALUE 'PRQ_PAYMENT_BLOCK',
+      not_in_run     TYPE ty_req_stage VALUE 'PRQ_NOT_IN_RUN',
+      cleared_no_run TYPE ty_req_stage VALUE 'PRQ_CLEARED_NO_RUN',
+      paid_late      TYPE ty_req_stage VALUE 'PRQ_PAID_LATE',
+      paid           TYPE ty_req_stage VALUE 'PRQ_PAID',
+      cancelled      TYPE ty_req_stage VALUE 'PRQ_CANCELLED',
+    END OF gc_req_stage.
+
+  "! Verdict of one payment request (SUCCESS attempt of FIN + source, ZCD_PAYM_REQ_LOG): due date by the
+  "! per-source cut-off and the business-day calendar, stage, whether it is finished (paid on time,
+  "! cancelled after SUCCESS: clean), overdue (not paid by the end of the due date) or paid late
+  TYPES:
+    BEGIN OF ty_request,
+      fin           TYPE zif_cd_ops_trace_types=>ty_fin,
+      source        TYPE zif_cd_ops_trace_types=>ty_source,
+      "! Requested payment date (request log DUE=, VERIFY-SE11) and the receipt (DATE= / TIME=)
+      requested     TYPE d,
+      received_date TYPE d,
+      received_time TYPE t,
+      cutoff        TYPE t,
+      due_date      TYPE d,
+      stage         TYPE ty_req_stage,
+      "! Payment run date and payment document when paid in a payment run
+      paid_date     TYPE d,
+      augbl         TYPE zif_cd_ops_trace_types=>ty_docno,
+      bukrs         TYPE zif_cd_ops_trace_types=>ty_bukrs,
+      "! Item amount (DFKKOP-BETRW of the FIN) or, without item, the request amount (AMOUNT=, VERIFY-SE11)
+      amount        TYPE zif_cd_ops_types=>ty_amount,
+      currency      TYPE zif_cd_ops_types=>ty_currency,
+      "! Finished: paid on time or cancelled after SUCCESS (no worklist row); overdue: due date passed
+      "! without payment (exception)
+      finished      TYPE abap_bool,
+      overdue       TYPE abap_bool,
+      "! Short text of the stage for the worklist row and the trace
+      text          TYPE ty_evidence_ref,
+    END OF ty_request.
+  TYPES tt_request TYPE STANDARD TABLE OF ty_request WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_key COMPONENTS fin source.
+
+  "! Item of a FIN of a payment request (DFKKOP by ZZ_FIN_TRANS_NUM) with the payment run of its clearing
+  "! document (DPAYH, no proposal run) - the stage of the request
+  TYPES:
+    BEGIN OF ty_req_item,
+      fin      TYPE zif_cd_ops_trace_types=>ty_fin,
+      opbel    TYPE zif_cd_ops_trace_types=>ty_docno,
+      bukrs    TYPE zif_cd_ops_trace_types=>ty_bukrs,
+      augbl    TYPE zif_cd_ops_trace_types=>ty_docno,
+      "! Payment block of the item (DFKKOP-SPZAH, VERIFY-SE11)
+      spzah    TYPE c LENGTH 1,
+      amount   TYPE zif_cd_ops_types=>ty_amount,
+      currency TYPE zif_cd_ops_types=>ty_currency,
+      "! Run date of the payment run of AUGBL (initial: cleared without payment run, or open)
+      laufd    TYPE d,
+    END OF ty_req_item.
+  TYPES tt_req_item TYPE STANDARD TABLE OF ty_req_item WITH EMPTY KEY.
+
+  "! A current request row of the worklist due before a date (A_PRQ_NOT_PAID) with the sum of the
+  "! items of its FIN in one currency (no item: currency and amount initial)
+  TYPES:
+    BEGIN OF ty_due_request,
+      fin_id       TYPE zif_cd_ops_trace_types=>ty_fin,
+      source       TYPE zif_cd_ops_trace_types=>ty_source,
+      outcome      TYPE ty_outcome,
+      "! Stage reached (row's evidence kind)
+      stage        TYPE ty_req_stage,
+      due_date     TYPE d,
+      evidence_ref TYPE ty_evidence_ref,
+      currency     TYPE zif_cd_ops_types=>ty_currency,
+      amount       TYPE zif_cd_ops_types=>ty_amount,
+    END OF ty_due_request.
+  TYPES tt_due_request TYPE STANDARD TABLE OF ty_due_request WITH EMPTY KEY.
 
   "! A source's watermark (ZCD_PAY_OUTWM)
   TYPES:
@@ -208,6 +346,8 @@ INTERFACE zif_cd_ops_payout_types
       docno     TYPE zif_cd_ops_trace_types=>tt_docno,
       "! Statement references (FEBEP-CHECT) of new lines: payment documents and cheque numbers
       refs      TYPE zif_cd_ops_trace_types=>tt_ref,
+      "! Payment requests (FIN + source) of the REQUESTS / NIGHTLYREQ sources
+      requests  TYPE tt_req_key,
       watermark TYPE ty_watermark,
       "! The read reached its package size: more changes wait for the next package
       more      TYPE abap_bool,
@@ -240,6 +380,10 @@ INTERFACE zif_cd_ops_payout_types
       "! Severity of the primary finding as the evaluator listed it (blank: no finding)
       severity      TYPE zif_cd_ops_types=>ty_severity,
       evaluated_at  TYPE ty_timestamp,
+      "! Flow + method class of the payment (e.g. DWIR; blank for a payment request) and the due date of a
+      "! payment request (2026-11-08: worklist filters of the transactions dashboard)
+      flow_class    TYPE zif_cd_hck_runtime_types=>ty_flow_class,
+      due_date      TYPE d,
     END OF ty_version.
   TYPES tt_version TYPE STANDARD TABLE OF ty_version WITH EMPTY KEY.
 
@@ -266,6 +410,20 @@ INTERFACE zif_cd_ops_payout_types
 
   "! Run lock variant and evaluation context of the snapshot (object keys of its findings)
   CONSTANTS gc_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME'.
+  "! Run lock variants of the NIGHTLY and SWEEP modes (own locks: the 5-minute FAST run is never
+  "! refused while a nightly or sweep run works; a duplicate current row of a race is closed by the
+  "! next evaluation of the payment - PLAN_WORKLIST keeps the newest)
+  CONSTANTS gc_variant_nightly TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME_NIGHTLY'.
+  CONSTANTS gc_variant_sweep TYPE zif_cd_ops_types=>ty_variant VALUE 'PAY_OUTCOME_SWEEP'.
+  "! Morning report checks whose configuration the worklist reuses (one definition): A_INFLIGHT - the
+  "! AGE_OLDEST limits (late payments) and PARAM1, the payment engine's factory calendar (due dates of
+  "! requests); C_PRQ_CANCEL - its PARAM2 (cancelled status value and sources) decides that a request
+  "! cancelled after SUCCESS is not expected to be paid
+  CONSTANTS:
+    BEGIN OF gc_check,
+      inflight   TYPE zif_cd_hck_types=>ty_check_id VALUE 'A_INFLIGHT',
+      prq_cancel TYPE zif_cd_hck_types=>ty_check_id VALUE 'C_PRQ_CANCEL',
+    END OF gc_check.
   CONSTANTS gc_context TYPE zif_cd_hck_types=>ty_check_id VALUE 'PAY_OUTCOME'.
   "! Object type of the snapshot's findings (ZCD_OPS_FINDING-OBJECT_TYPE)
   CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'PAYMENT'.
@@ -283,6 +441,15 @@ INTERFACE zif_cd_ops_payout_types
       status_pending   TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_STATUS_PENDING',
       "! Parallel packages could not be dispatched (bgPF): the packages of the run were judged one by one
       parallel_off     TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_OUTCOME_SERIAL',
+      "! Payment request not paid in a payment run by the end of its due date (worklist row, morning
+      "! report check A_PRQ_NOT_PAID: one finding per source + stage + due date)
+      request_not_paid TYPE zif_cd_ops_types=>ty_check_code VALUE 'PRQ_NOT_PAID',
+      "! A NIGHTLY or SWEEP run stopped at PAYOUT_BATCH_MAX_PACKAGES: the next run continues (NIGHTLY from
+      "! its cursor)
+      batch_incomplete TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_BATCH_INCOMPLETE',
+      "! The nightly re-evaluation of the worklist has not completed since the start of the day: requests
+      "! due yesterday may not be judged yet (A_PRQ_NOT_PAID evidence PARTIAL)
+      nightly_missing  TYPE zif_cd_ops_types=>ty_check_code VALUE 'PAY_NIGHTLY_MISSING',
     END OF gc_code.
 
   " ------------------------------------------------------------ parallel packages (ZCD_PAY_OUTPKG)
@@ -309,6 +476,8 @@ INTERFACE zif_cd_ops_payout_types
       "! Time of the run: VALID_FROM / VALID_TO of the versions the package writes
       run_at    TYPE ty_timestamp,
       docno     TYPE zif_cd_ops_trace_types=>tt_docno,
+      "! Payment requests of the package (FIN + source)
+      requests  TYPE tt_req_key,
       documents TYPE i,
       evaluated TYPE i,
       inserted  TYPE i,
@@ -427,6 +596,12 @@ INTERFACE zif_cd_ops_payout_types
       "! Payment documents listed as examples in an aggregated finding (oldest first) [10]; also read
       "! by A_INFLIGHT
       examples     TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_EXAMPLES',
+      "! Packages per run of the NIGHTLY and SWEEP modes [1000]; NIGHTLY continues from its cursor
+      batch_max_packages TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_BATCH_MAX_PACKAGES',
+      "! Cut-off of a payment request per source (LIST SOURCE=HHMMSS, * = every other source) in the
+      "! time zone FMON_TIME_ZONE [*=190000 - the last hourly disbursement run]: received after it on its
+      "! due date = due the next business day
+      req_cutoff   TYPE zif_cd_ops_types=>ty_param_name VALUE 'PAYOUT_REQ_CUTOFF',
     END OF gc_param.
 
   CONSTANTS:
@@ -437,10 +612,16 @@ INTERFACE zif_cd_ops_payout_types
       parallel     TYPE i VALUE 4,
       wait_sec     TYPE i VALUE 600,
       examples     TYPE i VALUE 10,
+      batch_max_packages TYPE i VALUE 1000,
+      req_cutoff   TYPE string VALUE `*=190000`,
       "! Snapshot lag (minutes) above which it is stale: MON_STALE_AFTER_MIN_CORE (core freshness row of
       "! the production-support overview, A_INFLIGHT evidence PARTIAL); 6 x the 5-minute cadence
       stale_after_min TYPE i VALUE 30,
     END OF gc_param_default.
+
+  "! Cut-off list: source of every other source and the separator of SOURCE=HHMMSS
+  CONSTANTS gc_cutoff_any TYPE c LENGTH 1 VALUE '*'.
+  CONSTANTS gc_cutoff_sep TYPE c LENGTH 1 VALUE '='.
 
   "! Hard ceiling of the parallel packages of one wave (bgPF units at the same time)
   CONSTANTS gc_max_parallel TYPE i VALUE 20.
@@ -491,6 +672,34 @@ INTERFACE zif_cd_ops_payout_types
       parallel_off     TYPE zif_cd_ops_types=>ty_msgno VALUE '764',
       "! FIN &1 source &2 payment &3: &4
       ambiguous_line   TYPE zif_cd_ops_types=>ty_msgno VALUE '765',
+      "! Requested &1, received &2 &3, due &4:
+      req_evidence     TYPE zif_cd_ops_types=>ty_msgno VALUE '766',
+      "! No payment engine item for the FIN
+      req_no_item      TYPE zif_cd_ops_types=>ty_msgno VALUE '767',
+      "! Item &1 has payment block &2
+      req_block        TYPE zif_cd_ops_types=>ty_msgno VALUE '768',
+      "! Item &1 open, not in a payment run
+      req_not_in_run   TYPE zif_cd_ops_types=>ty_msgno VALUE '769',
+      "! Item &1 cleared by &2 without payment run
+      req_cleared      TYPE zif_cd_ops_types=>ty_msgno VALUE '770',
+      "! Paid by &1 in the payment run of &2
+      req_paid         TYPE zif_cd_ops_types=>ty_msgno VALUE '771',
+      "! &1 &2 due &3: &4 request(s) not paid in a payment run
+      req_not_paid     TYPE zif_cd_ops_types=>ty_msgno VALUE '772',
+      "! FIN &1 source &2 due &3:
+      req_example      TYPE zif_cd_ops_types=>ty_msgno VALUE '773',
+      "! Full list: transactions dashboard, request &1 &2 due &3
+      req_drill_down   TYPE zif_cd_ops_types=>ty_msgno VALUE '774',
+      "! Sweep needs a date range and evidence sources of: &1
+      sweep_selection  TYPE zif_cd_ops_types=>ty_msgno VALUE '775',
+      "! &1 stopped after &2 package(s); the next run continues
+      batch_stopped    TYPE zif_cd_ops_types=>ty_msgno VALUE '776',
+      "! Worklist re-check &1 not completed today (&2): requests unchecked
+      nightly_missing  TYPE zif_cd_ops_types=>ty_msgno VALUE '777',
+      "! Cancelled after SUCCESS (&1): not expected to be paid
+      req_cancelled    TYPE zif_cd_ops_types=>ty_msgno VALUE '778',
+      "! Request &1 &2: stage &3, &4
+      trace_request    TYPE zif_cd_ops_types=>ty_msgno VALUE '779',
     END OF gc_msg.
 
 ENDINTERFACE.

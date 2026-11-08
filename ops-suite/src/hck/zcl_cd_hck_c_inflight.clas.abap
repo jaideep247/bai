@@ -7,18 +7,19 @@
 *& methods, ageing basis, calendar; rows with HBKID: calendar per house
 *& bank). The verdict of every payment is the canonical outcome of the
 *& shared evaluator ZIF_CD_OPS_PAY_OUTCOME (rules ZCD_HCK_CLRRULE, evidence
-*& plug-ins): CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING excluded,
-*& IN_FLIGHT and UNDETERMINED aged, INCONSISTENT listed. Since 2026-11-08 the
-*& check counts EVERY payment not yet final from the current versions of
-*& ZCD_PAY_OUTCOME (5-minute snapshot), aggregated on HANA with DPAYH by key
-*& - no row cap and no look-back window for payments in flight, however
-*& old; final outcomes count for PAY_EXCLUDED within the look-back windows.
-*& Ageing as before: VALUE_DATE classes in business days after the value
+*& plug-ins): CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING left out,
+*& IN_FLIGHT and UNDETERMINED aged, INCONSISTENT listed. The check counts
+*& EVERY payment not yet final from the current rows of the payment
+*& worklist ZCD_PAY_OUTCOME (open payments and exceptions only - a clean
+*& payment has no row since 2026-11-08), aggregated on HANA with DPAYH by key
+*& - no row cap and no look-back window for payments in flight, however old.
+*& Ageing by the shared rule ZCL_CD_HCK_PAY_AGEING (the worklist marks late
+*& payments with it): VALUE_DATE classes in business days after the value
 *& date (run date when missing) by the house bank / class / PARAM1 calendar,
 *& ISSUE_DATE classes in calendar days after the run date; the calendars are
 *& read once per run into a day table per calendar and applied to the
 *& groups, never per payment. Only payment documents the snapshot has not
-*& reached yet (no current version, runs since the DOCUMENTS watermark) and
+*& reached yet (entered after the DOCUMENTS watermark) and
 *& payments whose versions all say AMBIGUOUS are evaluated live, bounded by
 *& HCK_INFLIGHT_MAX_ROWS (metric PAY_NOT_SNAPSHOT). A snapshot behind more
 *& than MON_STALE_AFTER_MIN_CORE is said (PAY_SNAPSHOT_STALE, evidence
@@ -75,15 +76,20 @@
 *&            | candidates still ISSUED (bounded by HCK_INFLIGHT_MAX_ROWS).
 *& 2026-11-08 | Comments: method classes / house-bank calendars are posting area ZPMC, bank code roles ZBTR
 *&            | (were ZCD_HCK_PMCLASS / ZCD_HCK_BTCROLE, customer posting areas); no code change.
+*& 2026-11-08 | Exceptions-only worklist (user decision 2026-11-08): reads only the worklist (open payments and
+*&            | exceptions); PAY_EXCLUDED retired (it only counted clean payments, which have no row any more);
+*&            | ageing by the shared rule ZCL_CD_HCK_PAY_AGEING (the snapshot marks late payments with it); not yet
+*&            | snapshotted = entered after the DOCUMENTS watermark (a deleted clean payment is not re-evaluated
+*&            | live).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
-"! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
-"! days of VALUE_DATE classes for PAY_EXCLUDED and the live evaluation before the first snapshot
-"! (default 10), PARAM3 = the same for ISSUE_DATE classes (default 120). Metrics per flow + class
-"! (DIM1, e.g. DWIR): PAY_OPEN, AGE_OLDEST (level), OVER_WARN_CNT, OVER_CRIT_CNT,
-"! OVER_WARN_AMT / OVER_CRIT_AMT (DIM2 currency, never summed across currencies),
-"! PAY_EXCLUDED (DIM2 purpose), PAY_INCONSISTENT, PAY_UNDETERMINED, PAY_STATUS_LAG,
-"! PAY_NOT_SNAPSHOT. Warning / critical = AMBER / RED of AGE_OLDEST in ZCD_HCK_THRESH.
+"! PARAM1 = factory calendar when the method class / house bank has none (also the calendar of
+"! the due dates of payment requests), PARAM2 = look-back days of VALUE_DATE classes of the live
+"! evaluation before the first snapshot (default 10), PARAM3 = the same for ISSUE_DATE classes
+"! (default 120). Metrics per flow + class (DIM1, e.g. DWIR): PAY_OPEN, AGE_OLDEST (level),
+"! OVER_WARN_CNT, OVER_CRIT_CNT, OVER_WARN_AMT / OVER_CRIT_AMT (DIM2 currency, never summed across
+"! currencies), PAY_INCONSISTENT, PAY_UNDETERMINED, PAY_STATUS_LAG, PAY_NOT_SNAPSHOT. Warning /
+"! critical = AMBER / RED of AGE_OLDEST in ZCD_HCK_THRESH.
 CLASS zcl_cd_hck_c_inflight DEFINITION
   PUBLIC
   FINAL
@@ -100,7 +106,6 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         crit_count   TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVER_CRIT_CNT',
         warn_amount  TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVER_WARN_AMT',
         crit_amount  TYPE zif_cd_hck_types=>ty_metric_name VALUE 'OVER_CRIT_AMT',
-        excluded     TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_EXCLUDED',
         inconsistent TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_INCONSISTENT',
         "! Payments whose clearing cannot be determined (mandatory evidence unavailable): in flight
         undetermined TYPE zif_cd_hck_types=>ty_metric_name VALUE 'PAY_UNDETERMINED',
@@ -167,38 +172,6 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       END OF ty_late_amount.
     TYPES tt_late_amount TYPE HASHED TABLE OF ty_late_amount WITH UNIQUE KEY key currency.
 
-    TYPES:
-      BEGIN OF ty_excluded,
-        key     TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        purpose TYPE zif_cd_hck_runtime_types=>ty_purpose,
-        count   TYPE i,
-      END OF ty_excluded.
-    TYPES tt_excluded TYPE HASHED TABLE OF ty_excluded WITH UNIQUE KEY key purpose.
-
-    "! AGE_OLDEST limits of a watched flow + class (SET = amber or red maintained)
-    TYPES:
-      BEGIN OF ty_limit,
-        key   TYPE zif_cd_hck_runtime_types=>ty_flow_class,
-        limit TYPE zif_cd_hck_types=>ty_threshold,
-        set   TYPE abap_bool,
-      END OF ty_limit.
-    TYPES tt_limit TYPE HASHED TABLE OF ty_limit WITH UNIQUE KEY key.
-
-    "! Business days per calendar: working days in ( DATE, today ], built once per run downwards
-    TYPES:
-      BEGIN OF ty_cum,
-        calendar TYPE zif_cd_hck_types=>ty_calendar,
-        date     TYPE d,
-        days     TYPE i,
-      END OF ty_cum.
-    TYPES tt_cum TYPE HASHED TABLE OF ty_cum WITH UNIQUE KEY calendar date.
-    TYPES:
-      BEGIN OF ty_cal_low,
-        calendar TYPE zif_cd_hck_types=>ty_calendar,
-        low      TYPE d,
-      END OF ty_cal_low.
-    TYPES tt_cal_low TYPE HASHED TABLE OF ty_cal_low WITH UNIQUE KEY calendar.
-
     "! Oldest bank ACK of a payment (configured ACK source)
     TYPES:
       BEGIN OF ty_ack,
@@ -258,13 +231,11 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
     DATA mt_methods TYPE zif_cd_ops_payout_types=>tt_method.
     DATA mt_rules TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
     DATA mt_watched TYPE zif_cd_ops_payout_types=>tt_flow_class.
-    DATA mt_limits TYPE tt_limit.
-    DATA mt_cum TYPE tt_cum.
-    DATA mt_cal_low TYPE tt_cal_low.
+    "! The shared ageing rule (calendars, AGE_OLDEST limits) - the worklist judges lateness with it too
+    DATA mo_ageing TYPE REF TO zcl_cd_hck_pay_ageing.
     DATA mt_cells TYPE tt_cell.
     DATA mt_stats TYPE tt_stat.
     DATA mt_late_amounts TYPE tt_late_amount.
-    DATA mt_excluded TYPE tt_excluded.
     DATA mt_run_parts TYPE tt_run_part.
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
     DATA ms_link TYPE ty_file_link.
@@ -297,25 +268,27 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         it_thresholds TYPE zif_cd_hck_types=>tt_threshold.
 
     "! The snapshot lag: stale (or never run) = PAY_SNAPSHOT_STALE and evidence PARTIAL; returns the
-    "! DOCUMENTS watermark date (start of the live window), initial when none
+    "! DOCUMENTS watermark (payment documents entered after it are not in the worklist yet), initial
+    "! when none
     METHODS check_snapshot
       IMPORTING
-        is_context        TYPE zif_cd_hck_types=>ty_context
+        is_context          TYPE zif_cd_hck_types=>ty_context
       RETURNING
-        VALUE(rv_wm_date) TYPE d.
+        VALUE(rs_watermark) TYPE zif_cd_ops_payout_types=>ty_watermark.
 
     "! Query of the aggregate reads: the watched methods, outcomes counted however old
     METHODS base_query
       RETURNING
         VALUE(rs_query) TYPE zif_cd_ops_payout_types=>ty_group_query.
 
-    "! Every current version grouped on HANA: aged, listed, excluded, lagging
+    "! Every current worklist row of a payment grouped on HANA: aged, listed, lagging
     METHODS read_aggregate.
 
-    "! Payment documents not yet snapshotted (and AMBIGUOUS-only payments): evaluated live, bounded
+    "! Payment documents not yet snapshotted (entered after the DOCUMENTS watermark) and AMBIGUOUS-only
+    "! payments: evaluated live, bounded
     METHODS read_live
       IMPORTING
-        iv_wm_date TYPE d.
+        is_watermark TYPE zif_cd_ops_payout_types=>ty_watermark.
 
     "! (a) per payment: the versioned candidates still ISSUED and the live ones - bank ACK older than
     "! the grace; (a) per file: the runs of the classes acknowledged per file
@@ -374,46 +347,6 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         iv_xeinz      TYPE abap_bool
       RETURNING
         VALUE(rv_key) TYPE zif_cd_hck_runtime_types=>ty_flow_class.
-
-    "! ISSUE_DATE class: calendar days after the run date
-    METHODS is_issue_basis
-      IMPORTING
-        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
-      RETURNING
-        VALUE(rv_yes) TYPE abap_bool.
-
-    "! Run date inside the look-back window of the class (PAY_EXCLUDED)
-    METHODS in_window
-      IMPORTING
-        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
-        iv_laufd      TYPE d
-      RETURNING
-        VALUE(rv_yes) TYPE abap_bool.
-
-    "! Calendar of the payment: house bank row, method class, PARAM1 of the check
-    METHODS calendar_of
-      IMPORTING
-        iv_key             TYPE zif_cd_hck_runtime_types=>ty_flow_class
-        iv_hbkid           TYPE zif_cd_hck_runtime_types=>ty_hbkid
-      RETURNING
-        VALUE(rv_calendar) TYPE zif_cd_hck_types=>ty_calendar.
-
-    "! Age of a payment: business days after the reference date (calendar), as before - working days
-    "! in ( max( reference date, today - 400 ), today ], from the day table of the calendar
-    METHODS business_days
-      IMPORTING
-        iv_after       TYPE d
-        iv_calendar    TYPE zif_cd_hck_types=>ty_calendar
-      RETURNING
-        VALUE(rv_days) TYPE i.
-
-    "! RAG of an age against AGE_OLDEST of the flow + class (initial: limits not maintained)
-    METHODS rag_of
-      IMPORTING
-        iv_key        TYPE zif_cd_hck_runtime_types=>ty_flow_class
-        iv_age        TYPE i
-      RETURNING
-        VALUE(rv_rag) TYPE zif_cd_ops_types=>ty_rag.
 
     "! Detail line of a payment: document, method, run date, aged-from date, age, amount
     METHODS payment_line
@@ -499,9 +432,8 @@ ENDCLASS.
 CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
   METHOD zif_cd_hck_check~execute.
-    CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_watched, mt_limits, mt_cum, mt_cal_low, mt_cells,
-           mt_stats, mt_late_amounts, mt_excluded, mt_run_parts, mt_findings, ms_link, mv_no_valut,
-           mv_ambiguous_live, mv_partial.
+    CLEAR: mt_classes, mt_banks, mt_methods, mt_rules, mt_watched, mt_cells, mt_stats, mt_late_amounts,
+           mt_run_parts, mt_findings, ms_link, mv_no_valut, mv_ambiguous_live, mv_partial, mo_ageing.
     ms_def = is_def.
     mv_today = is_context-now_date.
     mv_calendar = to_upper( condense( is_def-param1 ) ).
@@ -515,11 +447,11 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     load_configuration( CHANGING cs_result = rs_result ).
     read_settings( is_context    = is_context
                    it_thresholds = it_thresholds ).
-    DATA(lv_wm_date) = check_snapshot( is_context ).
+    DATA(ls_watermark) = check_snapshot( is_context ).
 
     " Every payment not yet final from the snapshot (HANA groups), the rest live (bounded)
     read_aggregate( ).
-    read_live( lv_wm_date ).
+    read_live( ls_watermark ).
     read_examples( ).
 
     INSERT LINES OF mt_findings INTO TABLE rs_result-findings.
@@ -567,7 +499,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                         val2 = zcl_cd_ops_util=>param_int( io_params  = lo_params
                                                            iv_name    = zif_cd_ops_payout_types=>gc_param-examples
                                                            iv_default = zif_cd_ops_payout_types=>gc_param_default-examples ) ).
-    " Look-back windows: PAY_EXCLUDED and the live evaluation before the snapshot's first run
+    " Look-back windows of the live evaluation before the snapshot's first run
     DATA(lv_days) = zcl_cd_hck_param=>int( iv_value   = ms_def-param2
                                            iv_default = zif_cd_hck_runtime_types=>gc_check_default-inflight_days ).
     DATA(lv_issue_days) = zcl_cd_hck_param=>int( iv_value   = ms_def-param3
@@ -596,23 +528,21 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         EXIT.
       ENDIF.
     ENDLOOP.
-    " AGE_OLDEST limits once per watched flow + class; a key without limits is not judged (warning)
-    LOOP AT mt_watched ASSIGNING FIELD-SYMBOL(<lv_key>).
-      DATA(ls_limit) = VALUE ty_limit( key   = <lv_key>
-                                       limit = zcl_cd_hck_threshold=>resolve( it_thresholds = it_thresholds
-                                                                              iv_metric     = gc_metric-age_oldest
-                                                                              iv_key        = <lv_key> ) ).
-      ls_limit-limit-baseline_mode = zif_cd_hck_types=>gc_baseline-none.
-      ls_limit-set = xsdbool( ls_limit-limit-amber <> 0 OR ls_limit-limit-red <> 0 ).
-      INSERT ls_limit INTO TABLE mt_limits.
-    ENDLOOP.
+    " Ageing: AGE_OLDEST limits once per watched flow + class (a key without limits is not judged -
+    " warning), calendars as day tables - the one rule the worklist uses for late payments too
+    mo_ageing = NEW #( it_classes    = mt_classes
+                       it_banks      = mt_banks
+                       it_watched    = mt_watched
+                       iv_calendar   = mv_calendar
+                       it_thresholds = it_thresholds
+                       iv_today      = mv_today ).
   ENDMETHOD.
 
 
   METHOD check_snapshot.
     DATA lv_now TYPE timestampl.
     DATA(lt_watermarks) = mo_dao->get_watermarks( ).
-    rv_wm_date = VALUE #( lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ]-wm_date OPTIONAL ).
+    rs_watermark = VALUE #( lt_watermarks[ source = zif_cd_ops_payout_types=>gc_source-documents ] OPTIONAL ).
     CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
     DATA(ls_lag) = zcl_cd_ops_pay_snapshot=>lag( it_watermarks = lt_watermarks
                                                  iv_now        = lv_now ).
@@ -658,16 +588,9 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
 
   METHOD read_aggregate.
+    " The worklist holds only payments not final (open and exceptions, 2026-11-08): no clean payment
+    " is counted any more (PAY_EXCLUDED retired)
     DATA(ls_query) = base_query( ).
-    " Excluded purposes (the purpose values are the outcome values) within the look-back windows
-    LOOP AT zcl_cd_ops_pay_outcome=>purposes( ) ASSIGNING FIELD-SYMBOL(<lv_purpose>)
-         WHERE table_line <> zif_cd_hck_runtime_types=>gc_purpose-in_flight.
-      INSERT VALUE #( sign   = zif_cd_ops_types=>gc_range-sign_include
-                      option = zif_cd_ops_types=>gc_range-option_equal
-                      low    = <lv_purpose> ) INTO TABLE ls_query-recent.
-    ENDLOOP.
-    ls_query-final_from = nmin( val1 = mv_value_from val2 = mv_issue_from ).
-
     LOOP AT mo_dao->get_outcome_groups( ls_query ) ASSIGNING FIELD-SYMBOL(<ls_group>).
       DATA(lv_key) = key_of( iv_pymet = <ls_group>-pymet iv_xeinz = <ls_group>-xeinz ).
       IF lv_key IS INITIAL.
@@ -676,13 +599,13 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       CASE <ls_group>-outcome.
         WHEN zif_cd_ops_payout_types=>gc_outcome-in_flight OR zif_cd_ops_payout_types=>gc_outcome-undetermined.
           " In flight (also undetermined): aged from the value date (run date when missing) or the run date
-          DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_group>-valut IS INITIAL
+          DATA(lv_ref_date) = COND d( WHEN mo_ageing->is_issue_basis( lv_key ) = abap_true OR <ls_group>-valut IS INITIAL
                                         THEN <ls_group>-laufd ELSE <ls_group>-valut ).
           add_open( iv_key      = lv_key
                     iv_day      = <ls_group>-laufd
                     iv_ref_date = lv_ref_date
-                    iv_no_valut = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_group>-valut IS INITIAL )
-                    iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_group>-hbkid )
+                    iv_no_valut = xsdbool( mo_ageing->is_issue_basis( lv_key ) = abap_false AND <ls_group>-valut IS INITIAL )
+                    iv_calendar = mo_ageing->calendar_of( iv_key = lv_key iv_hbkid = <ls_group>-hbkid )
                     iv_payments = <ls_group>-payments
                     iv_amount   = <ls_group>-amount
                     iv_currency = <ls_group>-currency ).
@@ -738,17 +661,6 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                     iv_payments = <ls_group>-payments
                     iv_amount   = <ls_group>-amount
                     iv_currency = <ls_group>-currency ).
-        WHEN OTHERS.
-          " Excluded by a consistent purpose: counted within the look-back window of the class
-          IF in_window( iv_key = lv_key iv_laufd = <ls_group>-laufd ) = abap_true.
-            READ TABLE mt_excluded ASSIGNING FIELD-SYMBOL(<ls_excluded>)
-                 WITH TABLE KEY key = lv_key purpose = CONV zif_cd_hck_runtime_types=>ty_purpose( <ls_group>-outcome ).
-            IF sy-subrc <> 0.
-              INSERT VALUE #( key = lv_key purpose = CONV #( <ls_group>-outcome ) ) INTO TABLE mt_excluded
-                ASSIGNING <ls_excluded>.
-            ENDIF.
-            <ls_excluded>-count = <ls_excluded>-count + <ls_group>-payments.
-          ENDIF.
       ENDCASE.
     ENDLOOP.
   ENDMETHOD.
@@ -763,12 +675,13 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     LOOP AT mt_methods ASSIGNING FIELD-SYMBOL(<ls_method>).
       INSERT <ls_method>-pymet INTO TABLE lt_methods.
     ENDLOOP.
-    " Not reached by the snapshot: runs from the day before the DOCUMENTS watermark (before the first
-    " snapshot run: the look-back windows), bounded by HCK_INFLIGHT_MAX_ROWS as before
-    DATA(lv_from) = COND d( WHEN iv_wm_date IS NOT INITIAL THEN iv_wm_date - 1
-                            ELSE nmin( val1 = mv_value_from val2 = mv_issue_from ) ).
+    " Not reached by the snapshot: payment documents entered after the DOCUMENTS watermark (a clean
+    " payment has no worklist row, so "no row" no longer means "not reached" - 2026-11-08); before the
+    " first snapshot run the runs of the look-back windows; bounded by HCK_INFLIGHT_MAX_ROWS as before
     DATA(lt_new) = mo_dao->get_unsnapshotted( it_methods = lt_methods
-                                              iv_from    = lv_from
+                                              is_after   = is_watermark
+                                              iv_from    = COND #( WHEN mv_value_from < mv_issue_from
+                                                                   THEN mv_value_from ELSE mv_issue_from )
                                               iv_max     = mv_cap ).
     IF lines( lt_new ) >= mv_cap.
       capped( zif_cd_ops_payout_types=>gc_table-outcome ).
@@ -837,16 +750,6 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                      iv_line     = <ls_listing>-line ).
       ENDLOOP.
       CASE ls_verdict-status.
-        WHEN zif_cd_ops_payout_types=>gc_status-excluded.
-          IF in_window( iv_key = lv_key iv_laufd = <ls_payment>-laufd ) = abap_true.
-            READ TABLE mt_excluded ASSIGNING FIELD-SYMBOL(<ls_excluded>)
-                 WITH TABLE KEY key = lv_key purpose = ls_verdict-purpose.
-            IF sy-subrc <> 0.
-              INSERT VALUE #( key = lv_key purpose = ls_verdict-purpose ) INTO TABLE mt_excluded ASSIGNING <ls_excluded>.
-            ENDIF.
-            <ls_excluded>-count = <ls_excluded>-count + 1.
-          ENDIF.
-          CONTINUE.
         WHEN zif_cd_ops_payout_types=>gc_status-open.
           " In flight (also undetermined): aged below
         WHEN zif_cd_ops_payout_types=>gc_status-inconsistent.
@@ -859,14 +762,14 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       IF ls_verdict-outcome = zif_cd_ops_payout_types=>gc_outcome-undetermined.
         lr_stat->undetermined = lr_stat->undetermined + 1.
       ENDIF.
-      DATA(lv_no_valut) = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_payment>-valut IS INITIAL ).
-      DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_payment>-valut IS INITIAL
+      DATA(lv_no_valut) = xsdbool( mo_ageing->is_issue_basis( lv_key ) = abap_false AND <ls_payment>-valut IS INITIAL ).
+      DATA(lv_ref_date) = COND d( WHEN mo_ageing->is_issue_basis( lv_key ) = abap_true OR <ls_payment>-valut IS INITIAL
                                     THEN <ls_payment>-laufd ELSE <ls_payment>-valut ).
       DATA(lv_age) = add_open( iv_key      = lv_key
                                iv_day      = <ls_payment>-laufd
                                iv_ref_date = lv_ref_date
                                iv_no_valut = lv_no_valut
-                               iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_payment>-hbkid )
+                               iv_calendar = mo_ageing->calendar_of( iv_key = lv_key iv_hbkid = <ls_payment>-hbkid )
                                iv_payments = 1
                                iv_amount   = lv_amount
                                iv_currency = <ls_payment>-currency ).
@@ -1101,13 +1004,13 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
       IF lv_key IS INITIAL.
         CONTINUE.
       ENDIF.
-      DATA(lv_no_valut) = xsdbool( is_issue_basis( lv_key ) = abap_false AND <ls_example>-valut IS INITIAL ).
-      DATA(lv_ref_date) = COND d( WHEN is_issue_basis( lv_key ) = abap_true OR <ls_example>-valut IS INITIAL
+      DATA(lv_no_valut) = xsdbool( mo_ageing->is_issue_basis( lv_key ) = abap_false AND <ls_example>-valut IS INITIAL ).
+      DATA(lv_ref_date) = COND d( WHEN mo_ageing->is_issue_basis( lv_key ) = abap_true OR <ls_example>-valut IS INITIAL
                                     THEN <ls_example>-laufd ELSE <ls_example>-valut ).
-      DATA(lv_age) = COND i( WHEN is_issue_basis( lv_key ) = abap_true
+      DATA(lv_age) = COND i( WHEN mo_ageing->is_issue_basis( lv_key ) = abap_true
                                THEN nmax( val1 = 0 val2 = mv_today - lv_ref_date )
-                             ELSE business_days( iv_after    = lv_ref_date
-                                                 iv_calendar = calendar_of( iv_key = lv_key iv_hbkid = <ls_example>-hbkid ) ) ).
+                             ELSE mo_ageing->business_days( iv_after    = lv_ref_date
+                                                 iv_calendar = mo_ageing->calendar_of( iv_key = lv_key iv_hbkid = <ls_example>-hbkid ) ) ).
       DATA(lv_line) = payment_line( iv_doc1r    = <ls_example>-doc1r
                                     iv_pymet    = <ls_example>-pymet
                                     iv_laufd    = <ls_example>-laufd
@@ -1128,7 +1031,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         CONTINUE.
       ENDIF.
       " In flight: late, undetermined, status lag
-      DATA(lv_rag) = rag_of( iv_key = lv_key iv_age = lv_age ).
+      DATA(lv_rag) = mo_ageing->rag_of( iv_key = lv_key iv_age = lv_age ).
       IF lv_rag = zif_cd_ops_types=>gc_rag-red OR lv_rag = zif_cd_ops_types=>gc_rag-amber.
         add_example( iv_key      = lv_key
                      iv_day      = <ls_example>-laufd
@@ -1170,17 +1073,17 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
 
   METHOD add_open.
     DATA(lr_stat) = stat( iv_key ).
-    rv_age = COND #( WHEN is_issue_basis( iv_key ) = abap_true
+    rv_age = COND #( WHEN mo_ageing->is_issue_basis( iv_key ) = abap_true
                        " Issue date basis (e.g. cheques): calendar days since issue (run date)
                        THEN nmax( val1 = 0 val2 = mv_today - iv_ref_date )
                      " Value date basis (wire / ACH / card): business days after the value date
-                     ELSE business_days( iv_after = iv_ref_date iv_calendar = iv_calendar ) ).
+                     ELSE mo_ageing->business_days( iv_after = iv_ref_date iv_calendar = iv_calendar ) ).
     lr_stat->open   = lr_stat->open + iv_payments.
     lr_stat->oldest = nmax( val1 = lr_stat->oldest val2 = rv_age ).
     IF iv_no_valut = abap_true.
       mv_no_valut = mv_no_valut + iv_payments.
     ENDIF.
-    DATA(lv_rag) = rag_of( iv_key = iv_key iv_age = rv_age ).
+    DATA(lv_rag) = mo_ageing->rag_of( iv_key = iv_key iv_age = rv_age ).
     IF lv_rag <> zif_cd_ops_types=>gc_rag-red AND lv_rag <> zif_cd_ops_types=>gc_rag-amber.
       RETURN.
     ENDIF.
@@ -1268,75 +1171,6 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD is_issue_basis.
-    rv_yes = xsdbool( VALUE #( mt_classes[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = space ]-age_basis OPTIONAL )
-                      = zif_cd_hck_runtime_types=>gc_age_basis-issue_date ).
-  ENDMETHOD.
-
-
-  METHOD in_window.
-    DATA(lv_from) = COND d( WHEN is_issue_basis( iv_key ) = abap_true THEN mv_issue_from ELSE mv_value_from ).
-    rv_yes = xsdbool( iv_laufd >= lv_from AND iv_laufd <= mv_today ).
-  ENDMETHOD.
-
-
-  METHOD calendar_of.
-    rv_calendar = VALUE #( mt_banks[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = iv_hbkid ]-calendar OPTIONAL ).
-    IF rv_calendar IS INITIAL.
-      rv_calendar = VALUE #( mt_classes[ flow = iv_key(1) method_class = iv_key+1(3) hbkid = space ]-calendar
-                             OPTIONAL ).
-    ENDIF.
-    IF rv_calendar IS INITIAL.
-      rv_calendar = mv_calendar.
-    ENDIF.
-    rv_calendar = to_upper( rv_calendar ).
-  ENDMETHOD.
-
-
-  METHOD business_days.
-    IF mv_today <= iv_after.
-      RETURN.
-    ENDIF.
-    IF iv_calendar IS INITIAL.
-      rv_days = mv_today - iv_after.
-      RETURN.
-    ENDIF.
-    " Bounded as before: at most the last 400 days are counted
-    DATA(lv_from) = CONV d( nmax( val1 = iv_after
-                                  val2 = mv_today - zif_cd_hck_runtime_types=>gc_check_default-max_calendar ) ).
-    " The day table of the calendar grows downwards only as far as a payment needs it (one calendar
-    " read per calendar and date per run, as before - never per payment)
-    READ TABLE mt_cal_low ASSIGNING FIELD-SYMBOL(<ls_low>) WITH TABLE KEY calendar = iv_calendar.
-    IF sy-subrc <> 0.
-      INSERT VALUE #( calendar = iv_calendar low = mv_today ) INTO TABLE mt_cal_low ASSIGNING <ls_low>.
-      INSERT VALUE #( calendar = iv_calendar date = mv_today days = 0 ) INTO TABLE mt_cum.
-    ENDIF.
-    IF <ls_low>-low > lv_from.
-      DATA(lo_dao) = zcl_cd_hck_factory=>get_dao( ).
-      DATA(lv_days) = mt_cum[ calendar = iv_calendar date = <ls_low>-low ]-days.
-      WHILE <ls_low>-low > lv_from.
-        IF lo_dao->is_working_day( iv_calendar = iv_calendar iv_date = <ls_low>-low ) = abap_true.
-          lv_days = lv_days + 1.
-        ENDIF.
-        <ls_low>-low = <ls_low>-low - 1.
-        INSERT VALUE #( calendar = iv_calendar date = <ls_low>-low days = lv_days ) INTO TABLE mt_cum.
-      ENDWHILE.
-    ENDIF.
-    rv_days = mt_cum[ calendar = iv_calendar date = lv_from ]-days.
-  ENDMETHOD.
-
-
-  METHOD rag_of.
-    READ TABLE mt_limits ASSIGNING FIELD-SYMBOL(<ls_limit>) WITH TABLE KEY key = iv_key.
-    IF sy-subrc <> 0 OR <ls_limit>-set = abap_false.
-      RETURN.
-    ENDIF.
-    rv_rag = zcl_cd_hck_threshold=>evaluate( iv_value     = iv_age
-                                             is_threshold = <ls_limit>-limit
-                                             it_history   = VALUE #( ) )-rag.
-  ENDMETHOD.
-
-
   METHOD payment_line.
     rv_line = zcl_cd_ops_util=>text(
                 iv_msgno = zif_cd_hck_runtime_types=>gc_msg-payment_line
@@ -1369,13 +1203,6 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
              INTO TABLE cs_result-metrics.
       INSERT VALUE #( metric = gc_metric-status_lag dim1 = <lv_key> value = ls_stat-lag ) INTO TABLE cs_result-metrics.
       INSERT VALUE #( metric = gc_metric-not_snapshot dim1 = <lv_key> value = ls_stat-live ) INTO TABLE cs_result-metrics.
-      LOOP AT mt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>)
-           WHERE flow = <lv_key>(1) AND method_class = <lv_key>+1(3)
-           GROUP BY <ls_rule>-purpose ASSIGNING FIELD-SYMBOL(<lv_purpose>).
-        INSERT VALUE #( metric = gc_metric-excluded dim1 = <lv_key> dim2 = <lv_purpose>
-                        value  = VALUE #( mt_excluded[ key = <lv_key> purpose = <lv_purpose> ]-count OPTIONAL ) )
-               INTO TABLE cs_result-metrics.
-      ENDLOOP.
       " Amounts per currency (EUR / GBP alongside USD): never summed across currencies
       LOOP AT mt_late_amounts ASSIGNING FIELD-SYMBOL(<ls_late>) WHERE key = <lv_key>.
         INSERT VALUE #( metric = gc_metric-warn_amount dim1 = <lv_key> dim2 = <ls_late>-currency
@@ -1383,7 +1210,7 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         INSERT VALUE #( metric = gc_metric-crit_amount dim1 = <lv_key> dim2 = <ls_late>-currency
                         value  = <ls_late>-crit ) INTO TABLE cs_result-metrics.
       ENDLOOP.
-      IF VALUE #( mt_limits[ key = <lv_key> ]-set OPTIONAL ) = abap_false.
+      IF mo_ageing->limits_set( <lv_key> ) = abap_false.
         INSERT VALUE #( object_key = |{ ms_def-check_id }/{ <lv_key> }|
                         check_code = zif_cd_hck_runtime_types=>gc_code-limits_missing
                         severity   = zif_cd_ops_types=>gc_severity-warning

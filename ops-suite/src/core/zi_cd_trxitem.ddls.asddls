@@ -2,7 +2,8 @@
 // Purpose: Basic view of the transactions dashboard (docs/Dashboard_Transactions.md): open items of
 //          the payment engine (standard DFKKOP) that carry a payment request FIN number
 //          (ZZ_FIN_TRANS_NUM, confirmed: = ZCD_PAYM_REQ_LOG FIN number) and were posted within the
-//          400-day retention (BUDAT >= today - 400: bounded live read, the driver of every view).
+//          evidence window (BUDAT >= today - 45: bounded live read, the driver of the returns / NOC
+//          entity and of the request side in cds/; the worklist rows of the dashboard need no driver).
 //          Company code currency and country from T001; collection / disbursement from TFK042Z-XEINZ
 //          (confirmed) by country and payment method (key LAND1 / ZLSCH VERIFY-SE11, as the payment
 //          trace). Fields: OPBEL, OPUPW, OPUPK, OPUPZ, BUKRS, BUDAT, BETRH, BETRW, WAERS, PYMET,
@@ -12,6 +13,8 @@
 // Modification log: 2026-11-06 | Initial version (transactions dashboard).
 //                   2026-11-07 | Bound = the 400-day retention of the payment outcome (date filter by
 //                   posting, run or value date of the consumer; KPI / problem cards keep 31 days).
+//                   2026-11-08 | Exceptions-only worklist: the transactions are the worklist rows; this view
+//                   drives only returns / NOC and the request side - bound = the 45-day evidence window.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Transactions - open item with FIN (basic)'
@@ -55,4 +58,4 @@ define view entity ZI_CD_TrxItem
       Item.augrd                                            as ClearingReason
 }
 where Item.zz_fin_trans_num <> ' '
-  and Item.budat >= dats_add_days( $session.system_date, -400, 'INITIAL' )
+  and Item.budat >= dats_add_days( $session.system_date, -45, 'INITIAL' )

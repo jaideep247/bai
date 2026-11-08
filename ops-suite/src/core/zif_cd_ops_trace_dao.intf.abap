@@ -13,6 +13,8 @@
 *& 2026-11-07 | read_configured_set: one read for many keys (source attribution of the payment outcome).
 *& 2026-11-08 | Table consolidation: approved tables read from ZCD_OPS_TABWL (area FMON, purpose SOURCE; was
 *&            | ZCD_FMON_TABWL).
+*& 2026-11-08 | READ_CONFIGURED_AFTER: watermark read of a configured source (keyset date, time, key) - request log
+*&            | of the payment worklist.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - read repository</p>
 INTERFACE zif_cd_ops_trace_dao
@@ -42,6 +44,21 @@ INTERFACE zif_cd_ops_trace_dao
     IMPORTING
       is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
       it_keys        TYPE zif_cd_ops_trace_types=>tt_key_value
+      iv_max_rows    TYPE i
+    RETURNING
+      VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row
+    RAISING
+      zcx_cd_ops_error.
+
+  "! Watermark read of a configured source (2026-11-08, request log of the payment worklist): the rows
+  "! after the keyset position (DATE, TIME, KEY = the source's DATE / TIME / KEY fields) with DATE up to
+  "! iv_date_to, ordered by DATE, TIME, KEY, at most iv_max_rows. DATE (and KEY) must be configured
+  "! @raising zcx_cd_ops_error | unknown table / field, table not approved or not authorised
+  METHODS read_configured_after
+    IMPORTING
+      is_source      TYPE zif_cd_ops_trace_types=>ty_source_cfg
+      is_after       TYPE zif_cd_ops_trace_types=>ty_cfg_seek
+      iv_date_to     TYPE d
       iv_max_rows    TYPE i
     RETURNING
       VALUE(rt_rows) TYPE zif_cd_ops_trace_types=>tt_cfg_row

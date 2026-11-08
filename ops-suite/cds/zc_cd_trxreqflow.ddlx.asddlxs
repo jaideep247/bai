@@ -1,24 +1,24 @@
 // UI annotations: Transactions dashboard - request funnel (cds/, after SE11)
 // 2026-11-07: stage = canonical payment outcome as of the chosen instant (history from go-live only).
+// 2026-11-08: stage = current worklist row (exceptions-only worklist); clean-only counts removed.
 @Metadata.layer: #CORE
-@UI.headerInfo: { typeName: 'Payment request', typeNamePlural: 'Payment requests (outcome history from go-live)',
+@UI.headerInfo: { typeName: 'Payment request', typeNamePlural: 'Payment requests',
                   title: { type: #STANDARD, value: 'FinId' },
                   description: { type: #STANDARD, value: 'SourceSystem' } }
 @UI.chart: [ { qualifier: 'Funnel',
                title: 'Request funnel by source',
                chartType: #COLUMN,
                dimensions: [ 'SourceSystem' ],
-               measures: [ 'RequestedCount', 'ProcessedCount', 'PostedCount', 'PaidCount', 'AcknowledgedCount', 'ClearedCount', 'ErroredCount', 'RejectedCount', 'ReturnedCount' ],
+               measures: [ 'RequestedCount', 'ProcessedCount', 'PostedCount', 'PaidCount', 'AcknowledgedCount', 'ErroredCount', 'RejectedCount', 'ExceptionCount' ],
                dimensionAttributes: [ { dimension: 'SourceSystem', role: #CATEGORY } ],
                measureAttributes: [ { measure: 'RequestedCount', role: #AXIS_1 },
                                     { measure: 'ProcessedCount', role: #AXIS_1 },
                                     { measure: 'PostedCount', role: #AXIS_1 },
                                     { measure: 'PaidCount', role: #AXIS_1 },
                                     { measure: 'AcknowledgedCount', role: #AXIS_1 },
-                                    { measure: 'ClearedCount', role: #AXIS_1 },
                                     { measure: 'ErroredCount', role: #AXIS_1 },
                                     { measure: 'RejectedCount', role: #AXIS_1 },
-                                    { measure: 'ReturnedCount', role: #AXIS_1 } ] },
+                                    { measure: 'ExceptionCount', role: #AXIS_1 } ] },
              { qualifier: 'ByStage',
                title: 'Requests by stage and source',
                chartType: #BAR_STACKED,
@@ -101,10 +101,10 @@ annotate entity ZC_CD_TrxReqFlow with
   @EndUserText.label: 'Deciding evidence'
   @UI.identification: [ { position: 115 } ]
   OutcomeEvidenceRef;
-  @EndUserText.label: 'Outcome valid from (UTC)'
+  @EndUserText.label: 'On the worklist since (UTC)'
   @UI.identification: [ { position: 116 } ]
   OutcomeValidFrom;
-  @EndUserText.label: 'Stage (canonical outcome)'
+  @EndUserText.label: 'Stage (worklist outcome or evidence)'
   @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'StageCriticality' } ]
   @UI.identification: [ { position: 120, criticality: 'StageCriticality' } ]
   @UI.selectionField: [ { position: 80 } ]
@@ -121,16 +121,12 @@ annotate entity ZC_CD_TrxReqFlow with
   PaidCount;
   @EndUserText.label: 'Acknowledged (ACK)'
   AcknowledgedCount;
-  @EndUserText.label: 'Cleared (canonical outcome)'
-  ClearedCount;
   @EndUserText.label: 'Errored (no SUCCESS row)'
   ErroredCount;
   @EndUserText.label: 'Rejected (NACK)'
   RejectedCount;
-  @EndUserText.label: 'Returned'
-  ReturnedCount;
-  @EndUserText.label: 'Retrieved (not a return)'
-  RetrievedCount;
+  @EndUserText.label: 'Exception on the worklist'
+  ExceptionCount;
   @EndUserText.label: 'Ambiguous source'
   AmbiguousCount;
   @EndUserText.label: 'Attempts'

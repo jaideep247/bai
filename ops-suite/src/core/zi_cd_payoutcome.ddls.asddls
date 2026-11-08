@@ -1,16 +1,20 @@
 // Artifact: zi_cd_payoutcome.ddls.asddls
-// Purpose: Basic view of the canonical payment outcome history ZCD_PAY_OUTCOME (written only by the
-//          5-minute snapshot ZCL_CD_OPS_PAY_SNAPSHOT from the evaluator ZIF_CD_OPS_PAY_OUTCOME): one row per
-//          version of FIN + source + company code + payment document + payment run, valid from / to (UTC; open end
-//          99991231235959 = current), outcome, deciding evidence kind and reference, finding. Keys
-//          only: amounts, dates, partner and method are joined from DPAYH / DFKKOP / FEBEP /
-//          ZCD_PAYM_REQ_LOG by the consumers. History exists from go-live only. Read-only.
+// Purpose: Basic view of the payment worklist ZCD_PAY_OUTCOME (written only by the snapshot
+//          ZCL_CD_OPS_PAY_SNAPSHOT - FAST / NIGHTLY / SWEEP - from the evaluator ZIF_CD_OPS_PAY_OUTCOME and
+//          the request rule ZIF_CD_OPS_PAY_REQUEST): open payments, open payment requests and
+//          exceptions only (user decision 2026-11-08 - a clean payment has no row). One row per
+//          version of FIN + source + company code + payment document + payment run (request rows: payment
+//          document blank), valid from / to (UTC; open end 99991231235959 = current), outcome, deciding
+//          evidence kind (for a request the stage reached) and reference, finding, severity, flow + method
+//          class, due date of a request. Keys only: amounts, dates, partner and method are joined from
+//          DPAYH / DFKKOP / FEBEP / ZCD_PAYM_REQ_LOG by the consumers. Read-only.
 // Modification log: 2026-11-07 | Initial version (one canonical payment outcome model).
+//                   2026-11-08 | Exceptions-only worklist: severity, flow + method class, due date.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Payment outcome version (basic)'
+@EndUserText.label: 'Payment worklist row (basic)'
 @Metadata.ignorePropagatedAnnotations: true
-@ObjectModel.usageType: { serviceQuality: #A, sizeCategory: #XL, dataClass: #TRANSACTIONAL }
+@ObjectModel.usageType: { serviceQuality: #A, sizeCategory: #L, dataClass: #TRANSACTIONAL }
 @VDM.viewType: #BASIC
 define view entity ZI_CD_PayOutcome
   as select from zcd_pay_outcome
@@ -27,5 +31,8 @@ define view entity ZI_CD_PayOutcome
       evidence_kind                                         as EvidenceKind,
       evidence_ref                                          as EvidenceRef,
       finding                                               as Finding,
-      evaluated_at                                          as EvaluatedAt
+      severity                                              as Severity,
+      evaluated_at                                          as EvaluatedAt,
+      flow_class                                            as FlowClass,
+      due_date                                              as DueDate
 }

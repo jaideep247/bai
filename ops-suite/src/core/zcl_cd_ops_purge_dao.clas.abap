@@ -19,6 +19,9 @@
 *&            | (ZCL_CD_OPS_PAY_OUTCOME=>FINAL_OUTCOMES) and its payment run is before the cutoff date;
 *&            | the current version of a payment that is not final is never deleted, however old.
 *&            | Closed versions (VALID_TO before the cutoff) go as before.
+*& 2026-11-08 | PAY_OUTCOME comments: the worklist holds open rows and exception history only (clean payments are
+*&            | deleted by the snapshot); rule unchanged - closed history 90 days after the exception closed, open
+*&            | rows never.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge SQL</p>
 CLASS zcl_cd_ops_purge_dao DEFINITION
@@ -148,10 +151,11 @@ CLASS zcl_cd_ops_purge_dao IMPLEMENTATION.
         rv_count = sy-dbcnt.
 
       WHEN zif_cd_ops_purge_dao=>gc_target-pay_outcome.
-        " Closed versions (VALID_TO before the cutoff, index OUT) and the current version of a payment
-        " whose outcome is final and whose payment run is before the cutoff date. The current version of
-        " a payment that is not final (in flight, pending, undetermined, inconsistent, ambiguous) is
-        " never deleted, however old: A_INFLIGHT counts it from this table
+        " The payment worklist (2026-11-08): closed versions are exception history - VALID_TO before the
+        " cutoff = the exception closed more than RETENTION_DAYS_PAY_OUTCOME ago (index OUT); a current row
+        " only when its outcome is final (an exception that can no longer change) and its run is before
+        " the cutoff date. An open row (payment in flight, pending, undetermined, inconsistent, ambiguous;
+        " a payment request) is never deleted, however old: A_INFLIGHT / A_PRQ_NOT_PAID count it
         DATA(lv_run_cutoff) = cutoff_date( iv_cutoff ).
         DATA(lt_final_outcomes) = zcl_cd_ops_pay_outcome=>final_outcomes( ).
         SELECT fin_id, source, bukrs, augbl, laufd, laufi, valid_from

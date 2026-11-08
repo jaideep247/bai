@@ -10,6 +10,7 @@
 *& 2026-11-07 | Purge target HCK_RESULT: verdicts of the morning report checks (RETENTION_DAYS_HCK_RESULT).
 *& 2026-11-07 | Purge target PAY_OUTCOME: payment outcome versions (RETENTION_DAYS_PAY_OUTCOME).
 *& 2026-11-08 | PAY_OUTCOME: current versions only when final and the payment run is before the cutoff.
+*& 2026-11-08 | PAY_OUTCOME comment: exception history of the payment worklist; open rows never deleted.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - retention purge repository</p>
 INTERFACE zif_cd_ops_purge_dao
@@ -28,9 +29,9 @@ INTERFACE zif_cd_ops_purge_dao
       fmon_prism TYPE ty_target VALUE 'FMON_PRISM',
       "! ZCD_HCK_RESULT: verdict of each check per run, by execution time
       hck_result TYPE ty_target VALUE 'HCK_RESULT',
-      "! ZCD_PAY_OUTCOME: versions closed before the cutoff; the current version only when its outcome
-      "! is final and its payment run is before the cutoff (never the current version of a payment
-      "! that is not final)
+      "! ZCD_PAY_OUTCOME (payment worklist, 2026-11-08): exception history closed before the cutoff
+      "! (90 days after the exception closed); a current row only when its outcome is final and its
+      "! payment run is before the cutoff - an open row (payment or request) is never deleted
       pay_outcome TYPE ty_target VALUE 'PAY_OUTCOME',
     END OF gc_target.
 

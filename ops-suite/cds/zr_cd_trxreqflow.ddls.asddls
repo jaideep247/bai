@@ -2,18 +2,21 @@
 // Purpose: Request funnel of the transactions dashboard (ADT only, cds/ - activated after SE11
 //          confirmation of the placeholders in ZI_CD_TrxReqLog, ZI_CD_TrxAckU, ZI_CD_TrxChqStat,
 //          ZI_CD_TrxRtrv): one row per payment request and payment - FIN + source + company code +
-//          payment document (+ method) - of the chosen request date(s) (any day within the 400-day
-//          retention; the SUCCESS row rule judges every attempt first, the window selects the
-//          requests afterwards) with the stage it reached. The stage of a paid request is the
-//          canonical payment outcome valid at the "as of" instant (ZI_CD_PayOutcomeAt, joined by
-//          FIN + source + company code + payment document - the same verdict as the morning report
-//          check A_INFLIGHT and the payment trace), never re-derived from evidence here:
+//          payment document (+ method) - of the chosen request date(s) (the 45-day evidence window; the
+//          SUCCESS row rule judges every attempt first, the window selects the requests afterwards)
+//          with the stage it reached. The stage of a paid request is its current row of the payment
+//          worklist (ZI_CD_PayWorkItem, joined by FIN + source + company code + payment document - the
+//          same verdict as the morning report check A_INFLIGHT and the payment trace), never
+//          re-derived from evidence here. A finished clean payment has no worklist row (user
+//          decision 2026-11-08): its stage is the evidence stage below (PAID / ACKNOWLEDGED; the
+//          payment trace shows its outcome). Requests not paid on their due date: src/core
+//          ZR_CD_TrxFlow (kind REQUEST) and the morning report check A_PRQ_NOT_PAID.
 //            ERRORED      no SUCCESS attempt, a failure value       PENDING   no SUCCESS, no failure
 //            AMBIGUOUS    the FIN is in two or more sources (ZI_CD_TrxFinSrc) - never one picked
 //            NOT_POSTED   SUCCESS, no open item with the FIN
 //            REVERSED     clearing reason 05
-//            <outcome>    CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING / IN_FLIGHT /
-//                         UNDETERMINED / INCONSISTENT / AMBIGUOUS / REVERSED (canonical)
+//            <outcome>    worklist row: IN_FLIGHT / PENDING / UNDETERMINED / INCONSISTENT /
+//                         AMBIGUOUS (canonical; a clean final payment has no row)
 //            REJECTED     no outcome yet: NACK on the payment, or IRIS cheque status 3 / 4
 //            ACKNOWLEDGED no outcome yet, ACK      PAID  payment run / cheque, no outcome, no ACK
 //            POSTED       open item                OFFSET  cleared without payment run
@@ -24,6 +27,9 @@
 //                   RetrievalCount > 0 - identity is now FIN + source + company code + payment and the
 //                   stage is the canonical outcome (a retrieval is RETRIEVED, not RETURNED); request date
 //                   window after the SUCCESS rule; "as of" parameters.
+//                   2026-11-08 | Exceptions-only worklist: the current worklist row instead of the outcome
+//                   "as of" an instant (parameters removed); request date window = evidence window;
+//                   cleared / returned / retrieved counts removed (a clean payment has no row).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Transactions dashboard - request funnel'
 @Metadata.ignorePropagatedAnnotations: true
@@ -35,18 +41,10 @@ define root view entity ZR_CD_TrxReqFlow
     P_DateFrom : abap.dats,
     @EndUserText.label: 'Request date to'
     @Environment.systemField: #SYSTEM_DATE
-    P_DateTo   : abap.dats,
-    @EndUserText.label: 'Outcome as of (date, from go-live)'
-    @Environment.systemField: #SYSTEM_DATE
-    P_AsOfDate : abap.dats,
-    @EndUserText.label: 'Outcome as of (time, system time zone)'
-    @Environment.systemField: #SYSTEM_TIME
-    P_AsOfTime : abap.tims
+    P_DateTo   : abap.dats
   as select from    ZI_CD_TrxReqSap( P_DateFrom : $parameters.P_DateFrom,
                                      P_DateTo   : $parameters.P_DateTo ) as Req
-    left outer join ZI_CD_PayOutcomeAt( P_AsOfDate : $parameters.P_AsOfDate,
-                                        P_AsOfTime : $parameters.P_AsOfTime ) as Out
-                                         on  Out.FinId        = Req.FinId
+    left outer join ZI_CD_PayWorkItem as Out on  Out.FinId        = Req.FinId
                                          and Out.SourceSystem = Req.SourceSystem
                                          and Out.CompanyCode  = Req.CompanyCode
                                          and Out.ClearingDoc  = Req.ClearingDoc
@@ -87,11 +85,9 @@ define root view entity ZR_CD_TrxReqFlow
       cast( case
               when Req.RequestOutcome = 'ERRORED'                     then 1
               when Req.SourceCount > 1                                then 1
-              when Out.Outcome = 'RETURNED' or Out.Outcome = 'INCONSISTENT'
-                or Out.Outcome = 'AMBIGUOUS' or Out.Outcome = 'REVERSED' then 1
+              when Out.Severity = 'E'                                 then 1
               when Out.Outcome is null and ( Ack.NackCount > 0 or Chq.IsFailed > 0 ) then 1
-              when Out.Outcome = 'UNDETERMINED' or Out.Outcome = 'RETRIEVED' then 2
-              when Out.Outcome = 'CLEARED'                            then 3
+              when Out.Finding <> ' '                                 then 2
               else 0 end as abap.int1 )                     as StageCriticality,
       // ---------------------------------------------------------------- funnel measures (reached)
       cast( 1 as abap.int4 )                                as RequestedCount,
@@ -101,9 +97,7 @@ define root view entity ZR_CD_TrxReqFlow
       cast( case when Req.IsPaid > 0 then 1 else 0 end as abap.int4 )                 as PaidCount,
       cast( case when Ack.AckRowCount > 0 then 1 else 0 end as abap.int4 )            as AcknowledgedCount,
       cast( case when Ack.NackCount > 0 then 1 else 0 end as abap.int4 )              as RejectedCount,
-      cast( case Out.Outcome when 'CLEARED' then 1 else 0 end as abap.int4 )          as ClearedCount,
-      cast( case Out.Outcome when 'RETURNED' then 1 else 0 end as abap.int4 )         as ReturnedCount,
-      cast( case Out.Outcome when 'RETRIEVED' then 1 else 0 end as abap.int4 )        as RetrievedCount,
+      cast( case when Out.Finding <> ' ' then 1 else 0 end as abap.int4 )            as ExceptionCount,
       cast( case when Req.SourceCount > 1 then 1 else 0 end as abap.int4 )            as AmbiguousCount,
       Req.AttemptCount,
       Req.SuccessAttempts,

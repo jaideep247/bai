@@ -17,6 +17,7 @@
 *& 2026-11-07 | reset also drops the session parameter adapter (ZCA_PARAM).
 *& 2026-11-07 | inject_pay_outcome / inject_pay_outcome_dao added (canonical payment outcome).
 *& 2026-11-08 | inject_pay_snap_queue added (parallel packages of the outcome snapshot).
+*& 2026-11-08 | inject_pay_request (payment request rule double).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - test injector for the core factory</p>
 "! Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
@@ -70,6 +71,10 @@ CLASS zcl_cd_ops_injector DEFINITION
     CLASS-METHODS inject_pay_outcome
       IMPORTING
         io_outcome TYPE REF TO zif_cd_ops_pay_outcome.
+
+    CLASS-METHODS inject_pay_request
+      IMPORTING
+        io_request TYPE REF TO zif_cd_ops_pay_request.
 
     CLASS-METHODS inject_pay_outcome_dao
       IMPORTING
@@ -142,6 +147,11 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD inject_pay_request.
+    zcl_cd_ops_factory=>go_pay_request_double = io_request.
+  ENDMETHOD.
+
+
   METHOD inject_pay_outcome_dao.
     zcl_cd_ops_factory=>go_pay_outcome_dao_double = io_dao.
   ENDMETHOD.
@@ -172,6 +182,7 @@ CLASS zcl_cd_ops_injector IMPLEMENTATION.
            zcl_cd_ops_factory=>go_purge_dao_double,
            zcl_cd_ops_factory=>go_trace_dao_double,
            zcl_cd_ops_factory=>go_pay_outcome_double,
+           zcl_cd_ops_factory=>go_pay_request_double,
            zcl_cd_ops_factory=>go_pay_outcome_dao_double,
            zcl_cd_ops_factory=>go_pay_snap_queue_double,
            zcl_cd_ops_factory=>gt_plugin_double,

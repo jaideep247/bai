@@ -9,6 +9,7 @@
 *& 2026-11-06 | Audit A51: approved table / field checks.
 *& 2026-11-06 | Modern-syntax sweep: caught exception lx_error.
 *& 2026-11-08 | Table consolidation: a blank approved field means the whole table (ZCD_OPS_TABWL; was '*').
+*& 2026-11-08 | Keyset paging: condition and order of a watermark read, time field type.
 *&---------------------------------------------------------------------*
 CLASS ltc_query DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -25,6 +26,10 @@ CLASS ltc_query DEFINITION FINAL
     CONSTANTS gc_file_fld TYPE zif_cd_fmon_types=>ty_fieldname VALUE 'FILE_NAME_X'.
     CONSTANTS gc_date_fld TYPE zif_cd_fmon_types=>ty_fieldname VALUE 'CREATED_ON_X'.
     CONSTANTS gc_stat_fld TYPE zif_cd_fmon_types=>ty_fieldname VALUE 'STATUS_X'.
+    CONSTANTS gc_seek_where TYPE string
+      VALUE `( CREATED_ON_X > @LV_SEEK_DATE OR ( CREATED_ON_X = @LV_SEEK_DATE AND STATUS_X > @LV_SEEK_TIME )` &
+            ` OR ( CREATED_ON_X = @LV_SEEK_DATE AND STATUS_X = @LV_SEEK_TIME AND FILE_NAME_X > @LV_SEEK_KEY ) )`.
+    CONSTANTS gc_seek_order TYPE string VALUE `CREATED_ON_X, STATUS_X, FILE_NAME_X`.
 
     DATA ms_query TYPE zif_cd_fmon_types=>ty_query.
     DATA mt_fields TYPE zif_cd_fmon_types=>tt_ddic_field.
@@ -46,6 +51,8 @@ CLASS ltc_query DEFINITION FINAL
     METHODS approved_read_passes FOR TESTING.
     METHODS unapproved_table_is_rejected FOR TESTING.
     METHODS unapproved_field_is_rejected FOR TESTING.
+    METHODS seek_reads_after_the_key FOR TESTING.
+    METHODS seek_time_must_be_a_time FOR TESTING.
 
     "! Returns the message number raised by the approval check, blank when approved
     METHODS act_approval
@@ -175,6 +182,31 @@ CLASS ltc_query IMPLEMENTATION.
                                    ( table_name = gc_table field_name = gc_date_fld ) ) )
       exp = '249'
       msg = 'The status field is not approved and must raise 249' ).
+  ENDMETHOD.
+
+
+  " Rule (2026-11-08): a keyset read takes the rows after (date, time, key) in that order - the
+  " watermark read of the payment request log; without a key field there is no keyset
+  METHOD seek_reads_after_the_key.
+    configure_scenario( VALUE #( ) ).
+    cl_abap_unit_assert=>assert_initial( act = zcl_cd_fmon_query=>seek_condition( ms_query )
+                                         msg = 'No key field: no keyset' ).
+    ms_query-seek_key_field  = gc_file_fld.
+    ms_query-seek_time_field = gc_stat_fld.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_query=>seek_condition( ms_query ) exp = gc_seek_where
+                                        msg = 'Rows after date, time, key' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_fmon_query=>seek_order( ms_query ) exp = gc_seek_order
+                                        msg = 'Ordered by date, time, key' ).
+  ENDMETHOD.
+
+
+  " Rule: the time field of a keyset read must be a DDIC time (message 203)
+  METHOD seek_time_must_be_a_time.
+    configure_scenario( VALUE #( ) ).
+    ms_query-seek_key_field  = gc_file_fld.
+    ms_query-seek_time_field = gc_stat_fld.
+    cl_abap_unit_assert=>assert_equals( act = act( ) exp = '203'
+                                        msg = 'Character time field must raise 203' ).
   ENDMETHOD.
 
 ENDCLASS.

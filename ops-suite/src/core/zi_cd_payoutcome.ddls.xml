@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZI_CD_PAYOUTCOME</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Payment outcome version (basic)</DDTEXT>
+    <DDTEXT>Payment worklist row (basic)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>

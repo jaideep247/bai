@@ -11,6 +11,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-08 | Table consolidation: approved rows from ZCD_OPS_TABWL (FMON / SOURCE); blank field =
 *&            | the whole table (was '*').
+*& 2026-11-08 | Keyset paging of a watermark read (SEEK_CONDITION / SEEK_ORDER, seek key and time fields validated):
+*&            | the request log read of the payment worklist (source REQUESTS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - DDIC validation of configured reads</p>
 CLASS zcl_cd_fmon_query DEFINITION
@@ -44,6 +46,22 @@ CLASS zcl_cd_fmon_query DEFINITION
       RAISING
         zcx_cd_ops_error.
 
+    "! Keyset condition of a watermark read (dynamic WHERE part, host variables LV_SEEK_DATE /
+    "! LV_SEEK_TIME / LV_SEEK_KEY of the reader): the rows after (date, time, key) of the query's
+    "! SEEK_* values; blank when the query has no SEEK_KEY_FIELD or no date field
+    CLASS-METHODS seek_condition
+      IMPORTING
+        is_query        TYPE zif_cd_fmon_types=>ty_query
+      RETURNING
+        VALUE(rv_where) TYPE string.
+
+    "! ORDER BY of a keyset read: date, time (when configured) and key field; blank without seek
+    CLASS-METHODS seek_order
+      IMPORTING
+        is_query        TYPE zif_cd_fmon_types=>ty_query
+      RETURNING
+        VALUE(rv_order) TYPE string.
+
     "! Audit A51: the table and every queried field (and the date / IN field) must be
     "! approved in ZCD_OPS_TABWL, FMON / SOURCE (blank field = the whole table)
     CLASS-METHODS check_approved
@@ -56,6 +74,21 @@ CLASS zcl_cd_fmon_query DEFINITION
   PRIVATE SECTION.
     "! DDIC name, optionally with namespace (/ABC/NAME); length checked separately
     CONSTANTS gc_ddic_name_pattern TYPE string VALUE `^/?[A-Z][A-Z0-9_]*(/[A-Z0-9_]+)?$`.
+    "! ABAP type of a DDIC time field (TIMS)
+    CONSTANTS gc_time_type TYPE zif_cd_fmon_types=>ty_inttype VALUE 'T'.
+    "! Tokens of the keyset condition (dynamic WHERE; the host variables are the reader's)
+    CONSTANTS:
+      BEGIN OF gc_seek,
+        after_date TYPE string VALUE ` > @LV_SEEK_DATE`,
+        on_date    TYPE string VALUE ` = @LV_SEEK_DATE`,
+        after_time TYPE string VALUE ` > @LV_SEEK_TIME`,
+        on_time    TYPE string VALUE ` = @LV_SEEK_TIME`,
+        after_key  TYPE string VALUE ` > @LV_SEEK_KEY`,
+        open       TYPE string VALUE `( `,
+        or_open    TYPE string VALUE ` OR ( `,
+        and        TYPE string VALUE ` AND `,
+        close      TYPE string VALUE ` )`,
+      END OF gc_seek.
 
     CLASS-METHODS check_field
       IMPORTING
@@ -125,6 +158,58 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
                    iv_field  = is_query-in_field
                    it_fields = it_fields ).
     ENDIF.
+
+    " Keyset paging (watermark read): key field must exist, the time field must be a time
+    IF is_query-seek_key_field IS NOT INITIAL.
+      check_field( iv_table  = is_query-table_name
+                   iv_field  = is_query-seek_key_field
+                   it_fields = it_fields ).
+    ENDIF.
+    IF is_query-seek_key_field IS NOT INITIAL AND is_query-seek_time_field IS NOT INITIAL.
+      DATA(ls_time) = check_field( iv_table  = is_query-table_name
+                                   iv_field  = is_query-seek_time_field
+                                   it_fields = it_fields ).
+      IF ls_time-inttype <> gc_time_type.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e203(zcd_ops) WITH ls_time-fieldname is_query-table_name ls_time-inttype gc_time_type.
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD seek_condition.
+    IF is_query-seek_key_field IS INITIAL OR is_query-date_field IS INITIAL
+       OR is_query-date_kind <> zif_cd_fmon_types=>gc_date_kind-date.
+      RETURN.
+    ENDIF.
+    DATA(lv_date) = to_upper( condense( CONV string( is_query-date_field ) ) ).
+    DATA(lv_key) = to_upper( condense( CONV string( is_query-seek_key_field ) ) ).
+    " ( D > date OR ( D = date AND T > time ) OR ( D = date AND T = time AND K > key ) ), without T when
+    " the source has no time field
+    rv_where = |{ gc_seek-open }{ lv_date }{ gc_seek-after_date }|.
+    IF is_query-seek_time_field IS NOT INITIAL.
+      DATA(lv_time) = to_upper( condense( CONV string( is_query-seek_time_field ) ) ).
+      rv_where = |{ rv_where }{ gc_seek-or_open }{ lv_date }{ gc_seek-on_date }{ gc_seek-and }{ lv_time }| &&
+                 |{ gc_seek-after_time }{ gc_seek-close }|.
+      rv_where = |{ rv_where }{ gc_seek-or_open }{ lv_date }{ gc_seek-on_date }{ gc_seek-and }{ lv_time }| &&
+                 |{ gc_seek-on_time }{ gc_seek-and }{ lv_key }{ gc_seek-after_key }{ gc_seek-close }{ gc_seek-close }|.
+      RETURN.
+    ENDIF.
+    rv_where = |{ rv_where }{ gc_seek-or_open }{ lv_date }{ gc_seek-on_date }{ gc_seek-and }{ lv_key }| &&
+               |{ gc_seek-after_key }{ gc_seek-close }{ gc_seek-close }|.
+  ENDMETHOD.
+
+
+  METHOD seek_order.
+    IF seek_condition( is_query ) IS INITIAL.
+      RETURN.
+    ENDIF.
+    DATA(lt_fields) = VALUE string_table( ( to_upper( condense( CONV string( is_query-date_field ) ) ) ) ).
+    IF is_query-seek_time_field IS NOT INITIAL.
+      INSERT to_upper( condense( CONV string( is_query-seek_time_field ) ) ) INTO TABLE lt_fields.
+    ENDIF.
+    INSERT to_upper( condense( CONV string( is_query-seek_key_field ) ) ) INTO TABLE lt_fields.
+    rv_order = concat_lines_of( table = lt_fields sep = `, ` ).
   ENDMETHOD.
 
 
@@ -161,6 +246,12 @@ CLASS zcl_cd_fmon_query IMPLEMENTATION.
     ENDIF.
     IF is_query-in_field IS NOT INITIAL.
       INSERT to_upper( condense( is_query-in_field ) ) INTO TABLE lt_used.
+    ENDIF.
+    IF is_query-seek_key_field IS NOT INITIAL.
+      INSERT to_upper( condense( is_query-seek_key_field ) ) INTO TABLE lt_used.
+    ENDIF.
+    IF is_query-seek_time_field IS NOT INITIAL.
+      INSERT to_upper( condense( is_query-seek_time_field ) ) INTO TABLE lt_used.
     ENDIF.
     LOOP AT lt_used ASSIGNING FIELD-SYMBOL(<lv_field>).
       IF NOT line_exists( lt_table_rows[ field_name = <lv_field> ] ).
