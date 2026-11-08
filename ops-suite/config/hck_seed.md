@@ -137,14 +137,14 @@ uncapped count.
 | E_QUEUES | Q_HOLD | * | 1 | 5 | X | NONE | | |
 | E_QUEUES | Q_STUCK | * | 1 | 50 | X | NONE | | |
 | E_QUEUES | Q_OLDEST_MIN | * | 60 | 240 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | DWIR | 1 | 2 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | DACH | 2 | 3 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | CACH | 2 | 3 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | DCHQ | 61 | 91 | X | NONE | | |
-| A_INFLIGHT | AGE_OLDEST | CCRD | 2 | 3 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DWIR | 3 | 4 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DACH | 3 | 4 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | CACH | 3 | 4 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | DCHQ | 0 | 0 | X | NONE | | |
+| A_INFLIGHT | AGE_OLDEST | CCRD | 3 | 4 | X | NONE | | |
 | A_INFLIGHT | AGE_OLDEST | DACI | `‹confirm›` | `‹confirm›` | X | NONE | | |
 
-`A_INFLIGHT` AGE_OLDEST (**confirm**): the key (BUKRS column) is flow + method class; AMBER / RED = the age from which a payment is late (warning) / critical, because a limit is reached at value ≥ limit and 0 means *not set*. Wire: warning 0 / critical 1 business day after the value date → AMBER 1 / RED 2; ACH: warning 1 / critical 2 → 2 / 3; cheque: > 60 / > 90 calendar days uncashed → 61 / 91. The check classifies every payment with the same row (counts OVER_WARN_CNT / OVER_CRIT_CNT, amounts per currency) and the engine judges AGE_OLDEST with it - one source. A watched key without row is `LIMITS_NOT_CONFIGURED` (W), never green. `E_NUMRANGE` uses the `*` row (DIM1 object/subobject/interval/year is longer than 4 characters); `E_QUEUES` rows may be overridden per source (`QOUT`, `QIN`, `BGRF`).
+`A_INFLIGHT` AGE_OLDEST (**confirm**): the key (BUKRS column) is flow + method class; AMBER / RED = the age from which a payment is late (warning) / critical, because a limit is reached at value ≥ limit and 0 means *not set*. **Confirmed by the user 2026-11-08:** the team makes sure every ACH, wire and card payment is CLEARED within at most 3 days, so wire, ACH (both flows) and card: AMBER 3 (last day - act today) / RED 4 (the 3 days are over), business days after the value date by the factory calendar. Cheques: no limit (AMBER = RED = 0, not set) - when a cheque is cashed depends on the payee; outstanding cheques are still counted and listed, never late. A stale-cheque limit (e.g. void after N days) is a row change here if the payment engine has such a policy - **confirm**. The check classifies every payment with the same row (counts OVER_WARN_CNT / OVER_CRIT_CNT, amounts per currency) and the engine judges AGE_OLDEST with it - one source. A watched key without row is `LIMITS_NOT_CONFIGURED` (W), never green. `E_NUMRANGE` uses the `*` row (DIM1 object/subobject/interval/year is longer than 4 characters); `E_QUEUES` rows may be overridden per source (`QOUT`, `QIN`, `BGRF`).
 
 Rules: higher-is-worse → a zero limit means *not set*; lower-is-worse (`' '`) → both limits apply
 (`PAY_REQ` red 0 = no payment requests yesterday is RED); amber = red = 0 → static limits off.
