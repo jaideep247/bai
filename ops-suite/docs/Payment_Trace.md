@@ -7,9 +7,17 @@ Objects (package `ZCD_OPS_CORE`, `src/core`): report `ZCD_OPS_PAYMENT_TRACE`, en
 
 ## 1. What it does — and what it never does
 
-Support enters a **FIN ID + source** (primary), or a **clearing / payment document**, or a **cheque number**. The trace shows, per payment attempt, the evidence from the original payment request through SAP processing, file generation, PRISM handoff, bank acknowledgement, settlement / encashment / return, payment engine clearing and G/L transfer.
+Support enters a **FIN ID + source** (the payment request; primary), or a **clearing / payment document**, or a **payment reference / cheque number**. The trace shows, per payment attempt, the evidence from the original payment request through SAP processing, file generation, PRISM handoff, bank acknowledgement, settlement / encashment / return, payment engine clearing and G/L transfer.
 
 It **only reads**. It posts, reverses, clears, resets nothing; starts or reruns no business job; removes no lock; moves or re-sends no file; changes no interface, payload or integration routing; writes no business table. The interface `ZIF_CD_OPS_TRACE_DAO` has no write method; the engine and the report write nothing — not even to the suite's own stores (handover notes: §8, proposed).
+
+**Finding any payment (2026-11-08, exceptions-only worklist).** The dashboard lists only open payments, open requests and exceptions; every other payment is found here, by key, capped by `TRACE_MAX_ROWS`:
+
+| Input | Keyed read |
+|---|---|
+| Payment request: FIN + source | Request log by FIN (+ SOURCE), items by `DFKKOP-ZZ_FIN_TRANS_NUM` |
+| Payment document | Items by `DFKKOP-AUGBL` |
+| Payment reference / cheque number | The value as a payment document (as given and zero-padded to 12 digits - the statement reference CHECT of methods E G H I J K L is the AUGBL) and as a cheque number: `DFKKCR-ZTNUM` as given, without leading zeros and zero-padded to 13 digits; a register row counts when its ZTNUM, or its **last 13 characters** (the statement shows the last 13, `ZCL_CD_OPS_CHEQUE_LINK`), equals the reference; its DOC1R is the payment document. Limitation: a register number longer than 13 characters with a non-zero prefix is found by its full number only (keyed read; ZTNUM layout VERIFY-SE11, §9) |
 
 ## 2. Stages
 
@@ -28,7 +36,8 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | 9 | NOC | `DFKKNRP` (NOC lot items; shared EBS read `GET_NOC_ITEMS`) | `INFOF` (CHAR 50, **not a key**) = the attempt's clearing document (AUGBL) or a payment reference of the attempt (FIN of its items, cheque number) — each read as stored and without leading zeros, matched after condensing / removing leading zeros of all-digit values; exact INFOF content VERIFY-SE11 | Lot KEYN1, item POSNA, **NOC reason `FLGRD`** and the INFOF value. **Informational** (account data change, not a return): VERIFIED when found, NOT_APPLICABLE (`NO_NOC_ITEM`) when not — never MISSING; several items with different FLGRD or the row cap = AMBIGUOUS (all listed). NOC rows never set the first gap and never change the verdict |
 | 10 | FICA_CLEARING | `DFKKOP` (current) / history source (historical); `BSEG` | item + AUGBL; BSEG by document key with `XREF2 = AUGBL` | Clearing date; clearing-account line of the G/L transfer document (not for method C) |
 | 11 | GL | `DFKKKO` → `DFKKSUMC` → `BKPF` | `DFKKKO-FIKEY = DFKKSUMC-FIKEY = BKPF-AWKEY`, `AWTYP = TRACE_GL_AWTYP` (FKKSU), same BUKRS, `STBLG` blank | G/L document BUKRS / BELNR / GJAHR, entry date / time |
-| 12 | OUTCOME | canonical evaluator `ZIF_CD_OPS_PAY_OUTCOME` (rules `ZCD_HCK_CLRRULE`, evidence plug-ins `ZCL_CD_HCK_EV_*`; 2026-11-07) | current attempt's clearing reference = payment document; latest DPAYH run of it; FIN sources from the request log (SUCCESS rows first) | The **same verdict as the morning report check A_INFLIGHT and the transactions dashboard**: outcome (CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING / IN_FLIGHT / UNDETERMINED / INCONSISTENT / AMBIGUOUS / REVERSED), run date / ID, deciding evidence kind and reference, finding. Row status VERIFIED (outcome known), AMBIGUOUS (FIN in two sources - the input source does not pick one), FAILED (INCONSISTENT), UNAVAILABLE (UNDETERMINED, or configuration / request source not readable), NOT_APPLICABLE (method in no watched class). **Informational for the evidence verdict** (as NOC); the result carries `OUTCOME` when every current attempt has the same |
+| 1a | REQUEST_DUE | request rule `ZIF_CD_OPS_PAY_REQUEST` (2026-11-08) | FIN + source of the SUCCESS request rows | Due date (requested payment date, cut-off `PAYOUT_REQ_CUTOFF`, next business day), stage (`PRQ_NO_ITEM`, `PRQ_PAYMENT_BLOCK`, `PRQ_NOT_IN_RUN`, `PRQ_CLEARED_NO_RUN`, `PRQ_PAID`, `PRQ_PAID_LATE`, `PRQ_CANCELLED`); FAILED when not paid by the end of the due date or paid late, else VERIFIED. **Informational** (as OUTCOME): never the first gap, never the verdict |
+| 12 | OUTCOME | canonical evaluator `ZIF_CD_OPS_PAY_OUTCOME` (rules `ZCD_HCK_CLRRULE`, evidence plug-ins `ZCL_CD_HCK_EV_*`; 2026-11-07) | current attempt's clearing reference = payment document; latest DPAYH run of it; FIN sources from the request log (SUCCESS rows first) | The **same verdict as the morning report check A_INFLIGHT and the transactions dashboard (worklist)**; a clean final payment (no worklist row any more) is judged here live: outcome (CLEARED / RETURNED / RETRIEVED / VOIDED / PENDING / IN_FLIGHT / UNDETERMINED / INCONSISTENT / AMBIGUOUS / REVERSED), run date / ID, deciding evidence kind and reference, finding. Row status VERIFIED (outcome known), AMBIGUOUS (FIN in two sources - the input source does not pick one), FAILED (INCONSISTENT), UNAVAILABLE (UNDETERMINED, or configuration / request source not readable), NOT_APPLICABLE (method in no watched class). **Informational for the evidence verdict** (as NOC); the result carries `OUTCOME` when every current attempt has the same |
 
 ## 3. Statuses and verdict
 
@@ -41,7 +50,7 @@ Rows are grouped by **attempt**: attempt 0 holds the request, the open item(s) a
 | FAILED | Positive evidence of failure: NACK, return lot, retrieval, terminal cheque status |
 | NOT_APPLICABLE | Stage does not exist for this payment (e.g. no ACK for the method) — with reason |
 
-There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict; NOC rows and OUTCOME rows are information only and are ignored by the verdict and the first gap (the evidence verdict and the payment's canonical outcome answer two different questions: "is the evidence chain complete?" and "what happened to the money?"). **Incomplete evidence can never produce COMPLETE.**
+There is no PENDING: no deterministic per-stage rule exists yet (proposed: SLA from the FMON SLA table). The **first missing / failed milestone** of every attempt is flagged (`FIRST_GAP`), and the result names the first one of the request and current attempts. Verdict: `NOT_FOUND` (nothing for the keys) › `FAILED` › `AMBIGUOUS` › `INCOMPLETE` (any MISSING / UNAVAILABLE, or no current attempt) › `COMPLETE`. Historical attempts are shown as evidence and do not decide the verdict; NOC, REQUEST_DUE and OUTCOME rows are information only and are ignored by the verdict and the first gap (the evidence verdict and the payment's canonical outcome answer two different questions: "is the evidence chain complete?" and "what happened to the money?"). **Incomplete evidence can never produce COMPLETE.**
 
 ## 4. The two lookup paths (verified against the repository)
 
@@ -89,7 +98,7 @@ Shared with the morning report (2026-11-07): the in-flight check `A_INFLIGHT` (`
 | Parameter | Default | Meaning |
 |---|---|---|
 | `TRACE_MAX_ROWS` | 50 | Row cap per read; reaching it makes the stage AMBIGUOUS (`ROW_CAP_REACHED`) |
-| `TRACE_SRC_REQUEST` | — | `TABLE=ZCD_PAYM_REQ_LOG;KEY=<FIN field>;KEY2=SOURCE;REF=COUNTER;STATUS=ZZ_STATUS;DATE=..;TIME=..;INFO=ZZ_MEMBER_NO` |
+| `TRACE_SRC_REQUEST` | — | `TABLE=ZCD_PAYM_REQ_LOG;KEY=<FIN field>;KEY2=SOURCE;REF=COUNTER;STATUS=ZZ_STATUS;DATE=..;TIME=..;INFO=ZZ_MEMBER_NO;DUE=<requested payment date>;AMOUNT=<amount>` - DATE / TIME = received date and time (keyset read of the snapshot's REQUESTS source), `DUE` / `AMOUNT` (2026-11-08) for the due date and the amounts of the morning report (VERIFY-SE11) |
 | `TRACE_SRC_HISTORY` | — | `TABLE=DFKKRAPT;KEY=<item doc>;REF=<historical clearing doc>;DATE=<reset date>;TIME=<reset time>` |
 | `TRACE_SRC_REGUT` | — | `TABLE=ZCDT_REGUT;KEY=<LAUFD field>;KEY2=<LAUFI field>;REF=<file key = FMON source REGUT FILE_KEY_FIELD>;DATE=..;TIME=..` |
 | `TRACE_SRC_ACK` | — | Payment-level ACK, e.g. `TABLE=ZCD_ACH_ACK;KEY=<payment key>;STATUS=..;DATE=..;TIME=..` (blank = file level from FMON) |
@@ -130,7 +139,8 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 | `DFKKOP-PYMET`, `AUGRD`, `AUGDT`, `ZZ_FIN_TRANS_NUM` index | Fields exist; reversal clearing reason value(s); secondary index on ZZ_FIN_TRANS_NUM (performance) |
 | `DFKKKO-STBEL`, `CPUDT`, `CPUTM` | Reversal document field on the clearing document header |
 | `DFKKRAPT` | Table purpose (clearing reset history), the item key, historical clearing document, reset date / time fields → `TRACE_SRC_HISTORY` |
-| `ZCD_PAYM_REQ_LOG` | FIN field, date / time fields, `ZZ_MEMBER_NO` |
+| `ZCD_PAYM_REQ_LOG` | FIN field, date / time fields, `ZZ_MEMBER_NO`; requested payment date (`DUE=`), amount (`AMOUNT=`), time zone of the received time (assumed `FMON_TIME_ZONE`), an index on received date / time for the keyset read |
+| `DFKKCR-ZTNUM` layout | Length and padding of the register number vs. the 13 characters on the statement (last-13 search of a reference) |
 | `BUT000` source field and BPEXT index | `TRACE_BP_SOURCE_FIELD` |
 | `ZCDT_REGUT` | LAUFD / LAUFI and file key fields; that the file key equals the FMON REGUT source FILE_KEY_FIELD |
 | ACK tables (`ZCD_ACH_ACK`, `ZCD_WIRE_ACK`) | Payment key = clearing reference? status values for NACK |
@@ -180,6 +190,9 @@ ABAP Unit (`ZCL_CD_OPS_TRACE_ENGINE` local test class `ltc_trace`, LTD read-repo
 | `noc_found_by_payment_ref` | NOC item with INFOF = payment reference (FIN) → VERIFIED |
 | `no_noc_is_not_applicable` | No NOC item → NOT_APPLICABLE (`NO_NOC_ITEM`), never MISSING, no gap |
 | `noc_never_changes_verdict` | Two NOC items with different FLGRD → AMBIGUOUS rows, verdict still COMPLETE, no first gap |
+| `request_due_shown_as_info` | REQUEST_DUE row with due date and stage; never the first gap, verdict unchanged |
+| `reference_finds_cheque` | Payment reference = last 13 of the register number → cheque's payment document traced |
+| `reference_is_payment_doc` | Payment reference = AUGBL without leading zeros → the payment traced |
 
 `ltc_trace` injects an evaluator without verdict (OUTCOME row NOT_APPLICABLE), so every evidence-chain test above is unchanged. `ltc_outcome` traces the **shared negative fixtures** (`ZCL_CD_OPS_PAY_FIXTURE`) with the real evaluator and the delivered evidence plug-ins:
 
