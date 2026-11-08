@@ -16,7 +16,6 @@ define root view entity ZR_CD_HckCfgAll
   composition [0..*] of ZR_CD_HckBtcRole as _HckBtcRole
   composition [0..*] of ZR_CD_HckSeqOutcome as _HckSeqOutcome
   composition [0..*] of ZR_CD_HckReconSet as _HckReconSet
-  composition [0..*] of ZR_CD_HckReconBtc as _HckReconBtc
 {
   key 1 as SingletonID,
       max( Chg.LastChangedAt ) as LastChangedAtMax,
@@ -34,8 +33,7 @@ define root view entity ZR_CD_HckCfgAll
       _HckEvidenceSet,
       _HckBtcRole,
       _HckSeqOutcome,
-      _HckReconSet,
-      _HckReconBtc
+      _HckReconSet
 }
 where
   I_Language.Language = $session.system_language

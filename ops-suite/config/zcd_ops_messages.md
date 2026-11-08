@@ -337,7 +337,10 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
 | 420 | &1: each token must be BLANK or one register state character |
 | 421 | &1 is not a finding code of the in-flight check (upper case) |
+| 422 | &1 is required when &2 is '&3' |
 | 423 | &1 must be blank when &2 is '&3' |
+| 424 | Value &1 of &2 belongs to another usage (&3) |
+| 425 | Value &1 of &2 does not have the form &3 |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |

@@ -57,6 +57,10 @@ SEV = 'B,E,W,I'
 # outbound generation / bank acknowledgement (one constant line of the pool: at most 84 characters)
 DEADLINE_STAGES = 'FILE_RECEIVED,FILE_LOADED,FULLY_PROCESSED,GENERATED_IN_SAP,ACK_RECEIVED'
 ACTIONS = 'AUTO_POST,EXCEPTION,BLOCK,NOTIFY,ON_ACCOUNT'
+# ZCD_HCK_BTCROLE (table consolidation 2026-11-08): the roles of a code in a reconciliation set
+# (ZIF_CD_HCK_RECON_TYPES=>GC_ROLE) and the form of a lifecycle scope (flow D / C + method class)
+RECON_ROLES = 'LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE'
+LIFECYCLE_SCOPE = '[DC][A-Z0-9_]{1,3}'
 SPEC = {
     'ebs': dict(
         folder='ebs', pe_area='EBS', root='EbsCfgAll', draft='zcd_d_ebscfg', service='ZUI_CD_EBS_CFG',
@@ -141,8 +145,17 @@ SPEC = {
              [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
             ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
-            ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role', 'Bank transaction code roles', [],
-             [('enum', 'flow', 'D,C'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'), ('enum', 'compare_amount', ',X,R,C')]),
+            # Table consolidation 2026-11-08: one table of bank code roles with a USAGE - LIFECYCLE (scope =
+            # flow + method class, open list of roles) and RECON (scope = reconciliation set, fixed roles;
+            # was ZCD_HCK_RCBTC); the roles of one usage are refused for the other
+            ('zcd_hck_btcrole', 'HckBtcRole', 'zcd_d_hckbtcr', 'Bank code role',
+             'Bank code roles (lifecycle and reconciliation)', [],
+             [('enum', 'usage', 'LIFECYCLE,RECON'), ('enum', 'scheme', 'BAI2,ISO,PRTRY'),
+              ('when', 'usage', 'LIFECYCLE', [('form', 'scope', LIFECYCLE_SCOPE), ('required', 'role'),
+                                              ('reserved', 'role', RECON_ROLES),
+                                              ('enum', 'compare_amount', ',X,R,C')]),
+              ('when', 'usage', 'RECON', [('enum', 'role', RECON_ROLES), ('enum', 'scheme', 'BAI2'),
+                                          ('blank', 'compare_amount')])]),
             ('zcd_hck_seqout', 'HckSeqOutcome', 'zcd_d_hckseqo', 'Sequence outcome', 'Role sequence outcomes', [],
              [('enum', 'flow', 'D,C'), ('pcre', 'seq_pattern'), ('enum', 'expected_dfkkrp', ',0,1,2,3,4,5,6,7,8,9'),
               ('enum', 'severity', ',' + SEV),
@@ -154,9 +167,6 @@ SPEC = {
             ('zcd_hck_rcset', 'HckReconSet', 'zcd_d_hckrcset', 'Reconciliation set',
              'Reconciliation clearing account sets', [],
              [('enum', 'kind', 'THREEWAY,ACH_ZUONR,STRIPE'), ('enum', 'side', 'C,D')]),
-            ('zcd_hck_rcbtc', 'HckReconBtc', 'zcd_d_hckrcbtc', 'Reconciliation bank code',
-             'Reconciliation bank code roles', [],
-             [('enum', 'role', 'LEG,DEPOSIT,CUTOFF,REDEPOSIT,CHEQUE,OTHER,IGNORE')]),
         ]),
     'core': dict(
         folder='core', pe_area='CORE', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
@@ -218,7 +228,12 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'group_fields': 'Generation group fields (comma list)',
           # Three-way reconciliation (A_RECON_3WAY, 2026-11-07)
           'invert_bank': 'Invert bank sign (leg mapping)', 'leg_bank': 'Compare bank with G/L',
-          'leg_fica': 'Compare G/L with payment engine control total'}
+          'leg_fica': 'Compare G/L with payment engine control total',
+          # Table consolidation 2026-11-08
+          'usage': 'Usage (LIFECYCLE / RECON)',
+          'scope': 'Scope (lifecycle: flow + method class; recon: set ID)',
+          'purpose': 'Purpose (FMON: SOURCE; HCK: READ / DRIFT)',
+          'field_name': 'Field (blank = whole table)'}
 ADMIN = ('last_changed_by', 'last_changed_at', 'local_last_changed_at')
 LEGACY_ADMIN = ('changed_by', 'changed_at')
 

@@ -1,14 +1,14 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Bank transaction code roles'
+@EndUserText.label: 'Bank code roles (lifecycle and reconciliation)'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity ZR_CD_HckBtcRole
   as select from zcd_hck_btcrole
   association to parent ZR_CD_HckCfgAll as _HckCfgAll on $projection.SingletonID = _HckCfgAll.SingletonID
 {
-      @EndUserText.label: 'Flow'
-  key flow as Flow,
-      @EndUserText.label: 'Method class'
-  key method_class as MethodClass,
+      @EndUserText.label: 'Usage (LIFECYCLE / RECON)'
+  key usage as Usage,
+      @EndUserText.label: 'Scope (lifecycle: flow + method class; recon: set ID)'
+  key scope as Scope,
       @EndUserText.label: 'Scheme'
   key scheme as Scheme,
       @EndUserText.label: 'BTC code'

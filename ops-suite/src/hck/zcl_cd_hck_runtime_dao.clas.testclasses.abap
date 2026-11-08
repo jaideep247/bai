@@ -16,6 +16,8 @@
 *& 2026-11-07 | BSAS assignment test replaced; ltc_inflight_reads (user rules 1-5).
 *& 2026-11-07 | payments_by_document_all_runs: payment runs by payment document (canonical outcome).
 *& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
+*& 2026-11-08 | Table consolidation: bank code roles with usage LIFECYCLE / RECON; the lifecycle read splits
+*&            | SCOPE and never returns a RECON row (btc_roles_lifecycle_only).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -440,6 +442,7 @@ CLASS ltc_inflight_reads DEFINITION FINAL FOR TESTING
     METHODS gl_lines_by_xref2_window   FOR TESTING.
     METHODS gl_lines_by_account_capped FOR TESTING.
     METHODS configuration_active_only  FOR TESTING.
+    METHODS btc_roles_lifecycle_only   FOR TESTING.
     METHODS reference_rows_read        FOR TESTING.
     METHODS reference_needs_whitelist  FOR TESTING.
     METHODS reference_unknown_field    FOR TESTING.
@@ -555,12 +558,18 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_rule-active = abap_false.
     INSERT ls_rule INTO TABLE lt_rule.
     go_env->insert_test_data( lt_rule ).
-    ls_role-flow = 'C'.
-    ls_role-method_class = 'CRD'.
+    " Lifecycle row: SCOPE = flow C + method class CRD (table consolidation 2026-11-08)
+    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-lifecycle.
+    ls_role-scope = 'CCRD'.
     ls_role-scheme = 'BAI2'.
     ls_role-btc_code = '195'.
     ls_role-role = 'PAYOUT_RECEIVED'.
     ls_role-active = abap_true.
+    INSERT ls_role INTO TABLE lt_role.
+    " Reconciliation row of the same code (set STRIPE_US): never a lifecycle role
+    ls_role-usage = zif_cd_hck_types=>gc_btc_usage-recon.
+    ls_role-scope = 'STRIPE_US'.
+    ls_role-role = 'DEPOSIT'.
     INSERT ls_role INTO TABLE lt_role.
     go_env->insert_test_data( lt_role ).
     ls_out-flow = 'D'.
@@ -651,6 +660,23 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_outcomes[ 1 ]-outcome exp = 'CLEARED' msg = 'Outcome' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_evidence_settings( 'STRIPE' ) ) exp = 1
                                             msg = 'Active settings of the set only' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (table consolidation 2026-11-08): the lifecycle reads only usage LIFECYCLE of ZCD_HCK_BTCROLE
+  " and splits SCOPE into flow and method class; a reconciliation role of the same code never leaks in
+  METHOD btc_roles_lifecycle_only.
+    TRY.
+        DATA(lt_roles) = mo_cut->get_btc_roles( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1 msg = 'Only the lifecycle row' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-flow exp = 'C' msg = 'Flow from SCOPE' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-method_class exp = 'CRD'
+                                            msg = 'Method class from SCOPE' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_roles[ role = 'DEPOSIT' ] ) )
+                                           msg = 'A reconciliation role never leaks into the lifecycle' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

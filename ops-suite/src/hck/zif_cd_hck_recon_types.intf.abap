@@ -4,11 +4,13 @@
 *& Types and constants of the three-way reconciliation check A_RECON_3WAY
 *& (bank <-> G/L transit / clearing account <-> payment engine per company
 *& code, clearing account, currency and day; Stripe descriptor groups; ACH
-*& assignment pairs): configuration rows (ZCD_HCK_RCSET, ZCD_HCK_RCBTC),
+*& assignment pairs): configuration rows (ZCD_HCK_RCSET, ZCD_HCK_BTCROLE RECON),
 *& the grouped reads of ZIF_CD_HCK_RECON_DAO, the evaluated group days,
 *& check codes, buckets, metrics, messages and parameters.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
+*&            | ZCD_HCK_RCBTC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation types</p>
 "! Shared by ZCL_CD_HCK_C_RECON3 (check), ZCL_CD_HCK_RECON_EVAL (pure rules) and
@@ -67,7 +69,7 @@ INTERFACE zif_cd_hck_recon_types
     END OF ty_set.
   TYPES tt_set TYPE STANDARD TABLE OF ty_set WITH EMPTY KEY.
 
-  "! ZCD_HCK_RCBTC: role of a bank code in a set
+  "! ZCD_HCK_BTCROLE usage RECON (SCOPE = set id): role of a bank code in a set
   TYPES:
     BEGIN OF ty_btc_role,
       set_id TYPE ty_set_id,

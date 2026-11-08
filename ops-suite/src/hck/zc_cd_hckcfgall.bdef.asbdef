@@ -25,7 +25,6 @@ define behavior for ZC_CD_HckCfgAll alias HckCfgAll
   use association _HckBtcRole { create; with draft; }
   use association _HckSeqOutcome { create; with draft; }
   use association _HckReconSet { create; with draft; }
-  use association _HckReconBtc { create; with draft; }
 }
 
 define behavior for ZC_CD_HckCheckDef alias HckCheckDef
@@ -137,15 +136,6 @@ use etag
 }
 
 define behavior for ZC_CD_HckReconSet alias HckReconSet
-use etag
-{
-  use update;
-  use delete;
-
-  use association _HckCfgAll { with draft; }
-}
-
-define behavior for ZC_CD_HckReconBtc alias HckReconBtc
 use etag
 {
   use update;

@@ -5,7 +5,7 @@
    <DDLX>
     <METADATA>
      <NAME>ZC_CD_HCKBTCROLE</NAME>
-     <DESCRIPTION>Health check setup - Bank transaction code roles</DESCRIPTION>
+     <DESCRIPTION>Health check setup - Bank code roles (lifecycle and reconcil</DESCRIPTION>
      <MASTER_LANGUAGE>EN</MASTER_LANGUAGE>
     </METADATA>
    </DDLX>

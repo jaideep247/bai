@@ -34,6 +34,8 @@
 *&            | check status, completion, evidence availability, baseline mode, run scope (message 300).
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: GC_BTC_USAGE (ZCD_HCK_BTCROLE-USAGE LIFECYCLE / RECON; ZCD_HCK_RCBTC
+*&            | merged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -834,5 +836,15 @@ INTERFACE zif_cd_hck_types
       "! Scope of a run in ZCD_HCK_RESULT-RUN_SCOPE (variant and the selection ranges)
       run_scope                   TYPE zif_cd_ops_types=>ty_msgno VALUE '300',
     END OF gc_msg.
+
+  "! ZCD_HCK_BTCROLE-USAGE (table consolidation 2026-11-08): the role of a bank code in the payment
+  "! lifecycle (A_INFLIGHT; SCOPE = flow + method class) or in a reconciliation set (A_RECON_3WAY;
+  "! SCOPE = set id, was ZCD_HCK_RCBTC). Each reader reads only its own usage.
+  TYPES ty_btc_usage TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_btc_usage,
+      lifecycle TYPE ty_btc_usage VALUE 'LIFECYCLE',
+      recon     TYPE ty_btc_usage VALUE 'RECON',
+    END OF gc_btc_usage.
 
 ENDINTERFACE.

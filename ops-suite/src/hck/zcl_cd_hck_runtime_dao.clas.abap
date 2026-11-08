@@ -8,7 +8,7 @@
 *& DPAYH payments in a run-date window with the collection indicator of
 *& their method (TFK042Z via T001), G/L lines by XREF2 (BSEG) and the
 *& active rows of the in-flight configuration (ZCD_HCK_PMCLASS, _CLRRULE,
-*& _PMBANK, _BTCROLE, _SEQOUT).
+*& _PMBANK, _BTCROLE usage LIFECYCLE, _SEQOUT).
 *& Every read is keyed or window-bounded and capped. Read-only: no INSERT
 *& / UPDATE / DELETE, no lock, no queue or interval is changed.
 *& Unconfirmed names: VERIFY-DDIC (Release_Readiness.md).
@@ -19,6 +19,8 @@
 *&            | outcome, trace and 5-minute snapshot); one join for both reads.
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_btc_roles reads usage LIFECYCLE of ZCD_HCK_BTCROLE (flow + method
+*&            | class split from SCOPE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -355,10 +357,14 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
 
 
   METHOD zif_cd_hck_runtime_dao~get_btc_roles.
-    SELECT flow, method_class, scheme, btc_code, role, compare_amount
+    " Lifecycle rows only (2026-11-08): SCOPE = flow (1) + method class (3); reconciliation roles
+    " (usage RECON) are read by ZCL_CD_HCK_RECON_DAO and never reach the lifecycle
+    SELECT substring( scope, 1, 1 ) AS flow, substring( scope, 2, 3 ) AS method_class,
+           scheme, btc_code, role, compare_amount
       FROM zcd_hck_btcrole
-      WHERE active = @abap_true
-      ORDER BY flow, method_class, scheme, btc_code
+      WHERE usage  = @zif_cd_hck_types=>gc_btc_usage-lifecycle
+        AND active = @abap_true
+      ORDER BY scope, scheme, btc_code
       INTO CORRESPONDING FIELDS OF TABLE @rt_roles.
   ENDMETHOD.
 

@@ -11,7 +11,7 @@ Implements design §5 (`RAP_Apps_Design.md`, decisions D-2, D-3). Status: genera
 |---|---|---|---|---|
 | EBS rules & mapping | `ZUI_CD_EBS_CFG` (`ZUI_CD_EBS_CFG_O4`) | `ZR_CD_EbsCfgAll` | BtcMap (ZCD_BTC_MAP), BtcRule (ZCD_BTC_RULE), RuleDef (ZCD_EBS_RULE_DEF), HouseBankAcct (ZCD_EBS_ACCT), FlowPattern (ZCD_EBS_FLOW_PAT), ReasonMap (ZCD_EBS_RSN_MAP), EbsLookup (ZCD_EBS_LOOKUP, rule R21) | EBS |
 | File monitoring setup | `ZUI_CD_FMON_CFG` (`ZUI_CD_FMON_CFG_O4`) | `ZR_CD_FmonCfgAll` | FmonIface, FmonSla, FmonDeadline (ZCD_FMON_DEADL, 2026-11-07), FmonSource, FmonSourceMap, FmonCheck, FmonLotCfg, FmonCalendar (ZCD_FMON_*) | FMON |
-| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole, HckSeqOutcome (ZCD_HCK_*, ZCD_JOB_*) | HCK |
+| Health check setup | `ZUI_CD_HCK_CFG` (`ZUI_CD_HCK_CFG_O4`) | `ZR_CD_HckCfgAll` | HckCheckDef, HckThreshold, HckAggregate, JobCycle, JobStep, HckPmClass, HckPmBank, HckClrRule, HckEvidenceSet, HckBtcRole (usage LIFECYCLE / RECON, 2026-11-08), HckSeqOutcome, HckReconSet (ZCD_HCK_*, ZCD_JOB_*) | HCK |
 | Alerting, freshness & approved tables | `ZUI_CD_OPS_CFG` (`ZUI_CD_OPS_CFG_O4`) | `ZR_CD_OpsCfgAll` | AlertRule (ZCD_OPS_ALRULE), AlertChannel (ZCD_OPS_ALCHN), MonitorCfg (ZCD_OPS_MONCFG, *Monitor freshness*), ApprovedTable (ZCD_OPS_TABWL, *Approved tables per reader*: FMON SOURCE, HCK READ / DRIFT - table consolidation 2026-11-08) | CORE |
 
 **Runtime parameters are not maintained here** (2026-11-07): the OpsParam section (table ZCD_OPS_PARAM, draft table ZCD_D_PARAM, entities `ZR_/ZC_CD_OpsParam`) is retired. Parameters live in the global framework `ZCA_PARAM` and are maintained in its app *Parameter areas* (`ZUI_CA_PARAM_O4`, `param-framework/docs/ONBOARDING.md`), areas `CD_OPS`, `CD_EBS`, `CD_FMON`, `CD_HCK`; the framework has its own transport / production rules (definitions by transport only, values of released parameters adjustable in production).
@@ -56,7 +56,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 33 customizing tables of the apps, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 32 customizing tables of the apps, incl. ZCD_FMON_DEADL; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -87,7 +87,8 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
 | HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
-| HCK | HckPmClass, HckPmBank, HckBtcRole | Flow D / C; ageing basis VALUE_DATE / ISSUE_DATE; scheme BAI2 / ISO / PRTRY (method class, role: open lists) | 413 |
+| HCK | HckPmClass, HckPmBank | Flow D / C; ageing basis VALUE_DATE / ISSUE_DATE (method class: open list) | 413 |
+| HCK | HckBtcRole | Usage LIFECYCLE / RECON; scheme BAI2 / ISO / PRTRY. LIFECYCLE: scope = flow D / C + method class (PCRE `[DC][A-Z0-9_]{1,3}`), role required, an open list but never a reconciliation role, compare amount X / R / C or blank. RECON: role LEG / DEPOSIT / CUTOFF / REDEPOSIT / CHEQUE / OTHER / IGNORE, scheme BAI2, compare amount blank (table consolidation 2026-11-08, was ZCD_HCK_RCBTC) | 413, 422, 423, 424, 425 |
 | HCK | HckClrRule | Flow, purpose (CLEARED, RETURNED, VOIDED, PENDING, IN_FLIGHT), required (blank, X, C, N); **evidence class implements ZIF_CD_HCK_EVIDENCE** | 413, 410 |
 | HCK | HckSeqOutcome | Flow, expected returns lot items 0-9 or blank, severity; **sequence pattern is valid PCRE** (outcome: open list) | 413, 418 |
 | CORE | AlertRule | Payment engine area, minimum severity, minimum RAG; quiet hours both or neither; **rule / check / group patterns are valid PCRE** | 413, 414, 418 |

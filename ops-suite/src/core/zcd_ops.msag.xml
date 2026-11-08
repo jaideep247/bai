@@ -1997,8 +1997,26 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>422</MSGNR>
+     <TEXT>&amp;1 is required when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>423</MSGNR>
      <TEXT>&amp;1 must be blank when &amp;2 is '&amp;3'</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>424</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 belongs to another usage (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>425</MSGNR>
+     <TEXT>Value &amp;1 of &amp;2 does not have the form &amp;3</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

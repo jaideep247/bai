@@ -132,7 +132,7 @@ ZCL_CD_HCK_RECON_CDS_TEST,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_DAO,own test include,,13,90,,Not run in target SAP
 ZCL_CD_HCK_RECON_EVAL,own test include,,23,90,,Not run in target SAP
 ZCL_CD_HCK_REPORT_HTML,own test include,,8,90,,Not run in target SAP
-ZCL_CD_HCK_RUNTIME_DAO,own test include,,14,90,,Not run in target SAP
+ZCL_CD_HCK_RUNTIME_DAO,own test include,,15,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_STATS,own test include,,12,90,,Not run in target SAP
 ZCL_CD_HCK_SUPPRESSION,own test include,,11,90,,Not run in target SAP

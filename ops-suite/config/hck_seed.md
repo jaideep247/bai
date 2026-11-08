@@ -267,7 +267,7 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 ## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
 
-User rules 2026-11-07. All six tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Evidence settings*, *Bank transaction code roles*, *Role sequence outcomes*) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class**: a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+User rules 2026-11-07. All six tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Evidence settings*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
 
 ### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
 
@@ -345,28 +345,30 @@ What the card rows give: cleared G/L line without payout log row = `CLEARING_INC
 | STRIPE | ACK_FULL | `‹ACK full value›` | Optional: ACK values that count | (blank) |
 | STRIPE | ACK_PARTIAL | `‹ACK partial value›` | Optional: partial ACK = anomaly | (blank) |
 
-### 8e. `ZCD_HCK_BTCROLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
+### 8e. `ZCD_HCK_BTCROLE` usage `LIFECYCLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
 
-| FLOW | METHOD_CLASS | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
+Since the table consolidation of 2026-11-08 one table holds the roles of both checks: `USAGE` `LIFECYCLE` (these rows; `A_INFLIGHT` and the payment outcome) and `RECON` (§10b; `A_RECON_3WAY`, was `ZCD_HCK_RCBTC`). Key USAGE + SCOPE + SCHEME + BTC_CODE: SCOPE of a lifecycle row = flow + method class (`DWIR`, `CACH`, … - the 4-character threshold key of §3; the app checks the form `[DC]` + class, message 425). Lifecycle roles are an open list, but a reconciliation role (LEG, DEPOSIT, CUTOFF, REDEPOSIT, CHEQUE, OTHER, IGNORE) is refused on a lifecycle row (message 424) and a lifecycle row needs a role (422); each check reads only its own usage.
+
+| USAGE | SCOPE (flow + class) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
 |---|---|---|---|---|---|---|---|
-| D | WIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
-| D | WIR | BAI2 | 195 | RETURNED | X | Wire return | X |
-| D | ACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
-| D | ACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
-| D | ACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
-| D | ACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
-| C | ACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
-| C | ACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
-| C | ACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
-| C | ACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
-| C | ACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
-| C | CRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
-| D | CHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
-| D | CHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
-| D | CHQ | BAI2 | 399 | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared | X |
-| D | CHQ | BAI2 | 699 | CORRECTION | C | Bank correction (confirmed); further correction codes = more rows (open list) | X |
-| D | ACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
-| D | ACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
+| LIFECYCLE | DWIR | BAI2 | 495 | ORIGINAL | | Original wire (confirmed) | X |
+| LIFECYCLE | DWIR | BAI2 | 195 | RETURNED | X | Wire return | X |
+| LIFECYCLE | DACH | BAI2 | 466 | ORIGINAL | | Original ACH disbursement | X |
+| LIFECYCLE | DACH | BAI2 | 168 | RETURNED | X | Return of the original payment (DFKKRP expected) | X |
+| LIFECYCLE | DACH | BAI2 | 166 | RETRIEVED | | Retrieval succeeded | X |
+| LIFECYCLE | DACH | BAI2 | 468 | RETRIEVE_FAIL | | Retrieval failed | X |
+| LIFECYCLE | CACH | BAI2 | 166 | COLLECTED | | Successful collection | X |
+| LIFECYCLE | CACH | BAI2 | 143 | COLLECTED | | Successful collection | X |
+| LIFECYCLE | CACH | BAI2 | 468 | COLLECT_FAIL | X | Collection failure (delayed redeposit) | X |
+| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection, confirm›` | COLLECTED | | CAMT methods 1-5 - **confirm** | (blank) |
+| LIFECYCLE | CACH | ISO | `‹CAMT code of a collection return, confirm›` | COLLECT_FAIL | X | CAMT methods 1-5 - **confirm** | (blank) |
+| LIFECYCLE | CCRD | BAI2 | 195 | PAYOUT_RECEIVED | | Stripe payout deposit (incoming transfer); used by the planned deposit evidence | X |
+| LIFECYCLE | DCHQ | BAI2 | 581 | CASHED | R | Cheque paid (confirmed); amount compared with the payment amount (DPAYH-RWBTR of the AUGBL) | X |
+| LIFECYCLE | DCHQ | BAI2 | 255 | RETURNED | | Cheque returned (confirmed) | X |
+| LIFECYCLE | DCHQ | BAI2 | 399 | CORRECTION | C | Bank correction of cheque number / amount (confirmed); C = an earlier 581 amount is superseded, not compared | X |
+| LIFECYCLE | DCHQ | BAI2 | 699 | CORRECTION | C | Bank correction (confirmed); further correction codes = more rows (open list) | X |
+| LIFECYCLE | DACI | ISO | `‹original code, confirm›` | ORIGINAL | | International ACH (Barclays / Commerzbank) - **confirm** | (blank) |
+| LIFECYCLE | DACI | ISO | `‹return code, confirm›` | RETURNED | X | International ACH return - **confirm** | (blank) |
 
 The same code means different things per flow + class: 468 = collection failure (C ACH) and retrieval failure (D ACH); 195 = wire return (D WIR) and Stripe payout deposit (C CRD); 166 = collection (C ACH) and retrieval (D ACH).
 
@@ -416,9 +418,9 @@ No REDEPOSIT_PENDING row for wires (no delayed redeposit). Any other sequence is
 
 HCK messages are numbers 300–399 and 650–699 of class `ZCD_OPS`, listed with every other message in `config/zcd_ops_messages.md`.
 
-## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, `ZCD_HCK_RCBTC`
+## 10. Three-way reconciliation (`A_RECON_3WAY`) — `ZCD_HCK_RCSET`, `ZCD_HCK_BTCROLE` (usage RECON)
 
-> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets* / *Reconciliation bank code roles*, D-3).
+> **CONFIRM BEFORE TRANSPORT.** Example rows; G/L accounts, house bank IDs and codes are placeholders until Finance / Treasury confirm them. New rows only on a customizing request in DV1 (HCK configuration app *Reconciliation clearing account sets* / *Bank code roles (lifecycle and reconciliation)*, D-3).
 
 ### 10a. `ZCD_HCK_RCSET` — clearing account sets (one transit / clearing account in one currency)
 
@@ -434,26 +436,26 @@ HKONT in internal format is not required: the check converts it (ALPHA). The hou
 
 The JPMC account ending 16650 is an **example value**: it is the `ZCD_EBS_ACCT` row named by HBKID / HKTID of `STRIPE_US`, never a literal in code. A Stripe set compares only the descriptor groups (LEG_BANK / LEG_FICA are not used); the deposit code is its `DEPOSIT` row below.
 
-### 10b. `ZCD_HCK_RCBTC` — role of each bank code per set
+### 10b. `ZCD_HCK_BTCROLE` usage `RECON` — role of each bank code per set (was `ZCD_HCK_RCBTC`, table consolidation 2026-11-08)
 
-| SET_ID | BTC_CODE | ROLE | DESCRIPTION |
-|---|---|---|---|
-| COLL_ACH | 166 | LEG | ACH collected |
-| COLL_ACH | 143 | LEG | Collected (BAI 143, collections only) |
-| COLL_ACH | 468 | REDEPOSIT | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot |
-| DISB_ACH | 466 | LEG | ACH original |
-| DISB_ACH | 168 | CUTOFF | ACH return - processed in the next period (cut-off) |
-| DISB_ACH | 166 | CUTOFF | ACH retrieval - processed in the next period (cut-off) |
-| DISB_ACH | 468 | OTHER | Retrieval failure (stays paid) |
-| DISB_WIRE | 495 | LEG | Wire original |
-| DISB_WIRE | 195 | CUTOFF | Wire return |
-| DISB_CHQ | 581 | CHEQUE | Cheque cashed |
-| DISB_CHQ | 255 | CHEQUE | Cheque returned |
-| DISB_CHQ | 399 | CHEQUE | Correction (confirm) |
-| DISB_CHQ | 699 | CHEQUE | Correction (confirm) |
-| STRIPE_US | 195 | DEPOSIT | Stripe payout deposit |
+| USAGE | SCOPE (set id) | SCHEME | BTC_CODE | ROLE | COMPARE_AMOUNT | DESCRIPTION | ACTIVE |
+|---|---|---|---|---|---|---|---|
+| RECON | COLL_ACH | BAI2 | 166 | LEG | | ACH collected | X |
+| RECON | COLL_ACH | BAI2 | 143 | LEG | | Collected (BAI 143, collections only) | X |
+| RECON | COLL_ACH | BAI2 | 468 | REDEPOSIT | | Collection failure, delayed redeposit within HCK_RECON_REDEPOSIT_DAYS when no returns lot | X |
+| RECON | DISB_ACH | BAI2 | 466 | LEG | | ACH original | X |
+| RECON | DISB_ACH | BAI2 | 168 | CUTOFF | | ACH return - processed in the next period (cut-off) | X |
+| RECON | DISB_ACH | BAI2 | 166 | CUTOFF | | ACH retrieval - processed in the next period (cut-off) | X |
+| RECON | DISB_ACH | BAI2 | 468 | OTHER | | Retrieval failure (stays paid) | X |
+| RECON | DISB_WIRE | BAI2 | 495 | LEG | | Wire original | X |
+| RECON | DISB_WIRE | BAI2 | 195 | CUTOFF | | Wire return | X |
+| RECON | DISB_CHQ | BAI2 | 581 | CHEQUE | | Cheque cashed | X |
+| RECON | DISB_CHQ | BAI2 | 255 | CHEQUE | | Cheque returned | X |
+| RECON | DISB_CHQ | BAI2 | 399 | CHEQUE | | Correction (confirm) | X |
+| RECON | DISB_CHQ | BAI2 | 699 | CHEQUE | | Correction (confirm) | X |
+| RECON | STRIPE_US | BAI2 | 195 | DEPOSIT | | Stripe payout deposit | X |
 
-A code on the set's account without a row is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the row by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records). Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm** - roles of `ZCD_HCK_BTCROLE` §8e are a different question and are not merged).
+A code on the set's account without a row is **unmapped** (bucket UNMAPPED, `RECON_VARIANCE` W naming the code): add the row by transport, or `IGNORE` for a code that never carries money of the set (e.g. balance records). Roles: `LEG` compared, `DEPOSIT` Stripe deposit, `CUTOFF` return / retrieval of the next period, `REDEPOSIT` failure with delayed redeposit, `CHEQUE` cheque exception, `OTHER` explained variance, `IGNORE` not money of the set. SCOPE = the set id of §10a, SCHEME `BAI2`: the app refuses another scheme, a COMPARE_AMOUNT and any other role on a RECON row (messages 413 / 423), and these seven roles on a lifecycle row (424). BAI2 type codes (FEBEP-VORGC) only; CAMT (VGEXT) codes are not reconciled yet (**confirm**). The lifecycle roles of §8e answer a different question: same table, usage `LIFECYCLE`, read only by `A_INFLIGHT` - a lifecycle row never reaches the reconciliation and a RECON row never reaches the lifecycle.
 
 ### 10c. Thresholds and alerts
 

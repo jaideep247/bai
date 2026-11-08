@@ -29,13 +29,11 @@ annotate entity ZC_CD_HckCfgAll with
     { id: 'HckEvidenceSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Evidence settings', position: 110, targetElement: '_HckEvidenceSet' },
     { id: 'HckBtcRole', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Bank transaction code roles', position: 120, targetElement: '_HckBtcRole' },
+      label: 'Bank code roles (lifecycle and reconciliation)', position: 120, targetElement: '_HckBtcRole' },
     { id: 'HckSeqOutcome', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Role sequence outcomes', position: 130, targetElement: '_HckSeqOutcome' },
     { id: 'HckReconSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Reconciliation clearing account sets', position: 140, targetElement: '_HckReconSet' },
-    { id: 'HckReconBtc', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Reconciliation bank code roles', position: 150, targetElement: '_HckReconBtc' }
+      label: 'Reconciliation clearing account sets', position: 140, targetElement: '_HckReconSet' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

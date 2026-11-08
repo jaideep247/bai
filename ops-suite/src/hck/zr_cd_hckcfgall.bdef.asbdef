@@ -28,7 +28,6 @@ authorization master ( global )
   association _HckBtcRole { create ( features : global ); with draft; }
   association _HckSeqOutcome { create ( features : global ); with draft; }
   association _HckReconSet { create ( features : global ); with draft; }
-  association _HckReconBtc { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -59,8 +58,6 @@ authorization master ( global )
     validation HckSeqOutcome ~ validateTransport;
     validation HckReconSet ~ validateFields;
     validation HckReconSet ~ validateTransport;
-    validation HckReconBtc ~ validateFields;
-    validation HckReconBtc ~ validateTransport;
   }
 }
 
@@ -433,16 +430,16 @@ etag master LocalLastChangedAt
   update;
   delete ( features : global );
   field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) Flow, MethodClass, Scheme, BtcCode;
-  field ( mandatory : create ) Flow, MethodClass, Scheme, BtcCode;
+  field ( readonly : update ) Usage, Scope, Scheme, BtcCode;
+  field ( mandatory : create ) Usage, Scope, Scheme, BtcCode;
   association _HckCfgAll { with draft; }
   validation validateFields on save { create; update; }
   // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
   validation validateTransport on save { create; update; delete; }
   mapping for zcd_hck_btcrole
   {
-    Flow = flow;
-    MethodClass = method_class;
+    Usage = usage;
+    Scope = scope;
     Scheme = scheme;
     BtcCode = btc_code;
     Role = role;
@@ -527,38 +524,6 @@ etag master LocalLastChangedAt
     LegBank = leg_bank;
     LegFica = leg_fica;
     Tolerance = tolerance;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckReconBtc alias HckReconBtc
-persistent table zcd_hck_rcbtc
-with additional save
-draft table zcd_d_hckrcbtc
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) SetId, BtcCode;
-  field ( mandatory : create ) SetId, BtcCode;
-  association _HckCfgAll { with draft; }
-  validation validateFields on save { create; update; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_rcbtc
-  {
-    SetId = set_id;
-    BtcCode = btc_code;
-    Role = role;
     Description = description;
     Active = active;
     ChangedBy = changed_by;

@@ -7,11 +7,11 @@ define view entity ZR_CD_ApprovedTable
 {
       @EndUserText.label: 'Payment engine area'
   key pe_area as PaymentEngineArea,
-      @EndUserText.label: 'Purpose'
+      @EndUserText.label: 'Purpose (FMON: SOURCE; HCK: READ / DRIFT)'
   key purpose as Purpose,
       @EndUserText.label: 'Table name'
   key table_name as TableName,
-      @EndUserText.label: 'Field name'
+      @EndUserText.label: 'Field (blank = whole table)'
   key field_name as FieldName,
       1 as SingletonID,
       @EndUserText.label: 'Active'

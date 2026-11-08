@@ -17,6 +17,8 @@
 *& 2026-11-07 | get_issued_payments_by_doc: payment runs of payment documents (canonical payment outcome).
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: get_btc_roles reads usage LIFECYCLE of ZCD_HCK_BTCROLE (flow + method
+*&            | class split from SCOPE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -122,7 +124,8 @@ INTERFACE zif_cd_hck_runtime_dao
     RETURNING
       VALUE(rt_rules) TYPE zif_cd_hck_runtime_types=>tt_clr_rule.
 
-  "! Active BAI code roles per flow + method class (ZCD_HCK_BTCROLE)
+  "! Active bank code roles of the payment lifecycle per flow + method class (ZCD_HCK_BTCROLE, usage
+  "! LIFECYCLE: flow and method class split from SCOPE; RECON rows are never returned)
   METHODS get_btc_roles
     RETURNING
       VALUE(rt_roles) TYPE zif_cd_hck_runtime_types=>tt_btc_role.

@@ -4,7 +4,7 @@
 *& Financial integrity: three-way reconciliation bank <-> G/L transit /
 *& clearing account <-> payment engine per company code, clearing account,
 *& currency and day (sets in ZCD_HCK_RCSET, bank code roles in
-*& ZCD_HCK_RCBTC), the Stripe descriptor group (charges + fees = BAI
+*& ZCD_HCK_BTCROLE RECON), the Stripe descriptor group (charges + fees = BAI
 *& deposit) and the one-to-one ACH clearing by assignment. Reads every leg
 *& aggregated (ZIF_CD_HCK_RECON_DAO), judges with the pure rules of
 *& ZCL_CD_HCK_RECON_EVAL and stores only results: the difference per group
@@ -13,6 +13,8 @@
 *& nothing itself (the engine persists), reads no business table directly.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
+*&            | ZCD_HCK_RCBTC).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation bank/G/L/subledger</p>
 "! Window: report date - 1 back HCK_RECON_LOOKBACK_DAYS days. Tolerance per set (else
@@ -415,7 +417,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                   iv_value  = <ls_bucket>-count ).
     ENDLOOP.
 
-    " New or unmapped bank codes: one warning per set naming the codes (ZCD_HCK_RCBTC row needed)
+    " New or unmapped bank codes: one warning per set naming the codes (ZCD_HCK_BTCROLE row RECON needed)
     IF ls_eval-unmapped IS NOT INITIAL.
       DATA(lv_codes) = concat_lines_of( table = VALUE string_table( FOR ls_code IN ls_eval-unmapped
                                                                      ( condense( CONV string( ls_code-btc ) ) ) )

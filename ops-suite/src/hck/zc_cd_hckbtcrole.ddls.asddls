@@ -1,12 +1,12 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Bank transaction code roles'
+@EndUserText.label: 'Bank code roles (lifecycle and reconciliation)'
 @Metadata.allowExtensions: true
-@ObjectModel.semanticKey: ['Flow', 'MethodClass', 'Scheme', 'BtcCode']
+@ObjectModel.semanticKey: ['Usage', 'Scope', 'Scheme', 'BtcCode']
 define view entity ZC_CD_HckBtcRole
   as projection on ZR_CD_HckBtcRole
 {
-  key Flow,
-  key MethodClass,
+  key Usage,
+  key Scope,
   key Scheme,
   key BtcCode,
       @Consumption.hidden: true

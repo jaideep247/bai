@@ -2,7 +2,7 @@
 *& Artifact: zcl_cd_hck_recon_dao.clas.testclasses.abap
 *& Purpose:
 *& OSQL tests of the three-way reconciliation reads on doubles of
-*& ZCD_HCK_RCSET / ZCD_HCK_RCBTC (active rows), the bank line view
+*& ZCD_HCK_RCSET / ZCD_HCK_BTCROLE (active RECON rows), the bank line view
 *& ZI_CD_HckRcBankLine (grouped per account / currency / day / code /
 *& direction, last day, lines without returns lot - DFKKRP, deposits per
 *& posting document), ACDOCA (per day and reference procedure, deposit
@@ -12,6 +12,8 @@
 *& (VERIFY-DDIC field names, VERIFY-ADT: CDS entity and JOIN @itab doubles).
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-08 | Table consolidation: roles from ZCD_HCK_BTCROLE usage RECON; a lifecycle row of the same code
+*&            | is not read (roles_active_only).
 *&---------------------------------------------------------------------*
 CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -52,6 +54,9 @@ CLASS ltc_recon_dao DEFINITION FINAL FOR TESTING
         zuonr_op TYPE zif_cd_hck_recon_types=>ty_zuonr VALUE '000000500002',
         hbkid    TYPE zif_cd_hck_recon_types=>ty_hbkid VALUE 'JPMC1',
         hktid    TYPE zif_cd_hck_recon_types=>ty_hktid VALUE 'DISB1',
+        "! Lifecycle row of ZCD_HCK_BTCROLE (flow + method class, open role list)
+        lifecycle TYPE zif_cd_hck_recon_types=>ty_set_id VALUE 'CCRD',
+        collected TYPE zif_cd_hck_recon_types=>ty_role VALUE 'COLLECTED',
       END OF gc_test.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -118,7 +123,7 @@ CLASS ltc_recon_dao IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZCD_HCK_RCBTC' ) ( 'ZI_CD_HCKRCBANKLINE' )
+      i_dependency_list = VALUE #( ( 'ZCD_HCK_RCSET' ) ( 'ZCD_HCK_BTCROLE' ) ( 'ZI_CD_HCKRCBANKLINE' )
                                    ( 'DFKKRP' ) ( 'ACDOCA' ) ( 'DFKKSUMC' ) ( 'DPAYH' ) ) ).
   ENDMETHOD.
 
@@ -141,8 +146,8 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   METHOD insert_config.
     DATA lt_sets TYPE STANDARD TABLE OF zcd_hck_rcset WITH EMPTY KEY.
     DATA ls_set TYPE zcd_hck_rcset.
-    DATA lt_roles TYPE STANDARD TABLE OF zcd_hck_rcbtc WITH EMPTY KEY.
-    DATA ls_role TYPE zcd_hck_rcbtc.
+    DATA lt_roles TYPE STANDARD TABLE OF zcd_hck_btcrole WITH EMPTY KEY.
+    DATA ls_role TYPE zcd_hck_btcrole.
     ls_set-set_id   = gc_test-set_b.
     ls_set-kind     = zif_cd_hck_recon_types=>gc_kind-threeway.
     ls_set-bukrs    = gc_test-bukrs.
@@ -157,7 +162,9 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     ls_set-active = abap_false.
     INSERT ls_set INTO TABLE lt_sets.
     go_env->insert_test_data( lt_sets ).
-    ls_role-set_id   = gc_test-set_a.
+    ls_role-usage    = zif_cd_hck_types=>gc_btc_usage-recon.
+    ls_role-scope    = gc_test-set_a.
+    ls_role-scheme   = zif_cd_ebs_types=>gc_scheme-bai2.
     ls_role-btc_code = gc_test-leg.
     ls_role-role     = zif_cd_hck_recon_types=>gc_role-leg.
     ls_role-active   = abap_true.
@@ -165,6 +172,14 @@ CLASS ltc_recon_dao IMPLEMENTATION.
     ls_role-btc_code = gc_test-redep.
     ls_role-role     = zif_cd_hck_recon_types=>gc_role-redeposit.
     ls_role-active   = abap_false.
+    INSERT ls_role INTO TABLE lt_roles.
+    " Table consolidation 2026-11-08: a lifecycle role of the same code (usage LIFECYCLE, scope =
+    " flow + method class) must never reach the reconciliation
+    ls_role-usage    = zif_cd_hck_types=>gc_btc_usage-lifecycle.
+    ls_role-scope    = gc_test-lifecycle.
+    ls_role-btc_code = gc_test-deposit.
+    ls_role-role     = gc_test-collected.
+    ls_role-active   = abap_true.
     INSERT ls_role INTO TABLE lt_roles.
     go_env->insert_test_data( lt_roles ).
   ENDMETHOD.
@@ -347,8 +362,12 @@ CLASS ltc_recon_dao IMPLEMENTATION.
   METHOD roles_active_only.
     TRY.
         DATA(lt_roles) = mo_cut->get_btc_roles( ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1 msg = 'Inactive role not read' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_roles ) exp = 1
+                                            msg = 'Inactive role and the lifecycle row not read' ).
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-btc exp = gc_test-leg msg = 'Code read as BTC' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-set_id exp = gc_test-set_a msg = 'Scope read as set id' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_roles[ role = gc_test-collected ] ) )
+                                           msg = 'A lifecycle role never leaks into the reconciliation' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

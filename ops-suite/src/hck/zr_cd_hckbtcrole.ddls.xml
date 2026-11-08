@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_CD_HCKBTCROLE</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Bank transaction code roles</DDTEXT>
+    <DDTEXT>Bank code roles (lifecycle and reconciliation)</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>
