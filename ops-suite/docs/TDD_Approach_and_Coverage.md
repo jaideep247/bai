@@ -69,7 +69,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 
 | Payment engine area | Object | Test path | Methods | Covering include / partial exemption |
 |---|---|---|---|---|
-| Core | ZBP_R_CD_OPSCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| Core | ZBP_R_CD_OPSCFGALL | own test include | 4 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION - per activity 01 / 02 / 06 and none, root and first child, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
 | Core | ZBP_R_CD_OPSEXCEPTION | exempt | 0 | Exempt: instance authorization / features and the four actions read persisted findings: EML with COMMIT ENTITIES on doubled ZCD_OPS_FINDING / ZCD_OPS_EXC_HIST, not parsed offline - QA1 OPS-01 .. OPS-08; every decision tested in ZCL_CD_OPS_EXC_POLICY |
 | Core | ZCL_CD_OPS_ALERT_DAO | own test include | 7 |  |
 | Core | ZCL_CD_OPS_ALERT_POLICY | own test include | 20 |  |
@@ -107,7 +107,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | Core | ZCL_CD_OPS_UTIL | own test include | 22 |  |
 | Core | ZCL_CD_TRX_DASH_CDS_TEST | own test include | 8 |  |
 | Core | ZCX_CD_OPS_ERROR | covered | 0 | ZCL_CD_OPS_FACTORY |
-| EBS | ZBP_R_CD_EBSCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| EBS | ZBP_R_CD_EBSCFGALL | own test include | 4 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION - per activity 01 / 02 / 06 and none, root and first child, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
 | EBS | ZCL_CD_EBS_BTC_RESOLVER | own test include | 23 |  |
 | EBS | ZCL_CD_EBS_CFG_DAO | own test include | 13 |  |
 | EBS | ZCL_CD_EBS_DASH_CDS_TEST | own test include | 22 |  |
@@ -151,7 +151,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | EBS | ZCL_CD_EBS_SAP_DAO | own test include | 15 | partial: GET_RETRIEVALS select on ZCD_ACH_RTRV_LOG (VERIFY-DDIC status field) - QA1; its field check is unit tested |
 | EBS | ZCL_CD_EBS_SRC_FEB | own test include | 11 |  |
 | EBS | ZCL_CD_EBS_SRC_FILE | own test include | 4 |  |
-| FMON | ZBP_R_CD_FMONCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| FMON | ZBP_R_CD_FMONCFGALL | own test include | 4 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION - per activity 01 / 02 / 06 and none, root and first child, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
 | FMON | ZBP_R_CD_FMONFILE | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
 | FMON | ZBP_R_CD_FMONPRQWA | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
 | FMON | ZCL_CD_FMON_ADAPTER_GENERIC | own test include | 10 |  |
@@ -186,7 +186,7 @@ Changed meaning, deliberately: a flag is switched off with a value row with blan
 | FMON | ZCL_CD_FMON_RULES | own test include | 74 |  |
 | FMON | ZCL_CD_FMON_STATUS | own test include | 24 |  |
 | FMON | ZCL_CD_FMON_UTIL | own test include | 5 |  |
-| HCK | ZBP_R_CD_HCKCFGALL | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
+| HCK | ZBP_R_CD_HCKCFGALL | own test include | 4 | partial: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION - per activity 01 / 02 / 06 and none, root and first child, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CD_OPS_CFG_GATE / _CHECKS / _POLICY |
 | HCK | ZBP_R_CD_HCKSUPPRESS | own test include | 2 | partial: global authorization tested (EML GET PERMISSIONS, VERIFY-ADT); actions, determinations, validations and saver need EML with COMMIT ENTITIES on doubled tables - QA1 cases RAP_Ops_Apps.md 5; decisions tested in the policy classes |
 | HCK | ZCL_CD_HCK_AGG_QUERY | own test include | 14 |  |
 | HCK | ZCL_CD_HCK_BUDGET | own test include | 3 |  |

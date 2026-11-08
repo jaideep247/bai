@@ -11,6 +11,7 @@
 *& 2026-11-06 | Pattern fields validated on save: PCRE that compiles (message 418).
 *& 2026-11-07 | Create feature: client policy for every entity (new rows by transport from DV1, D-3).
 *& 2026-11-08 | Table consolidation: checks per kind / usage of a row (messages 422-426).
+*& 2026-11-08 | ZCD_OPS per child entity: create 01, change 02, delete 06; edit needs one (LCL_AUTH).
 *&---------------------------------------------------------------------*
 "! Values of this configuration app, generated from the spec in tools/rap_generate.py
 "! (element names, allowed values, interfaces, entities and tables) - one place, no literals
@@ -76,10 +77,47 @@ INTERFACE lif_c.
 ENDINTERFACE.
 
 
-CLASS lhc_ebscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
+"! ZCD_OPS answers of this app (payment engine area of the app) for the RAP handlers
+CLASS lcl_auth DEFINITION FINAL.
+  PUBLIC SECTION.
     CONSTANTS gc_pe_area TYPE zif_cd_ops_cfg_types=>ty_pe_area VALUE 'EBS'.
 
+    "! Allowed when the user has the activity for the area (create 01, change 02, delete 06)
+    CLASS-METHODS answer
+      IMPORTING
+        iv_actvt       TYPE zif_cd_ops_cfg_types=>ty_actvt
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+
+    "! Editing the singleton: allowed with at least one of 01, 02 or 06 for the area
+    CLASS-METHODS edit
+      RETURNING
+        VALUE(rv_auth) TYPE abp_behv_auth.
+ENDCLASS.
+
+
+CLASS lcl_auth IMPLEMENTATION.
+
+  METHOD answer.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized( iv_pe_area = gc_pe_area
+                                                                               iv_actvt   = iv_actvt )
+                           = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+
+  METHOD edit.
+    rv_auth = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->may_edit( gc_pe_area ) = abap_true
+                      THEN if_abap_behv=>auth-allowed
+                      ELSE if_abap_behv=>auth-unauthorized ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lhc_ebscfgall DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR EbsCfgAll RESULT result.
 
@@ -91,17 +129,34 @@ ENDCLASS.
 CLASS lhc_ebscfgall IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " ZCD_OPS activity 02 for the payment engine area: editing the singleton covers every child
-    DATA(lv_auth) = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->is_authorized(
-                                   iv_pe_area = gc_pe_area
-                                   iv_actvt  = zif_cd_ops_cfg_types=>gc_actvt-change ) = abap_true
-                            THEN if_abap_behv=>auth-allowed
-                            ELSE if_abap_behv=>auth-unauthorized ).
+    " ZCD_OPS for the payment engine area (2026-11-08): editing the singleton needs 01, 02 or 06;
+    " a new child row needs 01 - change (02) and delete (06) are answered by each child entity
     IF requested_authorizations-%update = if_abap_behv=>mk-on.
-      result-%update = lv_auth.
+      result-%update = lcl_auth=>edit( ).
     ENDIF.
     IF requested_authorizations-%action-Edit = if_abap_behv=>mk-on.
-      result-%action-Edit = lv_auth.
+      result-%action-Edit = lcl_auth=>edit( ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_BtcMap = if_abap_behv=>mk-on.
+      result-%assoc-_BtcMap = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_BtcRule = if_abap_behv=>mk-on.
+      result-%assoc-_BtcRule = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_RuleDef = if_abap_behv=>mk-on.
+      result-%assoc-_RuleDef = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_HouseBankAcct = if_abap_behv=>mk-on.
+      result-%assoc-_HouseBankAcct = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_FlowPattern = if_abap_behv=>mk-on.
+      result-%assoc-_FlowPattern = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_ReasonMap = if_abap_behv=>mk-on.
+      result-%assoc-_ReasonMap = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
+    IF requested_authorizations-%assoc-_EbsLookup = if_abap_behv=>mk-on.
+      result-%assoc-_EbsLookup = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
   ENDMETHOD.
 
@@ -142,6 +197,9 @@ CLASS lhc_btcmap DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR BtcMap RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR BtcMap RESULT result.
 
@@ -154,6 +212,17 @@ ENDCLASS.
 
 
 CLASS lhc_btcmap IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -287,6 +356,9 @@ CLASS lhc_btcrule DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR BtcRule RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR BtcRule RESULT result.
 
@@ -299,6 +371,17 @@ ENDCLASS.
 
 
 CLASS lhc_btcrule IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -393,6 +476,9 @@ CLASS lhc_ruledef DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR RuleDef RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR RuleDef RESULT result.
 
@@ -405,6 +491,17 @@ ENDCLASS.
 
 
 CLASS lhc_ruledef IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -517,6 +614,9 @@ CLASS lhc_housebankacct DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR HouseBankAcct RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR HouseBankAcct RESULT result.
 
@@ -529,6 +629,17 @@ ENDCLASS.
 
 
 CLASS lhc_housebankacct IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -617,6 +728,9 @@ CLASS lhc_flowpattern DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR FlowPattern RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR FlowPattern RESULT result.
 
@@ -629,6 +743,17 @@ ENDCLASS.
 
 
 CLASS lhc_flowpattern IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -720,6 +845,9 @@ CLASS lhc_reasonmap DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR ReasonMap RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR ReasonMap RESULT result.
 
@@ -729,6 +857,17 @@ ENDCLASS.
 
 
 CLASS lhc_reasonmap IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows
@@ -776,6 +915,9 @@ CLASS lhc_ebslookup DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
     CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
 
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR EbsLookup RESULT result.
+
     METHODS get_global_features FOR GLOBAL FEATURES
       IMPORTING REQUEST requested_features FOR EbsLookup RESULT result.
 
@@ -788,6 +930,17 @@ ENDCLASS.
 
 
 CLASS lhc_ebslookup IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCD_OPS for the payment engine area: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
 
   METHOD get_global_features.
     " D-3: delete only where new entries are allowed (DV1); production keeps rows

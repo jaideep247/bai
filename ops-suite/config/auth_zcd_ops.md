@@ -23,24 +23,26 @@ Permitted activities (SU21 → Activities):
 
 | ACTVT | Meaning in the suite | Used by |
 |---|---|---|
-| 01 | Create configuration entry (DV1, transport); **FMON: record a PRISM status event** | Configuration apps; PRISM status API `ZCL_CD_FMON_PRISM_API` (`ZCD_PE_AREA` = FMON, `BUKRS` DUMMY) |
-| 02 | Change (existing configuration, exception assign / resolve) | Configuration and operations apps |
+| 01 | Create configuration entry (new row of a child entity, DV1 only, transport); **FMON: record a PRISM status event** | Configuration apps (create of a child row; editing the singleton); PRISM status API `ZCL_CD_FMON_PRISM_API` (`ZCD_PE_AREA` = FMON, `BUKRS` DUMMY) |
+| 02 | Change (existing configuration row, exception assign / resolve) | Configuration apps (change of a child row; editing the singleton) and operations apps |
 | 03 | Display | All apps, ALV reports |
-| 06 | Delete configuration entry (DV1, transport) | Configuration apps |
+| 06 | Delete configuration entry (row of a child entity, DV1 only, transport) | Configuration apps (delete of a child row; editing the singleton) |
 | 16 | Execute | `ZCD_EBS_VALIDATE` (EBS), `ZCD_FMON_MONITOR` (FMON), `ZCD_MORNING_REPORT` (HCK), `ZCD_OPS_PURGE` (CORE) |
 | 85 | Approve (second person) | Waiver approval, HCK suppression approval |
+
+Configuration apps (user decision 2026-11-08): each activity is checked on its own per child entity and payment engine area of the app (EBS / FMON / HCK / CORE) — 01 create, 02 change, 06 delete; editing the singleton (Edit) needs at least one of the three; display needs only `S_SERVICE` (§3b). The client policy is unchanged: new rows and deletions only where the client records customizing changes (DV1).
 
 `BUKRS`: company code of the object where it has one (bank account, statement, check threshold row); payment engine area-wide checks pass it as `DUMMY`.
 
 ## 3. Roles (PFCG) — proposal
 
-| Role | ZCD_MODULE | ACTVT | BUKRS |
+| Role | ZCD_PE_AREA | ACTVT | BUKRS |
 |---|---|---|---|
 | `Z_CD_OPS_DISPLAY` | * | 03 | * |
 | `Z_CD_OPS_BATCH` (Control-M job user) | EBS, FMON, HCK, CORE | 16 | * |
 | `Z_CD_OPS_OPERATOR` (RTB operations) | EBS, FMON, HCK | 02, 03 | own company codes |
 | `Z_CD_OPS_APPROVER` (team lead, not the operator) | EBS, FMON, HCK | 03, 85 | own company codes |
-| `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 | * |
+| `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
 
 Segregation of duties: the operator (02) and the approver (85) of a payment engine area and company code are different users; the apps additionally refuse an approval by the requester (four-eyes).
@@ -84,8 +86,11 @@ Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CD_OPS_AUTH` (`ZIF_CD
 
 | Service | Behaviour pool | Operation | ZCD_PE_AREA | ACTVT |
 |---|---|---|---|---|
-| `ZUI_CD_EBS_CFG`, `ZUI_CD_FMON_CFG`, `ZUI_CD_HCK_CFG`, `ZUI_CD_OPS_CFG` (configuration apps) | `ZBP_R_CD_EBSCFGALL`, `…FMONCFGALL`, `…HCKCFGALL`, `…OPSCFGALL` | Edit / update of the singleton (global authorisation; covers create, change and delete of every child row) | EBS / FMON / HCK / CORE | 02 |
-| same | same | Create of new rows (global feature control) | — | Only in a client that records customizing changes (DV1); not an activity check |
+| `ZUI_CD_EBS_CFG`, `ZUI_CD_FMON_CFG`, `ZUI_CD_HCK_CFG`, `ZUI_CD_OPS_CFG` (configuration apps) | `ZBP_R_CD_EBSCFGALL`, `…FMONCFGALL`, `…HCKCFGALL`, `…OPSCFGALL` | Edit / update of the singleton (global authorisation of the root, `ZCL_CD_OPS_CFG_GATE=>MAY_EDIT`) | EBS / FMON / HCK / CORE | at least one of 01, 02, 06 |
+| same | same | Create of a child row (global authorisation of the root, create-by-association `%assoc`) | same | 01 |
+| same | same | Change of a child row (global authorisation of the child entity, authorisation master) | same | 02 |
+| same | same | Delete of a child row (global authorisation of the child entity) | same | 06 |
+| same | same | Create and delete offered at all (global feature control) | — | Only in a client that records customizing changes (DV1), D-3; not an activity check |
 | `ZUI_CD_OPS_EXC` (exceptions) | `ZBP_R_CD_OPSEXCEPTION` | Assign, resolve (instance authorisation) | Area of the exception | 02 |
 | same | same | Approve a waiver (second person; the requester is refused) | Area of the exception | 85 |
 | `ZUI_CD_HCK_SUP` (suppressions) | `ZBP_R_CD_HCKSUPPRESS` | Create, end suppression | HCK | 02 |
@@ -94,4 +99,4 @@ Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CD_OPS_AUTH` (`ZIF_CD
 | `ZUI_CD_FMON_PRQ` (PRISM request handled manually) | `ZBP_R_CD_FMONPRQWA` | Create (records the reference and resolves the exception) | FMON | 02 |
 | Dashboards (`ZUI_CD_*_DASH`, `ZUI_CD_FMON_FLOW`, `ZUI_CD_TRX_REQ`, `ZUI_CD_OPS_OVERVIEW`) | — (read-only) | Read through the DCLs of §3a | per §3a | 03 |
 
-**Known difference to §2 (open):** §2 lists activities 01 (create) and 06 (delete) for the configuration apps. The apps check 02 for the whole configuration, and new rows are limited to DV1 by the client policy. So today a user with 02 for an area can also add and delete rows of that area in DV1. Separating 01 / 06 would be a check per child entity in the generated behaviour pools (`tools/rap_generate.py`).
+The four configuration apps are generated (`tools/rap_generate.py`): every child entity is its own global authorisation master (VERIFY-ADT: child entity as authorisation master with draft on 7.58), so a user with 02 only can change but not add or delete rows, 01 only can add but not change, 06 can delete. Tests: the generated permission tests of each behaviour pool (02 only, 01 only, 06 only, no activity) and `ZCL_CD_OPS_CFG_GATE` (`edit_with_delete_only`, `no_activity_no_edit`).

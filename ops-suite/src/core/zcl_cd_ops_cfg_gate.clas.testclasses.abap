@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | Per-table create test withdrawn: new rows only by transport from DV1 (D-3).
+*& 2026-11-08 | MAY_EDIT: any of the activities 01 / 02 / 06 allows editing, none refuses it.
 *&---------------------------------------------------------------------*
 CLASS ltd_client DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -49,13 +50,15 @@ CLASS ltd_auth DEFINITION FINAL FOR TESTING.
     DATA mv_allowed TYPE abap_bool.
     DATA mv_pe_area  TYPE zif_cd_ops_cfg_types=>ty_pe_area.
     DATA mv_actvt   TYPE zif_cd_ops_cfg_types=>ty_actvt.
+    "! Activities granted one by one (in addition to mv_allowed = every activity)
+    DATA mt_actvt   TYPE STANDARD TABLE OF zif_cd_ops_cfg_types=>ty_actvt WITH EMPTY KEY.
 ENDCLASS.
 
 CLASS ltd_auth IMPLEMENTATION.
   METHOD zif_cd_ops_cfg_auth~is_authorized.
     mv_pe_area = iv_pe_area.
     mv_actvt  = iv_actvt.
-    rv_allowed = mv_allowed.
+    rv_allowed = xsdbool( mv_allowed = abap_true OR line_exists( mt_actvt[ table_line = iv_actvt ] ) ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -97,6 +100,8 @@ CLASS ltc_gate DEFINITION FINAL FOR TESTING
     METHODS dv1_records_on_request       FOR TESTING.
     METHODS auth_asks_area_and_actvt   FOR TESTING.
     METHODS client_is_read_once          FOR TESTING.
+    METHODS edit_with_delete_only        FOR TESTING.
+    METHODS no_activity_no_edit          FOR TESTING.
 ENDCLASS.
 
 
@@ -235,6 +240,36 @@ CLASS ltc_gate IMPLEMENTATION.
         lo_gate->check_request( gc_request ).
         cl_abap_unit_assert=>assert_equals( act = mo_client->mv_read_calls exp = 1
                                             msg = 'Client settings must be read once' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: any one of the activities 01 / 02 / 06 of the area allows editing the singleton
+  METHOD edit_with_delete_only.
+    TRY.
+        configure_scenario( VALUE #( dv1 = abap_true ) ).
+        INSERT zif_cd_ops_cfg_types=>gc_actvt-delete INTO TABLE mo_auth->mt_actvt.
+        cl_abap_unit_assert=>assert_true(
+          act = cut( )->may_edit( zif_cd_ops_cfg_types=>gc_pe_area-hck )
+          msg = 'Delete (06) alone allows editing' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_pe_area exp = zif_cd_ops_cfg_types=>gc_pe_area-hck
+                                            msg = 'Checked for the payment engine area of the app' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: display (03) or no activity never allows editing
+  METHOD no_activity_no_edit.
+    TRY.
+        configure_scenario( VALUE #( dv1 = abap_true ) ).
+        INSERT zif_cd_ops_cfg_types=>gc_actvt-display INTO TABLE mo_auth->mt_actvt.
+        cl_abap_unit_assert=>assert_false(
+          act = cut( )->may_edit( zif_cd_ops_cfg_types=>gc_pe_area-hck )
+          msg = 'Without 01, 02 or 06 the singleton cannot be edited' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
