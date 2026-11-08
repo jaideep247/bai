@@ -28,7 +28,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
 
 - Tables that **exist**: DFKKNRK, DFKKNRP (NOC lots: KEYN1 lot, POSNA item, INFOF CHAR50), DFKKRAPT. Tables that **do not exist**: DFKKRNIT, DFKKRAFT.
 - ZCD_PAYM_REQ_LOG: select ZZ_STATUS = SUCCESS, never the highest COUNTER.
-- **Cross-area reads (2026-11-07):** a payment engine area may use another area's read through that area's interface and factory only (FMON FEB adapter → `ZIF_CD_EBS_STMT_EVIDENCE` via `ZCL_CD_EBS_FACTORY`); the dependency is one-way (EBS never references FMON) and documented in both area docs; the definition (e.g. posting-open) lives once, in the owning area.
+- **Cross-area reads (2026-11-07):** a payment engine area may use another area's read through that area's interface and factory only (FMON FEB adapter → `ZIF_CD_EBS_STMT_EVIDENCE` via `ZCL_CD_EBS_FACTORY`; HCK `A_INFLIGHT` → `ZIF_CD_FMON_DAO=>GET_GROUP_ACKS` via `ZCL_CD_FMON_FACTORY` and `ZCL_CD_FMON_RULES=>GENERATION_KEY` / `NEXT_GENERATION`, 2026-11-08); the dependency is one-way (EBS never references FMON) and documented in both area docs; the definition (e.g. posting-open) lives once, in the owning area.
 - More confirmed facts (full list and sources: `USAA_Known_Tables.md` §1):
   - Request → open item: ZCD_PAYM_REQ_LOG FIN number = DFKKOP-ZZ_FIN_TRANS_NUM; request → partner: ZZ_MEMBER_NO = BUT000-BPEXT, read **with** SOURCE first, then without (legacy PCLM partners).
   - ZCD_SPE_EXCP_LOG: every payment-request failure needs an SPE row, or the hourly status job never reports it.
@@ -41,7 +41,7 @@ This page applies to every object in `ops-suite/`. Where two rules conflict, the
   - PRISM throttles ACH and wire files at 2 minutes per file before sending them to the bank; positive pay and stop pay are not throttled (user, 2026-11-06 — FMON delivery SLA allowance, `FMON_FILE_MONITORING.md` §A3a).
   - FPY1 locks EFKKCLEGPI per partner interval (GPART_V..GPART_B, one RUNKEY + BUKRS, _SCOPE 3) — design concurrency around partner ranges.
 - FPY1 locks per partner interval; F.13 is not run for disbursement clearing accounts.
-- ACK tables confirm payment-run files per pay cycle; Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK. Disbursements ACK per payment, collections per file.
+- ACK tables confirm payment-run files per pay cycle; Stripe payout, cost centre, BlackLine and GL OFSAA files have **no** ACK. Disbursements ACK per payment, collections per file. Every payment goes through DPAYH `ISSUED` (file sent) and `CONFIRMED` (bank ACK received) - disbursements and collections, every method including cheques; a stop and reissue of a cheque creates a new payment document and cheque number (user 2026-11-08, `HCK_MORNING_REPORT.md` §7b-6).
 - Control-M schedules `JQ4SP*`; SAP jobs `ZCD_<function>_<ENTITY>`; most run `RFKK_MA_SCHEDULER` or `ZICD_CALL_SM69_COMMAND_NEW`.
 
 **Unverified DDIC.** Any field of a custom table (ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST, ZCD_ACH_RTRV_LOG, ZCDT_REGUT, ZCD_STRP_POUT_LOG …) or any standard field not listed above is *unverified*. Do not hard-code it: read it through configuration (table/field names in customizing, validated against the DDIC at runtime with `cl_abap_typedescr`) or isolate it in one DAO method marked `"VERIFY-DDIC:`. List every such marker in the payment engine area README.

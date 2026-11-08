@@ -13,6 +13,8 @@
 *& 2026-11-07 | ltc_cfg_reads: SLA and calendar rows active only, stage deadlines (ZCD_FMON_DEADL).
 *& 2026-11-07 | Regenerated files: generations found by interface + generation group within the window
 *&            | (get_group_files, index GRP).
+*& 2026-11-08 | get_group_acks: the files of a group with their ACK events in one read - a file without
+*&            | ACK once with ACK_AT initial, other stages, other groups and older files not read.
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -114,6 +116,7 @@ CLASS ltc_dao DEFINITION FINAL
     METHODS grouped_count_per_status FOR TESTING.
     METHODS grouped_count_needs_approval FOR TESTING.
     METHODS generations_found_by_group FOR TESTING.
+    METHODS group_acks_with_events FOR TESTING.
 
 ENDCLASS.
 
@@ -271,6 +274,56 @@ CLASS ltc_dao IMPLEMENTATION.
                                          iv_since = '20261003' )
           exp = VALUE zif_cd_fmon_types=>tt_file( ( as_loaded( ls_first ) ) ( as_loaded( ls_second ) ) )
           msg = 'Both generations of the run inside the window, nothing else' ).
+      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+        cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (status lag of A_INFLIGHT, file-level ACK): the files of a generation group come back with
+  " their ACK_RECEIVED events in one read - a file without ACK once with ACK_AT initial; other stages,
+  " another group and a file older than the window are not read.
+  METHOD group_acks_with_events.
+    CONSTANTS lc_group TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/COLL01/PNC1'.
+    CONSTANTS lc_other TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261102/COLL02/PNC1'.
+    DATA lt_exp TYPE zif_cd_fmon_types=>tt_group_ack.
+    DATA ls_exp TYPE zif_cd_fmon_types=>ty_group_ack.
+    TRY.
+        DATA(ls_acked) = new_file( iv_id = 1 iv_date = gc_date ).
+        ls_acked-gen_group      = lc_group.
+        ls_acked-first_event_at = '20261102060000'.
+        DATA(ls_open) = new_file( iv_id = 2 iv_date = gc_date ).
+        ls_open-gen_group      = lc_group.
+        ls_open-first_event_at = '20261102070000'.
+        DATA(ls_other) = new_file( iv_id = 3 iv_date = gc_date ).
+        ls_other-gen_group = lc_other.
+        DATA(ls_too_old) = new_file( iv_id = 4 iv_date = '20261001' ).
+        ls_too_old-gen_group = lc_group.
+        mo_cut->save_files( VALUE #( ( ls_acked ) ( ls_open ) ( ls_other ) ( ls_too_old ) ) ).
+        " File 1: generated, then acknowledged (event of file 1 of NEW_EVENT)
+        mo_cut->insert_event( new_event( zif_cd_fmon_types=>gc_stage-generated ) ).
+        mo_cut->insert_event( new_event( zif_cd_fmon_types=>gc_stage-ack ) ).
+        ls_exp-file_id        = ls_acked-file_id.
+        ls_exp-iface_id       = gc_iface.
+        ls_exp-gen_group      = lc_group.
+        ls_exp-file_ref       = ls_acked-file_ref.
+        ls_exp-file_name      = ls_acked-file_name.
+        ls_exp-first_event_at = ls_acked-first_event_at.
+        ls_exp-ack_at         = ltd_clock=>gc_now.
+        INSERT ls_exp INTO TABLE lt_exp.
+        ls_exp-file_id        = ls_open-file_id.
+        ls_exp-file_ref       = ls_open-file_ref.
+        ls_exp-file_name      = ls_open-file_name.
+        ls_exp-first_event_at = ls_open-first_event_at.
+        CLEAR ls_exp-ack_at.
+        INSERT ls_exp INTO TABLE lt_exp.
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->get_group_acks( it_keys  = VALUE #( ( iface_id = gc_iface gen_group = lc_group ) )
+                                        iv_since = '20261003' )
+          exp = lt_exp
+          msg = 'Both files of the group, the ACK of file 1, nothing else' ).
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         cl_abap_unit_assert=>fail( msg = |Database error: { lx_sql->get_text( ) }| ).
       CATCH cx_root INTO DATA(lx_error).

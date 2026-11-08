@@ -10,6 +10,8 @@
 *& 2026-11-06 | Performance fix 8: count_legacy - grouped COUNT(*) on the same validated read path (DEFAULT IGNORE).
 *& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL, DEFAULT IGNORE); SLA and calendar rows: active only.
 *& 2026-11-07 | get_group_files (regenerated files: generations of a payment run, DEFAULT IGNORE).
+*& 2026-11-08 | get_group_acks (files of generation groups with their ACK events, one read; consumer
+*&            | HCK A_INFLIGHT status lag of payments acknowledged per file, DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -72,6 +74,16 @@ INTERFACE zif_cd_fmon_dao
       iv_since        TYPE d
     RETURNING
       VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
+
+  "! Every registered file of the interface + generation group keys (index GRP) since iv_since with
+  "! its ACK_RECEIVED events - one read (files LEFT OUTER JOIN events): one row per file and ACK
+  "! event, ACK_AT initial for a file without ACK. Read-only; consumer HCK A_INFLIGHT (status lag)
+  METHODS get_group_acks DEFAULT IGNORE
+    IMPORTING
+      it_keys        TYPE zif_cd_fmon_types=>tt_group_key
+      iv_since       TYPE d
+    RETURNING
+      VALUE(rt_acks) TYPE zif_cd_fmon_types=>tt_group_ack.
 
   "! Files of business dates iv_date_from..iv_date_to plus files since
   "! iv_open_since that are still open (no outcome or PARTIALLY_PROCESSED)

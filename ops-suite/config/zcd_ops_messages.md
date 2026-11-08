@@ -221,6 +221,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 283 | &1: PRISM already has this name (error &2) - regenerate, do not resend |
 | 284 | Source &1: at most &2 generation group fields (GROUP_FIELDS) |
 | 300 | Variant &1, categories &2, priorities &3, checks: |
+| 301 | File ACK lag not evaluated: FMON source &1 has no GROUP_FIELDS |
 | 302 | Table &1 is not on the health check whitelist ZCD_HCK_TABWL |
 | 303 | Table &1 does not exist in the ABAP Dictionary |
 | 304 | Field &1 does not exist in table &2 |
@@ -231,6 +232,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 309 | Date field &1 of table &2 is not of type DATS |
 | 310 | Check &1 has no aggregate definition in ZCD_HCK_AGG |
 | 311 | Hash of table &1 could not be calculated |
+| 312 | File ACK lag not evaluated: group field &1 of source &2 not in DPAYH run |
 | 313 | Lock table could not be read (ENQUEUE_READ return code &1) |
 | 314 | Configuration baseline taken for &1 tables &2 |
 | 315 | Morning report exported to &1 |
@@ -264,6 +266,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 343 | &1 > &2 STALE |
 | 344 | Check &1: PARAM1 (application log objects) is not maintained |
 | 345 | Check &1: PARAM1 (job name patterns) is not maintained |
+| 346 | File ACK lag not evaluated: no outbound interface with ACK level &1 |
 | 347 | No active job cycle configured |
 | 348 | OK - &1 metric(s) within limits |
 | 349 | (+&1 more) |
@@ -419,6 +422,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 685 | Status lag after the bank ACK not evaluated: &1 not configured |
 | 686 | Status lag after the bank ACK not evaluated (&1): |
 | 687 | - not updated &1 min after the evidence: |
+| 688 | Payment &1: DPAYH status still &2, file ACK received &3 |
+| 689 | - file of payment run &1, interface &2: |
 | 690 | &1 &2: bank vs G/L differs by &3, unexplained &4 |
 | 691 | &1 &2: G/L &3 vs payment engine control total &4 |
 | 692 | Stripe group &1: charges &2, fees &3 vs deposit &4 |

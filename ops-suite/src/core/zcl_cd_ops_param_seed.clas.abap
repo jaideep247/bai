@@ -1615,6 +1615,38 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d096,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'CACH,CCRD',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Flow + method classes acknowledged per file (list)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d096.
+    CONSTANTS:
+      BEGIN OF gc_d097,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_PAY_ACK_FILE_SRC',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'REGUT',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,10}',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'FMON source whose GROUP_FIELDS name the payment run',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d097.
+    CONSTANTS:
+      BEGIN OF gc_d098,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_PAY_STATUS_ACK_OPEN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
@@ -1627,9 +1659,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'DPAYH statuses that must change after the bank ACK (list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d096.
+      END OF gc_d098.
     CONSTANTS:
-      BEGIN OF gc_d097,
+      BEGIN OF gc_d099,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_PAY_STATUS_LAG_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1643,9 +1675,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Grace before a payment status lag is reported (minutes)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d097.
+      END OF gc_d099.
     CONSTANTS:
-      BEGIN OF gc_d098,
+      BEGIN OF gc_d100,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_QUEUE_ERR_STATES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1659,9 +1691,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'qRFC / bgRFC states that are an error (comma list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d098.
+      END OF gc_d100.
     CONSTANTS:
-      BEGIN OF gc_d099,
+      BEGIN OF gc_d101,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_QUEUE_HOLD_STATES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1675,9 +1707,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'qRFC / bgRFC states that hold a queue (comma list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d099.
+      END OF gc_d101.
     CONSTANTS:
-      BEGIN OF gc_d100,
+      BEGIN OF gc_d102,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_QUEUE_WAIT_STATES',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1691,9 +1723,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'States stuck when older than the age limit (comma list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d100.
+      END OF gc_d102.
     CONSTANTS:
-      BEGIN OF gc_d101,
+      BEGIN OF gc_d103,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_RECON_LOOKBACK_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1707,9 +1739,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days before the report date reconciled by A_RECON_3WAY',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d101.
+      END OF gc_d103.
     CONSTANTS:
-      BEGIN OF gc_d102,
+      BEGIN OF gc_d104,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_RECON_MAX_ROWS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1723,9 +1755,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Assignment groups of one reconciliation read (ceiling 50000)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d102.
+      END OF gc_d104.
     CONSTANTS:
-      BEGIN OF gc_d103,
+      BEGIN OF gc_d105,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_RECON_REDEPOSIT_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1739,9 +1771,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days a 468 without returns lot waits for its redeposit',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d103.
+      END OF gc_d105.
     CONSTANTS:
-      BEGIN OF gc_d104,
+      BEGIN OF gc_d106,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_RECON_TIMING_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1755,9 +1787,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Days a reconciliation difference may stay open as timing',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d104.
+      END OF gc_d106.
     CONSTANTS:
-      BEGIN OF gc_d105,
+      BEGIN OF gc_d107,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_RECON_TOLERANCE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1771,9 +1803,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Tolerance per group day when the set has none (amount)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d105.
+      END OF gc_d107.
     CONSTANTS:
-      BEGIN OF gc_d106,
+      BEGIN OF gc_d108,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_SCORE_AMBER_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1787,9 +1819,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score from which the report is AMBER (below = RED)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d106.
+      END OF gc_d108.
     CONSTANTS:
-      BEGIN OF gc_d107,
+      BEGIN OF gc_d109,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_SCORE_GREEN_MIN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1803,9 +1835,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score from which the report is GREEN',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d107.
+      END OF gc_d109.
     CONSTANTS:
-      BEGIN OF gc_d108,
+      BEGIN OF gc_d110,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_SUPPRESS_MAX_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1819,9 +1851,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Longest suppression without a second user (days)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d108.
+      END OF gc_d110.
     CONSTANTS:
-      BEGIN OF gc_d109,
+      BEGIN OF gc_d111,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_TIMEOUT_SEC',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1835,9 +1867,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Default check timeout (seconds)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d109.
+      END OF gc_d111.
     CONSTANTS:
-      BEGIN OF gc_d110,
+      BEGIN OF gc_d112,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_TOP_N',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1851,9 +1883,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Open exceptions listed in the morning report',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d110.
+      END OF gc_d112.
     CONSTANTS:
-      BEGIN OF gc_d111,
+      BEGIN OF gc_d113,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WATCH_PE_AREAS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1867,9 +1899,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Areas whose last run is checked (comma list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d111.
+      END OF gc_d113.
     CONSTANTS:
-      BEGIN OF gc_d112,
+      BEGIN OF gc_d114,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_H',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1883,9 +1915,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority H',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d112.
+      END OF gc_d114.
     CONSTANTS:
-      BEGIN OF gc_d113,
+      BEGIN OF gc_d115,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_L',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1899,9 +1931,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority L',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d113.
+      END OF gc_d115.
     CONSTANTS:
-      BEGIN OF gc_d114,
+      BEGIN OF gc_d116,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_M',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1915,7 +1947,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority M',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d114.
+      END OF gc_d116.
     DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_param TYPE REF TO zif_ca_param.
     DATA mo_params TYPE REF TO zif_cd_ops_params.
@@ -2049,6 +2081,8 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d112 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d113 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d114 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d115 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d116 ) INTO TABLE rt_definitions.
   ENDMETHOD.
 
 

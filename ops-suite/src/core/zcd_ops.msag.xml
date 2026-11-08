@@ -1301,6 +1301,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>301</MSGNR>
+     <TEXT>File ACK lag not evaluated: FMON source &amp;1 has no GROUP_FIELDS</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>302</MSGNR>
      <TEXT>Table &amp;1 is not on the health check whitelist ZCD_HCK_TABWL</TEXT>
     </T100>
@@ -1357,6 +1363,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>311</MSGNR>
      <TEXT>Hash of table &amp;1 could not be calculated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>312</MSGNR>
+     <TEXT>File ACK lag not evaluated: group field &amp;1 of source &amp;2 not in DPAYH run</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1555,6 +1567,12 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>345</MSGNR>
      <TEXT>Check &amp;1: PARAM1 (job name patterns) is not maintained</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>346</MSGNR>
+     <TEXT>File ACK lag not evaluated: no outbound interface with ACK level &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2485,6 +2503,18 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>687</MSGNR>
      <TEXT>- not updated &amp;1 min after the evidence:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>688</MSGNR>
+     <TEXT>Payment &amp;1: DPAYH status still &amp;2, file ACK received &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>689</MSGNR>
+     <TEXT>- file of payment run &amp;1, interface &amp;2:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

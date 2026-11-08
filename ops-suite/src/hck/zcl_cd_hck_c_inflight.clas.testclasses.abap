@@ -30,6 +30,12 @@
 *& 2026-11-08 | PAY_STATUS_LAG: bank evidence decides but the status lags beyond the grace (one finding per
 *&            | payment, metric), within the grace silent, bank ACK older than the grace while ISSUED,
 *&            | ACK source not configured (information, nothing judged).
+*& 2026-11-08 | Status lag after a file-level ACK (collections, HCK_PAY_ACK_FILE_CLASSES): the FMON file of
+*&            | the payment run (generation group LAUFD/LAUFI/HBKID of the source REGUT, FMON repository
+*&            | double) acknowledged after the grace while ISSUED, within the grace, status CONFIRMED,
+*&            | replaced failed file ignored and the regenerated file's ACK used, GROUP_FIELDS not
+*&            | configured (one W, no lag, no read), two payment runs with separate files, payment-level
+*&            | and file-level classes in one run.
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -156,6 +162,39 @@ CLASS ltd_trace_dao IMPLEMENTATION.
 ENDCLASS.
 
 
+"! FMON repository: the generating source, interfaces and the files of generation groups with ACKs
+CLASS ltd_fmon_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_fmon_dao PARTIALLY IMPLEMENTED.
+    DATA mt_sources TYPE zif_cd_fmon_types=>tt_src.
+    DATA mt_ifaces TYPE zif_cd_fmon_types=>tt_iface.
+    DATA mt_acks TYPE zif_cd_fmon_types=>tt_group_ack.
+    "! Keys of the last group read and number of group reads
+    DATA mt_keys TYPE zif_cd_fmon_types=>tt_group_key.
+    DATA mv_reads TYPE i.
+ENDCLASS.
+
+CLASS ltd_fmon_dao IMPLEMENTATION.
+  METHOD zif_cd_fmon_dao~get_sources.
+    rt_sources = mt_sources.
+  ENDMETHOD.
+
+  METHOD zif_cd_fmon_dao~get_ifaces.
+    rt_ifaces = mt_ifaces.
+  ENDMETHOD.
+
+  METHOD zif_cd_fmon_dao~get_group_acks.
+    mv_reads = mv_reads + 1.
+    mt_keys = it_keys.
+    LOOP AT mt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>).
+      IF line_exists( it_keys[ iface_id = <ls_ack>-iface_id gen_group = <ls_ack>-gen_group ] ).
+        INSERT <ls_ack> INTO TABLE rt_acks.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_cd_hck_dao PARTIALLY IMPLEMENTED.
@@ -270,7 +309,20 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
       "! Morning report time of the status-lag tests (grace 120 min: limit 06:00 today)
       gc_morning  TYPE t VALUE '080000',
       "! Payment-level ACK source as the payment trace configures it (test names)
-      gc_ack_spec TYPE string VALUE `TABLE=ZCD_WIRE_ACK;KEY=AUGBL;STATUS=ACK_STATUS;DATE=ACK_DATE;TIME=ACK_TIME`.
+      gc_ack_spec TYPE string VALUE `TABLE=ZCD_WIRE_ACK;KEY=AUGBL;STATUS=ACK_STATUS;DATE=ACK_DATE;TIME=ACK_TIME`,
+      "! FMON configuration of the file-level ACK (test names): the generating source with its payment
+      "! run fields, the collection interface acknowledged per file and a disbursement one per payment
+      gc_regut        TYPE zif_cd_fmon_types=>ty_src_id VALUE 'REGUT',
+      gc_group_fields TYPE zif_cd_fmon_types=>ty_field_list VALUE 'LAUFD,LAUFI,HBKID',
+      gc_coll_iface   TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_COLL_OUT',
+      gc_disb_iface   TYPE zif_cd_fmon_types=>ty_iface_id VALUE 'ACH_PNC_DISB_OUT',
+      gc_pnc          TYPE zif_cd_hck_runtime_types=>ty_hbkid VALUE 'PNC1',
+      gc_run_a        TYPE c LENGTH 6 VALUE 'COLL01',
+      gc_run_b        TYPE c LENGTH 6 VALUE 'COLL02',
+      "! Generation group keys of the two collection runs of Friday as FMON builds them (run date,
+      "! run ID, house bank joined by '/')
+      gc_group_a      TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261106/COLL01/PNC1',
+      gc_group_b      TYPE zif_cd_fmon_types=>ty_file_ref VALUE '20261106/COLL02/PNC1'.
 
     "! Confirmed DPAYH-ZZ_PAYMENT_STATUS values (2026-11-08) and ACK statuses of the tests
     CONSTANTS:
@@ -301,6 +353,7 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
 
     DATA mo_dao TYPE REF TO ltd_runtime_dao.
     DATA mo_trace TYPE REF TO ltd_trace_dao.
+    DATA mo_fmon TYPE REF TO ltd_fmon_dao.
     DATA mo_hck_dao TYPE REF TO ltd_hck_dao.
     DATA mo_ev_a TYPE REF TO ltd_evidence.
     DATA mo_ev_b TYPE REF TO ltd_evidence.
@@ -362,6 +415,40 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
     METHODS lag_within_grace_silent      FOR TESTING.
     METHODS ack_lag_after_grace          FOR TESTING.
     METHODS ack_source_unconfigured      FOR TESTING.
+    " status lag after a file-level ACK (collections)
+    METHODS file_ack_lag_after_grace     FOR TESTING.
+    METHODS file_ack_within_grace        FOR TESTING.
+    METHODS file_ack_confirmed_silent    FOR TESTING.
+    METHODS file_ack_replaced_ignored    FOR TESTING.
+    METHODS file_ack_group_unconfigured  FOR TESTING.
+    METHODS file_ack_two_runs_apart      FOR TESTING.
+    METHODS ack_levels_in_one_run        FOR TESTING.
+    "! A collection ACH payment in flight (test kind A finds nothing) of a Friday run with its status
+    METHODS add_collection
+      IMPORTING
+        iv_doc    TYPE zif_cd_hck_runtime_types=>ty_docno
+        iv_status TYPE clike
+        iv_laufi  TYPE clike.
+    "! A file of a generation group of the collection interface (FMON registry) with an optional ACK
+    METHODS add_file
+      IMPORTING
+        iv_id    TYPE i
+        iv_group TYPE zif_cd_fmon_types=>ty_file_ref
+        iv_first TYPE timestampl
+        iv_ack   TYPE timestampl OPTIONAL.
+    "! Time stamp of a local date and time (the report's time zone)
+    METHODS local_ts
+      IMPORTING
+        iv_date      TYPE d
+        iv_time      TYPE t
+      RETURNING
+        VALUE(rv_ts) TYPE timestampl.
+    "! The PAY_STATUS_LAG findings of a result
+    METHODS lags
+      IMPORTING
+        is_result     TYPE zif_cd_hck_types=>ty_check_result
+      RETURNING
+        VALUE(rt_lag) TYPE zif_cd_ops_types=>tt_finding.
     "! A wire in flight (test kind A finds nothing) with its DPAYH status and an optional bank ACK
     METHODS add_acked_wire
       IMPORTING
@@ -406,7 +493,8 @@ CLASS ltc_inflight DEFINITION FINAL FOR TESTING
         iv_valut      TYPE d OPTIONAL
         iv_collection TYPE abap_bool DEFAULT abap_false
         iv_currency   TYPE zif_cd_ops_types=>ty_currency DEFAULT gc_usd
-        iv_hbkid      TYPE zif_cd_hck_runtime_types=>ty_hbkid OPTIONAL.
+        iv_hbkid      TYPE zif_cd_hck_runtime_types=>ty_hbkid OPTIONAL
+        iv_laufi      TYPE clike OPTIONAL.
     METHODS add_line
       IMPORTING
         iv_chect TYPE clike
@@ -459,6 +547,25 @@ CLASS ltc_inflight IMPLEMENTATION.
     mo_trace = NEW #( ).
     zcl_cd_ops_injector=>inject_trace_dao( mo_trace ).
     zcl_cd_ops_injector=>inject_clock( NEW ltd_clock( ) ).
+    " FMON as configured for the file-level ACK: source REGUT with its payment run fields, the
+    " collection interface acknowledged per file, a disbursement interface acknowledged per payment
+    mo_fmon = NEW #( ).
+    DATA(ls_src) = VALUE zif_cd_fmon_types=>ty_src( ).
+    ls_src-src_id       = gc_regut.
+    ls_src-active       = abap_true.
+    ls_src-group_fields = gc_group_fields.
+    INSERT ls_src INTO TABLE mo_fmon->mt_sources.
+    DATA(ls_iface) = VALUE zif_cd_fmon_types=>ty_iface( ).
+    ls_iface-iface_id     = gc_coll_iface.
+    ls_iface-direction    = zif_cd_fmon_types=>gc_direction-outbound.
+    ls_iface-ack_expected = abap_true.
+    ls_iface-ack_level    = zif_cd_fmon_types=>gc_ack_level-file.
+    ls_iface-active       = abap_true.
+    INSERT ls_iface INTO TABLE mo_fmon->mt_ifaces.
+    ls_iface-iface_id  = gc_disb_iface.
+    ls_iface-ack_level = zif_cd_fmon_types=>gc_ack_level-payment.
+    INSERT ls_iface INTO TABLE mo_fmon->mt_ifaces.
+    zcl_cd_fmon_injector=>inject_dao( mo_fmon ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
     mo_ev_a = NEW #( ).
@@ -494,7 +601,8 @@ CLASS ltc_inflight IMPLEMENTATION.
   METHOD teardown.
     zcl_cd_hck_injector=>reset( ).
     zcl_cd_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_trace, mo_hck_dao, mo_params, mt_thresholds, mo_ev_a, mo_ev_b, mo_ev_c.
+    zcl_cd_fmon_injector=>reset( ).
+    CLEAR: mo_dao, mo_trace, mo_fmon, mo_hck_dao, mo_params, mt_thresholds, mo_ev_a, mo_ev_b, mo_ev_c.
   ENDMETHOD.
 
 
@@ -618,6 +726,7 @@ CLASS ltc_inflight IMPLEMENTATION.
     ls_payment-bukrs    = gc_bukrs.
     ls_payment-pymet    = iv_pymet.
     ls_payment-hbkid    = iv_hbkid.
+    ls_payment-laufi    = iv_laufi.
     ls_payment-valut    = iv_valut.
     ls_payment-amount   = gc_amount.
     ls_payment-currency = iv_currency.
@@ -1813,6 +1922,243 @@ CLASS ltc_inflight IMPLEMENTATION.
                                                             check_code = zif_cd_hck_runtime_types=>gc_code-status_lag ] ) )
                                            msg = 'No lag without ACK evidence' ).
         cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 0 msg = 'No read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD add_collection.
+    add_payment( iv_doc        = iv_doc
+                 iv_pymet      = gc_coll_ach
+                 iv_valut      = gc_today
+                 iv_collection = abap_true
+                 iv_hbkid      = gc_pnc
+                 iv_laufi      = iv_laufi ).
+    INSERT VALUE #( doc1r = iv_doc laufd = gc_friday laufi = iv_laufi status = iv_status ) INTO TABLE mo_trace->mt_runs.
+  ENDMETHOD.
+
+
+  METHOD add_file.
+    DATA ls_file TYPE zif_cd_fmon_types=>ty_group_ack.
+    ls_file-file_id        = CONV zif_cd_fmon_types=>ty_file_id( iv_id ).
+    ls_file-iface_id       = gc_coll_iface.
+    ls_file-gen_group      = iv_group.
+    ls_file-file_ref       = |ACH_COLL_FILE_{ iv_id }|.
+    ls_file-file_name      = |ACH_COLL_FILE_{ iv_id }.txt|.
+    ls_file-first_event_at = iv_first.
+    ls_file-ack_at         = iv_ack.
+    INSERT ls_file INTO TABLE mo_fmon->mt_acks.
+  ENDMETHOD.
+
+
+  METHOD local_ts.
+    CONVERT DATE iv_date TIME iv_time INTO TIME STAMP rv_ts TIME ZONE sy-zonlo.
+  ENDMETHOD.
+
+
+  METHOD lags.
+    LOOP AT is_result-findings ASSIGNING FIELD-SYMBOL(<ls_finding>)
+         WHERE check_code = zif_cd_hck_runtime_types=>gc_code-status_lag.
+      INSERT <ls_finding> INTO TABLE rt_lag.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  " File-level ACK (user 2026-11-08: collections are acknowledged per file): the file of the payment's run
+  " (generation group run date / run ID / house bank, built as FMON builds it) was acknowledged yesterday
+  " 10:00, the status still says ISSUED at 08:00 today - one PAY_STATUS_LAG (W); one FMON read, only the
+  " interface acknowledged per file
+  METHOD file_ack_lag_after_grace.
+    TRY.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lt_lag) = lags( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'One lagging collection' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+                                            msg = 'The collection whose status lags' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Warning' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-message sub = condense( gc_status-issued ) ) >= 0 )
+                                          msg = 'The status that did not follow is named' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = `ACH_COLL_FILE_1.txt` ) >= 0 )
+                                          msg = 'The acknowledged file is named' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-c_ach )
+                                            exp = 1 msg = 'Metric CACH' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 1 msg = 'One FMON read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mt_keys
+                                            exp = VALUE zif_cd_fmon_types=>tt_group_key( ( iface_id  = gc_coll_iface
+                                                                                           gen_group = gc_group_a ) )
+                                            msg = 'Group key as FMON builds it, file-level interface only' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 0 msg = 'No payment-level ACK read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " File-level ACK today 07:30, report 08:00 (grace 120 min): nothing reported
+  METHOD file_ack_within_grace.
+    TRY.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_today iv_time = '060000' )
+                  iv_ack   = local_ts( iv_date = gc_today iv_time = '073000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        cl_abap_unit_assert=>assert_initial( act = lags( ls_result ) msg = 'Within the grace: no lag' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-c_ach )
+                                            exp = 0 msg = 'Zero is measured' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The status already followed the file ACK (CONFIRMED): no candidate, no FMON read, no lag
+  METHOD file_ack_confirmed_silent.
+    TRY.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-confirmed iv_laufi = gc_run_a ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        cl_abap_unit_assert=>assert_initial( act = lags( ls_result ) msg = 'Status CONFIRMED: no lag' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 0 msg = 'No FMON read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Regenerated files (FMON rule 9): run A - file 1 failed and was replaced by file 2, acknowledged
+  " yesterday 10:00: the lag names file 2. Run B - file 3 has an old ACK but was replaced by file 4
+  " that has no ACK yet: a replaced file never counts and no ACK at all is FMON's finding - no lag
+  METHOD file_ack_replaced_ignored.
+    TRY.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_collection( iv_doc = gc_doc2 iv_status = gc_status-issued iv_laufi = gc_run_b ).
+        add_file( iv_id = 1 iv_group = gc_group_a iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' ) ).
+        add_file( iv_id    = 2
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '090000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        add_file( iv_id    = 3
+                  iv_group = gc_group_b
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '090000' ) ).
+        add_file( iv_id = 4 iv_group = gc_group_b iv_first = local_ts( iv_date = gc_holiday iv_time = '110000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lt_lag) = lags( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only run A lags' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+                                            msg = 'Payment of run A' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = `ACH_COLL_FILE_2.txt` ) >= 0 )
+                                          msg = 'The regenerated file decides' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( find( val = lt_lag[ 1 ]-details sub = `ACH_COLL_FILE_1.txt` ) >= 0 )
+                                           msg = 'The replaced file is not named' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " GROUP_FIELDS not configured on the source: the file-level case is not evaluable - one INFLIGHT_CONFIG
+  " W for the run, no lag, no FMON group read
+  METHOD file_ack_group_unconfigured.
+    TRY.
+        CLEAR mo_fmon->mt_sources.
+        DATA(ls_src) = VALUE zif_cd_fmon_types=>ty_src( ).
+        ls_src-src_id = gc_regut.
+        ls_src-active = abap_true.
+        INSERT ls_src INTO TABLE mo_fmon->mt_sources.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_collection( iv_doc = gc_doc2 iv_status = gc_status-issued iv_laufi = gc_run_b ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lv_key) = CONV zif_cd_ops_types=>ty_object_key( |{ gc_check }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+                                                             |{ zif_cd_hck_runtime_types=>gc_param-ack_file_src }| ).
+        DATA(lv_count) = 0.
+        LOOP AT ls_result-findings TRANSPORTING NO FIELDS WHERE object_key = lv_key.
+          lv_count = lv_count + 1.
+        ENDLOOP.
+        cl_abap_unit_assert=>assert_equals( act = lv_count exp = 1 msg = 'One configuration finding for the run' ).
+        DATA(ls_config) = ls_result-findings[ object_key = lv_key ].
+        cl_abap_unit_assert=>assert_equals( act = ls_config-check_code exp = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                                            msg = 'Configuration finding' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_config-severity exp = zif_cd_ops_types=>gc_severity-warning
+                                            msg = 'Not evaluable: warning' ).
+        cl_abap_unit_assert=>assert_initial( act = lags( ls_result ) msg = 'No lag without the link' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 0 msg = 'No group read' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Two payment runs, each with its own file: run A acknowledged yesterday (lag), run B today 07:30
+  " (within the grace) - judged per run, one FMON read for both groups
+  METHOD file_ack_two_runs_apart.
+    TRY.
+        add_collection( iv_doc = gc_doc1 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_collection( iv_doc = gc_doc2 iv_status = gc_status-issued iv_laufi = gc_run_b ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        add_file( iv_id    = 2
+                  iv_group = gc_group_b
+                  iv_first = local_ts( iv_date = gc_today iv_time = '060000' )
+                  iv_ack   = local_ts( iv_date = gc_today iv_time = '073000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        DATA(lt_lag) = lags( ls_result ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_lag ) exp = 1 msg = 'Only run A lags' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_lag[ 1 ]-reference exp = CONV zif_cd_ops_types=>ty_reference( gc_doc1 )
+                                            msg = 'Payment of run A' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 1 msg = 'One FMON read' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_fmon->mt_keys ) exp = 2 msg = 'Both groups in it' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Configuration decides the ACK per class: a wire (DWIR, per payment: TRACE_SRC_ACK) and a collection
+  " (CACH, per file: FMON) in one run - both lag, each by its own ACK, one read of each source
+  METHOD ack_levels_in_one_run.
+    TRY.
+        mo_params->set( iv_name = zif_cd_ops_trace_types=>gc_param-src_ack iv_value = gc_ack_spec ).
+        add_acked_wire( iv_doc = gc_doc1 iv_status = gc_status-issued iv_ack_status = gc_status-ack
+                        iv_ack_date = gc_holiday iv_ack_time = '100000' ).
+        add_collection( iv_doc = gc_doc2 iv_status = gc_status-issued iv_laufi = gc_run_a ).
+        add_file( iv_id    = 1
+                  iv_group = gc_group_a
+                  iv_first = local_ts( iv_date = gc_holiday iv_time = '080000' )
+                  iv_ack   = local_ts( iv_date = gc_holiday iv_time = '100000' ) ).
+        DATA(ls_result) = act( iv_time = gc_morning ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lags( ls_result ) ) exp = 2 msg = 'Both lag' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-d_wire )
+                                            exp = 1 msg = 'Wire by its payment-level ACK' ).
+        cl_abap_unit_assert=>assert_equals( act = metric( is_result = ls_result
+                                                          iv_metric = zcl_cd_hck_c_inflight=>gc_metric-status_lag
+                                                          iv_key    = gc_key-c_ach )
+                                            exp = 1 msg = 'Collection by its file ACK' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_trace->mv_ack_reads exp = 1 msg = 'One payment-level ACK read' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_fmon->mv_reads exp = 1 msg = 'One FMON read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

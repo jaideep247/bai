@@ -45,6 +45,15 @@
 *&            | line's day; (a) a disbursement's payment-level bank ACK (configured TRACE_SRC_ACK, the
 *&            | link the payment trace uses) is older than the grace while the status is still in
 *&            | HCK_PAY_STATUS_ACK_OPEN (ISSUED). Set-based: the shared status read and one ACK read.
+*& 2026-11-08 | Status lag after a file-level ACK (user 2026-11-08: every payment goes through ISSUED and
+*&            | CONFIRMED; collections are acknowledged per file): which ACK applies is configuration
+*&            | (HCK_PAY_ACK_FILE_CLASSES, default CACH,CCRD; every other class per payment). Link: the
+*&            | payment's DPAYH run (fields named by GROUP_FIELDS of the FMON source HCK_PAY_ACK_FILE_SRC)
+*&            | -> generation group key (ZCL_CD_FMON_RULES=>GENERATION_KEY, as FMON builds it) -> the
+*&            | latest generation of each interface of the group (a replaced file never counts) -> its
+*&            | ACK_RECEIVED event; one FMON read for all candidates (ZIF_CD_FMON_DAO=>GET_GROUP_ACKS,
+*&            | index GRP). Link not configured: one INFLIGHT_CONFIG W per run, nothing judged; no ACK at
+*&            | all is FMON's finding, not a lag. Reads FMON through its factory only (one-way).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - payments not cleared on the bank statement</p>
 "! PARAM1 = factory calendar when the method class / house bank has none, PARAM2 = look-back
@@ -144,6 +153,38 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
       END OF ty_ack.
     TYPES tt_ack TYPE HASHED TABLE OF ty_ack WITH UNIQUE KEY doc1r.
 
+    TYPES tt_iface_id TYPE SORTED TABLE OF zif_cd_fmon_types=>ty_iface_id WITH UNIQUE KEY table_line.
+
+    "! Link of a payment to the file of its payment run (file-level ACK): usable once the FMON source
+    "! has GROUP_FIELDS that are DPAYH payment run fields and file-level interfaces exist
+    TYPES:
+      BEGIN OF ty_file_link,
+        usable TYPE abap_bool,
+        "! DPAYH payment run field of each GROUP_FIELDS position, in the configured order
+        fields TYPE string_table,
+        "! Interfaces whose files of the group are read (the source's, else outbound + ACK level FILE)
+        ifaces TYPE tt_iface_id,
+      END OF ty_file_link.
+
+    "! ACK of the file of a payment's run: the latest of the ACKs of the latest generations
+    TYPES:
+      BEGIN OF ty_file_ack,
+        doc1r  TYPE zif_cd_hck_runtime_types=>ty_docno,
+        ack_at TYPE timestampl,
+        text   TYPE string,
+      END OF ty_file_ack.
+    TYPES tt_file_ack TYPE HASHED TABLE OF ty_file_ack WITH UNIQUE KEY doc1r.
+
+    "! ACK of a generation group: OPEN = a latest generation without ACK (FMON's finding, not judged)
+    TYPES:
+      BEGIN OF ty_group_time,
+        gen_group TYPE zif_cd_fmon_types=>ty_file_ref,
+        ack_at    TYPE timestampl,
+        open      TYPE abap_bool,
+        text      TYPE string,
+      END OF ty_group_time.
+    TYPES tt_group_time TYPE HASHED TABLE OF ty_group_time WITH UNIQUE KEY gen_group.
+
     DATA mo_outcome TYPE REF TO zif_cd_ops_pay_outcome.
     DATA mt_classes TYPE zif_cd_hck_runtime_types=>tt_pm_class.
     DATA mt_banks TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
@@ -229,6 +270,54 @@ CLASS zcl_cd_hck_c_inflight DEFINITION
         cs_result      TYPE zif_cd_hck_types=>ty_check_result
       RETURNING
         VALUE(rt_acks) TYPE tt_ack.
+
+    "! File-level ACK link of the run (FMON source HCK_PAY_ACK_FILE_SRC: GROUP_FIELDS -> DPAYH run
+    "! fields; interfaces). Not usable: one INFLIGHT_CONFIG W per run (the case is not evaluable)
+    METHODS file_ack_link
+      IMPORTING
+        is_def         TYPE zif_cd_hck_types=>ty_check_def
+      CHANGING
+        cs_result      TYPE zif_cd_hck_types=>ty_check_result
+      RETURNING
+        VALUE(rs_link) TYPE ty_file_link.
+
+    "! The one finding of a file-level link that is not usable
+    METHODS file_ack_unusable
+      IMPORTING
+        is_def     TYPE zif_cd_hck_types=>ty_check_def
+        iv_message TYPE string
+      CHANGING
+        cs_result  TYPE zif_cd_hck_types=>ty_check_result.
+
+    "! ACK of the file of each payment's run: generation group key of the payment run (built as FMON
+    "! builds it), one FMON read for all payments, the latest generation of each interface of the group
+    "! (a replaced file never counts) must have its ACK; the latest of these ACKs counts. No entry =
+    "! no ACK (FMON's finding) or no group key
+    METHODS file_acks_of
+      IMPORTING
+        it_payments    TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+        is_link        TYPE ty_file_link
+      RETURNING
+        VALUE(rt_acks) TYPE tt_file_ack.
+
+    "! PAY_STATUS_LAG of payments acknowledged per file whose file ACK is older than the grace
+    METHODS file_lags
+      IMPORTING
+        it_payments TYPE zif_cd_hck_runtime_types=>tt_issued_payment
+        is_link     TYPE ty_file_link
+        it_status   TYPE zcl_cd_hck_ev_support=>tt_pay_status
+        iv_limit    TYPE timestampl
+        iv_grace    TYPE i
+      CHANGING
+        ct_lag      TYPE tt_lag.
+
+    "! Value of a DPAYH payment run field of the payment, unformatted as FMON reads a source field
+    CLASS-METHODS run_value
+      IMPORTING
+        is_payment      TYPE zif_cd_hck_runtime_types=>ty_issued_payment
+        iv_field        TYPE string
+      RETURNING
+        VALUE(rv_value) TYPE string.
 
     "! The grace period after the evidence has passed: the evidence day without time counts from
     "! its end (the next day, 00:00), a time from that instant
@@ -647,7 +736,9 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
   METHOD report_status_lag.
     DATA lt_open TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
     DATA lt_ack_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
+    DATA lt_file_due TYPE zif_cd_hck_runtime_types=>tt_issued_payment.
     DATA lt_lag TYPE tt_lag.
+    DATA ls_link TYPE ty_file_link.
     DATA lv_now TYPE timestamp.
     DATA lv_limit TYPE timestampl.
     DATA(lo_params) = zcl_cd_ops_factory=>get_params( ).
@@ -658,6 +749,19 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
     CONVERT DATE is_context-now_date TIME is_context-now_time INTO TIME STAMP lv_now TIME ZONE sy-zonlo.
     lv_limit = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
                                             secs  = lv_grace * 60 ).
+    " Which bank ACK applies is configuration per flow + class: the listed classes are acknowledged per
+    " file (the FMON file of the payment run), every other class per payment (TRACE_SRC_ACK)
+    DATA(lt_file_classes) = zcl_cd_hck_ev_support=>tokens(
+                              lo_params->get_param( iv_name    = zif_cd_hck_runtime_types=>gc_param-ack_file_classes
+                                                    iv_default = zif_cd_hck_runtime_types=>gc_param_default-ack_file_classes ) ).
+    " The file-level link is checked once per run as soon as a watched class is acknowledged per file
+    LOOP AT lt_file_classes ASSIGNING FIELD-SYMBOL(<lv_file_class>).
+      IF line_exists( mt_watched[ table_line = CONV zif_cd_hck_runtime_types=>ty_flow_class( <lv_file_class> ) ] ).
+        ls_link = file_ack_link( EXPORTING is_def    = is_def
+                                 CHANGING  cs_result = cs_result ).
+        EXIT.
+      ENDIF.
+    ENDLOOP.
 
     " Payments in flight (also undetermined): a decided payment is not lagging
     LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
@@ -698,11 +802,15 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                                            iv_tail  = CONV string( ls_verdict-evidence_ref ) ) )
             INTO TABLE lt_lag.
         ENDIF.
-      ELSEIF <ls_payment>-flow = zif_cd_hck_runtime_types=>gc_flow-disbursement
-             AND lv_status IS NOT INITIAL AND line_exists( lt_ack_open[ table_line = lv_status ] )
+      ELSEIF lv_status IS NOT INITIAL AND line_exists( lt_ack_open[ table_line = lv_status ] )
              AND NOT line_exists( lt_no_ack[ table_line = to_upper( CONV string( <ls_payment>-pymet ) ) ] ).
-        " (a) candidate: disbursements are acknowledged per payment
-        INSERT <ls_payment> INTO TABLE lt_ack_due.
+        IF NOT line_exists( lt_file_classes[ table_line = CONV string( lv_key ) ] ).
+          " (a) candidate acknowledged per payment (by default the disbursements)
+          INSERT <ls_payment> INTO TABLE lt_ack_due.
+        ELSEIF ls_link-usable = abap_true.
+          " (a) candidate acknowledged per file (by default the collections): the payment run's file
+          INSERT <ls_payment> INTO TABLE lt_file_due.
+        ENDIF.
       ENDIF.
     ENDLOOP.
 
@@ -730,6 +838,16 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
                                                          iv_v1    = lv_grace
                                                          iv_tail  = <ls_ack>-text ) ) INTO TABLE lt_lag.
       ENDLOOP.
+    ENDIF.
+
+    " (a) per file: the ACK of the payment run's file is older than the grace, the status still ISSUED
+    IF lt_file_due IS NOT INITIAL.
+      file_lags( EXPORTING it_payments = lt_file_due
+                           is_link     = ls_link
+                           it_status   = lt_status
+                           iv_limit    = lv_limit
+                           iv_grace    = lv_grace
+                 CHANGING  ct_lag      = lt_lag ).
     ENDIF.
 
     " One finding per payment (default: no alert rule - warnings of the morning report and dashboard)
@@ -824,6 +942,196 @@ CLASS zcl_cd_hck_c_inflight IMPLEMENTATION.
         <ls_known> = ls_ack.
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD file_ack_link.
+    DATA(lo_fmon) = zcl_cd_fmon_factory=>get_dao( ).
+    DATA(lv_src_id) = CONV zif_cd_fmon_types=>ty_src_id( to_upper( condense(
+                        zcl_cd_ops_factory=>get_params( )->get_param(
+                          iv_name    = zif_cd_hck_runtime_types=>gc_param-ack_file_src
+                          iv_default = zif_cd_hck_runtime_types=>gc_param_default-ack_file_src ) ) ) ).
+    " The generating source and its GROUP_FIELDS (the payment run of a file, FMON rule 9)
+    DATA(lt_sources) = lo_fmon->get_sources( ).
+    DATA(ls_src) = VALUE zif_cd_fmon_types=>ty_src( lt_sources[ src_id = lv_src_id ] OPTIONAL ).
+    IF ls_src-group_fields IS INITIAL.
+      file_ack_unusable( EXPORTING is_def     = is_def
+                                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_unconfig
+                                                                       iv_v1    = lv_src_id )
+                         CHANGING  cs_result  = cs_result ).
+      RETURN.
+    ENDIF.
+    " Each group field must be a DPAYH payment run field: the payment's value of the same name
+    LOOP AT zcl_cd_ops_util=>split_list( ls_src-group_fields ) ASSIGNING FIELD-SYMBOL(<lv_field>).
+      DATA(lv_field) = to_upper( condense( <lv_field> ) ).
+      IF lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufd
+         AND lv_field <> zif_cd_hck_runtime_types=>gc_run_field-laufi
+         AND lv_field <> zif_cd_hck_runtime_types=>gc_run_field-hbkid.
+        file_ack_unusable( EXPORTING is_def     = is_def
+                                     iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_field
+                                                                         iv_v1    = lv_field
+                                                                         iv_v2    = lv_src_id )
+                           CHANGING  cs_result  = cs_result ).
+        CLEAR rs_link.
+        RETURN.
+      ENDIF.
+      INSERT lv_field INTO TABLE rs_link-fields.
+    ENDLOOP.
+    " The interfaces of the source's files: its own, else every outbound interface acknowledged per file
+    IF ls_src-iface_id IS NOT INITIAL.
+      INSERT ls_src-iface_id INTO TABLE rs_link-ifaces.
+    ELSE.
+      LOOP AT lo_fmon->get_ifaces( ) ASSIGNING FIELD-SYMBOL(<ls_iface>)
+           WHERE direction    = zif_cd_fmon_types=>gc_direction-outbound
+             AND ack_expected = abap_true
+             AND ack_level    = zif_cd_fmon_types=>gc_ack_level-file.
+        INSERT <ls_iface>-iface_id INTO TABLE rs_link-ifaces.
+      ENDLOOP.
+    ENDIF.
+    IF rs_link-ifaces IS INITIAL.
+      file_ack_unusable( EXPORTING is_def     = is_def
+                                   iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-file_ack_no_iface
+                                                                       iv_v1    = zif_cd_fmon_types=>gc_ack_level-file )
+                         CHANGING  cs_result  = cs_result ).
+      CLEAR rs_link.
+      RETURN.
+    ENDIF.
+    rs_link-usable = abap_true.
+  ENDMETHOD.
+
+
+  METHOD file_ack_unusable.
+    INSERT VALUE #( object_key = |{ is_def-check_id }/{ zif_cd_hck_runtime_types=>gc_code-status_lag }/| &&
+                                 |{ zif_cd_hck_runtime_types=>gc_param-ack_file_src }|
+                    check_code = zif_cd_hck_runtime_types=>gc_code-inflight_config
+                    severity   = zif_cd_ops_types=>gc_severity-warning
+                    action     = zif_cd_ops_types=>gc_action-notify
+                    message    = iv_message ) INTO TABLE cs_result-findings.
+  ENDMETHOD.
+
+
+  METHOD file_acks_of.
+    TYPES:
+      BEGIN OF ty_group_of,
+        doc1r     TYPE zif_cd_hck_runtime_types=>ty_docno,
+        gen_group TYPE zif_cd_fmon_types=>ty_file_ref,
+      END OF ty_group_of.
+    DATA lt_group_of TYPE HASHED TABLE OF ty_group_of WITH UNIQUE KEY doc1r.
+    DATA lt_keys TYPE zif_cd_fmon_types=>tt_group_key.
+    DATA lt_values TYPE string_table.
+    DATA lt_files TYPE zif_cd_fmon_types=>tt_file.
+    DATA lt_file_ack TYPE HASHED TABLE OF zif_cd_fmon_types=>ty_group_ack WITH UNIQUE KEY file_id.
+    DATA lt_groups TYPE tt_group_time.
+    DATA lv_since TYPE d.
+
+    " Generation group key of each payment run, built from the values FMON reads from the source row
+    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      CLEAR lt_values.
+      LOOP AT is_link-fields ASSIGNING FIELD-SYMBOL(<lv_field>).
+        INSERT run_value( is_payment = <ls_payment> iv_field = <lv_field> ) INTO TABLE lt_values.
+      ENDLOOP.
+      DATA(lv_group) = zcl_cd_fmon_rules=>generation_key( lt_values ).
+      IF lv_group IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( doc1r = <ls_payment>-doc1r gen_group = lv_group ) INTO TABLE lt_group_of.
+      LOOP AT is_link-ifaces ASSIGNING FIELD-SYMBOL(<lv_iface>).
+        INSERT VALUE #( iface_id = <lv_iface> gen_group = lv_group ) INTO TABLE lt_keys.
+      ENDLOOP.
+      IF lv_since IS INITIAL OR <ls_payment>-laufd < lv_since.
+        lv_since = <ls_payment>-laufd.
+      ENDIF.
+    ENDLOOP.
+    IF lt_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+    SORT lt_keys BY iface_id gen_group.
+    DELETE ADJACENT DUPLICATES FROM lt_keys COMPARING iface_id gen_group.
+    " One read for all candidates: the files of the groups since the day before the earliest run (the
+    " file's business date is in FMON's time zone) with their ACK events
+    DATA(lt_rows) = zcl_cd_fmon_factory=>get_dao( )->get_group_acks( it_keys  = lt_keys
+                                                                     iv_since = CONV d( lv_since - 1 ) ).
+    " The generations and the earliest ACK of each file
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
+      IF NOT line_exists( lt_files[ KEY by_id file_id = <ls_row>-file_id ] ).
+        INSERT CORRESPONDING #( <ls_row> ) INTO TABLE lt_files.
+      ENDIF.
+      IF <ls_row>-ack_at IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      READ TABLE lt_file_ack ASSIGNING FIELD-SYMBOL(<ls_file_ack>) WITH TABLE KEY file_id = <ls_row>-file_id.
+      IF sy-subrc <> 0.
+        INSERT <ls_row> INTO TABLE lt_file_ack.
+      ELSEIF <ls_row>-ack_at < <ls_file_ack>-ack_at.
+        <ls_file_ack>-ack_at = <ls_row>-ack_at.
+      ENDIF.
+    ENDLOOP.
+    " Per group: the latest generation of each interface (FMON's order; a replaced file never counts)
+    " must have its ACK - the latest of these ACKs is the group's (the payment's file is one of them)
+    LOOP AT lt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+      IF zcl_cd_fmon_rules=>next_generation( is_file = <ls_file> it_generations = lt_files ) IS NOT INITIAL.
+        CONTINUE.
+      ENDIF.
+      READ TABLE lt_groups ASSIGNING FIELD-SYMBOL(<ls_group>) WITH TABLE KEY gen_group = <ls_file>-gen_group.
+      IF sy-subrc <> 0.
+        INSERT VALUE #( gen_group = <ls_file>-gen_group ) INTO TABLE lt_groups ASSIGNING <ls_group>.
+      ENDIF.
+      READ TABLE lt_file_ack ASSIGNING <ls_file_ack> WITH TABLE KEY file_id = <ls_file>-file_id.
+      IF sy-subrc <> 0.
+        <ls_group>-open = abap_true.
+      ELSEIF <ls_file_ack>-ack_at > <ls_group>-ack_at.
+        <ls_group>-ack_at = <ls_file_ack>-ack_at.
+        <ls_group>-text   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_file_detail
+                                                   iv_v1    = <ls_file>-gen_group
+                                                   iv_v2    = <ls_file>-iface_id
+                                                   iv_tail  = CONV string( <ls_file>-file_name ) ).
+      ENDIF.
+    ENDLOOP.
+    LOOP AT lt_group_of ASSIGNING FIELD-SYMBOL(<ls_group_of>).
+      READ TABLE lt_groups ASSIGNING <ls_group> WITH TABLE KEY gen_group = <ls_group_of>-gen_group.
+      IF sy-subrc = 0 AND <ls_group>-open = abap_false AND <ls_group>-ack_at IS NOT INITIAL.
+        INSERT VALUE #( doc1r = <ls_group_of>-doc1r ack_at = <ls_group>-ack_at text = <ls_group>-text ) INTO TABLE rt_acks.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD file_lags.
+    DATA lv_date TYPE d.
+    DATA lv_time TYPE t.
+    DATA(lt_acks) = file_acks_of( it_payments = it_payments
+                                  is_link     = is_link ).
+    LOOP AT it_payments ASSIGNING FIELD-SYMBOL(<ls_payment>).
+      READ TABLE lt_acks ASSIGNING FIELD-SYMBOL(<ls_ack>) WITH TABLE KEY doc1r = <ls_payment>-doc1r.
+      " No ACK of the file: FMON's own finding (NO_BANK_ACK / missing), never a status lag here
+      IF sy-subrc <> 0 OR <ls_ack>-ack_at > iv_limit.
+        CONTINUE.
+      ENDIF.
+      CONVERT TIME STAMP <ls_ack>-ack_at TIME ZONE sy-zonlo INTO DATE lv_date TIME lv_time.
+      INSERT VALUE #( doc1r   = <ls_payment>-doc1r
+                      key     = |{ <ls_payment>-flow }{ <ls_payment>-class }|
+                      message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_file_ack
+                                                       iv_v1    = <ls_payment>-doc1r
+                                                       iv_v2    = VALUE #( it_status[ doc1r = <ls_payment>-doc1r ]-status OPTIONAL )
+                                                       iv_v3    = |{ lv_date DATE = ISO } { lv_time TIME = ISO }| )
+                      detail  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_runtime_types=>gc_msg-lag_detail
+                                                       iv_v1    = iv_grace
+                                                       iv_tail  = <ls_ack>-text ) ) INTO TABLE ct_lag.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD run_value.
+    " Unformatted as the FMON reader converts a source field (dates YYYYMMDD)
+    CASE iv_field.
+      WHEN zif_cd_hck_runtime_types=>gc_run_field-laufd.
+        rv_value = |{ is_payment-laufd }|.
+      WHEN zif_cd_hck_runtime_types=>gc_run_field-laufi.
+        rv_value = is_payment-laufi.
+      WHEN zif_cd_hck_runtime_types=>gc_run_field-hbkid.
+        rv_value = is_payment-hbkid.
+    ENDCASE.
+    rv_value = condense( rv_value ).
   ENDMETHOD.
 
 

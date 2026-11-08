@@ -28,6 +28,9 @@
 *&            | and HCK_PAY_STATUS_ACK_OPEN (statuses that must change after the bank ACK), messages 683-687.
 *& 2026-11-08 | Comment only: several cheques on one payment document are a defensive path - a stop and
 *&            | reissue creates a new payment document and cheque number (user 2026-11-08).
+*& 2026-11-08 | Status lag after a file-level ACK: parameters HCK_PAY_ACK_FILE_CLASSES (flow + classes
+*&            | acknowledged per file) and HCK_PAY_ACK_FILE_SRC (FMON source of the generation group),
+*&            | DPAYH payment run fields GC_RUN_FIELD, messages 301, 312, 346, 688, 689.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -595,6 +598,12 @@ INTERFACE zif_cd_hck_runtime_types
       status_lag_min    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_LAG_MIN',
       "! Payment statuses that must have changed once the bank ACK of the payment is received
       status_ack_open   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_STATUS_ACK_OPEN',
+      "! Flow + method classes acknowledged per file (comma list, e.g. CACH): their status lag after
+      "! the bank ACK uses the ACK of the payment run's file (FMON generation group); every other
+      "! class is acknowledged per payment (TRACE_SRC_ACK)
+      ack_file_classes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
+      "! FMON source (ZCD_FMON_SRC) whose GROUP_FIELDS name the payment run of a file
+      ack_file_src      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_SRC',
     END OF gc_param.
 
   "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of
@@ -614,7 +623,20 @@ INTERFACE zif_cd_hck_runtime_types
       inflight_max_rows TYPE i VALUE 5000,
       status_lag_min    TYPE i VALUE 120,
       status_ack_open   TYPE string VALUE `ISSUED`,
+      "! Collections ACH and card per file; disbursements (wire, ACH, cheque - cheque VERIFY) per payment
+      ack_file_classes  TYPE string VALUE `CACH,CCRD`,
+      ack_file_src      TYPE string VALUE `REGUT`,
     END OF gc_param_default.
+
+  "! DPAYH fields of the payment run a generation group field (ZCD_FMON_SRC-GROUP_FIELDS of the source
+  "! HCK_PAY_ACK_FILE_SRC) may name: the payment's value is the DPAYH field of the same name, so the
+  "! generation group key is built from the same values as FMON builds it from the file's source row
+  CONSTANTS:
+    BEGIN OF gc_run_field,
+      laufd TYPE string VALUE `LAUFD`,
+      laufi TYPE string VALUE `LAUFI`,
+      hbkid TYPE string VALUE `HBKID`,
+    END OF gc_run_field.
 
   "! Defaults of the check parameters (PARAM1-4 of ZCD_HCK_DEF) when blank
   CONSTANTS:
@@ -691,6 +713,11 @@ INTERFACE zif_cd_hck_runtime_types
       lag_ack_unconfig    TYPE zif_cd_ops_types=>ty_msgno VALUE '685',
       lag_ack_failed      TYPE zif_cd_ops_types=>ty_msgno VALUE '686',
       lag_detail          TYPE zif_cd_ops_types=>ty_msgno VALUE '687',
+      lag_file_ack        TYPE zif_cd_ops_types=>ty_msgno VALUE '688',
+      lag_file_detail     TYPE zif_cd_ops_types=>ty_msgno VALUE '689',
+      file_ack_unconfig   TYPE zif_cd_ops_types=>ty_msgno VALUE '301',
+      file_ack_field      TYPE zif_cd_ops_types=>ty_msgno VALUE '312',
+      file_ack_no_iface   TYPE zif_cd_ops_types=>ty_msgno VALUE '346',
     END OF gc_msg.
 
 ENDINTERFACE.

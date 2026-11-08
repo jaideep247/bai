@@ -18,6 +18,8 @@
 *& 2026-11-07 | get_deadlines (ZCD_FMON_DEADL); SLA and calendar rows read active only (production deactivates).
 *& 2026-11-07 | Regenerated files (user 2026-11-07): GEN_GROUP in every registry read, get_group_files
 *&            | (index GRP), GROUP_FIELDS of the source rows.
+*& 2026-11-08 | get_group_acks: files of generation groups (index GRP) with their ACK_RECEIVED events in one
+*&            | statement (LEFT OUTER JOIN ZCD_FMON_EVENT) - status lag of HCK A_INFLIGHT, file-level ACK.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -196,6 +198,25 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
       INTO CORRESPONDING FIELDS OF TABLE @rt_files.
     SORT rt_files BY file_id.
     mark_loaded( CHANGING ct_files = rt_files ).
+  ENDMETHOD.
+
+
+  METHOD zif_cd_fmon_dao~get_group_acks.
+    CHECK it_keys IS NOT INITIAL.
+    " index GRP (MANDT, IFACE_ID, GEN_GROUP) for the files, the event key (FILE_ID) for their ACKs;
+    " a file without ACK event comes back once with ACK_AT initial (it may be the latest generation)
+    SELECT f~file_id, f~iface_id, f~gen_group, f~file_ref, f~file_name, f~first_event_at,
+           e~event_at AS ack_at
+      FROM zcd_fmon_file AS f
+        LEFT OUTER JOIN zcd_fmon_event AS e
+          ON  e~file_id = f~file_id
+          AND e~stage   = @zif_cd_fmon_types=>gc_stage-ack
+      FOR ALL ENTRIES IN @it_keys
+      WHERE f~iface_id       = @it_keys-iface_id
+        AND f~gen_group      = @it_keys-gen_group
+        AND f~business_date >= @iv_since
+      INTO CORRESPONDING FIELDS OF TABLE @rt_acks.
+    SORT rt_acks BY file_id ack_at.
   ENDMETHOD.
 
 

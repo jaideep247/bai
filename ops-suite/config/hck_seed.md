@@ -54,7 +54,9 @@ case ignored; `*` alone is not a valid PCRE - confirm with the core owner).
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `HCK_PAY_STATUS_LAG_MIN` | INT 0..10080 | `120` | Minutes after the bank evidence (end of the statement line's day) or the bank ACK before a DPAYH status that did not follow is `PAY_STATUS_LAG` (W); the payment status job runs hourly |
-| `HCK_PAY_STATUS_ACK_OPEN` | LIST | `ISSUED` | DPAYH statuses that must have changed once the payment-level bank ACK (`TRACE_SRC_ACK`) is received |
+| `HCK_PAY_STATUS_ACK_OPEN` | LIST | `ISSUED` | DPAYH statuses that must have changed once the bank ACK is received (payment-level `TRACE_SRC_ACK` or the payment run's file) |
+| `HCK_PAY_ACK_FILE_CLASSES` | LIST | `CACH,CCRD` | Flow + method classes acknowledged **per file** (2026-11-08): their status lag after the ACK uses the `ACK_RECEIVED` of the FMON file of the payment run; every other class per payment (`TRACE_SRC_ACK`). Cheques `DCHQ` per payment - **VERIFY** (add `DCHQ` by transport if the bank acknowledges cheques per file) |
+| `HCK_PAY_ACK_FILE_SRC` | CHAR | `REGUT` | FMON source (`ZCD_FMON_SRC`) whose `GROUP_FIELDS` name the payment run of a file (`config/fmon_seed.md`; the fields must be DPAYH payment run fields LAUFD / LAUFI / HBKID, VERIFY-SE11). Blank `GROUP_FIELDS` = `INFLIGHT_CONFIG` W once per run, nothing judged |
 
 No alert rule is delivered for `PAY_STATUS_LAG` (morning report and dashboard only).
 

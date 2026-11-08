@@ -36,6 +36,8 @@
 *&            | failures in the check context, check codes FILE_REPLACED / REGENERATION_MISSING /
 *&            | FILE_REGENERATED_NOT_FAILED / PRISM_DUPLICATE_NAME, parameters FMON_REGEN_WAIT_MIN /
 *&            | FMON_PRISM_DUP_NAME_CODES, messages 280-283 (284 raised by the adapter).
+*& 2026-11-08 | TY_GROUP_ACK: files of generation groups with their ACK_RECEIVED events (read of the
+*&            | status lag of HCK A_INFLIGHT for payments acknowledged per file, ZIF_CD_FMON_DAO=>GET_GROUP_ACKS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -812,6 +814,20 @@ INTERFACE zif_cd_fmon_types
       gen_group TYPE ty_file_ref,
     END OF ty_group_key.
   TYPES tt_group_key TYPE STANDARD TABLE OF ty_group_key WITH EMPTY KEY.
+
+  "! A file of a generation group with one of its ACK_RECEIVED events (one row per file and ACK
+  "! event; ACK_AT initial = no ACK event). Consumer: status lag of HCK A_INFLIGHT (2026-11-08)
+  TYPES:
+    BEGIN OF ty_group_ack,
+      file_id        TYPE ty_file_id,
+      iface_id       TYPE ty_iface_id,
+      gen_group      TYPE ty_file_ref,
+      file_ref       TYPE ty_file_ref,
+      file_name      TYPE ty_file_name,
+      first_event_at TYPE timestampl,
+      ack_at         TYPE timestampl,
+    END OF ty_group_ack.
+  TYPES tt_group_ack TYPE STANDARD TABLE OF ty_group_ack WITH EMPTY KEY.
 
   "! Regeneration settings (ZCA_PARAM FMON_REGEN_WAIT_MIN / FMON_PRISM_DUP_NAME_CODES)
   TYPES:
