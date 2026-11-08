@@ -18,6 +18,8 @@
 *& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
 *& 2026-11-08 | Table consolidation: bank code roles with usage LIFECYCLE / RECON; the lifecycle read splits
 *&            | SCOPE and never returns a RECON row (btc_roles_lifecycle_only).
+*& 2026-11-08 | Table consolidation: ZCD_HCK_EVSET no longer doubled or read (Stripe settings are ZCA_PARAM
+*&            | parameters).
 *&---------------------------------------------------------------------*
 CLASS ltd_hck_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -454,7 +456,7 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'BSEG' ) ( 'ZCD_HCK_PMCLASS' ) ( 'ZCD_HCK_PMBANK' ) ( 'ZCD_HCK_CLRRULE' )
-                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ( 'ZCD_HCK_EVSET' ) ) ).
+                                   ( 'ZCD_HCK_BTCROLE' ) ( 'ZCD_HCK_SEQOUT' ) ) ).
   ENDMETHOD.
 
 
@@ -526,8 +528,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     DATA ls_role TYPE zcd_hck_btcrole.
     DATA lt_out TYPE STANDARD TABLE OF zcd_hck_seqout WITH EMPTY KEY.
     DATA ls_out TYPE zcd_hck_seqout.
-    DATA lt_set TYPE STANDARD TABLE OF zcd_hck_evset WITH EMPTY KEY.
-    DATA ls_set TYPE zcd_hck_evset.
     ls_class-flow = 'D'.
     ls_class-method_class = 'WIR'.
     ls_class-pay_methods = 'E'.
@@ -581,15 +581,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
     ls_out-active = abap_true.
     INSERT ls_out INTO TABLE lt_out.
     go_env->insert_test_data( lt_out ).
-    ls_set-set_id = 'STRIPE'.
-    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-table.
-    ls_set-value = 'ZCD_STRP_POUT_LOG'.
-    ls_set-active = abap_true.
-    INSERT ls_set INTO TABLE lt_set.
-    ls_set-name = zif_cd_hck_runtime_types=>gc_setting-intent_field.
-    ls_set-active = abap_false.
-    INSERT ls_set INTO TABLE lt_set.
-    go_env->insert_test_data( lt_set ).
   ENDMETHOD.
 
 
@@ -658,8 +649,6 @@ CLASS ltc_inflight_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_roles[ 1 ]-role exp = 'PAYOUT_RECEIVED'
                                             msg = 'Role per flow / class / scheme / code' ).
         cl_abap_unit_assert=>assert_equals( act = lt_outcomes[ 1 ]-outcome exp = 'CLEARED' msg = 'Outcome' ).
-        cl_abap_unit_assert=>assert_equals( act = lines( mo_cut->get_evidence_settings( 'STRIPE' ) ) exp = 1
-                                            msg = 'Active settings of the set only' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

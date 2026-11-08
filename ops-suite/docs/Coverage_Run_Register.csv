@@ -121,7 +121,7 @@ ZCL_CD_HCK_EV_PAY_STATUS,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_RETURN_LOT,own test include,,2,90,,Not run in target SAP
 ZCL_CD_HCK_EV_STMT_CHEQUE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_STMT_DOC,own test include,,4,90,,Not run in target SAP
-ZCL_CD_HCK_EV_STRIPE,own test include,,5,90,,Not run in target SAP
+ZCL_CD_HCK_EV_STRIPE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_EV_SUPPORT,own test include,,11,90,,Not run in target SAP
 ZCL_CD_HCK_EXPORT,own test include,,3,90,,Not run in target SAP
 ZCL_CD_HCK_FACTORY,covered,ZCL_CD_HCK_ENGINE,0,90,,Not run in target SAP; measured in ZCL_CD_HCK_ENGINE (construction only: every engine test resolves through it)

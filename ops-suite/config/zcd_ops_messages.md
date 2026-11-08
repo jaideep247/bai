@@ -405,7 +405,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 664 | returns lot item(s) &1 without a return line |
 | 665 | Evidence &1: parameter &2 required (&3 &4) |
 | 666 | Pattern &1 of ZCD_HCK_SEQOUT &2 is not a valid PCRE |
-| 667 | Evidence &1 (&2) not configured (ZCD_HCK_EVSET) - its rows are ignored |
+| 667 | Evidence &1 &2 not configured (settings / parameters) - its rows are ignored |
 | 668 | payout log &1 type &2 payout &3 ACK &4 |
 | 669 | G/L line &1 / &2 assignment &3 |
 | 670 | - assignment changed (no longer AUGBL) |

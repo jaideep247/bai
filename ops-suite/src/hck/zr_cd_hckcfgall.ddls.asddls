@@ -12,7 +12,6 @@ define root view entity ZR_CD_HckCfgAll
   composition [0..*] of ZR_CD_HckPmClass as _HckPmClass
   composition [0..*] of ZR_CD_HckPmBank as _HckPmBank
   composition [0..*] of ZR_CD_HckClrRule as _HckClrRule
-  composition [0..*] of ZR_CD_HckEvidenceSet as _HckEvidenceSet
   composition [0..*] of ZR_CD_HckBtcRole as _HckBtcRole
   composition [0..*] of ZR_CD_HckSeqOutcome as _HckSeqOutcome
   composition [0..*] of ZR_CD_HckReconSet as _HckReconSet
@@ -30,7 +29,6 @@ define root view entity ZR_CD_HckCfgAll
       _HckPmClass,
       _HckPmBank,
       _HckClrRule,
-      _HckEvidenceSet,
       _HckBtcRole,
       _HckSeqOutcome,
       _HckReconSet

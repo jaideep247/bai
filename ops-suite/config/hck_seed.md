@@ -266,7 +266,7 @@ the next morning report shows the step's state in the `B_CYCLE_*` drill-down; no
 
 ## 8. Payments in flight (`A_INFLIGHT`) — method classes, evidence rules, bank code roles, outcomes
 
-User rules 2026-11-07. All six tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Evidence settings*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
+User rules 2026-11-07. All five tables are maintained in the generated HCK configuration app (`ZUI_CD_HCK_CFG`, entities *Payment method classes*, *Factory calendar per house bank*, *Clearing / return evidence rules*, *Bank code roles (lifecycle and reconciliation)*, *Role sequence outcomes*; the Stripe evidence settings are ZCA_PARAM parameters, §8d) and get new rows only in DV1 on a customizing request (D-3); production may switch rows off (`ACTIVE`). Every row is keyed by **flow + method class** (in `ZCD_HCK_BTCROLE` usage `LIFECYCLE` the two are one key field SCOPE, e.g. `DACH`, table consolidation 2026-11-08): a new class (e.g. collection cheques, international ACH) is rows in these tables plus `ZCD_HCK_THRESH` limits — no code, no domain, no parameter. METHOD_CLASS, ROLE and OUTCOME are open lists (documented values below), only FLOW (D / C), PURPOSE, REQUIRED, AGE_BASIS, SCHEME, EXPECTED_DFKKRP and SEVERITY are validated as fixed values by the app; EVIDENCE_CLASS must implement `ZIF_CD_HCK_EVIDENCE` (app check on save, runtime check `CLEARING_RULE_INVALID`). METHOD_CLASS has 3 characters because flow + class (e.g. `CCRD`) is the 4-character threshold key.
 
 ### 8a. `ZCD_HCK_PMCLASS` — payment method classes (payment methods confirmed by the user)
 
@@ -318,8 +318,8 @@ REQUIRED (design review 2026-11-07): `X` **mandatory**, must hold and indicates 
 | C | ACH | CLEARED | 020 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by ZUONR) | X |
 | C | ACH | CLEARED | 030 | ZCL_CD_HCK_EV_GL_ZUONR | `EQUAL` | `‹clearing accounts›` | (blank) | ZUONR stays AUGBL (changed = anomaly) | X |
 | C | CRD | CLEARED | 010 | ZCL_CD_HCK_EV_GL_XREF2 | `‹clearing accounts, optional›` | | X | Rule 3: BSEG XREF2 = AUGBL cleared (F.13 by descriptor) | X |
-| C | CRD | CLEARED | 020 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | C | Stripe payout log row of the payment intent (mandatory corroboration; blank = explicit BSEG-only choice, below) | X |
-| C | CRD | IN_FLIGHT | 010 | ZCL_CD_HCK_EV_STRIPE | `STRIPE` | | X | Payout processed ... | X |
+| C | CRD | CLEARED | 020 | ZCL_CD_HCK_EV_STRIPE | | | C | Stripe payout log row of the payment intent (mandatory corroboration; blank = explicit BSEG-only choice, below) | X |
+| C | CRD | IN_FLIGHT | 010 | ZCL_CD_HCK_EV_STRIPE | | | X | Payout processed ... | X |
 | C | CRD | IN_FLIGHT | 020 | ZCL_CD_HCK_EV_GL_ZUONR | `CHANGED` | `‹clearing accounts›` | X | ... and descriptor set (ZUONR no longer AUGBL) | X |
 
 **Payment status rows (confirmed DPAYH-ZZ_PAYMENT_STATUS values, user 2026-11-08: ISSUED file sent to the bank, CONFIRMED bank ACK received, CLEARED, RETURNED, RETRIEVED, STOPPED cheques only; the hourly payment status job updates them).** The RETURNED / RETRIEVED status rows stand next to the bank evidence the same way as the CLEARED rows (`X`): status RETURNED / RETRIEVED without the bank line is `RETURN_INCONSISTENT` / `CLEARING_INCONSISTENT`. PARAM2 of `ZCL_CD_HCK_EV_PAY_STATUS` lists the statuses the status job has not updated yet (`ISSUED,CONFIRMED`): a payment in such a status is **pending**, not missing - when the bank evidence of the purpose holds and the status is the only gap, the payment stays **IN_FLIGHT** (aged; never inconsistent; no later purpose decides) and the morning report lists it as `PAY_STATUS_LAG` (W) once `HCK_PAY_STATUS_LAG_MIN` (120) minutes have passed (`HCK_MORNING_REPORT.md` §7b-6). The CLEARED status rows keep PARAM2 blank (rule 1 unchanged: on the statement but status not CLEARED = `CLEARING_INCONSISTENT`); `ISSUED,CONFIRMED` in their PARAM2 would make that case in flight + `PAY_STATUS_LAG` as well - a customizing decision open for the user.
@@ -328,21 +328,24 @@ REQUIRED (design review 2026-11-07): `X` **mandatory**, must hold and indicates 
 
 What the card rows give: cleared G/L line without payout log row = `CLEARING_INCONSISTENT` (CLEARED, condition missing); payout log row but ZUONR still AUGBL = `CLEARING_INCONSISTENT` "payout processed but descriptor not set" (IN_FLIGHT); payout row + descriptor + line not yet cleared = in flight, aged - late after the `CCRD` limit ("F.13 not cleared"). **While the Stripe settings (§8d) are not maintained** the Stripe rows are mandatory but not evaluable: card payments are reported as "clearing not determinable: Stripe evidence not configured" (`CLEARING_UNDETERMINED` W per payment, `INFLIGHT_CONFIG` W for the kind), stay in flight and are aged - they are never cleared on BSEG alone. **Explicit switch (visible configuration choice, per row):** to let the BSEG XREF2 row decide alone until the Stripe field names are maintained, set REQUIRED of the CLEARED / 020 Stripe row to blank (informational) on a customizing request and set it back to `C` together with the §8d settings. Trade-off: with blank, a cleared G/L line without a payout log row is counted as cleared (no `CLEARING_INCONSISTENT` "cleared without payout row"), so a payout file that never arrived is not seen by this check; with `C` (delivered) the card class shows undetermined payments and, after the `CCRD` limit, late payments every day until the settings exist. The IN_FLIGHT rows stay `X`: without Stripe settings they are undetermined too (payment in flight, aged). Planned, not delivered: a 195 deposit on the JPMC collection account ending 16650 for the descriptor's payout date (needs a payout-date evidence kind; account from `ZCD_EBS_ACCT`, never hard-coded) - **confirm**; the group balance of a descriptor (sum of charges and fees = the 195 amount) is proven by the three-way reconciliation check `A_RECON_3WAY` (§10, `STRIPE_GROUP_BREAK`).
 
-### 8d. `ZCD_HCK_EVSET` — evidence settings (set `STRIPE`, field names VERIFY-SE11)
+### 8d. Stripe evidence settings — framework `ZCA_PARAM`, area `CD_HCK`, parameters `HCK_STRIPE_*` (field names VERIFY-SE11)
 
-| SET_ID | NAME | VALUE | DESCRIPTION | ACTIVE |
-|---|---|---|---|---|
-| STRIPE | TABLE | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_OPS_TABWL` row HCK / READ | (blank until SE11) |
-| STRIPE | INTENT_FIELD | `‹SE11 payment intent ID field›` | Payout log: payment intent ID | (blank) |
-| STRIPE | DFKKOP_INTENT_FIELD | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_OPS_TABWL` HCK / READ) | (blank) |
-| STRIPE | REQ_INTENT_FIELD | `‹SE11 ZCD_PAYM_REQ_LOG payment intent field›` | Reserved (not read: the chain DFKKOP → payout log does not need it) | (blank) |
-| STRIPE | TYPE_FIELD | `‹SE11 record type field›` | Optional: record type | (blank) |
-| STRIPE | PAYOUT_FIELD | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout | (blank) |
-| STRIPE | ACK_FIELD | `‹SE11 ACK status field›` | Optional: ACK status | (blank) |
-| STRIPE | CHARGE | `‹charge record type›` | Optional: record types that count (record types: payout, refund, fees, network cost, charge) | (blank) |
-| STRIPE | REFUND | `‹refund record type›` | Optional: refund = anomaly `CLEARING_INCONSISTENT` | (blank) |
-| STRIPE | ACK_FULL | `‹ACK full value›` | Optional: ACK values that count | (blank) |
-| STRIPE | ACK_PARTIAL | `‹ACK partial value›` | Optional: partial ACK = anomaly | (blank) |
+Table consolidation 2026-11-08: the name / value rows of `ZCD_HCK_EVSET` (set `STRIPE`) are parameters of the framework, maintained in the app *Parameter areas* (`ZUI_CA_PARAM_O4`, area `CD_HCK`). Definitions: `config/param_definitions.csv`; every parameter is **delivered blank** (landscape-specific) - blank table or intent field = Stripe evidence not configured (`INFLIGHT_CONFIG`, card payments undetermined, §8c). No set id dimension: one Stripe payout log per landscape (a second log would be a second evidence kind), so the Stripe rows of §8c no longer need PARAM1 (not read). The framework validates the value types (table name: DDIC; field names: name pattern; lists: comma lists); `ZCL_CD_HCK_EV_STRIPE` checks table and fields against the DDIC and `ZCD_OPS_TABWL` HCK / READ before each read; a refused value is `D_PARAM_INVALID` the next morning.
+
+| Parameter (was SET STRIPE, NAME) | Value type | Value to maintain (VERIFY-SE11 / **confirm**) | Meaning |
+|---|---|---|---|
+| `HCK_STRIPE_TABLE` (TABLE) | DDIC, developer-owned | `ZCD_STRP_POUT_LOG` | Stripe payout log (FMON source STRIPE_PAYOUT_IN); also a `ZCD_OPS_TABWL` row HCK / READ |
+| `HCK_STRIPE_INTENT_FIELD` (INTENT_FIELD) | CHAR `[A-Z][A-Z0-9_]*`, developer-owned | `‹SE11 payment intent ID field›` | Payout log: payment intent ID |
+| `HCK_STRIPE_DFKKOP_FIELD` (DFKKOP_INTENT_FIELD) | CHAR, developer-owned | `‹SE11 DFKKOP payment intent field›` | Open item: payment intent ID (DFKKOP read by AUGBL; DFKKOP on `ZCD_OPS_TABWL` HCK / READ) |
+| `HCK_STRIPE_TYPE_FIELD` (TYPE_FIELD) | CHAR, developer-owned | `‹SE11 record type field›` | Optional: record type |
+| `HCK_STRIPE_PAYOUT_FIELD` (PAYOUT_FIELD) | CHAR, developer-owned | `‹SE11 payout ID field›` | Optional: payout ID filled = contained in a payout |
+| `HCK_STRIPE_ACK_FIELD` (ACK_FIELD) | CHAR, developer-owned | `‹SE11 ACK status field›` | Optional: ACK status |
+| `HCK_STRIPE_CHARGE` (CHARGE) | LIST | `‹charge record type›` | Optional: record types that count (record types: payout, refund, fees, network cost, charge) |
+| `HCK_STRIPE_REFUND` (REFUND) | LIST | `‹refund record type›` | Optional: refund = anomaly `CLEARING_INCONSISTENT` |
+| `HCK_STRIPE_ACK_FULL` (ACK_FULL) | LIST | `‹ACK full value›` | Optional: ACK values that count |
+| `HCK_STRIPE_ACK_PARTIAL` (ACK_PARTIAL) | LIST | `‹ACK partial value›` | Optional: partial ACK = anomaly |
+
+The former reserved setting `REQ_INTENT_FIELD` (never read: the chain DFKKOP → payout log does not need it) has no parameter - nothing unused is delivered.
 
 ### 8e. `ZCD_HCK_BTCROLE` usage `LIFECYCLE` — bank transaction code roles (scheme from the statement format: FEBEP-VORGC = BAI2, VGEXT = ISO / PRTRY, `ZCL_CD_EBS_SRC_FEB=>LINE_CODE`)
 

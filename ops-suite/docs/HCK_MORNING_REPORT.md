@@ -319,7 +319,7 @@ All three are read-only: they never change an interval, never restart, unlock or
 | `ZCL_CD_HCK_EV_GL_XREF2` - G/L line cleared | BSEG line with XREF2 = AUGBL (stable key) and AUGBL filled | PARAM1 G/L accounts (optional) | - |
 | `ZCL_CD_HCK_EV_GL_ZUONR` - assignment state | BSEG-ZUONR still AUGBL (`EQUAL`) / no longer AUGBL (`CHANGED`) | PARAM1 `EQUAL` / `CHANGED`, PARAM2 accounts | `EQUAL` violated → `CLEARING_INCONSISTENT` "assignment changed" |
 | `ZCL_CD_HCK_EV_RETURN_LOT` - returns lot | DFKKRP-SELW1 = AUGBL | - | - |
-| `ZCL_CD_HCK_EV_STRIPE` - Stripe payout | payout log row of the payment intent ID (DFKKOP by AUGBL → intent field → `ZCD_STRP_POUT_LOG`); optional charge / payout / full-ACK conditions | PARAM1 settings set (`ZCD_HCK_EVSET`, field names VERIFY-SE11, DDIC + `ZCD_OPS_TABWL` HCK / READ checked) | refund or partial ACK → `CLEARING_INCONSISTENT` |
+| `ZCL_CD_HCK_EV_STRIPE` - Stripe payout | payout log row of the payment intent ID (DFKKOP by AUGBL → intent field → `ZCD_STRP_POUT_LOG`); optional charge / payout / full-ACK conditions | parameters `HCK_STRIPE_*` (ZCA_PARAM area CD_HCK, delivered blank - was `ZCD_HCK_EVSET`; field names VERIFY-SE11, DDIC + `ZCD_OPS_TABWL` HCK / READ checked); PARAM1 not read | refund or partial ACK → `CLEARING_INCONSISTENT` |
 
 **Pending evidence (confirmed status values 2026-11-08).** A mandatory row (`X` / `C`) whose kind reports the payment as *pending* (payment status in PARAM2 of `ZCL_CD_HCK_EV_PAY_STATUS`: the hourly status job has not updated it yet) is neither held nor missing: it never indicates a purpose; when the purpose is indicated by its other rows and the pending row is its only gap, the payment stays **IN_FLIGHT** (verdict `STATUS_PENDING`, aged, not listed, no later purpose decides) and `PAY_STATUS_LAG` reports it after the grace period (§7b-6); with another missing or forbidden row the purpose is inconsistent as before (the pending row counted as not held).
 
@@ -678,7 +678,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 14. `BSEG`-XREF2 / ZUONR / AUGBL / HKONT read by BUKRS + XREF2 + GJAHR (FOR ALL ENTRIES, `get_gl_lines_by_xref2`): BSEG has no index on XREF2 - access path in a QA1 SQL trace (secondary index BUKRS / XREF2, or the clearing accounts in PARAM1); fiscal year = calendar year assumed
 15. `FEBEP`-VORGC / VGEXT (bank code of the line, as the EBS read) and the CHECT form of AUGBL / ZTNUM (with or without leading zeros - both are read); ZTNUM length and the 13-character suffix; `DFKKCR`-STATE is **confirmed** (B / V / blank)
 16. `DFKKRP`-BETRW (returned amount, shared EBS read `GET_RETURN_ITEMS`)
-17. Stripe payout log `ZCD_STRP_POUT_LOG` field names and the DFKKOP payment intent field (`ZCD_HCK_EVSET`, validated against the DDIC and `ZCD_OPS_TABWL` HCK / READ at run time)
+17. Stripe payout log `ZCD_STRP_POUT_LOG` field names and the DFKKOP payment intent field (parameters `HCK_STRIPE_*`, validated against the DDIC and `ZCD_OPS_TABWL` HCK / READ at run time)
 18. `DPAYH` by DOC1R (`get_issued_payments_by_doc`, canonical payment outcome): index on DOC1R; DOC1R not unique (re-runs) - the latest run (LAUFD, then LAUFI, descending) is judged
 
 `ZCL_CD_HCK_RECON_DAO` / `ZI_CD_HckRcBankLine` (2026-11-07, `A_RECON_3WAY`):

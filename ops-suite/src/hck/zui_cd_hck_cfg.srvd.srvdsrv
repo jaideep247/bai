@@ -11,7 +11,6 @@ define service ZUI_CD_HCK_CFG {
   expose ZC_CD_HckPmClass as HckPmClass;
   expose ZC_CD_HckPmBank as HckPmBank;
   expose ZC_CD_HckClrRule as HckClrRule;
-  expose ZC_CD_HckEvidenceSet as HckEvidenceSet;
   expose ZC_CD_HckBtcRole as HckBtcRole;
   expose ZC_CD_HckSeqOutcome as HckSeqOutcome;
   expose ZC_CD_HckReconSet as HckReconSet;

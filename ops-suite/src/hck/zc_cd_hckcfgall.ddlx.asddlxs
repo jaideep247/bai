@@ -26,14 +26,12 @@ annotate entity ZC_CD_HckCfgAll with
       label: 'Factory calendar per house bank', position: 90, targetElement: '_HckPmBank' },
     { id: 'HckClrRule', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Clearing / return evidence rules', position: 100, targetElement: '_HckClrRule' },
-    { id: 'HckEvidenceSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Evidence settings', position: 110, targetElement: '_HckEvidenceSet' },
     { id: 'HckBtcRole', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Bank code roles (lifecycle and reconciliation)', position: 120, targetElement: '_HckBtcRole' },
+      label: 'Bank code roles (lifecycle and reconciliation)', position: 110, targetElement: '_HckBtcRole' },
     { id: 'HckSeqOutcome', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Role sequence outcomes', position: 130, targetElement: '_HckSeqOutcome' },
+      label: 'Role sequence outcomes', position: 120, targetElement: '_HckSeqOutcome' },
     { id: 'HckReconSet', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Reconciliation clearing account sets', position: 140, targetElement: '_HckReconSet' }
+      label: 'Reconciliation clearing account sets', position: 130, targetElement: '_HckReconSet' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

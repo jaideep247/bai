@@ -19,6 +19,8 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: get_btc_roles reads usage LIFECYCLE of ZCD_HCK_BTCROLE (flow + method
 *&            | class split from SCOPE).
+*& 2026-11-08 | Table consolidation: get_evidence_settings (ZCD_HCK_EVSET) removed - the Stripe settings are
+*&            | ZCA_PARAM parameters HCK_STRIPE_*.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (NRIV, queues, payments)</p>
 "! Implementation ZCL_CD_HCK_RUNTIME_DAO, factory ZCL_CD_HCK_FACTORY=>GET_RUNTIME_DAO.
@@ -97,13 +99,6 @@ INTERFACE zif_cd_hck_runtime_dao
   METHODS get_pm_banks
     RETURNING
       VALUE(rt_banks) TYPE zif_cd_hck_runtime_types=>tt_pm_bank.
-
-  "! Active settings of an evidence kind (ZCD_HCK_EVSET by set id)
-  METHODS get_evidence_settings
-    IMPORTING
-      iv_set_id          TYPE zif_cd_hck_runtime_types=>ty_set_id
-    RETURNING
-      VALUE(rt_settings) TYPE zif_cd_hck_runtime_types=>tt_setting.
 
   "! Rows of a configured table whose reference field is one of the values (e.g. the Stripe
   "! payout log ZCD_STRP_POUT_LOG). Table on ZCD_OPS_TABWL (HCK / READ), fields in the DDIC - checked before

@@ -27,6 +27,8 @@ Modification log:
 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
 2026-11-07 | Default and value rows checked against ALLOWED_PCRE (design review: queue scope C).
 2026-11-07 | RETENTION_DAYS_PAY_OUTCOME default from the purge target (canonical payment outcome).
+2026-11-08 | Table consolidation: generated DEFINITIONS( ) in parts of PART_ROWS rows; DEFAULTS may scale
+           | a constant ('const', file, constant, factor - e.g. hours to minutes).
 """
 import csv
 import io
@@ -76,7 +78,7 @@ _RULE_BASE = os.path.join('src', 'ebs', 'zcl_cd_ebs_rule_base.clas.abap')
 _SCORE = os.path.join('src', 'hck', 'zcl_cd_hck_score.clas.abap')
 _PURGE = os.path.join('src', 'core', 'zcl_cd_ops_purge.clas.abap')
 # Defaults the code delivers outside the gc_param_default / gc_default convention:
-# name -> ('const', file, constant) or ('regex', file, pattern with one group)
+# name -> ('const', file, constant[, factor]) or ('regex', file, pattern with one group)
 DEFAULTS = {
     'SLA_DAYS_DEFAULT': ('const', OPS_TYPES, 'gc_param_default-sla_days'),
     'EBS_DUP_LOOKBACK_DAYS': ('const', os.path.join('src', 'ebs', 'zcl_cd_ebs_r_r22_dup_history.clas.abap'),
@@ -114,6 +116,8 @@ DEFAULTS = {
 }
 
 TYPES_FILE = re.compile(r'zif_cd_\w*types\.intf\.abap$')
+# Definitions per generated method (DEFINITIONS( ) collects the parts; abaplint method_length 120)
+PART_ROWS = 100
 TRUE_VALUES = ('X', 'abap_true')
 
 
@@ -266,7 +270,9 @@ def code_default(root, name, ref, defaults=None):
         spec = defaults[name]
         path = os.path.join(root, spec[1])
         if spec[0] == 'const':
-            return _resolve(root, constants(path).get(spec[2].lower(), '<missing ' + spec[2] + '>'), path)
+            value = _resolve(root, constants(path).get(spec[2].lower(), '<missing ' + spec[2] + '>'), path)
+            # ('const', file, constant, factor): an integer constant in another unit (e.g. hours -> minutes)
+            return str(int(value) * spec[3]) if len(spec) > 3 and INT.match(value) else value
         m = re.search(spec[2], _code(_read(path))) if os.path.exists(path) else None
         return m.group(1) if m else '<missing ' + spec[2] + '>'
     rel, key, kind = ref
@@ -458,6 +464,8 @@ GEN_HEADER = """*&--------------------------------------------------------------
 *& real read logic ZCL_CA_PARAM. Production-safe: no database.
 *& Modification log:
 *& 2026-11-07 | Initial version (generated; parameters moved to ZCA_PARAM).
+*& 2026-11-08 | DEFINITIONS( ) collects parts of at most 100 rows (method length; the table
+*&            | consolidation moved settings of retired customizing tables into definitions).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - delivered parameter definitions</p>
 "! Delivered areas and definitions (generated from config/param_*.csv) and the
@@ -508,7 +516,7 @@ CLASS zcl_cd_ops_param_seed DEFINITION
   PRIVATE SECTION.
 """
 
-GEN_FOOTER = """    DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
+GEN_FOOTER = """{decls}    DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_param TYPE REF TO zif_ca_param.
     DATA mo_params TYPE REF TO zif_cd_ops_params.
 
@@ -525,6 +533,7 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
   METHOD definitions.
 {defs}  ENDMETHOD.
 
+{parts}
 
   METHOD constructor.
     mo_dao = NEW #( ).
@@ -608,7 +617,19 @@ def render(areas, defs):
             out.append(f'        {comp:<15} TYPE {typ} VALUE {_abap(d[col])},\n')
         out.append(f'      END OF {n}.\n')
         d_lines.append(f'    INSERT CORRESPONDING #( {n} ) INTO TABLE rt_definitions.\n')
-    out.append(GEN_FOOTER.format(areas=''.join(a_lines), defs=''.join(d_lines)))
+    # A method holds at most PART_ROWS definitions (abaplint method_length 120 statements):
+    # DEFINITIONS( ) collects the parts
+    decls, calls, parts = [], [], []
+    for k, start in enumerate(range(0, len(d_lines), PART_ROWS), 1):
+        chunk = d_lines[start:start + PART_ROWS]
+        decls.append(f'    "! Delivered definitions {start + 1}-{start + len(chunk)} (at most {PART_ROWS} per method)\n'
+                     f'    CLASS-METHODS definitions_part_{k}\n'
+                     f'      RETURNING\n'
+                     f'        VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.\n\n')
+        calls.append(f'    INSERT LINES OF definitions_part_{k}( ) INTO TABLE rt_definitions.\n')
+        parts.append(f'\n  METHOD definitions_part_{k}.\n{"".join(chunk)}  ENDMETHOD.\n\n')
+    out.append(GEN_FOOTER.format(areas=''.join(a_lines), defs=''.join(calls), decls=''.join(decls),
+                                 parts=''.join(parts)))
     return ''.join(out)
 
 

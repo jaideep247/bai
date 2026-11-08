@@ -19,7 +19,6 @@ define root view entity ZC_CD_HckCfgAll
       _HckPmClass : redirected to composition child ZC_CD_HckPmClass,
       _HckPmBank : redirected to composition child ZC_CD_HckPmBank,
       _HckClrRule : redirected to composition child ZC_CD_HckClrRule,
-      _HckEvidenceSet : redirected to composition child ZC_CD_HckEvidenceSet,
       _HckBtcRole : redirected to composition child ZC_CD_HckBtcRole,
       _HckSeqOutcome : redirected to composition child ZC_CD_HckSeqOutcome,
       _HckReconSet : redirected to composition child ZC_CD_HckReconSet

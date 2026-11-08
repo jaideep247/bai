@@ -21,6 +21,8 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: get_btc_roles reads usage LIFECYCLE of ZCD_HCK_BTCROLE (flow + method
 *&            | class split from SCOPE).
+*& 2026-11-08 | Table consolidation: get_evidence_settings (ZCD_HCK_EVSET) removed - the Stripe settings are
+*&            | ZCA_PARAM parameters HCK_STRIPE_*.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - runtime reads (SQL)</p>
 CLASS zcl_cd_hck_runtime_dao DEFINITION
@@ -271,16 +273,6 @@ CLASS zcl_cd_hck_runtime_dao IMPLEMENTATION.
       WHERE active = @abap_true
       ORDER BY flow, method_class, hbkid
       INTO CORRESPONDING FIELDS OF TABLE @rt_banks.
-  ENDMETHOD.
-
-
-  METHOD zif_cd_hck_runtime_dao~get_evidence_settings.
-    SELECT name, value
-      FROM zcd_hck_evset
-      WHERE set_id = @iv_set_id
-        AND active = @abap_true
-      ORDER BY name
-      INTO CORRESPONDING FIELDS OF TABLE @rt_settings.
   ENDMETHOD.
 
 

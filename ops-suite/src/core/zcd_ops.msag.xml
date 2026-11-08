@@ -2406,7 +2406,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>667</MSGNR>
-     <TEXT>Evidence &amp;1 (&amp;2) not configured (ZCD_HCK_EVSET) - its rows are ignored</TEXT>
+     <TEXT>Evidence &amp;1 &amp;2 not configured (settings / parameters) - its rows are igno</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

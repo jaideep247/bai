@@ -61,7 +61,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `HckBtcRole`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
       hckclrrule                     TYPE string VALUE `HckClrRule`,
-      hckevidenceset                 TYPE string VALUE `HckEvidenceSet`,
       hckpmbank                      TYPE string VALUE `HckPmBank`,
       hckpmclass                     TYPE string VALUE `HckPmClass`,
       hckreconset                    TYPE string VALUE `HckReconSet`,
@@ -83,7 +82,6 @@ INTERFACE lif_c.
       hckbtcrole                     TYPE string VALUE `ZCD_HCK_BTCROLE`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
       hckclrrule                     TYPE string VALUE `ZCD_HCK_CLRRULE`,
-      hckevidenceset                 TYPE string VALUE `ZCD_HCK_EVSET`,
       hckpmbank                      TYPE string VALUE `ZCD_HCK_PMBANK`,
       hckpmclass                     TYPE string VALUE `ZCD_HCK_PMCLASS`,
       hckreconset                    TYPE string VALUE `ZCD_HCK_RCSET`,
@@ -187,9 +185,6 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckClrRule = if_abap_behv=>mk-on.
       result-%assoc-_HckClrRule = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckEvidenceSet = if_abap_behv=>mk-on.
-      result-%assoc-_HckEvidenceSet = lv_create.
     ENDIF.
     IF requested_features-%assoc-_HckBtcRole = if_abap_behv=>mk-on.
       result-%assoc-_HckBtcRole = lv_create.
@@ -1126,61 +1121,6 @@ CLASS lhc_hckclrrule IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_hckevidenceset DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckEvidenceSet RESULT result.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckEvidenceSet~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckevidenceset IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckevidenceset.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckevidenceset.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckevidenceset.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
 CLASS lhc_hckbtcrole DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
@@ -1591,7 +1531,6 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckpmclass table = lif_c=>gc_tab-hckpmclass )
             ( entity = lif_c=>gc_ent-hckpmbank table = lif_c=>gc_tab-hckpmbank )
             ( entity = lif_c=>gc_ent-hckclrrule table = lif_c=>gc_tab-hckclrrule )
-            ( entity = lif_c=>gc_ent-hckevidenceset table = lif_c=>gc_tab-hckevidenceset )
             ( entity = lif_c=>gc_ent-hckbtcrole table = lif_c=>gc_tab-hckbtcrole )
             ( entity = lif_c=>gc_ent-hckseqoutcome table = lif_c=>gc_tab-hckseqoutcome )
             ( entity = lif_c=>gc_ent-hckreconset table = lif_c=>gc_tab-hckreconset ) )

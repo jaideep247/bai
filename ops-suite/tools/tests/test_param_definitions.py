@@ -158,5 +158,40 @@ class ParamDefinitionsTest(unittest.TestCase):
         self.assertEqual(pd.code_default(root, name, names[name]), 'C')
 
 
+class ConsolidationTest(unittest.TestCase):
+    """Table consolidation 2026-11-08: generated method size and the definitions that replace
+    customizing tables."""
+
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    def test_definitions_in_parts(self):
+        row = dict(AREA='CD_OPS', KIND='P', VALUE_TYPE='INT', MIN_VALUE='', MAX_VALUE='', DEFAULT_VALUE='',
+                   ALLOWED_PCRE='', INTERFACE_NAME='', MANDATORY='', DEVELOPER_OWNED='', DESCRIPTION='d',
+                   OWNER='o')
+        defs = [dict(row, NAME=f'FIX_{i:03d}') for i in range(pd.PART_ROWS + 1)]
+        text = pd.render([], defs)
+        self.assertIn('INSERT LINES OF definitions_part_1( ) INTO TABLE rt_definitions.', text)
+        self.assertIn('INSERT LINES OF definitions_part_2( ) INTO TABLE rt_definitions.', text)
+        part2 = text.split('METHOD definitions_part_2.')[1].split('ENDMETHOD.')[0]
+        self.assertEqual(part2.count('INSERT CORRESPONDING'), 1)
+
+    def test_scaled_default(self):
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, 'src'))
+            with open(os.path.join(root, 'src', 'zif_cd_fix_types.intf.abap'), 'w', encoding='utf-8') as fh:
+                fh.write("INTERFACE zif_cd_fix_types PUBLIC.\n  CONSTANTS:\n    BEGIN OF gc_param_default,\n"
+                         "      hours TYPE i VALUE 26,\n    END OF gc_param_default.\nENDINTERFACE.\n")
+            spec = {'FIX_MIN': ('const', os.path.join('src', 'zif_cd_fix_types.intf.abap'),
+                                'gc_param_default-hours', 60)}
+            self.assertEqual(pd.code_default(root, 'FIX_MIN', ('x', 'y', 'runtime'), spec), '1560')
+
+    def test_stripe_settings_delivered_blank(self):
+        _, defs, _, _ = pd.load(self.ROOT)
+        stripe = [d for d in defs if d['NAME'].startswith('HCK_STRIPE_')]
+        self.assertEqual(len(stripe), 10)
+        self.assertTrue(all(d['AREA'] == 'CD_HCK' and d['DEFAULT_VALUE'] == '' for d in stripe))
+        self.assertEqual(next(d['VALUE_TYPE'] for d in stripe if d['NAME'] == 'HCK_STRIPE_TABLE'), 'DDIC')
+
+
 if __name__ == '__main__':
     unittest.main()

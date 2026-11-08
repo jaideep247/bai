@@ -33,6 +33,8 @@
 *&            | DPAYH payment run fields GC_RUN_FIELD, messages 301, 312, 346, 688, 689.
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: Stripe evidence settings are ZCA_PARAM parameters HCK_STRIPE_*
+*&            | (GC_PARAM; ZCD_HCK_EVSET retired, TY_SETTING / GC_SETTING removed).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - number range, queue, in-flight types</p>
 "! Shared by ZCL_CD_HCK_C_NUMRANGE, ZCL_CD_HCK_C_QUEUES, ZCL_CD_HCK_C_INFLIGHT and
@@ -413,36 +415,7 @@ INTERFACE zif_cd_hck_runtime_types
       indeterminate    TYPE ty_outcome VALUE 'INDETERMINATE',
     END OF gc_outcome.
 
-  " ------------------------------------------------------------ evidence settings / configured source
-  "! ZCD_HCK_EVSET: named settings of an evidence kind (set id = PARAM1 of the rule), e.g. the
-  "! field names and record-type values of the Stripe payout log
-  TYPES ty_set_id TYPE c LENGTH 10.
-  TYPES ty_set_name TYPE c LENGTH 20.
-  TYPES:
-    BEGIN OF ty_setting,
-      name  TYPE ty_set_name,
-      value TYPE ty_rule_param,
-    END OF ty_setting.
-  TYPES tt_setting TYPE SORTED TABLE OF ty_setting WITH UNIQUE KEY name.
-
-  "! Setting names of the Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE): chain payment document
-  "! (DFKKOP-AUGBL) -> payment intent ID (DFKKOP field DFKKOP_INTENT_FIELD) -> payout log row
-  "! (TABLE, field INTENT_FIELD). *_FIELD / TABLE = names validated against the DDIC and
-  "! ZCD_OPS_TABWL; CHARGE .. ACK_PARTIAL = optional comma lists of record-type / ACK values
-  CONSTANTS:
-    BEGIN OF gc_setting,
-      table         TYPE ty_set_name VALUE 'TABLE',
-      intent_field  TYPE ty_set_name VALUE 'INTENT_FIELD',
-      dfkkop_intent TYPE ty_set_name VALUE 'DFKKOP_INTENT_FIELD',
-      type_field    TYPE ty_set_name VALUE 'TYPE_FIELD',
-      payout_field  TYPE ty_set_name VALUE 'PAYOUT_FIELD',
-      ack_field     TYPE ty_set_name VALUE 'ACK_FIELD',
-      charge        TYPE ty_set_name VALUE 'CHARGE',
-      refund        TYPE ty_set_name VALUE 'REFUND',
-      ack_full      TYPE ty_set_name VALUE 'ACK_FULL',
-      ack_partial   TYPE ty_set_name VALUE 'ACK_PARTIAL',
-    END OF gc_setting.
-
+  " ------------------------------------------------------------ configured source
   "! Confirmed: DFKKOP-AUGBL = payment document (the open items a payment cleared)
   CONSTANTS gc_dfkkop_augbl TYPE zif_cd_hck_types=>ty_fieldname VALUE 'AUGBL'.
 
@@ -606,6 +579,25 @@ INTERFACE zif_cd_hck_runtime_types
       ack_file_classes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_CLASSES',
       "! FMON source (ZCD_FMON_SRC) whose GROUP_FIELDS name the payment run of a file
       ack_file_src      TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_PAY_ACK_FILE_SRC',
+      "! Stripe payout evidence (ZCL_CD_HCK_EV_STRIPE; table consolidation 2026-11-08, were the rows
+      "! of ZCD_HCK_EVSET set STRIPE): chain payment document (DFKKOP-AUGBL) -> payment intent ID
+      "! (DFKKOP field STRIPE_DFKKOP_FIELD) -> payout log row (STRIPE_TABLE, field
+      "! STRIPE_INTENT_FIELD). Table / field names are validated against the DDIC and ZCD_OPS_TABWL
+      "! (HCK / READ) before each read; delivered blank (landscape-specific, VERIFY-SE11) = the
+      "! evidence kind is not configured
+      stripe_table        TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TABLE',
+      stripe_intent_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_INTENT_FIELD',
+      stripe_dfkkop_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_DFKKOP_FIELD',
+      "! Optional fields of the payout log: record type, payout ID (filled = in a payout), ACK status
+      stripe_type_field   TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_TYPE_FIELD',
+      stripe_payout_field TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_PAYOUT_FIELD',
+      stripe_ack_field    TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FIELD',
+      "! Optional comma lists: record types that count / refund (anomaly), ACK values that count /
+      "! partial ACK (anomaly); blank = condition not used
+      stripe_charge       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_CHARGE',
+      stripe_refund       TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_REFUND',
+      stripe_ack_full     TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_FULL',
+      stripe_ack_partial  TYPE zif_cd_ops_types=>ty_param_name VALUE 'HCK_STRIPE_ACK_PARTIAL',
     END OF gc_param.
 
   "! Parameter names completed at run time: HCK_BTC_INFO_<scheme> (BAI2, ISO, PRTRY of

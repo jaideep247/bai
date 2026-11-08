@@ -36,6 +36,8 @@
 *&            | replaced failed file ignored and the regenerated file's ACK used, GROUP_FIELDS not
 *&            | configured (one W, no lag, no read), two payment runs with separate files, payment-level
 *&            | and file-level classes in one run.
+*& 2026-11-08 | Table consolidation: runtime DAO double without get_evidence_settings (Stripe settings are
+*&            | ZCA_PARAM parameters HCK_STRIPE_*, delivered blank = not configured).
 *&---------------------------------------------------------------------*
 CLASS ltd_runtime_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -85,10 +87,6 @@ CLASS ltd_runtime_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_runtime_dao~get_seq_outcomes.
     rt_outcomes = mt_outcomes.
-  ENDMETHOD.
-
-  METHOD zif_cd_hck_runtime_dao~get_evidence_settings.
-    CLEAR rt_settings.
   ENDMETHOD.
 
   METHOD zif_cd_hck_runtime_dao~get_gl_lines_by_xref2.

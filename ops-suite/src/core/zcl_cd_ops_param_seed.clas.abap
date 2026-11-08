@@ -12,6 +12,8 @@
 *& real read logic ZCL_CA_PARAM. Production-safe: no database.
 *& Modification log:
 *& 2026-11-07 | Initial version (generated; parameters moved to ZCA_PARAM).
+*& 2026-11-08 | DEFINITIONS( ) collects parts of at most 100 rows (method length; the table
+*&            | consolidation moved settings of retired customizing tables into definitions).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - delivered parameter definitions</p>
 "! Delivered areas and definitions (generated from config/param_*.csv) and the
@@ -1839,6 +1841,166 @@ CLASS zcl_cd_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d110,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_ACK_FIELD',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z][A-Z0-9_]*',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe payout log: ACK status field (blank = not read)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d110.
+    CONSTANTS:
+      BEGIN OF gc_d111,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_ACK_FULL',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe ACK values that count as full (blank = any)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d111.
+    CONSTANTS:
+      BEGIN OF gc_d112,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_ACK_PARTIAL',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe ACK values of a partial ACK = anomaly (comma list)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d112.
+    CONSTANTS:
+      BEGIN OF gc_d113,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_CHARGE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe record types that count as charge (blank = any)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d113.
+    CONSTANTS:
+      BEGIN OF gc_d114,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_DFKKOP_FIELD',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z][A-Z0-9_]*',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'DFKKOP field of the Stripe payment intent ID (blank = off)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d114.
+    CONSTANTS:
+      BEGIN OF gc_d115,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_INTENT_FIELD',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z][A-Z0-9_]*',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe payout log: payment intent ID field (blank = off)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d115.
+    CONSTANTS:
+      BEGIN OF gc_d116,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_PAYOUT_FIELD',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z][A-Z0-9_]*',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe payout log: payout ID field (blank = not read)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d116.
+    CONSTANTS:
+      BEGIN OF gc_d117,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_REFUND',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'LIST',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe record types of a refund = anomaly (comma list)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d117.
+    CONSTANTS:
+      BEGIN OF gc_d118,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_TABLE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'DDIC',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe payout log table (blank = Stripe evidence off)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d118.
+    CONSTANTS:
+      BEGIN OF gc_d119,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_STRIPE_TYPE_FIELD',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z][A-Z0-9_]*',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Stripe payout log: record type field (blank = not read)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
+      END OF gc_d119.
+    CONSTANTS:
+      BEGIN OF gc_d120,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_SUPPRESS_MAX_DAYS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'INT',
@@ -1851,9 +2013,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Longest suppression without a second user (days)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d110.
+      END OF gc_d120.
     CONSTANTS:
-      BEGIN OF gc_d111,
+      BEGIN OF gc_d121,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_TIMEOUT_SEC',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1867,9 +2029,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Default check timeout (seconds)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d111.
+      END OF gc_d121.
     CONSTANTS:
-      BEGIN OF gc_d112,
+      BEGIN OF gc_d122,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_TOP_N',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1883,9 +2045,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Open exceptions listed in the morning report',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d112.
+      END OF gc_d122.
     CONSTANTS:
-      BEGIN OF gc_d113,
+      BEGIN OF gc_d123,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WATCH_PE_AREAS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1899,9 +2061,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Areas whose last run is checked (comma list)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d113.
+      END OF gc_d123.
     CONSTANTS:
-      BEGIN OF gc_d114,
+      BEGIN OF gc_d124,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_H',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1915,9 +2077,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority H',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d114.
+      END OF gc_d124.
     CONSTANTS:
-      BEGIN OF gc_d115,
+      BEGIN OF gc_d125,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_L',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1931,9 +2093,9 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority L',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d115.
+      END OF gc_d125.
     CONSTANTS:
-      BEGIN OF gc_d116,
+      BEGIN OF gc_d126,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CD_HCK',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'HCK_WEIGHT_M',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -1947,7 +2109,17 @@ CLASS zcl_cd_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Score weight of priority M',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'PE RTB',
-      END OF gc_d116.
+      END OF gc_d126.
+    "! Delivered definitions 1-100 (at most 100 per method)
+    CLASS-METHODS definitions_part_1
+      RETURNING
+        VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
+
+    "! Delivered definitions 101-126 (at most 100 per method)
+    CLASS-METHODS definitions_part_2
+      RETURNING
+        VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
+
     DATA mo_dao TYPE REF TO zcl_ca_param_dao_mem.
     DATA mo_param TYPE REF TO zif_ca_param.
     DATA mo_params TYPE REF TO zif_cd_ops_params.
@@ -1967,6 +2139,12 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
 
 
   METHOD definitions.
+    INSERT LINES OF definitions_part_1( ) INTO TABLE rt_definitions.
+    INSERT LINES OF definitions_part_2( ) INTO TABLE rt_definitions.
+  ENDMETHOD.
+
+
+  METHOD definitions_part_1.
     INSERT CORRESPONDING #( gc_d001 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d002 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d003 ) INTO TABLE rt_definitions.
@@ -2067,6 +2245,10 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d098 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d099 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d100 ) INTO TABLE rt_definitions.
+  ENDMETHOD.
+
+
+  METHOD definitions_part_2.
     INSERT CORRESPONDING #( gc_d101 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d102 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d103 ) INTO TABLE rt_definitions.
@@ -2083,7 +2265,18 @@ CLASS zcl_cd_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d114 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d115 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d116 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d117 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d118 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d119 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d120 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d121 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d122 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d123 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d124 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d125 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d126 ) INTO TABLE rt_definitions.
   ENDMETHOD.
+
 
 
   METHOD constructor.

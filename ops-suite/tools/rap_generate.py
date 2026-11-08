@@ -147,7 +147,6 @@ SPEC = {
             ('zcd_hck_clrrule', 'HckClrRule', 'zcd_d_hckclr', 'Evidence rule', 'Clearing / return evidence rules',
              [], [('enum', 'flow', 'D,C'), ('enum', 'purpose', 'CLEARED,RETURNED,RETRIEVED,VOIDED,PENDING,IN_FLIGHT'),
                   ('enum', 'required', ',X,C,N'), ('class', 'evidence_class', 'ZIF_CD_HCK_EVIDENCE')]),
-            ('zcd_hck_evset', 'HckEvidenceSet', 'zcd_d_hckevset', 'Evidence setting', 'Evidence settings', [], []),
             # Table consolidation 2026-11-08: one table of bank code roles with a USAGE - LIFECYCLE (scope =
             # flow + method class, open list of roles) and RECON (scope = reconciliation set, fixed roles;
             # was ZCD_HCK_RCBTC); the roles of one usage are refused for the other

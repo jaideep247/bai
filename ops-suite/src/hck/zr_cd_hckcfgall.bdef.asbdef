@@ -24,7 +24,6 @@ authorization master ( global )
   association _HckPmClass { create ( features : global ); with draft; }
   association _HckPmBank { create ( features : global ); with draft; }
   association _HckClrRule { create ( features : global ); with draft; }
-  association _HckEvidenceSet { create ( features : global ); with draft; }
   association _HckBtcRole { create ( features : global ); with draft; }
   association _HckSeqOutcome { create ( features : global ); with draft; }
   association _HckReconSet { create ( features : global ); with draft; }
@@ -51,7 +50,6 @@ authorization master ( global )
     validation HckPmBank ~ validateTransport;
     validation HckClrRule ~ validateFields;
     validation HckClrRule ~ validateTransport;
-    validation HckEvidenceSet ~ validateTransport;
     validation HckBtcRole ~ validateFields;
     validation HckBtcRole ~ validateTransport;
     validation HckSeqOutcome ~ validateFields;
@@ -378,37 +376,6 @@ etag master LocalLastChangedAt
     Param2 = param2;
     Param3 = param3;
     Required = required;
-    Description = description;
-    Active = active;
-    ChangedBy = changed_by;
-    ChangedAt = changed_at;
-    LastChangedBy = last_changed_by;
-    LastChangedAt = last_changed_at;
-    LocalLastChangedAt = local_last_changed_at;
-  }
-}
-
-define behavior for ZR_CD_HckEvidenceSet alias HckEvidenceSet
-persistent table zcd_hck_evset
-with additional save
-draft table zcd_d_hckevset
-lock dependent by _HckCfgAll
-authorization dependent by _HckCfgAll
-etag master LocalLastChangedAt
-{
-  update;
-  delete ( features : global );
-  field ( readonly ) SingletonID, ChangedBy, ChangedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
-  field ( readonly : update ) SetId, Name;
-  field ( mandatory : create ) SetId, Name;
-  association _HckCfgAll { with draft; }
-  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
-  validation validateTransport on save { create; update; delete; }
-  mapping for zcd_hck_evset
-  {
-    SetId = set_id;
-    Name = name;
-    Value = value;
     Description = description;
     Active = active;
     ChangedBy = changed_by;
