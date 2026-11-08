@@ -60,3 +60,38 @@ Segregation of duties: the operator (02) and the approver (85) of a payment engi
 **Why CORE for transactions (no new value):** the transactions dashboard shows the same evidence as the 360° payment trace (request, open item, payment run, bank line, return), which is guarded by CORE 03 plus the company code of each item (`Payment_Trace.md` §6). One area keeps one rule for "may see payment evidence"; a new value (e.g. TRX) would need a domain change and a second grant for the same data. CORE 03 already covers the read-only alert / parameter apps — a user who should see neither gets no CORE. Company code is mapped in the DCL, so `Z_CD_OPS_OPERATOR` (own company codes) sees only its own transactions.
 
 Roles: `Z_CD_OPS_DISPLAY` (ZCD_PE_AREA *, 03, BUKRS *) covers all dashboards. Business roles per launchpad page (`Dashboard_Production_Support.md` §5) add the catalogs and `S_SERVICE` for the bindings; they grant no activity other than 03.
+
+## 3b. Every entry point and the ZCD_OPS check it makes (audit mapping, 2026-11-08)
+
+Every `AUTHORITY-CHECK` on `ZCD_OPS` is in one class, `ZCL_CD_OPS_AUTH` (`ZIF_CD_OPS_AUTH`, factory `GET_AUTH`). The engines (`ZCL_CD_EBS_ENGINE`, `ZCL_CD_FMON_ENGINE`, `ZCL_CD_HCK_ENGINE`, …) are called only from the entry points below, which check before the engine is created. The suite has no RFC-enabled function module and no other external entry point.
+
+**Batch programs and reports**
+
+| Entry point | ZCD_PE_AREA | ACTVT | When |
+|---|---|---|---|
+| `ZCD_EBS_VALIDATE` (job / SE38) | EBS | 16 | At start, before the run |
+| `ZCD_FMON_MONITOR` (job `ZCD_FMON_MONITOR_ALL` step 1) | FMON | 16 | At start |
+| `ZCD_OPS_PAY_SNAPSHOT` (job `ZCD_FMON_MONITOR_ALL` step 2) | CORE | 16 | At start |
+| `ZCD_MORNING_REPORT` | HCK | 16 | At start; a file download also checks `S_DATASET` (`AUTHORITY_CHECK_DATASET`) |
+| `ZCD_OPS_PURGE` | CORE | 16 | At start |
+| `ZCD_OPS_PAYMENT_TRACE` | CORE | 03, plus company code per item | At start; a step on an item of a company code without 03 is shown as not authorised |
+| `ZCD_OPS_PATTERN_CHECK` | each area | 03 | Per area read |
+| `ZCD_OPS_PATTERN_MIGRATE` | each area | 02 | Per area, before anything is written (DV1, customizing request) |
+| HCK checks reading a configured table | — | `S_TABU_NAM` 03 | Per table (`ZCL_CD_HCK_ENGINE`), in addition to the whitelist |
+| PRISM status API (`POST /sap/zcd_ops/prism_status`, `ZCL_CD_FMON_PRISM_API`) | FMON | 01 | Per call, before the event is stored; the bgPF unit it queues runs only for that stored event |
+
+**RAP services (Fiori apps)**
+
+| Service | Behaviour pool | Operation | ZCD_PE_AREA | ACTVT |
+|---|---|---|---|---|
+| `ZUI_CD_EBS_CFG`, `ZUI_CD_FMON_CFG`, `ZUI_CD_HCK_CFG`, `ZUI_CD_OPS_CFG` (configuration apps) | `ZBP_R_CD_EBSCFGALL`, `…FMONCFGALL`, `…HCKCFGALL`, `…OPSCFGALL` | Edit / update of the singleton (global authorisation; covers create, change and delete of every child row) | EBS / FMON / HCK / CORE | 02 |
+| same | same | Create of new rows (global feature control) | — | Only in a client that records customizing changes (DV1); not an activity check |
+| `ZUI_CD_OPS_EXC` (exceptions) | `ZBP_R_CD_OPSEXCEPTION` | Assign, resolve (instance authorisation) | Area of the exception | 02 |
+| same | same | Approve a waiver (second person; the requester is refused) | Area of the exception | 85 |
+| `ZUI_CD_HCK_SUP` (suppressions) | `ZBP_R_CD_HCKSUPPRESS` | Create, end suppression | HCK | 02 |
+| same | same | Approve suppression (second person) | HCK | 85 |
+| `ZUI_CD_FMON_MAN` (file manual status) | `ZBP_R_CD_FMONFILE` | Action set manual status | FMON | 02 |
+| `ZUI_CD_FMON_PRQ` (PRISM request handled manually) | `ZBP_R_CD_FMONPRQWA` | Create (records the reference and resolves the exception) | FMON | 02 |
+| Dashboards (`ZUI_CD_*_DASH`, `ZUI_CD_FMON_FLOW`, `ZUI_CD_TRX_REQ`, `ZUI_CD_OPS_OVERVIEW`) | — (read-only) | Read through the DCLs of §3a | per §3a | 03 |
+
+**Known difference to §2 (open):** §2 lists activities 01 (create) and 06 (delete) for the configuration apps. The apps check 02 for the whole configuration, and new rows are limited to DV1 by the client policy. So today a user with 02 for an area can also add and delete rows of that area in DV1. Separating 01 / 06 would be a check per child entity in the generated behaviour pools (`tools/rap_generate.py`).
