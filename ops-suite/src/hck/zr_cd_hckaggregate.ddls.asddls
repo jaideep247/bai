@@ -26,6 +26,8 @@ define view entity ZR_CD_HckAggregate
       age_days_min as AgeDaysMin,
       @EndUserText.label: 'Group field'
       group_field as GroupField,
+      @EndUserText.label: 'Expected groups'
+      expected_groups as ExpectedGroups,
       @EndUserText.label: 'Condition 1 field'
       cond1_field as Cond1Field,
       @EndUserText.label: 'Condition 1 operator'

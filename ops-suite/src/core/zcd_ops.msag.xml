@@ -2021,6 +2021,12 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>426</MSGNR>
+     <TEXT>&amp;1: expected groups must be a comma list of distinct values</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>500</MSGNR>
      <TEXT>Second file header 01 in line &amp;1 ignored; expected one 01 per file</TEXT>
     </T100>

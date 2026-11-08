@@ -170,21 +170,25 @@ Plus the `ZCD_OPS_TABWL` row HCK / READ `DFKKOP` (§5) and the threshold rows in
 | B_VOLUME | FEB_STMT | FEBKO | COUNT | AZDAT (VERIFY-DDIC) | DAY | (set by check) | `<format/sender field, VERIFY-DDIC>` | | Statements loaded per day (BAI vs CAMT) |
 | B_VOLUME | PAY_REQ | ZCD_PAYM_REQ_LOG | COUNT | `<request date field (DATS), VERIFY-DDIC>` | DAY | (set by check) | `<source field, VERIFY-DDIC>` | ZZ_STATUS EQ `SUCCESS` | Never "highest COUNTER" — status SUCCESS per standards |
 
-### 4a. Expected groups — `ZCD_HCK_AGGGRP` (audit A103)
+### 4a. Expected groups — `ZCD_HCK_AGG-EXPECTED_GROUPS` (audit A103; was `ZCD_HCK_AGGGRP`, table consolidation 2026-11-08)
 
 A grouped aggregate only returns groups that have rows: a company code or source that delivered nothing
-would simply be absent. Each row below names a group value the aggregate must report; when the query
-returns no row for it, the check measures **0** for that group, so a lower-is-worse threshold on that
-company can fire while another company is active. A **failed** query is an `AGG_CONFIG_INVALID` error
+would simply be absent. `EXPECTED_GROUPS` of the aggregate row names the group values it must report -
+a comma list of distinct values (each at most 70 characters, CHAR 255 in all; the app refuses an empty
+element, a repeat or a too long value, message 426, and a list without `GROUP_FIELD`, message 423); when
+the query returns no row for a listed value, the check measures **0** for that group, so a
+lower-is-worse threshold on that company can fire while another company is active. The readers
+(`ZCL_CD_HCK_C_GENERIC_AGG`, `ZCL_CD_HCK_C_VOLUME`) parse the list once per aggregate
+(`ZCL_CD_HCK_AGG_QUERY=>EXPECTED_GROUPS`). A **failed** query is an `AGG_CONFIG_INVALID` error
 finding and measures nothing — it never reads as zero volume. When a grouped result reaches the row cap
 (5 000 groups) it may be cut off and missing groups are not filled.
 
-| CHECK_ID | AGG_ID | GROUP_VALUE | DESCRIPTION |
+| CHECK_ID | AGG_ID | EXPECTED_GROUPS | Meaning (was one ZCD_HCK_AGGGRP row per value) |
 |---|---|---|---|
-| B_VOLUME | PAY_REQ | `<source system 1, from ZCD_PAYM_REQ_LOG-SOURCE, VERIFY-SE16>` | Payment requests expected daily |
-| A_RET_AGED | RET_AGED | `<company code, VERIFY with Treasury>` | Company codes reported even when nothing is aged |
+| B_VOLUME | PAY_REQ | `<source system 1, from ZCD_PAYM_REQ_LOG-SOURCE, VERIFY-SE16>` (further sources comma-separated) | Payment requests expected daily |
+| A_RET_AGED | RET_AGED | `<company code, VERIFY with Treasury>` (further company codes comma-separated) | Company codes reported even when nothing is aged |
 
-Maintained in the health check configuration app (entity *Expected groups*), table logging on.
+Maintained in the health check configuration app (entity *Generic aggregates*, field *Expected groups*), table logging on.
 
 ## 5. Table whitelist — `ZCD_OPS_TABWL`, area HCK, purpose READ
 
@@ -213,8 +217,7 @@ security boundary; every new row needs a reviewer.
 | HCK | DRIFT | TFK033D | (blank) | Account determination (no `*` wildcard in this landscape) | X |
 | HCK | DRIFT | ZCD_HCK_DEF | (blank) | Health check catalog | X |
 | HCK | DRIFT | ZCD_HCK_THRESH | (blank) | Health check thresholds | X |
-| HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates | X |
-| HCK | DRIFT | ZCD_HCK_AGGGRP | (blank) | Expected groups of aggregates (A103) | X |
+| HCK | DRIFT | ZCD_HCK_AGG | (blank) | Generic aggregates with their expected groups (A103) | X |
 | HCK | DRIFT | ZCD_JOB_STEP | (blank) | Job cycle steps | X |
 | HCK | DRIFT | ZCD_FMON_SLA | (blank) | FMON stage SLAs: durations and deadlines (ZCD_FMON_DEADL merged) | X |
 | HCK | DRIFT | ZCD_FMON_CAL | (blank) | FMON expected files | X |

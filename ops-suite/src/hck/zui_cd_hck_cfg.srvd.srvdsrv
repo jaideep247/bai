@@ -5,7 +5,6 @@ define service ZUI_CD_HCK_CFG {
   expose ZC_CD_HckCheckDef as HckCheckDef;
   expose ZC_CD_HckThreshold as HckThreshold;
   expose ZC_CD_HckAggregate as HckAggregate;
-  expose ZC_CD_HckAggGroup as HckAggGroup;
   expose ZC_CD_JobCycle as JobCycle;
   expose ZC_CD_JobStep as JobStep;
   expose ZC_CD_HckPmClass as HckPmClass;

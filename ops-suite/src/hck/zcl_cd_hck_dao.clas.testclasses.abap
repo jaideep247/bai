@@ -23,6 +23,8 @@
 *&            | DRIFT vs FMON SOURCE).
 *& 2026-11-08 | Table consolidation: monitor_cfg_positive_only removed with get_monitor_cfg (ZCD_OPS_MONCFG
 *&            | retired).
+*& 2026-11-08 | Table consolidation: expected groups read as ZCD_HCK_AGG-EXPECTED_GROUPS with the definitions
+*&            | (ZCD_HCK_AGGGRP no longer doubled).
 *&---------------------------------------------------------------------*
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -750,7 +752,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' ) ( 'ZCD_HCK_AGGGRP' )
+      i_dependency_list = VALUE #( ( 'ZCD_HCK_DEF' ) ( 'ZCD_HCK_THRESH' ) ( 'ZCD_HCK_AGG' )
                                    ( 'ZCD_OPS_TABWL' ) ( 'ZCD_HCK_BASELINE' )
                                    ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_JOB_STEP' ) ( 'BALHDR' )
                                    ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' ) ) ).
@@ -828,34 +830,27 @@ CLASS ltc_dao_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: aggregate rows and expected groups of the asked check only
+  " Rule: aggregate rows of the asked check only, with their expected groups (one comma list on the
+  " row - table consolidation 2026-11-08, was ZCD_HCK_AGGGRP)
   METHOD agg_defs_and_groups_of_check.
     DATA lt_agg TYPE STANDARD TABLE OF zcd_hck_agg WITH EMPTY KEY.
     DATA ls_agg TYPE zcd_hck_agg.
-    DATA lt_grp TYPE STANDARD TABLE OF zcd_hck_agggrp WITH EMPTY KEY.
-    DATA ls_grp TYPE zcd_hck_agggrp.
     TRY.
-        ls_agg-check_id = gc_test-check_a.
-        ls_agg-agg_id   = gc_test-agg.
-        ls_agg-tabname  = gc_test-table_on.
+        ls_agg-check_id        = gc_test-check_a.
+        ls_agg-agg_id          = gc_test-agg.
+        ls_agg-tabname         = gc_test-table_on.
+        ls_agg-expected_groups = |{ gc_test-group_2 },{ gc_test-group_1 }|.
         INSERT ls_agg INTO TABLE lt_agg.
         ls_agg-check_id = gc_test-check_b.
+        CLEAR ls_agg-expected_groups.
         INSERT ls_agg INTO TABLE lt_agg.
         go_env->insert_test_data( lt_agg ).
-        ls_grp-check_id    = gc_test-check_a.
-        ls_grp-agg_id      = gc_test-agg.
-        ls_grp-group_value = gc_test-group_2.
-        INSERT ls_grp INTO TABLE lt_grp.
-        ls_grp-group_value = gc_test-group_1.
-        INSERT ls_grp INTO TABLE lt_grp.
-        go_env->insert_test_data( lt_grp ).
         DATA(lt_defs) = mo_cut->get_agg_defs( gc_test-check_a ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_defs ) exp = 1 msg = 'One aggregate of the check' ).
         cl_abap_unit_assert=>assert_equals( act = lt_defs[ 1 ]-tabname exp = gc_test-table_on msg = 'Table read' ).
-        DATA(lt_groups) = mo_cut->get_agg_groups( gc_test-check_a ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_groups ) exp = 2 msg = 'Both expected groups' ).
-        cl_abap_unit_assert=>assert_equals( act = lt_groups[ 1 ]-group_value exp = gc_test-group_1
-                                            msg = 'Ordered by group value' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_defs[ 1 ]-expected_groups
+                                            exp = |{ gc_test-group_2 },{ gc_test-group_1 }|
+                                            msg = 'Expected groups read with the definition' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

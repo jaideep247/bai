@@ -14,6 +14,8 @@
 *& 2026-11-07 | Cap reached against the effective cap ZCL_CD_HCK_PARAM=>AGG_ROWS_CAP (parameter HCK_MAX_AGG_ROWS).
 *& 2026-11-08 | Table consolidation: approved tables (HCK / READ) and drift tables (HCK / DRIFT) read from
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
+*& 2026-11-08 | Table consolidation: EXPECTED_GROUPS / GROUP_LIST_VALID - the expected groups are a comma
+*&            | list of ZCD_HCK_AGG (was ZCD_HCK_AGGGRP), parsed once per aggregate, validated on save.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be approved (ZCD_OPS_TABWL HCK / READ); every field name
@@ -86,6 +88,22 @@ CLASS zcl_cd_hck_agg_query DEFINITION
         iv_date           TYPE d
       RETURNING
         VALUE(rv_literal) TYPE string.
+
+    "! Expected group values of an aggregate (ZCD_HCK_AGG-EXPECTED_GROUPS, A103; table consolidation
+    "! 2026-11-08, was ZCD_HCK_AGGGRP): the comma list split once, trimmed, blanks and repeats dropped
+    CLASS-METHODS expected_groups
+      IMPORTING
+        iv_list          TYPE clike
+      RETURNING
+        VALUE(rt_groups) TYPE zif_cd_hck_types=>tt_group_value.
+
+    "! Check of EXPECTED_GROUPS on save (configuration app, message 426): blank, or a comma list of
+    "! distinct, non-blank values that each fit a group value (70 characters)
+    CLASS-METHODS group_list_valid
+      IMPORTING
+        iv_value      TYPE clike
+      RETURNING
+        VALUE(rv_yes) TYPE abap_bool.
   PRIVATE SECTION.
     "! A decimal number literal accepted as a condition value
     CONSTANTS gc_number_pattern TYPE string VALUE `[-+]?[0-9]+(\.[0-9]+)?`.
@@ -352,6 +370,37 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
 
   METHOD reference_day.
     rv_date = iv_ref_date - is_def-age_days_min.
+  ENDMETHOD.
+
+
+  METHOD expected_groups.
+    LOOP AT zcl_cd_ops_util=>split_list( iv_list ) INTO DATA(lv_token).
+      DATA(lv_group) = CONV zif_cd_hck_types=>ty_group_value( lv_token ).
+      IF NOT line_exists( rt_groups[ table_line = lv_group ] ).
+        INSERT lv_group INTO TABLE rt_groups.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD group_list_valid.
+    rv_yes = abap_true.
+    IF iv_value IS INITIAL.
+      RETURN.
+    ENDIF.
+    " The same separators as the reader (ZCL_CD_OPS_UTIL=>SPLIT_LIST), but every element counts
+    DATA(lv_list) = translate( val = CONV string( iv_value ) from = `;` to = `,` ).
+    SPLIT lv_list AT `,` INTO TABLE DATA(lt_raw).
+    LOOP AT lt_raw INTO DATA(lv_raw).
+      DATA(lv_value) = condense( lv_raw ).
+      " a value longer than a group value would be cut and never match its group
+      IF lv_value <> CONV zif_cd_hck_types=>ty_group_value( lv_value ).
+        rv_yes = abap_false.
+        RETURN.
+      ENDIF.
+    ENDLOOP.
+    " no blank element (',,') and no repeat
+    rv_yes = xsdbool( lines( expected_groups( iv_value ) ) = lines( lt_raw ) ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -131,9 +131,11 @@ SPEC = {
               ('field', 'cond2_field', 'tabname'), ('field', 'cond3_field', 'tabname'),
               ('enum', 'agg_func', 'COUNT,SUM'), ('enum', 'date_mode', ',AGE,DAY'),
               ('enum', 'cond1_op', ',EQ,NE,GT,LT,GE,LE,IN'), ('enum', 'cond2_op', ',EQ,NE,GT,LT,GE,LE,IN'),
-              ('enum', 'cond3_op', ',EQ,NE,GT,LT,GE,LE,IN')]),
-            # Audit A103: expected groups of a grouped aggregate (silent group = measured 0)
-            ('zcd_hck_agggrp', 'HckAggGroup', 'zcd_d_hckaggg', 'Expected group', 'Expected groups', [], []),
+              ('enum', 'cond3_op', ',EQ,NE,GT,LT,GE,LE,IN'),
+              # Audit A103: expected groups of a grouped aggregate (silent group = measured 0) - one
+              # comma list on the row since the table consolidation of 2026-11-08 (was ZCD_HCK_AGGGRP)
+              ('valid', 'expected_groups', 'zcl_cd_hck_agg_query=>group_list_valid', 'group_list_invalid'),
+              ('when', 'group_field', BLANK, [('blank', 'expected_groups')])]),
             ('zcd_job_cycle', 'JobCycle', 'zcd_d_jobcyc', 'Job cycle', 'Job cycles', [], []),
             ('zcd_job_step', 'JobStep', 'zcd_d_jobstep', 'Job step', 'Job cycle steps', [],
              [('window', 'window_from', 'window_to'), ('pcre', 'jobname')]),

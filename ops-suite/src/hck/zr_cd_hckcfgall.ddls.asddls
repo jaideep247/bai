@@ -6,7 +6,6 @@ define root view entity ZR_CD_HckCfgAll
   composition [0..*] of ZR_CD_HckCheckDef as _HckCheckDef
   composition [0..*] of ZR_CD_HckThreshold as _HckThreshold
   composition [0..*] of ZR_CD_HckAggregate as _HckAggregate
-  composition [0..*] of ZR_CD_HckAggGroup as _HckAggGroup
   composition [0..*] of ZR_CD_JobCycle as _JobCycle
   composition [0..*] of ZR_CD_JobStep as _JobStep
   composition [0..*] of ZR_CD_HckPmClass as _HckPmClass
@@ -23,7 +22,6 @@ define root view entity ZR_CD_HckCfgAll
       _HckCheckDef,
       _HckThreshold,
       _HckAggregate,
-      _HckAggGroup,
       _JobCycle,
       _JobStep,
       _HckPmClass,

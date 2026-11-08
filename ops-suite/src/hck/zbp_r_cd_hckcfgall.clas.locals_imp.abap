@@ -33,6 +33,7 @@ INTERFACE lif_c.
       datemode                       TYPE string VALUE `DATEMODE`,
       evidenceclass                  TYPE string VALUE `EVIDENCECLASS`,
       expecteddfkkrp                 TYPE string VALUE `EXPECTEDDFKKRP`,
+      expectedgroups                 TYPE string VALUE `EXPECTEDGROUPS`,
       finding                        TYPE string VALUE `FINDING`,
       flow                           TYPE string VALUE `FLOW`,
       groupfield                     TYPE string VALUE `GROUPFIELD`,
@@ -56,7 +57,6 @@ INTERFACE lif_c.
       windowto                       TYPE string VALUE `WINDOWTO`,
     END OF gc_el,
     BEGIN OF gc_ent,
-      hckagggroup                    TYPE string VALUE `HckAggGroup`,
       hckaggregate                   TYPE string VALUE `HckAggregate`,
       hckbtcrole                     TYPE string VALUE `HckBtcRole`,
       hckcheckdef                    TYPE string VALUE `HckCheckDef`,
@@ -77,7 +77,6 @@ INTERFACE lif_c.
       zif_cd_hck_evidence            TYPE string VALUE `ZIF_CD_HCK_EVIDENCE`,
     END OF gc_if,
     BEGIN OF gc_tab,
-      hckagggroup                    TYPE string VALUE `ZCD_HCK_AGGGRP`,
       hckaggregate                   TYPE string VALUE `ZCD_HCK_AGG`,
       hckbtcrole                     TYPE string VALUE `ZCD_HCK_BTCROLE`,
       hckcheckdef                    TYPE string VALUE `ZCD_HCK_DEF`,
@@ -167,9 +166,6 @@ CLASS lhc_hckcfgall IMPLEMENTATION.
     ENDIF.
     IF requested_features-%assoc-_HckAggregate = if_abap_behv=>mk-on.
       result-%assoc-_HckAggregate = lv_create.
-    ENDIF.
-    IF requested_features-%assoc-_HckAggGroup = if_abap_behv=>mk-on.
-      result-%assoc-_HckAggGroup = lv_create.
     ENDIF.
     IF requested_features-%assoc-_JobCycle = if_abap_behv=>mk-on.
       result-%assoc-_JobCycle = lv_create.
@@ -530,6 +526,17 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
                         v2 = lif_c=>gc_el-cond3op v3 = lif_c=>gc_val-hckaggregate_cond3op
                         element = lif_c=>gc_el-cond3op ) INTO TABLE lt_msg.
       ENDIF.
+      IF zcl_cd_hck_agg_query=>group_list_valid( ls_row-ExpectedGroups ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-group_list_invalid v1 = ls_row-ExpectedGroups
+                        element = lif_c=>gc_el-expectedgroups ) INTO TABLE lt_msg.
+      ENDIF.
+      IF ls_row-GroupField IS INITIAL.
+        IF ls_row-ExpectedGroups IS NOT INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-must_be_blank v1 = lif_c=>gc_el-expectedgroups
+                          v2 = lif_c=>gc_el-groupfield v3 = ls_row-GroupField
+                          element = lif_c=>gc_el-expectedgroups ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-hckaggregate.
@@ -578,61 +585,6 @@ CLASS lhc_hckaggregate IMPLEMENTATION.
                       %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
                                              hckcfgall-SingletonID = 1 ) )
         INTO TABLE reported-hckaggregate.
-    ENDLOOP.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS lhc_hckagggroup DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
-    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
-
-    METHODS get_global_features FOR GLOBAL FEATURES
-      IMPORTING REQUEST requested_features FOR HckAggGroup RESULT result.
-
-    METHODS validatetransport FOR VALIDATE ON SAVE
-      IMPORTING keys FOR HckAggGroup~validateTransport.
-ENDCLASS.
-
-
-CLASS lhc_hckagggroup IMPLEMENTATION.
-
-  METHOD get_global_features.
-    " D-3: delete only where new entries are allowed (DV1); production keeps rows
-    IF requested_features-%delete = if_abap_behv=>mk-on.
-      result-%delete = COND #( WHEN zcl_cd_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
-                               THEN if_abap_behv=>fc-o-enabled
-                               ELSE if_abap_behv=>fc-o-disabled ).
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD validatetransport.
-    " DV1: every change (also a deletion) needs an open customizing request on the root
-    CHECK keys IS NOT INITIAL.
-    READ ENTITIES OF zr_cd_hckcfgall IN LOCAL MODE
-      ENTITY HckCfgAll
-        FIELDS ( TransportRequestID )
-        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
-      RESULT DATA(lt_root).
-    DATA(ls_msg) = zcl_cd_ops_cfg_factory=>get_gate( )->check_request(
-                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
-    LOOP AT keys INTO DATA(ls_key).
-      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-hckagggroup.
-      IF ls_msg-number IS INITIAL.
-        CONTINUE.
-      ENDIF.
-      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-hckagggroup.
-      INSERT VALUE #( %tky        = ls_key-%tky
-                      %state_area = gc_area_transport
-                      %msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                                 number   = ls_msg-number
-                                                 severity = if_abap_behv_message=>severity-error
-                                                 v1       = ls_msg-v1 )
-                      %path       = VALUE #( hckcfgall-%is_draft   = ls_key-%is_draft
-                                             hckcfgall-SingletonID = 1 ) )
-        INTO TABLE reported-hckagggroup.
     ENDLOOP.
   ENDMETHOD.
 
@@ -1525,7 +1477,6 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
             ( entity = lif_c=>gc_ent-hckcheckdef table = lif_c=>gc_tab-hckcheckdef )
             ( entity = lif_c=>gc_ent-hckthreshold table = lif_c=>gc_tab-hckthreshold )
             ( entity = lif_c=>gc_ent-hckaggregate table = lif_c=>gc_tab-hckaggregate )
-            ( entity = lif_c=>gc_ent-hckagggroup table = lif_c=>gc_tab-hckagggroup )
             ( entity = lif_c=>gc_ent-jobcycle table = lif_c=>gc_tab-jobcycle )
             ( entity = lif_c=>gc_ent-jobstep table = lif_c=>gc_tab-jobstep )
             ( entity = lif_c=>gc_ent-hckpmclass table = lif_c=>gc_tab-hckpmclass )

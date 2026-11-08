@@ -11,6 +11,7 @@
 *& 2026-11-07 | Messages 420 / 421: register state tokens and outcome finding codes of ZCD_HCK_SEQOUT.
 *& 2026-11-08 | Message 423: table consolidation, a field that must be blank for the row's kind / usage.
 *& 2026-11-08 | Messages 422 / 424 / 425: required for the kind, value of the other usage, form (PCRE).
+*& 2026-11-08 | Message 426: expected group list of ZCD_HCK_AGG (ZCD_HCK_AGGGRP merged).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Ops suite - configuration apps: types</p>
 INTERFACE zif_cd_ops_cfg_types
@@ -154,6 +155,8 @@ INTERFACE zif_cd_ops_cfg_types
       must_be_blank      TYPE ty_msg_number VALUE '423',
       value_reserved     TYPE ty_msg_number VALUE '424',
       form_invalid       TYPE ty_msg_number VALUE '425',
+      "! ZCD_HCK_AGG-EXPECTED_GROUPS (expected groups of a grouped aggregate, audit A103)
+      group_list_invalid TYPE ty_msg_number VALUE '426',
     END OF gc_msg.
 
 ENDINTERFACE.

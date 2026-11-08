@@ -18,11 +18,6 @@ union all
     last_changed_at as LastChangedAt
   }
 union all
-  select from zcd_hck_agggrp
-  {
-    last_changed_at as LastChangedAt
-  }
-union all
   select from zcd_job_cycle
   {
     last_changed_at as LastChangedAt

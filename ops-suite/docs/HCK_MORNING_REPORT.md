@@ -241,8 +241,7 @@ sequenceDiagram
 |---|---|---|---|
 | `ZCD_HCK_DEF` | C | MANDT, CHECK_ID | Check catalog: category, class, active, SEQ, priority, PARAM1–4, package size, timeout |
 | `ZCD_HCK_THRESH` | C | MANDT, CHECK_ID, METRIC, BUKRS | Amber/red limits, direction, baseline mode (NONE/ZSCORE/IQR), z limit / IQR k, lookback; `*` default rows |
-| `ZCD_HCK_AGG` | C | MANDT, CHECK_ID, AGG_ID | Generic COUNT/SUM: table, date field + mode (AGE/DAY) + days, group field, 3 conditions |
-| `ZCD_HCK_AGGGRP` | C | MANDT, CHECK_ID, AGG_ID, GROUP_VALUE | Expected group values of a grouped aggregate: a group without rows measures 0 (A103) |
+| `ZCD_HCK_AGG` | C | MANDT, CHECK_ID, AGG_ID | Generic COUNT/SUM: table, date field + mode (AGE/DAY) + days, group field, expected groups (comma list: a listed group without rows measures 0, A103 - `ZCD_HCK_AGGGRP` merged 2026-11-08), 3 conditions |
 | Core `ZCD_OPS_TABWL` | C | MANDT, PE_AREA, PURPOSE, TABLE_NAME, FIELD_NAME | One approved-table list of every reader (table consolidation 2026-11-08, was `ZCD_HCK_TABWL` / `ZCD_HCK_DRIFT` / `ZCD_FMON_TABWL`): HCK reads only its own rows - `HCK` / `READ` = tables the aggregates, value queries, queue and evidence sources may read (security boundary, with approver), `HCK` / `DRIFT` = tables under configuration-drift control; field blank (whole table) |
 | `ZCD_JOB_CYCLE` | C | MANDT, CYCLE_ID | Cycle header: text, factory calendar, active |
 | `ZCD_JOB_STEP` | C | MANDT, CYCLE_ID, STEP_NO | Job name pattern (PCRE, §9a), program, variant, predecessor, day offset, start window, max runtime, skippable, critical |
@@ -269,7 +268,7 @@ Every HCK finding: payment engine area `HCK`, `OBJECT_TYPE = 'CHECK'`, `GROUP1` 
 | `ZCL_CD_HCK_C_GL_TRANSFER` | A | P1 lag days (1), P2 window days (7), P3 max keys (500) | `GL_MISSING_KEYS` (*) | `GL_TRANSFER_GAP` per reconciliation key (E) |
 | `ZCL_CD_HCK_C_JOB_RUNTIME` | B | P1 job patterns, P2 day offset (1) | `DURATION_MIN` (job / job count) | — (baseline per job via thresholds) |
 | `ZCL_CD_HCK_C_APPLOG` | B | P1 log objects, P2 subobjects, P3 day offset (1) | `ERR_RATE_PCT`, `ERR_MESSAGES` (object/subobject / day) | — |
-| `ZCL_CD_HCK_C_VOLUME` | B | P1 offset (1), P2 days (1); rows in ZCD_HCK_AGG, expected groups in ZCD_HCK_AGGGRP | `<AGG_ID>` per source/LOB / day; 0 for each silent expected group (A103) | `AGG_CONFIG_INVALID` (also a failed query — no metric, never 0) |
+| `ZCL_CD_HCK_C_VOLUME` | B | P1 offset (1), P2 days (1); rows in ZCD_HCK_AGG, expected groups in its EXPECTED_GROUPS (comma list) | `<AGG_ID>` per source/LOB / day; 0 for each silent expected group (A103) | `AGG_CONFIG_INVALID` (also a failed query — no metric, never 0) |
 | `ZCL_CD_HCK_C_JOB_CYCLE` | B | P1 cycle date offset (0), P2 cycle ids | `STEPS_NOT_OK`, `STEPS_COMPLETED` (cycle / date) + step board | `STEP_MISSED/FAILED/STUCK/OVERRUN/BLOCKED` |
 | `ZCL_CD_HCK_C_OVERDUE_EXC` | C | — | `OVERDUE`, `OLDEST_OVERDUE_DAYS` (payment engine area) | — |
 | `ZCL_CD_HCK_C_CONFIG_DRIFT` | D | rows of ZCD_OPS_TABWL HCK / DRIFT | `DRIFTED_TABLES` (*) | `CONFIG_DRIFT` (E), `CONFIG_NO_BASELINE` (W) |

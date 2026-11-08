@@ -55,7 +55,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 
 - Create / delete are switched off by **global feature control** (button greyed out), not by an error after the fact.
 - **VERIFY-SE11:** the fixed values of domain `CCCORACTIV` (`ZIF_CD_OPS_CFG_TYPES=>GC_CHANGE_OPTION`) before activation; one constant to change if they differ.
-- Production changes are logged by **table change logging** (log flag on all 29 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
+- Production changes are logged by **table change logging** (log flag on all 28 customizing tables of the apps; Basis sets `rec/client`), visible in SCU3.
 
 ### Request check (DV1)
 `ZCL_CD_OPS_CFG_GATE->CHECK_REQUEST` reads E070 and refuses (validation `validateTransport` on every child, also for deletions): no request (402), unknown request (403), not a customizing request / task — e.g. a workbench request (404), released or no longer modifiable (405).
@@ -83,7 +83,7 @@ Tables with an `ACTIVE` flag — production can switch a row off by editing it (
 | FMON | FmonCalendar | Window both times or neither | 414 |
 | HCK | HckCheckDef | Class implements `ZIF_CD_HCK_CHECK`; category A–E; priority H/M/L | 410, 413 |
 | HCK | HckThreshold | Amber < red (higher is worse) / amber > red (lower is worse); baseline mode | 415, 413 |
-| HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators | 411, 412, 413 |
+| HCK | HckAggregate | Table exists; sum / date / group / condition fields exist; function COUNT/SUM; date mode; operators; expected groups a comma list of distinct values of at most 70 characters, blank without group field (table consolidation 2026-11-08, was ZCD_HCK_AGGGRP) | 411, 412, 413, 423, 426 |
 | HCK | JobStep | Window both times or neither; **job name is valid PCRE** | 414, 418 |
 | HCK | HckPmClass, HckPmBank | Flow D / C; ageing basis VALUE_DATE / ISSUE_DATE (method class: open list) | 413 |
 | HCK | HckBtcRole | Usage LIFECYCLE / RECON; scheme BAI2 / ISO / PRTRY. LIFECYCLE: scope = flow D / C + method class (PCRE `[DC][A-Z0-9_]{1,3}`), role required, an open list but never a reconciliation role, compare amount X / R / C or blank. RECON: role LEG / DEPOSIT / CUTOFF / REDEPOSIT / CHEQUE / OTHER / IGNORE, scheme BAI2, compare amount blank (table consolidation 2026-11-08, was ZCD_HCK_RCBTC) | 413, 422, 423, 424, 425 |

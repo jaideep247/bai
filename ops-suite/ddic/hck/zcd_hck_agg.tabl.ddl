@@ -9,7 +9,7 @@ define table zcd_hck_agg {
   // becomes the metric name; one check may hold several aggregates
   key agg_id    : abap.char(10) not null;
   description   : abap.char(60);
-  // must be in ZCD_HCK_TABWL; all field names are checked against the runtime DDIC
+  // must be approved in ZCD_OPS_TABWL (HCK / READ); all field names are checked against the runtime DDIC
   tabname       : abap.char(30);
   // COUNT or SUM
   agg_func      : abap.char(5);
@@ -20,6 +20,10 @@ define table zcd_hck_agg {
   age_days_min  : abap.int4;
   // result per value of this field becomes DIM1 (e.g. BUKRS, source, LOB)
   group_field   : abap.char(30);
+  // expected values of GROUP_FIELD, comma list of distinct values (each at most 70 characters, e.g.
+  // company codes); a group without rows measures 0 (audit A103; table consolidation 2026-11-08,
+  // was ZCD_HCK_AGGGRP); blank = none; only with a GROUP_FIELD (configuration app, message 426)
+  expected_groups : abap.char(255);
   // operators EQ NE GT LT GE LE IN (IN: comma list); values are quoted, never concatenated raw
   cond1_field   : abap.char(30);
   cond1_op      : abap.char(2);

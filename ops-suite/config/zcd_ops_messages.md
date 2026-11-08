@@ -341,6 +341,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 423 | &1 must be blank when &2 is '&3' |
 | 424 | Value &1 of &2 belongs to another usage (&3) |
 | 425 | Value &1 of &2 does not have the form &3 |
+| 426 | &1: expected groups must be a comma list of distinct values |
 | 500 | Second file header 01 in line &1 ignored; expected one 01 per file |
 | 501 | Account record 03 in line &1 outside a group; expected 02 before 03 |
 | 502 | Detail record 16 in line &1 outside an account; expected 03 before 16 |

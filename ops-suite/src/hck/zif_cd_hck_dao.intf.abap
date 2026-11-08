@@ -21,6 +21,8 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: get_monitor_cfg (ZCD_OPS_MONCFG) removed - the stale threshold per area
 *&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
+*& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
+*&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - data access (all SQL of HCK)</p>
 "! The only place in the HCK payment engine area that issues SQL, calls DDIC runtime
@@ -48,19 +50,13 @@ INTERFACE zif_cd_hck_dao
     RETURNING
       VALUE(rt_thresholds) TYPE zif_cd_hck_types=>tt_threshold.
 
-  "! Generic aggregate definitions (ZCD_HCK_AGG) of a check
+  "! Generic aggregate definitions (ZCD_HCK_AGG) of a check, with their expected groups
+  "! (EXPECTED_GROUPS, A103; table consolidation 2026-11-08 - was ZCD_HCK_AGGGRP)
   METHODS get_agg_defs
     IMPORTING
       iv_check_id    TYPE zif_cd_hck_types=>ty_check_id
     RETURNING
       VALUE(rt_defs) TYPE zif_cd_hck_types=>tt_agg_def.
-
-  "! Expected GROUP_FIELD values (ZCD_HCK_AGGGRP) of the aggregates of a check (A103)
-  METHODS get_agg_groups DEFAULT IGNORE
-    IMPORTING
-      iv_check_id      TYPE zif_cd_hck_types=>ty_check_id
-    RETURNING
-      VALUE(rt_groups) TYPE zif_cd_hck_types=>tt_agg_group.
 
   "! Table is approved for HCK reads (ZCD_OPS_TABWL HCK / READ, whole table) and active
   METHODS is_table_whitelisted

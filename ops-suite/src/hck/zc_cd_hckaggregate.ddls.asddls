@@ -17,6 +17,7 @@ define view entity ZC_CD_HckAggregate
       DateMode,
       AgeDaysMin,
       GroupField,
+      ExpectedGroups,
       Cond1Field,
       Cond1Op,
       Cond1Value,

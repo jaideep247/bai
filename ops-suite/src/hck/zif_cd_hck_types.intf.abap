@@ -38,6 +38,8 @@
 *&            | merged).
 *& 2026-11-08 | Table consolidation: TY_MONITOR_CFG removed (ZCD_OPS_MONCFG retired; stale threshold =
 *&            | parameter MON_STALE_AFTER_MIN_<area>).
+*& 2026-11-08 | Table consolidation: TY_AGG_DEF-EXPECTED_GROUPS (comma list, TY_GROUP_LIST) replaces
+*&            | ZCD_HCK_AGGGRP; TY_AGG_GROUP removed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -81,6 +83,8 @@ INTERFACE zif_cd_hck_types
   TYPES ty_operator      TYPE c LENGTH 2.
   TYPES ty_cond_value    TYPE c LENGTH 70.
   TYPES ty_group_value   TYPE c LENGTH 70.
+  "! ZCD_HCK_AGG-EXPECTED_GROUPS: comma list of expected group values (A103, was ZCD_HCK_AGGGRP)
+  TYPES ty_group_list    TYPE c LENGTH 255.
   TYPES ty_type_kind     TYPE c LENGTH 1.
   TYPES ty_cycle_id      TYPE c LENGTH 20.
   TYPES ty_step_no       TYPE n LENGTH 3.
@@ -302,6 +306,9 @@ INTERFACE zif_cd_hck_types
       date_mode    TYPE ty_date_mode,
       age_days_min TYPE i,
       group_field  TYPE ty_fieldname,
+      "! Expected GROUP_FIELD values, comma list (A103) - parsed once per aggregate by
+      "! ZCL_CD_HCK_AGG_QUERY=>EXPECTED_GROUPS
+      expected_groups TYPE ty_group_list,
       cond1_field  TYPE ty_fieldname,
       cond1_op     TYPE ty_operator,
       cond1_value  TYPE ty_cond_value,
@@ -346,14 +353,7 @@ INTERFACE zif_cd_hck_types
     END OF ty_agg_row.
   TYPES tt_agg_row TYPE STANDARD TABLE OF ty_agg_row WITH EMPTY KEY.
 
-  "! ZCD_HCK_AGGGRP: expected GROUP_FIELD values of an aggregate (audit A103)
-  TYPES:
-    BEGIN OF ty_agg_group,
-      check_id    TYPE ty_check_id,
-      agg_id      TYPE ty_agg_id,
-      group_value TYPE ty_group_value,
-    END OF ty_agg_group.
-  TYPES tt_agg_group TYPE STANDARD TABLE OF ty_agg_group WITH EMPTY KEY.
+  "! Expected GROUP_FIELD values of an aggregate (audit A103), parsed from ZCD_HCK_AGG-EXPECTED_GROUPS
   TYPES tt_group_value TYPE STANDARD TABLE OF ty_group_value WITH EMPTY KEY.
 
   "! A measured key figure (ZCD_HCK_METRIC without run id / time stamp)

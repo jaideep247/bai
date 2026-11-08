@@ -6,6 +6,8 @@
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Expected groups (ZCD_HCK_AGGGRP) measure zero when silent (audit A103).
+*& 2026-11-08 | Table consolidation: expected groups from ZCD_HCK_AGG-EXPECTED_GROUPS, parsed once per
+*&            | aggregate (was ZCD_HCK_AGGGRP).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - volume KPIs per day / source (LOB)</p>
 "! Every ZCD_HCK_AGG row of the check is measured in DAY mode: DATE_FIELD =
@@ -13,7 +15,7 @@
 "! yesterday), PARAM2 = number of days (default 1; >1 backfills history).
 "! DIM1 = GROUP_FIELD value (source / LOB, '*' when ungrouped), DIM2 = day.
 "! A missing feed is visible as value 0 under '*' (lower-is-worse threshold);
-"! with expected groups in ZCD_HCK_AGGGRP each silent group measures 0 (A103).
+"! with expected groups in ZCD_HCK_AGG-EXPECTED_GROUPS each silent group measures 0 (A103).
 "! A failed query is an AGG_INVALID error finding and measures nothing.
 CLASS zcl_cd_hck_c_volume DEFINITION
   PUBLIC
@@ -39,12 +41,10 @@ CLASS zcl_cd_hck_c_volume IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
         MESSAGE e310(zcd_ops) WITH is_def-check_id.
     ENDIF.
-    DATA(lt_groups) = lo_dao->get_agg_groups( is_def-check_id ).
-
     LOOP AT lt_defs INTO DATA(ls_agg).
       ls_agg-date_mode = zif_cd_hck_types=>gc_date_mode-day.
-      DATA(lt_expected) = VALUE zif_cd_hck_types=>tt_group_value(
-        FOR ls_group IN lt_groups WHERE ( agg_id = ls_agg-agg_id ) ( ls_group-group_value ) ).
+      " Expected groups parsed once per aggregate, used for every day
+      DATA(lt_expected) = zcl_cd_hck_agg_query=>expected_groups( ls_agg-expected_groups ).
       DO lv_days TIMES.
         ls_agg-age_days_min = lv_offset + sy-index - 1.
         TRY.
