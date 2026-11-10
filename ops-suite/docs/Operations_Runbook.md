@@ -17,6 +17,8 @@ Launchpad space **Production Support** → page *Overview* → *Production suppo
 6. **Transactions card** (funnel posted → paid → settled, returned, open) and *errored / stuck* list → transactions dashboard → transaction → payment runs / returns and NOC lot items → payment trace (§4a) with the FIN (or clearing document). Returns are reported by DFKKRP reason, NOCs by DFKKNRP reason.
 7. **Hand off** per area as in §4a / §4b: area, as of, object keys, check code, owner. The page and the dashboards change nothing — recovery stays with the owning team under its runbook.
 
+**QA1 pilot (2026-11-10).** During the pilot the routine above is run as `QA1_Pilot.md` §4 (who, when, what is recorded) and the scenarios S1-S6 are provoked by the owning teams under their own procedures; the suite only reads, reports, routes and records sign-off.
+
 ## 1. Every morning (by 7:00)
 
 1. Open the **morning report** e-mail (route MORNING) or run `ZCD_MORNING_REPORT` for today.

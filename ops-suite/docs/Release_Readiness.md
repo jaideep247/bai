@@ -123,6 +123,20 @@ the object's company code and alert rules can be scoped to a company code (`conf
 - **D-CC4 Central e-mails.** The morning report (`ALERT_MORNING`) and every seeded alert rule (blank `BUKRS_PATTERN`) go to central SO23 lists with all company codes; company-specific lists need their own rules (`config/alert_seed.md`) - confirm the membership of the lists.
 - **D-CC5 Daily controls per slice.** A control shows one row per company code with findings (plus the area-level row) and each slice is signed off separately; alternative (one sign-off per control by a user with every company code) is not built.
 
+## QA1 pilot pack (2026-11-10)
+
+`QA1_Pilot.md`: one collections flow, one disbursement flow, one BAI account (fields to fill), operating boundary
+(posting, clearing, job restarts and file retransmission stay under SAP / Control-M procedures; the suite reads,
+reports, routes and records sign-off), preconditions, daily routine, scenarios S1 missed clearing job, S2 partial ACK,
+S3 failed alert delivery, S4 file without confirmed forwarding, S5 stale monitor, S6 company-code isolation, acceptance
+per rollout step (DV1 activation, DV1 tests incl. V26-V45, QA1 pilot, PS4 go / no-go), exit criteria, evidence map of
+the 12 controls. Built for it: the clearing job as its own job cycle `CLEARING` with checks `B_CLEAR_TODAY` /
+`B_CLEAR_PRIOR` (proposal P1, configuration; `config/hck_seed.md`, `config/control_checks.csv`). **V45:** PARAM2
+`(?!CLEARING).*` of `B_CYCLE_*` reports every other cycle and not the clearing step. Gap controls P2 / P3 / P6 stay
+inactive and P7 partial, each with the exact SE11 / business question (`config/control_seed.md` §2a) - nothing guessed.
+Found and fixed on the way: `ZCL_CD_HCK_DAO->GET_OVERDUE_EXCEPTIONS` selected `AREA` into a structure whose component
+is `PE_AREA` (CORRESPONDING by name left the area blank; now `AREA AS PE_AREA`).
+
 ## Control center (2026-11-10)
 
 Daily controls with sign-off (framework `ZCA_OPS`: control register, review app `ZUI_CA_OPS_REV`, exception classification), payment lifecycle, open reconciliation variances and the business date on the overview page (`Dashboard_Production_Support.md` §1a). Nothing activated, no ABAP Unit run.
@@ -135,6 +149,6 @@ Daily controls with sign-off (framework `ZCA_OPS`: control register, review app 
 
 **Open inputs.**
 - **Pre-run stages of the payment lifecycle (VERIFY with the business):** *Pending* is delivered as open requests due on the date (`REQ_OPEN`); *Scheduled* and *Source posted* have no confirmed SAP value and are delivered inactive (`config/control_seed.md` §3).
-- **Gap controls (reviewer):** *Base-rejected items*, *ECT pending items*, *Missing check IDs* delivered inactive; *Returns notifications*, *BlackLine*, *Manual retrievals* partially covered - proposals P1-P7 (`config/control_seed.md` §2) need a decision each; no new check was built in this change.
+- **Gap controls (reviewer):** *Base-rejected items*, *ECT pending items*, *Missing check IDs* delivered inactive; *Returns notifications*, *BlackLine*, *Manual retrievals* partially covered - proposals P1-P7 (`config/control_seed.md` §2) need a decision each. Update 2026-11-10 (pre-pilot hardening): P1 built as configuration (*Clearing job*); P2, P3, P6, P7 stay open with the exact questions of `config/control_seed.md` §2a.
 - **Sign-off activity:** the existing change activity 02 of `ZCA_OPS` (decision documented in `ops-framework/docs/auth_zca_ops.md`); a separate activity is an alternative if segregation is wanted.
 - **No incidents in SAP** (user decision 2026-11-10): no incident card or field; the *Open incidents* tile of the mockup is not built.

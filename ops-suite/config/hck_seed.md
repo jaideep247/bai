@@ -79,8 +79,10 @@ uncapped count.
 | B_JOB_RUNTIME | Batch job duration vs rolling baseline | B | ZCL_CD_HCK_C_JOB_RUNTIME | X | 30 | M | `ZCD_.*` | `1` (yesterday) | | 120 |
 | B_APPLOG | Application log error rate per object | B | ZCL_CD_HCK_C_APPLOG | X | 40 | M | `FKK.*,ZCD.*` (**confirm objects**) | | `1` | 120 |
 | B_VOLUME | Payment engine volumes (yesterday) | B | ZCL_CD_HCK_C_VOLUME | X | 50 | L | `1` (offset) | `1` (days) | | 300 |
-| B_CYCLE_TODAY | Job cycles of today (so far) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 60 | H | `0` | (blank = all) | | 60 |
-| B_CYCLE_PRIOR | Job cycles of yesterday (incl. after-midnight steps) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 61 | H | `1` | | | 60 |
+| B_CYCLE_TODAY | Job cycles of today (so far) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 60 | H | `0` | `(?!CLEARING).*` *(2026-11-10: every cycle but the clearing cycle, which has its own checks; was blank = all)* | | 60 |
+| B_CYCLE_PRIOR | Job cycles of yesterday (incl. after-midnight steps) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 61 | H | `1` | `(?!CLEARING).*` *(2026-11-10, as above)* | | 60 |
+| B_CLEAR_TODAY | Clearing job cycle of today (control *Clearing job*, proposal P1, 2026-11-10) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 62 | H | `0` | `CLEARING` | | 60 |
+| B_CLEAR_PRIOR | Clearing job cycle of yesterday (incl. after-midnight steps) | B | ZCL_CD_HCK_C_JOB_CYCLE | X | 63 | H | `1` | `CLEARING` | | 60 |
 | C_OVERDUE_EXC | Owned exceptions past their due date | C | ZCL_CD_HCK_C_OVERDUE_EXC | X | 70 | H | | | | 60 |
 | C_PPO_BACKLOG | Postprocessing (PPO) backlog older than 3 days | C | ZCL_CD_HCK_C_GENERIC_AGG | X | 80 | M | | | | 120 |
 | D_CONFIG_DRIFT | Customizing drift vs golden baseline | D | ZCL_CD_HCK_C_CONFIG_DRIFT | X | 90 | M | | | | 120 |
@@ -126,6 +128,8 @@ uncapped count.
 | B_VOLUME | PAY_REQ | * | 100 | 0 | ' ' | ZSCORE | 3 | 20 |
 | B_CYCLE_TODAY | STEPS_NOT_OK | * | 1 | 2 | X | NONE | | |
 | B_CYCLE_PRIOR | STEPS_NOT_OK | * | 1 | 2 | X | NONE | | |
+| B_CLEAR_TODAY | STEPS_NOT_OK | * | 1 | 1 | X | NONE | | |
+| B_CLEAR_PRIOR | STEPS_NOT_OK | * | 1 | 1 | X | NONE | | |
 | C_OVERDUE_EXC | OVERDUE | * | 1 | 20 | X | NONE | | |
 | C_OVERDUE_EXC | OLDEST_OVERDUE_DAYS | * | 3 | 10 | X | NONE | | |
 | C_PPO_BACKLOG | PPO_AGED | * | 50 | 500 | X | ZSCORE | 3 | 8 |
@@ -259,6 +263,7 @@ After every approved transport: run `ZCD_MORNING_REPORT` with **Take config base
 | COLL_DAY | Collections daily (Stripe, BAI, evening ACH) | `<factory calendar, confirm>` | X |
 | DISB_DAY | Disbursements daily (payment requests, wire, check, ACH, ACKs) | `<confirm>` | X |
 | RECON_EOD | Reconciliation end of day (GL close, BlackLine expense) | `<confirm>` | X |
+| CLEARING | Clearing job (control *Clearing job*, checks `B_CLEAR_TODAY` / `B_CLEAR_PRIOR`; proposal P1, 2026-11-10) | `<factory calendar of the clearing schedule, confirm>` | X |
 
 | CYCLE_ID | STEP | DESCRIPTION | JOBNAME (pattern) | PROGRAM | PRED | DAY_OFFSET | WINDOW_FROM | WINDOW_TO | MAX_MIN | SKIPPABLE | CRITICAL |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -276,6 +281,17 @@ After every approved transport: run `ZCD_MORNING_REPORT` with **Take config base
 | DISB_DAY | 090 | ACH acknowledgment | `ZPAYM_ACH_ACK.*` | | 080 | 0 | 20:30 | 23:59 | 30 | | |
 | RECON_EOD | 010 | Recon key close / transfer / GL OFSAA | `ZPOST_GL.*` | | | 0 | 23:30 | 23:59 | 60 | | X |
 | RECON_EOD | 020 | BlackLine expense (LifeCo wire, ACH PNC, PUB) | `ZEXPENSE_GL.*` | | 010 | 1 | 02:00 | 02:30 | 60 | | X |
+| CLEARING | 010 | Clearing job (QA1 pilot: `<clearing job>`) | `<SM37 job name of the clearing job as PCRE, from the Control-M schedule>` | `<program, documentation>` | | `<0 or 1>` | `<Control-M start>` | `<start + 30 min>` | `<max runtime>` | | X |
+
+**Clearing job (proposal P1 of `config/control_seed.md`, built as configuration 2026-11-10).** The control *Clearing
+job* needs a check that is red only when the clearing job is late, missed, failed or stuck - not when any other job of
+any cycle is. Cycle `CLEARING` with the clearing job as its step and the two checks `B_CLEAR_TODAY` / `B_CLEAR_PRIOR`
+(same class as `B_CYCLE_*`, PARAM2 = the cycle) give it; the general cycle checks leave the clearing cycle out
+(PARAM2 `(?!CLEARING).*`), so a missed clearing job is reported once. Threshold red at one step not OK (critical
+step). The step's job name, window and calendar come from the Control-M schedule - **fill them in DV1** (the QA1 pilot
+field `<clearing job>`, `docs/QA1_Pilot.md`); check the job-name pattern with `ZCD_OPS_PATTERN_CHECK` (pattern area HCK_JOB) before
+the transport. The control's covered checks are `CD_HCK` / `GROUP2` = `B_CLEAR_TODAY`, `B_CLEAR_PRIOR`
+(`config/control_checks.csv`); `E_JOBS` (every `ZCD_` job) no longer turns the clearing control red.
 
 Repeating schedules (auto express checks every 5 min, hourly regular cycle) are watched by `E_JOBS`
 (cancelled / late / long-running) — a cycle step models one expected instance.

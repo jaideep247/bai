@@ -31,7 +31,8 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `../templates/` (folder `ops-suite/templates`) | Configuration owners, Basis — the suite's SAP e-mail templates (SMTG) as documented sources with the DV1 creation steps |
 | `Legacy_Parity_Comparison.md` | Reviewers — every difference to the legacy validators |
 | `TDD_Approach_and_Coverage.md` | Developers / reviewers — test levels, what is and is not unit tested |
-| `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1) |
+| `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1); §6.16 two-user company-code isolation test |
+| `QA1_Pilot.md` | Pilot lead, RTB operations, reviewers — QA1 pilot of one collections flow, one disbursement flow, one BAI account: operating boundary, preconditions, daily routine, scenario tests S1-S6, acceptance per rollout step, exit criteria, evidence map of the 12 controls |
 | `Implementation_Order.md` | Basis / developers — abapGit import, activation and transport order |
 | `history/Audit_History.md` | Reviewers — every review and audit finding: decision, where it lives now, open residual |
 | `RAP_Apps_Design.md` | Everyone — decisions D-1…D-6 for the RAP configuration and operations apps |
