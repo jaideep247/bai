@@ -1,7 +1,8 @@
 """Guard of the pattern migration: ZCL_CD_OPS_PATTERN_DAO reads every configuration row with the
 complete field list of its table and writes the row back whole (UPDATE ... FROM TABLE), so a
 field missing from a list would be cleared. Each SELECT of read_table must name exactly the
-fields of the table's DDL in ddic/ (client excluded)."""
+fields of the table's DDL in ddic/ (client excluded). Only the suite's own tables are migration
+tables: the framework's alert rules are never written by the suite (2026-11-10)."""
 import os
 import re
 import unittest
@@ -11,9 +12,7 @@ DAO = os.path.join(ROOT, 'src', 'core', 'zcl_cd_ops_pattern_dao.clas.abap')
 FIELD = re.compile(r'^\s*(key\s+)?([a-z_0-9]+)\s*:', re.I)
 
 
-# the alert rules are a table of the operations framework (ops-framework/ddic, 2026-11-10)
-DDIC_DIRS = [os.path.join(ROOT, 'ddic', f) for f in sorted(os.listdir(os.path.join(ROOT, 'ddic')))] + \
-            [os.path.join(ROOT, '..', 'ops-framework', 'ddic')]
+DDIC_DIRS = [os.path.join(ROOT, 'ddic', f) for f in sorted(os.listdir(os.path.join(ROOT, 'ddic')))]
 
 
 def ddl_fields(table):
@@ -37,7 +36,11 @@ class PatternDaoFieldListTest(unittest.TestCase):
 
     def test_every_migration_table_is_read(self):
         self.assertEqual(set(read_table_selects()), {'zcd_ebs_flow_pat', 'zcd_fmon_iface', 'zcd_job_step',
-                                                     'zca_ops_alrule', 'zcd_hck_def', 'zcd_hck_suppress'})
+                                                     'zcd_hck_def', 'zcd_hck_suppress'})
+
+    def test_no_framework_table_is_written(self):
+        text = open(DAO, encoding='utf-8').read()
+        self.assertIsNone(re.search(r'\b(UPDATE|INSERT|MODIFY|DELETE)\s+zca_', text, re.I))
 
     def test_field_lists_are_complete(self):
         for table, fields in read_table_selects().items():

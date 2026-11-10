@@ -3,8 +3,8 @@
 *& Purpose:
 *& One-off migration of the configured CP wildcard patterns to PCRE (user
 *& decision 2026-11-06). Reads every pattern of the suite's own configuration
-*& tables (ZCD_EBS_FLOW_PAT, ZCD_FMON_IFACE, ZCD_JOB_STEP, ZCA_OPS_ALRULE,
-*& the pattern-list parameters of ZCD_HCK_DEF, ZCD_HCK_SUPPRESS), shows old ->
+*& tables (ZCD_EBS_FLOW_PAT, ZCD_FMON_IFACE, ZCD_JOB_STEP, the pattern-list
+*& parameters of ZCD_HCK_DEF, ZCD_HCK_SUPPRESS), shows old ->
 *& new per row (ZCL_CD_OPS_PATTERN_CHECK=>PLAN_MIGRATION). Test mode (default)
 *& writes nothing. Update mode writes only rows with status CONVERT - never a
 *& pattern that does not compile or does not fit the field - after the client
@@ -16,6 +16,9 @@
 *& 2026-11-06 | Initial version (PCRE patterns: migration of existing rows).
 *& 2026-11-10 | ZCD_OPS display (03) checked per payment engine area before its rows are read (B7);
 *&            | an area without it is named in a message and left out.
+*& 2026-11-10 | Alert rules (framework table ZCA_OPS_ALRULE) left the migration: a consumer never
+*&            | writes framework tables; every alert rule row is entered in the framework app, which
+*&            | refuses a pattern that is no PCRE (message 418) - no CP pattern to migrate.
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_pattern_migrate.
 

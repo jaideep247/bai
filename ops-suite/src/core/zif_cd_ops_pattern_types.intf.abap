@@ -8,6 +8,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
 *& 2026-11-10 | TT_PE_AREA: payment engine areas the migration report may read (ZCD_OPS 03).
+*& 2026-11-10 | Alert rule fields and entity left the migration scope (framework table ZCA_OPS_ALRULE);
+*&            | GC_TABLE-ALERT_RULE stays the source label of the pattern check.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and migration types</p>
 INTERFACE zif_cd_ops_pattern_types
@@ -148,10 +150,6 @@ INTERFACE zif_cd_ops_pattern_types
       pattern        TYPE ty_name VALUE 'PATTERN',
       name_pattern   TYPE ty_name VALUE 'NAME_PATTERN',
       jobname        TYPE ty_name VALUE 'JOBNAME',
-      rule_pattern   TYPE ty_name VALUE 'RULE_PATTERN',
-      check_pattern  TYPE ty_name VALUE 'CHECK_PATTERN',
-      group1_pattern TYPE ty_name VALUE 'GROUP1_PATTERN',
-      group2_pattern TYPE ty_name VALUE 'GROUP2_PATTERN',
       param1         TYPE ty_name VALUE 'PARAM1',
       param2         TYPE ty_name VALUE 'PARAM2',
       key_pattern    TYPE ty_name VALUE 'KEY_PATTERN',
@@ -163,7 +161,6 @@ INTERFACE zif_cd_ops_pattern_types
       flow_pattern TYPE ty_name VALUE 'FlowPattern',
       fmon_iface   TYPE ty_name VALUE 'FmonIface',
       job_step     TYPE ty_name VALUE 'JobStep',
-      alert_rule   TYPE ty_name VALUE 'AlertRule',
       hck_def      TYPE ty_name VALUE 'HckCheckDef',
     END OF gc_entity.
 

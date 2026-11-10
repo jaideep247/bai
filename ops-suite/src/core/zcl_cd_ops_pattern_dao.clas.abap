@@ -5,7 +5,8 @@
 *& patterns per pattern area and the distinct real values of the area's
 *& source in a date window (DISTINCT, ORDER BY, UP TO the row cap): FEBEP-
 *& XBLNR of the configured accounts, ZCD_FMON_FILE names, TBTCO job names,
-*& object keys / rule IDs / check codes / groups of findings. Migration: the
+*& object keys / rule IDs / check codes / groups of findings (alert rule
+*& patterns of the framework read for the check only). Migration: the
 *& suite's own configuration tables only (fixed list), static SQL: complete
 *& rows read with the complete field list of the table (tools/tests checks the
 *& lists against ddic/), changed in ABAP, written back once per table (the
@@ -13,6 +14,10 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
 *& 2026-11-10 | Migration rows only of the areas the caller may display (IT_PE_AREAS, B7).
+*& 2026-11-10 | Alert rules (framework table ZCA_OPS_ALRULE) left the migration: a consumer never
+*&            | writes framework tables; every alert rule row is entered in the framework app, which
+*&            | refuses a pattern that is no PCRE (message 418) - no CP pattern to migrate.
+*& 2026-11-10 | Suppression keys: findings filtered by the framework field AREA (was PE_AREA).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and migration DAO</p>
 CLASS zcl_cd_ops_pattern_dao DEFINITION
@@ -31,7 +36,6 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
         iface_id      TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'IFACE_ID',
         cycle_id      TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'CYCLE_ID',
         step_no       TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'STEP_NO',
-        rule_id       TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'RULE_ID',
         check_id      TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'CHECK_ID',
         class_name    TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'CLASS_NAME',
         suppress_uuid TYPE zif_cd_ops_pattern_types=>ty_name VALUE 'SUPPRESS_UUID',
@@ -59,7 +63,6 @@ CLASS zcl_cd_ops_pattern_dao DEFINITION
     TYPES tt_flow TYPE STANDARD TABLE OF zcd_ebs_flow_pat WITH EMPTY KEY.
     TYPES tt_iface TYPE STANDARD TABLE OF zcd_fmon_iface WITH EMPTY KEY.
     TYPES tt_step TYPE STANDARD TABLE OF zcd_job_step WITH EMPTY KEY.
-    TYPES tt_rule TYPE STANDARD TABLE OF zca_ops_alrule WITH EMPTY KEY.
     TYPES tt_def TYPE STANDARD TABLE OF zcd_hck_def WITH EMPTY KEY.
     TYPES tt_suppress TYPE STANDARD TABLE OF zcd_hck_suppress WITH EMPTY KEY.
     TYPES tt_area_range TYPE RANGE OF zif_ca_ops_types=>ty_area.
@@ -277,7 +280,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           INNER JOIN zca_ops_run AS r
             ON r~run_id = f~run_id
           WHERE r~started_at BETWEEN @lv_from AND @lv_to
-            AND f~pe_area IN @lt_area
+            AND f~area IN @lt_area
           ORDER BY f~object_key
           INTO TABLE @rt_values
           UP TO @iv_max_rows ROWS.
@@ -448,7 +451,6 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
     DATA lt_flow TYPE tt_flow.
     DATA lt_iface TYPE tt_iface.
     DATA lt_step TYPE tt_step.
-    DATA lt_rule TYPE tt_rule.
     DATA lt_def TYPE tt_def.
     DATA lt_suppress TYPE tt_suppress.
     DATA lv_failed TYPE abap_bool.
@@ -475,10 +477,6 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
       WHEN zif_cd_ops_pattern_types=>gc_table-job_step.
         lt_step = it_new.
         UPDATE zcd_job_step FROM TABLE @lt_step.
-        lv_failed = xsdbool( sy-subrc <> 0 ).
-      WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule.
-        lt_rule = it_new.
-        UPDATE zca_ops_alrule FROM TABLE @lt_rule.
         lv_failed = xsdbool( sy-subrc <> 0 ).
       WHEN zif_cd_ops_pattern_types=>gc_table-hck_def.
         lt_def = it_new.
@@ -539,15 +537,6 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           ORDER BY PRIMARY KEY
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_step).
         rr_rows = NEW tt_step( lt_step ).
-      WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule.
-        SELECT rule_id, area, min_severity, rule_pattern, check_pattern, group1_pattern, group2_pattern,
-               min_rag, on_abort, channel, destination, digest, max_items, throttle_min, quiet_from, quiet_to,
-               escalate_after, escalation_dest, esc_override, active, changed_by, changed_at, last_changed_by,
-               last_changed_at, local_last_changed_at
-          FROM zca_ops_alrule
-          ORDER BY PRIMARY KEY
-          INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_rule).
-        rr_rows = NEW tt_rule( lt_rule ).
       WHEN zif_cd_ops_pattern_types=>gc_table-hck_def.
         SELECT check_id, description, category, class_name, active, seq, priority, param1, param2, param3,
                param4, package_size, timeout_sec, changed_by, changed_at, last_changed_by, last_changed_at,
@@ -589,14 +578,6 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
         key1  = gc_column-iface_id )
       ( table = zif_cd_ops_pattern_types=>gc_table-job_step field = zif_cd_ops_pattern_types=>gc_field-jobname
         key1  = gc_column-cycle_id key2 = gc_column-step_no )
-      ( table = zif_cd_ops_pattern_types=>gc_table-alert_rule field = zif_cd_ops_pattern_types=>gc_field-rule_pattern
-        key1  = gc_column-rule_id )
-      ( table = zif_cd_ops_pattern_types=>gc_table-alert_rule field = zif_cd_ops_pattern_types=>gc_field-check_pattern
-        key1  = gc_column-rule_id )
-      ( table = zif_cd_ops_pattern_types=>gc_table-alert_rule field = zif_cd_ops_pattern_types=>gc_field-group1_pattern
-        key1  = gc_column-rule_id )
-      ( table = zif_cd_ops_pattern_types=>gc_table-alert_rule field = zif_cd_ops_pattern_types=>gc_field-group2_pattern
-        key1  = gc_column-rule_id )
       ( table      = zif_cd_ops_pattern_types=>gc_table-hck_def field = zif_cd_ops_pattern_types=>gc_field-param1
         key1       = gc_column-check_id is_list = abap_true
         class_name = zif_cd_ops_pattern_types=>gc_list_class-tech_jobs )

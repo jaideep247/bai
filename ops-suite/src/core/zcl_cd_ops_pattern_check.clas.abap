@@ -11,6 +11,8 @@
 *& case ignored).
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
+*& 2026-11-10 | Alert rules (framework table ZCA_OPS_ALRULE) are no migration table any more: no area
+*&            | or RAP entity for them in PE_AREA_OF_TABLE / ENTITY_OF_TABLE.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and CP to PCRE rule</p>
 CLASS zcl_cd_ops_pattern_check DEFINITION
@@ -204,8 +206,7 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
                            WHEN zif_cd_ops_pattern_types=>gc_table-fmon_iface   THEN zif_cd_ops_types=>gc_pe_area-file_monitor
                            WHEN zif_cd_ops_pattern_types=>gc_table-job_step
                              OR zif_cd_ops_pattern_types=>gc_table-hck_def
-                             OR zif_cd_ops_pattern_types=>gc_table-suppression  THEN zif_cd_ops_types=>gc_pe_area-health_check
-                           WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule   THEN zif_cd_ops_types=>gc_pe_area-core ).
+                             OR zif_cd_ops_pattern_types=>gc_table-suppression  THEN zif_cd_ops_types=>gc_pe_area-health_check ).
   ENDMETHOD.
 
 
@@ -214,7 +215,6 @@ CLASS zcl_cd_ops_pattern_check IMPLEMENTATION.
                           WHEN zif_cd_ops_pattern_types=>gc_table-flow_pattern THEN zif_cd_ops_pattern_types=>gc_entity-flow_pattern
                           WHEN zif_cd_ops_pattern_types=>gc_table-fmon_iface   THEN zif_cd_ops_pattern_types=>gc_entity-fmon_iface
                           WHEN zif_cd_ops_pattern_types=>gc_table-job_step     THEN zif_cd_ops_pattern_types=>gc_entity-job_step
-                          WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule   THEN zif_cd_ops_pattern_types=>gc_entity-alert_rule
                           WHEN zif_cd_ops_pattern_types=>gc_table-hck_def      THEN zif_cd_ops_pattern_types=>gc_entity-hck_def ).
   ENDMETHOD.
 
