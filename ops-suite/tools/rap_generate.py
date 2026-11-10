@@ -14,6 +14,7 @@ Modification log:
 2026-11-10 | Generator parameterised for the framework ZCA_OPS (app framework written into the framework).
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the suite's profile; the
            | framework's app moved to the framework's own wrapper.
+2026-11-10 | Payment lifecycle stages (ZCD_OPS_PAYSTAGE) in the core app (overview page, control center).
 """
 import os
 import sys
@@ -128,7 +129,7 @@ SPEC = {
         ]),
     'core': dict(
         folder='core', pe_area='CD_OPS', root='OpsCfgAll', draft='zcd_d_opscfg', service='ZUI_CD_OPS_CFG',
-        title='Approved tables', tables=[
+        title='Approved tables and payment stages', tables=[
             # Runtime parameters are maintained in the framework app ZUI_CA_PARAM (ZCA_PARAM), not here -
             # also the stale threshold per monitor (MON_STALE_AFTER_MIN_<area>, was ZCD_OPS_MONCFG, 2026-11-08).
             # Alert rules and channels are the framework's app (ZUI_CA_OPS_CFG, 2026-11-10).
@@ -143,6 +144,11 @@ SPEC = {
               # EBS lookup rule R21 (2026-11-10): approved per field (key and status field of ZCD_EBS_LOOKUP)
               ('when', 'pe_area', 'CD_EBS', [('enum', 'purpose', 'LOOKUP'), ('required', 'field_name')]),
               ('table', 'table_name'), ('field', 'field_name', 'table_name')]),
+            # Payment lifecycle card of the overview page (2026-11-10): stage order and labels are
+            # configuration; the counts are read live from DPAYH and the worklist
+            ('zcd_ops_paystage', 'PayStage', 'zcd_d_paystage', 'Payment stage', 'Payment lifecycle stages', [],
+             [('enum', 'source', 'PAYRUN,REQUEST'),
+              ('when', 'active', 'X', [('required', 'match_value'), ('required', 'label')])]),
         ]),
 }
 
@@ -188,7 +194,11 @@ LABELS = {'pe_area': 'Payment engine area',  # design D-6
           'usage': 'Usage (LIFECYCLE / RECON)',
           'scope': 'Scope (lifecycle: flow + method class; recon: set ID)',
           'purpose': 'Purpose (FMON: SOURCE; HCK: READ / DRIFT)',
-          'field_name': 'Field (blank = whole table)'}
+          'field_name': 'Field (blank = whole table)',
+          # Payment lifecycle stages (2026-11-10)
+          'stage': 'Stage', 'label': 'Label of the stage',
+          'source': 'Counted from (PAYRUN / REQUEST)',
+          'match_value': 'Payment status (PAYRUN) / worklist outcome or stage (REQUEST)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME=RENAME, TOKENS=TOKENS, LABELS=LABELS)
 

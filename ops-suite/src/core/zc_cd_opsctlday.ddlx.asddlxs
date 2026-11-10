@@ -1,0 +1,116 @@
+// UI annotations: Production support - daily controls (overview page, entity ControlDay)
+// Cards: KPI "Checks reviewed" (data point ChecksReviewed, target ControlCount; AwaitingReview, ReviewOverdue),
+// KPI "Controls flagged" (data point ControlsFlagged; ActionRequired, Watch), list "Daily health checks"
+// (presentation variant DailyChecks), list "Attention queue" (selection variant Flagged). Global filter: the
+// current business date (IsCurrentDay = X, CONTROL_TIME_ZONE) or a business date. VERIFY-ADT: card rendering.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Control', typeNamePlural: 'Daily health checks',
+                  title: { type: #STANDARD, value: 'ControlName' },
+                  description: { type: #STANDARD, value: 'Category' } }
+@UI.chart: [ { qualifier: 'ByStatus',
+               title: 'Controls by status',
+               chartType: #DONUT,
+               dimensions: [ 'ControlStatus' ],
+               measures: [ 'ControlCount' ],
+               dimensionAttributes: [ { dimension: 'ControlStatus', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'ControlCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'DailyChecks',
+                             sortOrder: [ { by: 'Sequence', direction: #ASC } ],
+                             maxItems: 20,
+                             visualizations: [ { type: #AS_LINEITEM } ] },
+                           { qualifier: 'Attention',
+                             sortOrder: [ { by: 'StatusRank', direction: #DESC },
+                                          { by: 'OpenExceptions', direction: #DESC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM, qualifier: 'Attention' } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Flagged', text: 'Attention queue (watch and action required)', filter: 'IsFlagged EQ X' },
+                        { qualifier: 'Awaiting', text: 'Awaiting review', filter: 'IsAwaitingReview EQ X' },
+                        { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_OpsCtlDay with
+{
+  @EndUserText.label: 'Area'
+  @UI.selectionField: [ { position: 30 } ]
+  PaymentEngineArea;
+  @EndUserText.label: 'Control ID'
+  ControlId;
+  @EndUserText.label: 'Business date'
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Control'
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { qualifier: 'Attention', position: 10, importance: #HIGH } ]
+  ControlName;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  Category;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  Owner;
+  @EndUserText.label: 'Team'
+  @UI.lineItem: [ { position: 45, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Team;
+  @EndUserText.label: 'Review cut-off (local time)'
+  CutoffTime;
+  @UI.hidden: true
+  Sequence;
+  @EndUserText.label: 'Status'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'StatusCriticality' },
+                  { qualifier: 'Attention', position: 20, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  ControlStatus;
+  @UI.hidden: true
+  StatusText;
+  @UI.hidden: true
+  StatusRank;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Exceptions'
+  @UI.lineItem: [ { position: 50, importance: #HIGH },
+                  { qualifier: 'Attention', position: 30, importance: #HIGH } ]
+  OpenExceptions;
+  @EndUserText.label: 'Findings of the date'
+  FindingCount;
+  @EndUserText.label: 'Evidence (latest run of the date)'
+  EvidenceRun;
+  @EndUserText.label: 'Checked by'
+  @UI.lineItem: [ { position: 60, importance: #LOW } ]
+  ReviewedBy;
+  @EndUserText.label: 'Verified at (local time)'
+  ReviewedTimeLocal;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Signed off'
+  IsReviewed;
+  @EndUserText.label: 'Awaiting review'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM },
+                  { qualifier: 'Attention', position: 40, importance: #MEDIUM } ]
+  IsAwaitingReview;
+  @EndUserText.label: 'Review overdue'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  IsReviewOverdue;
+  @EndUserText.label: 'Flagged'
+  IsFlagged;
+  @EndUserText.label: 'Controls'
+  @UI.dataPoint: { qualifier: 'Controls', title: 'Active controls' }
+  ControlCount;
+  @EndUserText.label: 'Checks reviewed'
+  @UI.dataPoint: { qualifier: 'ChecksReviewed', title: 'Checks reviewed', targetValueElement: 'ControlCount' }
+  ReviewedCount;
+  @EndUserText.label: 'Awaiting review'
+  @UI.dataPoint: { qualifier: 'AwaitingReview', title: 'Awaiting review' }
+  AwaitingCount;
+  @EndUserText.label: 'Review overdue'
+  @UI.dataPoint: { qualifier: 'ReviewOverdue', title: 'Review overdue (past the cut-off)' }
+  OverdueCount;
+  @EndUserText.label: 'Action required'
+  @UI.dataPoint: { qualifier: 'ActionRequired', title: 'Require action' }
+  ActionRequiredCount;
+  @EndUserText.label: 'Watch'
+  @UI.dataPoint: { qualifier: 'Watch', title: 'On watch' }
+  WatchCount;
+  @EndUserText.label: 'Controls flagged'
+  @UI.dataPoint: { qualifier: 'ControlsFlagged', title: 'Controls flagged' }
+  FlaggedCount;
+}

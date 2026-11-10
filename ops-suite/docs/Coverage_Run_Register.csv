@@ -146,7 +146,7 @@ ZCL_CD_OPS_CFG_CHECKS,own test include,,18,90,,Not run in target SAP
 ZCL_CD_OPS_CHEQUE_LINK,own test include,,5,90,,Not run in target SAP
 ZCL_CD_OPS_FACTORY,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test seam: every slot injected and reset in the factory test)
-ZCL_CD_OPS_OVW_CDS_TEST,own test include,,6,90,,Not run in target SAP
+ZCL_CD_OPS_OVW_CDS_TEST,own test include,,11,90,,Not run in target SAP
 ZCL_CD_OPS_PARAM_SEED,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_CHECK,own test include,,19,90,,Not run in target SAP
 ZCL_CD_OPS_PATTERN_DAO,own test include,,8,90,,Not run in target SAP

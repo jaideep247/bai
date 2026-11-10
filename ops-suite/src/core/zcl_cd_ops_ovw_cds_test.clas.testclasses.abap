@@ -14,6 +14,10 @@
 *& 2026-11-06 | Initial version (production-support overview page).
 *& 2026-11-08 | Fourth freshness row CORE: the payment outcome snapshot lag (ZCD_PAY_OUTWM-CURRENT_TO,
 *&            | the recheck left out, stale after 30 minutes without parameter definition).
+*& 2026-11-10 | Control center: daily controls (counters of the framework's review rows), payment lifecycle
+*&            | (newest non-proposal run per payment document, stages from configuration), reconciliation
+*&            | variances (latest measurement beyond tolerance, expected / actual, disposition from the
+*&            | exception workflow); doubles of the direct dependencies of each view.
 *&---------------------------------------------------------------------*
 "! ZR_CD_OPSFRESHNESS: one row per batch monitor, area threshold, stale
 CLASS ltc_freshness DEFINITION FINAL
@@ -326,6 +330,378 @@ CLASS ltc_critical IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZR_CD_OPSCTLDAY: the overview reads the framework's derived control rows unchanged (one truth)
+CLASS ltc_control_day DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS gc_day TYPE d VALUE '20261110'.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS counters_of_the_review FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_control_day IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_CD_OPSCTLDAY' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_reviews TYPE STANDARD TABLE OF zr_ca_opsctlreview WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    lt_reviews = VALUE #(
+      ( area = zif_cd_ops_types=>gc_pe_area-file_monitor controlid = 'PAYMENT_FILES' businessdate = gc_day
+        controlstatus = zif_ca_ops_ctl_types=>gc_status-action statusrank = 2 openexceptions = 3 controlcount = 1
+        actionrequiredcount = 1 flaggedcount = 1 awaitingcount = 1 isawaitingreview = abap_true isflagged = abap_true )
+      ( area = zif_cd_ops_types=>gc_pe_area-health_check controlid = 'CLEARING_JOB' businessdate = gc_day
+        controlstatus = zif_ca_ops_ctl_types=>gc_status-healthy controlcount = 1 reviewedcount = 1
+        isreviewed = abap_true ) ).
+    go_env->insert_test_data( lt_reviews ).
+  ENDMETHOD.
+
+
+  METHOD counters_of_the_review.
+    SELECT businessdate, SUM( controlcount ) AS controls, SUM( reviewedcount ) AS reviewed,
+           SUM( awaitingcount ) AS awaiting, SUM( actionrequiredcount ) AS action, SUM( openexceptions ) AS exceptions
+      FROM zr_cd_opsctlday
+      WHERE businessdate = @gc_day
+      GROUP BY businessdate
+      ORDER BY businessdate
+      INTO TABLE @DATA(lt_kpi).
+    DATA(ls_kpi) = VALUE #( lt_kpi[ 1 ] OPTIONAL ).
+    cl_abap_unit_assert=>assert_equals( act = ls_kpi-controls exp = 2 msg = 'Two controls on the date' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_kpi-reviewed exp = 1 msg = 'Checks reviewed 1 / 2' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_kpi-awaiting exp = 1 msg = 'One awaiting review' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_kpi-action exp = 1 msg = 'One requires action' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_kpi-exceptions exp = 3 msg = 'Open exceptions of the controls' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_CD_PAYLIFERUN: newest non-proposal run row per payment document, live status
+CLASS ltc_life_run DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        doc_rerun TYPE c LENGTH 12 VALUE '000000900001',
+        doc_once  TYPE c LENGTH 12 VALUE '000000900002',
+        doc_prop  TYPE c LENGTH 12 VALUE '000000900003',
+        run_a     TYPE c LENGTH 6 VALUE 'RUN01',
+        run_b     TYPE c LENGTH 6 VALUE 'RUN02',
+        issued    TYPE c LENGTH 10 VALUE 'ISSUED',
+        cleared   TYPE c LENGTH 10 VALUE 'CLEARED',
+        bukrs     TYPE bukrs VALUE 'ZT01',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS newest_run_counts_once FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_life_run IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_CD_PAYLIFERUN' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_runs TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    DATA(lv_yesterday) = CONV d( sy-datum - 1 ).
+    " doc_rerun: paid yesterday (run A, ISSUED) and again today (run B, CLEARED) - counted once, today;
+    " doc_once: today, ISSUED; doc_prop: only a proposal run - no payment
+    lt_runs = VALUE #( ( laufd = lv_yesterday laufi = gc-run_a doc1r = gc-doc_rerun bukrs = gc-bukrs
+                         zz_payment_status = gc-issued )
+                       ( laufd = sy-datum laufi = gc-run_b doc1r = gc-doc_rerun bukrs = gc-bukrs
+                         zz_payment_status = gc-cleared )
+                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_once bukrs = gc-bukrs
+                         zz_payment_status = gc-issued )
+                       ( laufd = sy-datum laufi = gc-run_a doc1r = gc-doc_prop bukrs = gc-bukrs xvorl = abap_true
+                         zz_payment_status = gc-issued ) ).
+    go_env->insert_test_data( lt_runs ).
+  ENDMETHOD.
+
+
+  METHOD newest_run_counts_once.
+    SELECT businessdate, paymentdocument, paymentstatus FROM zi_cd_payliferun
+      ORDER BY paymentdocument INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Two payments; the proposal run is none' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-businessdate exp = sy-datum
+                                        msg = 'A re-run payment counts on its newest run date' ).
+    cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 1 ]-paymentstatus ) exp = CONV string( gc-cleared )
+                                        msg = 'Status of the newest run row' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZR_CD_PAYLIFECYCLE: configured stages pick the counted values; inactive stages are not shown
+CLASS ltc_lifecycle DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        day     TYPE d VALUE '20261110',
+        bukrs   TYPE c LENGTH 4 VALUE 'ZT01',
+        payrun  TYPE c LENGTH 10 VALUE 'PAYRUN',
+        request TYPE c LENGTH 10 VALUE 'REQUEST',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS stages_from_configuration FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_lifecycle IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_CD_PAYLIFECYCLE' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_stages TYPE STANDARD TABLE OF zcd_ops_paystage WITH EMPTY KEY.
+    DATA lt_counts TYPE STANDARD TABLE OF zi_cd_paylifecntu WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    lt_stages = VALUE #( ( stage = 'PENDING' seq = 10 label = 'Pending' source = gc-request match_value = 'REQ_OPEN'
+                           active = abap_true )
+                         ( stage = 'ISSUED' seq = 40 label = 'Issued' source = gc-payrun match_value = 'ISSUED'
+                           active = abap_true )
+                         ( stage = 'STOPPED' seq = 90 label = 'Stopped' source = gc-payrun match_value = 'STOPPED' ) ).
+    lt_counts = VALUE #( ( stagesource = gc-payrun businessdate = gc-day companycode = gc-bukrs matchvalue = 'ISSUED'
+                           paymentcount = 1200 )
+                         ( stagesource = gc-payrun businessdate = gc-day companycode = gc-bukrs matchvalue = 'STOPPED'
+                           paymentcount = 2 )
+                         ( stagesource = gc-request businessdate = gc-day matchvalue = 'REQ_OPEN' paymentcount = 15 )
+                         ( stagesource = gc-payrun businessdate = gc-day companycode = gc-bukrs matchvalue = 'REQ_OPEN'
+                           paymentcount = 99 ) ).
+    go_env->insert_test_data( lt_stages ).
+    go_env->insert_test_data( lt_counts ).
+  ENDMETHOD.
+
+
+  METHOD stages_from_configuration.
+    SELECT stage, stagesequence, paymentcount FROM zr_cd_paylifecycle
+      WHERE businessdate = @gc-day ORDER BY stagesequence INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Active stages only, source must match' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-paymentcount exp = 15
+                                        msg = 'Pending = open requests due on the date (REQUEST source)' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-paymentcount exp = 1200
+                                        msg = 'Issued = payments of the date with status ISSUED' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_CD_OPSVARBANK: latest measurement of a group-day, beyond tolerance only, expected / actual
+CLASS ltc_variance_leg DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        check    TYPE c LENGTH 20 VALUE 'A_RECON_3WAY',
+        group    TYPE c LENGTH 35 VALUE 'ZT01/0000123456/USD',
+        group_ok TYPE c LENGTH 35 VALUE 'ZT01/0000654321/USD',
+        day      TYPE c LENGTH 35 VALUE '2026-11-09',
+        run_old  TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000D1',
+        run_new  TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000D2',
+        old_at   TYPE timestampl VALUE '20261109120000.0000000',
+        new_at   TYPE timestampl VALUE '20261110120000.0000000',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS latest_beyond_tolerance FOR TESTING.
+
+    METHODS metric
+      IMPORTING
+        iv_run           TYPE zif_ca_ops_types=>ty_run_id
+        iv_group         TYPE clike
+        iv_metric        TYPE clike
+        iv_value         TYPE decfloat34
+        iv_at            TYPE timestampl
+      RETURNING
+        VALUE(rs_metric) TYPE zcd_hck_metric.
+ENDCLASS.
+
+
+CLASS ltc_variance_leg IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_CD_OPSVARBANK' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD metric.
+    rs_metric = VALUE #( run_id = iv_run check_id = gc-check metric = iv_metric dim1 = iv_group dim2 = gc-day
+                         value = iv_value measured_at = iv_at ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_metrics TYPE STANDARD TABLE OF zcd_hck_metric WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    " group: yesterday's run measured 500.00, today's run 120.00 (latest); bank 1000.00, G/L 880.00, tolerance 1.00
+    " group_ok: today's difference 0.50 within the tolerance 1.00 - no variance
+    lt_metrics = VALUE #( ( metric( iv_run = gc-run_old iv_group = gc-group iv_metric = 'RC_DIFF_BANK_GL'
+                                    iv_value = '500.00' iv_at = gc-old_at ) )
+                          ( metric( iv_run = gc-run_old iv_group = gc-group iv_metric = 'RC_TOLERANCE_PARAM'
+                                    iv_value = '1.00' iv_at = gc-old_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group iv_metric = 'RC_DIFF_BANK_GL'
+                                    iv_value = '120.00' iv_at = gc-new_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group iv_metric = 'RC_TOLERANCE_PARAM'
+                                    iv_value = '1.00' iv_at = gc-new_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group iv_metric = 'RC_BANK'
+                                    iv_value = '1000.00' iv_at = gc-new_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group iv_metric = 'RC_GL'
+                                    iv_value = '880.00' iv_at = gc-new_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group_ok iv_metric = 'RC_DIFF_BANK_GL'
+                                    iv_value = '0.50' iv_at = gc-new_at ) )
+                          ( metric( iv_run = gc-run_new iv_group = gc-group_ok iv_metric = 'RC_TOLERANCE_SET'
+                                    iv_value = '1.00' iv_at = gc-new_at ) ) ).
+    go_env->insert_test_data( lt_metrics ).
+  ENDMETHOD.
+
+
+  METHOD latest_beyond_tolerance.
+    SELECT recongroup, runid, difference, expectedamount, actualamount, recondate, findingkey
+      FROM zi_cd_opsvarbank ORDER BY recongroup INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 1 msg = 'One variance: the latest run, beyond tolerance' ).
+    DATA(ls_row) = lt_rows[ 1 ].
+    cl_abap_unit_assert=>assert_equals( act = ls_row-runid exp = gc-run_new msg = 'The newer run replaces the older' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_row-expectedamount exp = CONV decfloat34( '1000.00' ) msg = 'Expected = bank leg' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_row-actualamount exp = CONV decfloat34( '880.00' ) msg = 'SAP actual = G/L leg' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_row-recondate exp = CONV d( '20261109' ) msg = 'Business date = reconciled day' ).
+    cl_abap_unit_assert=>assert_equals( act = CONV string( ls_row-findingkey )
+                                        exp = |{ gc-check }/{ gc-group }/{ gc-day }/BANK|
+                                        msg = 'Object key of the finding of the group-day and leg' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZR_CD_OPSVARIANCE: disposition from the exception workflow
+CLASS ltc_variance DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        run TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000E1',
+        day TYPE d VALUE '20261109',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS disposition_from_exception FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_variance IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZR_CD_OPSVARIANCE' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_variances TYPE STANDARD TABLE OF zi_cd_opsvaru WITH EMPTY KEY.
+    DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    " G1 open break; G2 break classified TIMING; G3 classified by the check as timing; G4 resolved; G5 no finding
+    lt_variances = VALUE #( FOR i = 1 UNTIL i > 5
+                            ( checkid = 'A_RECON_3WAY' recongroup = |ZT01/000000000{ i }/USD| recondate = gc-day
+                              leg = 'BANK' runid = gc-run expectedamount = '100.00' actualamount = '90.00'
+                              findingkey = |K{ i }| ) ).
+    lt_findings = VALUE #( ( run_id = gc-run finding_no = 1 area = zif_cd_ops_types=>gc_pe_area-health_check
+                             object_key = 'K1' check_code = 'RECON_BREAK' disposition = zif_ca_ops_types=>gc_disposition-open )
+                           ( run_id = gc-run finding_no = 2 area = zif_cd_ops_types=>gc_pe_area-health_check
+                             object_key = 'K2' check_code = 'RECON_BREAK' disposition = zif_ca_ops_types=>gc_disposition-assigned
+                             reason_code = zif_ca_ops_exc_types=>gc_reason_code-timing )
+                           ( run_id = gc-run finding_no = 3 area = zif_cd_ops_types=>gc_pe_area-health_check
+                             object_key = 'K3' check_code = 'RECON_TIMING' disposition = zif_ca_ops_types=>gc_disposition-information )
+                           ( run_id = gc-run finding_no = 4 area = zif_cd_ops_types=>gc_pe_area-health_check
+                             object_key = 'K4' check_code = 'RECON_BREAK' disposition = zif_ca_ops_types=>gc_disposition-resolved ) ).
+    go_env->insert_test_data( lt_variances ).
+    go_env->insert_test_data( lt_findings ).
+  ENDMETHOD.
+
+
+  METHOD disposition_from_exception.
+    SELECT recongroup, variancedisposition, istiming, isunresolved, varianceamount
+      FROM zr_cd_opsvariance ORDER BY recongroup INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 5 msg = 'One row per variance' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-isunresolved exp = abap_true msg = 'Open break: unresolved' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-varianceamount exp = CONV decfloat34( '-10.00' )
+                                        msg = 'Variance = actual minus expected' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-istiming exp = abap_true msg = 'Classified TIMING in the exceptions app' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-isunresolved exp = abap_false msg = 'Timing is not unresolved' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-istiming exp = abap_true msg = 'Timing by the check (RECON_TIMING)' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-isunresolved exp = abap_false msg = 'Resolved exception' ).
+    cl_abap_unit_assert=>assert_equals( act = CONV string( lt_rows[ 5 ]-variancedisposition ) exp = `UNCLASSIFIED`
+                                        msg = 'No finding: unclassified, unresolved' ).
   ENDMETHOD.
 
 ENDCLASS.

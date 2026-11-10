@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_cd_opscfgall.clas.locals_imp.abap
 *& Purpose:
-*& Handlers and saver of Approved tables: ZCA_OPS authorisation, create /
+*& Handlers and saver of Approved tables and payment stages: ZCA_OPS authorisation, create /
 *& delete per client policy (D-3), field checks, customizing request check
 *& and transport recording. Thin: every decision is made by the gate / checks.
 *& Modification log:
@@ -22,27 +22,35 @@
 INTERFACE lif_c.
   CONSTANTS:
     BEGIN OF gc_el,
+      active                         TYPE string VALUE `ACTIVE`,
       fieldname                      TYPE string VALUE `FIELDNAME`,
+      label                          TYPE string VALUE `LABEL`,
+      matchvalue                     TYPE string VALUE `MATCHVALUE`,
       paymentenginearea              TYPE string VALUE `PAYMENTENGINEAREA`,
       purpose                        TYPE string VALUE `PURPOSE`,
+      source                         TYPE string VALUE `SOURCE`,
       tablename                      TYPE string VALUE `TABLENAME`,
     END OF gc_el,
     BEGIN OF gc_ent,
       approvedtable                  TYPE string VALUE `ApprovedTable`,
+      paystage                       TYPE string VALUE `PayStage`,
     END OF gc_ent,
     BEGIN OF gc_tab,
       approvedtable                  TYPE string VALUE `ZCD_OPS_TABWL`,
+      paystage                       TYPE string VALUE `ZCD_OPS_PAYSTAGE`,
     END OF gc_tab,
     BEGIN OF gc_val,
       approvedtable_paymentengineare TYPE string VALUE `CD_FMON,CD_HCK,CD_EBS`,
       approvedtable_purpose_cdebs    TYPE string VALUE `LOOKUP`,
       approvedtable_purpose_cdfmon   TYPE string VALUE `SOURCE`,
       approvedtable_purpose_cdhck    TYPE string VALUE `READ,DRIFT`,
+      paystage_source                TYPE string VALUE `PAYRUN,REQUEST`,
     END OF gc_val,
     BEGIN OF gc_when,
       approvedtable_pe_area_cd_ebs   TYPE string VALUE `CD_EBS`,
       approvedtable_pe_area_cd_fmon  TYPE string VALUE `CD_FMON`,
       approvedtable_pe_area_cd_hck   TYPE string VALUE `CD_HCK`,
+      paystage_active_x              TYPE string VALUE `X`,
     END OF gc_when.
 ENDINTERFACE.
 
@@ -110,6 +118,9 @@ CLASS lhc_opscfgall IMPLEMENTATION.
     IF requested_authorizations-%assoc-_ApprovedTable = if_abap_behv=>mk-on.
       result-%assoc-_ApprovedTable = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
     ENDIF.
+    IF requested_authorizations-%assoc-_PayStage = if_abap_behv=>mk-on.
+      result-%assoc-_PayStage = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -120,6 +131,9 @@ CLASS lhc_opscfgall IMPLEMENTATION.
                               ELSE if_abap_behv=>fc-o-disabled ).
     IF requested_features-%assoc-_ApprovedTable = if_abap_behv=>mk-on.
       result-%assoc-_ApprovedTable = lv_create.
+    ENDIF.
+    IF requested_features-%assoc-_PayStage = if_abap_behv=>mk-on.
+      result-%assoc-_PayStage = lv_create.
     ENDIF.
   ENDMETHOD.
 
@@ -288,6 +302,133 @@ CLASS lhc_approvedtable IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lhc_paystage DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
+    CONSTANTS gc_area_fields    TYPE string VALUE `FIELDS`.
+    CONSTANTS gc_area_transport TYPE string VALUE `TRANSPORT`.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR PayStage RESULT result.
+
+    METHODS get_global_features FOR GLOBAL FEATURES
+      IMPORTING REQUEST requested_features FOR PayStage RESULT result.
+
+    METHODS validatefields FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayStage~validateFields.
+
+    METHODS validatetransport FOR VALIDATE ON SAVE
+      IMPORTING keys FOR PayStage~validateTransport.
+ENDCLASS.
+
+
+CLASS lhc_paystage IMPLEMENTATION.
+
+  METHOD get_global_authorizations.
+    " ZCA_OPS for the area of the app: change of a row 02, delete 06 (create 01: root)
+    IF requested_authorizations-%update = if_abap_behv=>mk-on.
+      result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change ).
+    ENDIF.
+    IF requested_authorizations-%delete = if_abap_behv=>mk-on.
+      result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD get_global_features.
+    " D-3: delete only where new entries are allowed (DV1); production keeps rows
+    IF requested_features-%delete = if_abap_behv=>mk-on.
+      result-%delete = COND #( WHEN zcl_ca_ops_cfg_factory=>get_gate( )->delete_allowed( ) = abap_true
+                               THEN if_abap_behv=>fc-o-enabled
+                               ELSE if_abap_behv=>fc-o-disabled ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD validatefields.
+    DATA lt_msg TYPE zif_ca_ops_cfg_types=>tt_field_message.
+
+    READ ENTITIES OF zr_cd_opscfgall IN LOCAL MODE
+      ENTITY PayStage
+        ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_rows).
+    CHECK lt_rows IS NOT INITIAL.
+
+    LOOP AT lt_rows INTO DATA(ls_row).
+      CLEAR lt_msg.
+      INSERT VALUE #( %tky = ls_row-%tky %state_area = gc_area_fields ) INTO TABLE reported-paystage.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Source )
+                                        iv_list  = lif_c=>gc_val-paystage_source ) = abap_false.
+        INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-value_invalid v1 = ls_row-Source
+                        v2 = lif_c=>gc_el-source v3 = lif_c=>gc_val-paystage_source
+                        element = lif_c=>gc_el-source ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Active )
+                                        iv_list  = lif_c=>gc_when-paystage_active_x ) = abap_true.
+        IF ls_row-MatchValue IS INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-matchvalue
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-matchvalue ) INTO TABLE lt_msg.
+        ENDIF.
+        IF ls_row-Label IS INITIAL.
+          INSERT VALUE #( number = zif_cd_ops_cfg_types=>gc_msg-required v1 = lif_c=>gc_el-label
+                          v2 = lif_c=>gc_el-active v3 = ls_row-Active
+                          element = lif_c=>gc_el-label ) INTO TABLE lt_msg.
+        ENDIF.
+      ENDIF.
+
+      LOOP AT lt_msg INTO DATA(ls_msg).
+        INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-paystage.
+        INSERT INITIAL LINE INTO TABLE reported-paystage ASSIGNING FIELD-SYMBOL(<ls_reported>).
+        <ls_reported>-%tky        = ls_row-%tky.
+        <ls_reported>-%state_area = gc_area_fields.
+        <ls_reported>-%msg        = new_message( id       = zif_cd_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1
+                                                 v2       = ls_msg-v2
+                                                 v3       = ls_msg-v3 ).
+        <ls_reported>-%path-opscfgall-%is_draft   = ls_row-%is_draft.
+        <ls_reported>-%path-opscfgall-SingletonID = 1.
+        ASSIGN COMPONENT ls_msg-element OF STRUCTURE <ls_reported>-%element TO FIELD-SYMBOL(<lv_flag>).
+        IF sy-subrc = 0.
+          <lv_flag> = if_abap_behv=>mk-on.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD validatetransport.
+    " DV1: every change (also a deletion) needs an open customizing request on the root
+    CHECK keys IS NOT INITIAL.
+    READ ENTITIES OF zr_cd_opscfgall IN LOCAL MODE
+      ENTITY OpsCfgAll
+        FIELDS ( TransportRequestID )
+        WITH VALUE #( ( %is_draft = keys[ 1 ]-%is_draft SingletonID = 1 ) )
+      RESULT DATA(lt_root).
+    DATA(ls_msg) = zcl_ca_ops_cfg_factory=>get_gate( )->check_request(
+                     VALUE #( lt_root[ 1 ]-TransportRequestID OPTIONAL ) ).
+    LOOP AT keys INTO DATA(ls_key).
+      INSERT VALUE #( %tky = ls_key-%tky %state_area = gc_area_transport ) INTO TABLE reported-paystage.
+      IF ls_msg-number IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( %tky = ls_key-%tky ) INTO TABLE failed-paystage.
+      INSERT VALUE #( %tky        = ls_key-%tky
+                      %state_area = gc_area_transport
+                      %msg        = new_message( id       = zif_ca_ops_types=>gc_message_class
+                                                 number   = ls_msg-number
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = ls_msg-v1 )
+                      %path       = VALUE #( opscfgall-%is_draft   = ls_key-%is_draft
+                                             opscfgall-SingletonID = 1 ) )
+        INTO TABLE reported-paystage.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lsc_zr_cd_opscfgall DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
@@ -306,7 +447,8 @@ CLASS lsc_zr_cd_opscfgall IMPLEMENTATION.
         zcl_ca_ops_cfg_factory=>get_gate( )->record(
           iv_request   = lv_request
           it_relations = VALUE #(
-            ( entity = lif_c=>gc_ent-approvedtable table = lif_c=>gc_tab-approvedtable ) )
+            ( entity = lif_c=>gc_ent-approvedtable table = lif_c=>gc_tab-approvedtable )
+            ( entity = lif_c=>gc_ent-paystage table = lif_c=>gc_tab-paystage ) )
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).

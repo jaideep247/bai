@@ -1,0 +1,13 @@
+LANGU,AREA,CONTROL_ID,GUIDANCE
+E,CD_FMON,PAYMENT_FILES,"Confirm every expected payment file was generated, sent and accepted; for a missing, late or rejected file record the interface, the run and the next action."
+E,CD_HCK,CLEARING_JOB,Confirm the clearing job cycle finished in its window without cancelled steps; for a late or cancelled step record the job and whether a restart is safe.
+E,CD_HCK,BASE_REJECTS,"Review rejected Base items and record the reason, affected count, and next action. Group by rejection reason and verify a retry is safe before execution."
+E,CD_HCK,ECT_PENDING,"Review ECT items still pending and their age; record the oldest item, the count and who follows up."
+E,CD_FMON,OUTBOUND_IFACE,Confirm the outbound files reached the gateway and were delivered; record any file still queued or failed and the next action.
+E,CD_HCK,BLACKLINE,Confirm the reconciliation keys of the day reached the G/L for the BlackLine extract; record missing keys and the follow-up.
+E,CD_EBS,BAI_EXCEPTIONS,"Review the open bank statement exceptions (blocks and errors) of the day; record the statement, the rule and the next action."
+E,CD_EBS,MANUAL_RETRIEVALS,Review retrievals whose status does not match the bank statement; record the payment reference and the next action.
+E,CD_HCK,MISSING_CHECK_IDS,Review cheque payments without a cheque number; record the count and the follow-up with the print run.
+E,CD_FMON,PENDING_ACKS,Confirm the bank acknowledged every file and payment sent; record any acknowledgement still missing after its SLA.
+E,CD_FMON,RETURNS_NOTIF,"Review returns and NOC lots not processed or ageing; record the lot, the count and the next action."
+E,CD_HCK,DAILY_RECON,"Review the open reconciliation variances of the day (bank, G/L, subledger); classify timing differences and record the next action for breaks."

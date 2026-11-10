@@ -1,4 +1,4 @@
-@EndUserText.label : 'Draft: Approved tables (singleton)'
+@EndUserText.label : 'Draft: Approved tables and payment stages (singleton)'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A
