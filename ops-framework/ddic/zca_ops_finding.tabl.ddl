@@ -51,6 +51,11 @@ define table zca_ops_finding {
   // Classification of an open exception by operations (exceptions app, action classifyException;
   // values of parameter EXC_REASON_CODES, e.g. TIMING, INVESTIGATING; 2026-11-10) - carried forward
   reason_code   : abap.char(12);
+  // Company code of the finding (2026-11-10, company-code isolation): blank = not company-specific
+  // (an area-level finding, visible with the area authorisation); filled by the producer where it knows
+  // the company code at finding time. Read authorisation (DCLs) and the actions of the exceptions app check
+  // ZCA_OPS with BUKRS for a filled value; part of the identity of an exception (carry-forward)
+  bukrs         : bukrs;
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

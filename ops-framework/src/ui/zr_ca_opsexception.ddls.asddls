@@ -12,6 +12,9 @@ define root view entity ZR_CA_OpsException
   key finding_no    as FindingNo,
       @EndUserText.label: 'Area'
       area        as Area,
+      // Company code of the finding (2026-11-10): blank = not company-specific (area-level)
+      @EndUserText.label: 'Company code'
+      bukrs         as CompanyCode,
       @EndUserText.label: 'Object type'
       object_type   as ObjectType,
       @EndUserText.label: 'Object'

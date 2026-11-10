@@ -17,6 +17,7 @@
 *&            | silently. A row without an intent now carries its alert ID (hex, 32 characters - a dispatch
 *&            | intent is a 40-character SHA-1, so the two never meet); rows the database refuses raise 081;
 *&            | COMPLETE's fallback insert is checked as well.
+*& 2026-11-10 | Rules: company-code pattern BUKRS_PATTERN (company-code isolation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert repository</p>
 CLASS zcl_ca_ops_alert_dao DEFINITION
@@ -39,7 +40,7 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
     SELECT rule_id, area, min_severity, rule_pattern, check_pattern, group1_pattern,
            group2_pattern, min_rag, on_abort, channel, destination, digest, max_items,
            throttle_min, quiet_from, quiet_to, escalate_after, escalation_dest, esc_override, active,
-           template_id, show_amounts
+           template_id, show_amounts, bukrs_pattern
       FROM zca_ops_alrule
       WHERE ( area = @iv_area OR area = @zif_ca_ops_types=>gc_area_any )
         AND active = @abap_true

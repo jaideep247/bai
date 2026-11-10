@@ -14,6 +14,7 @@ define view entity ZC_CA_AlertRule
       CheckPattern,
       Group1Pattern,
       Group2Pattern,
+      BukrsPattern,
       MinRag,
       OnAbort,
       Channel,

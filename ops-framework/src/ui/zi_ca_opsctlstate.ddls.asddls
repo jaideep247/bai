@@ -5,6 +5,7 @@
 //          sign-off, or a finding raised after the sign-off; flagged = watch or action required.
 //          Read-only.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
+//                   2026-11-10 | Company code of the slice (company-code isolation).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: derived state'
 @Metadata.ignorePropagatedAnnotations: true
@@ -15,6 +16,7 @@ define view entity ZI_CA_OpsCtlState
   key D.Area,
   key D.ControlId,
   key D.BusinessDate,
+  key D.CompanyCode,
       D.ControlName,
       D.Category,
       D.Owner,

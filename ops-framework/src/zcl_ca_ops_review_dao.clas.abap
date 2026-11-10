@@ -7,6 +7,7 @@
 *& through ENQUEUE_E_TABLE (generic table lock, released with the LUW).
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | Company-code isolation: key field BUKRS of ZCA_OPS_REVIEW in the lock argument (one slice).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - daily control review SQL</p>
 CLASS zcl_ca_ops_review_dao DEFINITION
@@ -28,6 +29,7 @@ CLASS zcl_ca_ops_review_dao DEFINITION
         iv_area          TYPE zif_ca_ops_types=>ty_area
         iv_control_id    TYPE zif_ca_ops_ctl_types=>ty_control_id
         iv_business_date TYPE d
+        iv_bukrs         TYPE bukrs
       RETURNING
         VALUE(rv_varkey) TYPE rstable-varkey.
 
@@ -40,7 +42,10 @@ CLASS zcl_ca_ops_review_dao IMPLEMENTATION.
   METHOD zif_ca_ops_review_dao~lock.
     DATA lv_subrc TYPE sysubrc.
     DATA lv_holder TYPE syuname.
-    DATA(lv_varkey) = varkey( iv_area = iv_area iv_control_id = iv_control_id iv_business_date = iv_business_date ).
+    DATA(lv_varkey) = varkey( iv_area          = iv_area
+                              iv_control_id    = iv_control_id
+                              iv_business_date = iv_business_date
+                              iv_bukrs         = iv_bukrs ).
 
     " VERIFY-SE37: ENQUEUE_E_TABLE parameters MODE_RSTABLE, TABNAME, VARKEY, _SCOPE (as ZCL_CA_OPS_LOCK)
     TEST-SEAM enqueue.
@@ -79,14 +84,17 @@ CLASS zcl_ca_ops_review_dao IMPLEMENTATION.
 
 
   METHOD varkey.
-    " Fixed positions of the ZCA_OPS_REVIEW key: MANDT (3), AREA (16), CONTROL_ID (20), BUSINESS_DATE (8)
+    " Fixed positions of the ZCA_OPS_REVIEW key: MANDT (3), AREA (16), CONTROL_ID (20), BUSINESS_DATE (8),
+    " BUKRS (4)
     DATA lv_area TYPE zif_ca_ops_types=>ty_area.
     DATA lv_control_id TYPE zif_ca_ops_ctl_types=>ty_control_id.
     DATA lv_date TYPE d.
+    DATA lv_bukrs TYPE bukrs.
     lv_area       = iv_area.
     lv_control_id = iv_control_id.
     lv_date       = iv_business_date.
-    CONCATENATE sy-mandt lv_area lv_control_id lv_date INTO rv_varkey RESPECTING BLANKS.
+    lv_bukrs      = iv_bukrs.
+    CONCATENATE sy-mandt lv_area lv_control_id lv_date lv_bukrs INTO rv_varkey RESPECTING BLANKS.
   ENDMETHOD.
 
 ENDCLASS.

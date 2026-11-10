@@ -13,6 +13,7 @@ define table zca_d_alrule {
   checkpattern : abap.char(35);
   group1pattern : abap.char(35);
   group2pattern : abap.char(35);
+  bukrspattern : abap.char(35);
   minrag : abap.char(1);
   onabort : abap_boolean;
   channel : abap.char(10);

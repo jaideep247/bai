@@ -8,6 +8,8 @@
 *& ENQUEUE seam. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | Company-code isolation: a sign-off of one company-code slice never replaces the area-level
+*&            | slice or another company code's slice of the same control and date; lock per slice.
 *&---------------------------------------------------------------------*
 CLASS ltc_review_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -23,6 +25,8 @@ CLASS ltc_review_dao DEFINITION FINAL FOR TESTING
         first   TYPE timestampl VALUE '20261110130000.0000000',
         second  TYPE timestampl VALUE '20261110140000.0000000',
         holder  TYPE syuname VALUE 'ZT_OTHER',
+        bukrs   TYPE bukrs VALUE 'ZT01',
+        other   TYPE bukrs VALUE 'ZT02',
       END OF gc.
 
     CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
@@ -35,6 +39,7 @@ CLASS ltc_review_dao DEFINITION FINAL FOR TESTING
     METHODS first_sign_off_inserted     FOR TESTING.
     METHODS second_sign_off_replaces    FOR TESTING.
     METHODS foreign_lock_refused        FOR TESTING.
+    METHODS slices_are_separate         FOR TESTING.
 ENDCLASS.
 
 
@@ -98,12 +103,40 @@ CLASS ltc_review_dao IMPLEMENTATION.
       lv_holder = gc-holder.
     END-TEST-INJECTION.
     TRY.
-        mo_cut->lock( iv_area = gc-area iv_control_id = gc-control iv_business_date = gc-day ).
+        mo_cut->lock( iv_area = gc-area iv_control_id = gc-control iv_business_date = gc-day iv_bukrs = gc-bukrs ).
         cl_abap_unit_assert=>fail( msg = 'A control and date locked by another user is refused' ).
       CATCH zcx_ca_ops_error INTO DATA(lx_locked).
         cl_abap_unit_assert=>assert_equals( act = lx_locked->if_t100_message~t100key-msgno
                                             exp = zif_ca_ops_ctl_types=>gc_msg-review_locked msg = 'Message 079' ).
     ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: one row per control, date and company code - the sign-off of one company code's slice leaves the
+  " area-level slice and the other company code's slice of the same control and date as they were
+  METHOD slices_are_separate.
+    DATA lt_existing TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
+    lt_existing = VALUE #( ( area = gc-area control_id = gc-control business_date = gc-day
+                             status_at_review = zif_ca_ops_ctl_types=>gc_status-watch reviewed_at = gc-first
+                             last_changed_at = gc-first )
+                           ( area = gc-area control_id = gc-control business_date = gc-day bukrs = gc-other
+                             status_at_review = zif_ca_ops_ctl_types=>gc_status-healthy reviewed_at = gc-first
+                             last_changed_at = gc-first ) ).
+    go_env->insert_test_data( lt_existing ).
+
+    mo_cut->save( VALUE #( ( area = gc-area control_id = gc-control business_date = gc-day bukrs = gc-bukrs
+                             status_at_review = zif_ca_ops_ctl_types=>gc_status-action
+                             review_result = zif_ca_ops_ctl_types=>gc_status-action
+                             reviewed_by = sy-uname reviewed_at = gc-second last_changed_at = gc-second ) ) ).
+
+    SELECT bukrs, status_at_review FROM zca_ops_review ORDER BY bukrs INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 3 msg = 'Three slices of the control and date' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-status_at_review exp = zif_ca_ops_ctl_types=>gc_status-watch
+                                        msg = 'Area-level slice untouched' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-status_at_review exp = zif_ca_ops_ctl_types=>gc_status-action
+                                        msg = 'Sign-off of the own company code' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-status_at_review exp = zif_ca_ops_ctl_types=>gc_status-healthy
+                                        msg = 'Other company code untouched' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -6,6 +6,8 @@ strict ( 2 );
 // pool (insert or update of the review row of the date). No draft: one action is one complete change.
 // Concurrency: lock per control and date (ENQUEUE_E_TABLE on ZCA_OPS_REVIEW) and ETag LastChangedAt -
 // a second reviewer of the same control and date who did not see the first sign-off is refused (412).
+// Company-code isolation (2026-11-10): one row per slice (control, date, company code; blank = area-level),
+// signed off on its own with ZCA_OPS 02 for the area and, for a company code, that BUKRS.
 // VERIFY-ADT: managed BO without persistent table (with unmanaged save, lock master unmanaged) over a
 // root view entity with joins (7.58).
 define behavior for ZR_CA_OpsCtlReview alias Review
@@ -15,7 +17,7 @@ authorization master ( instance )
 etag master LastChangedAt
 {
   internal update;
-  field ( readonly ) Area, ControlId, BusinessDate, ControlName, Category, Owner, Backup, Team, CutoffTime,
+  field ( readonly ) Area, ControlId, BusinessDate, CompanyCode, ControlName, Category, Owner, Backup, Team, CutoffTime,
                      RunbookUrl, Sequence, Guidance, TimeZone, IsCurrentDay, ControlStatus, StatusRank,
                      StatusCriticality, FindingCount, LastFindingAt, OpenExceptions, EvidenceRun, EvidenceRunAt,
                      StatusAtReview, ReviewResult, ReviewedEvidenceRun, ReviewedBy, ReviewedAt, ReviewedOnLocal,

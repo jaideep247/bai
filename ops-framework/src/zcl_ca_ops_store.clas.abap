@@ -35,6 +35,10 @@
 *&            | ZCA_PARAM); start_run checks the release of ZCA_PARAM (044) and the area (043) first;
 *&            | SLA_DAYS_<area>_<severity> in area CA_OPS.
 *& 2026-11-10 | Carry-forward keeps the reason code of an exception (REASON_CODE, classification).
+*& 2026-11-10 | Company-code isolation: save_findings stores the company code of a finding (BUKRS, blank =
+*&            | not company-specific); the company code is part of the identity of an exception - the
+*&            | carry-forward inherits only from an earlier exception of the same object type, key, check code
+*&            | and company code, so two company codes never share an owner, waiver or classification.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -64,17 +68,19 @@ CLASS zcl_ca_ops_store DEFINITION
         object_key  TYPE zca_ops_finding-object_key,
       END OF ty_object.
     TYPES tt_object TYPE SORTED TABLE OF ty_object WITH UNIQUE KEY object_type object_key.
-    "! One exception carried forward: object type, key and check code
+    "! One exception carried forward: object type, key, check code and company code (identity of an
+    "! exception; blank company code = not company-specific)
     TYPES:
       BEGIN OF ty_block,
         object_type TYPE zca_ops_finding-object_type,
         object_key  TYPE zca_ops_finding-object_key,
         check_code  TYPE zca_ops_finding-check_code,
+        bukrs       TYPE zca_ops_finding-bukrs,
       END OF ty_block.
-    TYPES tt_block TYPE SORTED TABLE OF ty_block WITH UNIQUE KEY object_type object_key check_code.
+    TYPES tt_block TYPE SORTED TABLE OF ty_block WITH UNIQUE KEY object_type object_key check_code bukrs.
 
     "! New exceptions inherit from the open / assigned / waived exception of an
-    "! earlier run (same area, object type, object key, check code), which is
+    "! earlier run (same area, object type, object key, check code, company code), which is
     "! superseded. Only rows with disposition O are candidates. A superseded row is written only while it
     "! is as read; a row a user changed meanwhile is read and carried forward once more, and if it changed
     "! again the new row stays information and an information finding says so (the user's change wins)
@@ -271,6 +277,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
       ls_db-message     = <ls_finding>-message.
       ls_db-details     = <ls_finding>-details.
       ls_db-error_class = <ls_finding>-error_class.
+      ls_db-bukrs       = <ls_finding>-company_code.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
       ls_db-last_changed_at = lv_now.
@@ -348,7 +355,8 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_redo>).
       IF line_exists( lt_conflicts[ object_type = <ls_redo>-object_type
                                     object_key  = <ls_redo>-object_key
-                                    check_code  = <ls_redo>-check_code ] ).
+                                    check_code  = <ls_redo>-check_code
+                                    bukrs       = <ls_redo>-bukrs ] ).
         <ls_redo> = lt_original[ sy-tabix ].
       ENDIF.
     ENDLOOP.
@@ -369,7 +377,8 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     LOOP AT ct_new ASSIGNING FIELD-SYMBOL(<ls_left>) WHERE disposition <> zif_ca_ops_types=>gc_disposition-information.
       IF NOT line_exists( lt_conflicts[ object_type = <ls_left>-object_type
                                         object_key  = <ls_left>-object_key
-                                        check_code  = <ls_left>-check_code ] ).
+                                        check_code  = <ls_left>-check_code
+                                        bukrs       = <ls_left>-bukrs ] ).
         CONTINUE.
       ENDIF.
       <ls_left> = lt_original[ sy-tabix ].
@@ -387,7 +396,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     " index ZCA_OPS_FINDING~OBJ: MANDT, AREA, OBJECT_KEY (fix 5; OBJECT_TYPE is a filter)
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at, reason_code
+           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at, reason_code, bukrs
       FROM zca_ops_finding
       FOR ALL ENTRIES IN @it_keys
       WHERE area      = @is_run-area
@@ -399,7 +408,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
                              @zif_ca_ops_types=>gc_disposition-waived )
       INTO CORRESPONDING FIELDS OF TABLE @rt_prev.
     " newest first: the latest earlier row is the one inherited
-    SORT rt_prev BY object_type object_key check_code created_at DESCENDING.
+    SORT rt_prev BY object_type object_key check_code bukrs created_at DESCENDING.
   ENDMETHOD.
 
 
@@ -419,6 +428,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
            WITH KEY object_type = <ls_new>-object_type
                     object_key  = <ls_new>-object_key
                     check_code  = <ls_new>-check_code
+                    bukrs       = <ls_new>-bukrs
            BINARY SEARCH.
       IF sy-subrc <> 0.
         CONTINUE.
@@ -427,7 +437,8 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
       LOOP AT ct_prev ASSIGNING FIELD-SYMBOL(<ls_prev>) FROM lv_first.
         IF <ls_prev>-object_type <> <ls_new>-object_type
            OR <ls_prev>-object_key <> <ls_new>-object_key
-           OR <ls_prev>-check_code <> <ls_new>-check_code.
+           OR <ls_prev>-check_code <> <ls_new>-check_code
+           OR <ls_prev>-bukrs <> <ls_new>-bukrs.
           EXIT.
         ENDIF.
         IF <ls_prev>-superseded_by IS NOT INITIAL.
@@ -444,7 +455,8 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
         IF guarded_supersede( is_read = <ls_prev> iv_run_id = is_run-run_id iv_now = iv_now ) = abap_false.
           INSERT VALUE #( object_type = <ls_new>-object_type
                           object_key  = <ls_new>-object_key
-                          check_code  = <ls_new>-check_code ) INTO TABLE rt_conflicts.
+                          check_code  = <ls_new>-check_code
+                          bukrs       = <ls_new>-bukrs ) INTO TABLE rt_conflicts.
         ENDIF.
       ENDLOOP.
     ENDLOOP.
@@ -491,6 +503,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     rs_finding-object_key      = is_row-object_key.
     rs_finding-group1          = is_row-group1.
     rs_finding-group2          = is_row-group2.
+    rs_finding-bukrs           = is_row-bukrs.
     rs_finding-check_code      = zif_ca_ops_exc_types=>gc_code_deferred.
     rs_finding-severity        = zif_ca_ops_types=>gc_severity-info.
     rs_finding-action          = zif_ca_ops_types=>gc_action-notify.
@@ -552,7 +565,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
       " index ZCA_OPS_FINDING~OBJ: MANDT, AREA, OBJECT_KEY (fix 5: the caller knows no object type)
       SELECT run_id, finding_no, area, object_type, object_key, group1, group2, check_code, disposition,
              owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-             last_changed_at
+             last_changed_at, bukrs
         FROM zca_ops_finding
         FOR ALL ENTRIES IN @it_object_keys
         WHERE area      = @is_run-area
@@ -565,7 +578,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     IF it_groups IS NOT INITIAL.
       SELECT run_id, finding_no, area, object_type, object_key, group1, group2, check_code, disposition,
              owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-             last_changed_at
+             last_changed_at, bukrs
         FROM zca_ops_finding
         FOR ALL ENTRIES IN @it_groups
         WHERE area      = @is_run-area
@@ -588,7 +601,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     CLEAR lt_open.
     SELECT run_id, finding_no, area, object_type, object_key, group1, group2, check_code, disposition,
            owner, due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-           last_changed_at
+           last_changed_at, bukrs
       FROM zca_ops_finding
       FOR ALL ENTRIES IN @lt_changed
       WHERE run_id     = @lt_changed-run_id
@@ -715,7 +728,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
 
   METHOD zif_ca_ops_store~get_findings.
     SELECT object_type, object_key, group1, group2, rule_id, check_code, severity,
-           action, amount, currency, reference, message, details
+           action, amount, currency, reference, message, details, bukrs AS company_code
       FROM zca_ops_finding
       WHERE run_id = @iv_run_id
       ORDER BY finding_no

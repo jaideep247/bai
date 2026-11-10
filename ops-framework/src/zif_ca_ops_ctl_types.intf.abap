@@ -10,6 +10,7 @@
 *& and ZCL_CA_OPS_REVIEW_POLICY, same rule), never stored. No logic.
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | TY_REVIEW-BUKRS: company code of the reviewed slice (company-code isolation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - control review types</p>
 INTERFACE zif_ca_ops_ctl_types
@@ -51,6 +52,8 @@ INTERFACE zif_ca_ops_ctl_types
       area             TYPE zif_ca_ops_types=>ty_area,
       control_id       TYPE ty_control_id,
       business_date    TYPE d,
+      "! Company code of the slice (blank = area-level; company-code isolation 2026-11-10)
+      bukrs            TYPE bukrs,
       status_at_review TYPE ty_status,
       review_result    TYPE ty_status,
       evidence_run     TYPE zif_ca_ops_types=>ty_run_id,

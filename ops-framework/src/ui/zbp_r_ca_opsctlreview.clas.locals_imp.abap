@@ -10,6 +10,9 @@
 *& call of the repository. Thin: no rule is decided here.
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | Company-code isolation: a row is a slice (control, date, company code); the sign-off needs
+*&            | ZCA_OPS 02 for the area and, for a company-code slice, that BUKRS (ZCL_CA_OPS_EXC_POLICY=>
+*&            | MAY_ACT); lock and save per slice.
 *&---------------------------------------------------------------------*
 CLASS lhc_review DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -33,8 +36,11 @@ CLASS lhc_review IMPLEMENTATION.
       INSERT VALUE #( %tky                 = <ls_key>-%tky
                       %action-markReviewed = COND #( WHEN requested_authorizations-%action-markReviewed <> if_abap_behv=>mk-on
                                                        THEN if_abap_behv=>auth-allowed
-                                                     WHEN lo_auth->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-change
-                                                                               iv_area     = <ls_key>-Area ) = abap_true
+                                                     WHEN zcl_ca_ops_exc_policy=>may_act(
+                                                            io_auth     = lo_auth
+                                                            iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                            iv_area     = <ls_key>-Area
+                                                            iv_bukrs    = <ls_key>-CompanyCode ) = abap_true
                                                        THEN if_abap_behv=>auth-allowed
                                                      ELSE if_abap_behv=>auth-unauthorized ) ) INTO TABLE result.
     ENDLOOP.
@@ -47,7 +53,8 @@ CLASS lhc_review IMPLEMENTATION.
       TRY.
           lo_dao->lock( iv_area          = <ls_key>-Area
                         iv_control_id    = <ls_key>-ControlId
-                        iv_business_date = <ls_key>-BusinessDate ).
+                        iv_business_date = <ls_key>-BusinessDate
+                        iv_bukrs         = <ls_key>-CompanyCode ).
         CATCH zcx_ca_ops_error INTO DATA(lx_locked).
           INSERT VALUE #( %tky = <ls_key>-%tky ) INTO TABLE failed-review.
           INSERT VALUE #( %tky = <ls_key>-%tky
@@ -120,6 +127,7 @@ CLASS lsc_zr_ca_opsctlreview IMPLEMENTATION.
       INSERT VALUE #( area             = <ls_review>-Area
                       control_id       = <ls_review>-ControlId
                       business_date    = <ls_review>-BusinessDate
+                      bukrs            = <ls_review>-CompanyCode
                       status_at_review = <ls_review>-StatusAtReview
                       review_result    = <ls_review>-ReviewResult
                       evidence_run     = <ls_review>-ReviewedEvidenceRun

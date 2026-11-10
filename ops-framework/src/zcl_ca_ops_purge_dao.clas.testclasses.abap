@@ -284,7 +284,9 @@ CLASS ltc_purge_dao IMPLEMENTATION.
   " Rule: a sign-off older than the cutoff is deleted, a recent one is kept (count and delete agree)
   METHOD old_review_is_deleted.
     DATA lt_reviews TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
-    lt_reviews = VALUE #( ( area = gc-area control_id = 'ZT_CTL' business_date = gc-old_run reviewed_at = gc-old )
+    " the old sign-off of a company-code slice (key field BUKRS) is deleted with its key, not left behind
+    lt_reviews = VALUE #( ( area = gc-area control_id = 'ZT_CTL' business_date = gc-old_run reviewed_at = gc-old
+                            bukrs = 'ZT01' )
                           ( area = gc-area control_id = 'ZT_CTL' business_date = gc-new_run reviewed_at = gc-recent ) ).
     go_env->insert_test_data( lt_reviews ).
 

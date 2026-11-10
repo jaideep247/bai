@@ -15,6 +15,8 @@
 *&            | consumer section - section_owns_its_findings with the section double LTD_SECTION.
 *& 2026-11-10 | Alert e-mail templates: amounts only with SHOW_AMOUNTS, standard context keys and the findings
 *&            | block, business context of a finding, new / repeated / overdue from the stored exceptions.
+*& 2026-11-10 | Company-code isolation: a rule with a company-code pattern routes only that company code's
+*&            | findings (another company code and area-level findings stay out); an invalid one is named.
 *&---------------------------------------------------------------------*
 "! A consumer section: owns the findings with object key GC_OWNED_KEY
 CLASS ltd_section DEFINITION FINAL FOR TESTING.
@@ -83,6 +85,8 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS rule_pattern_is_whole_value  FOR TESTING.
     METHODS rule_pattern_ignores_case    FOR TESTING.
     METHODS invalid_pattern_is_named     FOR TESTING.
+    METHODS bukrs_pattern_keeps_list     FOR TESTING.
+    METHODS invalid_bukrs_pattern_named  FOR TESTING.
     METHODS inactive_rule_never_selected FOR TESTING.
     METHODS red_run_triggers_rag_rule    FOR TESTING.
     METHODS aborted_run_triggers_abort   FOR TESTING.
@@ -203,6 +207,47 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         ms_rule-group1_pattern = 'IFACE_.*'.
         cl_abap_unit_assert=>assert_initial( act = mo_cut->invalid_pattern( ms_rule )
                                              msg = 'Valid patterns name nothing' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the list of one company code (BUKRS_PATTERN) never receives another company code's finding, and
+  " area-level findings (blank company code) only when the pattern accepts blank
+  METHOD bukrs_pattern_keeps_list.
+    TRY.
+        ms_rule-bukrs_pattern = 'ZT01'.
+        DATA(ls_own) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_own-company_code = 'ZT01'.
+        DATA(ls_other) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_other-company_code = 'ZT02'.
+        DATA(ls_area_level) = finding( zif_ca_ops_types=>gc_severity-error ).
+        cl_abap_unit_assert=>assert_true( act = mo_cut->matches( is_rule = ms_rule is_finding = ls_own )
+                                          msg = 'Own company code is routed' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->matches( is_rule = ms_rule is_finding = ls_other )
+                                           msg = 'Another company code never reaches the list' ).
+        cl_abap_unit_assert=>assert_false( act = mo_cut->matches( is_rule = ms_rule is_finding = ls_area_level )
+                                           msg = 'Area-level finding not routed by a company-code pattern' ).
+        ms_rule-bukrs_pattern = 'ZT01|'.
+        cl_abap_unit_assert=>assert_true( act = mo_cut->matches( is_rule = ms_rule is_finding = ls_area_level )
+                                          msg = 'A pattern that accepts blank routes area-level findings' ).
+        CLEAR ms_rule-bukrs_pattern.
+        cl_abap_unit_assert=>assert_true( act = mo_cut->matches( is_rule = ms_rule is_finding = ls_other )
+                                          msg = 'Blank pattern = any company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A company-code pattern that does not compile is named like the other patterns
+  METHOD invalid_bukrs_pattern_named.
+    TRY.
+        ms_rule-bukrs_pattern = '(ZT01'.
+        cl_abap_unit_assert=>assert_equals( act = mo_cut->invalid_pattern( ms_rule )
+                                            exp = CONV zif_ca_ops_types=>ty_pattern( '(ZT01' )
+                                            msg = 'The invalid company-code pattern must be named' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

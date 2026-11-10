@@ -27,6 +27,10 @@
 *&            | (ZCL_CA_OPS_MAIL_TPL_BUILTIN). Findings table: columns shown when known (business date,
 *&            | company code, account, payment method, count, details); amounts only with SHOW_AMOUNTS (default
 *&            | off). Digest subject impact first: [SYSID][AREA][sev] <check or rule>: <n> finding(s)[, amounts].
+*& 2026-11-10 | Company-code isolation: the rule pattern BUKRS_PATTERN on the company code of the finding
+*&            | (blank = any; an area-level finding has a blank company code and matches only a blank pattern
+*&            | or a pattern that accepts blank) - findings of another company code never reach a company
+*&            | code's list.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert rule policy</p>
 CLASS zcl_ca_ops_alert_policy DEFINITION
@@ -306,7 +310,8 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
     rv_hit = xsdbool( pattern_hit( iv_pattern = is_rule-rule_pattern   iv_value = is_finding-rule_id )
                   AND pattern_hit( iv_pattern = is_rule-check_pattern  iv_value = is_finding-check_code )
                   AND pattern_hit( iv_pattern = is_rule-group1_pattern iv_value = is_finding-group1 )
-                  AND pattern_hit( iv_pattern = is_rule-group2_pattern iv_value = is_finding-group2 ) ).
+                  AND pattern_hit( iv_pattern = is_rule-group2_pattern iv_value = is_finding-group2 )
+                  AND pattern_hit( iv_pattern = is_rule-bukrs_pattern  iv_value = is_finding-company_code ) ).
   ENDMETHOD.
 
 
@@ -314,7 +319,8 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
     DATA(lt_patterns) = VALUE string_table( ( CONV #( is_rule-rule_pattern ) )
                                             ( CONV #( is_rule-check_pattern ) )
                                             ( CONV #( is_rule-group1_pattern ) )
-                                            ( CONV #( is_rule-group2_pattern ) ) ).
+                                            ( CONV #( is_rule-group2_pattern ) )
+                                            ( CONV #( is_rule-bukrs_pattern ) ) ).
     LOOP AT lt_patterns ASSIGNING FIELD-SYMBOL(<lv_pattern>).
       IF zcl_ca_ops_util=>pcre_valid( <lv_pattern> ) = abap_false.
         rv_pattern = <lv_pattern>.

@@ -8,6 +8,7 @@ define root view entity ZC_CA_OpsException
   key RunId,
   key FindingNo,
       Area,
+      CompanyCode,
       ObjectType,
       ObjectKey,
       Group1,

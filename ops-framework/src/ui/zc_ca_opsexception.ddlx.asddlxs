@@ -2,6 +2,7 @@
 // 2026-11-07: navigation to FEBAN / FPCPL removed - the suite records exceptions and does not
 // reprocess statements or clarify payment lots (read-only scope)
 // 2026-11-10: action Classify (reason code of an open exception, e.g. TIMING / INVESTIGATING)
+// 2026-11-10: company code of the exception (blank = area-level), column and filter
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -25,6 +26,10 @@ annotate entity ZC_CA_OpsException with
                   { type: #FOR_ACTION, dataAction: 'classifyException', label: 'Classify' } ]
   @UI.selectionField: [ { position: 10 } ]
   Area;
+  @UI.lineItem: [ { position: 15, importance: #HIGH } ]
+  @UI.identification: [ { position: 15 } ]
+  @UI.selectionField: [ { position: 15 } ]
+  CompanyCode;
   @UI.lineItem: [ { position: 20, importance: #HIGH } ]
   @UI.identification: [ { position: 20 } ]
   @UI.selectionField: [ { position: 20 } ]

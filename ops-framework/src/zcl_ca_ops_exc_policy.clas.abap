@@ -8,6 +8,8 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS.
 *& 2026-11-10 | CAN_CLASSIFY: reason code of an open exception (values of EXC_REASON_CODES).
+*& 2026-11-10 | MAY_ACT: the company-code isolation rule of every action of the exceptions app and of the
+*&            | daily control review (ZCA_OPS with the activity for the area; for a company code also BUKRS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception lifecycle rules</p>
 CLASS zcl_ca_ops_exc_policy DEFINITION
@@ -56,6 +58,18 @@ CLASS zcl_ca_ops_exc_policy DEFINITION
       RETURNING
         VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
+    "! Company-code isolation (docs/auth_zca_ops.md section 3c): the user may act on an exception or a
+    "! control slice with the activity when ZCA_OPS allows it for the area and, for a company code, for
+    "! that company code (BUKRS); blank company code = area-level object, checked area-wide (BUKRS DUMMY)
+    CLASS-METHODS may_act
+      IMPORTING
+        io_auth           TYPE REF TO zif_ca_ops_auth
+        iv_activity       TYPE zif_ca_ops_auth=>ty_activity
+        iv_area           TYPE zif_ca_ops_types=>ty_area
+        iv_bukrs          TYPE bukrs
+      RETURNING
+        VALUE(rv_allowed) TYPE abap_bool.
+
     "! Open (O) or assigned (A): the only dispositions operations may act on
     CLASS-METHODS is_open
       IMPORTING
@@ -75,6 +89,18 @@ ENDCLASS.
 
 
 CLASS zcl_ca_ops_exc_policy IMPLEMENTATION.
+
+  METHOD may_act.
+    " the read rule of the DCLs, literally: the area (BUKRS not checked), then area and company code together
+    IF io_auth->is_allowed( iv_activity = iv_activity iv_area = iv_area ) = abap_false.
+      RETURN.
+    ENDIF.
+    rv_allowed = xsdbool( iv_bukrs IS INITIAL
+                          OR io_auth->is_allowed( iv_activity = iv_activity
+                                                  iv_area     = iv_area
+                                                  iv_bukrs    = iv_bukrs ) = abap_true ).
+  ENDMETHOD.
+
 
   METHOD can_assign.
     IF is_open( is_state-disposition ) = abap_false.

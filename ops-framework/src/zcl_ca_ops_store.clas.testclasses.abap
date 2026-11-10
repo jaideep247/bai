@@ -27,6 +27,9 @@
 *&            | stamp. The user's action is simulated by the clock double (the run asks the clock for the
 *&            | stamp right after its read).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_STORE to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Company-code isolation: the company code of a finding is stored (BUKRS); an earlier exception
+*&            | of another company code with the same object, key and check is neither inherited nor
+*&            | superseded (company code = part of the exception's identity).
 *&---------------------------------------------------------------------*
 "! Clock double. A user of the exceptions app can act "during" a run: from the hook_from-th to the
 "! hook_to-th call of NOW (the store asks for the write stamp right after its read) the exception
@@ -139,6 +142,8 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS user_waives_during_reconcile FOR TESTING.
     METHODS writes_set_change_stamp      FOR TESTING.
     METHODS stores_system_and_error_cls  FOR TESTING.
+    METHODS stores_company_code          FOR TESTING.
+    METHODS carry_other_company_separate FOR TESTING.
     DATA mo_clock TYPE REF TO ltd_clock.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
     METHODS prior_row
@@ -302,6 +307,67 @@ CLASS ltc_store IMPLEMENTATION.
         cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The finding exists' ).
         cl_abap_unit_assert=>assert_equals( act = lv_class exp = zif_ca_ops_types=>gc_error_class-data
                                             msg = 'Error class stored on the finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: the company code the producer knows is stored with the finding (blank = area-level)
+  METHOD stores_company_code.
+    CONSTANTS lc_bukrs TYPE bukrs VALUE 'ZT01'.
+    TRY.
+        DATA(ls_run) = mo_cut->start_run( iv_area = zcl_ca_ops_param_seed=>gc_test_area-first ).
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-company_code = lc_bukrs.
+        DATA(ls_area_level) = finding( zif_ca_ops_types=>gc_severity-warning ).
+        ls_area_level-object_key = gc_cf-other_key.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( ls_finding ) ( ls_area_level ) )
+                               CHANGING  cs_run      = ls_run ).
+        cl_abap_unit_assert=>assert_equals( act = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 )-bukrs
+                                            exp = lc_bukrs msg = 'Company code stored on the finding' ).
+        cl_abap_unit_assert=>assert_initial( act = read_row( iv_run_id = ls_run-run_id iv_finding_no = 2 )-bukrs
+                                             msg = 'Area-level finding keeps a blank company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: two exceptions that differ only in the company code are different exceptions - the new one of
+  " ZT01 does not inherit the owner of ZT02's and does not supersede it
+  METHOD carry_other_company_separate.
+    DATA lt_rows TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_finding.
+    TRY.
+        ls_row-run_id        = gc_cf-prior_run.
+        ls_row-finding_no    = 1.
+        ls_row-area          = zcl_ca_ops_param_seed=>gc_test_area-first.
+        ls_row-object_type   = 'LINE'.
+        ls_row-object_key    = gc_cf-key.
+        ls_row-rule_id       = 'R14'.
+        ls_row-check_code    = gc_cf-check_code.
+        ls_row-severity      = zif_ca_ops_types=>gc_severity-error.
+        ls_row-disposition   = zif_ca_ops_types=>gc_disposition-assigned.
+        ls_row-owner         = gc_cf-owner.
+        ls_row-due_date      = gc_cf-due.
+        ls_row-first_seen_at = gc_cf-first_seen.
+        ls_row-created_at    = gc_cf-first_seen.
+        ls_row-occurrences   = 1.
+        ls_row-bukrs         = 'ZT02'.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(ls_run) = mo_cut->start_run( iv_area = zcl_ca_ops_param_seed=>gc_test_area-first ).
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-company_code = 'ZT01'.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( ls_finding ) )
+                               CHANGING  cs_run      = ls_run ).
+        DATA(ls_new) = read_row( iv_run_id = ls_run-run_id iv_finding_no = 1 ).
+        cl_abap_unit_assert=>assert_initial( act = ls_new-owner msg = 'No owner from another company code' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_new-occurrences exp = 1 msg = 'A new exception of ZT01' ).
+        cl_abap_unit_assert=>assert_equals( act = read_row( iv_run_id = gc_cf-prior_run iv_finding_no = 1 )-disposition
+                                            exp = zif_ca_ops_types=>gc_disposition-assigned
+                                            msg = 'The exception of ZT02 is not superseded' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
@@ -504,7 +570,7 @@ CLASS ltc_store IMPLEMENTATION.
 
   METHOD read_row.
     SELECT SINGLE disposition, owner, due_date, first_seen_at, occurrences, superseded_by, waiver_until,
-                  resolution, resolved_by
+                  resolution, resolved_by, bukrs
       FROM zca_ops_finding
       WHERE run_id     = @iv_run_id
         AND finding_no = @iv_finding_no

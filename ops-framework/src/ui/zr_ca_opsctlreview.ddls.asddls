@@ -1,6 +1,6 @@
 // Artifact: zr_ca_opsctlreview.ddls.asddls
-// Purpose: Daily control review (RAP BO, root): one row per active control and business date of the last 31
-//          days, all derived live - status (Healthy / Watch / Action required, texts of domain
+// Purpose: Daily control review (RAP BO, root): one row per slice - active control, business date of the last
+//          31 days and company code (blank = the area-level slice; ZI_CA_OpsCtlSlice) - all derived live - status (Healthy / Watch / Action required, texts of domain
 //          ZCA_OPS_CTL_STATUS), open exceptions, evidence run, guidance, cut-off - and the sign-off of the
 //          date (ZCA_OPS_REVIEW, the only persisted part: action markReviewed). AWAITING REVIEW as
 //          ZI_CA_OpsCtlState; OVERDUE = awaiting and the business date is over, or today after the
@@ -8,6 +8,9 @@
 //          the consumers' cards (checks reviewed n / m, awaiting, overdue, action required, watch). The
 //          time of the sign-off is shown in CONTROL_TIME_ZONE. Consumers read this view for their cards.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
+//                   2026-11-10 | Company-code isolation: key CompanyCode (slice); every counter counts slices, so
+//                                a card of a user of one company code sums only the slices he may read (DCL on
+//                                the slice's own company code = filter before the cards' aggregation).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Daily control review'
 @Metadata.ignorePropagatedAnnotations: true
@@ -20,6 +23,7 @@ define root view entity ZR_CA_OpsCtlReview
   key S.Area,
   key S.ControlId,
   key S.BusinessDate,
+  key S.CompanyCode,
       S.ControlName,
       S.Category,
       S.Owner,

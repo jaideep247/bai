@@ -17,6 +17,7 @@
 *&            | ALERT_LOG only (a consumer's tables are purged by its own target classes), GET_TARGETS
 *&            | (registry ZCA_OPS_PURGE).
 *& 2026-11-10 | Target REVIEW (ZCA_OPS_REVIEW by REVIEWED_AT, daily control review).
+*& 2026-11-10 | Target REVIEW: key field BUKRS read (company-code slices of the review).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge SQL</p>
 CLASS zcl_ca_ops_purge_dao DEFINITION
@@ -94,10 +95,10 @@ CLASS zcl_ca_ops_purge_dao IMPLEMENTATION.
         rv_count = sy-dbcnt.
 
       WHEN zif_ca_ops_purge_dao=>gc_target-review.
-        SELECT area, control_id, business_date
+        SELECT area, control_id, business_date, bukrs
           FROM zca_ops_review
           WHERE reviewed_at < @iv_cutoff
-          ORDER BY area, control_id, business_date
+          ORDER BY area, control_id, business_date, bukrs
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_reviews)
           UP TO @iv_max ROWS.
         CHECK lt_reviews IS NOT INITIAL.

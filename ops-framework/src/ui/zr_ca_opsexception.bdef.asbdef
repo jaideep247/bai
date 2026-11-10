@@ -12,7 +12,7 @@ authorization master ( instance )
 etag master LastChangedAt
 {
   internal update;
-  field ( readonly ) RunId, FindingNo, Area, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
+  field ( readonly ) RunId, FindingNo, Area, CompanyCode, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
                      WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode;
@@ -32,6 +32,7 @@ etag master LastChangedAt
     RunId        = run_id;
     FindingNo    = finding_no;
     Area       = area;
+    CompanyCode  = bukrs;
     ObjectType   = object_type;
     ObjectKey    = object_key;
     Group1       = group1;

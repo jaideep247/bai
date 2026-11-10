@@ -14,6 +14,8 @@
 *&            | an exception only while its stamp is the one it read).
 *& 2026-11-10 | Moved from ZBP_R_CD_OPSEXCEPTION to the reusable framework ZCA_OPS (local implementations).
 *& 2026-11-10 | Action classifyException: reason code of an open exception (EXC_REASON_CODES), history CLASSIFY.
+*& 2026-11-10 | Company-code isolation: every action is authorised with the company code of the exception
+*&            | (ZCL_CA_OPS_EXC_POLICY=>MAY_ACT - area, and BUKRS for an exception of a company code).
 *&---------------------------------------------------------------------*
 "! Content IDs of the history rows created by each action (one per action)
 INTERFACE lif_c.
@@ -66,15 +68,20 @@ CLASS lhc_exception IMPLEMENTATION.
     DATA(lo_auth) = zcl_ca_ops_factory=>get_auth( ).
     READ ENTITIES OF zr_ca_opsexception IN LOCAL MODE
       ENTITY Exception
-        FIELDS ( Area ) WITH CORRESPONDING #( keys )
+        FIELDS ( Area CompanyCode ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_exceptions).
     LOOP AT lt_exceptions ASSIGNING FIELD-SYMBOL(<ls_exception>).
-      DATA(lv_change) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-change
-                                                         iv_area   = <ls_exception>-Area ) = abap_true
+      " company-code isolation: an exception of a company code needs ZCA_OPS with that BUKRS as well
+      DATA(lv_change) = COND #( WHEN zcl_ca_ops_exc_policy=>may_act( io_auth     = lo_auth
+                                                                    iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                                    iv_area     = <ls_exception>-Area
+                                                                    iv_bukrs    = <ls_exception>-CompanyCode ) = abap_true
                                 THEN if_abap_behv=>auth-allowed
                                 ELSE if_abap_behv=>auth-unauthorized ).
-      DATA(lv_approve) = COND #( WHEN lo_auth->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-approve
-                                                          iv_area   = <ls_exception>-Area ) = abap_true
+      DATA(lv_approve) = COND #( WHEN zcl_ca_ops_exc_policy=>may_act( io_auth     = lo_auth
+                                                                     iv_activity = zif_ca_ops_auth=>gc_activity-approve
+                                                                     iv_area     = <ls_exception>-Area
+                                                                     iv_bukrs    = <ls_exception>-CompanyCode ) = abap_true
                                  THEN if_abap_behv=>auth-allowed
                                  ELSE if_abap_behv=>auth-unauthorized ).
       " answer only what the framework asked for

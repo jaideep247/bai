@@ -16,6 +16,7 @@ Modification log:
            | rule flag SHOW_AMOUNTS (alert e-mail templates).
 2026-11-10 | Control register of the daily review: controls (owner / backup user 437, team 438, runbook URL
            | 439), guidance per language and the checks a control covers (exact values).
+2026-11-10 | Alert rules: company-code pattern BUKRS_PATTERN (PCRE, checked on save as the other patterns).
 """
 import os
 import sys
@@ -39,7 +40,8 @@ SPEC = {
              [('area', 'area', True), ('enum', 'min_severity', ',' + SEV),
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
               ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
-              ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
+              ('pcre', 'group2_pattern'), ('pcre', 'bukrs_pattern'),
+              ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
             ('zca_ops_alchn', 'AlertChannel', 'zca_d_alchn', 'Channel', 'Alert channels', [],
              [('class', 'class_name', 'ZIF_CA_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination'),
               ('valid', 'template_id', 'zcl_ca_ops_cfg_checks=>template_valid', 'template_invalid')]),
@@ -70,6 +72,7 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'local_last_changed_at': 'Changed at (instance)', 'changed_by': 'Changed by (SM30)',
           'changed_at': 'Changed at (SM30)', 'template_id': 'E-mail template (SMTG template ID)',
           'show_amounts': 'Show amounts in the e-mail',
+          'bukrs_pattern': 'Company code pattern (PCRE, blank = any)',
           # Control register (2026-11-10)
           'langu': 'Language', 'cutoff_time': 'Review cut-off (local time, CONTROL_TIME_ZONE)',
           'team': 'Team (parameter CONTROL_TEAMS)', 'check_area': 'Area of the findings',

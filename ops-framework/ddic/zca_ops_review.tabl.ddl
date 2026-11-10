@@ -9,6 +9,10 @@ define table zca_ops_review {
   key control_id : abap.char(20) not null;
   // Business date reviewed (local date of the parameter CONTROL_TIME_ZONE)
   key business_date : abap.dats not null;
+  // Company code of the reviewed slice (2026-11-10, company-code isolation): blank = the area-level slice
+  // (findings without company code and the run evidence); a company code = the findings of that company
+  // code only - each slice is signed off by a reviewer authorised for it (ZCA_OPS 02 with BUKRS)
+  key bukrs     : bukrs not null;
   // Derived status when the reviewer signed off: H healthy, W watch, A action required
   status_at_review : zca_ops_ctl_status;
   // Result the reviewer confirmed (differs from STATUS_AT_REVIEW only with an observation)

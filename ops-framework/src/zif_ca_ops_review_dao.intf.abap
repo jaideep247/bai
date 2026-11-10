@@ -8,18 +8,21 @@
 *& writes ZCA_OPS_REVIEW (the retention purge deletes old rows).
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | Company-code isolation: the lock is per slice (control, date, company code).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - daily control review repository</p>
 INTERFACE zif_ca_ops_review_dao
   PUBLIC.
 
-  "! Exclusive lock of the review of one control and business date (released at the end of the LUW)
+  "! Exclusive lock of the review of one control, business date and company code (blank = the area-level
+  "! slice; released at the end of the LUW)
   "! @raising zcx_ca_ops_error | locked by another user (079) or the lock server failed (042)
   METHODS lock
     IMPORTING
       iv_area          TYPE zif_ca_ops_types=>ty_area
       iv_control_id    TYPE zif_ca_ops_ctl_types=>ty_control_id
       iv_business_date TYPE d
+      iv_bukrs         TYPE bukrs
     RAISING
       zcx_ca_ops_error.
 

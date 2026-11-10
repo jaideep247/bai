@@ -7,6 +7,7 @@
 //          Status rank of a finding: B / E 2 (action required), W 1 (watch), else 0 (healthy) - the rule of
 //          ZCL_CA_OPS_REVIEW_POLICY=>STATUS_OF_SEVERITY. Read-only.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
+//                   2026-11-10 | Company code of the finding (blank = area-level): the slice it counts in.
 // VERIFY-ADT: OR of field comparisons in the ON condition of an inner join (7.58); PlanViz: findings read by
 //             RUN_ID (primary key) of the runs of the date (CTL-08).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -28,6 +29,7 @@ define view entity ZI_CA_OpsCtlFind
   key Fnd.run_id                                            as RunId,
   key Fnd.finding_no                                        as FindingNo,
       Run.BusinessDate,
+      Fnd.bukrs                                             as CompanyCode,
       Fnd.severity                                          as Severity,
       Fnd.disposition                                       as Disposition,
       Fnd.created_at                                        as CreatedAt,

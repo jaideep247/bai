@@ -1,12 +1,20 @@
 // Artifact: zc_ca_opsctlreview.dcls.asdcls
 // Purpose: Read access to the daily control review (service ZUI_CA_OPS_REV): authorization object ZCA_OPS
-//          with ZCA_PARAR = the area of the control and ACTVT 03, as the exceptions app. The sign-off
-//          (action markReviewed) keeps its own instance check in the behaviour pool (ACTVT 02).
+//          with ZCA_PARAR = the area of the control and ACTVT 03, as the exceptions app - and, for a
+//          company-code slice, the same object with BUKRS = the company code of the slice (company-code
+//          isolation, docs/auth_zca_ops.md section 3c). Every status, count and sign-off of a row is derived
+//          from the findings of its own company code only (ZI_CA_OpsCtlSlice), so this filter on the row is a
+//          filter on the findings before the counters are summed by the cards. The sign-off (action
+//          markReviewed) keeps its own instance check in the behaviour pool (ACTVT 02 with the slice's BUKRS).
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
-// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58).
+//                   2026-11-10 | Company-code isolation: BUKRS of the slice.
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); BUKRS not mapped in the first condition = not
+//             checked; IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'Daily control review - read access'
 @MappingRole: true
 define role ZC_CA_OpsCtlReview {
   grant select on ZC_CA_OpsCtlReview
-    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
 }

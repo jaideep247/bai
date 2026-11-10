@@ -24,6 +24,7 @@ INTERFACE lif_c.
     BEGIN OF gc_el,
       area                           TYPE string VALUE `AREA`,
       backup                         TYPE string VALUE `BACKUP`,
+      bukrspattern                   TYPE string VALUE `BUKRSPATTERN`,
       checkarea                      TYPE string VALUE `CHECKAREA`,
       checkpattern                   TYPE string VALUE `CHECKPATTERN`,
       classname                      TYPE string VALUE `CLASSNAME`,
@@ -271,6 +272,10 @@ CLASS lhc_alertrule IMPLEMENTATION.
       IF zcl_ca_ops_util=>pcre_valid( ls_row-Group2Pattern ) = abap_false.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-Group2Pattern
                         element = lif_c=>gc_el-group2pattern ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_util=>pcre_valid( ls_row-BukrsPattern ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-pattern_invalid v1 = ls_row-BukrsPattern
+                        element = lif_c=>gc_el-bukrspattern ) INTO TABLE lt_msg.
       ENDIF.
       DATA(lv_dest_invalid) = zcl_ca_ops_cfg_checks=>invalid_destination(
                                 iv_class       = zcl_ca_ops_cfg_checks=>channel_class( ls_row-Channel )

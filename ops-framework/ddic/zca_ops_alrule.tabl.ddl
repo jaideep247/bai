@@ -15,6 +15,9 @@ define table zca_ops_alrule {
   check_pattern   : abap.char(35);
   group1_pattern  : abap.char(35);
   group2_pattern  : abap.char(35);
+  // PCRE on the company code of the finding (2026-11-10); blank = any. A rule whose list serves one
+  // company code names it here, so findings of another company code never reach that list
+  bukrs_pattern   : abap.char(35);
   // Run-level trigger: R or A (run RAG equal or worse); blank = none
   min_rag         : abap.char(1);
   on_abort        : abap_boolean;

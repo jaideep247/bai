@@ -33,6 +33,8 @@
 *&            | name of the exceptions app (GC_EXC_APP).
 *& 2026-11-10 | TY_FINDING-CONTEXT: labelled business-context lines for the alert e-mail (never amounts).
 *& 2026-11-10 | Name prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, reason codes).
+*& 2026-11-10 | Company-code isolation: TY_FINDING-COMPANY_CODE is stored (ZCA_OPS_FINDING-BUKRS); alert rule
+*&            | pattern on the company code (TY_ALERT_RULE-BUKRS_PATTERN).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -300,8 +302,10 @@ INTERFACE zif_ca_ops_types
       details     TYPE string,
       "! TRANSIENT / DATA / CONFIG / CODE for a finding raised at a catch boundary (else blank)
       error_class TYPE ty_error_class,
-      "! Business context of the finding for the alert e-mail (2026-11-10; not stored in
-      "! ZCA_OPS_FINDING - the producer fills what it knows at finding time, blank = not known):
+      "! Business context of the finding for the alert e-mail (2026-11-10; the producer fills what it
+      "! knows at finding time, blank = not known; of these only the company code is stored -
+      "! ZCA_OPS_FINDING-BUKRS, blank = not company-specific, part of the exception's identity and of its
+      "! read / change authorisation, company-code isolation 2026-11-10):
       "! business date (statement, file, due date), company code, account as a label that may be
       "! e-mailed (house bank / account ID or a masked number - never a full account number),
       "! payment method, number of payments / items the finding stands for (0 = not known)
@@ -520,6 +524,8 @@ INTERFACE zif_ca_ops_types
       check_pattern   TYPE ty_pattern,
       group1_pattern  TYPE ty_pattern,
       group2_pattern  TYPE ty_pattern,
+      "! PCRE on the company code of the finding; blank = any (a list of one company code names it)
+      bukrs_pattern   TYPE ty_pattern,
       "! Also alert when the run ends with this RAG or worse (blank = no run-level alert)
       min_rag         TYPE ty_rag,
       on_abort        TYPE abap_bool,

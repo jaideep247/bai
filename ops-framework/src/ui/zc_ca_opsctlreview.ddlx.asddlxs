@@ -30,6 +30,11 @@ annotate entity ZC_CA_OpsCtlReview with
   @UI.lineItem: [ { position: 5, importance: #HIGH } ]
   @UI.selectionField: [ { position: 10 } ]
   BusinessDate;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 15, importance: #HIGH } ]
+  @UI.identification: [ { position: 25 } ]
+  @UI.selectionField: [ { position: 75 } ]
+  CompanyCode;
   @EndUserText.label: 'Control'
   @UI.lineItem: [ { position: 10, importance: #HIGH },
                   { type: #FOR_ACTION, dataAction: 'markReviewed', label: 'Mark reviewed' } ]

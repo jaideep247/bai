@@ -10,6 +10,10 @@
 *& behavior. VERIFY-ADT: doubles of CDS view dependencies (7.58).
 *& Modification log:
 *& 2026-11-10 | Initial version (control register and daily control review).
+*& 2026-11-10 | Company-code isolation: the company code of a finding reaches its slice (ltc_find); the
+*&            | slices of a control and date (ltc_slice: area-level always, a company code with findings,
+*&            | open exceptions or a sign-off); the status of a slice counts only the findings of its own
+*&            | company code (ltc_day).
 *&---------------------------------------------------------------------*
 "! ZI_CA_OPSCTLFIND: findings of the covered checks of a control
 CLASS ltc_find DEFINITION FINAL FOR TESTING
@@ -25,6 +29,7 @@ CLASS ltc_find DEFINITION FINAL FOR TESTING
         run        TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000C1',
         day        TYPE d VALUE '20261110',
         rule       TYPE zif_ca_ops_types=>ty_rule_id VALUE 'F_MISSING',
+        bukrs      TYPE bukrs VALUE 'ZT01',
       END OF gc.
 
     CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
@@ -58,7 +63,7 @@ CLASS ltc_find IMPLEMENTATION.
     lt_runs = VALUE #( ( runid = gc-run area = gc-check_area businessdate = gc-day ) ).
     " 1 open error of the rule, 2 waived error, 3 resolved error, 4 open warning of another rule,
     " 5 superseded warning of the rule (raised again later - still live for the date)
-    lt_findings = VALUE #( ( run_id = gc-run finding_no = 1 area = gc-check_area rule_id = gc-rule
+    lt_findings = VALUE #( ( run_id = gc-run finding_no = 1 area = gc-check_area rule_id = gc-rule bukrs = gc-bukrs
                              severity = zif_ca_ops_types=>gc_severity-error disposition = zif_ca_ops_types=>gc_disposition-open )
                            ( run_id = gc-run finding_no = 2 area = gc-check_area rule_id = gc-rule
                              severity = zif_ca_ops_types=>gc_severity-error disposition = zif_ca_ops_types=>gc_disposition-waived )
@@ -76,13 +81,16 @@ CLASS ltc_find IMPLEMENTATION.
 
   " Rule: exact value of the configured field; open, assigned and superseded count, resolved and waived not
   METHOD exact_match_and_live_only.
-    SELECT findingno, statusrank, businessdate FROM zi_ca_opsctlfind ORDER BY findingno INTO TABLE @DATA(lt_rows).
+    SELECT findingno, statusrank, businessdate, companycode FROM zi_ca_opsctlfind ORDER BY findingno
+      INTO TABLE @DATA(lt_rows).
     cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 2 msg = 'Open error and superseded warning only' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-statusrank exp = zif_ca_ops_ctl_types=>gc_rank-action
                                         msg = 'Error ranks as action required' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-statusrank exp = zif_ca_ops_ctl_types=>gc_rank-watch
                                         msg = 'Warning ranks as watch' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-businessdate exp = gc-day msg = 'Business date of the run' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-companycode exp = gc-bukrs msg = 'Company code of the finding' ).
+    cl_abap_unit_assert=>assert_initial( act = lt_rows[ 2 ]-companycode msg = 'Area-level finding: blank company code' ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -235,6 +243,170 @@ CLASS ltc_review IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-watchcount exp = 1 msg = 'Counted as watch' ).
     cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-isreviewoverdue exp = abap_true
                                         msg = 'Yesterday not signed off: overdue' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_CA_OPSCTLSLICE: which slices a control has on a business date
+CLASS ltc_slice DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        area     TYPE zif_ca_ops_types=>ty_area VALUE 'ZT_OPS_A',
+        control  TYPE zif_ca_ops_ctl_types=>ty_control_id VALUE 'ZT_PAYFILES',
+        inactive TYPE zif_ca_ops_ctl_types=>ty_control_id VALUE 'ZT_OFF',
+        day      TYPE d VALUE '20261110',
+        finding  TYPE bukrs VALUE 'ZT01',
+        open     TYPE bukrs VALUE 'ZT02',
+        reviewed TYPE bukrs VALUE 'ZT03',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS slices_of_a_control FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_slice IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_CA_OPSCTLSLICE' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_controls TYPE STANDARD TABLE OF zca_ops_control WITH EMPTY KEY.
+    DATA lt_days TYPE STANDARD TABLE OF zi_ca_opsbusday WITH EMPTY KEY.
+    DATA lt_find_days TYPE STANDARD TABLE OF zi_ca_opsctlfindday WITH EMPTY KEY.
+    DATA lt_open TYPE STANDARD TABLE OF zi_ca_opsctlopen WITH EMPTY KEY.
+    DATA lt_reviews TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    lt_controls = VALUE #( ( area = gc-area control_id = gc-control active = abap_true )
+                           ( area = gc-area control_id = gc-inactive ) ).
+    lt_days = VALUE #( ( businessdate = gc-day ) ).
+    " findings of the date: area-level and ZT01; open exceptions now: ZT02; a sign-off of ZT03; findings of
+    " the inactive control never make a slice
+    lt_find_days = VALUE #( ( area = gc-area controlid = gc-control businessdate = gc-day statusrank = 1 )
+                            ( area = gc-area controlid = gc-control businessdate = gc-day companycode = gc-finding
+                              statusrank = 2 )
+                            ( area = gc-area controlid = gc-inactive businessdate = gc-day companycode = gc-finding
+                              statusrank = 2 ) ).
+    lt_open = VALUE #( ( area = gc-area controlid = gc-control companycode = gc-open openexceptions = 1 ) ).
+    lt_reviews = VALUE #( ( area = gc-area control_id = gc-control business_date = gc-day bukrs = gc-reviewed ) ).
+    go_env->insert_test_data( lt_controls ).
+    go_env->insert_test_data( lt_days ).
+    go_env->insert_test_data( lt_find_days ).
+    go_env->insert_test_data( lt_open ).
+    go_env->insert_test_data( lt_reviews ).
+  ENDMETHOD.
+
+
+  " Rule: the area-level slice always; a company code with findings of the date, open exceptions or a sign-off
+  METHOD slices_of_a_control.
+    SELECT controlid, companycode FROM zi_ca_opsctlslice ORDER BY controlid, companycode INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 4 msg = 'Area-level, ZT01, ZT02, ZT03' ).
+    cl_abap_unit_assert=>assert_initial( act = lt_rows[ 1 ]-companycode msg = 'Area-level slice first' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-companycode exp = gc-finding msg = 'Slice of the findings' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-companycode exp = gc-open msg = 'Slice of the open exceptions' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 4 ]-companycode exp = gc-reviewed msg = 'Slice of the sign-off' ).
+    cl_abap_unit_assert=>assert_false( act = xsdbool( line_exists( lt_rows[ controlid = gc-inactive ] ) )
+                                       msg = 'An inactive control has no slice' ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! ZI_CA_OPSCTLDAY: the status and counts of a slice are those of its own company code only
+CLASS ltc_day DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        area    TYPE zif_ca_ops_types=>ty_area VALUE 'ZT_OPS_A',
+        control TYPE zif_ca_ops_ctl_types=>ty_control_id VALUE 'ZT_PAYFILES',
+        day     TYPE d VALUE '20261110',
+        own     TYPE bukrs VALUE 'ZT01',
+        other   TYPE bukrs VALUE 'ZT02',
+      END OF gc.
+
+    CLASS-DATA go_env TYPE REF TO if_cds_test_environment.
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS status_per_company_code FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_day IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_cds_test_environment=>create( i_for_entity = 'ZI_CA_OPSCTLDAY' ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    DATA lt_slices TYPE STANDARD TABLE OF zi_ca_opsctlslice WITH EMPTY KEY.
+    DATA lt_controls TYPE STANDARD TABLE OF zca_ops_control WITH EMPTY KEY.
+    DATA lt_days TYPE STANDARD TABLE OF zi_ca_opsbusday WITH EMPTY KEY.
+    DATA lt_find_days TYPE STANDARD TABLE OF zi_ca_opsctlfindday WITH EMPTY KEY.
+    DATA lt_open TYPE STANDARD TABLE OF zi_ca_opsctlopen WITH EMPTY KEY.
+    DATA lt_reviews TYPE STANDARD TABLE OF zca_ops_review WITH EMPTY KEY.
+    go_env->clear_doubles( ).
+    lt_slices = VALUE #( ( area = gc-area controlid = gc-control businessdate = gc-day )
+                         ( area = gc-area controlid = gc-control businessdate = gc-day companycode = gc-own )
+                         ( area = gc-area controlid = gc-control businessdate = gc-day companycode = gc-other ) ).
+    lt_controls = VALUE #( ( area = gc-area control_id = gc-control active = abap_true ) ).
+    lt_days = VALUE #( ( businessdate = gc-day ) ).
+    " area-level: nothing; ZT01: a watch finding, 1 open exception; ZT02: action required, 3 open, signed off
+    lt_find_days = VALUE #( ( area = gc-area controlid = gc-control businessdate = gc-day companycode = gc-own
+                              statusrank = 1 findingcount = 1 )
+                            ( area = gc-area controlid = gc-control businessdate = gc-day companycode = gc-other
+                              statusrank = 2 findingcount = 3 ) ).
+    lt_open = VALUE #( ( area = gc-area controlid = gc-control companycode = gc-own openexceptions = 1 )
+                       ( area = gc-area controlid = gc-control companycode = gc-other openexceptions = 3 ) ).
+    lt_reviews = VALUE #( ( area = gc-area control_id = gc-control business_date = gc-day bukrs = gc-other
+                            status_at_review = zif_ca_ops_ctl_types=>gc_status-action ) ).
+    go_env->insert_test_data( lt_slices ).
+    go_env->insert_test_data( lt_controls ).
+    go_env->insert_test_data( lt_days ).
+    go_env->insert_test_data( lt_find_days ).
+    go_env->insert_test_data( lt_open ).
+    go_env->insert_test_data( lt_reviews ).
+  ENDMETHOD.
+
+
+  " Rule: a slice never shows the rank, findings, open exceptions or sign-off of another company code
+  METHOD status_per_company_code.
+    SELECT companycode, statusrank, findingcount, openexceptions, statusatreview
+      FROM zi_ca_opsctlday ORDER BY companycode INTO TABLE @DATA(lt_rows).
+    cl_abap_unit_assert=>assert_equals( act = lines( lt_rows ) exp = 3 msg = 'One row per slice' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-statusrank exp = 0 msg = 'Area-level slice: healthy' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 1 ]-openexceptions exp = 0 msg = 'Area-level slice: no exception' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-statusrank exp = 1 msg = 'ZT01: its own watch only' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 2 ]-openexceptions exp = 1 msg = 'ZT01: its own exception only' ).
+    cl_abap_unit_assert=>assert_initial( act = lt_rows[ 2 ]-statusatreview msg = 'ZT01: not signed off by ZT02' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-statusrank exp = 2 msg = 'ZT02: action required' ).
+    cl_abap_unit_assert=>assert_equals( act = lt_rows[ 3 ]-findingcount exp = 3 msg = 'ZT02: its three findings' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -5,11 +5,12 @@
 //          (ZCA_OPS, ZCA_PARAR = area of the control, ACTVT 03); the sign-off needs ZCA_OPS 02 (behaviour
 //          pool). Read-only apart from the action markReviewed.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
+//                   2026-11-10 | Company code of the slice (company-code isolation; DCL with BUKRS).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Daily control review'
 @Metadata.allowExtensions: true
 @Search.searchable: true
-@ObjectModel.semanticKey: [ 'Area', 'ControlId', 'BusinessDate' ]
+@ObjectModel.semanticKey: [ 'Area', 'ControlId', 'BusinessDate', 'CompanyCode' ]
 define root view entity ZC_CA_OpsCtlReview
   provider contract transactional_query
   as projection on ZR_CA_OpsCtlReview
@@ -17,6 +18,7 @@ define root view entity ZC_CA_OpsCtlReview
   key Area,
   key ControlId,
   key BusinessDate,
+  key CompanyCode,
       @Search.defaultSearchElement: true
       @Search.fuzzinessThreshold: 0.8
       ControlName,

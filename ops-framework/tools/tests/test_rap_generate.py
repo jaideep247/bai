@@ -18,7 +18,9 @@ class FrameworkAppTest(unittest.TestCase):
 
     def test_every_pattern_field_is_validated(self):
         expected = {('framework', 'zca_ops_alrule', 'rule_pattern'), ('framework', 'zca_ops_alrule', 'check_pattern'),
-                    ('framework', 'zca_ops_alrule', 'group1_pattern'), ('framework', 'zca_ops_alrule', 'group2_pattern')}
+                    ('framework', 'zca_ops_alrule', 'group1_pattern'), ('framework', 'zca_ops_alrule', 'group2_pattern'),
+                    # company-code pattern of a rule (company-code isolation, 2026-11-10)
+                    ('framework', 'zca_ops_alrule', 'bukrs_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)

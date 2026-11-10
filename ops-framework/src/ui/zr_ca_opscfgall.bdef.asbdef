@@ -71,6 +71,7 @@ etag master LocalLastChangedAt
     CheckPattern = check_pattern;
     Group1Pattern = group1_pattern;
     Group2Pattern = group2_pattern;
+    BukrsPattern = bukrs_pattern;
     MinRag = min_rag;
     OnAbort = on_abort;
     Channel = channel;

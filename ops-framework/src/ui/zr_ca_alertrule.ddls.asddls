@@ -20,6 +20,8 @@ define view entity ZR_CA_AlertRule
       group1_pattern as Group1Pattern,
       @EndUserText.label: 'Group2 pattern'
       group2_pattern as Group2Pattern,
+      @EndUserText.label: 'Company code pattern (PCRE, blank = any)'
+      bukrs_pattern as BukrsPattern,
       @EndUserText.label: 'Minimum RAG'
       min_rag as MinRag,
       @EndUserText.label: 'On abort'

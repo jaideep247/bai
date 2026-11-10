@@ -4,6 +4,8 @@
 //          equals a covered-check row of the control - whatever run raised them. Index OPN of
 //          ZCA_OPS_FINDING (AREA, DISPOSITION). Counted on the database, nothing stored. Read-only.
 // Modification log: 2026-11-10 | Initial version (control register and daily control review).
+//                   2026-11-10 | Company-code isolation: counted per company code of the exceptions (blank =
+//                                area-level).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Control review: open exceptions'
 @Metadata.ignorePropagatedAnnotations: true
@@ -17,6 +19,7 @@ define view entity ZI_CA_OpsCtlOpen
 {
   key Chk.area                                              as Area,
   key Chk.control_id                                        as ControlId,
+  key Fnd.bukrs                                             as CompanyCode,
       cast( count( * ) as abap.int4 )                       as OpenExceptions
 }
 where
@@ -31,4 +34,5 @@ where
   )
 group by
   Chk.area,
-  Chk.control_id
+  Chk.control_id,
+  Fnd.bukrs
