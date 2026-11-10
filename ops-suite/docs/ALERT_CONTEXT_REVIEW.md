@@ -41,8 +41,8 @@ Priority and lists: `config/alert_seed.md`. "Context before -> after" names what
 | `EBS_BLOCK` | CD_EBS, B | ZCD_PAYOPS, escalation ZCD_RTBLEAD after 3 | `ZCD_OPS_ALERT_EBS_BLOCK` | Line / statement key, BTC group, reference, signed amount -> **+ company code, account (house bank / account ID or masked number), business date (booking / statement date), payment method of the line** (`ZCL_CD_EBS_ENGINE=>ADD_CONTEXT`, from the package in memory) | Amount hidden by default (open decision); file-level parser findings (`EMPTY_FILE`, BAI2 structure) have no statement - no company code |
 | `EBS_ERROR` | CD_EBS, E; amber run; abort | ZCD_PAYOPS | `ZCD_OPS_ALERT_EBS` | as `EBS_BLOCK` | Message texts of some rules contain amounts (R02 bounds, R12 code totals, S02 balances) - written by the rule, shown in the message column (open decision on amounts in texts, `Release_Readiness.md` §5) |
 | `FMON_SLA` | CD_FMON, E; **pattern corrected** (`.*SLA.*` matched no check code) -> rule pattern `F_(SLA\|PRISM.*\|FILERCV)` | ZCD_PAYOPS | `ZCD_OPS_ALERT_FMON_SLA` | **Before: never sent** (dead pattern). After: file name, interface, file ID -> **+ business date, payment method, record count** (`ZCL_CD_FMON_UTIL=>NEW_FINDING`) | Corrected pattern is a proposal (seed row, confirm before transport); control total has no currency in the finding (`FMON_DEFAULT_CURRENCY` is read by the engine, not the check) - hidden anyway by default |
-| `FMON_ACK` *(new, proposed)* | CD_FMON, E, `(NO_)?BANK_ACK(_LATE)?\|ACK_.*_MISMATCH` | ZCD_PAYOPS | `ZCD_OPS_ALERT_ACK` (also chosen by the section for any rule without template) | **Before: no seed rule selected the ACK codes** (the documented `FMON_ERR` did not exist) - the ACK table was only built if some rule matched. After: routed; ACK table (house bank, bank, file, method, payments, amount, payment run, generated / delivered / ACK due, overdue by, totals per currency, unknown never 0) as block `TABLE_SECTION`; **`SHOW_AMOUNTS` = X** (user decision) | Rule is a proposal (confirm) |
-| `FMON_FILE` *(new, proposed)* | CD_FMON, E, rule pattern `F_(MISSING\|REJECT\|DUP\|SIZE\|PRF.*)` without the regeneration codes | ZCD_PAYOPS | `ZCD_OPS_ALERT_FMON_FILE` | **Before: missing / rejected (NACK) / failed / duplicate / zero-byte / size / PRISM-failed files reached no rule** (only B via `ALL_ABORT`). After: routed; **+ business date (also of an expected file), payment method, record count** | Proposal (confirm recipients) |
+| `FMON_ACK` *(new, approved 2026-11-10)* | CD_FMON, E, `(NO_)?BANK_ACK(_LATE)?\|ACK_.+MATCH` | ZCD_PAYOPS | `ZCD_OPS_ALERT_ACK` (also chosen by the section for any rule without template) | **Before: no seed rule selected the ACK codes** (the documented `FMON_ERR` did not exist) - the ACK table was only built if some rule matched. After: routed; ACK table (house bank, bank, file, method, payments, amount, payment run, generated / delivered / ACK due, overdue by, totals per currency, unknown never 0) as block `TABLE_SECTION`; **`SHOW_AMOUNTS` = X** (user decision) | Rule is a proposal (confirm) |
+| `FMON_FILE` *(new, approved 2026-11-10)* | CD_FMON, E, rule pattern `F_(MISSING\|REJECT\|DUP\|SIZE\|PRF.*)` without the regeneration codes | ZCD_PAYOPS | `ZCD_OPS_ALERT_FMON_FILE` | **Before: missing / rejected (NACK) / failed / duplicate / zero-byte / size / PRISM-failed files reached no rule** (only B via `ALL_ABORT`). After: routed; **+ business date (also of an expected file), payment method, record count** | Proposal (confirm recipients) |
 | `FMON_PART` | CD_FMON, E; **pattern corrected** (`.*PARTIAL.*` matched no code) -> `LOT_.*` | ZCD_RETOPS | `ZCD_OPS_ALERT_RETURNS` | **Before: never sent.** After: lot findings with file context | Proposal (confirm that partial return lots are what the rule was meant for) |
 | `FMON_BAIDL` | CD_FMON, E, `STAGE_DEADLINE_MISSED` | ZCD_PAYOPS, escalation after 6 | `ZCD_OPS_ALERT_DEADLINE` | Interface / day key, condition in GROUP2 -> **+ business date, missed stage as a context line** (`ZCL_CD_FMON_CHK_DEADLINE`) | Condition (GROUP2) is not a column: it is in the message text |
 | `NOC_AGING` | CD_FMON, E, `NOC_AGING.*` | ZCD_COMPL | `ZCD_OPS_ALERT_NOC` | File key -> **+ business date, payment method, count** | `NOC_DUE_TODAY` (W) is not alerted - by design (morning report) |
@@ -53,7 +53,7 @@ Priority and lists: `config/alert_seed.md`. "Context before -> after" names what
 | `RUN_LOCKED` | every area, E | ZCD_RTBSUP | `ZCD_OPS_ALERT_LOCKED` | Area, variant, lock holder (message) -> + run keys | - |
 | Morning report (`SEND`, route `HCK_MAIL_ROUTE`) | - | `ALERT_MORNING` | `ZCD_OPS_MORNING_REPORT` (`HCK_MAIL_TEMPLATE`) | Prepared HTML -> **in a template** (report = `TABLE_MAIN`, system / client / exceptions app around it) | Report content unchanged (`ZCL_CD_HCK_REPORT_HTML`) |
 
-**14 alert types** (11 seed rules, 2 proposed rules, the morning report).
+**14 alert types** (13 seed rules - 2 of them new, approved 2026-11-10 - and the morning report).
 
 ## 4. Check codes that can reach the router
 
@@ -92,11 +92,11 @@ All findings of an EBS, FMON and HCK run are dispatched; a code reaches an e-mai
 | Morning report e-mail not editable | In template `ZCD_OPS_MORNING_REPORT` (`HCK_MAIL_TEMPLATE`) | `ZCL_CD_HCK_ENGINE` |
 | ACK subject test expected the former area name `FMON` | Expects the area constant | `ZCL_CD_OPS_ACK_MAIL` test include |
 
-## 6. Gaps fixed in configuration (proposed seed rows - confirm before transport)
+## 6. Gaps fixed in configuration (seed rows approved by the user 2026-11-10)
 
 `FMON_SLA` and `FMON_PART` patterns matched no check code; no rule selected the missing bank ACK codes or the
 file failures; the `FMON_REGEN` and `HCK_RECON` patterns were longer than the pattern field (CHAR 35). The
-corrected and new rows are in `config/alert_seed.md` (marked *proposed 2026-11-10*); they are configuration,
+corrected and new rows are in `config/alert_seed.md` (approved by the user 2026-11-10); they are configuration,
 entered in DV1 on a customizing request after `ZCD_OPS_PATTERN_CHECK` confirms what they capture.
 
 ## 7. Gaps left

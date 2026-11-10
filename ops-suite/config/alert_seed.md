@@ -42,10 +42,10 @@ configuration app refuses a pattern that does not compile (message 418); check w
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | EBS_BLOCK | CD_EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_EBS_BLOCK | |
 | EBS_ERROR | CD_EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — | ZCD_OPS_ALERT_EBS | |
-| FMON_PART | CD_FMON | E | | LOT_.* *(proposed 2026-11-10; was `.*PARTIAL.*`, which matches no check code the suite raises)* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RETURNS | |
-| FMON_SLA | CD_FMON | E | F_(SLA\|PRISM.*\|FILERCV) *(proposed 2026-11-10)* | *(blank; was `.*SLA.*`, which matches no check code - the SLA codes are `NO_<stage>` / `<stage>_LATE`)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_SLA | |
-| FMON_ACK *(new, proposed 2026-11-10)* | CD_FMON | E | | (NO_)?BANK_ACK(_LATE)?\|ACK_.*_MISMATCH | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_ACK | X |
-| FMON_FILE *(new, proposed 2026-11-10)* | CD_FMON | E | F_(MISSING\|REJECT\|DUP\|SIZE\|PRF.*) | (?!REGENERATION_M\|PRISM_DUP).* *(those two go to FMON_REGEN)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_FILE | |
+| FMON_PART | CD_FMON | E | | LOT_.* *(approved 2026-11-10; was `.*PARTIAL.*`, which matches no check code the suite raises)* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RETURNS | |
+| FMON_SLA | CD_FMON | E | F_(SLA\|PRISM.*\|FILERCV) *(approved 2026-11-10)* | *(blank; was `.*SLA.*`, which matches no check code - the SLA codes are `NO_<stage>` / `<stage>_LATE`)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_SLA | |
+| FMON_ACK *(new, approved 2026-11-10)* | CD_FMON | E | | (NO_)?BANK_ACK(_LATE)?\|ACK_.+MATCH *(35 characters; the first proposal `...\|ACK_.*_MISMATCH` had 38, longer than CHAR 35)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_ACK | X |
+| FMON_FILE *(new, approved 2026-11-10)* | CD_FMON | E | F_(MISSING\|REJECT\|DUP\|SIZE\|PRF.*) | (?!REGENERATION_M\|PRISM_DUP).* *(those two go to FMON_REGEN)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_FILE | |
 | FMON_BAIDL | CD_FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD | ZCD_OPS_ALERT_DEADLINE | |
 | NOC_AGING | CD_FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — | ZCD_OPS_ALERT_NOC | |
 | FMON_REGEN | CD_FMON | E | | .*REGEN.*\|PRISM_DUP.* *(2026-11-10: was the three codes spelled out - 68 characters, longer than the pattern field CHAR 35)* | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_REGEN | |
@@ -62,14 +62,14 @@ ACK alert shows payments and amounts (user decision); whether other alerts show 
 the flag stays blank until it is taken (`Release_Readiness.md` §5). The ACK section shows its file amounts
 whatever rule carries it. Review of every alert and its business context: `docs/ALERT_CONTEXT_REVIEW.md`.
 
-**Patterns corrected (proposed 2026-11-10, confirm before transport).** `FMON_SLA` (`.*SLA.*`) and `FMON_PART`
+**Patterns corrected (approved by the user 2026-11-10; enter in DV1 and transport).** `FMON_SLA` (`.*SLA.*`) and `FMON_PART`
 (`.*PARTIAL.*`) matched no check code the suite raises (the SLA check raises `NO_<stage>` / `<stage>_LATE`, e.g.
 `NO_PRISM_HANDOFF`, `BANK_ACK_LATE`; partial return lots are `LOT_UNPROCESSED` / `LOT_NOT_FOUND`), and no rule
 selected the missing bank ACK findings or the file failures (`FILE_MISSING`, `NACK`, `FILE_FAILED`,
 `DUPLICATE_FILE`, size, PRISM failed) - they reached only the morning report and the dashboards.
 `FMON_SLA` now selects the SLA checks by check ID (rule pattern; the ACK stage check `F_BANKACK` goes to
 `FMON_ACK`), `FMON_PART` the lot checks, new `FMON_ACK` the ACK codes and new `FMON_FILE` the file checks by check
-ID (`config/fmon_seed.md`). Every pattern fits the field (CHAR 35): `FMON_REGEN` and `HCK_RECON` spelled their codes out
+ID (`config/fmon_seed.md`). Every pattern fits the field (CHAR 35; `FMON_ACK` exactly 35 after shortening `ACK_.*_MISMATCH` to `ACK_.+MATCH`, which selects the same two codes `ACK_COUNT_MISMATCH` / `ACK_AMOUNT_MISMATCH`): `FMON_REGEN` and `HCK_RECON` spelled their codes out
 in 68 / 56 characters and are shortened to patterns that select the same codes. Check what a pattern captures with
 `ZCD_OPS_PATTERN_CHECK` before the transport.
 
