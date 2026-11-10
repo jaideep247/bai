@@ -117,7 +117,7 @@ Cost: the distinct-name read scans the date window of TBTCO instead of a name pr
 | DPAYH | DOC1R | R07 |
 | DFKKRP | SELW1 | R07R, R07L |
 | DFKKCR | ZTNUM; DOC1R | R07C / R08 / R12; trace |
-| DFKKOP | AUGBL; ZZ_FIN_TRANS_NUM | trace, HCK payment request rules |
+| DFKKOP | AUGBL; ZZ_FIN_TRANS_NUM (**blocking pre-check 0.8 of `Implementation_Order.md`**, 2026-11-10: read by every snapshot package at 200 000-400 000 payments a day) | trace, HCK payment request rules, payment worklist snapshot (FIN items) |
 | BKPF | AWTYP + AWKEY | HCK G/L transfer gaps |
 | DFKKKO | BUDAT | HCK G/L transfer gaps |
 | DFKKSUMC | FIKEY | HCK G/L transfer gaps |

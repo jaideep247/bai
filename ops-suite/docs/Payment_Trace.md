@@ -136,7 +136,7 @@ Posting, reversal, clearing or reset; business job starts or reruns; lock remova
 
 | Item | What to confirm |
 |---|---|
-| `DFKKOP-PYMET`, `AUGRD`, `AUGDT`, `ZZ_FIN_TRANS_NUM` index | Fields exist; reversal clearing reason value(s); secondary index on ZZ_FIN_TRANS_NUM (performance) |
+| `DFKKOP-PYMET`, `AUGRD`, `AUGDT`, `ZZ_FIN_TRANS_NUM` index | Fields exist; reversal clearing reason value(s); secondary index on ZZ_FIN_TRANS_NUM (performance - blocking pre-check 0.8 of `Implementation_Order.md`) |
 | `DFKKKO-STBEL`, `CPUDT`, `CPUTM` | Reversal document field on the clearing document header |
 | `DFKKRAPT` | Table purpose (clearing reset history), the item key, historical clearing document, reset date / time fields → `TRACE_SRC_HISTORY` |
 | `ZCD_PAYM_REQ_LOG` | FIN field, date / time fields, `ZZ_MEMBER_NO`; requested payment date (`DUE=`), amount (`AMOUNT=`), time zone of the received time (assumed `FMON_TIME_ZONE`), an index on received date / time for the keyset read |
