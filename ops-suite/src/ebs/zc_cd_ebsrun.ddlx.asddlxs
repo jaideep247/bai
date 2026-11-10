@@ -28,6 +28,11 @@ annotate entity ZC_CD_EbsRun with
                  label: 'Findings of the run', position: 30 } ]
   @UI.hidden: true
   RunId;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 15, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 15 } ]
+  @UI.selectionField: [ { position: 15 } ]
+  CompanyCode;
   @UI.hidden: true
   PaymentEngineArea;
   @EndUserText.label: 'Run variant'

@@ -36,6 +36,11 @@ annotate entity ZC_CD_EbsFind with
   FindingNo;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 45, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 5 } ]
+  @UI.selectionField: [ { position: 5 } ]
+  CompanyCode;
   @EndUserText.label: 'Object type (STMT, LINE, FILE, RUN)'
   @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
   @UI.identification: [ { position: 10 } ]

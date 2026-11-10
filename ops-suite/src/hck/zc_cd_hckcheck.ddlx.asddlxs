@@ -54,6 +54,10 @@ annotate entity ZC_CD_HckCheck with
   CheckId;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 5, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 5 } ]
+  CompanyCode;
   @EndUserText.label: 'Check text'
   @UI.lineItem: [ { position: 30, importance: #HIGH } ]
   @UI.identification: [ { position: 20 } ]
@@ -145,9 +149,6 @@ annotate entity ZC_CD_HckCheck with
   @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
   @UI.fieldGroup: [ { qualifier: 'Measures', position: 20 } ]
   MetricCount;
-  @EndUserText.label: 'Findings in the run'
-  @UI.fieldGroup: [ { qualifier: 'Measures', position: 30 } ]
-  RunFindingCount;
   @EndUserText.label: 'Open exceptions'
   @UI.lineItem: [ { position: 60, importance: #HIGH } ]
   @UI.fieldGroup: [ { qualifier: 'Measures', position: 40 } ]

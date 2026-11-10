@@ -6,6 +6,7 @@
 //          analytics view ZI_CD_HckMetric holds the same rows for Analysis for Office; this one
 //          lives in src/hck so that the abapGit pull never depends on cds/ objects. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the metric (ZCD_HCK_METRIC-BUKRS, company-code isolation).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK metric history of 31 days (basic)'
@@ -24,6 +25,8 @@ define view entity ZI_CD_HckMetricBase
       cast( case kind when 'L' then 'L' when 'R' then 'R' else 'V' end as abap.char( 1 ) ) as MetricKind,
       weight                                                as Weight,
       measured_at                                           as MeasuredAt,
+      // Company code the metric is about (blank = not company-specific; company-code isolation)
+      bukrs                                                 as CompanyCode,
       tstmp_to_dats( cast( measured_at as timestamp ), 'UTC', $session.client, 'NULL' ) as MeasuredDate
 }
 where tstmp_to_dats( cast( measured_at as timestamp ), 'UTC', $session.client, 'NULL' )

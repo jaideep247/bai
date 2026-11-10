@@ -4,6 +4,7 @@
 //          flagged" (action required, watch), list cards "Daily health checks" and "Attention queue". Read
 //          access: DCL ZC_CD_OPSOVERVIEW (ZCA_OPS, ZCA_PARAR = area of the control, ACTVT 03). Read-only.
 // Modification log: 2026-11-10 | Initial version (control center: daily controls on the overview page).
+//                   2026-11-10 | Company code of the control slice (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Production support - daily controls'
 @Metadata.allowExtensions: true
@@ -14,6 +15,7 @@ define root view entity ZC_CD_OpsCtlDay
   key PaymentEngineArea,
   key ControlId,
   key BusinessDate,
+  key CompanyCode,
       ControlName,
       Category,
       Owner,

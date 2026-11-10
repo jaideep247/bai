@@ -4,6 +4,7 @@
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | Amount with currency reference (DECFLOAT34, no TCURX shift);
 //                                DaysPastDue only for open / assigned items past due (audit A47, A87).
+//                   2026-11-10 | Company code of the finding (company-code isolation, DCL ZI_CD_OpsAnalytics).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite finding / exception (basic)'
@@ -17,6 +18,8 @@ define view entity ZI_CD_OpsFinding
   key run_id                                              as RunId,
   key finding_no                                          as FindingNo,
       area                                              as PaymentEngineArea,
+      // Company code of the finding (blank = area-level; company-code isolation)
+      bukrs                                               as CompanyCode,
       object_type                                         as ObjectType,
       object_key                                          as ObjectKey,
       // HCK: category A-E / check id; EBS, FMON: their own grouping

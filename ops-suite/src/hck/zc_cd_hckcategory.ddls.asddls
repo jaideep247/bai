@@ -3,6 +3,7 @@
 //          the last completed run, drill-down to the checks of the category.
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the category slice (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard - category'
 @Metadata.allowExtensions: true
@@ -11,6 +12,7 @@ define root view entity ZC_CD_HckCategory
   as projection on ZR_CD_HckCategory
 {
   key Category,
+  key CompanyCode,
       CategoryText,
       PaymentEngineArea,
       AsOfRunId,

@@ -2,6 +2,7 @@
 // Purpose: Analytical query (dashboard "exception queue"): findings, open and
 //          overdue items, oldest age per payment engine area / category / check. Verify syntax on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
+//                   2026-11-10 | Company code (free axis; company-code isolation on the cube).
 // Authorization: enforced on ZI_CD_OpsFindingCube (DCL ZI_CD_OpsAnalytics).
 @EndUserText.label: 'Ops suite findings - query'
 define transient view entity ZC_CD_OpsFindingQry
@@ -12,6 +13,8 @@ define transient view entity ZC_CD_OpsFindingQry
   PaymentEngineArea,
   @AnalyticsDetails.query.axis: #ROWS
   Group1,
+  @AnalyticsDetails.query.axis: #FREE
+  CompanyCode,
   @AnalyticsDetails.query.axis: #FREE
   Group2,
   @AnalyticsDetails.query.axis: #FREE

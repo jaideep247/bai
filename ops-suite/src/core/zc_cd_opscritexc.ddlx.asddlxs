@@ -20,6 +20,11 @@ annotate entity ZC_CD_OpsCritExc with
   @UI.identification: [ { position: 10 } ]
   @UI.selectionField: [ { position: 10 } ]
   PaymentEngineArea;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 15, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 15 } ]
+  @UI.selectionField: [ { position: 15 } ]
+  CompanyCode;
   @EndUserText.label: 'Object type'
   @UI.identification: [ { position: 20 } ]
   ObjectType;

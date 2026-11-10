@@ -6,6 +6,7 @@
 //          31 days (bounded read), with the severity rank and the warm-up flag (BASELINE_WARMUP,
 //          information, A102). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check finding (basic)'
@@ -18,6 +19,8 @@ define view entity ZI_CD_HckFinding
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
       cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
+      // Company code of the finding (blank = area-level; company-code isolation)
+      bukrs                                                 as CompanyCode,
       // Check id (CHAR 20 in ZCD_HCK_DEF) from GROUP2 (CHAR 35). VERIFY-ADT: CHAR cast to a shorter length
       cast( group2 as abap.char( 20 ) )                     as CheckId,
       cast( group1 as abap.char( 1 ) )                      as Category,

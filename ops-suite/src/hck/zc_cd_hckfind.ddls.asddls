@@ -3,6 +3,7 @@
 //          (check / metric / run -> findings).
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard - finding'
 @Metadata.allowExtensions: true
@@ -13,6 +14,7 @@ define root view entity ZC_CD_HckFind
   key RunId,
   key FindingNo,
       PaymentEngineArea,
+      CompanyCode,
       CheckId,
       CheckText,
       Category,

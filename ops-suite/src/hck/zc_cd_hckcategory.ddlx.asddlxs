@@ -32,6 +32,10 @@ annotate entity ZC_CD_HckCategory with
   CategoryText;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 5, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 5 } ]
+  CompanyCode;
   @UI.hidden: true
   AsOfRunId;
   @EndUserText.label: 'Morning report as of'

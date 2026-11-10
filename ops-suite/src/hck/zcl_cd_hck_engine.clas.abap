@@ -45,6 +45,8 @@
 *&            | (DETAILS) and error class.
 *& 2026-11-10 | Alert e-mail context: every finding names its health check, category and priority (message
 *&            | 839, context line); the morning report goes out in its e-mail template (HCK_MAIL_TEMPLATE).
+*& 2026-11-10 | Company-code isolation: a threshold finding of a metric and the stored metric carry the metric's
+*&            | company code (blank = area-level).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -606,7 +608,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
         IF ls_evaluation-rag = zif_ca_ops_types=>gc_rag-grey.
           cs_result-warmup = abap_true.
         ENDIF.
-        INSERT VALUE #( object_key = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
+        INSERT VALUE #( object_key   = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
+                        company_code = <ls_metric>-company_code
                         check_code = ls_evaluation-check_code
                         severity   = zif_ca_ops_types=>gc_severity-info
                         reference  = <ls_metric>-dim2
@@ -625,7 +628,8 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
           && |{ ls_evaluation-points } points)|
         ELSE |{ <ls_metric>-metric } { <ls_metric>-dim1 }: { value_text( <ls_metric>-value ) } |
           && |(amber { value_text( ls_threshold-amber ) }, red { value_text( ls_threshold-red ) })| ).
-      INSERT VALUE #( object_key = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
+      INSERT VALUE #( object_key   = |{ cs_result-check_id }/{ <ls_metric>-metric }/{ <ls_metric>-dim1 }|
+                      company_code = <ls_metric>-company_code
                       check_code = ls_evaluation-check_code
                       severity   = COND #( WHEN ls_evaluation-rag = zif_ca_ops_types=>gc_rag-red
                                            THEN zif_ca_ops_types=>gc_severity-error
@@ -726,6 +730,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       ls_history-measured_at = lv_now.
       ls_history-kind        = <ls_metric>-kind.
       ls_history-weight      = <ls_metric>-weight.
+      ls_history-bukrs       = <ls_metric>-company_code.
       INSERT ls_history INTO TABLE lt_history.
     ENDLOOP.
     IF lt_history IS NOT INITIAL.

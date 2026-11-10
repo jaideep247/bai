@@ -2,6 +2,7 @@
 // Purpose: Open morning report exceptions now (O open, A assigned), one row: total, red (B / E),
 //          amber (W), overdue (due date before today). For the KPI entity ZR_CD_HckKpi. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | One row per company code of the open exceptions (company-code isolation; slices ZI_CD_HckOpenSlice).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK open exceptions (one row)'
@@ -12,6 +13,7 @@
 define view entity ZI_CD_HckOpenSum
   as select from ZI_CD_HckFinding
 {
+  key CompanyCode,
       cast( 'CD_HCK' as abap.char( 16 ) )                                                   as PaymentEngineArea,
       cast( count( * ) as abap.int4 )                                                   as OpenFindingCount,
       cast( sum( case when SeverityRank >= 3 then 1 else 0 end ) as abap.int4 )         as OpenRedCount,
@@ -20,3 +22,5 @@ define view entity ZI_CD_HckOpenSum
                       then 1 else 0 end ) as abap.int4 )                                as OverdueCount
 }
 where IsOpen = 'X'
+group by
+  CompanyCode

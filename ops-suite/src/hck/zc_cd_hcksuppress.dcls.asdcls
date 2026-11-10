@@ -1,12 +1,18 @@
 // Artifact: zc_cd_hcksuppress.dcls.asdcls
-// Purpose: Read access to the suppressions app (service ZUI_CD_HCK_SUP): authorization object
-//          ZCD_OPS with ZCA_PARAR HCK and ACTVT 03 (fixed values; every suppression belongs to the
-//          health check). Create, end and approve keep their checks in the behaviour pool.
+// Purpose: Read access to the suppressions app (service ZUI_CD_HCK_SUP): authorization object ZCA_OPS with
+//          ZCA_PARAR CD_HCK and ACTVT 03 (fixed values; every suppression belongs to the health check) and -
+//          company-code isolation, ops-framework/docs/auth_zca_ops.md section 3c - for a suppression of a company
+//          code the same object with BUKRS = that company code. Create, end and approve keep their checks in the
+//          behaviour pool (with the suppression's company code, ZCL_CD_HCK_SUPPRESSION=>CHECK_COMPANY_CODE).
 // Modification log: 2026-11-10 | Initial version (read authorisation of the operations apps).
-// VERIFY-ADT: pfcg_auth with an empty element list and fixed field values (7.58).
+//                   2026-11-10 | Company-code isolation: BUKRS of the suppression.
+// VERIFY-ADT: pfcg_auth with an empty element list and fixed field values, and with a mapped BUKRS next to a
+//             fixed ZCA_PARAR (7.58); IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'Health check suppressions - read access'
 @MappingRole: true
 define role ZC_CD_HckSuppress {
   grant select on ZC_CD_HckSuppress
-    where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'CD_HCK', ACTVT = '03' );
+    where ( ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR = 'CD_HCK', ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( CompanyCode ) = aspect pfcg_auth( ZCA_OPS, BUKRS, ZCA_PARAR = 'CD_HCK', ACTVT = '03' ) );
 }

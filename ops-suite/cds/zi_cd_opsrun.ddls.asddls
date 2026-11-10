@@ -2,6 +2,8 @@
 // Purpose: Basic interface view over ZCA_OPS_RUN (run headers of HCK, FMON, EBS)
 //          for the operations dashboard. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
+//                   2026-11-10 | Company-code isolation: the run header's finding count (every company code) is no longer exposed;
+//                                findings per company code come from ZI_CD_OpsFindingCube.
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite run (basic)'
@@ -25,7 +27,6 @@ define view entity ZI_CD_OpsRun
       passed_items                                        as PassedItems,
       failed_items                                        as FailedItems,
       warning_items                                       as WarningItems,
-      finding_count                                       as FindingCount,
       runtime_ms                                          as RuntimeMs,
       message                                             as RunMessage,
       created_by                                          as CreatedBy

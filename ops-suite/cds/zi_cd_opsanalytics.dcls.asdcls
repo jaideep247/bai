@@ -4,6 +4,12 @@
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | File monitoring cube ZI_CD_FmonFlowCube (FMON file monitoring dashboard).
 //                   2026-11-10 | Comments name the authorisation field ZCA_PARAR (SU20).
+//                   2026-11-10 | Company-code isolation (ops-framework/docs/auth_zca_ops.md section 3c): findings and
+//                                metrics with BUKRS of the row - area authorised AND ( company code blank OR ( area,
+//                                company code ) authorised ). The cubes have one row per finding / metric, so the
+//                                analytic engine aggregates only what the DCL let through (queries on the cubes:
+//                                VERIFY-ADT that the cube's DCL applies to a transient query, V36). Runs and files
+//                                are area-level (no finding count of every company code is exposed any more).
 // Authorization object ZCD_OPS (to create, class e.g. ZCD): fields ZCA_PARAR (HCK, FMON, EBS, CORE), ACTVT (03 display).
 // Role for IT support: ZCA_PARAR = *, ACTVT = 03; management: same, consumed via the queries only.
 // Verify on target release: aspect pfcg_auth syntax and #MAPPING role annotation.
@@ -15,13 +21,21 @@ define role ZI_CD_OpsAnalytics {
   grant select on ZI_CD_OpsRunCube
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZI_CD_OpsFinding
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZI_CD_OpsFindingCube
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZI_CD_HckMetric
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZI_CD_HckMetricCube
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZI_CD_FmonFlowCube
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
 }

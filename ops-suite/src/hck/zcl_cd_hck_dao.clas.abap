@@ -40,6 +40,7 @@
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *& 2026-11-10 | get_table_fields checks S_TABU_NAM 03 (ZIF_CA_OPS_AUTH=>MAY_READ_TABLE) first: every dynamic read
 *&            | (aggregate, values, queues, reference rows, drift hash) describes its table there - 813.
+*& 2026-11-10 | save_metrics: company code of the metric (ZCD_HCK_METRIC-BUKRS, company-code isolation).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -314,6 +315,7 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
       ls_db-kind        = COND #( WHEN <ls_metric>-kind IS INITIAL THEN zif_cd_hck_types=>gc_metric_kind-volume
                                   ELSE <ls_metric>-kind ).
       ls_db-weight      = <ls_metric>-weight.
+      ls_db-bukrs       = <ls_metric>-bukrs.
       INSERT ls_db INTO TABLE lt_db.
     ENDLOOP.
     " a duplicate key inside one run is a repeated measurement: keep the first

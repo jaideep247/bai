@@ -14,6 +14,9 @@ annotate entity ZC_CD_FmonFlowFind with
   FindingNo;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.identification: [ { position: 5 } ]
+  CompanyCode;
   @UI.hidden: true
   FileIdHex;
   @EndUserText.label: 'File / expected file'

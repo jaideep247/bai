@@ -43,6 +43,7 @@
 *& 2026-11-08 | Customer posting areas: GC_BTC_USAGE is key USAGE of ZBTR; check code POSTAREA_INVALID.
 *& 2026-11-10 | Alert status C (claimed) and HCK_ALERT_CLAIM_MIN: claims never completed (alert health).
 *& 2026-11-10 | HCK_MAIL_TEMPLATE (morning report e-mail template); message 839 (check line of a finding).
+*& 2026-11-10 | Company-code isolation: TY_METRIC-COMPANY_CODE / TY_METRIC_HIST-BUKRS, GC_COMPANY_CODE_FIELD.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - types and constants</p>
 "! Shared by the HCK engine, the check plug-ins, the DAO, the HTML renderer
@@ -256,6 +257,9 @@ INTERFACE zif_cd_hck_types
 
   CONSTANTS gc_object_type TYPE zif_ca_ops_types=>ty_object_type VALUE 'CHECK'.
   CONSTANTS gc_default_key TYPE ty_thresh_key VALUE '*'.
+  "! Group field of a generic aggregate (ZCD_HCK_AGG-GROUP_FIELD) whose values are company codes: its metrics
+  "! and findings carry the company code (company-code isolation, 2026-11-10)
+  CONSTANTS gc_company_code_field TYPE fieldname VALUE 'BUKRS'.
   CONSTANTS gc_self_check  TYPE ty_check_id VALUE 'HCK_SELF'.
   "! Result row raised when no business check is selected / active (audit A60)
   CONSTANTS gc_config_check TYPE ty_check_id VALUE 'HCK_CONFIG'.
@@ -375,6 +379,10 @@ INTERFACE zif_cd_hck_types
       kind   TYPE ty_metric_kind,
       "! rates: the denominator the rate was computed over (e.g. messages read)
       weight TYPE ty_value,
+      "! Company code the metric is about (blank = not company-specific): set by the check when a dimension
+      "! is a company code (generic aggregate grouped by GC_COMPANY_CODE_FIELD, reconciliation set); stored
+      "! with the metric and carried to its findings (company-code isolation, 2026-11-10)
+      company_code TYPE bukrs,
     END OF ty_metric.
   TYPES tt_metric TYPE STANDARD TABLE OF ty_metric WITH EMPTY KEY.
 
@@ -390,6 +398,7 @@ INTERFACE zif_cd_hck_types
       measured_at TYPE timestampl,
       kind        TYPE ty_metric_kind,
       weight      TYPE ty_value,
+      bukrs       TYPE bukrs,
     END OF ty_metric_hist.
   TYPES tt_metric_hist TYPE STANDARD TABLE OF ty_metric_hist WITH EMPTY KEY.
 

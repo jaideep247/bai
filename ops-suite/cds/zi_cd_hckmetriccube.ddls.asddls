@@ -3,6 +3,7 @@
 //          per day, job duration, error rates). Verify annotations on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | Measures by metric semantics: volume SUM, level MAX / AVG, rate weighted (audit A88).
+//                   2026-11-10 | Company code of the metric (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Health check metrics - cube'
 @Metadata.ignorePropagatedAnnotations: true
@@ -20,6 +21,7 @@ define view entity ZI_CD_HckMetricCube
   key Dimension1,
   key Dimension2,
       PaymentEngineArea,
+      CompanyCode,
       MeasuredDate,
       _Check.Category                                     as Category,
       MetricKind,

@@ -3,6 +3,7 @@
 //          check, metric and dimension (source / LOB / job). Verify syntax on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | Volume, level and weighted-rate measures instead of a plain SUM (audit A88).
+//                   2026-11-10 | Company code (free axis; company-code isolation on the cube).
 // Authorization: enforced on ZI_CD_HckMetricCube (DCL ZI_CD_OpsAnalytics).
 @EndUserText.label: 'Health check metric trend - query'
 define transient view entity ZC_CD_HckMetricQry
@@ -20,6 +21,8 @@ define transient view entity ZC_CD_HckMetricQry
   Metric,
   @AnalyticsDetails.query.axis: #FREE
   Dimension1,
+  @AnalyticsDetails.query.axis: #FREE
+  CompanyCode,
   @AnalyticsDetails.query.axis: #FREE
   Category,
   @AnalyticsDetails.query.axis: #FREE

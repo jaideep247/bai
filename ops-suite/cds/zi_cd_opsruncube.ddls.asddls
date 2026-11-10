@@ -2,6 +2,7 @@
 // Purpose: Analytical cube of suite runs: runs, runtime, items and findings per
 //          payment engine area / day / RAG. Release-dependent annotations: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
+//                   2026-11-10 | Company-code isolation: FindingCount removed (see ZI_CD_OpsRun).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite runs - cube'
 @Metadata.ignorePropagatedAnnotations: true
@@ -31,8 +32,6 @@ define view entity ZI_CD_OpsRunCube
       @Aggregation.default: #SUM
       FailedItems,
       @Aggregation.default: #SUM
-      WarningItems,
-      @Aggregation.default: #SUM
-      FindingCount
+      WarningItems
 }
 where IsTestMode = ''

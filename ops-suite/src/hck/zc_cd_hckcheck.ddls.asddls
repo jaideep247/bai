@@ -6,6 +6,8 @@
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
 //                   2026-11-07 | Persisted verdict: completion, evidence, scope, baseline mode, summary, failed count.
+//                   2026-11-10 | Company-code isolation: key CompanyCode (check slice); the run's finding count of every company code is
+//                                no longer exposed.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard'
 @Metadata.allowExtensions: true
@@ -16,6 +18,7 @@ define root view entity ZC_CD_HckCheck
   as projection on ZR_CD_HckCheck
 {
   key CheckId,
+  key CompanyCode,
       PaymentEngineArea,
       CheckText,
       Category,
@@ -55,7 +58,6 @@ define root view entity ZC_CD_HckCheck
       @Aggregation.default: #SUM
       MetricCount,
       @Aggregation.default: #SUM
-      RunFindingCount,
       @Aggregation.default: #SUM
       OpenFindingCount,
       @Aggregation.default: #SUM

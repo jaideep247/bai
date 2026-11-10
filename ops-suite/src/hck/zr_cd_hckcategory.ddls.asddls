@@ -5,15 +5,19 @@
 //          of the category has a verdict - warm-up or no result), open exceptions. Drill-down:
 //          category -> checks. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company-code isolation: per category and check slice (key CompanyCode) - the counts of a company code
+//                                are summed only into its own row.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check dashboard - category'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #S, dataClass: #MIXED }
 define root view entity ZR_CD_HckCategory
   as select from ZR_CD_HckCheck
-  association [0..*] to ZR_CD_HckCheck as _Checks on $projection.Category = _Checks.Category
+  association [0..*] to ZR_CD_HckCheck as _Checks on  $projection.Category    = _Checks.Category
+                                                  and $projection.CompanyCode = _Checks.CompanyCode
 {
   key Category,
+  key CompanyCode,
       CategoryText,
       PaymentEngineArea,
       AsOfRunId,
@@ -42,6 +46,7 @@ define root view entity ZR_CD_HckCategory
 }
 group by
   Category,
+  CompanyCode,
   CategoryText,
   PaymentEngineArea,
   AsOfRunId,

@@ -1,26 +1,50 @@
 // Artifact: zc_cd_hckdash.dcls.asdcls
-// Purpose: Read access to the health check dashboard (service ZUI_CD_HCK_DASH): authorization
-//          object ZCD_OPS with ZCA_PARAR = HCK and ACTVT 03 (display), as the file monitoring
-//          dashboard role ZC_CD_FMONFLOW. Every entity carries PaymentEngineArea (HCK on every row).
+// Purpose: Read access to the health check dashboard (service ZUI_CD_HCK_DASH): authorization object ZCA_OPS
+//          with ZCA_PARAR = CD_HCK and ACTVT 03 (display), and - company-code isolation, the rule of
+//          ops-framework/docs/auth_zca_ops.md section 3c - for a row of a company code the same object with
+//          BUKRS = that company code: area authorised AND ( company code blank OR ( area, company code )
+//          authorised ). Findings carry the company code of the finding, metrics the company code the metric is
+//          about (generic aggregate grouped by BUKRS, reconciliation set), checks / categories / red-amber /
+//          runs / KPI are slices per company code: the verdict and run counters only on the area-level slice,
+//          the open exceptions and findings of a company code on its own slice - the condition on the row is a
+//          condition on the findings before a card or the analytical list sums them. The as-of row is
+//          area-level (last run, age, check counters; no finding count).
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
-// VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58).
+//                   2026-11-10 | Company-code isolation: BUKRS of the row on every entity built on findings or
+//                                metrics (was area only).
+// VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58); BUKRS not mapped in the
+//             first condition = not checked; IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'HCK health check dashboard - read access'
 @MappingRole: true
 define role ZC_CD_HckDash {
   grant select on ZC_CD_HckCheck
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckCategory
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckRun
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckMetric
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckFind
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckAsOf
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_HckKpi
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_HckRed
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
 }

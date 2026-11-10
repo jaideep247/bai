@@ -41,7 +41,8 @@ PAIRS = [
       'src/ebs/zi_cd_ebsrunbase.ddls.asddls', 'src/ebs/zi_cd_ebsfinding.ddls.asddls'], _WINDOW,
      'src/ebs/zif_cd_ebs_types.intf.abap', 'gc_dashboard-window_days', 'equal', None),
     ('hck_dashboard_window_days',
-     ['src/hck/zr_cd_hckrun.ddls.asddls', 'src/hck/zi_cd_hckfinding.ddls.asddls',
+     # the run window moved from ZR_CD_HckRun to its slices (company-code isolation, 2026-11-10)
+     ['src/hck/zi_cd_hckrunslice.ddls.asddls', 'src/hck/zi_cd_hckfinding.ddls.asddls',
       'src/hck/zi_cd_hckmetricbase.ddls.asddls'], _WINDOW,
      'src/hck/zif_cd_hck_types.intf.abap', 'gc_dashboard-window_days', 'equal', None),
     ('trx_dashboard_item_window_days', 'src/core/zr_cd_trxkpi.ddls.asddls', _WINDOW,

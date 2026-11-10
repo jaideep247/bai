@@ -3,6 +3,8 @@
 //          and amounts per payment engine area, category, check, severity, day. Verify annotations on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | Amount aggregated per currency; MaxDaysPastDue over open past-due items (audit A47, A87).
+//                   2026-11-10 | Company code of the finding (company-code isolation): one cube row per finding, so the DCL filters the
+//                                findings before the analytic engine aggregates.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Ops suite findings - cube'
 @Metadata.ignorePropagatedAnnotations: true
@@ -16,6 +18,7 @@ define view entity ZI_CD_OpsFindingCube
   key RunId,
   key FindingNo,
       PaymentEngineArea,
+      CompanyCode,
       Group1,
       @ObjectModel.foreignKey.association: '_Check'
       Group2,

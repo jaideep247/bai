@@ -4,6 +4,7 @@
 //          severity, warm-up flag, disposition, owner, due date. Leaf of the drill-down; work the
 //          exception in the owned-exceptions app (ZUI_CD_OPS_EXC_O4). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check dashboard - finding'
 @Metadata.ignorePropagatedAnnotations: true
@@ -15,6 +16,7 @@ define root view entity ZR_CD_HckFind
   key Find.RunId,
   key Find.FindingNo,
       Find.PaymentEngineArea,
+      Find.CompanyCode,
       Find.CheckId,
       Def.description                                       as CheckText,
       Find.Category,

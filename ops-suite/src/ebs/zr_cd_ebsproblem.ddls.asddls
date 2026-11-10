@@ -4,6 +4,7 @@
 //          or E (error), and every open POSTING_INCOMPLETE (S13, posting-dependent rules not
 //          evaluated) - newest first (presentation variant), the card shows the top n. Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation, DCL ZC_CD_EBSDASH).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation dashboard - latest problems'
 @Metadata.ignorePropagatedAnnotations: true
@@ -14,6 +15,7 @@ define root view entity ZR_CD_EbsProblem
   key RunId,
   key FindingNo,
       PaymentEngineArea,
+      CompanyCode,
       ObjectType,
       ObjectKey,
       StmtObjectKey,

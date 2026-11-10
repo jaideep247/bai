@@ -7,6 +7,7 @@
 //          source is not exposed (may contain the account number - same rule as ZI_CD_EbsFinding).
 //          Work the exception in the owned-exceptions app (ZUI_CD_OPS_EXC_O4). Read-only.
 // Modification log: 2026-11-06 | Initial version (production-support overview page).
+//                   2026-11-10 | Company code of the finding (company-code isolation).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Production support - critical exceptions'
 @Metadata.ignorePropagatedAnnotations: true
@@ -17,6 +18,8 @@ define root view entity ZR_CD_OpsCritExc
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
       area                                               as PaymentEngineArea,
+      // Company code of the finding (blank = area-level; company-code isolation, DCL ZC_CD_OPSOVERVIEW)
+      bukrs                                                 as CompanyCode,
       object_type                                           as ObjectType,
       object_key                                            as ObjectKey,
       // Interface / payment method (FMON), category / bank key (EBS), check id (HCK)

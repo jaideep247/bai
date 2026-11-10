@@ -11,6 +11,8 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *& 2026-11-06 | validateRequest: the key pattern must be valid PCRE (message 418, field KeyPattern).
+*& 2026-11-10 | Company-code isolation: create (validation), end and approve of a suppression of a company code need
+*&            | ZCA_OPS with that BUKRS (ZCL_CD_HCK_SUPPRESSION=>CHECK_COMPANY_CODE, message 840).
 *&---------------------------------------------------------------------*
 CLASS lhc_suppression DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
@@ -105,14 +107,21 @@ CLASS lhc_suppression IMPLEMENTATION.
 
   METHOD validaterequest.
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
-      ENTITY Suppression FIELDS ( CheckId Reason ValidFrom ValidTo KeyPattern ) WITH CORRESPONDING #( keys )
+      ENTITY Suppression FIELDS ( CheckId Reason ValidFrom ValidTo KeyPattern CompanyCode ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
+    DATA(lo_auth) = zcl_ca_ops_factory=>get_auth( ).
     LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       DATA(ls_decision) = zcl_cd_hck_suppression=>check_request( iv_check_id = <ls_row>-CheckId
                                                                  iv_reason   = <ls_row>-Reason
                                                                  iv_from     = <ls_row>-ValidFrom
                                                                  iv_to       = <ls_row>-ValidTo
                                                                  iv_key_pattern = <ls_row>-KeyPattern ).
+      " company-code isolation: a suppression of a company code needs ZCA_OPS 02 with that BUKRS
+      IF ls_decision-allowed = abap_true.
+        ls_decision = zcl_cd_hck_suppression=>check_company_code( io_auth     = lo_auth
+                                                                  iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                                  iv_bukrs    = <ls_row>-CompanyCode ).
+      ENDIF.
       IF ls_decision-allowed = abap_false.
         INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-suppression.
         INSERT VALUE #( %tky = <ls_row>-%tky
@@ -132,10 +141,17 @@ CLASS lhc_suppression IMPLEMENTATION.
       ENTITY Suppression ALL FIELDS WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
     DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
+    DATA(lo_auth) = zcl_ca_ops_factory=>get_auth( ).
     LOOP AT lt_rows INTO DATA(ls_row).
       DATA(ls_decision) = zcl_cd_hck_suppression=>can_approve( iv_status     = ls_row-Status
                                                                iv_created_by = ls_row-CreatedBy
                                                                iv_approver   = sy-uname ).
+      " company-code isolation: the approver needs ZCA_OPS 85 with the suppression's BUKRS
+      IF ls_decision-allowed = abap_true.
+        ls_decision = zcl_cd_hck_suppression=>check_company_code( io_auth     = lo_auth
+                                                                  iv_activity = zif_ca_ops_auth=>gc_activity-approve
+                                                                  iv_bukrs    = ls_row-CompanyCode ).
+      ENDIF.
       IF ls_decision-allowed = abap_false.
         INSERT VALUE #( %tky = ls_row-%tky ) INTO TABLE failed-suppression.
         INSERT VALUE #( %tky = ls_row-%tky
@@ -162,13 +178,31 @@ CLASS lhc_suppression IMPLEMENTATION.
   METHOD endsuppression.
     " The suppression ends yesterday: from the next morning report on the findings count again
     READ ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
-      ENTITY Suppression FIELDS ( ValidFrom ) WITH CORRESPONDING #( keys )
+      ENTITY Suppression FIELDS ( ValidFrom CompanyCode ) WITH CORRESPONDING #( keys )
       RESULT DATA(lt_rows).
     DATA(lv_yesterday) = CONV d( zcl_ca_ops_factory=>get_clock( )->today( ) - 1 ).
+    DATA(lo_auth) = zcl_ca_ops_factory=>get_auth( ).
+    " company-code isolation: ending a suppression of a company code needs ZCA_OPS 02 with that BUKRS
+    DATA(lt_ending) = lt_rows.
+    CLEAR lt_ending.
+    LOOP AT lt_rows ASSIGNING FIELD-SYMBOL(<ls_end>).
+      DATA(ls_decision) = zcl_cd_hck_suppression=>check_company_code( io_auth     = lo_auth
+                                                                      iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                                      iv_bukrs    = <ls_end>-CompanyCode ).
+      IF ls_decision-allowed = abap_true.
+        INSERT <ls_end> INTO TABLE lt_ending.
+      ELSE.
+        INSERT VALUE #( %tky = <ls_end>-%tky ) INTO TABLE failed-suppression.
+        INSERT VALUE #( %tky = <ls_end>-%tky
+                        %msg = new_message( id = zif_cd_ops_types=>gc_message_class number = ls_decision-msgno
+                                            severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
+          INTO TABLE reported-suppression.
+      ENDIF.
+    ENDLOOP.
     MODIFY ENTITIES OF zr_cd_hcksuppress IN LOCAL MODE
       ENTITY Suppression
         UPDATE FIELDS ( ValidFrom ValidTo )
-        WITH VALUE #( FOR ls_row IN lt_rows
+        WITH VALUE #( FOR ls_row IN lt_ending
                       ( %tky      = ls_row-%tky
                         ValidFrom = COND #( WHEN ls_row-ValidFrom > lv_yesterday THEN lv_yesterday ELSE ls_row-ValidFrom )
                         ValidTo   = lv_yesterday ) ).

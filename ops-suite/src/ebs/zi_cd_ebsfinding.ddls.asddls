@@ -13,6 +13,8 @@
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
 //                   2026-11-07 | IsDuplicate / IsPostingIncomplete from ZCD_EBS_RULE_DEF-FINDING_CLASS
 //                              | (association) instead of rule literals.
+//                   2026-11-10 | Company code of the finding (ZCA_OPS_FINDING-BUKRS: the statement's company code
+//                              | for statement and line findings, blank for run / file findings = area-level).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation finding (basic)'
@@ -27,6 +29,7 @@ define view entity ZI_CD_EbsFinding
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
       cast( 'CD_EBS' as abap.char( 16 ) )                       as PaymentEngineArea,
+      bukrs                                                 as CompanyCode,
       object_type                                           as ObjectType,
       object_key                                            as ObjectKey,
       // FEB = imported statement (FEBKO / FEBEP), FILE = bank file validated before import

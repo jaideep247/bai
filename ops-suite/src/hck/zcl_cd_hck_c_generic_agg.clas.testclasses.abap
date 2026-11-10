@@ -11,6 +11,7 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-08 | Table consolidation: expected groups as the comma list EXPECTED_GROUPS of the aggregate row
 *&            | (DAO double without get_agg_groups).
+*& 2026-11-10 | Company-code isolation: metrics grouped by BUKRS carry their company code.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -179,7 +180,7 @@ CLASS ltc_generic_agg IMPLEMENTATION.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
     TRY.
         configure_scenario( VALUE #( ) ).
-        INSERT VALUE #( metric = gc_agg dim1 = gc_us01 value = gc_count ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = gc_us01 value = gc_count company_code = gc_us01 ) INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp
                                             msg = 'Metric AGG_ID per company code' ).
@@ -195,8 +196,8 @@ CLASS ltc_generic_agg IMPLEMENTATION.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
     TRY.
         configure_scenario( VALUE #( expected = abap_true ) ).
-        INSERT VALUE #( metric = gc_agg dim1 = gc_us01 value = gc_count ) INTO TABLE lt_exp.
-        INSERT VALUE #( metric = gc_agg dim1 = gc_us02 value = 0 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = gc_us01 value = gc_count company_code = gc_us01 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = gc_us02 value = 0 company_code = gc_us02 ) INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp
                                             msg = 'Silent expected group measures 0' ).

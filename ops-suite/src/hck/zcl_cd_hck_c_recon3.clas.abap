@@ -20,6 +20,8 @@
 *&            | the differences and the tolerance used with its source (RC_TOLERANCE_SET / _PARAM), balanced
 *&            | days included; findings carry expected / actual / difference / tolerance / source (838).
 *&            | TOLERANCE_SET = X makes the set tolerance count even at 0.00 (exact match).
+*& 2026-11-10 | Company-code isolation: metrics and findings of a reconciliation set carry the set's company code
+*&            | (ZCD_HCK_RCSET-BUKRS; the group key starts with it).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation bank/G/L/subledger</p>
 "! Window: report date - 1 back HCK_RECON_LOOKBACK_DAYS days. Tolerance per set (else
@@ -152,7 +154,9 @@ CLASS zcl_cd_hck_c_recon3 DEFINITION
         iv_dim1   TYPE clike
         iv_dim2   TYPE clike
         iv_value  TYPE zif_cd_hck_types=>ty_value
-        iv_kind   TYPE zif_cd_hck_types=>ty_metric_kind DEFAULT zif_cd_hck_types=>gc_metric_kind-volume.
+        iv_kind   TYPE zif_cd_hck_types=>ty_metric_kind DEFAULT zif_cd_hck_types=>gc_metric_kind-volume
+        "! Company code of the reconciliation set (blank = not company-specific)
+        iv_bukrs  TYPE bukrs OPTIONAL.
 
     METHODS add_finding
       IMPORTING
@@ -422,12 +426,14 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     LOOP AT lt_status_count ASSIGNING FIELD-SYMBOL(<ls_status>).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-days
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = <ls_status>-name
                   iv_value  = <ls_status>-count ).
     ENDLOOP.
     LOOP AT lt_bucket_count ASSIGNING FIELD-SYMBOL(<ls_bucket>).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-bucket
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = <ls_bucket>-name
                   iv_value  = <ls_bucket>-count ).
     ENDLOOP.
@@ -490,6 +496,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                     THEN zif_cd_hck_recon_types=>gc_metric-tol_set
                                     ELSE zif_cd_hck_recon_types=>gc_metric-tol_param )
                 iv_dim1   = is_work-group
+                iv_bukrs  = is_work-set-bukrs
                 iv_dim2   = lv_day
                 iv_value  = is_work-tolerance
                 iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
@@ -497,16 +504,19 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     IF is_day-status <> zif_cd_hck_recon_types=>gc_status-none.
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-bank
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_day
                   iv_value  = is_day-bank
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-gl
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_day
                   iv_value  = is_day-gl_fica
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-diff_bank_gl
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_day
                   iv_value  = is_day-diff_bank_gl
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
@@ -514,11 +524,13 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     IF is_day-sub_status <> zif_cd_hck_recon_types=>gc_status-none.
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-fica
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_day
                   iv_value  = is_day-fica
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-diff_gl_fica
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_day
                   iv_value  = is_day-diff_gl_fica
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
@@ -529,6 +541,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
         mv_breaks = mv_breaks + 1.
         add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-unexplained
                     iv_dim1   = is_work-group
+                    iv_bukrs  = is_work-set-bukrs
                     iv_dim2   = lv_day
                     iv_value  = is_day-residual
                     iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
@@ -661,6 +674,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                    ELSE day_text( <ls_group>-day ) ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-stripe_diff
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = lv_name
                   iv_value  = <ls_group>-difference
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
@@ -723,6 +737,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       DATA(lv_day) = day_text( <ls_day>-day ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-ach_open
                   iv_dim1   = is_work-group
+                  iv_bukrs  = is_work-set-bukrs
                   iv_dim2   = |{ lv_day }{ zif_cd_hck_recon_types=>gc_key_sep }{ <ls_day>-status }|
                   iv_value  = <ls_day>-group_count ).
       DATA(lv_message) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-ach_unmatched
@@ -795,12 +810,14 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                     dim1   = iv_dim1
                     dim2   = iv_dim2
                     value  = iv_value
-                    kind   = iv_kind ) INTO TABLE ms_result-metrics.
+                    kind   = iv_kind
+                    company_code = iv_bukrs ) INTO TABLE ms_result-metrics.
   ENDMETHOD.
 
 
   METHOD add_finding.
-    INSERT VALUE #( object_key = |{ mv_check_id }{ zif_cd_hck_recon_types=>gc_key_sep }{ iv_key }|
+    INSERT VALUE #( object_key   = |{ mv_check_id }{ zif_cd_hck_recon_types=>gc_key_sep }{ iv_key }|
+                    company_code = is_work-set-bukrs
                     check_code = iv_code
                     severity   = iv_severity
                     action     = COND #( WHEN iv_severity <> zif_ca_ops_types=>gc_severity-info

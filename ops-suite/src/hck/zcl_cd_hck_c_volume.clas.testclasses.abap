@@ -10,6 +10,7 @@
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-08 | Table consolidation: expected groups as the comma list EXPECTED_GROUPS of the aggregate row
 *&            | (DAO double without get_agg_groups).
+*& 2026-11-10 | Company-code isolation: metrics grouped by BUKRS carry their company code.
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -108,8 +109,10 @@ CLASS ltc_volume IMPLEMENTATION.
     DATA lt_exp TYPE zif_cd_hck_types=>tt_metric.
     TRY.
         INSERT VALUE #( group_value = gc_active row_count = 40 ) INTO TABLE mo_dao->mt_rows.
-        INSERT VALUE #( metric = gc_agg dim1 = gc_active dim2 = '20261105' value = 40 ) INTO TABLE lt_exp.
-        INSERT VALUE #( metric = gc_agg dim1 = gc_silent dim2 = '20261105' value = 0 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = gc_active dim2 = '20261105' value = 40 company_code = gc_active )
+               INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = gc_silent dim2 = '20261105' value = 0 company_code = gc_silent )
+               INTO TABLE lt_exp.
         DATA(ls_result) = act( ).
         cl_abap_unit_assert=>assert_equals( act = ls_result-metrics exp = lt_exp
                                             msg = 'Silent company must be measured as 0' ).

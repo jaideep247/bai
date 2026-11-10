@@ -13,6 +13,7 @@ define root view entity ZC_CD_EbsProblem
   key RunId,
   key FindingNo,
       PaymentEngineArea,
+      CompanyCode,
       ObjectType,
       ObjectKey,
       StmtObjectKey,

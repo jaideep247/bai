@@ -2,6 +2,7 @@
 // Purpose: Analytical query (dashboard tile "suite runs"): runs, red runs and
 //          average runtime per payment engine area and day. Release-dependent syntax: verify on target release.
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
+//                   2026-11-10 | Company-code isolation: FindingCount removed (see ZI_CD_OpsRun).
 // Authorization: enforced on ZI_CD_OpsRunCube (DCL ZI_CD_OpsAnalytics).
 @EndUserText.label: 'Ops suite runs - query'
 define transient view entity ZC_CD_OpsRunQry
@@ -21,8 +22,6 @@ define transient view entity ZC_CD_OpsRunQry
   RunCount,
   @AnalyticsDetails.query.axis: #COLUMNS
   RedRunCount,
-  @AnalyticsDetails.query.axis: #COLUMNS
-  FindingCount,
   @AnalyticsDetails.query.axis: #COLUMNS
   MaxRuntimeMs,
   @AnalyticsDetails.query.axis: #FREE

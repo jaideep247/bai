@@ -23,6 +23,8 @@
 *& 2026-11-07 | Rule registry rows (ltd_rows=>rule_defs) for the classification from ZCD_EBS_RULE_DEF-FINDING_CLASS.
 *& 2026-11-08 | Table consolidation: moncfg_threshold_applies with a value row of MON_STALE_AFTER_MIN_EBS
 *&            | over its definition (ZCA_PARAM_DEF / _VAL doubled as base dependencies of ZI_CD_OpsStaleCfg).
+*& 2026-11-10 | Company-code isolation: run_sliced_by_company_code - run counters on the area-level slice, the
+*&            | findings of a company code on its own slice (ZI_CD_EbsRunSlice).
 *&---------------------------------------------------------------------*
 "! Test data builders: one row per call, filled field by field (house rule)
 CLASS ltd_rows DEFINITION FINAL FOR TESTING.
@@ -893,6 +895,7 @@ CLASS ltc_run DEFINITION FINAL
     METHODS stale_when_no_completed_run FOR TESTING.
     METHODS stale_after_26_hours FOR TESTING.
     METHODS moncfg_threshold_applies FOR TESTING.
+    METHODS run_sliced_by_company_code FOR TESTING.
 
     METHODS counted_run
       IMPORTING
@@ -1113,6 +1116,57 @@ CLASS ltc_run IMPLEMENTATION.
                                             msg = 'Beyond the configured 60 minutes: stale' ).
         cl_abap_unit_assert=>assert_equals( act = ls_row-staleafterminutes exp = lc_minutes
                                             msg = 'The configured threshold is shown' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule (company-code isolation): a run with findings of company code US01 has two slices - the area-level
+  " slice carries the run's line counters and its area-level findings, the US01 slice only US01's findings;
+  " summed over the slices every count appears once
+  METHOD run_sliced_by_company_code.
+    CONSTANTS lc_bukrs TYPE bukrs VALUE 'US01'.
+    TRY.
+        DATA lt_runs TYPE STANDARD TABLE OF zca_ops_run WITH EMPTY KEY.
+        DATA lt_findings TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+        INSERT counted_run( iv_run_id = gc_run-late iv_ended_at = ltd_rows=>seconds_ago( 60 ) ) INTO TABLE lt_runs.
+        DATA(ls_statement) = ltd_rows=>finding( iv_run_id      = gc_run-late
+                                                iv_finding_no  = 1
+                                                iv_object_type = zcl_cd_ebs_finding=>gc_object_type-statement
+                                                iv_object_key  = ltd_rows=>stmt_key( gc_kukey )
+                                                iv_rule_id     = gc_s13
+                                                iv_code        = gc_s13_code
+                                                iv_severity    = zif_ca_ops_types=>gc_severity-warning ).
+        ls_statement-bukrs = lc_bukrs.
+        INSERT ls_statement INTO TABLE lt_findings.
+        INSERT ltd_rows=>finding( iv_run_id      = gc_run-late
+                                  iv_finding_no  = 2
+                                  iv_object_type = zcl_cd_ebs_finding=>gc_object_type-run
+                                  iv_object_key  = gc_r22
+                                  iv_rule_id     = gc_r22
+                                  iv_code        = gc_plugin
+                                  iv_severity    = zif_ca_ops_types=>gc_severity-error ) INTO TABLE lt_findings.
+        go_env->insert_test_data( i_data = lt_runs ).
+        go_env->insert_test_data( i_data = lt_findings ).
+
+        SELECT companycode, runcount, linecount, findingcount, errorfindingcount, postingincompletecount
+          FROM zr_cd_ebsrun WHERE runid = @gc_run-late ORDER BY companycode INTO TABLE @DATA(lt_slices).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_slices ) exp = 2 msg = 'Area-level and US01 slice' ).
+        cl_abap_unit_assert=>assert_initial( act = lt_slices[ 1 ]-companycode msg = 'Area-level slice first' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 1 ]-runcount exp = 1 msg = 'The run counted once' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 1 ]-linecount exp = gc_count-total
+                                            msg = 'Line counters on the area-level slice' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 1 ]-errorfindingcount exp = 1
+                                            msg = 'The run finding is area-level' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 1 ]-postingincompletecount exp = 0
+                                            msg = 'No US01 finding on the area-level slice' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 2 ]-companycode exp = lc_bukrs msg = 'US01 slice' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 2 ]-runcount exp = 0 msg = 'No second run count' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 2 ]-linecount exp = 0 msg = 'No line counters on US01' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_slices[ 2 ]-postingincompletecount exp = 1
+                                            msg = 'The US01 statement finding on its slice' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

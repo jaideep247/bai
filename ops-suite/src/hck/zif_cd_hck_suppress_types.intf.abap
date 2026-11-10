@@ -8,6 +8,7 @@
 *& 2026-11-06 | KEY_PATTERN is PCRE (complete object key, case ignored); message 418 for an invalid one.
 *& 2026-11-07 | GC_PARAM_MAX_DAYS (HCK_SUPPRESS_MAX_DAYS) moved here from the behaviour pool.
 *& 2026-11-07 | Comment: HCK_SUPPRESS_MAX_DAYS in ZCA_PARAM (ZCD_OPS_PARAM retired).
+*& 2026-11-10 | Message 840 (company-code isolation of the suppression app).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression types</p>
 INTERFACE zif_cd_hck_suppress_types
@@ -50,6 +51,8 @@ INTERFACE zif_cd_hck_suppress_types
       "! core messages
       same_user      TYPE symsgno VALUE '063',
       no_reason      TYPE symsgno VALUE '062',
+      "! company-code isolation: no ZCA_OPS authorisation for the suppression's company code
+      company_denied TYPE symsgno VALUE '840',
     END OF gc_msg.
 
 ENDINTERFACE.

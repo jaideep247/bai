@@ -8,7 +8,7 @@ ZBP_R_CD_HCKSUPPRESS,own test include,,2,90,,"Not run in target SAP; partial exe
 ZBP_R_CD_OPSCFGALL,own test include,,4,90,,"Not run in target SAP; partial exemption: global authorization tested (EML GET PERMISSIONS ONLY GLOBAL AUTHORIZATION, VERIFY-ADT); global features, validations and saver need GET PERMISSIONS FEATURES or draft EML with COMMIT ENTITIES, which the offline lint (abaplint 2.120.92) does not parse - DV1 cases RAP_Config_Apps.md 6; decisions tested in ZCL_CA_OPS_CFG_GATE / _CHECKS / _POLICY"
 ZCL_CD_EBS_BTC_RESOLVER,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_CFG_DAO,own test include,,15,90,,Not run in target SAP
-ZCL_CD_EBS_DASH_CDS_TEST,own test include,,22,90,,Not run in target SAP
+ZCL_CD_EBS_DASH_CDS_TEST,own test include,,23,90,,Not run in target SAP
 ZCL_CD_EBS_ENGINE,own test include,,46,90,,Not run in target SAP
 ZCL_CD_EBS_FACTORY,own test include,,5,90,,Not run in target SAP
 ZCL_CD_EBS_FEB_DAO,own test include,,9,90,,Not run in target SAP
@@ -138,12 +138,13 @@ ZCL_CD_HCK_REPORT_HTML,own test include,,8,90,,Not run in target SAP
 ZCL_CD_HCK_RUNTIME_DAO,own test include,,16,90,,Not run in target SAP
 ZCL_CD_HCK_SCORE,own test include,,6,90,,Not run in target SAP
 ZCL_CD_HCK_STATS,own test include,,12,90,,Not run in target SAP
-ZCL_CD_HCK_SUPPRESSION,own test include,,11,90,,Not run in target SAP
+ZCL_CD_HCK_SUPPRESSION,own test include,,15,90,,Not run in target SAP
 ZCL_CD_HCK_THRESHOLD,own test include,,16,90,,Not run in target SAP
 ZCL_CD_HCK_VALUE_QUERY,own test include,,6,90,,Not run in target SAP
 ZCL_CD_OPS_ACK_MAIL,own test include,,8,90,,Not run in target SAP
 ZCL_CD_OPS_CFG_CHECKS,own test include,,18,90,,Not run in target SAP
 ZCL_CD_OPS_CHEQUE_LINK,own test include,,5,90,,Not run in target SAP
+ZCL_CD_OPS_DCL_TEST,own test include,,2,90,,Not run in target SAP
 ZCL_CD_OPS_FACTORY,own test include,,4,90,,Not run in target SAP
 ZCL_CD_OPS_INJECTOR,covered,ZCL_CD_OPS_FACTORY,0,90,,Not run in target SAP; measured in ZCL_CD_OPS_FACTORY (test seam: every slot injected and reset in the factory test)
 ZCL_CD_OPS_OVW_CDS_TEST,own test include,,11,90,,Not run in target SAP

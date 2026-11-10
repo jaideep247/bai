@@ -1,29 +1,50 @@
 // Artifact: zc_cd_ebsdash.dcls.asdcls
-// Purpose: Read access to the EBS validation dashboard (service ZUI_CD_EBS_DASH): authorization
-//          object ZCD_OPS with ZCA_PARAR = EBS and ACTVT 03 (display), as the file monitoring
-//          dashboard role ZC_CD_FMONFLOW. Every entity carries PaymentEngineArea (EBS on every row).
-//          Company code (BUKRS) is not checked here: the EBS validation run and the
-//          exceptions app are area-wide as well (config/auth_zcd_ops.md); restrict per company
-//          code later by adding BUKRS to the statement and line grants.
+// Purpose: Read access to the EBS validation dashboard (service ZUI_CD_EBS_DASH): authorization object
+//          ZCA_OPS with ZCA_PARAR = CD_EBS and ACTVT 03 (display), and - company-code isolation, the rule of
+//          ops-framework/docs/auth_zca_ops.md section 3c - for a row of a company code the same object with
+//          BUKRS = that company code: area authorised AND ( company code blank OR ( area, company code )
+//          authorised ). Statements, lines and returns / NOC items carry the statement's company code;
+//          findings and problems the company code of the finding (blank for run and file findings =
+//          area-level); run and KPI rows are slices per company code (ZI_CD_EbsRunSlice): the run's own line
+//          counters only on the area-level slice, the finding counts of a company code on its slice - so the
+//          condition on the row is a condition on the findings before the analytical list sums them. The as-of
+//          row is area-level (last run, age; no finding count).
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
-// VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58).
+//                   2026-11-10 | Company-code isolation: BUKRS of the row on every entity built on statements or
+//                                findings (was area only).
+// VERIFY-ADT: aspect pfcg_auth on a literal-valued element of a projection view (7.58); BUKRS not mapped in the
+//             first condition = not checked; IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'EBS validation dashboard - read access'
 @MappingRole: true
 define role ZC_CD_EbsDash {
   grant select on ZC_CD_EbsStmt
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsLine
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsFind
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsRetNoc
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsRun
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsAsOf
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_EbsKpi
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_EbsProblem
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
 }

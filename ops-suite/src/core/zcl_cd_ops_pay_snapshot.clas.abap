@@ -59,6 +59,8 @@
 *&            | consecutive failed runs per source (ZCD_PAY_OUTWM-FAIL_COUNT): warning, error from
 *&            | PAYOUT_FAIL_ESCALATE on, configuration errors (GC_CONFIG_MSG, package status C) reported as
 *&            | PAY_OUTCOME_CONFIG.
+*& 2026-11-10 | Company-code isolation: the aggregated finding of flagged payments is per company code too (GROUP BY
+*&            | BUKRS of the payments) and carries it - payments of two company codes never share one finding.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment worklist - FAST / NIGHTLY / SWEEP snapshot</p>
 "! Parameters (ZCA_PARAM, CD_OPS): PAYOUT_PACKAGE_SIZE, PAYOUT_MAX_PACKAGES, PAYOUT_INITIAL_DAYS,
@@ -412,8 +414,9 @@ CLASS zcl_cd_ops_pay_snapshot DEFINITION
         iv_source   TYPE zif_cd_ops_payout_types=>ty_source_id
         iv_packages TYPE i.
 
-    "! One finding per flow + method class + finding code + run date of the versions with a finding
-    "! written by this run (PAY_SOURCE_AMBIGUOUS): count of payments, first PAYOUT_EXAMPLES lines
+    "! One finding per flow + method class + finding code + run date + company code of the versions with a
+    "! finding written by this run (PAY_SOURCE_AMBIGUOUS): count of payments, first PAYOUT_EXAMPLES lines;
+    "! the finding carries the company code of its payments (company-code isolation)
     METHODS report_flagged
       IMPORTING
         it_flagged TYPE tt_flagged.
@@ -1523,11 +1526,12 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     DATA lt_details TYPE string_table.
     DATA lt_payments TYPE SORTED TABLE OF zif_cd_ops_trace_types=>ty_docno WITH UNIQUE KEY table_line.
     DATA(lt_sorted) = it_flagged.
-    SORT lt_sorted BY key version-finding version-laufd version-augbl version-fin_id version-source.
+    SORT lt_sorted BY key version-finding version-laufd version-bukrs version-augbl version-fin_id version-source.
     LOOP AT lt_sorted ASSIGNING FIELD-SYMBOL(<ls_first>)
          GROUP BY ( key     = <ls_first>-key
                     finding = <ls_first>-version-finding
-                    laufd   = <ls_first>-version-laufd ) ASSIGNING FIELD-SYMBOL(<ls_group>).
+                    laufd   = <ls_first>-version-laufd
+                    bukrs   = <ls_first>-version-bukrs ) ASSIGNING FIELD-SYMBOL(<ls_group>).
       CLEAR: lt_details, lt_payments.
       DATA(lv_rows) = 0.
       LOOP AT GROUP <ls_group> ASSIGNING FIELD-SYMBOL(<ls_member>).
@@ -1554,6 +1558,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                                     |{ <ls_group>-finding }/{ <ls_group>-laufd }|
                       group1      = <ls_group>-key
                       group2      = |{ <ls_group>-laufd }|
+                      company_code = <ls_group>-bukrs
                       check_code  = <ls_group>-finding
                       severity    = zif_ca_ops_types=>gc_severity-warning
                       action      = zif_ca_ops_types=>gc_action-notify

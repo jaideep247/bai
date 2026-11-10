@@ -529,3 +529,4 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the o
 | 837 | Missing or late bank ACK - evidence per file |
 | 838 | Expected &1, actual &2, difference &3, tolerance &4 - source: |
 | 839 | Health check &1 (category &2, priority &3): &4 |
+| 840 | No authorisation for company code &1 (ZCA_OPS, area CD_HCK) |

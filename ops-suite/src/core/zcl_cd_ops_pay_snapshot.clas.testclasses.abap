@@ -38,6 +38,7 @@
 *&            | (the queue double runs the operation with the key only); packages deleted per mode; the count of
 *&            | consecutive failed runs: a warning first, an error from PAYOUT_FAIL_ESCALATE on, reset by a run
 *&            | without failure; a configuration error is PAY_OUTCOME_CONFIG.
+*& 2026-11-10 | two_sources_ambiguous_both: the aggregated finding carries the company code of its payments.
 *&---------------------------------------------------------------------*
 "! Worklist repository double: evidence events per source, rows in memory
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
@@ -1588,6 +1589,9 @@ CLASS ltc_snapshot IMPLEMENTATION.
           SPLIT <ls_finding>-details AT cl_abap_char_utilities=>newline INTO TABLE lt_lines.
           " Examples head, two example lines (FIN / source) and the drill-down line
           cl_abap_unit_assert=>assert_equals( act = lines( lt_lines ) exp = 4 msg = 'Examples and drill-down' ).
+          " company-code isolation: the finding carries the company code of its payments
+          cl_abap_unit_assert=>assert_equals( act = <ls_finding>-company_code exp = zcl_cd_ops_pay_fixture=>gc_bukrs
+                                              msg = 'Company code of the payments' ).
         ENDLOOP.
         cl_abap_unit_assert=>assert_equals( act = lv_findings exp = 1 msg = 'One aggregated finding' ).
         cl_abap_unit_assert=>assert_equals( act = lines( mo_store->mt_findings ) exp = 1 msg = 'Finding stored' ).

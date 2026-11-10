@@ -5,6 +5,8 @@
 //          arrived (FILE_MISSING, key <interface>/<date>) has no reference and is listed here
 //          only. Work the exception in the owned-exceptions app (ZUI_CD_OPS_EXC_O4). Read-only.
 // Modification log: 2026-11-06 | Initial version (FMON file monitoring dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation; FMON findings are area-level -
+//                                blank - as long as the interface register has no company code).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'FMON file monitoring - open exception'
 @Metadata.ignorePropagatedAnnotations: true
@@ -15,6 +17,7 @@ define root view entity ZR_CD_FmonFlowFind
   key run_id                                                as RunId,
   key finding_no                                            as FindingNo,
       area                                               as PaymentEngineArea,
+      bukrs                                                 as CompanyCode,
       reference                                             as FileIdHex,
       object_key                                            as ObjectKey,
       group1                                                as IfaceId,

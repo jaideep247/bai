@@ -9,6 +9,8 @@
 *& 2026-11-08 | Table consolidation: the HCK whitelist is ZCD_OPS_TABWL (HCK / READ), comments only.
 *& 2026-11-08 | Table consolidation: ltc_group_list - expected group list parsed once (trimmed, distinct) and
 *&            | validated on save (blank element, repeat, overlong value).
+*& 2026-11-10 | Company-code isolation: metrics of an aggregate grouped by BUKRS carry the group value as their
+*&            | company code (expected groups included).
 *&---------------------------------------------------------------------*
 CLASS ltc_agg_query DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -256,8 +258,8 @@ CLASS ltc_agg_query IMPLEMENTATION.
         ls_row-group_value = 'US02'.
         ls_row-row_count   = 3.
         INSERT ls_row INTO TABLE lt_rows.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 12 ) INTO TABLE lt_exp.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 3 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 12 company_code = 'US01' ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 3 company_code = 'US02' ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_agg_query=>to_metrics( is_def      = ms_def
                                                   it_rows     = lt_rows
@@ -280,8 +282,8 @@ CLASS ltc_agg_query IMPLEMENTATION.
         INSERT VALUE #( group_value = 'US01' row_count = 12 ) INTO TABLE lt_rows.
         INSERT CONV #( 'US01' ) INTO TABLE lt_expected.
         INSERT CONV #( 'US02' ) INTO TABLE lt_expected.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 12 ) INTO TABLE lt_exp.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 12 company_code = 'US01' ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 company_code = 'US02' ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_agg_query=>to_metrics( is_def      = ms_def
                                                   it_rows     = lt_rows
@@ -303,8 +305,8 @@ CLASS ltc_agg_query IMPLEMENTATION.
     TRY.
         INSERT CONV #( 'US01' ) INTO TABLE lt_expected.
         INSERT CONV #( 'US02' ) INTO TABLE lt_expected.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 0 ) INTO TABLE lt_exp.
-        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US01' value = 0 company_code = 'US01' ) INTO TABLE lt_exp.
+        INSERT VALUE #( metric = gc_agg dim1 = 'US02' value = 0 company_code = 'US02' ) INTO TABLE lt_exp.
         cl_abap_unit_assert=>assert_equals(
           act = zcl_cd_hck_agg_query=>to_metrics( is_def      = ms_def
                                                   it_rows     = lt_rows

@@ -4,6 +4,7 @@
 //          and the check's text and category. Trend chart: value per day, one line per DIM2 series.
 //          Drill-down: metric -> findings of the check. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the metric (company-code isolation, DCL ZC_CD_HCKDASH).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check dashboard - metric'
 @Metadata.ignorePropagatedAnnotations: true
@@ -20,6 +21,7 @@ define root view entity ZR_CD_HckMetric
   key Met.Dimension1,
   key Met.Dimension2,
       cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
+      Met.CompanyCode,
       Def.description                                       as CheckText,
       Def.category                                          as Category,
       Met.MetricKind,

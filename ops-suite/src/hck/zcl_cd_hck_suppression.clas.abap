@@ -16,6 +16,8 @@
 *& 2026-11-06 | Key pattern is PCRE matched to the complete object key (case ignored; blank = all). A
 *&              suppression whose pattern is not valid PCRE is not applied and is reported
 *&              (SUPPRESSION_PATTERN_INVALID, W); check_request refuses such a pattern (message 418).
+*& 2026-11-10 | Company-code isolation: CHECK_COMPANY_CODE (create, end, approve with BUKRS of the suppression, message
+*&            | 840); a suppression of a company code also matches a finding of that company code (BUKRS of the finding).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - suppression of known findings</p>
 CLASS zcl_cd_hck_suppression DEFINITION
@@ -47,6 +49,17 @@ CLASS zcl_cd_hck_suppression DEFINITION
         iv_status          TYPE zif_cd_hck_suppress_types=>ty_status
         iv_created_by      TYPE syuname
         iv_approver        TYPE syuname
+      RETURNING
+        VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
+
+    "! Company-code isolation: create, end or approve a suppression of a company code only with ZCA_OPS for
+    "! area CD_HCK and that company code (ZCL_CA_OPS_EXC_POLICY=>MAY_ACT); blank = area-level suppression,
+    "! area authorisation (message 840 when refused)
+    CLASS-METHODS check_company_code
+      IMPORTING
+        io_auth            TYPE REF TO zif_ca_ops_auth
+        iv_activity        TYPE zif_ca_ops_auth=>ty_activity
+        iv_bukrs           TYPE bukrs
       RETURNING
         VALUE(rs_decision) TYPE zif_ca_ops_exc_types=>ty_decision.
 
@@ -150,6 +163,19 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD check_company_code.
+    IF zcl_ca_ops_exc_policy=>may_act( io_auth     = io_auth
+                                       iv_activity = iv_activity
+                                       iv_area     = zif_cd_ops_types=>gc_pe_area-health_check
+                                       iv_bukrs    = iv_bukrs ) = abap_true.
+      rs_decision-allowed = abap_true.
+      RETURN.
+    ENDIF.
+    rs_decision-msgno = zif_cd_hck_suppress_types=>gc_msg-company_denied.
+    rs_decision-v1    = iv_bukrs.
+  ENDMETHOD.
+
+
   METHOD matches.
     rv_match = xsdbool(
          is_suppression-status = zif_cd_hck_suppress_types=>gc_status-active
@@ -159,7 +185,9 @@ CLASS zcl_cd_hck_suppression IMPLEMENTATION.
      AND ( is_suppression-key_pattern IS INITIAL
            OR zcl_ca_ops_util=>pcre_match( iv_value   = is_finding-object_key
                                            iv_pattern = is_suppression-key_pattern ) = abap_true )
-     AND ( is_suppression-bukrs IS INITIAL OR is_finding-object_key CS is_suppression-bukrs ) ).
+     AND ( is_suppression-bukrs IS INITIAL
+           OR is_finding-company_code = is_suppression-bukrs
+           OR is_finding-object_key CS is_suppression-bukrs ) ).
   ENDMETHOD.
 
 ENDCLASS.

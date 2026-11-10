@@ -13,21 +13,28 @@
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
 //                   2026-11-07 | Verdict from ZCD_HCK_RESULT (ZI_CD_HckResult) instead of findings and metric
 //                              | rows (ZI_CD_HckCheckRes / ZI_CD_HckRunMetric removed): dashboard = report.
+//                   2026-11-10 | Company-code isolation: one row per check slice (ZI_CD_HckCheckSlice, key CompanyCode); verdict counters
+//                                and the run's finding count on the area-level slice only, the open exceptions of a company code on its
+//                                slice; the verdict attributes on every slice.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check dashboard - check'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType: { serviceQuality: #C, sizeCategory: #S, dataClass: #MIXED }
 // VERIFY-ADT: LEFT OUTER JOIN conditions on fields of the cross-joined as-of row (7.58)
 define root view entity ZR_CD_HckCheck
-  as select from    zcd_hck_def        as Def
-    cross join      ZR_CD_HckAsOf      as AsOf
-    left outer join ZI_CD_HckResult    as Res  on  Res.RunId   = AsOf.RunId
-                                               and Res.CheckId = Def.check_id
-    left outer join ZI_CD_HckCheckOpen as OpenExc on  OpenExc.CheckId = Def.check_id
+  as select from    ZI_CD_HckCheckSlice as Slice
+    inner join      zcd_hck_def         as Def  on  Def.check_id = Slice.CheckId
+    cross join      ZR_CD_HckAsOf       as AsOf
+    left outer join ZI_CD_HckResult     as Res  on  Res.RunId   = AsOf.RunId
+                                                and Res.CheckId = Def.check_id
+    left outer join ZI_CD_HckCheckOpen  as OpenExc on  OpenExc.CheckId     = Slice.CheckId
+                                                   and OpenExc.CompanyCode = Slice.CompanyCode
   association [0..*] to ZR_CD_HckMetric as _Metrics  on $projection.CheckId = _Metrics.CheckId
   association [0..*] to ZR_CD_HckFind   as _Findings on $projection.CheckId = _Findings.CheckId
 {
   key Def.check_id                                          as CheckId,
+      // Blank = the area-level slice (verdict counters and exceptions without company code)
+  key Slice.CompanyCode,
       cast( 'CD_HCK' as abap.char( 16 ) )                       as PaymentEngineArea,
       Def.description                                       as CheckText,
       Def.category                                          as Category,
@@ -72,20 +79,26 @@ define root view entity ZR_CD_HckCheck
       AsOf.IsStale                                          as MonitorIsStale,
       AsOf.StaleCriticality                                 as MonitorCriticality,
       // ---------------------------------------------------------------- measures
-      cast( 1 as abap.int4 )                                as CheckCount,
-      cast( case Res.CheckStatus when 'RED' then 1 when 'FAILED' then 1 else 0 end as abap.int4 ) as RedCheckCount,
-      cast( case Res.CheckStatus when 'FAILED' then 1 else 0 end as abap.int4 ) as FailedCheckCount,
-      cast( case Res.CheckStatus when 'AMBER' then 1 else 0 end as abap.int4 )  as AmberCheckCount,
-      cast( case Res.CheckStatus when 'WARMUP' then 1 else 0 end as abap.int4 ) as WarmupCheckCount,
-      cast( case Res.CheckStatus when 'GREEN' then 1 else 0 end as abap.int4 )  as GreenCheckCount,
-      cast( case Res.CheckStatus when 'RED'    then 0
-                                 when 'FAILED' then 0
-                                 when 'AMBER'  then 0
-                                 when 'WARMUP' then 0
-                                 when 'GREEN'  then 0
-                                 else 1 end as abap.int4 )  as NoResultCheckCount,
-      cast( coalesce( Res.MetricCount, 0 ) as abap.int4 )   as MetricCount,
-      cast( coalesce( Res.RunFindingCount, 0 ) as abap.int4 ) as RunFindingCount,
+      // Verdict counters: area-level (a check has one verdict per run), on the area-level slice only, so a
+      // sum over the slices counts each check once; open exceptions per company code on every slice
+      cast( case Slice.CompanyCode when ' ' then 1 else 0 end as abap.int4 ) as CheckCount,
+      cast( case when Slice.CompanyCode <> ' ' then 0
+                 when Res.CheckStatus = 'RED' or Res.CheckStatus = 'FAILED' then 1
+                 else 0 end as abap.int4 )                  as RedCheckCount,
+      cast( case when Slice.CompanyCode = ' ' and Res.CheckStatus = 'FAILED' then 1 else 0 end as abap.int4 ) as FailedCheckCount,
+      cast( case when Slice.CompanyCode = ' ' and Res.CheckStatus = 'AMBER' then 1 else 0 end as abap.int4 )  as AmberCheckCount,
+      cast( case when Slice.CompanyCode = ' ' and Res.CheckStatus = 'WARMUP' then 1 else 0 end as abap.int4 ) as WarmupCheckCount,
+      cast( case when Slice.CompanyCode = ' ' and Res.CheckStatus = 'GREEN' then 1 else 0 end as abap.int4 )  as GreenCheckCount,
+      cast( case when Slice.CompanyCode <> ' '  then 0
+                 when Res.CheckStatus = 'RED'    then 0
+                 when Res.CheckStatus = 'FAILED' then 0
+                 when Res.CheckStatus = 'AMBER'  then 0
+                 when Res.CheckStatus = 'WARMUP' then 0
+                 when Res.CheckStatus = 'GREEN'  then 0
+                 else 1 end as abap.int4 )                  as NoResultCheckCount,
+      cast( case Slice.CompanyCode when ' ' then coalesce( Res.MetricCount, 0 ) else 0 end as abap.int4 ) as MetricCount,
+      // The run's findings of the check in every company code: area-level slice only, not exposed in ZC_CD_HckCheck
+      cast( case Slice.CompanyCode when ' ' then coalesce( Res.RunFindingCount, 0 ) else 0 end as abap.int4 ) as RunFindingCount,
       cast( coalesce( OpenExc.OpenFindingCount, 0 ) as abap.int4 ) as OpenFindingCount,
       cast( coalesce( OpenExc.OpenRedCount, 0 ) as abap.int4 )     as OpenRedCount,
       cast( coalesce( OpenExc.OpenAmberCount, 0 ) as abap.int4 )   as OpenAmberCount,

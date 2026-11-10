@@ -9,20 +9,32 @@
 //                   2026-11-10 | Control center: daily controls (area of the control), payment lifecycle and its
 //                                payments (CD_OPS + company code of the base row, as ZC_CD_TRXDASH), variances
 //                                (CD_HCK).
-// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58).
+//                   2026-11-10 | Company-code isolation (ops-framework/docs/auth_zca_ops.md section 3c): critical
+//                                exceptions (company code of the finding), daily controls (slice of the review per
+//                                company code - the KPI cards sum only slices the user may read) and variances
+//                                (company code of the reconciliation group): area authorised AND ( company code blank
+//                                OR ( area, company code ) authorised ). Freshness is area-level (runs only).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); BUKRS not mapped in the first condition = not checked;
+//             IS INITIAL in an access condition (fallback: CompanyCode = ' ').
 @EndUserText.label: 'Production support overview - read access'
 @MappingRole: true
 define role ZC_CD_OpsOverview {
   grant select on ZC_CD_OpsFreshness
     where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
   grant select on ZC_CD_OpsCritExc
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_OpsCtlDay
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
   grant select on ZC_CD_PayLifecycle
     where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_PayOfDay
     where ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' );
   grant select on ZC_CD_OpsVariance
-    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' );
+    where ( PaymentEngineArea ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( PaymentEngineArea, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
 }

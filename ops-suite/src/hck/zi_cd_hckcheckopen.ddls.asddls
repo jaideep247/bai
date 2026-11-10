@@ -2,6 +2,7 @@
 // Purpose: Open morning report exceptions (O open, A assigned) per check id, whatever run raised
 //          them: count, B / E and W counts, oldest due date. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Per check and company code of the exceptions (company-code isolation).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK open exceptions per check'
@@ -12,6 +13,7 @@ define view entity ZI_CD_HckCheckOpen
   as select from ZI_CD_HckFinding
 {
   key CheckId,
+  key CompanyCode,
       cast( count( * ) as abap.int4 )                                                     as OpenFindingCount,
       cast( sum( case when SeverityRank >= 3 then 1 else 0 end ) as abap.int4 )           as OpenRedCount,
       cast( sum( case when SeverityRank = 2 then 1 else 0 end ) as abap.int4 )            as OpenAmberCount,
@@ -19,4 +21,5 @@ define view entity ZI_CD_HckCheckOpen
 }
 where IsOpen = 'X'
 group by
-  CheckId
+  CheckId,
+  CompanyCode

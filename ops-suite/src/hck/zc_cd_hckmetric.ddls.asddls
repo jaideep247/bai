@@ -4,6 +4,7 @@
 //          drill-down to the open findings of the check.
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the metric (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard - metric'
 @Metadata.allowExtensions: true
@@ -17,6 +18,7 @@ define root view entity ZC_CD_HckMetric
   key Dimension1,
   key Dimension2,
       PaymentEngineArea,
+      CompanyCode,
       CheckText,
       Category,
       MetricKind,

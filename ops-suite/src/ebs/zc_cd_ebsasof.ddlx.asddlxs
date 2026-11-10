@@ -29,9 +29,6 @@ annotate entity ZC_CD_EbsAsOf with
   @EndUserText.label: 'Lines validated by the run'
   @UI.identification: [ { position: 60 } ]
   RunLineCount;
-  @EndUserText.label: 'Findings of the run'
-  @UI.identification: [ { position: 70 } ]
-  RunFindingCount;
   @EndUserText.label: 'Age (minutes)'
   @UI.lineItem: [ { position: 20, importance: #HIGH, criticality: 'StaleCriticality' } ]
   @UI.identification: [ { position: 80, criticality: 'StaleCriticality' } ]

@@ -16,6 +16,10 @@ define table zcd_hck_metric {
   kind          : abap.char(1);
   // rates: denominator the rate was computed over; weighted rate = SUM(value*weight)/SUM(weight)
   weight        : abap.dec(31,4);
+  // Company code the metric is about (2026-11-10, company-code isolation): blank = not company-specific;
+  // set by the check where a dimension is a company code (generic aggregate grouped by BUKRS,
+  // reconciliation set) - the metric history is read with the company-code rule of the DCLs
+  bukrs         : bukrs;
 }
 // Secondary index HST: baseline history; TIM: dashboard trend, archiving / deletion
 // @index HST: MANDT, CHECK_ID, METRIC, DIM1, DIM2, MEASURED_AT

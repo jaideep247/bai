@@ -9,7 +9,133 @@
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Key pattern as PCRE: whole key, any case, invalid pattern reported and not applied,
 *&              request with an invalid pattern refused (418).
+*& 2026-11-10 | Company-code isolation: create / end / approve of another company code's suppression refused (840),
+*&            | area-level allowed with the area; a suppression of a company code matches that company code's findings.
 *&---------------------------------------------------------------------*
+"! Authorisations of the simulated user: ZCA_OPS rows (activity, area, company code); without a company code
+"! the check is area-wide (BUKRS DUMMY = any row of the area)
+CLASS ltd_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_auth PARTIALLY IMPLEMENTED.
+    TYPES:
+      BEGIN OF ty_grant,
+        activity TYPE zif_ca_ops_auth=>ty_activity,
+        area     TYPE zif_ca_ops_types=>ty_area,
+        bukrs    TYPE bukrs,
+      END OF ty_grant.
+    DATA mt_grants TYPE STANDARD TABLE OF ty_grant WITH EMPTY KEY.
+ENDCLASS.
+
+
+CLASS ltd_auth IMPLEMENTATION.
+  METHOD zif_ca_ops_auth~is_allowed.
+    rv_allowed = xsdbool( line_exists( mt_grants[ activity = iv_activity area = iv_area ] ) ).
+    IF iv_bukrs IS NOT INITIAL.
+      rv_allowed = xsdbool( line_exists( mt_grants[ activity = iv_activity area = iv_area bukrs = iv_bukrs ] ) ).
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! Company-code isolation of the suppression app: user A has ZCA_OPS 02 for CD_HCK with BUKRS US01 only
+CLASS ltc_company_code DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc,
+        own   TYPE bukrs VALUE 'US01',
+        other TYPE bukrs VALUE 'US02',
+      END OF gc.
+    DATA mo_auth TYPE REF TO ltd_auth.
+
+    METHODS setup.
+    METHODS own_company_code_allowed   FOR TESTING.
+    METHODS other_company_code_refused FOR TESTING.
+    METHODS area_level_allowed         FOR TESTING.
+    METHODS finding_company_code_match FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_company_code IMPLEMENTATION.
+
+  METHOD setup.
+    mo_auth = NEW #( ).
+    mo_auth->mt_grants = VALUE #( ( activity = zif_ca_ops_auth=>gc_activity-change
+                                    area     = zif_cd_ops_types=>gc_pe_area-health_check
+                                    bukrs    = gc-own ) ).
+  ENDMETHOD.
+
+
+  " Rule: a suppression of the user's company code may be created, ended or approved
+  METHOD own_company_code_allowed.
+    TRY.
+        cl_abap_unit_assert=>assert_true(
+          act = zcl_cd_hck_suppression=>check_company_code( io_auth     = mo_auth
+                                                            iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                            iv_bukrs    = gc-own )-allowed
+          msg = 'Own company code must be allowed' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a suppression of another company code is refused with 840 - it would hide that company's findings
+  METHOD other_company_code_refused.
+    TRY.
+        DATA(ls_decision) = zcl_cd_hck_suppression=>check_company_code( io_auth     = mo_auth
+                                                                        iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                                        iv_bukrs    = gc-other ).
+        cl_abap_unit_assert=>assert_false( act = ls_decision-allowed msg = 'Another company code must be refused' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_decision-msgno exp = zif_cd_hck_suppress_types=>gc_msg-company_denied
+                                            msg = 'Message 840' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_decision-v1 exp = CONV symsgv( gc-other ) msg = 'Names the company code' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: an area-level suppression (blank company code) needs the area authorisation only
+  METHOD area_level_allowed.
+    TRY.
+        cl_abap_unit_assert=>assert_true(
+          act = zcl_cd_hck_suppression=>check_company_code( io_auth     = mo_auth
+                                                            iv_activity = zif_ca_ops_auth=>gc_activity-change
+                                                            iv_bukrs    = space )-allowed
+          msg = 'Area-level suppression allowed with the area' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Rule: a suppression of a company code matches a finding of that company code (its BUKRS), not another's
+  METHOD finding_company_code_match.
+    DATA lt_findings TYPE zif_ca_ops_types=>tt_finding.
+    TRY.
+        INSERT VALUE #( object_key = 'B_CYCLE/LAG/X' group2 = 'B_CYCLE' severity = zif_ca_ops_types=>gc_severity-error
+                        company_code = gc-own ) INTO TABLE lt_findings.
+        INSERT VALUE #( object_key = 'B_CYCLE/LAG/Y' group2 = 'B_CYCLE' severity = zif_ca_ops_types=>gc_severity-error
+                        company_code = gc-other ) INTO TABLE lt_findings.
+        DATA(lt_result) = zcl_cd_hck_suppression=>apply(
+          it_findings     = lt_findings
+          it_suppressions = VALUE #( ( check_id = 'B_CYCLE' bukrs = gc-own valid_from = '20261101' valid_to = '20261130'
+                                       status = zif_cd_hck_suppress_types=>gc_status-active ) )
+          iv_today        = '20261110' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_result[ 1 ]-severity exp = zif_ca_ops_types=>gc_severity-info
+                                            msg = 'Finding of US01 suppressed' ).
+        cl_abap_unit_assert=>assert_equals( act = lt_result[ 2 ]-severity exp = zif_ca_ops_types=>gc_severity-error
+                                            msg = 'Finding of US02 untouched' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS ltc_suppression DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 

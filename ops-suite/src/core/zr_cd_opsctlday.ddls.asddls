@@ -6,6 +6,8 @@
 //          and overdue review) with the counters the KPI cards sum. One truth: the review app ZUI_CA_OPS_REV
 //          and these cards read the same view. Read-only.
 // Modification log: 2026-11-10 | Initial version (control center: daily controls on the overview page).
+//                   2026-11-10 | Company-code isolation: key CompanyCode - one row per slice of the framework's review (ZR_CA_OpsCtlReview);
+//                                the cards sum the slices the user may read (DCL ZC_CD_OPSOVERVIEW on the slice's company code).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Production support - daily controls'
 @Metadata.ignorePropagatedAnnotations: true
@@ -17,6 +19,8 @@ define root view entity ZR_CD_OpsCtlDay
   key Ctl.Area                                              as PaymentEngineArea,
   key Ctl.ControlId,
   key Ctl.BusinessDate,
+      // Company code of the slice (blank = area-level; company-code isolation of the daily controls)
+  key Ctl.CompanyCode,
       Ctl.ControlName,
       Ctl.Category,
       Ctl.Owner,

@@ -16,6 +16,7 @@
 *&            | ZCD_OPS_TABWL (was ZCD_HCK_TABWL, ZCD_HCK_DRIFT).
 *& 2026-11-08 | Table consolidation: EXPECTED_GROUPS / GROUP_LIST_VALID - the expected groups are a comma
 *&            | list of ZCD_HCK_AGG (was ZCD_HCK_AGGGRP), parsed once per aggregate, validated on save.
+*& 2026-11-10 | Company-code isolation: a metric grouped by BUKRS (GC_COMPANY_CODE_FIELD) carries its company code.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - generic aggregate builder (pure)</p>
 "! Security: table must be approved (ZCD_OPS_TABWL HCK / READ); every field name
@@ -240,10 +241,14 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    " Grouped by the company code field: the group value is the company code of the metric (and its findings)
+    DATA(lv_by_company) = xsdbool( to_upper( condense( is_def-group_field ) ) = zif_cd_hck_types=>gc_company_code_field ).
     LOOP AT it_rows ASSIGNING FIELD-SYMBOL(<ls_row>).
       ls_metric-dim1  = COND #( WHEN is_def-group_field IS INITIAL OR <ls_row>-group_value IS INITIAL
                                 THEN zif_cd_hck_types=>gc_default_key
                                 ELSE <ls_row>-group_value ).
+      ls_metric-company_code = COND #( WHEN lv_by_company = abap_true AND <ls_row>-group_value IS NOT INITIAL
+                                       THEN <ls_row>-group_value ).
       ls_metric-value = COND #( WHEN to_upper( is_def-agg_func ) = zif_cd_hck_types=>gc_agg_func-sum
                                 THEN <ls_row>-total
                                 ELSE <ls_row>-row_count ).
@@ -260,6 +265,7 @@ CLASS zcl_cd_hck_agg_query IMPLEMENTATION.
     ENDLOOP.
     LOOP AT it_expected ASSIGNING FIELD-SYMBOL(<lv_expected>).
       ls_metric-dim1 = <lv_expected>.
+      ls_metric-company_code = COND #( WHEN lv_by_company = abap_true THEN <lv_expected> ).
       INSERT ls_metric-dim1 INTO TABLE lt_measured.
       IF sy-subrc = 0.
         INSERT ls_metric INTO TABLE rt_metrics.

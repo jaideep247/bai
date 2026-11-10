@@ -43,6 +43,10 @@ annotate entity ZC_CD_HckMetric with
   Dimension2;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 5, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 5 } ]
+  CompanyCode;
   @EndUserText.label: 'Check text'
   @UI.identification: [ { position: 50 } ]
   CheckText;

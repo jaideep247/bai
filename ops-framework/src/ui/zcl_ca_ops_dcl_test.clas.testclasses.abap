@@ -163,8 +163,9 @@ CLASS ltc_review IMPLEMENTATION.
 
   " Rule: the counters a card sums for user A never include the slice of ZT02
   METHOD user_a_sees_own_slices.
-    SELECT SUM( controlcount ) AS controls, SUM( actionrequiredcount ) AS actions, SUM( openexceptions ) AS open
+    SELECT SINGLE SUM( controlcount ) AS controls, SUM( actionrequiredcount ) AS actions, SUM( openexceptions ) AS open
       FROM zc_ca_opsctlreview INTO @DATA(ls_sum).
+    cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The sum must be read' ).
     cl_abap_unit_assert=>assert_equals( act = ls_sum-controls exp = 2 msg = 'Area-level and ZT01 slice' ).
     cl_abap_unit_assert=>assert_equals( act = ls_sum-actions exp = 0 msg = 'No action required of ZT02' ).
     cl_abap_unit_assert=>assert_equals( act = ls_sum-open exp = 0 msg = 'No open exception of ZT02' ).

@@ -14,6 +14,8 @@ annotate entity ZC_CD_EbsProblem with
   FindingNo;
   @UI.hidden: true
   PaymentEngineArea;
+  @EndUserText.label: 'Company code'
+  CompanyCode;
   @EndUserText.label: 'Object type'
   ObjectType;
   @EndUserText.label: 'Statement / line'

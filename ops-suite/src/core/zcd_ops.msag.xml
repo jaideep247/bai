@@ -3146,6 +3146,12 @@
      <MSGNR>839</MSGNR>
      <TEXT>Health check &amp;1 (category &amp;2, priority &amp;3): &amp;4</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>840</MSGNR>
+     <TEXT>No authorisation for company code &amp;1 (ZCA_OPS, area CD_HCK)</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

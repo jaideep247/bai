@@ -31,6 +31,10 @@ annotate entity ZC_CD_OpsCtlDay with
   @EndUserText.label: 'Area'
   @UI.selectionField: [ { position: 30 } ]
   PaymentEngineArea;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 15, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 35 } ]
+  CompanyCode;
   @EndUserText.label: 'Control ID'
   ControlId;
   @EndUserText.label: 'Business date'

@@ -3,6 +3,7 @@
 //          run (scorecard trend), drill-down to the findings of the run.
 //          Read access: DCL ZC_CD_HCKDASH (ZCD_OPS, ZCA_PARAR = HCK, ACTVT 03). Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the run slice (company-code isolation).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'HCK health check dashboard - run'
 @Metadata.allowExtensions: true
@@ -11,6 +12,7 @@ define root view entity ZC_CD_HckRun
   as projection on ZR_CD_HckRun
 {
   key RunId,
+  key CompanyCode,
       PaymentEngineArea,
       RunVariant,
       StartedAt,

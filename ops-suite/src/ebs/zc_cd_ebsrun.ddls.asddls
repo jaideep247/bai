@@ -12,6 +12,7 @@ define root view entity ZC_CD_EbsRun
   as projection on ZR_CD_EbsRun
 {
   key RunId,
+  key CompanyCode,
       PaymentEngineArea,
       RunVariant,
       StartedAt,

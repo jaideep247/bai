@@ -4,6 +4,8 @@
 //          statements, duplicates, unmapped bank transaction codes, statements and lines with
 //          findings. Information findings are counted separately (never a problem). Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-10 | Per run and company code of the findings (company-code isolation: the counts of
+//                                one company code are a row of their own, never added into another's).
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS findings per run'
@@ -14,6 +16,7 @@ define view entity ZI_CD_EbsRunFind
   as select from ZI_CD_EbsFinding
 {
   key RunId,
+  key CompanyCode,
       cast( count( * ) as abap.int4 )                                                     as FindingCount,
       cast( sum( case Severity when 'B' then 1 else 0 end ) as abap.int4 )                as BlockFindingCount,
       cast( sum( case Severity when 'E' then 1 else 0 end ) as abap.int4 )                as ErrorFindingCount,
@@ -30,4 +33,5 @@ define view entity ZI_CD_EbsRunFind
             - max( case LineObjectKey when ' ' then 1 else 0 end ) as abap.int4 )          as LinesWithFindings
 }
 group by
-  RunId
+  RunId,
+  CompanyCode

@@ -8,6 +8,8 @@ annotate entity ZC_CD_HckKpi with
   @UI.hidden: true
   PaymentEngineArea;
   @UI.hidden: true
+  CompanyCode;
+  @UI.hidden: true
   RunId;
   @EndUserText.label: 'Report variant'
   RunVariant;

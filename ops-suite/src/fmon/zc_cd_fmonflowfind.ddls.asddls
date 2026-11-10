@@ -3,6 +3,7 @@
 //          dashboard and source of the "missing files" tile, service ZUI_CD_FMON_FLOW).
 //          Read access: DCL ZC_CD_FMONFLOW. Read-only - exceptions are worked in ZUI_CD_OPS_EXC_O4.
 // Modification log: 2026-11-06 | Initial version (FMON file monitoring dashboard).
+//                   2026-11-10 | Company code of the finding (company-code isolation, DCL ZC_CD_FMONFLOW).
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'FMON file monitoring - open exception'
 @Metadata.allowExtensions: true
@@ -13,6 +14,7 @@ define root view entity ZC_CD_FmonFlowFind
   key RunId,
   key FindingNo,
       PaymentEngineArea,
+      CompanyCode,
       FileIdHex,
       ObjectKey,
       IfaceId,

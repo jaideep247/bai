@@ -3,6 +3,7 @@
 //          overview page list card): active checks that are RED or AMBER in the last completed
 //          morning report run, red first, with category, priority and open exceptions. Read-only.
 // Modification log: 2026-11-06 | Initial version (health check dashboard).
+//                   2026-11-10 | Company code of the check slice (company-code isolation).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'HCK health check dashboard - red checks'
 @Metadata.ignorePropagatedAnnotations: true
@@ -11,6 +12,7 @@ define root view entity ZR_CD_HckRed
   as select from ZR_CD_HckCheck
 {
   key CheckId,
+  key CompanyCode,
       PaymentEngineArea,
       CheckText,
       Category,

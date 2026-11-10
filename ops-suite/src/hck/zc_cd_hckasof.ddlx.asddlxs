@@ -43,9 +43,6 @@ annotate entity ZC_CD_HckAsOf with
   @EndUserText.label: 'Checks in baseline warm-up'
   @UI.identification: [ { position: 100 } ]
   WarmupCheckCount;
-  @EndUserText.label: 'Findings of the run'
-  @UI.identification: [ { position: 110 } ]
-  RunFindingCount;
   @EndUserText.label: 'Health score and critical / high counts'
   @UI.identification: [ { position: 120 } ]
   RunMessage;

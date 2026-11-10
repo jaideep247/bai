@@ -11,6 +11,7 @@ define root view entity ZC_CD_EbsKpi
   as projection on ZR_CD_EbsKpi
 {
   key RunDate,
+  key CompanyCode,
       PaymentEngineArea,
       RunId,
       RunVariant,

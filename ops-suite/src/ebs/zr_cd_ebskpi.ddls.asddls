@@ -7,6 +7,8 @@
 //          as-of run. A day without a completed run has no row: the as-of entity still shows the
 //          age. Read-only.
 // Modification log: 2026-11-06 | Initial version (EBS validation dashboard).
+//                   2026-11-10 | Company-code isolation: one row per run date and slice of the run (key CompanyCode,
+//                                ZR_CD_EbsRun); counters of the run and of the day on the area-level slice only.
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'EBS validation dashboard - KPI per day'
 @Metadata.ignorePropagatedAnnotations: true
@@ -19,6 +21,7 @@ define root view entity ZR_CD_EbsKpi
     cross join   ZR_CD_EbsAsOf   as AsOf
 {
   key Day.RunDate,
+  key Run.CompanyCode,
       Run.PaymentEngineArea,
       Run.RunId,
       Run.RunVariant,
@@ -28,7 +31,7 @@ define root view entity ZR_CD_EbsKpi
            then cast( 'X' as abap_boolean )
            else cast( ' ' as abap_boolean ) end             as IsToday,
       Run.IsAsOfRun                                         as IsLatest,
-      Day.CompletedRunCount,
+      cast( case Run.CompanyCode when ' ' then Day.CompletedRunCount else 0 end as abap.int4 ) as CompletedRunCount,
       AsOf.AsOfAt,
       AsOf.AgeMinutes                                       as MonitorAgeMinutes,
       AsOf.IsStale                                          as MonitorIsStale,
