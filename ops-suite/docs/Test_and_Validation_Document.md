@@ -282,7 +282,23 @@ ABAP Unit: `ZCL_CD_OPS_PAY_OUTCOME` (16 tests on the shared fixtures with the de
 
 ### 6.12 Production-support overview page (`ZUI_CD_OPS_OVERVIEW_O4`, `Dashboard_Production_Support.md`)
 
-ABAP Unit: `ZCL_CD_OPS_OVW_CDS_TEST` (5 CDS tests: one freshness row per monitor, stale by the area's threshold, open B / E exceptions only, overdue days, hidden bank-file message). QA1: **OVP-01 … OVP-08** (doc §7).
+ABAP Unit: `ZCL_CD_OPS_OVW_CDS_TEST` (10 CDS tests: one freshness row per monitor, stale by the area's threshold, open B / E exceptions only, overdue days, hidden bank-file message; control center 2026-11-10: counters of the daily controls, newest non-proposal run per payment document, lifecycle stages from configuration, latest variance beyond tolerance with expected / actual, variance disposition from the exception workflow). QA1: **OVP-01 … OVP-15** (doc §7).
+
+**Control center - daily control review (framework `ZUI_CA_OPS_REV`, 2026-11-10).** ABAP Unit in ZCA_OPS: `ZCL_CA_OPS_REVIEW_POLICY` (11), `ZCL_CA_OPS_REVIEW_DAO` (3), `ZCL_CA_OPS_CTL_CDS_TEST` (3), `ZCL_CA_OPS_CFG_CHECKS` `ltc_control_check` (6), `ZCL_CA_OPS_EXC_POLICY` classification (2), `ZCL_CA_OPS_PURGE_DAO` `old_review_is_deleted`. QA1:
+
+| ID | Case | Expected | Result |
+|---|---|---|---|
+| CTL-01 | Control with an open E finding today | Status *Action required*, exceptions = open B / E / W of its checks | pending |
+| CTL-02 | Health check red at 07:00, green in the 09:00 rerun | Status *Healthy* after 09:00 (07:00 exception resolved by the rerun) | pending |
+| CTL-03 | *Mark reviewed* on *Action required* without next action | Refused 076; with observation and next action: one `ZCA_OPS_REVIEW` row, checked by = user, evidence = latest run | pending |
+| CTL-04 | Reviewer enters *Healthy* for a *Watch* control without observation | Refused 077; with observation saved, result H, status at sign-off W | pending |
+| CTL-05 | New W finding after the sign-off | *Awaiting review* again; signing off again replaces the row of the date | pending |
+| CTL-06 | Two reviewers sign off the same control and date in parallel | One saves; the other gets 079 or HTTP 412, refreshes and sees the first sign-off | pending |
+| CTL-07 | 09:15 local, control with cut-off 08:30 not signed off | *Review overdue*; tile *Review overdue* counts it | pending |
+| CTL-08 | ST05 / PlanViz of the review list and the control cards | Runs by STARTED_AT, findings by RUN_ID, open exceptions by index OPN; no scan of ZCA_OPS_FINDING | pending |
+| CTL-09 | Control register: unknown owner, team NIGHT, link without http | Refused on save (437, 438, 439) | pending |
+| CTL-10 | Display role (03 only) | Review list visible, *Mark reviewed* not allowed | pending |
+| CTL-11 | *Classify* a RECON3 break as TIMING, next morning report re-raises it | Reason code kept (carry-forward); variance disposition TIMING | pending |
 
 ### 6.13 Patterns — PCRE, complete value (`ZCD_OPS_PATTERN_CHECK`, `ZCD_OPS_PATTERN_MIGRATE`)
 
@@ -303,7 +319,7 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 
 | ID | Scenario | Setup | Expected | Result |
 |---|---|---|---|---|
-| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 145 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas + CA_OPS, 140 + 15 framework definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
 | PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |
