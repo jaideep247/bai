@@ -30,6 +30,7 @@ Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any cha
 | Authorisation (SU21 / SU20) | object `ZCA_OPS` | object class `ZCA`, object `ZCA_PARAM`, field `ZCA_PARAR` |
 | Message classes (SE91) | `ZCA_OPS` | `ZCA_PARAM` |
 | Application log (SLG0) | object `ZCA_OPS`, sub-object `ALERT` | - |
+| E-mail templates (SMTG) | `ZCA_OPS_ALERT_DEFAULT` (created in DV1 from `templates/`, section 4a) | - |
 | Roles (PFCG, proposal) | `Z_CA_OPS_*` | `Z_CA_PARAM_*` |
 
 The complete list of each component is its `src/` folder (one file per object); a clash on any single
