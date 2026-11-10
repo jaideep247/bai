@@ -7,6 +7,9 @@
 // 2026-11-10: control center cards - business date as global filter field (BusinessDate; default: the
 // current business date, IsCurrentDay = X, today in CONTROL_TIME_ZONE); the sign-off is the framework's
 // review app ZUI_CA_OPS_REV.
+// 2026-11-10: business processes of the framework's check registry (process onboarding) - KPI card "Business
+// processes" and list card "Process checks - attention" on the framework's area dashboard projection (same CDS,
+// same DCL ZC_CA_OPSCHECKSTATUS; card annotations in its metadata extension); opens app ZUI_CA_OPS_DASH.
 define service ZUI_CD_OPS_OVERVIEW {
   // Cross-area cards
   expose ZC_CD_OpsCritExc   as CriticalException;
@@ -30,4 +33,6 @@ define service ZUI_CD_OPS_OVERVIEW {
   expose ZC_CD_PayLifecycle  as PaymentLifecycle;
   expose ZC_CD_PayOfDay      as PaymentOfDay;
   expose ZC_CD_OpsVariance   as ReconVariance;
+  // Business processes (process onboarding, 2026-11-10): registered checks, flagged, stale, needs attention
+  expose ZC_CA_OpsCheckStatus as ProcessCheck;
 }

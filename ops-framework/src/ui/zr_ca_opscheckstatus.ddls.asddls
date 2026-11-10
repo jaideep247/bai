@@ -9,6 +9,9 @@
 //          only, so a sum over the slices never mixes company codes (docs/auth_zca_ops.md section 3c).
 //          Nothing stored, read-only (no behaviour definition).
 // Modification log: 2026-11-10 | Initial version (process onboarding: area dashboard and freshness).
+//                   2026-11-10 | Overview card counters: CheckCount (one per registered check, area-level slice
+//                              | only), StaleCount, IsAttention (open exception or stale) - for a consumer's
+//                              | overview page KPI and list cards (summed after the DCL).
 // VERIFY-ADT: cross join with left outer joins, a literal in the ON condition of a left outer join, the
 //             TIMESTAMPL -> TIMESTAMP cast and tstmp_seconds_between (as the consumers' "as of" views), coalesce
 //             over a LEFT OUTER JOIN column (7.58).
@@ -82,7 +85,30 @@ define root view entity ZR_CA_OpsCheckStatus
               else 3 end as abap.int1 )                     as StaleCriticality,
       // Counters for cards (sum over the slices the user may read)
       cast( 1 as abap.int4 )                                as SliceCount,
-      cast( case when coalesce( Op.WorstRank, 0 ) > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount
+      cast( case when coalesce( Op.WorstRank, 0 ) > 0 then 1 else 0 end as abap.int4 ) as FlaggedCount,
+      // One per registered check (area-level slice only), so a company-code slice never counts a check twice
+      cast( case when Sl.CompanyCode = ' ' then 1 else 0 end as abap.int4 ) as CheckCount,
+      // Stale checks: area-level slice only (a run has no company code)
+      cast( case
+              when Sl.CompanyCode <> ' ' then 0
+              when Run.started_at is null then 1
+              when tstmp_seconds_between( cast( Run.started_at as timestamp ),
+                                          tstmp_current_utctimestamp( ), 'NULL' )
+                   > coalesce( StA.StaleAfterMinutes, StD.StaleAfterMinutes ) * 60 then 1
+              else 0 end as abap.int4 )                     as StaleCount,
+      // Needs attention: an open exception on the slice, or the area-level slice is stale
+      case
+        when coalesce( Op.WorstRank, 0 ) > 0
+          then cast( 'X' as abap_boolean )
+        when Sl.CompanyCode <> ' '
+          then cast( ' ' as abap_boolean )
+        when Run.started_at is null
+          then cast( 'X' as abap_boolean )
+        when tstmp_seconds_between( cast( Run.started_at as timestamp ),
+                                    tstmp_current_utctimestamp( ), 'NULL' )
+             > coalesce( StA.StaleAfterMinutes, StD.StaleAfterMinutes ) * 60
+          then cast( 'X' as abap_boolean )
+        else cast( ' ' as abap_boolean ) end                as IsAttention
 }
 where
   Chk.active = 'X'

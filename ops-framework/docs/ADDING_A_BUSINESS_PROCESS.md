@@ -180,7 +180,7 @@ active check of the group is `CHECKS_NOT_REGISTERED` (error).
 |---|---|
 | `ZUI_CA_OPS_EXC` | the exceptions of the process: filter area, GROUP1 = process, GROUP2 = check; assign, resolve, waive, classify |
 | `ZUI_CA_OPS_REV` | the control and its status per business date and company code, sign-off |
-| `ZUI_CA_OPS_DASH` | *Checks by area*: per check and company code the last run, run RAG, status (worst open exception), open exceptions, **stale** when no run completed or the last is older than `CHECK_STALE_MIN_<area>` (else `CHECK_STALE_MIN_DEFAULT`) minutes |
+| `ZUI_CA_OPS_DASH` | *Checks by area*: per check and company code the last run, run RAG, status (worst open exception), open exceptions, **stale** when no run completed or the last is older than `CHECK_STALE_MIN_<area>` (else `CHECK_STALE_MIN_DEFAULT`) minutes. **Overview cards** (2026-11-10): a consumer that exposes `ZC_CA_OpsCheckStatus` in its overview service gets the KPI card *Business processes* (data points `ProcessChecks`, `ChecksFlagged`, `ChecksStale`, `OpenExceptions`) and the list card *Process checks - attention* (variants `Attention`) without new CDS - a new process appears on them once its checks are active |
 | E-mail | the alert rule of the process (template of the rule / channel / default) |
 | Consumer overview pages | select from `ZR_CA_OpsCheckStatus` and `ZR_CA_OpsCtlReview` (cards) |
 

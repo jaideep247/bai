@@ -8,6 +8,12 @@ Goal (user, 2026-11-10): a new business process is added and integrated end to e
 mostly by configuration plus at most one small check class.
 
 ### Added
+- Overview cards of the area dashboard (2026-11-10): counters `CheckCount` (one per registered check, area-level
+  slice only), `StaleCount` and flag `IsAttention` (open exception or stale) on `ZR_CA_OpsCheckStatus` /
+  `ZC_CA_OpsCheckStatus` (summed by default), data points `ProcessChecks`, `ChecksFlagged`, `ChecksStale` and the
+  `Attention` / `Stale` variants in its metadata extension, so a consumer's overview page shows KPI card *Business
+  processes* and list card *Process checks - attention* by exposing the projection; CDS tests
+  `ZCL_CA_OPS_DASH_CDS_TEST` (VERIFY V57).
 - Check contract `ZIF_CA_OPS_CHECK` and the generic runner `ZCL_CA_OPS_CHECK_RUNNER` / report `ZCA_OPS_CHECK_RUN`:
   one run per area and schedule group (run variant) with authorisation 16, run lock, run header durable first,
   every active check of the registry `ZCA_OPS_CHECK` (class by name, interface checked first), GROUP1 = process

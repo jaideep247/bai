@@ -27,6 +27,8 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 | **Daily health checks** (control center) | List (table) | `ControlDay` (presentation variant `DailyChecks`) | Control, category, status (Healthy / Watch / Action required, coloured), owner + team, exceptions, awaiting review; "View all controls" | Review app (row: the control and date) |
 | **Payment lifecycle** (control center) | Analytical (bars) | `PaymentLifecycle` (chart `Lifecycle`, sorted by the configured stage order) | Tracked payments of the business date per stage (PENDING ... STOPPED, `ZCD_OPS_PAYSTAGE`; the request-status stages PENDING / SCHEDULED / SRCREJECT / SRCPOSTED inactive until the status field is named) | "View payments": `PaymentOfDay` list (payment reference → payment trace) |
 | **Attention queue** (control center) | List | `ControlDay` (selection variant `Flagged`, presentation variant `Attention`) | Controls with Action required / Watch, open exceptions, awaiting review; "Review queue" | Exceptions app filtered by the control's area; review app |
+| **Business processes** (process onboarding, 2026-11-10) | KPI | `ProcessCheck` (framework projection `ZC_CA_OpsCheckStatus`; data points `ProcessChecks` = registered checks, `ChecksFlagged` = check / company-code slices with an open exception, `ChecksStale` = no completed run within `CHECK_STALE_MIN_<area>` (else `CHECK_STALE_MIN_DEFAULT`) minutes, `OpenExceptions`) | *n registered checks - f flagged, s stale, e open exceptions* for every business process onboarded through the framework's check registry (e.g. `CD_COLL` / `BASE_REQ_LIFE` once active); empty until a process is active | Area dashboard (`ZCAOpsDashboard-display` → `ZUI_CA_OPS_DASH_O4`) |
+| **Process checks - attention** (process onboarding) | List | `ProcessCheck` (selection variant `Attention` = open exception or stale; presentation variant `Attention`: worst status, then stale, then most open exceptions; 10 rows) | Process, check, company code, status (coloured), open exceptions, stale, last run | Area dashboard (row: the check); exceptions app filtered by area |
 | Requests (after SE11) | Analytical | `PaymentRequest` of `cds/ZUI_CD_TRX_REQ` (second data source, §2; parameterised: request date window, as of) | Requested → processed → posted → paid → acknowledged → cleared; errored | Request funnel app |
 
 Global filter: none mandatory (the area entities have different dimensions); each card applies its own selection variant. The page is as fresh as its sources: three cards read monitor runs (the freshness card says how old), the transactions cards are live.
@@ -77,7 +79,7 @@ DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` on both
 
 | Page (in space `ZCD_OPS_SP_PROD_SUPPORT`, "Production Support") | Section / tiles |
 |---|---|
-| **Overview** (`ZCD_OPS_PG_OVERVIEW`) | App tile *Production support overview* (`ZCDOpsOverview-display` → OVP app `ZCD_OPS_OVW`); dynamic tiles *Stale monitors* (`MonitorFreshness/$count?$filter=IsStale eq true`), *Open critical exceptions* (`CriticalException/$count`), *Overdue critical* (`CriticalException/$count?$filter=IsOverdue eq true`) |
+| **Overview** (`ZCD_OPS_PG_OVERVIEW`) | App tile *Production support overview* (`ZCDOpsOverview-display` → OVP app `ZCD_OPS_OVW`); dynamic tiles *Stale monitors* (`MonitorFreshness/$count?$filter=IsStale eq true`), *Open critical exceptions* (`CriticalException/$count`), *Overdue critical* (`CriticalException/$count?$filter=IsOverdue eq true`), *Stale process checks* (`ProcessCheck/$count?$filter=IsStale eq true`, 2026-11-10) |
 | **File monitoring** (`ZCD_OPS_PG_FMON`) | App tile *File monitoring dashboard* (`ZCDFileFlow-analyze`); tiles of `Dashboard_File_Monitoring.md` §6 |
 | **EBS validation** (`ZCD_OPS_PG_EBS`) | App tiles *EBS validation dashboard* (`ZCDEbsValidation-analyze`, ALP on `EbsStatement`), *EBS findings* (`ZCDEbsValidation-analyzeFindings`), *EBS runs* (`ZCDEbsValidation-displayRuns`); tiles of `Dashboard_EBS_Validation.md` §5 |
 | **Health checks** (`ZCD_OPS_PG_HCK`) | App tile *Health check dashboard* (`ZCDHealthCheck-analyze`); tiles of `Dashboard_Health_Check.md` §4 |
@@ -90,13 +92,13 @@ Dynamic tile URLs: `/sap/opu/odata4/sap/<binding>/srvd/sap/<service>/0001/<Entit
 
 **Catalogs:** technical catalogs `ZCD_OPS_TC_OVW`, `ZCD_OPS_TC_FMON` (exists, step 1d.4), `ZCD_OPS_TC_EBS`, `ZCD_OPS_TC_HCK`, `ZCD_OPS_TC_TRX` (app descriptors + target mappings); business catalogs `ZCD_OPS_BC_<area>` referencing them.
 
-**Target mappings** (semantic object – action → app): `ZCDOpsOverview-display` → BSP `ZCD_OPS_OVW`; `ZCDFileFlow-analyze` → `ZCD_FMON_FLOW`; `ZCDEbsValidation-analyze` → `ZCD_EBS_DASH`; `ZCDHealthCheck-analyze` → `ZCD_HCK_DASH`; `ZCDTransaction-analyze` → `ZCD_TRX_DASH`; `ZCDPaymentRequest-analyze` → `ZCD_TRX_REQ` (after SE11); `ZCDOpsException-manage` → the owned-exceptions app; `ZCDPaymentTrace-display` → transaction for report `ZCD_OPS_PAYMENT_TRACE` (**proposed**: create the transaction, map `FinId` → `P_FIN`, `SourceSystem` → `P_SRC`, `ClearingDoc` → `P_AUGBL`).
+**Target mappings** (semantic object – action → app): `ZCDOpsOverview-display` → BSP `ZCD_OPS_OVW`; `ZCDFileFlow-analyze` → `ZCD_FMON_FLOW`; `ZCDEbsValidation-analyze` → `ZCD_EBS_DASH`; `ZCDHealthCheck-analyze` → `ZCD_HCK_DASH`; `ZCDTransaction-analyze` → `ZCD_TRX_DASH`; `ZCDPaymentRequest-analyze` → `ZCD_TRX_REQ` (after SE11); `ZCDOpsException-manage` → the owned-exceptions app; `ZCAOpsDashboard-display` → list report on `ZUI_CA_OPS_DASH_O4` (framework area dashboard, 2026-11-10); `ZCDPaymentTrace-display` → transaction for report `ZCD_OPS_PAYMENT_TRACE` (**proposed**: create the transaction, map `FinId` → `P_FIN`, `SourceSystem` → `P_SRC`, `ClearingDoc` → `P_AUGBL`).
 
 **Roles (PFCG, display only):**
 
 | Business role | Space / pages | Catalogs | `S_SERVICE` | ZCD_OPS |
 |---|---|---|---|---|
-| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4`, `ZUI_CA_OPS_REV_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCA_PARAR CD_FMON, CD_EBS, CD_HCK, CD_OPS; ACTVT 03; BUKRS own company codes (or *) |
+| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4`, `ZUI_CA_OPS_REV_O4`, `ZUI_CA_OPS_DASH_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCA_PARAR CD_FMON, CD_EBS, CD_HCK, CD_OPS (+ the area of each business process when it is activated, e.g. CD_COLL - without it the process cards stay empty for the user); ACTVT 03; BUKRS own company codes (or *) |
 | `ZCD_OPS_REVIEWER` (shift reviewers, 2026-11-10) | Daily control review page | `ZCD_OPS_BC_REVIEW` | `ZUI_CA_OPS_REV_O4` | ZCA_PARAR of the control areas; ACTVT **02** (sign-off, `ops-framework/docs/auth_zca_ops.md`) and 03 |
 | `ZCD_OPS_FMON_DISPLAY`, `ZCD_OPS_EBS_DISPLAY`, `ZCD_OPS_HCK_DISPLAY`, `ZCD_OPS_TRX_DISPLAY` | one page each + Overview | the area catalog + `ZCD_OPS_BC_OVW` | the area binding + overview binding | that area, 03 |
 
@@ -115,6 +117,7 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | `ZCD_OPS_PAYSTAGE` (+ draft `ZCD_D_PAYSTAGE`, entity `PayStage` of `ZUI_CD_OPS_CFG`) | table (C): stages of the lifecycle card |
 | `src/hck`: `ZI_CD_OpsVarBank`, `ZI_CD_OpsVarFica`, `ZI_CD_OpsVarU`, `ZR_CD_OpsVariance`, `ZC_CD_OpsVariance` (+ DDLX) | reconciliation variances |
 | `ZCL_CD_OPS_OVW_CDS_TEST` | class (test holder): `ltc_freshness` — `one_row_per_monitor_area`, `stale_by_area_threshold`; `ltc_critical` — `open_block_and_error_only`, `overdue_days_are_counted`, `bank_file_message_hidden`; 2026-11-10: `ltc_control_day` — `counters_of_the_review`; `ltc_life_run` — `newest_run_counts_once`; `ltc_lifecycle` — `stages_from_configuration`; `ltc_variance_leg` — `latest_beyond_tolerance`; `ltc_variance` — `disposition_from_exception` |
+| `ProcessCheck` = framework `ZC_CA_OpsCheckStatus` (no suite object; counters and card annotations in the framework, tested by `ZCL_CA_OPS_DASH_CDS_TEST`) | exposed entity (2026-11-10) |
 
 ## 6. VERIFY-ADT
 
@@ -127,6 +130,7 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | Navigation from a list-card row to another app by area | Card-level navigation only (owned-exceptions app) |
 | Global filter fields `IsCurrentDay` / `BusinessDate` with `@Consumption.filter.defaultValue` on OVP V4 (control center) | Manifest `filterSettings` default; else the user selects the date |
 | UNION ALL of aggregating selects (`ZI_CD_PayLifeCntU`), OR / comparisons in left outer join ON conditions (`ZI_CD_PayLifeRun`, `ZI_CD_OpsVar*`), concat of CHAR fields for the finding key | Three views; key built in ABAP is not an option (CDS only) - split per leg already done |
+| Projection of the framework (`ZC_CA_OpsCheckStatus`) exposed in the overview service with its own metadata extension and DCL; `@Aggregation.default: #SUM` on a `transactional_query` projection for the KPI sums (cards *Business processes*, *Process checks - attention*) | Consumer projection `ZC_CD_OpsProcCheck` on `ZR_CA_OpsCheckStatus` with copied card annotations and DCL |
 | KPI data point with `targetValueElement` (checks reviewed n / m) | Two data points (reviewed, controls) |
 
 ## 7. QA1 cases
@@ -148,3 +152,4 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | OVP-13 | RECON3 break on a group-day, then *Classify* TIMING in the exceptions app | *Open variances* −1, *Classified as timing* +1 |
 | OVP-14 | Peak day (2 M payments) - payment lifecycle card and *View payments* | Counts equal SE16H on DPAYH (LAUFD, XVORL blank, newest run per DOC1R); response < 5 s; PlanViz recorded (§11 of `Performance_Review.md`) |
 | OVP-15 | User with CD_OPS / BUKRS US01 only | Lifecycle and payments of US01 only |
+| OVP-16 | One business process active (test area), one check with an open error in company code 1000, one check whose schedule group has not run within its threshold | *Business processes*: registered checks = active checks (not doubled by the 1000 slice), flagged 1, stale 1; *Process checks - attention* lists both, error first; a fresh check without exceptions is not listed; a user of 2000 sees the stale check but not the 1000 slice; tap opens the area dashboard |

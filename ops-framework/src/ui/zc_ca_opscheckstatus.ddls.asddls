@@ -1,9 +1,11 @@
 // Artifact: zc_ca_opscheckstatus.ddls.asddls
 // Purpose: Consumption view of the area dashboard (service ZUI_CA_OPS_DASH, list report "Checks by area"):
 //          per area, registered check and company-code slice - process, last run, status, open exceptions,
-//          freshness. Read access: DCL ZC_CA_OPSCHECKSTATUS (ZCA_OPS 03 for the area and, for a company-code
+//          freshness. Also exposed by a consumer's overview page (KPI card "Business processes", list card
+//          "Process checks - attention"; annotations in the metadata extension). Read access: DCL ZC_CA_OPSCHECKSTATUS (ZCA_OPS 03 for the area and, for a company-code
 //          slice, its BUKRS). Read-only.
 // Modification log: 2026-11-10 | Initial version (process onboarding: area dashboard and freshness).
+//                   2026-11-10 | Overview card counters (CheckCount, StaleCount, IsAttention), summed by default.
 @AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Area dashboard: status per check'
 @Metadata.allowExtensions: true
@@ -29,6 +31,7 @@ define root view entity ZC_CA_OpsCheckStatus
       LastRunStatus,
       LastRunRag,
       RunCriticality,
+      @Aggregation.default: #SUM
       OpenExceptions,
       Status,
       StatusCriticality,
@@ -36,6 +39,13 @@ define root view entity ZC_CA_OpsCheckStatus
       AgeMinutes,
       IsStale,
       StaleCriticality,
+      @Aggregation.default: #SUM
       SliceCount,
-      FlaggedCount
+      @Aggregation.default: #SUM
+      FlaggedCount,
+      @Aggregation.default: #SUM
+      CheckCount,
+      @Aggregation.default: #SUM
+      StaleCount,
+      IsAttention
 }
