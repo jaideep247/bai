@@ -27,6 +27,7 @@
 *& 2026-11-08 | READ_LEGACY: optional keyset paging (rows after date, time, key in that order -
 *&            | ZCL_CD_FMON_QUERY=>SEEK_CONDITION) for the watermark read of the payment request log.
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
+*& 2026-11-10 | get_payrun_totals: DPAYH grouped by LAUFD, LAUFI, HBKID, currency (missing bank ACK alert).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (all FMON SQL)</p>
 "! Legacy tables (ZCDT_REGUT, ZCD_ACH_ACK, ZCD_WIRE_ACK, ZCD_CHECK_HIST,
@@ -217,6 +218,44 @@ CLASS zcl_cd_fmon_dao IMPLEMENTATION.
         AND f~business_date >= @iv_since
       INTO CORRESPONDING FIELDS OF TABLE @rt_acks.
     SORT rt_acks BY file_id ack_at.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_fmon_dao~get_payrun_totals.
+    DATA lr_laufd TYPE RANGE OF d.
+    DATA lr_laufi TYPE RANGE OF zif_cd_fmon_types=>ty_payrun_key-laufi.
+
+    IF it_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+    LOOP AT it_keys ASSIGNING FIELD-SYMBOL(<ls_key>).
+      IF NOT line_exists( lr_laufd[ low = <ls_key>-laufd ] ).
+        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+                        low = <ls_key>-laufd ) INTO TABLE lr_laufd.
+      ENDIF.
+      IF NOT line_exists( lr_laufi[ low = <ls_key>-laufi ] ).
+        INSERT VALUE #( sign = zif_cd_ops_types=>gc_range-sign_include option = zif_cd_ops_types=>gc_range-option_equal
+                        low = <ls_key>-laufi ) INTO TABLE lr_laufi.
+      ENDIF.
+    ENDLOOP.
+    " One grouped read for every late file of the run (set-based, never per file); the run date
+    " and ID bound the read, the house bank is matched below.
+    "VERIFY-DDIC: DPAYH-HBKID, RWBTR (amount), WAERS (currency) - VERIFY-SE11 before activation
+    SELECT laufd, laufi, hbkid, waers AS currency, COUNT(*) AS payments, SUM( rwbtr ) AS amount
+      FROM dpayh
+      WHERE laufd IN @lr_laufd
+        AND laufi IN @lr_laufi
+      GROUP BY laufd, laufi, hbkid, waers
+      ORDER BY laufd, laufi, hbkid, waers
+      INTO CORRESPONDING FIELDS OF TABLE @rt_totals.
+    " only the run / house bank pairs asked for (a key without house bank takes every house bank)
+    DELETE rt_totals WHERE payments <= 0.
+    LOOP AT rt_totals ASSIGNING FIELD-SYMBOL(<ls_total>).
+      IF NOT line_exists( it_keys[ laufd = <ls_total>-laufd laufi = <ls_total>-laufi hbkid = <ls_total>-hbkid ] )
+         AND NOT line_exists( it_keys[ laufd = <ls_total>-laufd laufi = <ls_total>-laufi hbkid = space ] ).
+        DELETE rt_totals.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 

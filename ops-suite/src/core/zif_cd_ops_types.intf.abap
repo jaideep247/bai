@@ -35,6 +35,8 @@
 *&            | driver), date kinds WORKLIST / RUN / VALUE / DUE (POSTING retired).
 *& 2026-11-10 | Error class (GC_ERROR_CLASS, rules GC_ERROR_RULE; TY_FINDING-ERROR_CLASS), job link of a
 *&            | run (TY_RUN-JOBNAME / JOBCOUNT / SYSID), TABWL purpose LOOKUP (EBS R21), messages 802-805.
+*& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): labels of the detail lines GC_ACK_MSG
+*&            | (messages 816-837), label separator, alert subject and table.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -474,6 +476,40 @@ INTERFACE zif_cd_ops_types
       check_code  TYPE ty_check_code,
     END OF ty_repeat_key.
   TYPES tt_repeat_key TYPE HASHED TABLE OF ty_repeat_key WITH UNIQUE KEY object_type object_key check_code.
+
+  "! Missing or late bank ACK (user request 2026-11-10): file monitoring writes the evidence of
+  "! the file(s) into ZCD_OPS_FINDING-DETAILS as labelled lines ("<label>: <value>", one block per
+  "! file, blocks separated by an empty line, the marker line first); the alert policy reads the
+  "! same labels back for the ACK table of the e-mail. Labels are ZCD_OPS messages (no variables).
+  CONSTANTS:
+    BEGIN OF gc_ack_msg,
+      marker        TYPE zif_cd_ops_types=>ty_msgno VALUE '837',
+      house_bank    TYPE zif_cd_ops_types=>ty_msgno VALUE '816',
+      bank          TYPE zif_cd_ops_types=>ty_msgno VALUE '817',
+      file_name     TYPE zif_cd_ops_types=>ty_msgno VALUE '818',
+      iface         TYPE zif_cd_ops_types=>ty_msgno VALUE '819',
+      pay_method    TYPE zif_cd_ops_types=>ty_msgno VALUE '820',
+      payments      TYPE zif_cd_ops_types=>ty_msgno VALUE '821',
+      amount        TYPE zif_cd_ops_types=>ty_msgno VALUE '822',
+      pay_run       TYPE zif_cd_ops_types=>ty_msgno VALUE '823',
+      business_date TYPE zif_cd_ops_types=>ty_msgno VALUE '824',
+      generated     TYPE zif_cd_ops_types=>ty_msgno VALUE '825',
+      sent          TYPE zif_cd_ops_types=>ty_msgno VALUE '826',
+      delivered     TYPE zif_cd_ops_types=>ty_msgno VALUE '827',
+      ack_due       TYPE zif_cd_ops_types=>ty_msgno VALUE '828',
+      overdue       TYPE zif_cd_ops_types=>ty_msgno VALUE '829',
+      ack_level     TYPE zif_cd_ops_types=>ty_msgno VALUE '830',
+      earlier_file  TYPE zif_cd_ops_types=>ty_msgno VALUE '831',
+      missed_stage  TYPE zif_cd_ops_types=>ty_msgno VALUE '832',
+      "! Subject: Missing bank ACK: &1 file(s), &2 payments, &3
+      subject       TYPE zif_cd_ops_types=>ty_msgno VALUE '833',
+      total         TYPE zif_cd_ops_types=>ty_msgno VALUE '834',
+      unknown       TYPE zif_cd_ops_types=>ty_msgno VALUE '835',
+      "! &1 h &2 min
+      hours_minutes TYPE zif_cd_ops_types=>ty_msgno VALUE '836',
+    END OF gc_ack_msg.
+  "! Between label and value of a detail line
+  CONSTANTS gc_ack_label_separator TYPE string VALUE `: `.
 
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:

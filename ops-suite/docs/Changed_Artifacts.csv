@@ -260,6 +260,9 @@ src/core/zcd_ops_tabwl.tabl.xml,abapGit,
 src/core/zcd_pay_outcome.tabl.xml,abapGit,
 src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
+src/core/zcl_cd_ops_ack_mail.clas.abap,ABAP,Missing or late bank ACK in the alert e-mail (user request 2026-11-10).
+src/core/zcl_cd_ops_ack_mail.clas.testclasses.abap,ABAP,Domain tests of the missing bank ACK table: two files in different
+src/core/zcl_cd_ops_ack_mail.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
 src/core/zcl_cd_ops_alert_dao.clas.testclasses.abap,ABAP,SQL tests of the alert DAO claim / repeat-key logic on cl_osql_test_environment
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
@@ -887,6 +890,9 @@ src/fmon/zcd_fmon_prq_wa.tabl.xml,abapGit,
 src/fmon/zcd_fmon_sla.tabl.xml,abapGit,
 src/fmon/zcd_fmon_src.tabl.xml,abapGit,
 src/fmon/zcd_fmon_srcmap.tabl.xml,abapGit,
+src/fmon/zcl_cd_fmon_ack_alert.clas.abap,ABAP,Evidence of a file whose bank ACK is missing or late (user request
+src/fmon/zcl_cd_fmon_ack_alert.clas.testclasses.abap,ABAP,Domain tests of the missing bank ACK evidence: house bank and payment run
+src/fmon/zcl_cd_fmon_ack_alert.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_feb.clas.abap,ABAP,Source adapter for imported bank statements (ZCD_FMON_SRC row with
 src/fmon/zcl_cd_fmon_adapter_feb.clas.testclasses.abap,ABAP,"Application tests of the FEB source adapter with LTD_* FMON DAO, factory"
 src/fmon/zcl_cd_fmon_adapter_feb.clas.xml,abapGit,
@@ -1434,7 +1440,6 @@ tools/__pycache__/cds_abap_parity.cpython-313.pyc,Other,
 tools/__pycache__/literal_scan.cpython-313.pyc,Other,
 tools/__pycache__/name_checks.cpython-313.pyc,Other,
 tools/__pycache__/param_definitions.cpython-313.pyc,Other,
-tools/__pycache__/rap_generate.cpython-313.pyc,Other,
 tools/__pycache__/test_checks.cpython-313.pyc,Other,
 tools/__pycache__/usage_checks.cpython-313.pyc,Other,
 tools/tests/test_abapgit_serialize.py,Other,
@@ -1449,15 +1454,3 @@ tools/tests/test_pcre_only.py,Other,
 tools/tests/test_rap_generate.py,Other,
 tools/tests/test_test_checks.py,Other,
 tools/tests/test_usage_checks.py,Other,
-tools/tests/__pycache__/test_abapgit_serialize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_auth_checks.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_cds_abap_parity.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_modernize.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_name_checks.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_no_cp_patterns.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_param_definitions.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_pattern_dao_fields.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_pcre_only.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_rap_generate.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_test_checks.cpython-313.pyc,Other,
-tools/tests/__pycache__/test_usage_checks.cpython-313.pyc,Other,

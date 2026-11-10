@@ -17,6 +17,7 @@
 *& 2026-11-10 | exception_trace (every link of an exception chain), error_class (TRANSIENT / DATA /
 *&              CONFIG / CODE), account_label (house bank / account ID or masked number), job_link
 *&              (batch job of the running program; GET_JOB_RUNTIME_INFO in test seam JOB_INFO).
+*& 2026-11-10 | format_amount: thousands separators and two decimals (missing bank ACK alert).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
 "! Stateless helpers. No database access.
@@ -186,6 +187,17 @@ CLASS zcl_cd_ops_util DEFINITION
       RETURNING
         VALUE(rv_label) TYPE string.
 
+    "! Thousands separator of FORMAT_AMOUNT (read back by the missing bank ACK alert)
+    CONSTANTS gc_thousands_separator TYPE string VALUE `,`.
+
+    "! Amount with thousands separators and two decimals, independent of user settings
+    "! (e.g. -1,234,567.80) - for e-mail tables, never for calculation
+    CLASS-METHODS format_amount
+      IMPORTING
+        iv_amount      TYPE decfloat34
+      RETURNING
+        VALUE(rv_text) TYPE string.
+
     "! Batch job of the running program (SM37 name and count; blank in dialog) and the system
     CLASS-METHODS job_link
       RETURNING
@@ -219,6 +231,9 @@ CLASS zcl_cd_ops_util DEFINITION
     "! A chain longer than this is cut (protects the trace against a cyclic PREVIOUS)
     CONSTANTS gc_trace_max_links TYPE i VALUE 20.
     CONSTANTS gc_list_separator TYPE string VALUE `,`.
+    CONSTANTS gc_decimal_point TYPE string VALUE `.`.
+    CONSTANTS gc_minus TYPE string VALUE `-`.
+    CONSTANTS gc_thousands_group TYPE i VALUE 3.
 
 ENDCLASS.
 
@@ -506,6 +521,21 @@ CLASS zcl_cd_ops_util IMPLEMENTATION.
                        ELSE |{ gc_account_mask }{ substring( val = lv_account
                                                              off = lv_length - gc_account_visible
                                                              len = gc_account_visible ) }| ).
+  ENDMETHOD.
+
+
+  METHOD format_amount.
+    DATA lv_rounded TYPE p LENGTH 16 DECIMALS 2.
+    lv_rounded = abs( iv_amount ).
+    DATA(lv_raw) = |{ lv_rounded NUMBER = RAW DECIMALS = 2 }|.
+    SPLIT lv_raw AT gc_decimal_point INTO DATA(lv_integer) DATA(lv_decimals).
+    DATA(lv_grouped) = ``.
+    WHILE strlen( lv_integer ) > gc_thousands_group.
+      DATA(lv_cut) = strlen( lv_integer ) - gc_thousands_group.
+      lv_grouped = |{ gc_thousands_separator }{ lv_integer+lv_cut }{ lv_grouped }|.
+      lv_integer = lv_integer(lv_cut).
+    ENDWHILE.
+    rv_text = |{ COND string( WHEN iv_amount < 0 THEN gc_minus ) }{ lv_integer }{ lv_grouped }{ gc_decimal_point }{ lv_decimals }|.
   ENDMETHOD.
 
 

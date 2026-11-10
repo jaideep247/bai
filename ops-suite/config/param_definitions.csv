@@ -73,6 +73,7 @@ CD_EBS,EBS_RESULT_MAX,P,INT,1,,100000,,,,,Findings kept per run (the rest summar
 CD_EBS,EBS_RTRV_STATUS_FIELD,P,CHAR,,,ZZ_RTRV_STATUS,[A-Z][A-Z0-9_]*,,X,X,Status field of ZCD_ACH_RTRV_LOG,PE RTB
 CD_EBS,EBS_ZTNUM_IGNORE_ZEROS,P,BOOL,,,X,,,,,Leading zeros of check numbers not significant (blank=off),PE RTB
 CD_FMON,FMON_AGE_BASIS,P,CHAR,,,A,[AN],,,,Banking-day age basis: A after receipt / N next working day,PE RTB
+CD_FMON,FMON_DEFAULT_CURRENCY,P,CHAR,,,USD,,,,,Currency of file control totals (missing bank ACK alert),PE RTB
 CD_FMON,FMON_DUP_DAYS,P,INT,0,,7,,,,,Duplicate-file history window (days),PE RTB
 CD_FMON,FMON_FACTORY_CAL,P,CHAR,,,US,[A-Z0-9]{2},,X,,Factory calendar when ZCD_FMON_CAL has none,PE RTB
 CD_FMON,FMON_FEB_STMT_OFFSET,P,INT,0,5,1,,,,,Working days from statement date to statement file date,PE RTB

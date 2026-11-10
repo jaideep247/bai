@@ -14,7 +14,7 @@
 *& 2026-11-07 | Tests of the removed rag_from_value dropped.
 *& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, INT parameter without definition
 *&            | default): a value that is not a number is a logged parameter error and gives the default.
-*& 2026-11-10 | exception_trace, error_class, account_label, job_link (test seam JOB_INFO).
+*& 2026-11-10 | exception_trace, error_class, account_label, job_link (test seam JOB_INFO); format_amount.
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -54,6 +54,7 @@ CLASS ltc_util DEFINITION FINAL FOR TESTING
     METHODS short_account_fully_masked   FOR TESTING.
     METHODS job_link_in_batch            FOR TESTING.
     METHODS job_link_blank_in_dialog     FOR TESTING.
+    METHODS amount_has_thousands_groups  FOR TESTING.
 
     CONSTANTS:
       BEGIN OF gc_test,
@@ -453,6 +454,17 @@ CLASS ltc_util IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = ls_link-sysid
                                         exp = sy-sysid
                                         msg = 'The system is always known' ).
+  ENDMETHOD.
+
+
+  " Missing bank ACK alert: thousands separators and two decimals, sign kept
+  METHOD amount_has_thousands_groups.
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>format_amount( CONV decfloat34( '-1234567.8' ) )
+                                        exp = `-1,234,567.80`
+                                        msg = 'Groups of three, two decimals, minus first' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_cd_ops_util=>format_amount( CONV decfloat34( '999' ) )
+                                        exp = `999.00`
+                                        msg = 'No separator below one thousand' ).
   ENDMETHOD.
 
 ENDCLASS.

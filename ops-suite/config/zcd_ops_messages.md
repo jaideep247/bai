@@ -529,3 +529,25 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 805 | Alert dispatch failed for the run of &1: |
 | 806 | E-mail for &1: SAPconnect commit failed (return code &2) |
 | 815 | Partner filter not applied: source field &1 not usable - |
+| 816 | House bank |
+| 817 | Bank |
+| 818 | File name |
+| 819 | Interface |
+| 820 | Payment method |
+| 821 | Payments |
+| 822 | Amount |
+| 823 | Payment run (date / ID) |
+| 824 | Business date |
+| 825 | Generated in SAP |
+| 826 | Sent to PRISM |
+| 827 | Delivered to bank |
+| 828 | ACK due |
+| 829 | Overdue by |
+| 830 | ACK level |
+| 831 | Earlier file (regenerated) |
+| 832 | Missed deadline of stage |
+| 833 | Missing bank ACK: &1 file(s), &2 payments, &3 |
+| 834 | Total |
+| 835 | unknown |
+| 836 | &1 h &2 min |
+| 837 | Missing or late bank ACK - evidence per file |
