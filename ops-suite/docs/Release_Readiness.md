@@ -156,10 +156,10 @@ lifecycle `CD_COLL` / `BASE_REQ_LIFE` (P2, `config/control_seed.md` §2b). Nothi
 - **V55 (DV1):** the morning report with row `D_PROC_ONBOARD` (`ZCL_CD_HCK_C_FRAMEWORK`, PARAM1 `ZCL_CA_OPS_CHK_ONBOARD`): with no active registered process the check is green with no finding; a test process without alert rule gives one `PROC_NO_ALERT_RULE` finding in area CD_HCK (GROUP2 `D_PROC_ONBOARD`) and the next run after the rule is added resolves it; the framework registry row `CA_OPS` / `ONBOARDING` is inactive in this landscape.
 - **V56 (VERIFY-SE11 / business, before activating P2):** the six questions of `config/control_seed.md` §2a P2 answered; the placeholders of `config/processes/CD_COLL_BASE_REQ_LIFE.json` replaced and the scaffold run; area `CD_COLL`, role `Z_CD_OPS_COLL`, SO23 list of rule `COLL_LIFE`; index of the status table (framework V48); `ZCL_CD_COLL_C_REFUND` and its data access class written with an OSQL test.
 
-**Decisions for the user (D-PO1 ... D-PO3).**
-- **D-PO1 Own area per process.** `CD_COLL` proposed for the collections request lifecycle (runs in `CD_HCK` would be the morning report's "last run" and mask a missing report); alternative: keep P2 in the morning report as HCK rows (`ZCD_HCK_AGG` / adapter rows) - not built.
-- **D-PO2 Onboarding check in the morning report** (`D_PROC_ONBOARD`) instead of the framework job `CA_OPS` / `MORNING`; the other is left inactive (one report per gap).
-- **D-PO3 R2 / R3 limits in hours.** The no-code aggregate works in days; hours need the check class (or a later time-stamp field of the framework's aggregate rows).
+**Decisions D-PO1 ... D-PO3 - approved by the user 2026-11-10 as proposed.**
+- **D-PO1 Own area per process (approved 2026-11-10).** `CD_COLL` for the collections request lifecycle (runs in `CD_HCK` would be the morning report's "last run" and mask a missing report); alternative: keep P2 in the morning report as HCK rows (`ZCD_HCK_AGG` / adapter rows) - not built.
+- **D-PO2 Onboarding check in the morning report (approved 2026-11-10)** (`D_PROC_ONBOARD`) instead of the framework job `CA_OPS` / `MORNING`; the other is left inactive (one report per gap).
+- **D-PO3 R2 / R3 limits in hours (approved 2026-11-10).** The no-code aggregate works in days; hours need the check class (or a later time-stamp field of the framework's aggregate rows).
 
 ## Control center (2026-11-10)
 

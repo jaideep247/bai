@@ -223,7 +223,7 @@ reads a business table until the questions of §2a are answered.
 | Check | Rule | Kind | Row (placeholders in ‹ ›) |
 |---|---|---|---|
 | `COLL_R1_PENDING` | a `PENDING` request past its request date (validation did not move it) | aggregate R1 | AGE of ‹request date field›, `MIN_AGE_DAYS` 1, ‹status field› EQ `PENDING`, per ‹company code field›, ‹amber› / ‹red› days |
-| `COLL_R2_SCHEDULED` | `SCHEDULED` with no answer of the source | aggregate R2 | AGE of ‹status change date field›, ‹status field› EQ `SCHEDULED` - days only; a limit in hours needs the class (§1) |
+| `COLL_R2_SCHEDULED` | `SCHEDULED` with no answer of the source | class `ZCL_CD_COLL_C_NO_ANSWER` | hours since ‹status change time stamp› of requests whose latest status is `SCHEDULED`, amber / red in hours (decision D-PO3, approved 2026-11-10: limits in hours belong to a check class) |
 | `COLL_R3_REFUND` | source-rejected request **without a successful Stripe refund** - the control's main check | class `ZCL_CD_COLL_C_REFUND` | one anti-join in its data access class: requests with ‹reject value› whose ‹refund log› has no row with ‹success value›; findings `PREMIUM_REFUND_MISSING` (E) per request, `PREMIUM_REFUND_FAILED` (E) for a failed call, company code on the finding |
 | `COLL_R4_SRCPOSTED` | `SRCPOSTED` not collected on the request date | aggregate R4 | COUNT, ‹status field› EQ `SRCPOSTED`, ‹request date field› at least 1 day old, ‹amber› / ‹red› |
 

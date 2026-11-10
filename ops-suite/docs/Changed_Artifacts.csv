@@ -157,6 +157,8 @@ docs/USAA_Known_Tables.md,Doc,
 docs/portable_checks.json,Doc,
 docs/history/Audit_History.md,Doc,
 docs/processes/CD_COLL_BASE_REQ_LIFE.md,Doc,
+docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.abap,ABAP,Check COLL_R2_SCHEDULED of process BASE_REQ_LIFE (area CD_COLL):
+docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_no_answer.clas.testclasses.abap,ABAP,Tests of check COLL_R2_SCHEDULED through ZIF_CA_OPS_CHECK~RUN with a data access
 docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.abap,ABAP,Check COLL_R3_REFUND of process BASE_REQ_LIFE (area CD_COLL):
 docs/processes/CD_COLL_BASE_REQ_LIFE_skeleton/zcl_cd_coll_c_refund.clas.testclasses.abap,ABAP,Tests of check COLL_R3_REFUND through ZIF_CA_OPS_CHECK~RUN with a data access
 docs/text_elements/zcd_ebs_validate.prog.texts.md,Doc,

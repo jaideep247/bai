@@ -25,7 +25,7 @@ The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: 
 | `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK | 03, 85 | own company codes |
 | `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | CD_FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
-| `Z_CD_OPS_COLL` (collections operations - process `BASE_REQ_LIFE`, proposal, created on activation of P2) | CD_COLL | 02, 03 (job user: `Z_CD_OPS_BATCH` gets CD_COLL 16) | own company codes |
+| `Z_CD_OPS_COLL` (collections operations - process `BASE_REQ_LIFE`; area approved 2026-11-10 (D-PO1), role created on activation of P2) | CD_COLL | 02, 03 (job user: `Z_CD_OPS_BATCH` gets CD_COLL 16) | own company codes |
 
 Segregation of duties: the operator (02) and the approver (85) of a payment engine area and company code are different users; the apps additionally refuse an approval by the requester (four-eyes).
 

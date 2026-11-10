@@ -13,14 +13,13 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 | Check | Kind | Schedule group | Company-code aware | Covered by control |
 |---|---|---|---|---|
 | `COLL_R1_PENDING` | aggregate (no code) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
-| `COLL_R2_SCHEDULED` | aggregate (no code) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
+| `COLL_R2_SCHEDULED` | class `ZCL_CD_COLL_C_NO_ANSWER` (limit in hours, D-PO3) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
 | `COLL_R3_REFUND` | class `ZCL_CD_COLL_C_REFUND` | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
 | `COLL_R4_SRCPOSTED` | aggregate (no code) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
 
 | Aggregate | Table | Function | Status | Limits amber / red |
 |---|---|---|---|---|
 | `COLL_R1_PENDING` / `R1` | ‹status table› | AGE | ‹status field› EQ PENDING | ‹amber days› / ‹red days› |
-| `COLL_R2_SCHEDULED` / `R2` | ‹status table› | AGE | ‹status field› EQ SCHEDULED | ‹amber days› / ‹red days› |
 | `COLL_R4_SRCPOSTED` / `R4` | ‹status table› | COUNT | ‹status field› EQ SRCPOSTED | ‹amber count› / ‹red count› |
 
 ## End to end
@@ -44,9 +43,9 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 
 ## VERIFY before activation
 
-- VERIFY-SE11: the table and field that hold the request status (PENDING, SCHEDULED, SRCPOSTED) and the value of a source reject; one row per request or per status change (one row per change: R1, R2, R4 need the latest row of a request - a check class, not an aggregate); the date of the request and of the status change; the company-code field (config/control_seed.md section 2a, question 1).
+- VERIFY-SE11: the table and field that hold the request status (PENDING, SCHEDULED, SRCPOSTED) and the value of a source reject; one row per request or per status change (one row per change: R1, R4 and the R2 class need the latest row of a request - a check class, not an aggregate); the date of the request and of the status change; the company-code field (config/control_seed.md section 2a, question 1).
 - Where the incoming SRCPOSTED / reject of BASE is logged (question 2) and what a failed fund account validation sets (question 3).
 - The table of SAP's Stripe refund call: key back to the request (FIN number / payment intent), status field, success / failure values, time stamp (question 4) - the one anti-join read of COLL_R3_REFUND in its data access class (OSQL test).
-- Limits: hours allowed for R2 and R3 (question 5). The no-code aggregate counts days of a date field; a limit in hours needs a time stamp and therefore the check class (or a later TIME_FIELD of ZCA_OPS_AGG).
-- Index of the status table that starts with the status field (and the company-code field) for R1, R2, R4 (docs/VERIFY.md of the framework, V48).
+- Limits: hours allowed for R2 and R3 (question 5) and the time-stamp field each limit counts from. Decision D-PO3 (approved 2026-11-10): limits in hours are checked by the check classes ZCL_CD_COLL_C_NO_ANSWER (R2) and ZCL_CD_COLL_C_REFUND (R3), not by no-code rows (they count days).
+- Index of the status table that starts with the status field (and the company-code field) for R1, R4 and R2 (docs/VERIFY.md of the framework, V48).
 - Area CD_COLL in ZCA_PARAM_AREA, role Z_CD_OPS_COLL (config/auth_zcd_ops.md), SO23 list of rule COLL_LIFE, owner and backup of the process in DV1.

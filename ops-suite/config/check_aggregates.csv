@@ -1,4 +1,3 @@
 AREA,CHECK_ID,AGG_ID,DESCRIPTION,TABNAME,AGG_FUNC,DATE_FIELD,MIN_AGE_DAYS,BUKRS_FIELD,STATUS_FIELD,STATUS_OP,STATUS_VALUE,COND_FIELD,COND_OP,COND_VALUE,AMBER,RED,CHECK_CODE,ACTIVE
 CD_COLL,COLL_R1_PENDING,R1,Oldest PENDING request past its request date,‹status table›,AGE,‹request date field›,1,‹company code field›,‹status field›,EQ,PENDING,,,,‹amber days›,‹red days›,REQ_PENDING_OVERDUE,
-CD_COLL,COLL_R2_SCHEDULED,R2,Oldest SCHEDULED request without SRCPOSTED / reject,‹status table›,AGE,‹status change date field›,0,‹company code field›,‹status field›,EQ,SCHEDULED,,,,‹amber days›,‹red days›,REQ_NO_SOURCE_ANSWER,
 CD_COLL,COLL_R4_SRCPOSTED,R4,SRCPOSTED requests past their request date,‹status table›,COUNT,‹request date field›,1,‹company code field›,‹status field›,EQ,SRCPOSTED,,,,‹amber count›,‹red count›,REQ_POSTED_NOT_COLLECTED,
