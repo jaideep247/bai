@@ -12,6 +12,7 @@
 *& 2026-11-06 | Audit A95/A96: missing 49/98/99 blocks (B); funds-type layout validated before references are read.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
+*& 2026-11-10 | Texts name the account as house bank / account ID, else masked to its last four characters.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS - BAI2 bank statement file parser</p>
 "! One statement per 03 account record; 16 detail records become lines.
@@ -1022,7 +1023,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
       RETURN.
     ENDIF.
     DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_trailer_49
-                                            iv_v1    = ms_account-stmt-account_no ).
+                                            iv_v1    = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
+                                                                                       iv_hbkid   = ms_account-stmt-hbkid
+                                                                                       iv_hktid   = ms_account-stmt-hktid ) ).
     DATA(lv_total) = compare_total( is_check = stmt_check( iv_check_code = gc_check-acct_ctrl_total
                                                            iv_label      = zcl_cd_ops_util=>text(
                                                                              iv_msgno = zif_cd_ebs_types=>gc_msg-control_total
@@ -1123,7 +1126,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
                    iv_rule_id  = gc_rule-structure
                    iv_severity = zif_cd_ops_types=>gc_severity-block
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_expected_account_tr
-                                                        iv_v1    = ms_account-stmt-account_no
+                                                        iv_v1    = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
+                                                                                                   iv_hbkid   = ms_account-stmt-hbkid
+                                                                                                   iv_hktid   = ms_account-stmt-hktid )
                                                         iv_v2    = mv_line_no ) ).
     ENDIF.
     check_statement_totals( ).
@@ -1132,7 +1137,9 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
                    iv_rule_id  = gc_rule-empty
                    iv_severity = zif_cd_ops_types=>gc_severity-warning
                    iv_message  = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account_statement_without_d
-                                                        iv_v1    = ms_account-stmt-account_no ) ).
+                                                        iv_v1    = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
+                                                                                                   iv_hbkid   = ms_account-stmt-hbkid
+                                                                                                   iv_hktid   = ms_account-stmt-hktid ) ) ).
     ENDIF.
     ms_group-child_total += COND ty_amount( WHEN iv_has_trailer = abap_true THEN iv_trailer_total
                                             ELSE ms_account-computed_total ).
@@ -1143,7 +1150,10 @@ CLASS zcl_cd_ebs_parser_bai2 IMPLEMENTATION.
 
 
   METHOD check_statement_totals.
-    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account iv_v1 = ms_account-stmt-account_no ).
+    DATA(lv_account) = zcl_cd_ops_util=>account_label( iv_account = ms_account-stmt-account_no
+                                                       iv_hbkid   = ms_account-stmt-hbkid
+                                                       iv_hktid   = ms_account-stmt-hktid ).
+    DATA(lv_label) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-account iv_v1 = lv_account ).
     IF ms_account-has_credit_tot = abap_true.
       check_total( is_check    = stmt_check( iv_check_code = gc_check-credit_sum
                                              iv_label      = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-total_credits_100

@@ -8,6 +8,7 @@
 *& live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | client_check_reason_shown: message 048 carries the reason of a failed client check.
 *&---------------------------------------------------------------------*
 CLASS ltd_system DEFINITION FINAL FOR TESTING.
 
@@ -89,6 +90,7 @@ CLASS ltc_maint DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS no_record_in_local_mode FOR TESTING.
     METHODS record_failure_propagates FOR TESTING RAISING cx_static_check.
     METHODS config_change_message FOR TESTING.
+    METHODS client_check_reason_shown FOR TESTING.
     METHODS value_change_message FOR TESTING.
     METHODS authorization_delegated FOR TESTING.
 ENDCLASS.
@@ -216,6 +218,26 @@ CLASS ltc_maint IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = mo_cut->check_config_change( gc_area )-msgno
                                             exp = zif_ca_param_types=>gc_msg-config_not_allowed
                                             msg = `Definitions are not maintained in a local client` ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD client_check_reason_shown.
+    CONSTANTS lc_reason TYPE string VALUE `Configuration API not available`.
+
+    TRY.
+        configure_scenario( VALUE #( transport = abap_true ) ).
+        mo_system->ms_client-cust_editable = abap_false.
+        mo_system->ms_client-cust_reason   = lc_reason.
+        DATA(ls_message) = mo_cut->check_config_change( gc_area ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-msgno
+                                            exp = zif_ca_param_types=>gc_msg-client_unchecked
+                                            msg = `A failed client check is message 048, not 044` ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-v2
+                                            exp = CONV symsgv( lc_reason )
+                                            msg = `The reason of the failed check reaches the app` ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

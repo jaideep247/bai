@@ -7,6 +7,7 @@
 *& values, check result rows, migration rows and their statuses. No logic.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: pattern check and migration).
+*& 2026-11-10 | TT_PE_AREA: payment engine areas the migration report may read (ZCD_OPS 03).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - pattern check and migration types</p>
 INTERFACE zif_cd_ops_pattern_types
@@ -15,6 +16,8 @@ INTERFACE zif_cd_ops_pattern_types
   TYPES ty_area   TYPE c LENGTH 10.
   TYPES ty_status TYPE c LENGTH 12.
   TYPES ty_name   TYPE c LENGTH 30.
+  "! Payment engine areas a caller is authorised for (ZCD_OPS 03)
+  TYPES tt_pe_area TYPE SORTED TABLE OF zif_cd_ops_types=>ty_pe_area WITH UNIQUE KEY table_line.
 
   "! Pattern areas of the pattern check: configured field -> source of real values
   CONSTANTS:

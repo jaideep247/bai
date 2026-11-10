@@ -16,6 +16,8 @@
 *&            | ZCD_FMON_TABWL).
 *& 2026-11-08 | Table consolidation: get_slas reads both kinds of ZCD_FMON_SLA (DURATION, DEADLINE);
 *&            | get_deadlines (ZCD_FMON_DEADL) removed.
+*& 2026-11-10 | get_payrun_totals: payments and amount per payment run and house bank (DPAYH, one grouped
+*&            | read, read-only) for the missing bank ACK alert (DEFAULT IGNORE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - repository (config, registry, events)</p>
 INTERFACE zif_cd_fmon_dao
@@ -84,6 +86,15 @@ INTERFACE zif_cd_fmon_dao
       iv_since       TYPE d
     RETURNING
       VALUE(rt_acks) TYPE zif_cd_fmon_types=>tt_group_ack.
+
+  "! Payments (count) and amount per payment run, house bank and currency (DPAYH, read-only, one
+  "! grouped read for all keys): fallback of the missing bank ACK alert when a file's record count
+  "! or control total is not known. A key without payments is not returned (never 0)
+  METHODS get_payrun_totals DEFAULT IGNORE
+    IMPORTING
+      it_keys          TYPE zif_cd_fmon_types=>tt_payrun_key
+    RETURNING
+      VALUE(rt_totals) TYPE zif_cd_fmon_types=>tt_payrun_total.
 
   "! Files of business dates iv_date_from..iv_date_to plus files since
   "! iv_open_since that are still open (no outcome or PARTIALLY_PROCESSED)

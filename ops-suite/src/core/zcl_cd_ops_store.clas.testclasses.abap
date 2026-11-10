@@ -137,6 +137,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
     METHODS user_changes_twice_deferred  FOR TESTING.
     METHODS user_waives_during_reconcile FOR TESTING.
     METHODS writes_set_change_stamp      FOR TESTING.
+    METHODS stores_system_and_error_cls  FOR TESTING.
     DATA mo_clock TYPE REF TO ltd_clock.
     "! Fix 5: an earlier exception row with explicit type, owner and creation time (test data)
     METHODS prior_row
@@ -278,6 +279,28 @@ CLASS ltc_store IMPLEMENTATION.
         cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The earlier row exists' ).
         cl_abap_unit_assert=>assert_not_initial( act = lv_inserted msg = 'Insert stamped' ).
         cl_abap_unit_assert=>assert_not_initial( act = lv_superseded msg = 'Supersede stamped' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The run carries its system ID (the job is empty in dialog) and a finding its error class
+  METHOD stores_system_and_error_cls.
+    TRY.
+        DATA(ls_run) = mo_cut->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-ebs ).
+        DATA(ls_finding) = finding( zif_cd_ops_types=>gc_severity-error ).
+        ls_finding-error_class = zif_cd_ops_types=>gc_error_class-data.
+        mo_cut->save_findings( EXPORTING it_findings = VALUE #( ( ls_finding ) )
+                               CHANGING  cs_run      = ls_run ).
+        SELECT SINGLE sysid FROM zcd_ops_run WHERE run_id = @ls_run-run_id INTO @DATA(lv_sysid).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The run exists' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_sysid exp = sy-sysid msg = 'System ID stored on the run' ).
+        SELECT SINGLE error_class FROM zcd_ops_finding WHERE run_id = @ls_run-run_id AND finding_no = 1
+          INTO @DATA(lv_class).
+        cl_abap_unit_assert=>assert_subrc( exp = 0 act = sy-subrc msg = 'The finding exists' ).
+        cl_abap_unit_assert=>assert_equals( act = lv_class exp = zif_cd_ops_types=>gc_error_class-data
+                                            msg = 'Error class stored on the finding' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

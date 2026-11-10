@@ -12,6 +12,7 @@
 *& reads are free for batch users), no maintenance.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | RAISE keeps the caught conversion error as PREVIOUS (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - read logic and buffer</p>
 CLASS zcl_ca_param DEFINITION
@@ -107,6 +108,7 @@ CLASS zcl_ca_param DEFINITION
         iv_msgno      TYPE symsgno
         iv_v3         TYPE csequence OPTIONAL
         iv_v4         TYPE csequence OPTIONAL
+        ix_previous   TYPE REF TO cx_root OPTIONAL
       RAISING
         zcx_ca_param.
 
@@ -372,22 +374,24 @@ CLASS zcl_ca_param IMPLEMENTATION.
   METHOD to_number.
     TRY.
         rv_value = condense( CONV string( is_resolved-value ) ).
-      CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
+      CATCH cx_sy_conversion_error cx_sy_arithmetic_error INTO DATA(lx_error).
         raise( is_definition = is_resolved-definition
                iv_msgno      = zif_ca_param_types=>gc_msg-type_invalid
                iv_v3         = is_resolved-value
-               iv_v4         = is_resolved-definition-value_type ).
+               iv_v4         = is_resolved-definition-value_type
+               ix_previous   = lx_error ).
     ENDTRY.
   ENDMETHOD.
 
 
   METHOD raise.
-    RAISE EXCEPTION zcx_ca_param=>create( VALUE #( msgid = zif_ca_param_types=>gc_msgid
-                                                   msgno = iv_msgno
-                                                   v1    = is_definition-area
-                                                   v2    = is_definition-name
-                                                   v3    = iv_v3
-                                                   v4    = iv_v4 ) ).
+    RAISE EXCEPTION zcx_ca_param=>create( is_message  = VALUE #( msgid = zif_ca_param_types=>gc_msgid
+                                                                 msgno = iv_msgno
+                                                                 v1    = is_definition-area
+                                                                 v2    = is_definition-name
+                                                                 v3    = iv_v3
+                                                                 v4    = iv_v4 )
+                                          ix_previous = ix_previous ).
   ENDMETHOD.
 
 

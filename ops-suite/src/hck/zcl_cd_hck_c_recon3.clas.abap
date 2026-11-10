@@ -16,6 +16,10 @@
 *& 2026-11-08 | Table consolidation: bank code roles of the sets from ZCD_HCK_BTCROLE usage RECON (was
 *&            | ZCD_HCK_RCBTC).
 *& 2026-11-08 | Customer posting area: the roles of the sets are ZBTR entries (was ZCD_HCK_BTCROLE) - comments only.
+*& 2026-11-10 | Deterministic evidence: every group-day with data records bank, G/L and payment engine legs,
+*&            | the differences and the tolerance used with its source (RC_TOLERANCE_SET / _PARAM), balanced
+*&            | days included; findings carry expected / actual / difference / tolerance / source (838).
+*&            | TOLERANCE_SET = X makes the set tolerance count even at 0.00 (exact match).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - three-way reconciliation bank/G/L/subledger</p>
 "! Window: report date - 1 back HCK_RECON_LOOKBACK_DAYS days. Tolerance per set (else
@@ -40,6 +44,8 @@ CLASS zcl_cd_hck_c_recon3 DEFINITION
         accounts  TYPE zif_cd_hck_recon_types=>tt_account,
         gl_key    TYPE zif_cd_hck_recon_types=>ty_gl_key,
         tolerance TYPE zif_cd_hck_recon_types=>ty_amount,
+        "! SET or PARAMETER (deterministic verification: the tolerance used and where it came from)
+        tol_source TYPE string,
       END OF ty_set_work.
     TYPES tt_set_work TYPE STANDARD TABLE OF ty_set_work WITH EMPTY KEY.
 
@@ -262,7 +268,15 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
       ls_work-set-hkont = |{ <ls_set>-hkont ALPHA = IN }|.
       ls_work-group     = group_key( ls_work-set ).
       ls_work-gl_key    = VALUE #( bukrs = ls_work-set-bukrs hkont = ls_work-set-hkont currency = ls_work-set-waers ).
-      ls_work-tolerance = COND #( WHEN <ls_set>-tolerance > 0 THEN <ls_set>-tolerance ELSE ms_base-tolerance ).
+      " A maintained set tolerance wins - with the flag also 0.00 (exact match); without the flag a
+      " value above 0 counts as maintained (rows before 2026-11-10), else the parameter applies
+      IF <ls_set>-tolerance_set = abap_true OR <ls_set>-tolerance > 0.
+        ls_work-tolerance  = abs( <ls_set>-tolerance ).
+        ls_work-tol_source = zif_cd_hck_recon_types=>gc_tolerance_source-set.
+      ELSE.
+        ls_work-tolerance  = ms_base-tolerance.
+        ls_work-tol_source = zif_cd_hck_recon_types=>gc_tolerance_source-parameter.
+      ENDIF.
       " The XBLNR account of the house bank account, as the EBS scope (ZCD_EBS_ACCT, active)
       LOOP AT lt_accounts ASSIGNING FIELD-SYMBOL(<ls_account>)
            WHERE active = abap_true AND bukrs = <ls_set>-bukrs AND hbkid = <ls_set>-hbkid AND hktid = <ls_set>-hktid.
@@ -458,8 +472,39 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
     DATA(lv_fica_key) = |{ is_work-group }{ zif_cd_hck_recon_types=>gc_key_sep }{ lv_day }|
                      && |{ zif_cd_hck_recon_types=>gc_key_sep }{ zif_cd_hck_recon_types=>gc_leg-fica }|.
     DATA(lv_buckets) = bucket_list( is_day-buckets ).
+    " Deterministic verification: expected, actual, difference, tolerance used and its source of
+    " every group-day with data - balanced days included (metrics), and in every finding's details
+    DATA(lv_bank_evidence) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-evidence
+                                                    iv_v1    = |{ is_day-bank }|
+                                                    iv_v2    = |{ is_day-gl_fica }|
+                                                    iv_v3    = |{ is_day-diff_bank_gl }|
+                                                    iv_v4    = |{ is_work-tolerance }|
+                                                    iv_tail  = is_work-tol_source ).
+    DATA(lv_fica_evidence) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_recon_types=>gc_msg-evidence
+                                                    iv_v1    = |{ is_day-gl_fica }|
+                                                    iv_v2    = |{ is_day-fica }|
+                                                    iv_v3    = |{ is_day-diff_gl_fica }|
+                                                    iv_v4    = |{ is_work-tolerance }|
+                                                    iv_tail  = is_work-tol_source ).
+    add_metric( iv_metric = COND #( WHEN is_work-tol_source = zif_cd_hck_recon_types=>gc_tolerance_source-set
+                                    THEN zif_cd_hck_recon_types=>gc_metric-tol_set
+                                    ELSE zif_cd_hck_recon_types=>gc_metric-tol_param )
+                iv_dim1   = is_work-group
+                iv_dim2   = lv_day
+                iv_value  = is_work-tolerance
+                iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
 
     IF is_day-status <> zif_cd_hck_recon_types=>gc_status-none.
+      add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-bank
+                  iv_dim1   = is_work-group
+                  iv_dim2   = lv_day
+                  iv_value  = is_day-bank
+                  iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
+      add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-gl
+                  iv_dim1   = is_work-group
+                  iv_dim2   = lv_day
+                  iv_value  = is_day-gl_fica
+                  iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-diff_bank_gl
                   iv_dim1   = is_work-group
                   iv_dim2   = lv_day
@@ -467,6 +512,11 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                   iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
     ENDIF.
     IF is_day-sub_status <> zif_cd_hck_recon_types=>gc_status-none.
+      add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-fica
+                  iv_dim1   = is_work-group
+                  iv_dim2   = lv_day
+                  iv_value  = is_day-fica
+                  iv_kind   = zif_cd_hck_types=>gc_metric_kind-level ).
       add_metric( iv_metric = zif_cd_hck_recon_types=>gc_metric-diff_gl_fica
                   iv_dim1   = is_work-group
                   iv_dim2   = lv_day
@@ -492,7 +542,8 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                                           iv_v2    = lv_day
                                                           iv_v3    = |{ is_day-diff_bank_gl }|
                                                           iv_v4    = |{ is_day-residual }| )
-                     iv_details  = |{ is_day-bank } { is_day-gl_fica } { is_day-gl_other } { lv_buckets }| ).
+                     iv_details  = |{ lv_bank_evidence }{ cl_abap_char_utilities=>newline }|
+                                && |{ is_day-bank } { is_day-gl_fica } { is_day-gl_other } { lv_buckets }| ).
       WHEN zif_cd_hck_recon_types=>gc_status-timing.
         mv_timing = mv_timing + 1.
         add_finding( is_work     = is_work
@@ -504,7 +555,8 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                                           iv_v1    = is_work-group
                                                           iv_v2    = lv_day
                                                           iv_v3    = |{ is_day-diff_bank_gl }|
-                                                          iv_v4    = lv_buckets ) ).
+                                                          iv_v4    = lv_buckets )
+                     iv_details  = lv_bank_evidence ).
       WHEN zif_cd_hck_recon_types=>gc_status-variance.
         mv_variance = mv_variance + 1.
         add_finding( is_work     = is_work
@@ -516,7 +568,8 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                                           iv_v1    = is_work-group
                                                           iv_v2    = lv_day
                                                           iv_v3    = |{ is_day-diff_bank_gl }|
-                                                          iv_v4    = lv_buckets ) ).
+                                                          iv_v4    = lv_buckets )
+                     iv_details  = lv_bank_evidence ).
     ENDCASE.
 
     CASE is_day-sub_status.
@@ -532,7 +585,7 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                                           iv_v2    = lv_day
                                                           iv_v3    = |{ is_day-gl_fica }|
                                                           iv_v4    = |{ is_day-fica }| )
-                     iv_details  = |{ is_day-payments }| ).
+                     iv_details  = |{ lv_fica_evidence }{ cl_abap_char_utilities=>newline }{ is_day-payments }| ).
       WHEN zif_cd_hck_recon_types=>gc_status-timing.
         mv_timing = mv_timing + 1.
         add_finding( is_work     = is_work
@@ -544,7 +597,8 @@ CLASS zcl_cd_hck_c_recon3 IMPLEMENTATION.
                                                           iv_v1    = is_work-group
                                                           iv_v2    = lv_day
                                                           iv_v3    = |{ is_day-diff_gl_fica }|
-                                                          iv_v4    = zif_cd_hck_recon_types=>gc_bucket-timing ) ).
+                                                          iv_v4    = zif_cd_hck_recon_types=>gc_bucket-timing )
+                     iv_details  = lv_fica_evidence ).
     ENDCASE.
   ENDMETHOD.
 

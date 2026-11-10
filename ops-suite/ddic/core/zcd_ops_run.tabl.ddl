@@ -22,6 +22,10 @@ define table zcd_ops_run {
   runtime_ms    : abap.int4;
   message       : abap.char(255);
   created_by    : syuname;
+  // Batch job of the run (SM37: job name + count; blank in dialog) and the system (2026-11-10)
+  jobname       : btcjob;
+  jobcount      : btcjobcnt;
+  sysid         : sysysid;
 }
 // Secondary index MOD: morning report / last-run lookups
 // @index MOD: MANDT, PE_AREA, STARTED_AT

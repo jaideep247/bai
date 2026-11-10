@@ -46,6 +46,14 @@
 *&            | duplicate-name failures in the check context, ZCL_CD_FMON_CHK_REGEN in the instant unit.
 *& 2026-11-08 | Table consolidation: stage deadlines are ZCD_FMON_SLA rows of kind DEADLINE in the context's
 *&            | SLAs (ZCD_FMON_DEADL merged).
+*& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR after the run started is rolled back, the run closed as aborted
+*&            | (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and re-raised - never
+*&            | left in status R. Engine findings of a caught exception (source, lot reader, check, registry,
+*&            | database, alert) keep the exception trace (DETAILS) and error class: ENGINE_FINDING IX_ERROR.
+*& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): every ACK finding (no / late ACK, ACK count
+*&            | or amount mismatch, missed ACK deadline) carries the evidence of its file(s) in DETAILS and
+*&            | the file amount / currency (ENRICH_ACK_FINDINGS, ZCL_CD_FMON_ACK_ALERT); counts not known
+*&            | come from one grouped read of the payment runs (ZIF_CD_FMON_DAO=>GET_PAYRUN_TOTALS).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - engine (one run per business date)</p>
 "! Run order: start run -> load customizing -> sync sources -> load registry
@@ -90,6 +98,7 @@ CLASS zcl_cd_fmon_engine DEFINITION
         zcx_cd_ops_error.
 
   PRIVATE SECTION.
+    CONSTANTS gc_seconds_per_minute TYPE i VALUE 60.
     "! Run variant of the instant PRISM unit (run history; no lock is taken)
     CONSTANTS gc_event_variant TYPE zif_cd_ops_types=>ty_variant VALUE 'PRISM'.
     "! Checks an event can open or close for its file (the others need the batch context)
@@ -376,6 +385,33 @@ CLASS zcl_cd_fmon_engine DEFINITION
       RAISING
         zcx_cd_ops_error.
 
+    "! Missing bank ACK alert: DETAILS (labelled evidence per file), AMOUNT and CURRENCY of every
+    "! ACK finding; one grouped payment-run read for all files whose counts are not known
+    METHODS enrich_ack_findings.
+
+    "! Files an ACK finding is about: the file of a file finding (REFERENCE = file ID), the files of
+    "! the interface and business date without ACK / NACK for a missed ACK deadline
+    METHODS ack_files
+      IMPORTING
+        is_finding      TYPE zif_cd_ops_types=>ty_finding
+      RETURNING
+        VALUE(rt_files) TYPE zif_cd_fmon_types=>tt_file.
+
+    METHODS ack_input
+      IMPORTING
+        is_file         TYPE zif_cd_fmon_types=>ty_file
+        is_finding      TYPE zif_cd_ops_types=>ty_finding
+        it_totals       TYPE zif_cd_fmon_types=>tt_payrun_total
+        iv_currency     TYPE zif_cd_ops_types=>ty_currency
+      RETURNING
+        VALUE(rs_input) TYPE zcl_cd_fmon_ack_alert=>ty_input.
+
+    METHODS run_key_of
+      IMPORTING
+        is_file       TYPE zif_cd_fmon_types=>ty_file
+      RETURNING
+        VALUE(rs_key) TYPE zif_cd_fmon_types=>ty_payrun_key.
+
     METHODS is_lot_controlled
       IMPORTING
         is_iface             TYPE zif_cd_fmon_types=>ty_iface
@@ -388,7 +424,9 @@ CLASS zcl_cd_fmon_engine DEFINITION
         iv_key      TYPE clike
         iv_message  TYPE clike
         iv_iface_id TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
-        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error.
+        iv_severity TYPE zif_cd_ops_types=>ty_severity DEFAULT zif_cd_ops_types=>gc_severity-error
+        "! Caught exception: its trace goes to DETAILS, its error class to ERROR_CLASS
+        ix_error    TYPE REF TO cx_root OPTIONAL.
 
 
     METHODS mark_changed
@@ -494,33 +532,42 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
       mo_store->commit( ).
     ENDIF.
 
-    " Audit A05: a technical SQL error anywhere in the run is handled here, at the owner of
-    " the LUW - rolled back, recorded, and the run closed as failed (never left running)
+    " B9: this method owns the LUW of the run - a ZCD_OPS error that stops the run is rolled
+    " back, the run closed as aborted (ON_ABORT alert rules) and the error re-raised to the job
     TRY.
-        load_config( ).
-        sync_sources( ).
-        load_registry( ).
-        " Lots and calendar expectations need the whole day: batch run only
-        IF mv_single = abap_false.
-          derive_lot_outcomes( ).
-          build_expectations( ).
-        ENDIF.
-        run_checks( ).
-        IF mv_test_mode = abap_false.
-          persist_registry( ).
-        ENDIF.
-      CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
-        IF mv_test_mode = abap_false.
-          mo_store->rollback( ).
-        ENDIF.
-        engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
-                        iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
-                        iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
-                                                            iv_tail  = lx_sql->get_text( ) ) ).
-    ENDTRY.
+        " Audit A05: a technical SQL error anywhere in the run is handled here, at the owner of
+        " the LUW - rolled back, recorded, and the run closed as failed (never left running)
+        TRY.
+            load_config( ).
+            sync_sources( ).
+            load_registry( ).
+            " Lots and calendar expectations need the whole day: batch run only
+            IF mv_single = abap_false.
+              derive_lot_outcomes( ).
+              build_expectations( ).
+            ENDIF.
+            run_checks( ).
+            IF mv_test_mode = abap_false.
+              persist_registry( ).
+            ENDIF.
+          CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+            IF mv_test_mode = abap_false.
+              mo_store->rollback( ).
+            ENDIF.
+            engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
+                            iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
+                            iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
+                                                                iv_tail  = lx_sql->get_text( ) )
+                            ix_error   = lx_sql ).
+        ENDTRY.
 
-    rs_result-board = build_board( ).
-    finish( CHANGING cs_run = ls_run ).
+        rs_result-board = build_board( ).
+        finish( CHANGING cs_run = ls_run ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        mt_findings = zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+                                                   CHANGING  cs_run   = ls_run ).
+        RAISE EXCEPTION lx_error.
+    ENDTRY.
     rs_result-run      = ls_run.
     rs_result-findings = mt_findings.
   ENDMETHOD.
@@ -602,7 +649,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
                                                               iv_v1    = ls_src-src_id
                                                               iv_v2    = ls_src-table_name
-                                                              iv_tail  = lx_ops->get_text( ) ) ).
+                                                              iv_tail  = lx_ops->get_text( ) )
+                          ix_error   = lx_ops ).
           CONTINUE.
         CATCH cx_root INTO DATA(lx_root).
           engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
@@ -610,7 +658,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-source
                                                               iv_v1    = ls_src-src_id
                                                               iv_v2    = ls_src-table_name
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
           CONTINUE.
       ENDTRY.
 
@@ -1129,7 +1178,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-lot_reader
                                                               iv_v1    = ls_cfg-lot_type
                                                               iv_v2    = ls_cfg-item_table
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
           CONTINUE.
       ENDTRY.
 
@@ -1429,7 +1479,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                           iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-check
                                                               iv_v1    = ls_check-check_id
                                                               iv_v2    = ls_check-class_name
-                                                              iv_tail  = lx_root->get_text( ) ) ).
+                                                              iv_tail  = lx_root->get_text( ) )
+                          ix_error   = lx_root ).
       ENDTRY.
     ENDLOOP.
   ENDMETHOD.
@@ -1459,7 +1510,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-registry_not_saved
-                                                            iv_tail  = lx_ops->get_text( ) ) ).
+                                                            iv_tail  = lx_ops->get_text( ) )
+                        ix_error   = lx_ops ).
         RETURN.
       CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
         " Audit A05: technical SQL errors are rolled back the same way
@@ -1467,7 +1519,8 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
         engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-persist_error
                         iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
                         iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
-                                                            iv_tail  = lx_sql->get_text( ) ) ).
+                                                            iv_tail  = lx_sql->get_text( ) )
+                        ix_error   = lx_sql ).
         RETURN.
     ENDTRY.
 
@@ -1574,6 +1627,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                          iv_default = zif_cd_fmon_prism_types=>gc_default_instant )
                                    IS NOT INITIAL ).
     IF lv_instant = abap_true.
+      enrich_ack_findings( ).
       mo_store->save_findings( EXPORTING it_findings = mt_findings
                                CHANGING  cs_run      = cs_run ).
     ENDIF.
@@ -1603,12 +1657,200 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                 iv_code       = zif_cd_fmon_types=>gc_check_code-alert_failed
                 iv_message    = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-alert_dispatch_failed
                                                        iv_tail  = lx_alert->get_text( ) ) ) ) ).
+          lt_alert_error[ 1 ]-details     = zcl_cd_ops_util=>exception_trace( lx_alert ).
+          lt_alert_error[ 1 ]-error_class = zcl_cd_ops_util=>error_class( lx_alert ).
           mo_store->save_findings( EXPORTING it_findings = lt_alert_error
                                    CHANGING  cs_run      = cs_run ).
           INSERT LINES OF lt_alert_error INTO TABLE mt_findings.
           mo_store->finish_run( cs_run ).
           mo_store->commit( ).
       ENDTRY.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD enrich_ack_findings.
+    TYPES:
+      BEGIN OF ty_target,
+        index TYPE i,
+        files TYPE zif_cd_fmon_types=>tt_file,
+      END OF ty_target.
+    DATA lt_targets TYPE STANDARD TABLE OF ty_target WITH EMPTY KEY.
+    DATA lt_keys    TYPE zif_cd_fmon_types=>tt_payrun_key.
+    DATA lt_totals  TYPE zif_cd_fmon_types=>tt_payrun_total.
+
+    LOOP AT mt_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+      DATA(lv_index) = sy-tabix.
+      DATA(lt_files) = ack_files( <ls_finding> ).
+      IF lt_files IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      INSERT VALUE #( index = lv_index files = lt_files ) INTO TABLE lt_targets.
+      LOOP AT lt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+        IF zcl_cd_fmon_ack_alert=>needs_fallback( <ls_file> ) = abap_false.
+          CONTINUE.
+        ENDIF.
+        DATA(ls_key) = run_key_of( <ls_file> ).
+        IF ls_key-laufd IS NOT INITIAL AND ls_key-laufi IS NOT INITIAL.
+          INSERT ls_key INTO TABLE lt_keys.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+    IF lt_targets IS INITIAL.
+      RETURN.
+    ENDIF.
+    " One grouped, read-only read of the payment runs for every file whose counts are not known
+    IF lt_keys IS NOT INITIAL.
+      TRY.
+          lt_totals = mo_dao->get_payrun_totals( lt_keys ).
+        CATCH cx_sy_open_sql_db INTO DATA(lx_sql).
+          " the counts stay unknown (never 0); the failed read is visible as a finding
+          engine_finding( iv_code    = zif_cd_fmon_types=>gc_check_code-plugin_error
+                          iv_key     = zif_cd_fmon_types=>gc_engine_key-registry
+                          iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_types=>gc_msg-database_error
+                                                              iv_tail  = lx_sql->get_text( ) )
+                          ix_error   = lx_sql ).
+      ENDTRY.
+    ENDIF.
+    DATA(lv_currency) = CONV zif_cd_ops_types=>ty_currency(
+                          mo_params->get_param( iv_name    = zif_cd_fmon_types=>gc_param-default_currency
+                                                iv_default = CONV #( zif_cd_fmon_types=>gc_param_default-default_currency ) ) ).
+
+    LOOP AT lt_targets ASSIGNING FIELD-SYMBOL(<ls_target>).
+      ASSIGN mt_findings[ <ls_target>-index ] TO <ls_finding>.
+      DATA(lv_details) = zcl_cd_ops_ack_mail=>marker( ).
+      DATA(lv_amount) = VALUE zif_cd_ops_types=>ty_amount( ).
+      DATA(lv_ccy) = VALUE zif_cd_ops_types=>ty_currency( ).
+      DATA(lv_blocks) = 0.
+      LOOP AT <ls_target>-files ASSIGNING <ls_file>.
+        lv_blocks += 1.
+        DATA(ls_block) = zcl_cd_fmon_ack_alert=>block( ack_input( is_file     = <ls_file>
+                                                                  is_finding  = <ls_finding>
+                                                                  it_totals   = lt_totals
+                                                                  iv_currency = lv_currency ) ).
+        " one block per file, separated by an empty line
+        lv_details = COND #( WHEN lv_blocks = 1
+                             THEN |{ lv_details }{ cl_abap_char_utilities=>newline }{ ls_block-text }|
+                             ELSE |{ lv_details }{ cl_abap_char_utilities=>newline }{ cl_abap_char_utilities=>newline }|
+                               && ls_block-text ).
+        IF ls_block-amount_known = abap_true AND ( lv_ccy IS INITIAL OR lv_ccy = ls_block-currency ).
+          lv_amount += ls_block-amount.
+          lv_ccy = ls_block-currency.
+        ENDIF.
+      ENDLOOP.
+      <ls_finding>-details  = lv_details.
+      <ls_finding>-amount   = lv_amount.
+      <ls_finding>-currency = lv_ccy.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD ack_files.
+    IF zcl_cd_fmon_ack_alert=>is_ack_code( is_finding-check_code ) = abap_true.
+      LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_file>).
+        IF zcl_cd_fmon_util=>file_hex( <ls_file>-file_id ) = is_finding-reference.
+          INSERT <ls_file> INTO TABLE rt_files.
+          RETURN.
+        ENDIF.
+      ENDLOOP.
+      RETURN.
+    ENDIF.
+    IF zcl_cd_fmon_ack_alert=>is_ack_deadline( is_finding ) = abap_false.
+      RETURN.
+    ENDIF.
+    LOOP AT mt_files ASSIGNING <ls_file> WHERE iface_id = is_finding-group1 AND business_date = mv_date.
+      IF <ls_file>-outcome <> zif_cd_fmon_types=>gc_stage-ack AND <ls_file>-outcome <> zif_cd_fmon_types=>gc_stage-nack.
+        INSERT <ls_file> INTO TABLE rt_files.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD run_key_of.
+    rs_key = zcl_cd_fmon_ack_alert=>run_key(
+               iv_gen_group    = is_file-gen_group
+               iv_group_fields = VALUE #( mt_srcs[ src_id = is_file-src_id ]-group_fields OPTIONAL ) ).
+  ENDMETHOD.
+
+
+  METHOD ack_input.
+    rs_input-file      = is_file.
+    rs_input-iface     = VALUE #( mt_ifaces[ iface_id = is_file-iface_id ] OPTIONAL ).
+    rs_input-run_key   = run_key_of( is_file ).
+    rs_input-total     = zcl_cd_fmon_ack_alert=>total_for( it_totals = it_totals is_key = rs_input-run_key ).
+    rs_input-currency  = iv_currency.
+    rs_input-time_zone = mv_tz.
+    " first event of each milestone (registry events of this run and earlier runs)
+    LOOP AT mt_events ASSIGNING FIELD-SYMBOL(<ls_event>) USING KEY by_file WHERE file_id = is_file-file_id.
+      CASE <ls_event>-stage.
+        WHEN zif_cd_fmon_types=>gc_stage-generated.
+          IF rs_input-generated_at IS INITIAL OR <ls_event>-event_at < rs_input-generated_at.
+            rs_input-generated_at = <ls_event>-event_at.
+          ENDIF.
+        WHEN zif_cd_fmon_types=>gc_stage-sent.
+          IF rs_input-sent_at IS INITIAL OR <ls_event>-event_at < rs_input-sent_at.
+            rs_input-sent_at = <ls_event>-event_at.
+          ENDIF.
+        WHEN zif_cd_fmon_types=>gc_stage-forwarded OR zif_cd_fmon_types=>gc_stage-prism_delivered.
+          IF rs_input-delivered_at IS INITIAL OR <ls_event>-event_at < rs_input-delivered_at.
+            rs_input-delivered_at = <ls_event>-event_at.
+          ENDIF.
+      ENDCASE.
+    ENDLOOP.
+    " ACK due and overdue: the duration SLA of stage ACK (no / late ACK) or the ACK deadline
+    CASE is_finding-check_code.
+      WHEN zif_cd_fmon_types=>gc_check_code-no_bank_ack OR zif_cd_fmon_types=>gc_check_code-bank_ack_late.
+        rs_input-timing = abap_true.
+        LOOP AT mt_slas ASSIGNING FIELD-SYMBOL(<ls_sla>)
+             WHERE iface_id = is_file-iface_id AND stage = zif_cd_fmon_types=>gc_stage-ack
+               AND kind = zif_cd_fmon_types=>gc_sla_kind-duration.
+          DATA(ls_verdict) = zcl_cd_fmon_rules=>sla_verdict( is_file   = is_file
+                                                            is_sla    = <ls_sla>
+                                                            it_events = mt_events
+                                                            iv_now    = mv_now ).
+          IF ls_verdict-basis_at IS NOT INITIAL.
+            rs_input-ack_due = cl_abap_tstmp=>add( tstmp = ls_verdict-basis_at
+                                                   secs  = ls_verdict-allowed_min * gc_seconds_per_minute ).
+            rs_input-overdue_min = nmax( val1 = ls_verdict-elapsed_min - ls_verdict-allowed_min val2 = 0 ).
+          ENDIF.
+          EXIT.
+        ENDLOOP.
+      WHEN zif_cd_fmon_types=>gc_check_code-deadline_missed.
+        rs_input-timing = abap_true.
+        DATA(lv_day_type) = VALUE #( mt_expects[ iface_id = is_file-iface_id ]-day_type OPTIONAL ).
+        LOOP AT mt_slas ASSIGNING <ls_sla>
+             WHERE iface_id = is_file-iface_id AND stage = zif_cd_fmon_types=>gc_stage-ack
+               AND kind = zif_cd_fmon_types=>gc_sla_kind-deadline.
+          IF rs_input-ack_due IS NOT INITIAL AND <ls_sla>-day_type <> lv_day_type.
+            CONTINUE.
+          ENDIF.
+          DATA lv_due TYPE timestamp.
+          CONVERT DATE mv_date TIME <ls_sla>-due_time INTO TIME STAMP lv_due TIME ZONE mv_tz.
+          rs_input-ack_due = lv_due.
+        ENDLOOP.
+        IF rs_input-ack_due IS NOT INITIAL AND mv_now > rs_input-ack_due.
+          TRY.
+              rs_input-overdue_min = cl_abap_tstmp=>subtract( tstmp1 = mv_now tstmp2 = rs_input-ack_due )
+                                     / gc_seconds_per_minute.
+            CATCH cx_parameter_invalid_range cx_parameter_invalid_type.
+              " shown as 0 h 0 min next to the due time - never a wrong lateness
+              CLEAR rs_input-overdue_min.
+          ENDTRY.
+        ENDIF.
+    ENDCASE.
+    " a regenerated file names the generation it replaced (latest earlier file of its group)
+    IF is_file-gen_group IS NOT INITIAL.
+      DATA(ls_earlier) = VALUE zif_cd_fmon_types=>ty_file( ).
+      LOOP AT mt_files ASSIGNING FIELD-SYMBOL(<ls_other>)
+           WHERE iface_id = is_file-iface_id AND gen_group = is_file-gen_group AND file_id <> is_file-file_id.
+        " generated before the file (first event, then file ID), and the latest of those
+        IF ( <ls_other>-first_event_at < is_file-first_event_at
+             OR ( <ls_other>-first_event_at = is_file-first_event_at AND <ls_other>-file_id < is_file-file_id ) )
+           AND ( ls_earlier IS INITIAL OR <ls_other>-first_event_at > ls_earlier-first_event_at ).
+          ls_earlier = <ls_other>.
+        ENDIF.
+      ENDLOOP.
+      rs_input-earlier_file = ls_earlier-file_name.
     ENDIF.
   ENDMETHOD.
 
@@ -1650,6 +1892,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
                                                          iv_severity   = iv_severity ).
     IF line_exists( mt_findings[ check_code = ls_finding-check_code object_key = ls_finding-object_key ] ).
       RETURN.
+    ENDIF.
+    IF ix_error IS BOUND.
+      ls_finding-details     = zcl_cd_ops_util=>exception_trace( ix_error ).
+      ls_finding-error_class = zcl_cd_ops_util=>error_class( ix_error ).
     ENDIF.
     INSERT ls_finding INTO TABLE mt_findings.
   ENDMETHOD.

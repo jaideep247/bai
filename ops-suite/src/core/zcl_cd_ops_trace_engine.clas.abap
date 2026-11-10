@@ -35,6 +35,8 @@
 *& 2026-11-08 | Search by payment reference / cheque number (REFERENCE_DOCUMENTS: the payment document, the cheque
 *&            | number full or its last 13 characters - keyed DFKKCR reads only); stage REQUEST_DUE: due date and
 *&            | stage of every request seen (one rule with the payment worklist, information only).
+*& 2026-11-10 | A BP_SOURCE_FIELD the partner read refuses is a CONFIGURATION row (815), no longer cleared
+*&            | silently; the row never decides the verdict.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment trace - evidence timeline engine</p>
 CLASS zcl_cd_ops_trace_engine DEFINITION
@@ -591,9 +593,16 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
           lt_partners = mo_dao->get_partners( iv_bpext = iv_member iv_max_rows = ms_cfg-max_rows ).
           ev_without_source = abap_true.
         ENDIF.
-      CATCH zcx_cd_ops_error.
-        " A wrong source field only loses the partner filter; the items still show
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        " A wrong source field only loses the partner filter; the items still show - and the
+        " trace says so in a configuration row (never silently)
         CLEAR lt_partners.
+        add_row( is_row = VALUE #( stage  = zif_cd_ops_trace_types=>gc_stage-config
+                                   status = zif_cd_ops_trace_types=>gc_status-unavailable
+                                   reason = zif_cd_ops_trace_types=>gc_reason-not_configured
+                                   detail = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_trace_types=>gc_msg-partner_filter_off
+                                                                   iv_v1    = ms_cfg-bp_source_field
+                                                                   iv_tail  = lx_error->get_text( ) ) ) ).
     ENDTRY.
     " More than one partner is never silently picked: no filter, the items decide
     IF lines( lt_partners ) = 1.
@@ -1715,7 +1724,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
                                                       AND status <> zif_cd_ops_trace_types=>gc_status-not_applicable
                                                       AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
                                                       AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome
-                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due.
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due
+                                                      AND stage <> zif_cd_ops_trace_types=>gc_stage-config.
       IF NOT line_exists( mt_rows[ attempt = <ls_row>-attempt first_gap = abap_true ] ).
         <ls_row>-first_gap = abap_true.
       ENDIF.
@@ -1727,7 +1737,8 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
     LOOP AT mt_rows INTO DATA(ls_row) WHERE attempt_kind <> zif_cd_ops_trace_types=>gc_attempt-historical
                                         AND stage <> zif_cd_ops_trace_types=>gc_stage-noc
                                         AND stage <> zif_cd_ops_trace_types=>gc_stage-outcome
-                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due.
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-request_due
+                                        AND stage <> zif_cd_ops_trace_types=>gc_stage-config.
       CASE ls_row-status.
         WHEN zif_cd_ops_trace_types=>gc_status-failed.
           lv_failed = abap_true.
@@ -1765,6 +1776,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
   METHOD stage_seq.
     rv_seq = SWITCH #( iv_stage
+                       WHEN zif_cd_ops_trace_types=>gc_stage-config     THEN 0
                        WHEN zif_cd_ops_trace_types=>gc_stage-request    THEN 1
                        WHEN zif_cd_ops_trace_types=>gc_stage-request_due THEN 1
                        WHEN zif_cd_ops_trace_types=>gc_stage-sap_item   THEN 2

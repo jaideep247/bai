@@ -48,7 +48,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>006</MSGNR>
-     <TEXT>&amp;1 more finding(s) in ZCD_OPS_FINDING.</TEXT>
+     <TEXT>&amp;1 more finding(s): see the exceptions app (Fiori ZUI_CD_OPS_EXC).</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -91,12 +91,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>021</MSGNR>
      <TEXT>Alert rule &amp;1 has no recipient</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>022</MSGNR>
-     <TEXT>Application log &amp;1/&amp;2 could not be written</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1116,7 +1110,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>255</MSGNR>
-     <TEXT>Body is not valid JSON:</TEXT>
+     <TEXT>Body is not valid JSON</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -3157,6 +3151,228 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>788</MSGNR>
      <TEXT>Open exceptions of request &amp;1 could not be read - record not saved</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>800</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 not created (BAL_LOG_CREATE return code &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>801</MSGNR>
+     <TEXT>Application log &amp;1/&amp;2 not saved (BAL_DB_SAVE return code &amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>802</MSGNR>
+     <TEXT>Alert log ID could not be generated - alert not delivered</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>803</MSGNR>
+     <TEXT>Run &amp;1, job &amp;2 / &amp;3 - exceptions app ZUI_CD_OPS_EXC</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>804</MSGNR>
+     <TEXT>Run &amp;1 &amp;2 aborted by an error:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>805</MSGNR>
+     <TEXT>Alert dispatch failed for the run of &amp;1:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>806</MSGNR>
+     <TEXT>E-mail for &amp;1: SAPconnect commit failed (return code &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>807</MSGNR>
+     <TEXT>File &amp;2 not resolved or not valid in logical path / file name &amp;1 (FILE)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>808</MSGNR>
+     <TEXT>File name &amp;1 not allowed: enter a name only, without a path or ..</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>809</MSGNR>
+     <TEXT>No authorisation to &amp;2 file &amp;1 (S_DATASET)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>810</MSGNR>
+     <TEXT>File &amp;1 could not be opened or read</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>812</MSGNR>
+     <TEXT>Field &amp;1 of table &amp;2 is not approved for EBS lookups (ZCD_OPS_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>813</MSGNR>
+     <TEXT>No authorisation to display table &amp;1 (S_TABU_NAM 03)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>815</MSGNR>
+     <TEXT>Partner filter not applied: source field &amp;1 not usable -</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>816</MSGNR>
+     <TEXT>House bank</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>817</MSGNR>
+     <TEXT>Bank</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>818</MSGNR>
+     <TEXT>File name</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>819</MSGNR>
+     <TEXT>Interface</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>820</MSGNR>
+     <TEXT>Payment method</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>821</MSGNR>
+     <TEXT>Payments</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>822</MSGNR>
+     <TEXT>Amount</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>823</MSGNR>
+     <TEXT>Payment run (date / ID)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>824</MSGNR>
+     <TEXT>Business date</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>825</MSGNR>
+     <TEXT>Generated in SAP</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>826</MSGNR>
+     <TEXT>Sent to PRISM</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>827</MSGNR>
+     <TEXT>Delivered to bank</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>828</MSGNR>
+     <TEXT>ACK due</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>829</MSGNR>
+     <TEXT>Overdue by</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>830</MSGNR>
+     <TEXT>ACK level</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>831</MSGNR>
+     <TEXT>Earlier file (regenerated)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>832</MSGNR>
+     <TEXT>Missed deadline of stage</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>833</MSGNR>
+     <TEXT>Missing bank ACK: &amp;1 file(s), &amp;2 payments, &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>834</MSGNR>
+     <TEXT>Total</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>835</MSGNR>
+     <TEXT>unknown</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>836</MSGNR>
+     <TEXT>&amp;1 h &amp;2 min</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>837</MSGNR>
+     <TEXT>Missing or late bank ACK - evidence per file</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCD_OPS</ARBGB>
+     <MSGNR>838</MSGNR>
+     <TEXT>Expected &amp;1, actual &amp;2, difference &amp;3, tolerance &amp;4 - source:</TEXT>
     </T100>
    </T100>
   </asx:values>

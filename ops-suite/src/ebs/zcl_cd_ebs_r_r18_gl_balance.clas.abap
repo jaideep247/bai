@@ -11,6 +11,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A25: G/L account found through the canonical account identity.
 *& 2026-11-06 | Performance fix 6: one G/L balance read for all closing statements of the package.
+*& 2026-11-10 | Texts name the account as house bank / account ID, else masked to its last four characters.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check R18 - bank G/L balance = closing</p>
 CLASS zcl_cd_ebs_r_r18_gl_balance DEFINITION
@@ -59,7 +60,9 @@ CLASS zcl_cd_ebs_r_r18_gl_balance IMPLEMENTATION.
         INSERT zcl_cd_ebs_finding=>for_rule_statement(
                  is_rule = is_rule is_statement = <ls_statement> iv_check_code = zif_cd_ebs_types=>gc_check_code-gl_account_not_mapped
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-gl_account_not_mapped
-                                                     iv_v1    = <ls_statement>-account_no ) )
+                                                     iv_v1    = zcl_cd_ops_util=>account_label( iv_account = <ls_statement>-account_no
+                                                                                                iv_hbkid   = <ls_statement>-hbkid
+                                                                                                iv_hktid   = <ls_statement>-hktid ) ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.

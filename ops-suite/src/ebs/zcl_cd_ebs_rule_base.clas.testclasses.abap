@@ -35,6 +35,7 @@
 *&            | PARAM3 LOT), BAI195D = wire return (R07 RETURNED) - seeded rows tested; PARAM3 LOT tests kept
 *&            | as the rule capability (helper run_lot_chain).
 *& 2026-11-08 | Configuration double: get_reason (R05 asks the DAO for the ZRSN entry of a reason).
+*& 2026-11-10 | s04_unconfigured_account: the account number is masked in the message (B15).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -2448,6 +2449,11 @@ CLASS ltc_stmt_rules IMPLEMENTATION.
     add_statement( ).
     run( iv_class = 'ZCL_CD_EBS_R_S04_ACCOUNT' is_rule = rule( 'S04' ) ).
     assert_one_code( iv_check_code = 'ACCOUNT_NOT_CONFIGURED' iv_msg = 'Unknown account must fail S04' ).
+    " B15: the e-mailed text never carries the full bank account number
+    IF strlen( condense( mt_stmts[ 1 ]-account_no ) ) > 4.
+      cl_abap_unit_assert=>assert_false( act = xsdbool( mt_findings[ 1 ]-message CS condense( mt_stmts[ 1 ]-account_no ) )
+                                         msg = 'Account number masked in the message' ).
+    ENDIF.
   ENDMETHOD.
 
 

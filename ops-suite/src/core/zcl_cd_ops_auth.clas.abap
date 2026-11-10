@@ -8,6 +8,8 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (authorisation object ZCD_OPS, gap G3).
 *& 2026-11-06 | Test seams AUTH_AREA / AUTH_BUKRS around the kernel check (coverage gap closure).
+*& 2026-11-10 | Field ZCD_PE_AREA (SU20, auth_zcd_ops.md section 1); a wrong field name failed every check.
+*& 2026-11-10 | may_read_table: S_TABU_NAM 03 in test seam AUTH_TABLE (was ZCL_CD_FMON_DDIC, now shared).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - authorisation check ZCD_OPS</p>
 "! Object ZCD_OPS must exist (SU21, config/auth_zcd_ops.md) before activation.
@@ -30,7 +32,7 @@ CLASS zcl_cd_ops_auth IMPLEMENTATION.
       TEST-SEAM auth_area.
         AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_object
           ID 'ACTVT'      FIELD iv_activity
-          ID 'ZCD_MODULE' FIELD iv_pe_area
+          ID 'ZCD_PE_AREA' FIELD iv_pe_area
           ID 'BUKRS'      DUMMY.
         rv_allowed = xsdbool( sy-subrc = 0 ).
       END-TEST-SEAM.
@@ -39,8 +41,19 @@ CLASS zcl_cd_ops_auth IMPLEMENTATION.
     TEST-SEAM auth_bukrs.
       AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_object
         ID 'ACTVT'      FIELD iv_activity
-        ID 'ZCD_MODULE' FIELD iv_pe_area
+        ID 'ZCD_PE_AREA' FIELD iv_pe_area
         ID 'BUKRS'      FIELD iv_bukrs.
+      rv_allowed = xsdbool( sy-subrc = 0 ).
+    END-TEST-SEAM.
+  ENDMETHOD.
+
+
+  METHOD zif_cd_ops_auth~may_read_table.
+    DATA(lv_table) = to_upper( condense( CONV string( iv_table ) ) ).
+    TEST-SEAM auth_table.
+      AUTHORITY-CHECK OBJECT zif_cd_ops_auth=>gc_table_auth-object
+        ID zif_cd_ops_auth=>gc_table_auth-id_actvt FIELD zif_cd_ops_auth=>gc_table_auth-display
+        ID zif_cd_ops_auth=>gc_table_auth-id_table FIELD lv_table.
       rv_allowed = xsdbool( sy-subrc = 0 ).
     END-TEST-SEAM.
   ENDMETHOD.

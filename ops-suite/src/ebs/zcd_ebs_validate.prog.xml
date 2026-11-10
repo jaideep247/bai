@@ -90,8 +90,8 @@
     <item>
      <ID>S</ID>
      <KEY>P_PATH</KEY>
-     <ENTRY>        File path</ENTRY>
-     <LENGTH>17</LENGTH>
+     <ENTRY>        File name (logical path)</ENTRY>
+     <LENGTH>32</LENGTH>
     </item>
     <item>
      <ID>S</ID>

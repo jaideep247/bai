@@ -46,6 +46,8 @@ define table zcd_ops_finding {
   // exception repository and the exceptions app (ETag of ZR_CD_OpsException); a batch write is guarded
   // by the stamp it read, so a user's change in between is never overwritten
   last_changed_at : timestampl;
+  // Error class of a finding raised at a catch boundary (TRANSIENT, DATA, CONFIG, CODE; 2026-11-10)
+  error_class   : abap.char(10);
 }
 // Secondary indexes OPN: exception queue / aging; OBJ: drill-down, idempotent re-validation,
 // carry-forward and reconcile. Performance fix 5: OBJ without OBJECT_TYPE - reconcile( ) and

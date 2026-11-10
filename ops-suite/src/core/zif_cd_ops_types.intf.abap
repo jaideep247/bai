@@ -34,6 +34,12 @@
 *& 2026-11-08 | Transactions dashboard on the payment worklist: GC_TRX_DASHBOARD-RETENTION_DAYS retired (no 400-day
 *&            | driver), date kinds WORKLIST / RUN / VALUE / DUE (POSTING retired).
 *& 2026-11-10 | GC_MSGNO_FREE removed: the PRISM handled-manually save no longer turns a failed closure into a warning.
+*& 2026-11-10 | Error class (GC_ERROR_CLASS, rules GC_ERROR_RULE; TY_FINDING-ERROR_CLASS), job link of a
+*&            | run (TY_RUN-JOBNAME / JOBCOUNT / SYSID), TABWL purpose LOOKUP (EBS R21), messages 802-805.
+*& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): labels of the detail lines GC_ACK_MSG
+*&            | (messages 816-837), label separator, alert subject and table.
+*& 2026-11-10 | Logical file names / paths (FILE) of the EBS input file and the morning report export,
+*&            | S_DATASET activities (directory traversal fix).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - shared types and constants</p>
 "! Shared by Health Check (HCK), File Monitoring (FMON) and EBS Validation (EBS).
@@ -62,6 +68,7 @@ INTERFACE zif_cd_ops_types
   CONSTANTS gc_message_class TYPE c LENGTH 20 VALUE 'ZCD_OPS'.
   "! Message type used when a text is only built, never shown
   CONSTANTS gc_msgty_info TYPE c LENGTH 1 VALUE 'I'.
+  CONSTANTS gc_msgty_error TYPE c LENGTH 1 VALUE 'E'.
   "! Time of day limits and the time zone used for UTC timestamps
   CONSTANTS:
     BEGIN OF gc_time,
@@ -207,7 +214,69 @@ INTERFACE zif_cd_ops_types
       read   TYPE ty_tabwl_purpose VALUE 'READ',
       "! HCK configuration drift: the whole table is hashed against the golden baseline
       drift  TYPE ty_tabwl_purpose VALUE 'DRIFT',
+      "! EBS lookup rule R21 (ZCD_EBS_LOOKUP): key and status fields only, field-level rows
+      lookup TYPE ty_tabwl_purpose VALUE 'LOOKUP',
     END OF gc_tabwl_purpose.
+
+  "! Error class of a failure (ZCD_OPS_FINDING-ERROR_CLASS): only TRANSIENT may be retried
+  "! (lock, timeout, database); DATA, CONFIG and CODE go to their owner (ZCL_CD_OPS_UTIL=>ERROR_CLASS)
+  TYPES ty_error_class TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_error_class,
+      transient TYPE ty_error_class VALUE 'TRANSIENT',
+      data      TYPE ty_error_class VALUE 'DATA',
+      config    TYPE ty_error_class VALUE 'CONFIG',
+      code      TYPE ty_error_class VALUE 'CODE',
+    END OF gc_error_class.
+
+  "! Classification of ZCL_CD_OPS_UTIL=>ERROR_CLASS: ZCD_OPS message numbers of lock / timeout and of
+  "! configuration / authorisation failures (comma lists - extend them with every new message of the
+  "! kind), exception classes of the database layer (TRANSIENT) and the prefix of runtime errors (CODE)
+  CONSTANTS:
+    BEGIN OF gc_error_rule,
+      transient_msgno TYPE string VALUE `040,042,313,335,369,763`,
+      config_msgno    TYPE string
+        VALUE `007,021,027,030,031,032,033,041,050,051,200,201,202,303,304,703,807,808,809,812,813`,
+      transient_class TYPE string VALUE `CX_SY_OPEN_SQL_DB,CX_SQL_EXCEPTION`,
+      code_prefix     TYPE string VALUE `CX_SY_`,
+    END OF gc_error_rule.
+
+  "! Batch job of a run (SM37 link) and the system it ran in (ZCL_CD_OPS_UTIL=>JOB_LINK)
+  TYPES:
+    BEGIN OF ty_job_link,
+      jobname  TYPE btcjob,
+      jobcount TYPE btcjobcnt,
+      sysid    TYPE sysysid,
+    END OF ty_job_link.
+
+  "! Application server files only through a logical path of transaction FILE (no directory from a
+  "! user): logical path for FILE_GET_NAME_USING_PATH and the logical file name it is validated
+  "! against (FILE_VALIDATE_NAME); created in FILE as a setup step (Implementation_Order.md)
+  TYPES:
+    BEGIN OF ty_logical_file,
+      path TYPE pathintern,
+      file TYPE fileintern,
+    END OF ty_logical_file.
+  CONSTANTS:
+    BEGIN OF gc_logical_file,
+      "! EBS validation: bank file read before import (ZCD_EBS_VALIDATE)
+      BEGIN OF ebs_input,
+        path TYPE pathintern VALUE 'ZCD_OPS_EBS_IN',
+        file TYPE fileintern VALUE 'ZCD_OPS_EBS_IN',
+      END OF ebs_input,
+      "! Morning report: CSV export (ZCD_MORNING_REPORT)
+      BEGIN OF hck_export,
+        path TYPE pathintern VALUE 'ZCD_OPS_HCK_OUT',
+        file TYPE fileintern VALUE 'ZCD_OPS_HCK_OUT',
+      END OF hck_export,
+    END OF gc_logical_file.
+  "! S_DATASET activity of AUTHORITY_CHECK_DATASET
+  TYPES ty_dataset_activity TYPE c LENGTH 8.
+  CONSTANTS:
+    BEGIN OF gc_dataset_activity,
+      read  TYPE ty_dataset_activity VALUE 'READ',
+      write TYPE ty_dataset_activity VALUE 'WRITE',
+    END OF gc_dataset_activity.
 
   "! ZCD_OPS_FINDING-DISPOSITION - exception lifecycle
   TYPES ty_disposition TYPE c LENGTH 1.
@@ -275,6 +344,8 @@ INTERFACE zif_cd_ops_types
       reference   TYPE ty_reference,
       message     TYPE ty_message,
       details     TYPE string,
+      "! TRANSIENT / DATA / CONFIG / CODE for a finding raised at a catch boundary (else blank)
+      error_class TYPE ty_error_class,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
@@ -301,6 +372,10 @@ INTERFACE zif_cd_ops_types
       runtime_ms    TYPE i,
       message       TYPE ty_message,
       created_by    TYPE syuname,
+      "! Batch job of the run (SM37 link; blank in dialog) and the system it ran in
+      jobname       TYPE btcjob,
+      jobcount      TYPE btcjobcnt,
+      sysid         TYPE sysysid,
     END OF ty_run.
   TYPES tt_run TYPE STANDARD TABLE OF ty_run WITH EMPTY KEY.
 
@@ -432,6 +507,40 @@ INTERFACE zif_cd_ops_types
     END OF ty_repeat_key.
   TYPES tt_repeat_key TYPE HASHED TABLE OF ty_repeat_key WITH UNIQUE KEY object_type object_key check_code.
 
+  "! Missing or late bank ACK (user request 2026-11-10): file monitoring writes the evidence of
+  "! the file(s) into ZCD_OPS_FINDING-DETAILS as labelled lines ("<label>: <value>", one block per
+  "! file, blocks separated by an empty line, the marker line first); the alert policy reads the
+  "! same labels back for the ACK table of the e-mail. Labels are ZCD_OPS messages (no variables).
+  CONSTANTS:
+    BEGIN OF gc_ack_msg,
+      marker        TYPE zif_cd_ops_types=>ty_msgno VALUE '837',
+      house_bank    TYPE zif_cd_ops_types=>ty_msgno VALUE '816',
+      bank          TYPE zif_cd_ops_types=>ty_msgno VALUE '817',
+      file_name     TYPE zif_cd_ops_types=>ty_msgno VALUE '818',
+      iface         TYPE zif_cd_ops_types=>ty_msgno VALUE '819',
+      pay_method    TYPE zif_cd_ops_types=>ty_msgno VALUE '820',
+      payments      TYPE zif_cd_ops_types=>ty_msgno VALUE '821',
+      amount        TYPE zif_cd_ops_types=>ty_msgno VALUE '822',
+      pay_run       TYPE zif_cd_ops_types=>ty_msgno VALUE '823',
+      business_date TYPE zif_cd_ops_types=>ty_msgno VALUE '824',
+      generated     TYPE zif_cd_ops_types=>ty_msgno VALUE '825',
+      sent          TYPE zif_cd_ops_types=>ty_msgno VALUE '826',
+      delivered     TYPE zif_cd_ops_types=>ty_msgno VALUE '827',
+      ack_due       TYPE zif_cd_ops_types=>ty_msgno VALUE '828',
+      overdue       TYPE zif_cd_ops_types=>ty_msgno VALUE '829',
+      ack_level     TYPE zif_cd_ops_types=>ty_msgno VALUE '830',
+      earlier_file  TYPE zif_cd_ops_types=>ty_msgno VALUE '831',
+      missed_stage  TYPE zif_cd_ops_types=>ty_msgno VALUE '832',
+      "! Subject: Missing bank ACK: &1 file(s), &2 payments, &3
+      subject       TYPE zif_cd_ops_types=>ty_msgno VALUE '833',
+      total         TYPE zif_cd_ops_types=>ty_msgno VALUE '834',
+      unknown       TYPE zif_cd_ops_types=>ty_msgno VALUE '835',
+      "! &1 h &2 min
+      hours_minutes TYPE zif_cd_ops_types=>ty_msgno VALUE '836',
+    END OF gc_ack_msg.
+  "! Between label and value of a detail line
+  CONSTANTS gc_ack_label_separator TYPE string VALUE `: `.
+
   "! Message numbers (class ZCD_OPS) of this area's user-facing texts
   CONSTANTS:
     BEGIN OF gc_msg,
@@ -447,6 +556,10 @@ INTERFACE zif_cd_ops_types
       alert_pattern_invalid       TYPE zif_cd_ops_types=>ty_msgno VALUE '742',
       pattern_invalid             TYPE zif_cd_ops_types=>ty_msgno VALUE '743',
       pattern_too_long            TYPE zif_cd_ops_types=>ty_msgno VALUE '744',
+      alert_id_failed             TYPE zif_cd_ops_types=>ty_msgno VALUE '802',
+      alert_run_reference         TYPE zif_cd_ops_types=>ty_msgno VALUE '803',
+      run_aborted                 TYPE zif_cd_ops_types=>ty_msgno VALUE '804',
+      alert_dispatch_failed       TYPE zif_cd_ops_types=>ty_msgno VALUE '805',
     END OF gc_msg.
 
 ENDINTERFACE.

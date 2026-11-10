@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Exception action history'
 @Metadata.allowExtensions: true
 define view entity ZC_CD_OpsExcHist

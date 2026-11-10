@@ -8,6 +8,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Adapter and check plug-ins created with the core interface check (audit A62).
 *& 2026-11-06 | get_prism_dao( ), get_prism_queue( ) for the PRISM status API.
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - factory</p>
 "! Getters have no side effects and never read the database.
@@ -119,9 +120,11 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
                         iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-adapter ).
     TRY.
         ro_adapter ?= lo_object.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-adapter.
+          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-adapter
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
   ENDMETHOD.
 
@@ -132,9 +135,11 @@ CLASS zcl_cd_fmon_factory IMPLEMENTATION.
                         iv_interface  = zif_cd_fmon_types=>gc_plugin_interface-check ).
     TRY.
         ro_check ?= lo_object.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-check.
+          MESSAGE e032(zcd_ops) WITH iv_class_name zif_cd_fmon_types=>gc_plugin_interface-check
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
   ENDMETHOD.
 

@@ -12,6 +12,12 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Rule patterns are PCRE matched to the complete value (case ignored; blank = any);
 *&              invalid_pattern( ) names a pattern that does not compile (the router logs and skips the rule).
+*& 2026-11-10 | Subject starts with the system ID; text and HTML carry run ID, job name / count and the
+*&              exceptions app (message 803) - the receiver finds the run without searching.
+*& 2026-11-10 | Missing bank ACK (user request 2026-11-10): findings with ACK evidence get their own table
+*&              (house bank, bank, file, method, payments, amount, payment run, times, overdue; totals per
+*&              currency; most overdue first) and the impact-first subject (ZCL_CD_OPS_ACK_MAIL); other
+*&              findings stay in the general table. Text version with the same content.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
 CLASS zcl_cd_ops_alert_policy DEFINITION
@@ -313,7 +319,19 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
     rs_message-run_id      = is_run-run_id.
     rs_message-severity    = lv_worst.
     rs_message-item_count  = iv_total.
+    " Missing / late bank ACK: own table and impact-first subject (user request 2026-11-10)
+    DATA(lt_ack_rows) = zcl_cd_ops_ack_mail=>rows( it_findings ).
+    DATA(lt_other) = it_findings.
+    LOOP AT lt_other ASSIGNING FIELD-SYMBOL(<ls_other>).
+      IF zcl_cd_ops_ack_mail=>is_ack( <ls_other> ) = abap_true.
+        DELETE lt_other.
+      ENDIF.
+    ENDLOOP.
     rs_message-subject     = COND #(
+      WHEN lt_ack_rows IS NOT INITIAL AND is_selection-run_level = abap_false
+      THEN zcl_cd_ops_ack_mail=>subject( it_rows     = lt_ack_rows
+                                         iv_pe_area  = is_run-pe_area
+                                         iv_severity = lv_worst )
       WHEN is_selection-run_level = abap_true
       THEN zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_subject_run
                                   iv_v1    = is_run-pe_area
@@ -327,6 +345,13 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
                                   iv_v2    = lv_worst
                                   iv_v3    = iv_total
                                   iv_v4    = is_selection-rule-rule_id ) ).
+    " The system first: a QA1 alert is never mistaken for production
+    rs_message-subject = |[{ COND sysysid( WHEN is_run-sysid IS NOT INITIAL THEN is_run-sysid ELSE sy-sysid ) }]|
+                      && rs_message-subject.
+    DATA(lv_reference) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_run_reference
+                                                iv_v1    = is_run-run_id
+                                                iv_v2    = is_run-jobname
+                                                iv_v3    = is_run-jobcount ).
     rs_message-html = gc_html-p_bold_open && zcl_cd_ops_util=>html_escape( rs_message-subject ) && gc_html-p_bold_close
                    && gc_html-p_open
                    && zcl_cd_ops_util=>html_escape(
@@ -340,9 +365,14 @@ CLASS zcl_cd_ops_alert_policy IMPLEMENTATION.
                                                iv_v1    = is_run-failed_items
                                                iv_v2    = is_run-blocked_items ) )
                    && gc_html-p_close
-                   && findings_html( it_findings = it_findings iv_suppressed = iv_suppressed ).
-    rs_message-text = rs_message-subject.
-    LOOP AT it_findings ASSIGNING FIELD-SYMBOL(<ls_finding>).
+                   && gc_html-p_open && zcl_cd_ops_util=>html_escape( lv_reference ) && gc_html-p_close
+                   && zcl_cd_ops_ack_mail=>html( lt_ack_rows )
+                   && findings_html( it_findings = lt_other iv_suppressed = iv_suppressed ).
+    rs_message-text = |{ rs_message-subject }\n{ lv_reference }|.
+    IF lt_ack_rows IS NOT INITIAL.
+      rs_message-text = |{ rs_message-text }\n{ zcl_cd_ops_ack_mail=>text( lt_ack_rows ) }|.
+    ENDIF.
+    LOOP AT lt_other ASSIGNING FIELD-SYMBOL(<ls_finding>).
       rs_message-text = |{ rs_message-text }\n{ <ls_finding>-severity } { <ls_finding>-rule_id } |
                      && |{ <ls_finding>-object_key } { <ls_finding>-message }|.
     ENDLOOP.

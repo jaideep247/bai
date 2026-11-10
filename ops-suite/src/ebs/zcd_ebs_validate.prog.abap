@@ -16,6 +16,10 @@
 *& 2026-11-06 | Audit A68: FEB date range validated (selection screen and source).
 *& 2026-11-06 | Audit A69: server file read rejects encoding and read errors, distinguishes end of file, always closes.
 *& 2026-11-06 | Modern-syntax sweep: CASE.
+*& 2026-11-10 | Server file: P_PATH is a file name only, resolved in logical path ZCD_OPS_EBS_IN (FILE),
+*&            | validated and checked with S_DATASET READ (ZCL_CD_OPS_FILE_PATH) - no directory from the
+*&            | user. File not readable: own message 810 (was 012 'Read of table'). Line excerpts in
+*&            | parser findings (E150, UNKNOWN_RECORD) come only from files read this way.
 *&---------------------------------------------------------------------*
 REPORT zcd_ebs_validate.
 
@@ -161,20 +165,25 @@ CLASS lcl_report IMPLEMENTATION.
                                             CHANGING   data_tab = lt_lines
                                             EXCEPTIONS OTHERS   = 1 ).
       IF sy-subrc <> 0.
-        RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e810(zcd_ops) WITH p_path.
       ENDIF.
     ELSE.
+      " Directory traversal: only a file name, resolved in the logical path of the EBS input
+      " file, validated and authorised for READ - the user never names a directory
+      DATA(lv_file) = zcl_cd_ops_file_path=>physical( is_logical   = zif_cd_ops_types=>gc_logical_file-ebs_input
+                                                      iv_file_name = p_path
+                                                      iv_activity  = zif_cd_ops_types=>gc_dataset_activity-read ).
       " A69: no IGNORING CONVERSION ERRORS - a file that is not UTF-8 is rejected, not
       " validated with replaced characters; only end of file ends the read; the dataset is
       " closed on every path
       TRY.
-          OPEN DATASET p_path FOR INPUT IN TEXT MODE ENCODING UTF-8.
+          OPEN DATASET lv_file FOR INPUT IN TEXT MODE ENCODING UTF-8.
           IF sy-subrc <> 0.
-            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path.
+            RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e810(zcd_ops) WITH lv_file.
           ENDIF.
           DO.
             CLEAR lv_line.
-            READ DATASET p_path INTO lv_line.
+            READ DATASET lv_file INTO lv_line.
             DATA(lv_subrc) = sy-subrc.
             CASE lv_subrc.
               WHEN 0.
@@ -187,24 +196,24 @@ CLASS lcl_report IMPLEMENTATION.
               WHEN OTHERS.
                 DATA(lv_read) = lines( lt_lines ).
                 RAISE EXCEPTION TYPE zcx_cd_ops_error
-                  MESSAGE e531(zcd_ops) WITH p_path lv_subrc lv_read.
+                  MESSAGE e531(zcd_ops) WITH lv_file lv_subrc lv_read.
             ENDCASE.
           ENDDO.
         CATCH cx_sy_conversion_codepage INTO DATA(lx_codepage).
-          CLOSE DATASET p_path.
+          CLOSE DATASET lv_file.
           DATA(lv_read_ok) = lines( lt_lines ).
-          RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e530(zcd_ops) WITH p_path lv_read_ok
+          RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e530(zcd_ops) WITH lv_file lv_read_ok
             EXPORTING
               previous = lx_codepage.
         CATCH cx_sy_file_access_error INTO DATA(lx_file).
-          CLOSE DATASET p_path.
-          RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH p_path
+          CLOSE DATASET lv_file.
+          RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e810(zcd_ops) WITH lv_file
             EXPORTING
               previous = lx_file.
         CLEANUP.
-          CLOSE DATASET p_path.
+          CLOSE DATASET lv_file.
       ENDTRY.
-      CLOSE DATASET p_path.
+      CLOSE DATASET lv_file.
     ENDIF.
     rv_content = concat_lines_of( table = lt_lines sep = cl_abap_char_utilities=>newline ).
   ENDMETHOD.

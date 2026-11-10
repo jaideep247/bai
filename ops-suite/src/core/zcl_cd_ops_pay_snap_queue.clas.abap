@@ -11,6 +11,7 @@
 *& Modification log:
 *& 2026-11-08 | Initial version (parallel snapshot packages; test seams BGPF, PAUSE).
 *& 2026-11-10 | The operation carries the package key only (concurrency review: keys, never the documents).
+*& 2026-11-10 | A failed bgPF start raises 764 (parallel packages not available); the cause stays in PREVIOUS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - bgPF queue of snapshot packages</p>
 "! VERIFY-ADT: CL_BGMC_PROCESS_FACTORY=>GET_DEFAULT( )->CREATE( ), SET_NAME,
@@ -46,7 +47,7 @@ CLASS zcl_cd_ops_pay_snap_queue IMPLEMENTATION.
     END-TEST-SEAM.
     IF lx_error IS BOUND.
       RAISE EXCEPTION TYPE zcx_cd_ops_error
-        MESSAGE e751(zcd_ops) WITH is_package-source
+        MESSAGE e764(zcd_ops)
         EXPORTING
           previous = lx_error.
     ENDIF.

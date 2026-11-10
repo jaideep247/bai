@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (PRISM status API, instant bgPF processing).
 *& 2026-11-07 | Store double: get_param delegates to the shared fake ZCL_CD_OPS_PARAMS_MEM.
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED) instead of the store double.
+*& 2026-11-10 | store_failure_is_500: no internal text in the answer, failure recorded server-side (B6).
 *&---------------------------------------------------------------------*
 CLASS ltd_prism_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -71,6 +72,9 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ops_store PARTIALLY IMPLEMENTED.
     DATA mv_commits TYPE i.
     DATA mv_rollbacks TYPE i.
+    "! B6: the server-side record of a store failure
+    DATA mt_saved TYPE zif_cd_ops_types=>tt_finding.
+    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     "! Queued units in the LUW at commit time (the unit must be part of the committed LUW)
     DATA mo_queue TYPE REF TO ltd_queue.
     DATA mv_queued_at_commit TYPE i.
@@ -86,6 +90,16 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_cd_ops_store~rollback.
     mv_rollbacks += 1.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~start_run.
+    rs_run-pe_area = iv_pe_area.
+    rs_run-variant = iv_variant.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~save_findings.
+    INSERT LINES OF it_findings INTO TABLE mt_saved.
+  ENDMETHOD.
+  METHOD zif_cd_ops_store~finish_run.
+    ms_finished = is_run.
   ENDMETHOD.
 ENDCLASS.
 
@@ -283,8 +297,22 @@ CLASS ltc_api IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = ls_response-status_code
                                             exp = zif_cd_fmon_prism_types=>gc_http-internal_error
                                             msg = '500 on a store failure' ).
-        cl_abap_unit_assert=>assert_equals( act = |{ mo_store->mv_rollbacks }/{ mo_store->mv_commits }| exp = |1/0|
-                                            msg = 'Rolled back, never committed' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollbacks exp = 1
+                                            msg = 'The event write is rolled back' ).
+        " B6: the caller sees the error code and the event ID only, no internal text
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_response-errors[ 1 ]-message
+          exp = zcl_cd_ops_util=>text( iv_msgno = zif_cd_fmon_prism_types=>gc_msg-store_failed
+                                       iv_v1    = gc_test-event_id )
+          msg = 'Generic message with the event ID' ).
+        " the detail stays server-side: one PRISM_STORE_FAILED finding with the trace, its own commit
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mt_saved[ 1 ]-check_code
+                                            exp = zif_cd_fmon_prism_types=>gc_check_store_failed
+                                            msg = 'Failure recorded as a finding' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mo_store->mt_saved[ 1 ]-details
+                                                 msg = 'The finding keeps the exception trace' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_commits exp = 1
+                                            msg = 'Only the failure record is committed' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
     ENDTRY.

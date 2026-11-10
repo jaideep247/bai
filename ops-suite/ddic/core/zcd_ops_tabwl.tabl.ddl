@@ -5,11 +5,12 @@
 @AbapCatalog.dataMaintenance : #ALLOWED
 define table zcd_ops_tabwl {
   key mandt      : abap.clnt not null;
-  // Payment engine area of the reader: FMON or HCK (table consolidation 2026-11-08)
+  // Payment engine area of the reader: FMON, HCK or EBS (table consolidation 2026-11-08; EBS 2026-11-10)
   key pe_area    : abap.char(4) not null;
   // What the reader does with the table: FMON SOURCE (dynamic reader of ZCD_FMON_SRC / _LOTCFG,
   // audit A51), HCK READ (aggregates, value queries, queue and evidence sources), HCK DRIFT
-  // (configuration drift hash); every reader filters by its area and purpose
+  // (configuration drift hash), EBS LOOKUP (rule R21: key and status field of ZCD_EBS_LOOKUP, one
+  // row per field, 2026-11-10); every reader filters by its area and purpose
   key purpose    : abap.char(10) not null;
   key table_name : abap.char(30) not null;
   // Approved field; blank = the whole table (FMON may narrow a table to fields, HCK rows are blank)

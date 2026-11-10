@@ -1287,7 +1287,9 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
                             severity    = zif_cd_ops_types=>gc_severity-warning
                             action      = zif_cd_ops_types=>gc_action-notify
                             message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_payout_types=>gc_msg-parallel_off
-                                                                 iv_tail  = lx_error->get_text( ) ) ) INTO TABLE mt_findings.
+                                                                 iv_tail  = COND #( WHEN lx_error->previous IS BOUND
+                                                                                    THEN lx_error->previous->get_text( )
+                                                                                    ELSE lx_error->get_text( ) ) ) ) INTO TABLE mt_findings.
           ENDIF.
           mo_store->commit( ).
           run_package( CORRESPONDING #( <ls_package> ) ).

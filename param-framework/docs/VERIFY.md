@@ -13,7 +13,7 @@ pull; record the outcome in `CHANGELOG.md`.
 | A1 | abapGit TABL XML with foreign keys (DD05M / DD08V), full buffering, table logging, delivery class C | `src/zca_param_*.tabl.xml` | SE11: foreign keys AREA and NAME, technical settings *log data changes*, buffering *fully buffered*; else maintain in SE11 and re-serialize |
 | A2 | DOMA / DTEL XML, value table of `ZCA_PARAM_AREA_ID`, fixed values | `src/*.doma.xml`, `*.dtel.xml` | SE11 shows fixed values of KIND / VTYPE / SIGN / OPTION |
 | A3 | Authorization objects SUSC `ZCA`, AUTH `ZCA_PARAR`, SUSO `ZCA_PARAM` (fields, activities 01/02/03/06) | `src/zca.susc.xml`, `zca_parar.auth.xml`, `zca_param.suso.xml` | SU21; fallback: create in SU21 manually - object class `ZCA` (or an existing customer class), field `ZCA_PARAR` with data element `ZCA_PARAM_AREA_ID`, object `ZCA_PARAM` with fields `ZCA_PARAR`, `ACTVT`, permitted activities 01 02 03 06 |
-| A4 | Message class `ZCA_PARAM` | `src/zca_param.msag.xml` | SE91 shows 001-025, 040-045, 047 |
+| A4 | Message class `ZCA_PARAM` | `src/zca_param.msag.xml` | SE91 shows 001-025, 040-045, 047, 048 |
 | A5 | `CL_ABAP_INTFDESCR->APPLIES_TO_CLASS( p_classname )` incl. inherited interfaces | `ZCL_CA_PARAM_VALIDATOR->CHECK_REPOSITORY` | unit test `class_with_interface` (CX_SY_ZERODIVIDE / IF_MESSAGE) |
 | A6 | Invalid date converts to 0 days (`d` -> `i`) | `ZCL_CA_PARAM_VALIDATOR->IS_DATE` | unit test `date_impossible_day` |
 | A7 | `matches( val pcre case = abap_false )`, `replace( pcre ... occ = 0 )`, `CX_SY_REGEX` for invalid PCRE | validator | unit tests `allowed_pcre_*`, `pcre_value_compiles`, `def_pattern_rules` |
@@ -28,7 +28,7 @@ pull; record the outcome in `CHANGELOG.md`.
 | A16 | DCL `pfcg_auth( ZCA_PARAM, ZCA_PARAR, ACTVT = '03' )` on draft-enabled projections | `ZC_CA_PARAM*.dcls` | user without 03 for an area does not see it |
 | A17 | Service binding | ADT: *New Service Binding* `ZUI_CA_PARAM_O4`, type *OData V4 - UI*, service definition `ZUI_CA_PARAM`, *Publish*; preview entity `Area` | Fiori elements preview: list, object page, draft, create definition and value |
 | A18 | RAP data elements `ABP_CREATION_USER`, `ABP_CREATION_TSTMPL`, `ABP_LASTCHANGE_USER`, `ABP_LASTCHANGE_TSTMPL`, `ABP_LOCINST_LASTCHANGE_TSTMPL`, include `SYCH_BDL_DRAFT_ADMIN_INC` | tables | activation |
-| A19 | ABAP Unit of all six test classes (104 tests), coverage | SE80 / ADT | all green; coverage of `ZCL_CA_PARAM`, `ZCL_CA_PARAM_VALIDATOR` >= 90 % |
+| A19 | ABAP Unit of all six test classes (105 tests), coverage | SE80 / ADT | all green; coverage of `ZCL_CA_PARAM`, `ZCL_CA_PARAM_VALIDATOR` >= 90 % |
 | A20 | ATC (default variant of DV1) | package `ZCA_PARAM` | no priority 1 / 2 findings |
 | A21 | App rules end to end | TRANSPORT client: create area / definition / values with request; QA or production: change a released value, try a developer-owned one (045), try to create a definition (disabled / 044) | as `docs/DESIGN.md` section 8 |
 

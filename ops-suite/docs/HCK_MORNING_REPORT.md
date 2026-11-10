@@ -482,6 +482,13 @@ The buckets are applied in this order and only while each brings the residual ne
 
 Overlap: EBS R18 compares the bank G/L balance with the statement per statement; `A_GL_TRANSFER` lists reconciliation keys without G/L document; `A_INFLIGHT` follows single payments. `A_RECON_3WAY` is the daily group-level proof across the three legs and does not replace them.
 
+### 7z. Changes of 2026-11-10 — alert health and reconciliation evidence
+
+- **`E_ALERT_DELIVERY`** measures, besides failed (F) and throttled (T) deliveries, the alert-log rows still **claimed** (status C) `HCK_ALERT_CLAIM_MIN` minutes (default 30, ZCA_PARAM) after the claim: metric `ALERT_CLAIM_STUCK` per channel, `*` = 0 when none (threshold row `config/hck_seed.md` §3: red at 1). A claim that is never completed means the dispatcher stopped between claim and send - nothing else reports it.
+- **`A_RECON_3WAY` evidence (deterministic verification).** Every group-day with data records - balanced days included - the bank leg `RC_BANK` (expected of bank ↔ G/L), the G/L leg `RC_GL`, the payment engine leg `RC_FICA` (when the subledger leg is compared), the differences `RC_DIFF_BANK_GL` / `RC_DIFF_GL_FICA` and the tolerance used under `RC_TOLERANCE_SET` or `RC_TOLERANCE_PARAM` (the metric name is the source). Break, timing and variance findings carry the same line in DETAILS (message 838: expected, actual, difference, tolerance, source).
+- **Set tolerance maintained explicitly.** `ZCD_HCK_RCSET-TOLERANCE_SET` = X makes the set tolerance apply even at 0.00 (exact match); without the flag a tolerance above 0 still counts as maintained, 0.00 falls back to `HCK_RECON_TOLERANCE` (as before).
+- **S_TABU_NAM 03** is checked before every dynamic read of a configured table (message 813, reported by the check as PLUGIN_ERROR with the trace).
+
 ## 8. Thresholds and baselines
 
 > **First principle:** a limit is either absolute (policy) or relative to the metric's own history (normality) — the table says which.
@@ -663,7 +670,7 @@ ABAP Unit (RISK LEVEL HARMLESS, DURATION SHORT; pure classes without doubles; en
 | HCK-QA-10 | GL transfer completeness | Reconciliation key with totals records and no GL transfer in the window | `GL_TRANSFER_GAP` per key; metric GL_MISSING_KEYS |
 | HCK-QA-11 | Report in dialog and background | Run interactively in test mode; then as background job with productive variant and CSV export | Dialog: scorecard + ALV + drill-downs, nothing saved; background: spool lists, ZCD_OPS_RUN/FINDING rows, ZCD_HCK_METRIC rows, CSV file on the application server |
 | HCK-QA-12 | Mail and alerts | ALERT_MORNING maintained; P_MAIL = X; one red finding | One HTML mail (renders on phone and desktop, RAG chips); core `dispatch` logs to ZCD_OPS_ALLOG per alert rule; test mode sends nothing |
-| HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_MODULE = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
+| HCK-QA-13 | Dashboard | Activate CDS + DCL, role with ZCD_OPS ZCD_PE_AREA = HCK only | Queries return HCK data only; run, finding and metric trends consistent with the morning report |
 | HCK-QA-14 | Health of the health check | Suspend the EBS validation job for > 26 h | `HCK_SELF` RED with `PE_AREA_STALE` for EBS |
 | HCK-QA-18 | Number range nearly exhausted | QA1 test object (SNRO) with an interval of 100 numbers, NRLEVEL 86 / 96; PARAM1 = the object | `E_NUMRANGE` AMBER / RED with `NR_USAGE_HIGH` naming object, interval, 85 % / 95 %, numbers left; object without interval → `NR_NO_INTERVAL` |
 | HCK-QA-19 | Queue in error / stuck | Outbound queue to an unreachable test destination (SYSFAIL / CPICERR); a stopped test queue; PARAM1 = its name pattern | `E_QUEUES` `QUEUE_ERROR` (E) naming SMQ1, `QUEUE_HOLD`; metrics `Q_ERROR` / `Q_HOLD` QOUT; queue left untouched |

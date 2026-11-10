@@ -68,6 +68,7 @@ tokens); use SSF / secure store for those.
 | 044 | definitions / areas only by transport | change attempted in QA / production | change in development |
 | 045 | value not changeable in this client | area not production-editable or parameter developer-owned | change in development, or release the parameter (by transport) |
 | 047 | recording on the request failed | request locked or released meanwhile, CTS problem | the save is rolled back (short dump); check the request (SE01) and save again |
+| 048 | client check failed: customizing not editable, reason in the message | the business configuration API raised (VERIFY-ADT name, missing authorisation, client settings) | the app stays read-only for areas and definitions (fail closed); fix the reason shown and reopen the app |
 
 Checking a value without the app: SE16 display of `ZCA_PARAM_VAL` (area, name) and
 `ZCA_PARAM_DEF`; the effective value includes the default and the rules of

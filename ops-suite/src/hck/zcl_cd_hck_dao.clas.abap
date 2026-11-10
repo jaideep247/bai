@@ -37,6 +37,9 @@
 *&            | is the core parameter MON_STALE_AFTER_MIN_<area>.
 *& 2026-11-08 | Table consolidation: expected groups are the field EXPECTED_GROUPS of ZCD_HCK_AGG (read with
 *&            | the definitions); get_agg_groups (ZCD_HCK_AGGGRP) removed.
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
+*& 2026-11-10 | get_table_fields checks S_TABU_NAM 03 (ZIF_CD_OPS_AUTH=>MAY_READ_TABLE) first: every dynamic read
+*&            | (aggregate, values, queues, reference rows, drift hash) describes its table there - 813.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -148,6 +151,12 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     DATA lt_ddic TYPE ddfields.
 
     DATA(lv_name) = to_upper( condense( CONV string( iv_tabname ) ) ).
+    " Every dynamic read of the health check describes its table here first: S_TABU_NAM display
+    " of the running user, in addition to the approved-table list (the check reports 813)
+    IF zcl_cd_ops_factory=>get_auth( )->may_read_table( lv_name ) = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e813(zcd_ops) WITH lv_name.
+    ENDIF.
     cl_abap_typedescr=>describe_by_name(
       EXPORTING
         p_name         = lv_name
@@ -162,9 +171,11 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
     ENDIF.
     TRY.
         lo_struct ?= lo_descr.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e303(zcd_ops) WITH lv_name.
+          MESSAGE e303(zcd_ops) WITH lv_name
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
 
     lo_struct->get_ddic_field_list(

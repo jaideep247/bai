@@ -19,6 +19,8 @@
 *&            | rows of another area or purpose do not approve (other_purpose_not_approved).
 *& 2026-11-08 | Table consolidation: SLA rows with KIND / DAY_TYPE; deadlines_only_active reads DURATION and
 *&            | DEADLINE rows of ZCD_FMON_SLA in one read (ZCD_FMON_DEADL merged).
+*& 2026-11-10 | ltc_payrun_totals: DPAYH payments and amount per payment run and house bank in one grouped
+*&            | read; other runs and house banks not returned (missing bank ACK alert).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -916,6 +918,102 @@ CLASS ltc_cfg_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( lt_checks ) exp = 1 msg = 'Only the active check' ).
         cl_abap_unit_assert=>assert_equals( act = lt_checks[ 1 ]-check_id exp = gc_test-check_on
                                             msg = 'Active check returned' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_payrun_totals DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      BEGIN OF gc_test,
+        laufd  TYPE d VALUE '20261110',
+        laufi  TYPE c LENGTH 6 VALUE 'R0001',
+        other  TYPE c LENGTH 6 VALUE 'R0002',
+        hbkid  TYPE c LENGTH 5 VALUE 'JPMC1',
+        hbkid2 TYPE c LENGTH 5 VALUE 'BOA01',
+        usd    TYPE c LENGTH 5 VALUE 'USD',
+      END OF gc_test.
+
+    CLASS-DATA go_env TYPE REF TO if_osql_test_environment.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+
+    METHODS totals_per_run_and_bank FOR TESTING.
+    METHODS no_keys_no_read         FOR TESTING.
+
+    METHODS payment
+      IMPORTING
+        iv_laufi  TYPE clike
+        iv_hbkid  TYPE clike
+        VALUE(iv_amount) TYPE zif_cd_ops_types=>ty_amount
+        iv_keyno  TYPE i.
+ENDCLASS.
+
+
+CLASS ltc_payrun_totals IMPLEMENTATION.
+
+  METHOD class_setup.
+    go_env = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'DPAYH' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    go_env->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    go_env->clear_doubles( ).
+  ENDMETHOD.
+
+
+  METHOD payment.
+    DATA lt_payh TYPE STANDARD TABLE OF dpayh WITH EMPTY KEY.
+    DATA ls_payh TYPE dpayh.
+    ls_payh-laufd = gc_test-laufd.
+    ls_payh-laufi = iv_laufi.
+    ls_payh-hbkid = iv_hbkid.
+    ls_payh-waers = gc_test-usd.
+    ls_payh-rwbtr = iv_amount.
+    ls_payh-pykey = |{ iv_keyno }|.
+    INSERT ls_payh INTO TABLE lt_payh.
+    go_env->insert_test_data( lt_payh ).
+  ENDMETHOD.
+
+
+  " One grouped read: the payments of the asked run and house bank, nothing else
+  METHOD totals_per_run_and_bank.
+    TRY.
+        payment( iv_laufi = gc_test-laufi iv_hbkid = gc_test-hbkid iv_amount = 100 iv_keyno = 1 ).
+        payment( iv_laufi = gc_test-laufi iv_hbkid = gc_test-hbkid iv_amount = 50 iv_keyno = 2 ).
+        payment( iv_laufi = gc_test-laufi iv_hbkid = gc_test-hbkid2 iv_amount = 70 iv_keyno = 3 ).
+        payment( iv_laufi = gc_test-other iv_hbkid = gc_test-hbkid iv_amount = 90 iv_keyno = 4 ).
+        DATA(lt_totals) = NEW zcl_cd_fmon_dao( )->zif_cd_fmon_dao~get_payrun_totals(
+                            VALUE #( ( laufd = gc_test-laufd laufi = gc_test-laufi hbkid = gc_test-hbkid ) ) ).
+        cl_abap_unit_assert=>assert_equals(
+          act = lt_totals
+          exp = VALUE zif_cd_fmon_types=>tt_payrun_total( ( laufd = gc_test-laufd laufi = gc_test-laufi
+                                                           hbkid = gc_test-hbkid currency = gc_test-usd
+                                                           payments = 2 amount = 150 ) )
+          msg = 'Two payments of the run and house bank, 150 USD' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD no_keys_no_read.
+    TRY.
+        cl_abap_unit_assert=>assert_initial( act = NEW zcl_cd_fmon_dao( )->zif_cd_fmon_dao~get_payrun_totals( VALUE #( ) )
+                                             msg = 'Nothing asked, nothing read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -200,6 +200,12 @@
      <MSGNR>047</MSGNR>
      <TEXT>Changes could not be recorded on request &amp;1</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_PARAM</ARBGB>
+     <MSGNR>048</MSGNR>
+     <TEXT>Area &amp;1: client check failed, customizing not editable: &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

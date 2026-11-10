@@ -10,6 +10,7 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | SLG1 external ID area/run/rule, BAL_LOG_REFRESH after save, partial log reported (audit A45, SLG1).
 *& 2026-11-06 | Test seams around the four BAL calls; return codes kept in locals (coverage gap closure).
+*& 2026-11-10 | Own messages for create (800) and save (801) failures, each with the return code.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - alert channel application log</p>
 CLASS zcl_cd_ops_chn_applog DEFINITION
@@ -37,7 +38,7 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
     DATA lv_object TYPE string.
     DATA lv_sub    TYPE string.
     DATA lv_subrc  TYPE sysubrc.
-    DATA lv_saved  TYPE abap_bool.
+    DATA lv_save_subrc TYPE sysubrc.
 
     SPLIT is_message-destination AT '/' INTO lv_object lv_sub.
     ls_log-object    = COND #( WHEN lv_object IS NOT INITIAL THEN condense( lv_object ) ELSE gc_default_object ).
@@ -61,7 +62,8 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
       lv_subrc = sy-subrc.
     END-TEST-SEAM.
     IF lv_subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e022(zcd_ops) WITH ls_log-object ls_log-subobject.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e800(zcd_ops) WITH ls_log-object ls_log-subobject lv_subrc.
     ENDIF.
 
     DATA(lv_msgty) = SWITCH symsgty( is_message-severity
@@ -100,7 +102,7 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
           save_not_allowed = 2
           numbering_error  = 3
           OTHERS           = 4.
-      lv_saved = xsdbool( sy-subrc = 0 ).
+      lv_save_subrc = sy-subrc.
     END-TEST-SEAM.
     " the saved log is released from memory: long batch runs do not grow SAPLSBAL (SLG1)
     TEST-SEAM bal_refresh.
@@ -116,8 +118,9 @@ CLASS zcl_cd_ops_chn_applog IMPLEMENTATION.
       " nothing to release - the handle is gone already
       CLEAR lv_handle.
     ENDIF.
-    IF lv_saved = abap_false.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e022(zcd_ops) WITH ls_log-object ls_log-subobject.
+    IF lv_save_subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e801(zcd_ops) WITH ls_log-object ls_log-subobject lv_save_subrc.
     ENDIF.
     " A45: a log that stopped adding lines is saved but reported as partial, never as sent
     IF lv_added < lines( lt_text ).

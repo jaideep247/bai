@@ -13,6 +13,8 @@
 *&            | the cutoff; the current version of a recent payment stays).
 *& 2026-11-08 | Retention 90 days of PAY_OUTCOME: an open cheque 120 days old keeps its current version,
 *&            | a cleared payment 91 days old and a version closed 91 days ago are purged.
+*& 2026-11-10 | run_purge_takes_history (exception history purged with its findings), old_file_purged_
+*&            | open_kept (registry by business date, file of an open FMON exception kept).
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -71,6 +73,8 @@ CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
         VALUE(rv_count) TYPE i.
 
     METHODS old_closed_run_is_deleted  FOR TESTING.
+    METHODS run_purge_takes_history    FOR TESTING.
+    METHODS old_file_purged_open_kept  FOR TESTING.
     METHODS open_exception_keeps_run   FOR TESTING.
     METHODS valid_waiver_keeps_run     FOR TESTING.
     METHODS expired_waiver_is_purged   FOR TESTING.
@@ -106,7 +110,8 @@ CLASS ltc_purge_dao IMPLEMENTATION.
     go_env = cl_osql_test_environment=>create(
       i_dependency_list = VALUE #( ( 'ZCD_OPS_RUN' ) ( 'ZCD_OPS_FINDING' ) ( 'ZCD_OPS_ALLOG' )
                                    ( 'ZCD_FMON_EVENT' ) ( 'ZCD_HCK_METRIC' ) ( 'ZCD_FMON_PRISM' )
-                                   ( 'ZCD_HCK_RESULT' ) ( 'ZCD_PAY_OUTCOME' ) ) ).
+                                   ( 'ZCD_HCK_RESULT' ) ( 'ZCD_PAY_OUTCOME' ) ( 'ZCD_OPS_EXC_HIST' )
+                                   ( 'ZCD_FMON_FILE' ) ) ).
   ENDMETHOD.
 
 
@@ -166,6 +171,67 @@ CLASS ltc_purge_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lv_runs exp = 1 msg = 'The old closed run must be deleted' ).
         cl_abap_unit_assert=>assert_equals( act = lv_findings exp = 1 msg = 'Its findings must be deleted with it' ).
         cl_abap_unit_assert=>assert_equals( act = run_count( ) exp = 0 msg = 'No run may remain' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B16: the action history of the purged findings goes with them - never orphaned
+  METHOD run_purge_takes_history.
+    DATA lt_hist TYPE STANDARD TABLE OF zcd_ops_exc_hist WITH EMPTY KEY.
+    DATA ls_hist TYPE zcd_ops_exc_hist.
+    TRY.
+        given_run( iv_run_id = gc-run_old iv_started = gc-old iv_disposition = zif_cd_ops_types=>gc_disposition-resolved ).
+        ls_hist-hist_uuid  = gc-run_new.
+        ls_hist-run_id     = gc-run_old.
+        ls_hist-finding_no = 1.
+        INSERT ls_hist INTO TABLE lt_hist.
+        go_env->insert_test_data( lt_hist ).
+        mo_cut->delete_package( EXPORTING iv_target   = zif_cd_ops_purge_dao=>gc_target-run
+                                          iv_cutoff   = gc-cutoff
+                                          iv_today    = gc-today
+                                          iv_max      = 100
+                                IMPORTING ev_history  = DATA(lv_history) ).
+        cl_abap_unit_assert=>assert_equals( act = lv_history exp = 1 msg = 'The history row goes with its finding' ).
+        SELECT COUNT(*) FROM zcd_ops_exc_hist INTO @DATA(lv_left).
+        cl_abap_unit_assert=>assert_equals( act = lv_left exp = 0 msg = 'No orphaned history' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B16: old registry files are purged by business date; the file of an open FMON exception stays
+  METHOD old_file_purged_open_kept.
+    DATA lt_files TYPE STANDARD TABLE OF zcd_fmon_file WITH EMPTY KEY.
+    DATA ls_file TYPE zcd_fmon_file.
+    DATA lt_findings TYPE STANDARD TABLE OF zcd_ops_finding WITH EMPTY KEY.
+    DATA ls_finding TYPE zcd_ops_finding.
+    TRY.
+        ls_file-file_id       = gc-run_old.
+        ls_file-business_date = gc-old_run.
+        INSERT ls_file INTO TABLE lt_files.
+        ls_file-file_id       = gc-run_new.
+        INSERT ls_file INTO TABLE lt_files.
+        go_env->insert_test_data( lt_files ).
+        ls_finding-run_id      = gc-run_new.
+        ls_finding-finding_no  = 1.
+        ls_finding-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
+        ls_finding-reference   = |{ gc-run_new }|.
+        ls_finding-disposition = zif_cd_ops_types=>gc_disposition-open.
+        INSERT ls_finding INTO TABLE lt_findings.
+        go_env->insert_test_data( lt_findings ).
+        cl_abap_unit_assert=>assert_equals(
+          act = mo_cut->delete_package( iv_target = zif_cd_ops_purge_dao=>gc_target-fmon_file
+                                        iv_cutoff = gc-cutoff
+                                        iv_today  = gc-today
+                                        iv_max    = 100 )
+          exp = 1
+          msg = 'Only the file without an open exception is purged' ).
+        SELECT file_id FROM zcd_fmon_file ORDER BY file_id INTO TABLE @DATA(lt_left).
+        cl_abap_unit_assert=>assert_equals( act = lt_left exp = VALUE #( ( file_id = gc-run_new ) )
+                                            msg = 'The file of the open exception stays' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

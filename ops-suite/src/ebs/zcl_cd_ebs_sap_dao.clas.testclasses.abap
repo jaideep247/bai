@@ -19,7 +19,24 @@
 *& 2026-11-07 | Returns lot item amount (DFKKRP-BETRW) for the in-flight check.
 *& 2026-11-08 | Table consolidation: ZCD_JOB_CYCLE is the configured lookup table of the tests
 *&            | (ZCD_OPS_MONCFG retired).
+*& 2026-11-10 | R21 lookup: approved fields in ZCD_OPS_TABWL (EBS / LOOKUP) and S_TABU_NAM double; tests
+*&            | lookup_field_not_approved, lookup_table_display_813 (B3).
 *&---------------------------------------------------------------------*
+CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    "! S_TABU_NAM display of the test user (B4); allowed unless a test refuses it
+    DATA mv_allowed TYPE abap_bool VALUE abap_true.
+ENDCLASS.
+
+
+CLASS ltd_table_auth IMPLEMENTATION.
+  METHOD zif_cd_ops_auth~may_read_table.
+    rv_allowed = mv_allowed.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_sap_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -303,6 +320,10 @@ CLASS ltc_sap_dao_reads DEFINITION FINAL FOR TESTING
     METHODS lookup_rows_key_and_status FOR TESTING.
     METHODS lookup_unknown_field_raises FOR TESTING.
     METHODS lookup_empty_keys_nothing FOR TESTING.
+    METHODS lookup_field_not_approved FOR TESTING.
+    METHODS lookup_table_display_813 FOR TESTING.
+    "! ZCD_OPS_TABWL rows EBS / LOOKUP for the lookup table's key and status field
+    METHODS approve_lookup_fields.
 ENDCLASS.
 
 
@@ -310,7 +331,7 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
 
   METHOD class_setup.
     go_env = cl_osql_test_environment=>create(
-      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_JOB_CYCLE' ) ) ).
+      i_dependency_list = VALUE #( ( 'DFKKCR' ) ( 'BSEG' ) ( 'ZCD_JOB_CYCLE' ) ( 'ZCD_OPS_TABWL' ) ) ).
   ENDMETHOD.
 
 
@@ -323,7 +344,24 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
     go_env->clear_doubles( ).
     mo_params = NEW #( ).
     zcl_cd_ops_injector=>inject_params( mo_params->params( ) ).
+    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     mo_cut = NEW zcl_cd_ebs_sap_dao( ).
+    approve_lookup_fields( ).
+  ENDMETHOD.
+
+
+  METHOD approve_lookup_fields.
+    DATA lt_tabwl TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
+    DATA ls_tabwl TYPE zcd_ops_tabwl.
+    ls_tabwl-pe_area    = zif_cd_ops_types=>gc_pe_area-ebs.
+    ls_tabwl-purpose    = zif_cd_ops_types=>gc_tabwl_purpose-lookup.
+    ls_tabwl-table_name = gc_test-lookup_tab.
+    ls_tabwl-active     = abap_true.
+    ls_tabwl-field_name = gc_test-lookup_key.
+    INSERT ls_tabwl INTO TABLE lt_tabwl.
+    ls_tabwl-field_name = gc_test-lookup_stat.
+    INSERT ls_tabwl INTO TABLE lt_tabwl.
+    go_env->insert_test_data( lt_tabwl ).
   ENDMETHOD.
 
 
@@ -472,10 +510,19 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: an unknown key field fails closed (051) before any SQL
+  " Rule: an unknown key field fails closed (051) before any SQL - even when it is approved
   METHOD lookup_unknown_field_raises.
     DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
     DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
+    DATA lt_tabwl TYPE STANDARD TABLE OF zcd_ops_tabwl WITH EMPTY KEY.
+    DATA ls_tabwl TYPE zcd_ops_tabwl.
+    ls_tabwl-pe_area    = zif_cd_ops_types=>gc_pe_area-ebs.
+    ls_tabwl-purpose    = zif_cd_ops_types=>gc_tabwl_purpose-lookup.
+    ls_tabwl-table_name = gc_test-lookup_tab.
+    ls_tabwl-field_name = gc_test-bad_field.
+    ls_tabwl-active     = abap_true.
+    INSERT ls_tabwl INTO TABLE lt_tabwl.
+    go_env->insert_test_data( lt_tabwl ).
     ls_lookup-table_name = gc_test-lookup_tab.
     ls_lookup-key_field  = gc_test-bad_field.
     INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
@@ -486,6 +533,45 @@ CLASS ltc_sap_dao_reads IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
                                             exp = gc_test-msgno_field
                                             msg = 'Unknown field is message 051' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B3: a field without its ZCD_OPS_TABWL row (EBS / LOOKUP) is never read - 812
+  METHOD lookup_field_not_approved.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
+    ls_lookup-table_name = gc_test-lookup_tab.
+    ls_lookup-key_field  = gc_test-bad_field.
+    INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
+    TRY.
+        mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
+        cl_abap_unit_assert=>fail( msg = 'A field that is not approved must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = CONV symsgno( '812' )
+                                            msg = 'Field not approved is message 812' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B3: an approved table the user may not display (S_TABU_NAM 03) is not read - 813
+  METHOD lookup_table_display_813.
+    DATA ls_lookup TYPE zif_cd_ebs_types=>ty_lookup_cfg.
+    DATA lt_keys TYPE zif_cd_ebs_sap_dao=>tt_lookup_key.
+    DATA(lo_auth) = NEW ltd_table_auth( ).
+    lo_auth->mv_allowed = abap_false.
+    zcl_cd_ops_injector=>inject_auth( lo_auth ).
+    ls_lookup-table_name = gc_test-lookup_tab.
+    ls_lookup-key_field  = gc_test-lookup_key.
+    INSERT CONV #( gc_test-param ) INTO TABLE lt_keys.
+    TRY.
+        mo_cut->get_lookup_rows( is_lookup = ls_lookup it_keys = lt_keys ).
+        cl_abap_unit_assert=>fail( msg = 'A table without display authorisation must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = CONV symsgno( '813' )
+                                            msg = 'S_TABU_NAM refusal is message 813' ).
     ENDTRY.
   ENDMETHOD.
 

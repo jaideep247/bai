@@ -10,6 +10,7 @@
 *& session; tests create their own over a system double.
 *& Modification log:
 *& 2026-11-07 | Initial version.
+*& 2026-11-10 | check_config_change: message 048 with the reason when the client check failed.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Parameter framework - maintenance gate</p>
 CLASS zcl_ca_param_maint DEFINITION
@@ -64,7 +65,8 @@ CLASS zcl_ca_param_maint DEFINITION
       RETURNING
         VALUE(rs_message) TYPE zif_ca_param_types=>ty_message.
 
-    "! Message 044 when areas / definitions cannot be maintained in this client
+    "! Message 044 when areas / definitions cannot be maintained in this client; 048 with the
+    "! reason when the client check itself failed (customizing treated as not editable)
     METHODS check_config_change
       IMPORTING
         iv_area           TYPE zif_ca_param_types=>ty_area
@@ -101,6 +103,7 @@ CLASS zcl_ca_param_maint DEFINITION
     DATA mo_system    TYPE REF TO zif_ca_param_system.
     DATA mo_validator TYPE REF TO zcl_ca_param_validator.
     DATA mv_mode      TYPE zif_ca_param_types=>ty_mode.
+    DATA ms_client    TYPE zif_ca_param_types=>ty_client.
 
 ENDCLASS.
 
@@ -124,7 +127,8 @@ CLASS zcl_ca_param_maint IMPLEMENTATION.
 
   METHOD mode.
     IF mv_mode IS INITIAL.
-      mv_mode = zcl_ca_param_maint_policy=>mode( mo_system->read_client( ) ).
+      ms_client = mo_system->read_client( ).
+      mv_mode   = zcl_ca_param_maint_policy=>mode( ms_client ).
     ENDIF.
     rv_mode = mv_mode.
   ENDMETHOD.
@@ -168,11 +172,19 @@ CLASS zcl_ca_param_maint IMPLEMENTATION.
 
 
   METHOD check_config_change.
-    IF can_maintain_config( ) = abap_false.
-      rs_message = VALUE #( msgid = zif_ca_param_types=>gc_msgid
-                            msgno = zif_ca_param_types=>gc_msg-config_not_allowed
-                            v1    = iv_area ).
+    IF can_maintain_config( ) = abap_true.
+      RETURN.
     ENDIF.
+    IF ms_client-cust_reason IS NOT INITIAL.
+      rs_message = VALUE #( msgid = zif_ca_param_types=>gc_msgid
+                            msgno = zif_ca_param_types=>gc_msg-client_unchecked
+                            v1    = iv_area
+                            v2    = ms_client-cust_reason ).
+      RETURN.
+    ENDIF.
+    rs_message = VALUE #( msgid = zif_ca_param_types=>gc_msgid
+                          msgno = zif_ca_param_types=>gc_msg-config_not_allowed
+                          v1    = iv_area ).
   ENDMETHOD.
 
 

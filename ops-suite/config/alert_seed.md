@@ -130,3 +130,19 @@ One parameter per payment engine area (INT, at least 1, app *Parameter areas* `Z
 | `MON_STALE_AFTER_MIN_CORE` | 30 | Payment outcome snapshot lag (2026-11-08): minutes behind the evidence, 6 x the 5-minute cadence; also A_INFLIGHT `PAY_SNAPSHOT_STALE` |
 
 The delivered values equal the CDS fallback literals and their ABAP constants (`ZIF_CD_FMON_TYPES=>GC_DASHBOARD-STALE_AFTER_MIN`, `ZIF_CD_HCK_TYPES=>GC_PARAM_DEFAULT-MAX_AGE_HOURS` × 60) — portable checks `cds_abap_parity` and `param_definitions_complete`. No value row is delivered (`config/param_values.csv`): a landscape changes a threshold with a value row. Time zone per area: not configurable (time stamps are UTC); future extension.
+
+## Missing bank ACK mail — layout (user request 2026-11-10; sample with made-up values)
+
+Findings `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` and `STAGE_DEADLINE_MISSED` of stage `ACK_RECEIVED` carry their file evidence; any FMON rule that selects them (e.g. `FMON_ERR`) sends this layout - no new rule is needed.
+
+Subject: `[PS4][FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00; USD 1,234,567.80`
+
+| House bank | Bank | File name | Payment method | Payments | Amount | Payment run (date / ID) | Generated in SAP | Delivered to bank | ACK due | Overdue by |
+|---|---|---|---|---:|---:|---|---|---|---|---|
+| JPMC1/OPS01 | JPMC | ACH_JPMC_20261110_01.txt | ACH | 120 | USD 1,234,567.80 | 2026-11-10/R0001 | 2026-11-10 06:02:11 CST | 2026-11-10 06:07:40 CST | 2026-11-10 09:00:00 CST | 1 h 35 min |
+| BOA01 | BOA | WIRE_BOA_20261110_02.txt | WIRE | 1 | CAD 2,500.00 | 2026-11-10/R0002 | 2026-11-10 07:15:03 CST | 2026-11-10 07:16:20 CST | 2026-11-10 10:00:00 CST | 0 h 35 min |
+| Total | | 2 | | 121 | CAD 2,500.00 / USD 1,234,567.80 | | | | | |
+
+Below the table: the run / job line (message 803) and, if the alert also selected other findings, the general findings table. The text version lists the same columns separated by ` | `.
+
+**User decision 2026-11-10:** dollar amounts and payment counts are shown in the missing-ACK alert. Masking of amounts in other alerts remains an open decision (`Release_Readiness.md` §5). No payee or member data; bank accounts only as house bank / account ID.

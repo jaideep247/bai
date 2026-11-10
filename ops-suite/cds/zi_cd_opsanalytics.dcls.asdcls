@@ -3,8 +3,9 @@
 //          views (custom authorization object ZCD_OPS to be created in SU21).
 // Modification log: 2026-11-05 | Initial version (ops suite consolidation).
 //                   2026-11-06 | File monitoring cube ZI_CD_FmonFlowCube (FMON file monitoring dashboard).
-// Authorization object ZCD_OPS (to create, class e.g. ZCD): fields ZCD_MODULE (HCK, FMON, EBS), ACTVT (03 display).
-// Role for IT support: ZCD_MODULE = *, ACTVT = 03; management: same, consumed via the queries only.
+//                   2026-11-10 | Comments name the authorisation field ZCD_PE_AREA (SU20).
+// Authorization object ZCD_OPS (to create, class e.g. ZCD): fields ZCD_PE_AREA (HCK, FMON, EBS, CORE), ACTVT (03 display).
+// Role for IT support: ZCD_PE_AREA = *, ACTVT = 03; management: same, consumed via the queries only.
 // Verify on target release: aspect pfcg_auth syntax and #MAPPING role annotation.
 @EndUserText.label: 'Ops suite analytics - pe_area authorization'
 @MappingRole: true

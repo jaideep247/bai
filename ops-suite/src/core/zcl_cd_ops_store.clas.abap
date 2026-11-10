@@ -29,6 +29,8 @@
 *&            | it changes again it is left for the next run with an information finding EXC_CHANGED_DEFERRED -
 *&            | a waiver, assignment or resolution is never overwritten. Findings inserted accepting duplicate
 *&            | keys with a count check; numbering continues after the run's highest finding number.
+*& 2026-11-10 | Observability: start_run stores the job (JOBNAME / JOBCOUNT) and system ID of the run;
+*&            | save_findings stores the error class of a finding raised at a catch boundary.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - DB store (ZCD_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -205,6 +207,10 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     rs_run-status     = zif_cd_ops_types=>gc_run_status-running.
     rs_run-rag        = zif_cd_ops_types=>gc_rag-grey.
     rs_run-created_by = sy-uname.
+    DATA(ls_job) = zcl_cd_ops_util=>job_link( ).
+    rs_run-jobname  = ls_job-jobname.
+    rs_run-jobcount = ls_job-jobcount.
+    rs_run-sysid    = ls_job-sysid.
 
     IF iv_test_mode = abap_true.
       RETURN.
@@ -255,6 +261,7 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
       ls_db-reference   = <ls_finding>-reference.
       ls_db-message     = <ls_finding>-message.
       ls_db-details     = <ls_finding>-details.
+      ls_db-error_class = <ls_finding>-error_class.
       ls_db-created_at  = lv_now.
       ls_db-created_by  = sy-uname.
       ls_db-last_changed_at = lv_now.
@@ -734,6 +741,9 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     rs_db-runtime_ms    = is_run-runtime_ms.
     rs_db-message       = is_run-message.
     rs_db-created_by    = is_run-created_by.
+    rs_db-jobname       = is_run-jobname.
+    rs_db-jobcount      = is_run-jobcount.
+    rs_db-sysid         = is_run-sysid.
   ENDMETHOD.
 
 
@@ -755,6 +765,9 @@ CLASS zcl_cd_ops_store IMPLEMENTATION.
     rs_run-runtime_ms    = is_db-runtime_ms.
     rs_run-message       = is_db-message.
     rs_run-created_by    = is_db-created_by.
+    rs_run-jobname       = is_db-jobname.
+    rs_run-jobcount      = is_db-jobcount.
+    rs_run-sysid         = is_db-sysid.
   ENDMETHOD.
 
 ENDCLASS.

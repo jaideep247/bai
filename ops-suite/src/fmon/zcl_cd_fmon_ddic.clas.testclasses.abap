@@ -3,12 +3,27 @@
 *& Purpose:
 *& Unit tests of the RTTI DDIC describer: fields and key flags of a DDIC
 *& table (T000, delivered by SAP in every system), invalid names, unknown
-*& names and non-structure types refused, S_TABU_NAM decision through test
-*& seam TABLE_AUTH. Reads the runtime DDIC only (no table content); does not
+*& names and non-structure types refused, S_TABU_NAM decision of the core
+*& authorisation (double). Reads the runtime DDIC only (no table content); does not
 *& prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | S_TABU_NAM decision through the core authorisation double (ZCL_CD_OPS_INJECTOR=>INJECT_AUTH).
 *&---------------------------------------------------------------------*
+CLASS ltd_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    DATA mv_allowed TYPE abap_bool.
+ENDCLASS.
+
+
+CLASS ltd_auth IMPLEMENTATION.
+  METHOD zif_cd_ops_auth~may_read_table.
+    rv_allowed = mv_allowed.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_ddic DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -50,6 +65,7 @@ CLASS ltc_ddic IMPLEMENTATION.
 
 
   METHOD teardown.
+    zcl_cd_ops_injector=>reset( ).
     CLEAR mo_cut.
   ENDMETHOD.
 
@@ -103,9 +119,8 @@ CLASS ltc_ddic IMPLEMENTATION.
   " Rule: S_TABU_NAM display decides whether the dynamic reader may read the table
   METHOD authorised_table_may_read.
     TRY.
-        TEST-INJECTION table_auth.
-          rv_allowed = abap_true.
-        END-TEST-INJECTION.
+        zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
+        CAST ltd_auth( zcl_cd_ops_factory=>get_auth( ) )->mv_allowed = abap_true.
         cl_abap_unit_assert=>assert_true( act = mo_cut->may_read( gc_table ) msg = 'Authorised table may be read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -116,9 +131,7 @@ CLASS ltc_ddic IMPLEMENTATION.
   " Rule: without S_TABU_NAM display the table is not read
   METHOD refused_table_may_not_read.
     TRY.
-        TEST-INJECTION table_auth.
-          rv_allowed = abap_false.
-        END-TEST-INJECTION.
+        zcl_cd_ops_injector=>inject_auth( NEW ltd_auth( ) ).
         cl_abap_unit_assert=>assert_false( act = mo_cut->may_read( gc_table ) msg = 'Refused table is not read' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (audit A61: no truncated report export).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-10 | IV_FILE is a path resolved by ZCL_CD_OPS_FILE_PATH: the temp file and a delete stay in it.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - complete-or-nothing file export</p>
 "! ABAP cannot rename a dataset atomically. Instead the full content is proven

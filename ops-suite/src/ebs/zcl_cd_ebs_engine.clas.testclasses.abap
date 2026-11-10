@@ -36,10 +36,15 @@ CLASS ltd_source DEFINITION FINAL FOR TESTING.
     INTERFACES zif_cd_ebs_source.
     DATA mt_packages TYPE STANDARD TABLE OF zif_cd_ebs_types=>ty_package WITH EMPTY KEY.
     DATA mv_next TYPE i VALUE 1.
+    "! B9: the source cannot be read (the run stops after it started)
+    DATA mv_fail TYPE abap_bool.
 ENDCLASS.
 
 CLASS ltd_source IMPLEMENTATION.
   METHOD zif_cd_ebs_source~next_package.
+    IF mv_fail = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e012(zcd_ops) WITH 'UNIT'.
+    ENDIF.
     rs_package = VALUE #( mt_packages[ mv_next ] OPTIONAL ).
     mv_next += 1.
   ENDMETHOD.
@@ -84,6 +89,7 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
     DATA mv_commits  TYPE i.
     DATA mv_starts   TYPE i.
+    DATA mv_rollbacks TYPE i.
     DATA mv_reconciles TYPE i.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
     METHODS constructor.
@@ -116,6 +122,9 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_cd_ops_store~commit.
     mv_commits += 1.
   ENDMETHOD.
+  METHOD zif_cd_ops_store~rollback.
+    mv_rollbacks += 1.
+  ENDMETHOD.
   METHOD zif_cd_ops_store~get_last_run.
     CLEAR rs_run.
   ENDMETHOD.
@@ -133,6 +142,9 @@ CLASS ltd_alert DEFINITION FINAL FOR TESTING.
     DATA mv_dispatched TYPE i.
     "! A67: findings handed to the alert router
     DATA mt_findings TYPE zif_cd_ops_types=>tt_finding.
+    "! B11: the alert configuration cannot be read
+    DATA mv_fail TYPE abap_bool.
+    DATA ms_run TYPE zif_cd_ops_types=>ty_run.
 ENDCLASS.
 
 CLASS ltd_alert IMPLEMENTATION.
@@ -141,6 +153,10 @@ CLASS ltd_alert IMPLEMENTATION.
   METHOD zif_cd_ops_alert~dispatch.
     mv_dispatched += 1.
     mt_findings = it_findings.
+    ms_run = is_run.
+    IF mv_fail = abap_true.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e020(zcd_ops) WITH 'UNIT'.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.
 
@@ -299,6 +315,9 @@ CLASS ltc_engine DEFINITION FINAL FOR TESTING
     METHODS empty_rule_group_is_gap      FOR TESTING.
     METHODS none_row_makes_group_optional FOR TESTING.
     METHODS unusable_rule_is_gap         FOR TESTING.
+    METHODS stopped_run_is_aborted       FOR TESTING.
+    METHODS alert_failure_is_finding     FOR TESTING.
+    METHODS plugin_error_keeps_trace     FOR TESTING.
     "! Findings of VALIDATE_PACKAGE for a package (default: the first package of the source)
     METHODS validate
       IMPORTING
@@ -413,6 +432,66 @@ CLASS ltc_engine IMPLEMENTATION.
       ENDDO.
       INSERT ls_package INTO TABLE mo_source->mt_packages.
     ENDDO.
+  ENDMETHOD.
+
+
+  " B9: a run that stops after it started is rolled back, closed as aborted (ON_ABORT alert)
+  " and the error reaches the job - never a run left in status R or a green job
+  METHOD stopped_run_is_aborted.
+    configure_scenario( default_flags( ) ).
+    mo_source->mv_fail = abap_true.
+    TRY.
+        NEW zcl_cd_ebs_engine( )->run( io_source = mo_source iv_variant = 'UNIT' ).
+        cl_abap_unit_assert=>fail( msg = 'The error must reach the caller' ).
+      CATCH zcx_cd_ops_error.
+        cl_abap_unit_assert=>assert_equals( act = mo_store->mv_rollbacks exp = 1
+                                            msg = 'The open LUW is rolled back' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status
+                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            msg = 'The run is closed as aborted' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_aborted ] ) )
+          msg = 'RUN_ABORTED is saved' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_alert->ms_run-status
+                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            msg = 'ON_ABORT rules see the aborted run' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_lock->mv_releases exp = 1
+                                            msg = 'The run lock is released' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B11: a failed alert dispatch is a finding of the run (ALERT_FAILED), never swallowed
+  METHOD alert_failure_is_finding.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-line_code = gc_test-code_unmap.
+    configure_scenario( ls_flags ).
+    mo_alert->mv_fail = abap_true.
+
+    run_engine( ).
+
+    cl_abap_unit_assert=>assert_true(
+      act = xsdbool( line_exists( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_alert_failed ] ) )
+      msg = 'ALERT_FAILED is saved with the run' ).
+    cl_abap_unit_assert=>assert_true(
+      act = xsdbool( line_exists( ms_result-findings[ check_code = zcl_cd_ops_run_guard=>gc_check_alert_failed ] ) )
+      msg = 'ALERT_FAILED is returned to the report' ).
+  ENDMETHOD.
+
+
+  " B10 / B12: a rule that raises leaves its exception trace and error class on PLUGIN_ERROR
+  METHOD plugin_error_keeps_trace.
+    DATA(ls_flags) = default_flags( ).
+    ls_flags-assign_fail_rule = abap_true.
+    configure_scenario( ls_flags ).
+
+    run_engine( ).
+
+    DATA(ls_error) = VALUE #( mo_store->mt_saved[ check_code = zcl_cd_ebs_engine=>gc_check_code-plugin_error ] OPTIONAL ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( ls_error-details CS 'ZCX_CD_OPS_ERROR' )
+                                      msg = 'The trace names the exception class' ).
+    cl_abap_unit_assert=>assert_equals( act = ls_error-error_class exp = zif_cd_ops_types=>gc_error_class-data
+                                        msg = 'A rule that could not read its data is DATA' ).
   ENDMETHOD.
 
 

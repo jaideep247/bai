@@ -199,6 +199,8 @@ src/core/zc_cd_opscritexc.ddlx.asddlxs,CDS,
 src/core/zc_cd_opscritexc.ddlx.xml,abapGit,
 src/core/zc_cd_opsexception.bdef.asbdef,RAP,
 src/core/zc_cd_opsexception.bdef.xml,abapGit,
+src/core/zc_cd_opsexception.dcls.asdcls,Other,
+src/core/zc_cd_opsexception.dcls.xml,abapGit,
 src/core/zc_cd_opsexception.ddls.asddls,CDS,
 src/core/zc_cd_opsexception.ddls.xml,abapGit,
 src/core/zc_cd_opsexception.ddlx.asddlxs,CDS,
@@ -262,6 +264,9 @@ src/core/zcd_pay_outcome.tabl.xml,abapGit,
 src/core/zcd_pay_outpkg.tabl.xml,abapGit,
 src/core/zcd_pay_outpkgm.tabl.xml,abapGit,
 src/core/zcd_pay_outwm.tabl.xml,abapGit,
+src/core/zcl_cd_ops_ack_mail.clas.abap,ABAP,Missing or late bank ACK in the alert e-mail (user request 2026-11-10).
+src/core/zcl_cd_ops_ack_mail.clas.testclasses.abap,ABAP,Domain tests of the missing bank ACK table: two files in different
+src/core/zcl_cd_ops_ack_mail.clas.xml,abapGit,
 src/core/zcl_cd_ops_alert_dao.clas.abap,ABAP,"SQL for the alert router: rules (payment engine area or '*'), channels and the delivery"
 src/core/zcl_cd_ops_alert_dao.clas.testclasses.abap,ABAP,SQL tests of the alert DAO claim / repeat-key logic on cl_osql_test_environment
 src/core/zcl_cd_ops_alert_dao.clas.xml,abapGit,
@@ -317,6 +322,9 @@ src/core/zcl_cd_ops_exc_policy.clas.xml,abapGit,
 src/core/zcl_cd_ops_factory.clas.abap,ABAP,"Resolves shared services (store, alert router, alert DAO, clock) and creates"
 src/core/zcl_cd_ops_factory.clas.testclasses.abap,ABAP,Tests of plug-in creation by class name (the mechanism behind every
 src/core/zcl_cd_ops_factory.clas.xml,abapGit,
+src/core/zcl_cd_ops_file_path.clas.abap,ABAP,The only way the suite turns a user's file name into an application
+src/core/zcl_cd_ops_file_path.clas.testclasses.abap,ABAP,Unit tests of the logical-path file resolution through its test seams
+src/core/zcl_cd_ops_file_path.clas.xml,abapGit,
 src/core/zcl_cd_ops_injector.clas.abap,ABAP,Unit tests only (not FOR TESTING so the factory may name it as GLOBAL FRIEND).
 src/core/zcl_cd_ops_injector.clas.xml,abapGit,
 src/core/zcl_cd_ops_lock.clas.abap,ABAP,Run lock over the standard generic lock object E_TABLE with table
@@ -376,7 +384,7 @@ src/core/zcl_cd_ops_purge.clas.xml,abapGit,
 src/core/zcl_cd_ops_purge_dao.clas.abap,ABAP,All SQL of the retention purge. A run is purgeable when it started before
 src/core/zcl_cd_ops_purge_dao.clas.testclasses.abap,ABAP,OSQL tests of the purge SQL: old runs without blocking exceptions are
 src/core/zcl_cd_ops_purge_dao.clas.xml,abapGit,
-src/core/zcl_cd_ops_run_guard.clas.abap,ABAP,What a run does when the run lock is held by another run: nothing is
+src/core/zcl_cd_ops_run_guard.clas.abap,ABAP,What a run does when it cannot run or cannot finish:
 src/core/zcl_cd_ops_run_guard.clas.testclasses.abap,ABAP,Tests of the refused run: a second run while the lock is held becomes an
 src/core/zcl_cd_ops_run_guard.clas.xml,abapGit,
 src/core/zcl_cd_ops_store.clas.abap,ABAP,Repository for the shared result/exception store. The only class that
@@ -816,6 +824,8 @@ src/fmon/zc_cd_fmoncheck.ddlx.asddlxs,CDS,
 src/fmon/zc_cd_fmoncheck.ddlx.xml,abapGit,
 src/fmon/zc_cd_fmonfile.bdef.asbdef,RAP,
 src/fmon/zc_cd_fmonfile.bdef.xml,abapGit,
+src/fmon/zc_cd_fmonfile.dcls.asdcls,Other,
+src/fmon/zc_cd_fmonfile.dcls.xml,abapGit,
 src/fmon/zc_cd_fmonfile.ddls.asddls,CDS,
 src/fmon/zc_cd_fmonfile.ddls.xml,abapGit,
 src/fmon/zc_cd_fmonfile.ddlx.asddlxs,CDS,
@@ -852,6 +862,8 @@ src/fmon/zc_cd_fmonlotcfg.ddlx.asddlxs,CDS,
 src/fmon/zc_cd_fmonlotcfg.ddlx.xml,abapGit,
 src/fmon/zc_cd_fmonprqwa.bdef.asbdef,RAP,
 src/fmon/zc_cd_fmonprqwa.bdef.xml,abapGit,
+src/fmon/zc_cd_fmonprqwa.dcls.asdcls,Other,
+src/fmon/zc_cd_fmonprqwa.dcls.xml,abapGit,
 src/fmon/zc_cd_fmonprqwa.ddls.asddls,CDS,
 src/fmon/zc_cd_fmonprqwa.ddls.xml,abapGit,
 src/fmon/zc_cd_fmonprqwa.ddlx.asddlxs,CDS,
@@ -889,6 +901,9 @@ src/fmon/zcd_fmon_prq_wa.tabl.xml,abapGit,
 src/fmon/zcd_fmon_sla.tabl.xml,abapGit,
 src/fmon/zcd_fmon_src.tabl.xml,abapGit,
 src/fmon/zcd_fmon_srcmap.tabl.xml,abapGit,
+src/fmon/zcl_cd_fmon_ack_alert.clas.abap,ABAP,Evidence of a file whose bank ACK is missing or late (user request
+src/fmon/zcl_cd_fmon_ack_alert.clas.testclasses.abap,ABAP,Domain tests of the missing bank ACK evidence: house bank and payment run
+src/fmon/zcl_cd_fmon_ack_alert.clas.xml,abapGit,
 src/fmon/zcl_cd_fmon_adapter_feb.clas.abap,ABAP,Source adapter for imported bank statements (ZCD_FMON_SRC row with
 src/fmon/zcl_cd_fmon_adapter_feb.clas.testclasses.abap,ABAP,"Application tests of the FEB source adapter with LTD_* FMON DAO, factory"
 src/fmon/zcl_cd_fmon_adapter_feb.clas.xml,abapGit,
@@ -1129,6 +1144,8 @@ src/hck/zc_cd_hckseqoutcome.ddlx.asddlxs,CDS,
 src/hck/zc_cd_hckseqoutcome.ddlx.xml,abapGit,
 src/hck/zc_cd_hcksuppress.bdef.asbdef,RAP,
 src/hck/zc_cd_hcksuppress.bdef.xml,abapGit,
+src/hck/zc_cd_hcksuppress.dcls.asdcls,Other,
+src/hck/zc_cd_hcksuppress.dcls.xml,abapGit,
 src/hck/zc_cd_hcksuppress.ddls.asddls,CDS,
 src/hck/zc_cd_hcksuppress.ddls.xml,abapGit,
 src/hck/zc_cd_hcksuppress.ddlx.asddlxs,CDS,
@@ -1418,6 +1435,7 @@ src/hck/zui_cd_hck_dash.srvd.xml,abapGit,
 src/hck/zui_cd_hck_sup.srvd.srvdsrv,RAP,
 src/hck/zui_cd_hck_sup.srvd.xml,abapGit,
 tools/abapgit_serialize.py,Other,
+tools/auth_checks.py,Other,
 tools/cds_abap_parity.py,Other,
 tools/class_purpose.py,Other,
 tools/literal_allowlist.txt,Other,
@@ -1431,6 +1449,7 @@ tools/test_checks.py,Other,
 tools/test_path_register.csv,Doc,
 tools/usage_checks.py,Other,
 tools/tests/test_abapgit_serialize.py,Other,
+tools/tests/test_auth_checks.py,Other,
 tools/tests/test_cds_abap_parity.py,Other,
 tools/tests/test_modernize.py,Other,
 tools/tests/test_name_checks.py,Other,

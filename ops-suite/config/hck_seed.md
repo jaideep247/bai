@@ -135,6 +135,7 @@ uncapped count.
 | E_SYSTEM | UPDATE_ERRORS | * | 1 | 5 | X | NONE | | |
 | E_SYSTEM | LOCK_MAX_AGE_MIN | * | 60 | 240 | X | NONE | | |
 | E_ALERT_DELIVERY | ALERT_FAILED | * | 1 | 5 | X | NONE | | |
+| E_ALERT_DELIVERY | ALERT_CLAIM_STUCK | * | 1 | 1 | X | NONE | | |
 | D_PARAM_INVALID | PARAM_INVALID | * | 1 | 1 | X | NONE | | |
 | D_POSTAREA_INVALID | POSTAREA_INVALID | * | 1 | 1 | X | NONE | | |
 | E_NUMRANGE | NR_USED_PCT | * | 85 | 95 | X | NONE | | |
@@ -213,6 +214,17 @@ Since the table consolidation of 2026-11-08 the HCK whitelist (was `ZCD_HCK_TABW
 
 No HR, partner bank or card tables — the aggregate check returns counts/sums only, but the whitelist is the
 security boundary; every new row needs a reviewer.
+
+## 5a. Approved lookup fields — `ZCD_OPS_TABWL`, area EBS, purpose LOOKUP (2026-11-10)
+
+The EBS lookup rule R21 (`ZCD_EBS_LOOKUP`) reads a configured table and echoes the values into findings, so every key field and status field needs its own active row (field-level; a blank field approves nothing), in addition to `S_TABU_NAM` 03 of the job user. No lookup is delivered; when one is configured, add per lookup:
+
+| PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | DESCRIPTION | ACTIVE | APPROVED_BY |
+|---|---|---|---|---|---|---|
+| EBS | LOOKUP | `<lookup table>` | `<KEY_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: key | X | `<security reviewer>` |
+| EBS | LOOKUP | `<lookup table>` | `<STATUS_FIELD of the lookup>` | R21 lookup `<LOOKUP_ID>`: status | X | `<security reviewer>` |
+
+The EBS configuration app refuses a lookup whose fields are not approved (message 812); at run time the same check and `S_TABU_NAM` (813) stop the read, and the rule reports PLUGIN_ERROR (fail closed).
 
 ## 6. Configuration drift — `ZCD_OPS_TABWL`, area HCK, purpose DRIFT
 

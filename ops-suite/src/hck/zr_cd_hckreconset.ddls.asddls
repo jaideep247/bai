@@ -30,6 +30,8 @@ define view entity ZR_CD_HckReconSet
       leg_fica as LegFica,
       @EndUserText.label: 'Tolerance'
       tolerance as Tolerance,
+      @EndUserText.label: 'Tolerance set'
+      tolerance_set as ToleranceSet,
       @EndUserText.label: 'Description'
       description as Description,
       @EndUserText.label: 'Active'

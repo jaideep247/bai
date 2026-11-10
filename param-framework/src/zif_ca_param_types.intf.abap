@@ -112,6 +112,8 @@ INTERFACE zif_ca_param_types
       role          TYPE ty_role,
       change_option TYPE ty_change_opt,
       cust_editable TYPE abap_bool,
+      "! Why the business configuration API could not answer (customizing then not editable)
+      cust_reason   TYPE string,
     END OF ty_client.
 
   "! State of a transport request (E070)
@@ -167,6 +169,7 @@ INTERFACE zif_ca_param_types
       config_not_allowed TYPE symsgno VALUE '044',
       value_not_editable TYPE symsgno VALUE '045',
       record_failed      TYPE symsgno VALUE '047',
+      client_unchecked   TYPE symsgno VALUE '048',
     END OF gc_msg.
 
   "! Parameter kinds (domain ZCA_PARAM_KIND)

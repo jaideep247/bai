@@ -20,6 +20,9 @@
 *& 2026-11-07 | Parameter names / default from ZIF_CD_OPS_TYPES; parameters through GET_PARAMS;
 *&            | escalation window with ZCL_CD_OPS_UTIL=>PARAM_INT.
 *& 2026-11-07 | Intent key and claim time stay on the claim only (webhook de-duplication fields removed).
+*& 2026-11-10 | An alert ID that cannot be generated raises 802 (was: initial ID, the second one a duplicate
+*&            | key); the caller records ALERT_FAILED. Test seam ALERT_ID. Decisions logged before the error
+*&            | are still written. A failed delivery keeps the exception trace in ZCD_OPS_ALLOG-ERROR.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
 CLASS zcl_cd_ops_alert_router DEFINITION
@@ -45,14 +48,18 @@ CLASS zcl_cd_ops_alert_router DEFINITION
         is_selection TYPE zcl_cd_ops_alert_policy=>ty_selection
         is_run       TYPE zif_cd_ops_types=>ty_run
         it_channels  TYPE zif_cd_ops_types=>tt_alert_channel
-        io_dao       TYPE REF TO zif_cd_ops_alert_dao.
+        io_dao       TYPE REF TO zif_cd_ops_alert_dao
+      RAISING
+        zcx_cd_ops_error.
 
     METHODS deliver_messages
       IMPORTING
         it_messages TYPE zif_cd_ops_types=>tt_alert_message
         is_channel  TYPE zif_cd_ops_types=>ty_alert_channel
         is_run      TYPE zif_cd_ops_types=>ty_run
-        io_dao      TYPE REF TO zif_cd_ops_alert_dao.
+        io_dao      TYPE REF TO zif_cd_ops_alert_dao
+      RAISING
+        zcx_cd_ops_error.
     "! Consecutive runs of the payment engine area (newest first, current included) in
     "! which the rule fired; a run without an alert of the rule ends the series (A46)
     METHODS count_consecutive
@@ -78,11 +85,17 @@ CLASS zcl_cd_ops_alert_router DEFINITION
         iv_destination TYPE zif_cd_ops_types=>ty_alert_dest OPTIONAL
         iv_subject     TYPE clike OPTIONAL
         iv_error       TYPE clike OPTIONAL
-        iv_alert_id    TYPE zif_cd_ops_types=>ty_run_id OPTIONAL.
+        iv_alert_id    TYPE zif_cd_ops_types=>ty_run_id OPTIONAL
+      RAISING
+        zcx_cd_ops_error.
 
+    "! Key of an alert log row; raises 802 when no UUID can be generated (an initial key would
+    "! collide with the next one)
     METHODS new_id
       RETURNING
-        VALUE(rv_id) TYPE zif_cd_ops_types=>ty_run_id.
+        VALUE(rv_id) TYPE zif_cd_ops_types=>ty_run_id
+      RAISING
+        zcx_cd_ops_error.
 
 ENDCLASS.
 
@@ -104,28 +117,36 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
     ENDIF.
     " PCRE patterns: a rule whose pattern does not compile is a configuration error -
     " logged as a failed alert of the rule and not applied
-    LOOP AT lt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>).
-      DATA(lv_invalid) = mo_policy->invalid_pattern( <ls_rule> ).
-      IF lv_invalid IS NOT INITIAL.
-        add_log( iv_rule_id = <ls_rule>-rule_id iv_channel = <ls_rule>-channel is_run = is_run
-                 iv_status  = zif_cd_ops_types=>gc_alert_status-failed
-                 iv_error   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_pattern_invalid
-                                                     iv_v1    = <ls_rule>-rule_id
-                                                     iv_v2    = lv_invalid ) ).
-        DELETE lt_rules.
-      ENDIF.
-    ENDLOOP.
-    DATA(lt_channels) = lo_dao->get_channels( ).
-    mt_repeat = lo_dao->get_repeat_keys( is_run-run_id ).
-    DATA(lt_selection) = mo_policy->select( it_rules    = lt_rules
-                                            is_run      = is_run
-                                            it_findings = it_findings ).
-    LOOP AT lt_selection ASSIGNING FIELD-SYMBOL(<ls_selection>).
-      route_selection( is_selection = <ls_selection>
-                       is_run       = is_run
-                       it_channels  = lt_channels
-                       io_dao       = lo_dao ).
-    ENDLOOP.
+    TRY.
+        LOOP AT lt_rules ASSIGNING FIELD-SYMBOL(<ls_rule>).
+          DATA(lv_invalid) = mo_policy->invalid_pattern( <ls_rule> ).
+          IF lv_invalid IS NOT INITIAL.
+            add_log( iv_rule_id = <ls_rule>-rule_id iv_channel = <ls_rule>-channel is_run = is_run
+                     iv_status  = zif_cd_ops_types=>gc_alert_status-failed
+                     iv_error   = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_msg-alert_pattern_invalid
+                                                         iv_v1    = <ls_rule>-rule_id
+                                                         iv_v2    = lv_invalid ) ).
+            DELETE lt_rules.
+          ENDIF.
+        ENDLOOP.
+        DATA(lt_channels) = lo_dao->get_channels( ).
+        mt_repeat = lo_dao->get_repeat_keys( is_run-run_id ).
+        DATA(lt_selection) = mo_policy->select( it_rules    = lt_rules
+                                                is_run      = is_run
+                                                it_findings = it_findings ).
+        LOOP AT lt_selection ASSIGNING FIELD-SYMBOL(<ls_selection>).
+          route_selection( is_selection = <ls_selection>
+                           is_run       = is_run
+                           it_channels  = lt_channels
+                           io_dao       = lo_dao ).
+        ENDLOOP.
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        " the decisions taken so far stay auditable; the caller records ALERT_FAILED
+        IF mt_log IS NOT INITIAL.
+          lo_dao->insert_log( mt_log ).
+        ENDIF.
+        RAISE EXCEPTION lx_error.
+    ENDTRY.
 
     IF mt_log IS NOT INITIAL.
       lo_dao->insert_log( mt_log ).
@@ -202,7 +223,9 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
                  iv_error = lx_cast->get_text( ) iv_alert_id = ls_message-alert_id ).
         lo_dao->insert_log( mt_log ).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH ls_channel-class_name 'ZIF_CD_OPS_ALERT_CHANNEL'.
+          MESSAGE e032(zcd_ops) WITH ls_channel-class_name zif_cd_ops_types=>gc_plugin_intf-alert_channel
+          EXPORTING
+            previous = lx_cast.
     ENDTRY.
   ENDMETHOD.
 
@@ -337,11 +360,12 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
           ls_final-status = COND #( WHEN lx_ops->if_t100_message~t100key-msgno = zif_cd_ops_types=>gc_msg-applog_partial
                                     THEN zif_cd_ops_types=>gc_alert_status-partial
                                     ELSE zif_cd_ops_types=>gc_alert_status-failed ).
-          ls_final-error = lx_ops->get_text( ).
+          " B10: the chain (class, message, position of each link), cut to the log field
+          ls_final-error = zcl_cd_ops_util=>exception_trace( lx_ops ).
         CATCH cx_root INTO DATA(lx_delivery).
           " Deliberately broad: a channel must never abort the run it reports on
           ls_final-status = zif_cd_ops_types=>gc_alert_status-failed.
-          ls_final-error  = lx_delivery->get_text( ).
+          ls_final-error  = zcl_cd_ops_util=>exception_trace( lx_delivery ).
       ENDTRY.
       ls_final-sent_at = zcl_cd_ops_factory=>get_clock( )->now( ).
       io_dao->complete( ls_final ).
@@ -406,12 +430,20 @@ CLASS zcl_cd_ops_alert_router IMPLEMENTATION.
 
 
   METHOD new_id.
-    TRY.
-        rv_id = cl_system_uuid=>create_uuid_x16_static( ).
-      CATCH cx_uuid_error.
-        " Log key falls back to an initial id; the row is still written for audit
-        CLEAR rv_id.
-    ENDTRY.
+    DATA lx_error TYPE REF TO cx_uuid_error.
+    TEST-SEAM alert_id.
+      TRY.
+          rv_id = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error INTO lx_error.
+          " raised below: an initial key would collide with the next alert of this kind
+      ENDTRY.
+    END-TEST-SEAM.
+    IF lx_error IS BOUND OR rv_id IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error
+        MESSAGE e802(zcd_ops)
+        EXPORTING
+          previous = lx_error.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

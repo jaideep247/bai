@@ -15,7 +15,7 @@
 | Selection text | P_FROM | Statement date from |
 | Selection text | P_TO | Statement date to |
 | Selection text | P_PACK | Statements per package |
-| Selection text | P_PATH | File path |
+| Selection text | P_PATH | File name (logical path) |
 | Selection text | P_PC | Upload from PC |
 | Selection text | P_BAI2 | BAI2 |
 | Selection text | P_C053 | CAMT.053 statement |

@@ -9,6 +9,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-10 | In background an error ends the job with a type E message (was S: the job ended green).
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_purge.
 
@@ -34,6 +35,10 @@ CLASS lcl_app IMPLEMENTATION.
                                                 iv_pe_area   = zif_cd_ops_types=>gc_pe_area-core ).
         mt_results = NEW zcl_cd_ops_purge( )->run( xsdbool( p_test = abap_true ) ).
       CATCH zcx_cd_ops_error INTO DATA(lx_ops).
+        " B9: in background the job ends cancelled (Control-M red), never green
+        IF sy-batch = abap_true.
+          MESSAGE lx_ops TYPE 'E'.
+        ENDIF.
         MESSAGE lx_ops TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.
     ENDTRY.

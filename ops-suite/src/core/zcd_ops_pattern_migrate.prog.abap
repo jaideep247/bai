@@ -14,6 +14,8 @@
 *& request (VERIFY-ADT: ZCL_CD_OPS_CFG_TRANSPORT), one commit through the store.
 *& Modification log:
 *& 2026-11-06 | Initial version (PCRE patterns: migration of existing rows).
+*& 2026-11-10 | ZCD_OPS display (03) checked per payment engine area before its rows are read (B7);
+*&            | an area without it is named in a message and left out.
 *&---------------------------------------------------------------------*
 REPORT zcd_ops_pattern_migrate.
 
@@ -72,8 +74,27 @@ ENDCLASS.
 CLASS lcl_app IMPLEMENTATION.
 
   METHOD main.
+    DATA lt_areas TYPE zif_cd_ops_pattern_types=>tt_pe_area.
+    " B7: rows of an area are read only with display authorisation for it (as ZCD_OPS_PATTERN_CHECK)
+    DATA(lo_auth) = zcl_cd_ops_factory=>get_auth( ).
+    LOOP AT VALUE zif_cd_ops_pattern_types=>tt_pe_area( ( zif_cd_ops_types=>gc_pe_area-core )
+                                                        ( zif_cd_ops_types=>gc_pe_area-ebs )
+                                                        ( zif_cd_ops_types=>gc_pe_area-file_monitor )
+                                                        ( zif_cd_ops_types=>gc_pe_area-health_check ) )
+         INTO DATA(lv_area).
+      IF lo_auth->is_allowed( iv_activity = zif_cd_ops_auth=>gc_activity-display
+                              iv_pe_area  = lv_area ) = abap_true.
+        INSERT lv_area INTO TABLE lt_areas.
+      ELSE.
+        MESSAGE s041(zcd_ops) WITH |{ zif_cd_ops_auth=>gc_object } { lv_area }| zif_cd_ops_auth=>gc_activity-display
+                DISPLAY LIKE 'W'.
+      ENDIF.
+    ENDLOOP.
+    IF lt_areas IS INITIAL.
+      RETURN.
+    ENDIF.
     DATA(lo_dao) = zcl_cd_ops_factory=>get_pattern_dao( ).
-    mt_rows = zcl_cd_ops_pattern_check=>plan_migration( lo_dao->get_migration_rows( ) ).
+    mt_rows = zcl_cd_ops_pattern_check=>plan_migration( lo_dao->get_migration_rows( lt_areas ) ).
     DATA(lv_convert) = count( zif_cd_ops_pattern_types=>gc_migration-convert ).
 
     IF p_test = abap_false AND lv_convert > 0.

@@ -365,6 +365,7 @@ etag master LocalLastChangedAt
     LegBank = leg_bank;
     LegFica = leg_fica;
     Tolerance = tolerance;
+    ToleranceSet = tolerance_set;
     Description = description;
     Active = active;
     ChangedBy = changed_by;

@@ -7,6 +7,7 @@
 *& the JSON response. No database, no clock, no HTTP.
 *& Modification log:
 *& 2026-11-06 | Initial version (PRISM status API, user decision 2026-11-06).
+*& 2026-11-10 | MALFORMED_JSON without the internal parser text (message 255 only).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">FMON PRISM status API - parse, validate, map an event</p>
 "! Contract and field rules: docs/PRISM_Status_API.md. Unknown members are ignored
@@ -213,11 +214,11 @@ CLASS zcl_cd_fmon_prism_event IMPLEMENTATION.
             WHEN OTHERS.
           ENDCASE.
         ENDDO.
-      CATCH cx_sxml_error INTO DATA(lx_error).
+      CATCH cx_sxml_error.
+        " the caller is told the body is not JSON - never the parser's internal text
         CLEAR rs_parsed-members.
         rs_parsed-errors = VALUE #( ( new_error( iv_code  = zif_cd_fmon_prism_types=>gc_error-malformed_json
-                                                 iv_msgno = zif_cd_fmon_prism_types=>gc_msg-malformed_json
-                                                 iv_tail  = lx_error->get_text( ) ) ) ).
+                                                 iv_msgno = zif_cd_fmon_prism_types=>gc_msg-malformed_json ) ) ).
     ENDTRY.
   ENDMETHOD.
 

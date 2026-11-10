@@ -26,7 +26,23 @@
 *& 2026-11-08 | Table consolidation: expected groups read as ZCD_HCK_AGG-EXPECTED_GROUPS with the definitions
 *&            | (ZCD_HCK_AGGGRP no longer doubled).
 *& 2026-11-08 | Drift table example ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
+*& 2026-11-10 | S_TABU_NAM 03 through a core authorisation double; refused_table_display_813 (B4).
 *&---------------------------------------------------------------------*
+CLASS ltd_table_auth DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_cd_ops_auth PARTIALLY IMPLEMENTED.
+    "! S_TABU_NAM display of the test user (B4); allowed unless a test refuses it
+    DATA mv_allowed TYPE abap_bool VALUE abap_true.
+ENDCLASS.
+
+
+CLASS ltd_table_auth IMPLEMENTATION.
+  METHOD zif_cd_ops_auth~may_read_table.
+    rv_allowed = mv_allowed.
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS ltc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -116,6 +132,7 @@ CLASS ltc_dao IMPLEMENTATION.
 
   METHOD setup.
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
+    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     go_env->clear_doubles( ).
     CLEAR: mt_metrics, mt_findings, mt_runs.
     mo_cut = zcl_cd_hck_factory=>get_dao( ).
@@ -737,6 +754,7 @@ CLASS ltc_dao_reads DEFINITION FINAL FOR TESTING
         VALUE(rs_row) TYPE zcd_ops_tabwl.
 
     METHODS check_defs_active_by_seq FOR TESTING.
+    METHODS refused_table_display_813 FOR TESTING.
     METHODS thresholds_of_one_check FOR TESTING.
     METHODS agg_defs_and_groups_of_check FOR TESTING.
     METHODS whitelist_needs_active_row FOR TESTING.
@@ -768,6 +786,7 @@ CLASS ltc_dao_reads IMPLEMENTATION.
 
   METHOD setup.
     zcl_cd_ops_injector=>inject_params( NEW zcl_cd_ops_param_seed( )->params( ) ).
+    zcl_cd_ops_injector=>inject_auth( NEW ltd_table_auth( ) ).
     go_env->clear_doubles( ).
     mo_cut = NEW zcl_cd_hck_dao( ).
   ENDMETHOD.
@@ -1063,6 +1082,22 @@ CLASS ltc_dao_reads IMPLEMENTATION.
                                             msg = 'Only deliveries inside the window' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B4: a table the user may not display (S_TABU_NAM 03) is never described or read - 813
+  METHOD refused_table_display_813.
+    DATA(lo_auth) = NEW ltd_table_auth( ).
+    lo_auth->mv_allowed = abap_false.
+    zcl_cd_ops_injector=>inject_auth( lo_auth ).
+    TRY.
+        mo_cut->get_table_fields( 'T000' ).
+        cl_abap_unit_assert=>fail( msg = 'A table without display authorisation must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = CONV symsgno( '813' )
+                                            msg = 'S_TABU_NAM refusal is message 813' ).
     ENDTRY.
   ENDMETHOD.
 

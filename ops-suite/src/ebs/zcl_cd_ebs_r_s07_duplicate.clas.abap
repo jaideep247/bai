@@ -9,6 +9,7 @@
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
 *& 2026-11-06 | Audit A25: duplicate key uses the canonical account identity.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
+*& 2026-11-10 | Texts name the account as house bank / account ID, else masked to its last four characters.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS check S07 - duplicate statement</p>
 CLASS zcl_cd_ebs_r_s07_duplicate DEFINITION
@@ -46,7 +47,9 @@ CLASS zcl_cd_ebs_r_s07_duplicate IMPLEMENTATION.
                  is_rule = is_rule is_statement = <ls_statement> iv_check_code = zif_cd_ebs_types=>gc_check_code-stmt_duplicate_in_file
                  iv_message = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-stmt_duplicate_in_file
                                                      iv_v1    = <ls_statement>-stmt_no
-                                                     iv_v2    = <ls_statement>-account_no ) )
+                                                     iv_v2    = zcl_cd_ops_util=>account_label( iv_account = <ls_statement>-account_no
+                                                                                                iv_hbkid   = <ls_statement>-hbkid
+                                                                                                iv_hktid   = <ls_statement>-hktid ) ) )
           INTO TABLE rt_findings.
         CONTINUE.
       ENDIF.

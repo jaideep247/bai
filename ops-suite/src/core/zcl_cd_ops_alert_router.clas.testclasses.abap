@@ -15,6 +15,7 @@
 *& 2026-11-07 | Delivered message no longer carries intent key / raise time (webhook fields removed).
 *& 2026-11-07 | Parameters over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
+*& 2026-11-10 | alert_id_failure_raises: no UUID for the alert log raises 802 (test seam ALERT_ID), nothing sent.
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -202,6 +203,7 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
     METHODS escalation_beats_throttle    FOR TESTING.
     METHODS send_inactive_channel_fails  FOR TESTING.
     METHODS invalid_rule_pattern_logged  FOR TESTING.
+    METHODS alert_id_failure_raises      FOR TESTING.
 ENDCLASS.
 
 
@@ -619,6 +621,30 @@ CLASS ltc_alert_router IMPLEMENTATION.
       CATCH zcx_cd_ops_error.
         cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
                                              msg = 'An inactive channel must not deliver' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B17: an alert log ID that cannot be generated is an error the caller records (ALERT_FAILED),
+  " never an initial key that collides with the next alert
+  METHOD alert_id_failure_raises.
+    DATA ls_finding TYPE zif_cd_ops_types=>ty_finding.
+    configure_scenario( default_flags( ) ).
+    ls_finding-check_code = 'UNMAPPED_BTC'.
+    ls_finding-severity   = zif_cd_ops_types=>gc_severity-error.
+    TEST-INJECTION alert_id.
+      lx_error = NEW cx_uuid_error( ).
+    END-TEST-INJECTION.
+    TRY.
+        zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = ms_run
+                                                    it_findings = VALUE #( ( ls_finding ) ) ).
+        cl_abap_unit_assert=>fail( msg = 'A missing alert ID must raise' ).
+      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+        cl_abap_unit_assert=>assert_equals( act = lx_error->if_t100_message~t100key-msgno
+                                            exp = zif_cd_ops_types=>gc_msg-alert_id_failed
+                                            msg = 'Message 802' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
+                                             msg = 'Nothing is delivered without a log key' ).
     ENDTRY.
   ENDMETHOD.
 

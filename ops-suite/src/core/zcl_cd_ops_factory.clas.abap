@@ -20,6 +20,7 @@
 *& 2026-11-07 | get_pay_outcome (canonical payment outcome evaluator), get_pay_outcome_dao (snapshot SQL).
 *& 2026-11-08 | get_pay_snap_queue (bgPF units of the parallel outcome snapshot packages).
 *& 2026-11-08 | get_pay_request (due date and stage of payment requests: worklist and payment trace).
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations suite - core factory</p>
 "! Single resolution point for shared services and for configuration-driven
@@ -300,9 +301,11 @@ CLASS zcl_cd_ops_factory IMPLEMENTATION.
 
     TRY.
         lo_class ?= lo_descr.
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e031(zcd_ops) WITH lv_name.
+          MESSAGE e031(zcd_ops) WITH lv_name
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
 
     IF lo_class->is_instantiatable( ) = abap_false.

@@ -160,6 +160,32 @@ The message names the bank and statement date (277). **One finding per interface
 
 **Timing.** The 5-minute job (`ZCD_FMON_MONITOR_ALL`) evaluates the deadline in the first run at or after 10:00 Central: the alert leaves between 10:00 and 10:05 (alert rule `FMON_BAIDL`, SO23 list `ZCD_PAYOPS`, escalation `ZCD_RTBLEAD`; `config/alert_seed.md`).
 
+## A3c. Missing or late bank ACK — what the finding and the alert e-mail show (user request 2026-11-10)
+
+**Which findings.** `NO_BANK_ACK` and `BANK_ACK_LATE` (duration SLA of stage `ACK_RECEIVED`, `ZCL_CD_FMON_RULES=>SLA_CODE`), `ACK_COUNT_MISMATCH` / `ACK_AMOUNT_MISMATCH`, and `STAGE_DEADLINE_MISSED` when the missed stage is `ACK_RECEIVED` (the deadline check names the stage in DETAILS; the finding is per interface and day, so it lists every file of that day without ACK / NACK).
+
+**What is shown, per file** - only from what file monitoring already holds (no copy into a new table; `ZCL_CD_FMON_ACK_ALERT`):
+
+| Detail | Source |
+|---|---|
+| House bank (and account ID) | generation group `ZCD_FMON_FILE-GEN_GROUP` split by the source's `GROUP_FIELDS` names (`HBKID`, `HKTID`); a key shortened to a digest is not guessed |
+| Bank | `ZCD_FMON_IFACE-BANK_KEY` |
+| File name (reference), interface and description | `ZCD_FMON_FILE`, `ZCD_FMON_IFACE` |
+| Payment method | file, else interface |
+| Payments / amount | `RECORD_COUNT` / `CONTROL_TOTAL` with `FMON_DEFAULT_CURRENCY` (USD; registry and interface have no currency); when the file does not know them: one grouped, read-only read of DPAYH for all late files of the run (LAUFD + LAUFI + HBKID; `VERIFY-DDIC` RWBTR / WAERS / HBKID); else *unknown* - never 0 |
+| Payment run (date / ID) | `LAUFD` / `LAUFI` of the generation group |
+| Business date | file |
+| Generated in SAP, sent to PRISM, delivered to the bank | first event of `GENERATED_IN_SAP`, `SENT_TO_PRISM`, `FORWARDED_TO_BANK` / `PRISM_DELIVERED` (`ZCD_FMON_EVENT`), in `FMON_TIME_ZONE` |
+| ACK due / overdue by | basis + allowed minutes of the ACK SLA, or the ACK deadline (`ZCD_FMON_SLA` kind DEADLINE) of the business date |
+| ACK level | `ZCD_FMON_IFACE-ACK_LEVEL` |
+| Earlier file | for a regenerated file, the generation it replaced |
+
+The finding's AMOUNT / CURRENCY are the file amount; REFERENCE stays the file ID (the file monitoring dashboard links findings to files by it) and the file name is the OBJECT_KEY and a DETAILS line. DETAILS hold the labelled lines (*label: value*, one block per file) - the exceptions app shows them as they are.
+
+**E-mail** (`ZCL_CD_OPS_ALERT_POLICY` with `ZCL_CD_OPS_ACK_MAIL`): subject `[<SYSID>][FMON][<severity>] Missing bank ACK: <n> file(s), <payments> payments, <CUR> <total>`; a table House bank | Bank | File name | Payment method | Payments | Amount | Payment run | Generated | Delivered to bank | ACK due | Overdue by, most overdue first, amounts with thousands separators and two decimals (right-aligned), a totals row (files, payments, amount per currency); the run / job / exceptions-app line; the same content in the text version. Other findings of the same alert stay in the general table. Layout sample: `config/alert_seed.md`.
+
+**Amounts (user decision 2026-11-10):** amounts and payment counts are shown in the missing-ACK alert. No payee or member data and no bank account number beyond the house bank / account ID.
+
 ## A4. NOC and returns completeness
 
 > **First principle:** a returns or NOC file is processed only when zero transactions are unaccounted for.

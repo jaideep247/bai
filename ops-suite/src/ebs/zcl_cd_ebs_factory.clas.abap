@@ -10,6 +10,7 @@
 *& 2026-11-07 | Release repository seam removed with the blocked-line release (read-only scope).
 *& 2026-11-07 | Comment: parser class from ZCA_PARAM (CLASS with interface ZIF_CD_EBS_PARSER).
 *& 2026-11-07 | get_stmt_evidence: statement evidence shared with file monitoring (FEB adapter).
+*& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - factory</p>
 CLASS zcl_cd_ebs_factory DEFINITION
@@ -99,9 +100,11 @@ CLASS zcl_cd_ebs_factory IMPLEMENTATION.
         ro_parser = CAST zif_cd_ebs_parser( zcl_cd_ops_factory=>get_plugin(
                                               iv_class_name = CONV #( lv_class )
                                               iv_interface  = zif_cd_ebs_types=>gc_plugin_interface-parser ) ).
-      CATCH cx_sy_move_cast_error.
+      CATCH cx_sy_move_cast_error INTO DATA(lx_error).
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e032(zcd_ops) WITH lv_class zif_cd_ebs_types=>gc_plugin_interface-parser.
+          MESSAGE e032(zcd_ops) WITH lv_class zif_cd_ebs_types=>gc_plugin_interface-parser
+          EXPORTING
+            previous = lx_error.
     ENDTRY.
   ENDMETHOD.
 

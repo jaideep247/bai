@@ -303,7 +303,7 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 
 | ID | Scenario | Setup | Expected | Result |
 |---|---|---|---|---|
-| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 129 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
+| PRM-01 | Definitions imported | Step 3.0 of `Implementation_Order.md` done (4 areas, 145 definitions) | Morning report `D_PARAM_INVALID` GREEN, metric PARAM_INVALID 0 | pending |
 | PRM-02 | Definition default wins | No value row for `HCK_TOP_N` | Morning report lists 20 open exceptions (definition default), whatever the code passes as default | pending |
 | PRM-03 | Invalid value | `HCK_TOP_N` value row `many` (enter in DV1 sandbox through EML / test client — the app refuses it) | Run uses 20; no SLG1 entry; next morning report `PARAM_INVALID` E with key `CD_HCK/HCK_TOP_N` | pending |
 | PRM-04 | BOOL off | `FMON_PRISM_INSTANT` value row blank | PRISM unit updates the registry only, findings come from the 5-minute run | pending |

@@ -44,6 +44,9 @@
 *&            | merged into ZCD_FMON_SLA; TY_DEADLINE and the context component DEADLINES removed.
 *& 2026-11-08 | TY_QUERY-SEEK_*: keyset paging of a date read (watermark read of the payment request log, source
 *&            | REQUESTS of the payment worklist).
+*& 2026-11-10 | Missing bank ACK alert (user request 2026-11-10): payment run key of a file (generation group
+*&            | split by GROUP_FIELDS), payment run totals (fallback), FMON_DEFAULT_CURRENCY.
+*& 2026-11-10 | GC_TABLE_AUTH moved to ZIF_CD_OPS_AUTH (one S_TABU_NAM check for every area).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - types, status model and constants</p>
 "! Status model (ordered stages; a later stage never regresses):
@@ -339,7 +342,39 @@ INTERFACE zif_cd_fmon_types
       regen_wait_min  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_REGEN_WAIT_MIN',
       "! PRISM error codes meaning "file name already received" (comma list, whole value) [blank]
       dup_name_codes  TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_PRISM_DUP_NAME_CODES',
+      "! Currency of a file's control total (registry and interface have none) [USD]
+      default_currency TYPE zif_cd_ops_types=>ty_param_name VALUE 'FMON_DEFAULT_CURRENCY',
     END OF gc_param.
+
+  "! Missing bank ACK alert: payment run of a file from its generation group (GEN_GROUP split by the
+  "! source's GROUP_FIELDS names) - the names below are the ones read; others are ignored
+  CONSTANTS:
+    BEGIN OF gc_run_field,
+      laufd TYPE ty_fieldname VALUE 'LAUFD',
+      laufi TYPE ty_fieldname VALUE 'LAUFI',
+      hbkid TYPE ty_fieldname VALUE 'HBKID',
+      hktid TYPE ty_fieldname VALUE 'HKTID',
+    END OF gc_run_field.
+  TYPES:
+    BEGIN OF ty_payrun_key,
+      laufd TYPE d,
+      laufi TYPE c LENGTH 6,
+      hbkid TYPE c LENGTH 5,
+      hktid TYPE c LENGTH 5,
+    END OF ty_payrun_key.
+  TYPES tt_payrun_key TYPE SORTED TABLE OF ty_payrun_key WITH UNIQUE KEY laufd laufi hbkid hktid.
+  "! Payments of a payment run and house bank (DPAYH, one grouped read): fallback when the file's
+  "! RECORD_COUNT / CONTROL_TOTAL are not known
+  TYPES:
+    BEGIN OF ty_payrun_total,
+      laufd    TYPE d,
+      laufi    TYPE c LENGTH 6,
+      hbkid    TYPE c LENGTH 5,
+      currency TYPE zif_cd_ops_types=>ty_currency,
+      payments TYPE i,
+      amount   TYPE zif_cd_ops_types=>ty_amount,
+    END OF ty_payrun_total.
+  TYPES tt_payrun_total TYPE STANDARD TABLE OF ty_payrun_total WITH EMPTY KEY.
 
   CONSTANTS gc_wildcard TYPE c LENGTH 1 VALUE '*'.
   CONSTANTS gc_object_type TYPE zif_cd_ops_types=>ty_object_type VALUE 'FILE'.
@@ -359,14 +394,6 @@ INTERFACE zif_cd_fmon_types
       next     TYPE ty_fcal_correct VALUE '+',
       previous TYPE ty_fcal_correct VALUE '-',
     END OF gc_fcal_correct.
-  "! Display authorisation checked at the dynamic read boundary (ZCL_CD_FMON_DDIC=>MAY_READ)
-  CONSTANTS:
-    BEGIN OF gc_table_auth,
-      object   TYPE xuobject VALUE 'S_TABU_NAM',
-      id_actvt TYPE xufield VALUE 'ACTVT',
-      id_table TYPE xufield VALUE 'TABLE',
-      display  TYPE activ_auth VALUE '03',
-    END OF gc_table_auth.
   "! Token in a done-value list that stands for an initial status
   CONSTANTS gc_blank_token TYPE string VALUE `<BLANK>`.
 
@@ -985,6 +1012,7 @@ INTERFACE zif_cd_fmon_types
       feb_stmt_offset  TYPE i VALUE 1,
       "! SAP regenerates a file PRISM could not deliver within an hour ‹confirm with payment operations›
       regen_wait_min   TYPE i VALUE 60,
+      default_currency TYPE string VALUE `USD`,
     END OF gc_param_default.
 
   "! File monitoring dashboard (CDS, docs/Dashboard_File_Monitoring.md): the monitor is stale

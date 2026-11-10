@@ -4,7 +4,7 @@
 *& Unit test of the bgPF queue of the snapshot packages through the test
 *& seams BGPF and PAUSE: a process saved for execution returns without
 *& exception, a pause returns. The bgPF error branch (CX_BGMC -> message
-*& 751) is not injected because CX_BGMC is VERIFY-ADT on SAP_BASIS 7.58 SP01
+*& 764) is not injected because CX_BGMC is VERIFY-ADT on SAP_BASIS 7.58 SP01
 *& (QA case POC-14); does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-08 | Initial version (parallel snapshot packages).

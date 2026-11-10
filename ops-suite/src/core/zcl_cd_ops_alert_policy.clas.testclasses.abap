@@ -8,6 +8,9 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Severity-ordered cap, full-selection severity, held-back count (audit A63).
 *& 2026-11-06 | PCRE rule patterns: whole value, case ignored, invalid pattern named.
+*& 2026-11-10 | mail_names_system_and_job: system ID in the subject, run and job in the body (message 803).
+*& 2026-11-10 | ack_mail_subject_and_table: missing bank ACK subject and own table; other findings stay in
+*&            | the general table.
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -55,6 +58,8 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS throttle_expires             FOR TESTING.
     METHODS escalates_after_n_runs       FOR TESTING.
     METHODS digest_is_one_message        FOR TESTING.
+    METHODS mail_names_system_and_job    FOR TESTING.
+    METHODS ack_mail_subject_and_table   FOR TESTING.
     METHODS per_finding_caps_at_max      FOR TESTING.
     METHODS html_values_are_escaped      FOR TESTING.
     METHODS blocker_after_cap_is_kept    FOR TESTING.
@@ -333,6 +338,75 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lt_messages[ 1 ]-severity
                                             exp = zif_cd_ops_types=>gc_severity-block
                                             msg = 'Digest severity is the worst finding' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B12: the receiver sees the system in the subject and the run / job link in the body
+  METHOD mail_names_system_and_job.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    CONSTANTS lc_jobname TYPE btcjob VALUE 'ZCD_EBS_VALIDATE_JPMC'.
+    CONSTANTS lc_jobcount TYPE btcjobcnt VALUE '11223344'.
+    TRY.
+        ms_run-jobname  = lc_jobname.
+        ms_run-jobcount = lc_jobcount.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( zif_cd_ops_types=>gc_severity-error ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_equals( act = ls_message-subject(5)
+                                            exp = |[{ sy-sysid }]|
+                                            msg = 'The subject starts with the system ID' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-text CS lc_jobname AND ls_message-text CS lc_jobcount )
+                                          msg = 'The text names job name and count' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS lc_jobcount )
+                                          msg = 'The HTML body names the job count' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User request 2026-11-10: the missing bank ACK mail leads with the impact and shows the ACK
+  " files in their own table; a finding without ACK evidence stays in the general table
+  METHOD ack_mail_subject_and_table.
+    DATA ls_selection TYPE zcl_cd_ops_alert_policy=>ty_selection.
+    CONSTANTS lc_file TYPE string VALUE `ACH_JPMC_20261110_01.txt`.
+    TRY.
+        DATA(ls_ack) = finding( iv_severity = zif_cd_ops_types=>gc_severity-error ).
+        ls_ack-details = zcl_cd_ops_ack_mail=>marker( ) && cl_abap_char_utilities=>newline
+                      && zcl_cd_ops_ack_mail=>line( iv_label = zif_cd_ops_types=>gc_ack_msg-file_name iv_value = lc_file )
+                      && cl_abap_char_utilities=>newline
+                      && zcl_cd_ops_ack_mail=>line( iv_label = zif_cd_ops_types=>gc_ack_msg-payments iv_value = `120` ).
+        DATA(ls_other) = finding( iv_severity = zif_cd_ops_types=>gc_severity-error
+                                  iv_object_key = 'OTHER_FILE' ).
+        ms_run-pe_area        = zif_cd_ops_types=>gc_pe_area-file_monitor.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_ack ) ( ls_other ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( find( val = ls_message-subject sub = |[{ sy-sysid }][FMON][E] | ) = 0 )
+          msg = 'Subject: [system][area][severity] first' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( ls_message-subject CS zcl_cd_ops_util=>text( iv_msgno = zif_cd_ops_types=>gc_ack_msg-subject
+                                                                      iv_v1    = 1
+                                                                      iv_v2    = 120
+                                                                      iv_v3    = zcl_cd_ops_util=>text(
+                                                                                   zif_cd_ops_types=>gc_ack_msg-unknown ) ) )
+          msg = 'Missing bank ACK: 1 file, 120 payments, amount unknown' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS lc_file )
+                                          msg = 'The ACK file is in the ACK table' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS 'OTHER_FILE' )
+                                          msg = 'The other finding stays in the general table' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( zcl_cd_ops_ack_mail=>rows( ls_selection-findings ) ) exp = 1
+                                            msg = 'The other finding is no row of the ACK table' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

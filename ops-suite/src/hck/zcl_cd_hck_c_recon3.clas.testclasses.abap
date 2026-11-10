@@ -12,6 +12,7 @@
 *& no database read; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-07 | Initial version (three-way reconciliation check A_RECON_3WAY).
+*& 2026-11-10 | balanced_day_has_evidence, flagged_zero_tolerance_exact (B8 deterministic evidence).
 *&---------------------------------------------------------------------*
 CLASS ltd_recon_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -228,6 +229,8 @@ CLASS ltc_recon3 DEFINITION FINAL FOR TESTING
     METHODS currencies_kept_apart      FOR TESTING.
     METHODS company_codes_kept_apart   FOR TESTING.
     METHODS tolerance_param_and_set    FOR TESTING.
+    METHODS balanced_day_has_evidence  FOR TESTING.
+    METHODS flagged_zero_tolerance_exact FOR TESTING.
     METHODS empty_window_is_no_evidence FOR TESTING.
     METHODS set_without_account_config FOR TESTING.
     METHODS window_ends_before_report  FOR TESTING.
@@ -579,6 +582,51 @@ CLASS ltc_recon3 IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( act = lines( findings_of( is_result = act( )
                                                                       iv_code   = zif_cd_hck_recon_types=>gc_code-recon_break ) )
                                             exp = 1 msg = 'Set tolerance 0.50 wins: break' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B8: a balanced day keeps its evidence - both legs, the difference and the tolerance with its source
+  METHOD balanced_day_has_evidence.
+    TRY.
+        mo_params->set( iv_name = zif_cd_hck_recon_types=>gc_param-tolerance iv_value = gc_test-tol_one ).
+        configure_scenario( VALUE #( ) ).
+        add_bank( iv_day = gc_test-day5 iv_amount = 100 ).
+        add_gl( iv_day = gc_test-day5 iv_amount = 100 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-bank dim2 = '2026-11-05' ]-value
+          exp = 100 msg = 'Expected (bank leg) recorded' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-gl dim2 = '2026-11-05' ]-value
+          exp = 100 msg = 'Actual (G/L leg) recorded' ).
+        cl_abap_unit_assert=>assert_equals(
+          act = ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-tol_param dim2 = '2026-11-05' ]-value
+          exp = 1 msg = 'Tolerance used and its source (parameter)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B8: a set tolerance 0.00 with TOLERANCE_SET is an exact match - never the parameter
+  METHOD flagged_zero_tolerance_exact.
+    TRY.
+        mo_params->set( iv_name = zif_cd_hck_recon_types=>gc_param-tolerance iv_value = gc_test-tol_one ).
+        configure_scenario( VALUE #( ) ).
+        mo_dao->mt_sets[ 1 ]-tolerance_set = abap_true.
+        mo_dao->mt_sets[ 1 ]-tolerance     = 0.
+        add_bank( iv_day = gc_test-day1 iv_amount = 101 ).
+        add_gl( iv_day = gc_test-day1 iv_amount = 100 ).
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( findings_of( is_result = ls_result
+                                                                      iv_code   = zif_cd_hck_recon_types=>gc_code-recon_break ) )
+                                            exp = 1 msg = 'Exact match: a difference of 1 breaks' ).
+        cl_abap_unit_assert=>assert_true(
+          act = xsdbool( line_exists( ls_result-metrics[ metric = zif_cd_hck_recon_types=>gc_metric-tol_set ] ) )
+          msg = 'The tolerance came from the set' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

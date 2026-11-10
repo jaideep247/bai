@@ -223,6 +223,10 @@ CLASS ltd_store DEFINITION FINAL FOR TESTING.
     DATA mv_start_calls TYPE i.
     DATA mv_reconcile_calls TYPE i.
     DATA mt_reconciled TYPE zif_cd_ops_types=>tt_object_key.
+    "! B9: the first save of findings fails (the run stops after it started)
+    DATA mv_fail_save TYPE abap_bool.
+    DATA mt_saved TYPE zif_cd_ops_types=>tt_finding.
+    DATA ms_finished TYPE zif_cd_ops_types=>ty_run.
 ENDCLASS.
 
 
@@ -235,10 +239,16 @@ CLASS ltd_store IMPLEMENTATION.
     rs_run-status    = zif_cd_ops_types=>gc_run_status-running.
   ENDMETHOD.
   METHOD zif_cd_ops_store~save_findings.
+    IF mv_fail_save = abap_true.
+      mv_fail_save = abap_false.
+      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e010(zcd_ops) WITH 'ZCD_OPS_FINDING'.
+    ENDIF.
+    INSERT LINES OF it_findings INTO TABLE mt_saved.
     cs_run-finding_count += lines( it_findings ).
   ENDMETHOD.
   METHOD zif_cd_ops_store~finish_run.
     mv_finish_calls += 1.
+    ms_finished = is_run.
   ENDMETHOD.
   METHOD zif_cd_ops_store~commit.
     mv_commit_calls += 1.
@@ -504,6 +514,7 @@ CLASS ltc_engine DEFINITION FINAL
     METHODS check_failure_no_reconcile FOR TESTING.
     METHODS save_conflict_is_reported FOR TESTING.
     METHODS sql_error_ends_run_failed FOR TESTING.
+    METHODS stopped_run_is_aborted FOR TESTING.
     METHODS same_name_next_day_new_file FOR TESTING.
     METHODS late_ack_goes_to_its_day FOR TESTING.
     METHODS undated_ref_ambiguous FOR TESTING.
@@ -1160,6 +1171,27 @@ CLASS ltc_engine IMPLEMENTATION.
                                             msg = 'The run must be finished' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lx_error->get_text( ) }| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " B9: a ZCD_OPS error after the run started is rolled back, the run closed as aborted with
+  " RUN_ABORTED (trace in DETAILS) and re-raised to the job - never left in status R
+  METHOD stopped_run_is_aborted.
+    configure_scenario( VALUE #( returns_open = 1 ) ).
+    mo_store->mv_fail_save = abap_true.
+    TRY.
+        act( ).
+        cl_abap_unit_assert=>fail( msg = 'The error must reach the caller' ).
+      CATCH zcx_cd_ops_error.
+        cl_abap_unit_assert=>assert_true( act = xsdbool( mo_store->mv_rollback_calls >= 1 )
+                                          msg = 'The open LUW is rolled back' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_store->ms_finished-status
+                                            exp = zif_cd_ops_types=>gc_run_status-aborted
+                                            msg = 'The run is closed as aborted' ).
+        DATA(ls_aborted) = VALUE #( mo_store->mt_saved[ check_code = zcl_cd_ops_run_guard=>gc_check_aborted ] OPTIONAL ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_aborted-details CS 'ZCX_CD_OPS_ERROR' )
+                                          msg = 'RUN_ABORTED carries the exception trace' ).
     ENDTRY.
   ENDMETHOD.
 

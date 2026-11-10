@@ -40,6 +40,10 @@
 *&            | flag (apply_blocking_flags) removed - the batch run ZCD_EBS_VALIDATE is the only entry.
 *& 2026-11-07 | EBS_EMPTY_FEED_OK read through ZCL_CD_OPS_FACTORY=>GET_PARAMS (the store serves no parameters).
 *& 2026-11-07 | Posting-open definition in ZCL_CD_EBS_STMT_EVIDENCE=>IS_POSTING_OPEN (shared with file monitoring).
+*& 2026-11-10 | Run boundary: a ZCX_CD_OPS_ERROR / CX_SY_OPEN_SQL_DB after the run started is rolled back, the run
+*&            | closed as aborted (ZCL_CD_OPS_RUN_GUARD=>ABORT: RUN_ABORTED with trace, commit, ON_ABORT alert) and
+*&            | re-raised; a failed alert dispatch is an ALERT_FAILED finding (was swallowed); PLUGIN_ERROR keeps the
+*&            | exception trace (DETAILS) and error class.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - engine</p>
 CLASS zcl_cd_ebs_engine DEFINITION
@@ -325,143 +329,164 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
       lo_store->commit( ).
     ENDIF.
 
-    DATA(lo_params)      = zcl_cd_ops_factory=>get_params( ).
-    DATA(lv_cb_percent)  = zcl_cd_ops_util=>param_int( io_params  = lo_params
-                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_fail_pct
-                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_fail_pct ).
-    DATA(lv_cb_packages) = zcl_cd_ops_util=>param_int( io_params  = lo_params
-                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_packages
-                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_packages ).
-    DATA(lv_cb_min)      = zcl_cd_ops_util=>param_int( io_params  = lo_params
-                                                       iv_name    = zif_cd_ebs_types=>gc_param-cb_min_lines
-                                                       iv_default = zif_cd_ebs_types=>gc_param_default-cb_min_lines ).
-    DATA(lv_keep_max)    = zcl_cd_ops_util=>param_int( io_params  = lo_params
-                                                       iv_name    = zif_cd_ebs_types=>gc_param-result_max
-                                                       iv_default = zif_cd_ebs_types=>gc_param_default-result_max ).
+    " B9: the LUW owner of the run - a technical error is rolled back, the run is closed as
+    " aborted (ON_ABORT alert rules) and the error goes to the job (cancelled, never green)
+    TRY.
+        DATA(lo_params)      = zcl_cd_ops_factory=>get_params( ).
+        DATA(lv_cb_percent)  = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                           iv_name    = zif_cd_ebs_types=>gc_param-cb_fail_pct
+                                                           iv_default = zif_cd_ebs_types=>gc_param_default-cb_fail_pct ).
+        DATA(lv_cb_packages) = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                           iv_name    = zif_cd_ebs_types=>gc_param-cb_packages
+                                                           iv_default = zif_cd_ebs_types=>gc_param_default-cb_packages ).
+        DATA(lv_cb_min)      = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                           iv_name    = zif_cd_ebs_types=>gc_param-cb_min_lines
+                                                           iv_default = zif_cd_ebs_types=>gc_param_default-cb_min_lines ).
+        DATA(lv_keep_max)    = zcl_cd_ops_util=>param_int( io_params  = lo_params
+                                                           iv_name    = zif_cd_ebs_types=>gc_param-result_max
+                                                           iv_default = zif_cd_ebs_types=>gc_param_default-result_max ).
 
-    DO.
-      DATA(ls_package) = io_source->next_package( ).
-      IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
-        EXIT.
-      ENDIF.
+        DO.
+          DATA(ls_package) = io_source->next_package( ).
+          IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
+            EXIT.
+          ENDIF.
 
-      " User decision 2026-11-06: only statements whose every line is a payment engine account
-      " are validated; the others leave the package before any rule, finding or reconciliation
-      load_configuration( ).
-      rs_result-out_of_scope += mo_scope->remove_out_of_scope( CHANGING cs_package = ls_package ).
-      " Only statements in scope count as evaluated: a run whose statements were all out of
-      " scope evaluated nothing and is NO_DATA (grey), never green - an empty or wrong account
-      " configuration must not look like a clean day
-      lv_statements += lines( ls_package-statements ).
-      IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
-        FREE ls_package.
-        CONTINUE.
-      ENDIF.
-      DATA(lt_findings) = validate_package( CHANGING cs_package = ls_package ).
-      DATA(ls_before) = rs_result-run.
-      count_lines( EXPORTING it_lines        = ls_package-lines
-                             it_findings     = lt_findings
-                   CHANGING  cs_run          = rs_result-run
-                             cv_unevaluated  = rs_result-unevaluated
-                             cv_posting_open = rs_result-posting_open ).
-      summarize( EXPORTING it_findings = lt_findings CHANGING ct_summary = lt_summary ).
+          " User decision 2026-11-06: only statements whose every line is a payment engine account
+          " are validated; the others leave the package before any rule, finding or reconciliation
+          load_configuration( ).
+          rs_result-out_of_scope += mo_scope->remove_out_of_scope( CHANGING cs_package = ls_package ).
+          " Only statements in scope count as evaluated: a run whose statements were all out of
+          " scope evaluated nothing and is NO_DATA (grey), never green - an empty or wrong account
+          " configuration must not look like a clean day
+          lv_statements += lines( ls_package-statements ).
+          IF ls_package-statements IS INITIAL AND ls_package-lines IS INITIAL AND ls_package-findings IS INITIAL.
+            FREE ls_package.
+            CONTINUE.
+          ENDIF.
+          DATA(lt_findings) = validate_package( CHANGING cs_package = ls_package ).
+          DATA(ls_before) = rs_result-run.
+          count_lines( EXPORTING it_lines        = ls_package-lines
+                                 it_findings     = lt_findings
+                       CHANGING  cs_run          = rs_result-run
+                                 cv_unevaluated  = rs_result-unevaluated
+                                 cv_posting_open = rs_result-posting_open ).
+          summarize( EXPORTING it_findings = lt_findings CHANGING ct_summary = lt_summary ).
 
-      lo_store->save_findings( EXPORTING it_findings = lt_findings CHANGING cs_run = rs_result-run ).
-      IF iv_test_mode = abap_false.
-        reconcile_package( is_run      = rs_result-run
-                           is_package  = ls_package
-                           it_findings = lt_findings ).
-        lo_store->commit( ).
-      ENDIF.
-      lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
-                                               iv_rag2 = zcl_cd_ops_util=>rag_from_findings( lt_findings ) ).
-      LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_keep>) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
-        INSERT <ls_keep> INTO TABLE lt_all_findings.
-      ENDLOOP.
-      " A67: the retention bound is exact - never a whole package over the cap
-      LOOP AT ls_package-lines ASSIGNING FIELD-SYMBOL(<ls_keep_line>) FROM 1 TO lv_keep_max - lines( rs_result-lines ).
-        INSERT <ls_keep_line> INTO TABLE rs_result-lines.
-      ENDLOOP.
+          lo_store->save_findings( EXPORTING it_findings = lt_findings CHANGING cs_run = rs_result-run ).
+          IF iv_test_mode = abap_false.
+            reconcile_package( is_run      = rs_result-run
+                               is_package  = ls_package
+                               it_findings = lt_findings ).
+            lo_store->commit( ).
+          ENDIF.
+          lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag
+                                                   iv_rag2 = zcl_cd_ops_util=>rag_from_findings( lt_findings ) ).
+          LOOP AT lt_findings ASSIGNING FIELD-SYMBOL(<ls_keep>) FROM 1 TO lv_keep_max - lines( lt_all_findings ).
+            INSERT <ls_keep> INTO TABLE lt_all_findings.
+          ENDLOOP.
+          " A67: the retention bound is exact - never a whole package over the cap
+          LOOP AT ls_package-lines ASSIGNING FIELD-SYMBOL(<ls_keep_line>) FROM 1 TO lv_keep_max - lines( rs_result-lines ).
+            INSERT <ls_keep_line> INTO TABLE rs_result-lines.
+          ENDLOOP.
 
-      " Circuit breaker: consecutive packages with a failure rate above the limit, or with
-      " a technical failure (A66: a rule could not run - its lines are unevaluated)
-      DATA(lv_package_lines) = rs_result-run-total_items - ls_before-total_items.
-      DATA(lv_package_bad) = ( rs_result-run-failed_items - ls_before-failed_items )
-                           + ( rs_result-run-blocked_items - ls_before-blocked_items ).
-      DATA(lv_technical) = xsdbool( line_exists( lt_findings[ check_code = gc_check_code-plugin_error ] ) ).
-      IF lv_technical = abap_true
-         OR (     lv_package_lines >= lv_cb_min AND lv_package_lines > 0
-              AND lv_package_bad * 100 > lv_cb_percent * lv_package_lines ).
-        lv_bad_packages += 1.
-      ELSE.
-        CLEAR lv_bad_packages.
-      ENDIF.
-      IF lv_bad_packages >= lv_cb_packages.
-        DATA(ls_breaker) = VALUE zif_cd_ops_types=>ty_finding(
-          object_type = zcl_cd_ebs_finding=>gc_object_type-run
-          rule_id     = 'CB'
-          check_code  = zif_cd_ebs_types=>gc_check_code-circuit_breaker
-          severity    = zif_cd_ops_types=>gc_severity-error
-          action      = zif_cd_ops_types=>gc_action-notify
-          message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-circuit_breaker
-                                               iv_v1    = lv_bad_packages
-                                               iv_v2    = lv_cb_percent ) ).
-        lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING cs_run = rs_result-run ).
-        INSERT ls_breaker INTO TABLE lt_all_findings.
-        summarize( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING ct_summary = lt_summary ).
-        lv_run_rag = zif_cd_ops_types=>gc_rag-red.
-        rs_result-run-status = zif_cd_ops_types=>gc_run_status-aborted.
-        EXIT.
-      ENDIF.
-      " The package is persisted, counted and kept within EBS_RESULT_MAX: release its buffers
-      " before the next package is read (lower peak memory in long batch runs)
-      FREE: ls_package, lt_findings.
-    ENDDO.
+          " Circuit breaker: consecutive packages with a failure rate above the limit, or with
+          " a technical failure (A66: a rule could not run - its lines are unevaluated)
+          DATA(lv_package_lines) = rs_result-run-total_items - ls_before-total_items.
+          DATA(lv_package_bad) = ( rs_result-run-failed_items - ls_before-failed_items )
+                               + ( rs_result-run-blocked_items - ls_before-blocked_items ).
+          DATA(lv_technical) = xsdbool( line_exists( lt_findings[ check_code = gc_check_code-plugin_error ] ) ).
+          IF lv_technical = abap_true
+             OR (     lv_package_lines >= lv_cb_min AND lv_package_lines > 0
+                  AND lv_package_bad * 100 > lv_cb_percent * lv_package_lines ).
+            lv_bad_packages += 1.
+          ELSE.
+            CLEAR lv_bad_packages.
+          ENDIF.
+          IF lv_bad_packages >= lv_cb_packages.
+            DATA(ls_breaker) = VALUE zif_cd_ops_types=>ty_finding(
+              object_type = zcl_cd_ebs_finding=>gc_object_type-run
+              rule_id     = 'CB'
+              check_code  = zif_cd_ebs_types=>gc_check_code-circuit_breaker
+              severity    = zif_cd_ops_types=>gc_severity-error
+              action      = zif_cd_ops_types=>gc_action-notify
+              message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-circuit_breaker
+                                                   iv_v1    = lv_bad_packages
+                                                   iv_v2    = lv_cb_percent ) ).
+            lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING cs_run = rs_result-run ).
+            INSERT ls_breaker INTO TABLE lt_all_findings.
+            summarize( EXPORTING it_findings = VALUE #( ( ls_breaker ) ) CHANGING ct_summary = lt_summary ).
+            lv_run_rag = zif_cd_ops_types=>gc_rag-red.
+            rs_result-run-status = zif_cd_ops_types=>gc_run_status-aborted.
+            EXIT.
+          ENDIF.
+          " The package is persisted, counted and kept within EBS_RESULT_MAX: release its buffers
+          " before the next package is read (lower peak memory in long batch runs)
+          FREE: ls_package, lt_findings.
+        ENDDO.
 
-    " A68: a run that selected no statement evaluated nothing - NO_DATA (grey), not green,
-    " unless the feed is declared intentionally empty (EBS_EMPTY_FEED_OK = X)
-    DATA(lv_no_data) = xsdbool( lv_statements = 0
-                                AND rs_result-run-status <> zif_cd_ops_types=>gc_run_status-aborted
-                                AND zcl_cd_ops_factory=>get_params( )->get_param( zif_cd_ebs_types=>gc_param-empty_feed_ok ) <> abap_true ).
-    IF lv_no_data = abap_true.
-      DATA(ls_no_data) = VALUE zif_cd_ops_types=>ty_finding(
-        object_type = zcl_cd_ebs_finding=>gc_object_type-run
-        object_key  = iv_variant
-        rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
-        check_code  = zif_cd_ebs_types=>gc_check_code-no_data
-        severity    = zif_cd_ops_types=>gc_severity-error
-        action      = zif_cd_ops_types=>gc_action-notify
-        message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-no_data
-                                             iv_v1    = iv_variant ) ).
-      lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING cs_run = rs_result-run ).
-      INSERT ls_no_data INTO TABLE lt_all_findings.
-      summarize( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING ct_summary = lt_summary ).
-    ENDIF.
+        " A68: a run that selected no statement evaluated nothing - NO_DATA (grey), not green,
+        " unless the feed is declared intentionally empty (EBS_EMPTY_FEED_OK = X)
+        DATA(lv_no_data) = xsdbool( lv_statements = 0
+                                    AND rs_result-run-status <> zif_cd_ops_types=>gc_run_status-aborted
+                                    AND zcl_cd_ops_factory=>get_params( )->get_param(
+                                          zif_cd_ebs_types=>gc_param-empty_feed_ok ) <> abap_true ).
+        IF lv_no_data = abap_true.
+          DATA(ls_no_data) = VALUE zif_cd_ops_types=>ty_finding(
+            object_type = zcl_cd_ebs_finding=>gc_object_type-run
+            object_key  = iv_variant
+            rule_id     = zif_cd_ebs_types=>gc_engine-rule_id
+            check_code  = zif_cd_ebs_types=>gc_check_code-no_data
+            severity    = zif_cd_ops_types=>gc_severity-error
+            action      = zif_cd_ops_types=>gc_action-notify
+            message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-no_data
+                                                 iv_v1    = iv_variant ) ).
+          lo_store->save_findings( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING cs_run = rs_result-run ).
+          INSERT ls_no_data INTO TABLE lt_all_findings.
+          summarize( EXPORTING it_findings = VALUE #( ( ls_no_data ) ) CHANGING ct_summary = lt_summary ).
+        ENDIF.
 
-    " Operating model: a run that could not evaluate entries because posting is not complete
-    " is never green, whatever severity S13 is configured with
-    IF rs_result-posting_open > 0.
-      lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag iv_rag2 = zif_cd_ops_types=>gc_rag-amber ).
-    ENDIF.
-    close_run( EXPORTING iv_rag          = lv_run_rag
-                         iv_started      = lv_started
-                         iv_no_data      = lv_no_data
-                         iv_unevaluated  = rs_result-unevaluated
-                         iv_posting_open = rs_result-posting_open
-                         iv_out_of_scope = rs_result-out_of_scope
-               CHANGING  cs_run          = rs_result-run ).
-    lo_store->finish_run( rs_result-run ).
-    IF iv_test_mode = abap_false.
-      lo_store->commit( ).
-      TRY.
-          zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = rs_result-run
-                                                      it_findings = alert_findings( it_kept    = lt_all_findings
-                                                                                    it_summary = lt_summary ) ).
-        CATCH zcx_cd_ops_error ##NO_HANDLER.
-          " Alert configuration unreadable: the run result is already persisted;
-          " the morning report's alert-delivery check surfaces the gap.
-      ENDTRY.
-    ENDIF.
+        " Operating model: a run that could not evaluate entries because posting is not complete
+        " is never green, whatever severity S13 is configured with
+        IF rs_result-posting_open > 0.
+          lv_run_rag = zcl_cd_ops_util=>worse_rag( iv_rag1 = lv_run_rag iv_rag2 = zif_cd_ops_types=>gc_rag-amber ).
+        ENDIF.
+        close_run( EXPORTING iv_rag          = lv_run_rag
+                             iv_started      = lv_started
+                             iv_no_data      = lv_no_data
+                             iv_unevaluated  = rs_result-unevaluated
+                             iv_posting_open = rs_result-posting_open
+                             iv_out_of_scope = rs_result-out_of_scope
+                   CHANGING  cs_run          = rs_result-run ).
+        lo_store->finish_run( rs_result-run ).
+        IF iv_test_mode = abap_false.
+          lo_store->commit( ).
+          TRY.
+              zcl_cd_ops_factory=>get_alert( )->dispatch( is_run      = rs_result-run
+                                                          it_findings = alert_findings( it_kept    = lt_all_findings
+                                                                                        it_summary = lt_summary ) ).
+            CATCH zcx_cd_ops_error INTO DATA(lx_alert).
+              " B11: the run result is already persisted; the failed dispatch is a finding of
+              " the run (ALERT_FAILED, with the trace), as in file monitoring and the morning report
+              DATA(lt_alert_error) = VALUE zif_cd_ops_types=>tt_finding(
+                ( zcl_cd_ops_run_guard=>alert_failed( is_run = rs_result-run ix_error = lx_alert ) ) ).
+              lo_store->save_findings( EXPORTING it_findings = lt_alert_error CHANGING cs_run = rs_result-run ).
+              lo_store->finish_run( rs_result-run ).
+              lo_store->commit( ).
+              INSERT LINES OF lt_alert_error INTO TABLE lt_all_findings.
+          ENDTRY.
+        ENDIF.
+      CATCH zcx_cd_ops_error cx_sy_open_sql_db INTO DATA(lx_error).
+        zcl_cd_ops_run_guard=>abort( EXPORTING ix_error = lx_error
+                                     CHANGING  cs_run   = rs_result-run ).
+        IF lx_error IS INSTANCE OF zcx_cd_ops_error.
+          RAISE EXCEPTION CAST zcx_cd_ops_error( lx_error ).
+        ENDIF.
+        RAISE EXCEPTION TYPE zcx_cd_ops_error
+          MESSAGE e804(zcd_ops) WITH rs_result-run-pe_area rs_result-run-variant
+          EXPORTING
+            previous = lx_error.
+    ENDTRY.
     rs_result-findings = lt_all_findings.
   ENDMETHOD.
 
@@ -645,7 +670,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
                         message     = zcl_cd_ops_util=>text( iv_msgno = zif_cd_ebs_types=>gc_msg-rule_failed
                                                              iv_v1    = is_rule-rule_id
                                                              iv_v2    = is_rule-class_name
-                                                             iv_tail  = lx_error->get_text( ) ) )
+                                                             iv_tail  = lx_error->get_text( ) )
+                        " B10 / B12: the whole chain and its error class stay with the finding
+                        details     = zcl_cd_ops_util=>exception_trace( lx_error )
+                        error_class = zcl_cd_ops_util=>error_class( lx_error ) )
           INTO TABLE rt_findings.
     ENDTRY.
   ENDMETHOD.

@@ -20,6 +20,8 @@
 *&            | get_noc_items - NOC lot items (DFKKNRP) by INFOF with their NOC reason FLGRD.
 *& 2026-11-07 | TY_RETURN_ITEM-AMOUNT (DFKKRP-BETRW) for the in-flight check (shared read, A_INFLIGHT).
 *& 2026-11-08 | Customer posting area: FICA_REASON is a result of ZRSN (was ZCD_EBS_RSN_MAP) - comment only.
+*& 2026-11-10 | is_lookup_field_approved: ZCD_OPS_TABWL row EBS / LOOKUP for the table and field (R21,
+*&            | DEFAULT IGNORE); get_lookup_rows reads only approved fields with S_TABU_NAM 03.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">EBS validation - payment engine reads for line rules</p>
 "! All reads used by the business rules (R07*, R08, R12, R18, R19). Keys are
@@ -166,6 +168,17 @@ INTERFACE zif_cd_ebs_sap_dao
 
   "! Rows of the configured table for the keys (key field, status field). Table and field
   "! names are validated against the DDIC; an unknown name raises (rule fails closed).
+  "! The field of the table is approved for the EBS lookup rule R21 (active ZCD_OPS_TABWL row of
+  "! area EBS, purpose LOOKUP, table and field - field-level, a blank field approves nothing)
+  METHODS is_lookup_field_approved DEFAULT IGNORE
+    IMPORTING
+      iv_table           TYPE clike
+      iv_field           TYPE clike
+    RETURNING
+      VALUE(rv_approved) TYPE abap_bool.
+
+  "! Rows of the configured lookup table: key and status field must be approved
+  "! (is_lookup_field_approved, 812) and the table displayable (S_TABU_NAM 03, 813)
   METHODS get_lookup_rows
     IMPORTING
       is_lookup      TYPE zif_cd_ebs_types=>ty_lookup_cfg

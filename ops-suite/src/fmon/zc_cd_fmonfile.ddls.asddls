@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @EndUserText.label: 'Monitored files - manual status'
 @Metadata.allowExtensions: true
 define root view entity ZC_CD_FmonFile

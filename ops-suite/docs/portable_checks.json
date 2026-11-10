@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-10"
   },
-  "passed": 27,
-  "total": 27,
-  "abap_files": 401,
-  "declared_unit_methods": 1685,
+  "passed": 28,
+  "total": 28,
+  "abap_files": 407,
+  "declared_unit_methods": 1748,
   "measured_coverage": null,
   "checks": [
     {
@@ -79,13 +79,13 @@
     {
       "name": "no_inline_texts",
       "passed": true,
-      "detail": "No user-facing text or technical value as a literal outside declarations (4060 literals scanned; allow-list tools/literal_allowlist.txt).",
+      "detail": "No user-facing text or technical value as a literal outside declarations (4225 literals scanned; allow-list tools/literal_allowlist.txt).",
       "failures": []
     },
     {
       "name": "message_constants_exist",
       "passed": true,
-      "detail": "448 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
+      "detail": "455 message-number constants point to existing ZCD_OPS messages (a shared message may be named by several apps).",
       "failures": []
     },
     {
@@ -131,6 +131,12 @@
       "failures": []
     },
     {
+      "name": "auth_fields_defined",
+      "passed": true,
+      "detail": "Every AUTHORITY-CHECK on ZCD_OPS (zif_cd_ops_auth=>gc_object) and every pfcg_auth( ZCD_OPS, ... ) in a DCL (src/ and cds/) names only the fields config/auth_zcd_ops.md defines (section 1 field, section 2 object field list).",
+      "failures": []
+    },
+    {
       "name": "messages_used",
       "passed": true,
       "detail": "Every ZCD_OPS message (config/zcd_ops_messages.md) is raised by production code: a message-number constant that production code reads, MESSAGE eNNN(zcd_ops) or NUMBER = literal.",
@@ -151,7 +157,7 @@
     {
       "name": "param_definitions_complete",
       "passed": true,
-      "detail": "142 delivered definitions in 4 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
+      "detail": "145 delivered definitions in 4 areas (config/param_definitions.csv): every parameter name the code reads (gc_param constants, standalone gc_param_* constants, every enumerated run-time name) is defined and every definition is read, the area is the one ZCL_CD_OPS_PARAMS_CA derives from the prefix, the default equals the default the code delivers, flags are BOOL, no read is compared with an off token, ZCL_CD_OPS_PARAM_SEED is generated from the seed files.",
       "failures": []
     },
     {
@@ -163,13 +169,13 @@
     {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 401 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 407 files.",
       "failures": []
     },
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1257 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1274 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]
