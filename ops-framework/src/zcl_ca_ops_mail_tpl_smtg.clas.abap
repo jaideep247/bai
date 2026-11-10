@@ -181,9 +181,10 @@ CLASS zcl_ca_ops_mail_tpl_smtg IMPLEMENTATION.
 
 
   METHOD probe.
-    DATA lo_type  TYPE REF TO cl_abap_typedescr.
-    DATA lo_class TYPE REF TO cl_abap_classdescr.
-    DATA lv_subrc TYPE sysubrc.
+    DATA lo_type     TYPE REF TO cl_abap_typedescr.
+    DATA lo_class    TYPE REF TO cl_abap_classdescr.
+    DATA lv_instance TYPE abap_bool.
+    DATA lv_render   TYPE abap_bool.
 
     mv_state = gc_state-not_usable.
     TEST-SEAM smtg_describe.
@@ -195,19 +196,19 @@ CLASS zcl_ca_ops_mail_tpl_smtg IMPLEMENTATION.
         EXCEPTIONS
           type_not_found = 1
           OTHERS         = 2 ).
-      lv_subrc = sy-subrc.
+      IF sy-subrc = 0 AND lo_type IS BOUND.
+        TRY.
+            lo_class = CAST cl_abap_classdescr( lo_type ).
+            lv_instance  = xsdbool( line_exists( lo_class->methods[ name = gc_api-get_instance ] ) ).
+            mv_with_data = xsdbool( line_exists( lo_class->methods[ name = gc_api-render_w_data ] ) ).
+            lv_render    = xsdbool( line_exists( lo_class->methods[ name = gc_api-render ] ) ).
+          CATCH cx_sy_move_cast_error.
+            " a type of that name that is no class: not usable
+            CLEAR lo_class.
+        ENDTRY.
+      ENDIF.
     END-TEST-SEAM.
-    IF lv_subrc <> 0 OR lo_type IS NOT BOUND.
-      RETURN.
-    ENDIF.
-    TRY.
-        lo_class = CAST cl_abap_classdescr( lo_type ).
-      CATCH cx_sy_move_cast_error.
-        RETURN.
-    ENDTRY.
-    mv_with_data = xsdbool( line_exists( lo_class->methods[ name = gc_api-render_w_data ] ) ).
-    IF line_exists( lo_class->methods[ name = gc_api-get_instance ] )
-       AND ( mv_with_data = abap_true OR line_exists( lo_class->methods[ name = gc_api-render ] ) ).
+    IF lv_instance = abap_true AND ( mv_with_data = abap_true OR lv_render = abap_true ).
       mv_state = gc_state-usable.
     ENDIF.
   ENDMETHOD.

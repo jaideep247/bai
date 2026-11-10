@@ -10,6 +10,7 @@
 *& 2026-11-06 | ltc_alert_dao_reads: rules, channels, log read and insert (coverage gap closure).
 *& 2026-11-07 | Second channel of the ordering test is APPLOG (webhook channel removed).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | facts_of_open_exceptions: GET_EXCEPTION_FACTS reads the open / assigned exceptions of the run.
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -33,6 +34,7 @@ CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
     METHODS second_claim_is_refused FOR TESTING.
     METHODS failed_intent_can_retry FOR TESTING.
     METHODS repeat_keys_only_carried FOR TESTING.
+    METHODS facts_of_open_exceptions FOR TESTING.
 
 ENDCLASS.
 
@@ -118,6 +120,39 @@ CLASS ltc_alert_dao IMPLEMENTATION.
         cl_abap_unit_assert=>assert_true(
           act = xsdbool( line_exists( lt_keys[ object_type = 'LINE' object_key = 'S0001/1' check_code = 'UNMAPPED_BTC' ] ) )
           msg = 'The carried finding is S0001/1' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " E-mail context: occurrences, due date and owner of the open / assigned exceptions of the run only
+  METHOD facts_of_open_exceptions.
+    DATA lt_rows TYPE STANDARD TABLE OF zca_ops_finding WITH EMPTY KEY.
+    DATA ls_row TYPE zca_ops_finding.
+    CONSTANTS lc_run TYPE zif_ca_ops_types=>ty_run_id VALUE '000000000000000000000000000000F2'.
+    TRY.
+        ls_row-run_id      = lc_run.
+        ls_row-finding_no  = 1.
+        ls_row-object_type = 'LINE'.
+        ls_row-object_key  = 'S0001/1'.
+        ls_row-check_code  = 'UNMAPPED_BTC'.
+        ls_row-occurrences = 2.
+        ls_row-due_date    = '20261111'.
+        ls_row-owner       = 'ZT_OWNER'.
+        ls_row-disposition = zif_ca_ops_types=>gc_disposition-open.
+        INSERT ls_row INTO TABLE lt_rows.
+        ls_row-finding_no  = 2.
+        ls_row-object_key  = 'S0001/2'.
+        ls_row-disposition = zif_ca_ops_types=>gc_disposition-information.
+        INSERT ls_row INTO TABLE lt_rows.
+        go_env->insert_test_data( lt_rows ).
+        DATA(lt_facts) = mo_cut->get_exception_facts( lc_run ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_facts ) exp = 1 msg = 'Only the open exception' ).
+        DATA(ls_fact) = lt_facts[ object_type = 'LINE' object_key = 'S0001/1' check_code = 'UNMAPPED_BTC' ].
+        cl_abap_unit_assert=>assert_equals( act = ls_fact-occurrences exp = 2 msg = 'Occurrences' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_fact-due_date exp = '20261111' msg = 'Due date' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_fact-owner exp = 'ZT_OWNER' msg = 'Owner' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

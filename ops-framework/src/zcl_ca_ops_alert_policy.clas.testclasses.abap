@@ -13,6 +13,8 @@
 *&            | the general table.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_POLICY to the reusable framework ZCA_OPS: the bank ACK table is a
 *&            | consumer section - section_owns_its_findings with the section double LTD_SECTION.
+*& 2026-11-10 | Alert e-mail templates: amounts only with SHOW_AMOUNTS, standard context keys and the findings
+*&            | block, business context of a finding, new / repeated / overdue from the stored exceptions.
 *&---------------------------------------------------------------------*
 "! A consumer section: owns the findings with object key GC_OWNED_KEY
 CLASS ltd_section DEFINITION FINAL FOR TESTING.
@@ -97,6 +99,11 @@ CLASS ltc_alert_policy DEFINITION FINAL FOR TESTING
     METHODS blocker_after_cap_is_kept    FOR TESTING.
     METHODS per_finding_blocker_first    FOR TESTING.
     METHODS cap_order_is_stable          FOR TESTING.
+    METHODS amounts_hidden_by_default    FOR TESTING.
+    METHODS amounts_shown_when_flagged   FOR TESTING.
+    METHODS context_has_standard_keys    FOR TESTING.
+    METHODS finding_context_is_shown     FOR TESTING.
+    METHODS facts_count_new_and_overdue  FOR TESTING.
 ENDCLASS.
 
 
@@ -562,6 +569,146 @@ CLASS ltc_alert_policy IMPLEMENTATION.
                                                     iv_destination = gc_test-dest ).
         cl_abap_unit_assert=>assert_char_cp( act = lt_messages[ 1 ]-text exp = '*line one*'
                                              msg = 'Ties are broken by object key, not input order' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " User decision 2026-11-10: whether alerts show amounts is configuration, default off
+  METHOD amounts_hidden_by_default.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    TRY.
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-amount   = '1234.56'.
+        ls_finding-currency = 'USD'.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_finding ) ( ls_finding ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_char_np( act = ls_message-html exp = '*1,234.56*'
+                                             msg = 'No amount in the e-mail without SHOW_AMOUNTS' ).
+        cl_abap_unit_assert=>assert_char_np( act = ls_message-subject exp = '*1,234.56*'
+                                             msg = 'No amount in the subject without SHOW_AMOUNTS' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " SHOW_AMOUNTS = X: amount column, totals per currency in the subject (impact first)
+  METHOD amounts_shown_when_flagged.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    TRY.
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-amount   = '1234.56'.
+        ls_finding-currency = 'USD'.
+        ms_rule-show_amounts  = abap_true.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_finding ) ( ls_finding ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-html exp = '*USD 1,234.56*'
+                                             msg = 'The amount column is shown' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_message-subject exp = '*USD 2,469.12*'
+                                             msg = 'The subject names the total per currency' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-context-header-amount_total exp = 'USD 2,469.12'
+                                            msg = 'The amount total is a context key' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " The message carries the standard keys and the findings table as a block whose token is replaced
+  METHOD context_has_standard_keys.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    TRY.
+        ms_rule-template_id   = 'ZT_RULE_TEMPLATE'.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( finding( zif_ca_ops_types=>gc_severity-error ) )
+                                         ( finding( zif_ca_ops_types=>gc_severity-error ) ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        DATA(ls_header) = ls_message-context-header.
+        cl_abap_unit_assert=>assert_equals( act = ls_header-rule_id exp = gc_test-rule_id msg = 'Rule key' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-findings_total exp = '2' msg = 'Findings key' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-check_code exp = 'UNMAPPED_BTC'
+                                            msg = 'One check code: the check key' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-subject exp = ls_message-subject
+                                            msg = 'The subject is a key of the template' ).
+        cl_abap_unit_assert=>assert_char_cp( act = ls_header-headline exp = 'UNMAPPED_BTC: 2*'
+                                             msg = 'The headline: what and how many, no prefixes' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-template_id exp = ms_rule-template_id
+                                            msg = 'The rule names the template' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_message-context-blocks ) exp = 1
+                                            msg = 'One block: the findings table' ).
+        cl_abap_unit_assert=>assert_false( act = xsdbool( ls_message-html CS ls_header-table_main )
+                                           msg = 'The token is replaced by the table' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_message-renderer exp = zif_ca_ops_types=>gc_renderer-builtin
+                                            msg = 'The policy delivers the built-in layout' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Business context of a finding (business date, company code, ...) is shown when known
+  METHOD finding_context_is_shown.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    TRY.
+        DATA(ls_finding) = finding( zif_ca_ops_types=>gc_severity-error ).
+        ls_finding-business_date = '20261109'.
+        ls_finding-company_code  = 'ZT01'.
+        ls_finding-account       = 'HB001/AC01'.
+        ls_finding-details       = 'Label: value'.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_finding ) ).
+        DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest ).
+        DATA(ls_message) = lt_messages[ 1 ].
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-html CS '2026-11-09' AND ls_message-html CS 'ZT01'
+                                                         AND ls_message-html CS 'HB001/AC01' )
+                                          msg = 'Business date, company code and account in the table' ).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-text CS 'ZT01' AND ls_message-text CS 'Label: value' )
+                                          msg = 'The text names the context and the detail lines' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " Stored exceptions of the run: new, repeated, overdue, earliest due date and its owner
+  METHOD facts_count_new_and_overdue.
+    DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
+    DATA lt_facts     TYPE zif_ca_ops_types=>tt_exception_fact.
+    TRY.
+        DATA(lo_cut) = NEW zcl_ca_ops_alert_policy( is_mail = VALUE #( today = '20261110' ) ).
+        DATA(ls_new) = finding( iv_severity = zif_ca_ops_types=>gc_severity-error iv_object_key = 'S0001/1' ).
+        DATA(ls_old) = finding( iv_severity = zif_ca_ops_types=>gc_severity-error iv_object_key = 'S0001/2' ).
+        INSERT VALUE #( object_type = ls_new-object_type object_key = ls_new-object_key check_code = ls_new-check_code
+                        occurrences = 1 due_date = '20261111' owner = 'ZT_NEW' ) INTO TABLE lt_facts.
+        INSERT VALUE #( object_type = ls_old-object_type object_key = ls_old-object_key check_code = ls_old-check_code
+                        occurrences = 3 due_date = '20261108' owner = 'ZT_OLD' ) INTO TABLE lt_facts.
+        ls_selection-rule     = ms_rule.
+        ls_selection-findings = VALUE #( ( ls_new ) ( ls_old ) ).
+        DATA(lt_messages) = lo_cut->build_messages( is_selection   = ls_selection
+                                                    is_run         = ms_run
+                                                    iv_destination = gc_test-dest
+                                                    it_facts       = lt_facts ).
+        DATA(ls_header) = lt_messages[ 1 ]-context-header.
+        cl_abap_unit_assert=>assert_equals( act = ls_header-findings_new exp = '1' msg = 'One new exception' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-findings_repeated exp = '1' msg = 'One carried forward' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-findings_overdue exp = '1' msg = 'One overdue' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-due_date exp = '2026-11-08' msg = 'Earliest due date' ).
+        cl_abap_unit_assert=>assert_equals( act = ls_header-owner exp = 'ZT_OLD' msg = 'Owner of the earliest due' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

@@ -12,6 +12,8 @@
 *& 2026-11-07 | ltc_destination: CHANNEL_CLASS / INVALID_DESTINATION (SO23 lists).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (test include; generic
 *&            | checks; threshold order and posting areas stay with the consumer's checks).
+*& 2026-11-10 | LTC_TEMPLATE_CHECK: e-mail template ID of a rule / channel (syntax, existence through the
+*&            | injected renderer double LTD_MAIL_TEMPLATE).
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
@@ -369,3 +371,93 @@ CLASS ltc_destination IMPLEMENTATION.
 ENDCLASS.
 
 
+"! Template renderer that knows one template only (existence check of the configuration app)
+CLASS ltd_mail_template DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_mail_template.
+    CONSTANTS gc_known TYPE zif_ca_ops_types=>ty_template_id VALUE 'ZT_KNOWN_TPL'.
+ENDCLASS.
+
+CLASS ltd_mail_template IMPLEMENTATION.
+  METHOD zif_ca_ops_mail_template~is_available.
+    rv_available = abap_true.
+  ENDMETHOD.
+  METHOD zif_ca_ops_mail_template~exists.
+    rv_exists = xsdbool( iv_template_id = gc_known ).
+  ENDMETHOD.
+  METHOD zif_ca_ops_mail_template~render.
+    CLEAR rs_rendered.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltc_template_check DEFINITION FINAL FOR TESTING
+  RISK LEVEL HARMLESS
+  DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS setup.
+    METHODS teardown.
+    METHODS blank_template_is_valid      FOR TESTING.
+    METHODS known_template_is_valid      FOR TESTING.
+    METHODS unknown_template_is_refused  FOR TESTING.
+    METHODS bad_syntax_is_refused        FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_template_check IMPLEMENTATION.
+
+  METHOD setup.
+    zcl_ca_ops_injector=>inject_mail_template( NEW ltd_mail_template( ) ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    zcl_ca_ops_injector=>reset( ).
+  ENDMETHOD.
+
+
+  METHOD blank_template_is_valid.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>template_valid( space )
+                                          msg = 'Blank = channel default / generic template' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD known_template_is_valid.
+    TRY.
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>template_valid( ltd_mail_template=>gc_known )
+                                          msg = 'An existing template is accepted' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD unknown_template_is_refused.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>template_valid( 'ZT_UNKNOWN_TPL' )
+                                           msg = 'A template that does not exist is refused (436)' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD bad_syntax_is_refused.
+    TRY.
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>template_valid( 'zt_known_tpl' )
+                                           msg = 'Lower case is refused' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>template_valid( 'ZT KNOWN' )
+                                           msg = 'A blank inside the ID is refused' ).
+        cl_abap_unit_assert=>assert_false( act = zcl_ca_ops_cfg_checks=>template_valid( '1ZT' )
+                                           msg = 'An ID starts with a letter or a namespace' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+ENDCLASS.

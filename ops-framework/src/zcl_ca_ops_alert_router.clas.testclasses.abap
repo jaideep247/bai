@@ -17,6 +17,9 @@
 *&            | serves no parameters.
 *& 2026-11-10 | alert_id_failure_raises: no UUID for the alert log raises 802 (test seam ALERT_ID), nothing sent.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Alert e-mail templates: renderer double LTD_MAIL_TEMPLATE injected (no SMTG call); template
+*&            | rendered after the claim and logged, fallback to the built-in layout logged, rule before
+*&            | channel before generic template, a prepared report in a template (SEND).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -74,6 +77,29 @@ CLASS ltd_channel IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e020(zca_ops) WITH 'TEST'.
     ENDIF.
     INSERT is_message INTO TABLE mt_delivered.
+  ENDMETHOD.
+ENDCLASS.
+
+"! Renderer of SAP e-mail templates (the SMTG adapter is never called by these tests)
+CLASS ltd_mail_template DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_mail_template.
+    DATA mv_available TYPE abap_bool.
+    DATA mt_asked     TYPE STANDARD TABLE OF zif_ca_ops_types=>ty_template_id WITH EMPTY KEY.
+ENDCLASS.
+
+CLASS ltd_mail_template IMPLEMENTATION.
+  METHOD zif_ca_ops_mail_template~is_available.
+    rv_available = mv_available.
+  ENDMETHOD.
+  METHOD zif_ca_ops_mail_template~exists.
+    rv_exists = abap_true.
+  ENDMETHOD.
+  METHOD zif_ca_ops_mail_template~render.
+    INSERT iv_template_id INTO TABLE mt_asked.
+    rs_rendered-subject = is_context-header-subject.
+    rs_rendered-html    = |<h1>TEMPLATE</h1>{ is_context-header-table_main }|.
+    rs_rendered-text    = |TEMPLATE { is_context-header-table_main }|.
   ENDMETHOD.
 ENDCLASS.
 
@@ -169,12 +195,17 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
         bad_pattern      TYPE abap_bool,
         escalate_after   TYPE i,
         prior_runs_sent  TYPE i,
+        "! E-mail templates: available renderer, template of the rule / of the channel
+        smtg_available   TYPE abap_bool,
+        rule_template    TYPE zif_ca_ops_types=>ty_template_id,
+        channel_template TYPE zif_ca_ops_types=>ty_template_id,
       END OF ty_flags.
 
     DATA mo_dao     TYPE REF TO ltd_alert_dao.
     DATA mo_channel TYPE REF TO ltd_channel.
     DATA mo_clock   TYPE REF TO ltd_clock.
     DATA mo_store   TYPE REF TO ltd_store.
+    DATA mo_template TYPE REF TO ltd_mail_template.
     DATA ms_run     TYPE zif_ca_ops_types=>ty_run.
 
     METHODS setup.
@@ -205,6 +236,11 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
     METHODS send_inactive_channel_fails  FOR TESTING.
     METHODS invalid_rule_pattern_logged  FOR TESTING.
     METHODS alert_id_failure_raises      FOR TESTING.
+    METHODS template_rendered_and_logged FOR TESTING.
+    METHODS template_fallback_is_logged  FOR TESTING.
+    METHODS rule_template_beats_channel  FOR TESTING.
+    METHODS channel_template_is_default  FOR TESTING.
+    METHODS send_wraps_report_template   FOR TESTING.
 ENDCLASS.
 
 
@@ -215,6 +251,8 @@ CLASS ltc_alert_router IMPLEMENTATION.
     mo_channel = NEW #( ).
     mo_clock   = NEW #( ).
     mo_store   = NEW #( ).
+    mo_template = NEW #( ).
+    zcl_ca_ops_injector=>inject_mail_template( mo_template ).
     zcl_ca_ops_injector=>inject_alert_dao( mo_dao ).
     zcl_ca_ops_injector=>inject_clock( mo_clock ).
     zcl_ca_ops_injector=>inject_store( mo_store ).
@@ -235,7 +273,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
 
   METHOD teardown.
     zcl_ca_ops_injector=>reset( ).
-    CLEAR: mo_dao, mo_channel, mo_clock, mo_store.
+    CLEAR: mo_dao, mo_channel, mo_clock, mo_store, mo_template.
   ENDMETHOD.
 
 
@@ -260,6 +298,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ls_rule-escalation_dest = gc_test-escalation.
     ls_rule-esc_override    = is_flags-esc_override.
     ls_rule-active          = is_flags-rule_active.
+    ls_rule-template_id     = is_flags-rule_template.
     IF is_flags-bad_pattern = abap_true.
       ls_rule-check_pattern = '(ZT'.
     ENDIF.
@@ -272,6 +311,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ls_channel-channel    = zif_ca_ops_types=>gc_channel-email.
     ls_channel-class_name = gc_test-channel_cl.
     ls_channel-active     = xsdbool( is_flags-channel_inactive = abap_false ).
+    ls_channel-template_id = is_flags-channel_template.
     INSERT ls_channel INTO TABLE mo_dao->mt_channels.
 
     IF is_flags-sent_minutes_ago > 0.
@@ -311,6 +351,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ENDIF.
 
     mo_channel->mv_fail = is_flags-channel_fails.
+    mo_template->mv_available = is_flags-smtg_available.
     mo_clock->mv_now    = gc_test-now.
     mo_clock->mv_time   = COND #( WHEN is_flags-night = abap_true THEN gc_test-night ELSE gc_test-day ).
   ENDMETHOD.
@@ -646,6 +687,125 @@ CLASS ltc_alert_router IMPLEMENTATION.
                                             msg = 'Message 802' ).
         cl_abap_unit_assert=>assert_initial( act = mo_channel->mt_delivered
                                              msg = 'Nothing is delivered without a log key' ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " SMTG available: the generic template is rendered after the claim, the table is put in, the log
+  " row names template and renderer
+  METHOD template_rendered_and_logged.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-smtg_available = abap_true.
+        configure_scenario( ls_flags ).
+
+        run_dispatch( ).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1
+                                            msg = 'The alert is delivered once' ).
+        DATA(ls_delivered) = mo_channel->mt_delivered[ 1 ].
+        cl_abap_unit_assert=>assert_char_cp( act = ls_delivered-html exp = '<h1>TEMPLATE</h1>*S0001/1*'
+                                             msg = 'Template HTML with the findings table in place' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_template->mt_asked[ 1 ]
+                                            exp = CONV zif_ca_ops_types=>ty_template_id(
+                                                    zif_ca_ops_types=>gc_param_default-template_default )
+                                            msg = 'Without rule and channel template the generic one' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_claims[ 1 ]-template_id
+                                            exp = mo_template->mt_asked[ 1 ]
+                                            msg = 'The claim names the template' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-renderer
+                                            exp = zif_ca_ops_types=>gc_renderer-smtg
+                                            msg = 'The log names the renderer' ).
+        cl_abap_unit_assert=>assert_initial( act = mo_dao->mt_inserted[ 1 ]-render_info
+                                             msg = 'Nothing to note' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " SMTG not usable: the built-in layout is delivered all the same, the fallback is on the log row
+  METHOD template_fallback_is_logged.
+    TRY.
+        configure_scenario( default_flags( ) ).
+
+        run_dispatch( ).
+
+        cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1
+                                            msg = 'A fallback still delivers the e-mail' ).
+        cl_abap_unit_assert=>assert_char_cp( act = mo_channel->mt_delivered[ 1 ]-html exp = '*Unmapped code*'
+                                             msg = 'The built-in layout names the finding' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-status
+                                            exp = zif_ca_ops_types=>gc_alert_status-sent
+                                            msg = 'Sent' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-renderer
+                                            exp = zif_ca_ops_types=>gc_renderer-builtin
+                                            msg = 'The log names the built-in renderer' ).
+        cl_abap_unit_assert=>assert_not_initial( act = mo_dao->mt_inserted[ 1 ]-render_info
+                                                 msg = 'The fallback is never silent' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD rule_template_beats_channel.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-smtg_available   = abap_true.
+        ls_flags-rule_template    = 'ZT_RULE_TPL'.
+        ls_flags-channel_template = 'ZT_CHANNEL_TPL'.
+        configure_scenario( ls_flags ).
+
+        run_dispatch( ).
+
+        cl_abap_unit_assert=>assert_equals( act = mo_template->mt_asked[ 1 ] exp = 'ZT_RULE_TPL'
+                                            msg = 'The rule template wins over the channel default' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD channel_template_is_default.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-smtg_available   = abap_true.
+        ls_flags-channel_template = 'ZT_CHANNEL_TPL'.
+        configure_scenario( ls_flags ).
+
+        run_dispatch( ).
+
+        cl_abap_unit_assert=>assert_equals( act = mo_template->mt_asked[ 1 ] exp = 'ZT_CHANNEL_TPL'
+                                            msg = 'Without a rule template the channel default applies' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  " A prepared report (send) in a template: the report is the block TABLE_MAIN
+  METHOD send_wraps_report_template.
+    TRY.
+        DATA(ls_flags) = default_flags( ).
+        ls_flags-smtg_available = abap_true.
+        configure_scenario( ls_flags ).
+        mo_store->mo_params->set( iv_name = 'ALERT_MORNING' iv_value = gc_test-dest ).
+
+        zcl_ca_ops_factory=>get_alert( )->send( iv_route       = 'MORNING'
+                                                iv_subject     = `Daily report`
+                                                iv_html        = `<p>report</p>`
+                                                iv_template_id = 'ZT_REPORT_TPL' ).
+
+        cl_abap_unit_assert=>assert_equals( act = mo_channel->mt_delivered[ 1 ]-html
+                                            exp = `<h1>TEMPLATE</h1><p>report</p>`
+                                            msg = 'The report stands where the template has TABLE_MAIN' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_template->mt_asked[ 1 ] exp = 'ZT_REPORT_TPL'
+                                            msg = 'The template of the caller' ).
+        cl_abap_unit_assert=>assert_equals( act = mo_dao->mt_inserted[ 1 ]-template_id exp = 'ZT_REPORT_TPL'
+                                            msg = 'The log names the template' ).
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
   ENDMETHOD.
 
