@@ -142,7 +142,7 @@ The three PRISM rows are confirmed (wire values of the API). `PRISM_*` stages fi
 
 ## ZCD_OPS_TABWL, area FMON, purpose SOURCE (tables approved for the dynamic reader — audit A51)
 
-Since the table consolidation of 2026-11-08 the approved tables of every reader are one core table, `ZCD_OPS_TABWL` (core configuration app *Alerting and approved tables* → *Approved tables per reader*; was `ZCD_FMON_TABWL`). The FMON reader reads only the rows with `PE_AREA = FMON` and `PURPOSE = SOURCE`. Every table named in `ZCD_FMON_SRC` or `ZCD_FMON_LOTCFG` (and every payment trace source, `Payment_Trace.md` §9) must be approved here, and the batch user needs `S_TABU_NAM` (ACTVT 03, TABLE = the name) for it; otherwise the read is refused (messages 244 / 245 / 249). `FIELD_NAME` **blank** approves every field of the table (was `*`); list fields one row each to narrow it. `APPROVED_BY` = the security reviewer of the row.
+Since the table consolidation of 2026-11-08 the approved tables of every reader are one core table, `ZCD_OPS_TABWL` (core configuration app *Approved tables*; was `ZCD_FMON_TABWL`). The FMON reader reads only the rows with `PE_AREA = CD_FMON` and `PURPOSE = SOURCE`. Every table named in `ZCD_FMON_SRC` or `ZCD_FMON_LOTCFG` (and every payment trace source, `Payment_Trace.md` §9) must be approved here, and the batch user needs `S_TABU_NAM` (ACTVT 03, TABLE = the name) for it; otherwise the read is refused (messages 244 / 245 / 249). `FIELD_NAME` **blank** approves every field of the table (was `*`); list fields one row each to narrow it. `APPROVED_BY` = the security reviewer of the row.
 
 | PE_AREA | PURPOSE | TABLE_NAME | FIELD_NAME | ACTIVE | APPROVED_BY | DESCRIPTION |
 |---|---|---|---|---|---|---|
