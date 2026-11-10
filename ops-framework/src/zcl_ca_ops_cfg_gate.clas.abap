@@ -4,14 +4,15 @@
 *& The single entry point of the four configuration behaviour pools:
 *& feature control (create / delete per client policy), transport request
 *& check, transport recording (only where the client records changes) and
-*& authorisation (ZCD_OPS). Client settings are read once per instance.
+*& authorisation (ZCA_OPS). Client settings are read once per instance.
 *& Handlers stay thin: they only translate answers into RAP results.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-07 | Per-table create withdrawn: new rows only by transport from DV1 (user decision, D-3).
-*& 2026-11-08 | MAY_EDIT: editing the singleton needs ZCD_OPS 01, 02 or 06 of the area (activities per child).
+*& 2026-11-08 | MAY_EDIT: editing the singleton needs ZCA_OPS 01, 02 or 06 of the area (activities per child).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_GATE to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: gate for behaviour pools</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: gate for behaviour pools</p>
 CLASS zcl_ca_ops_cfg_gate DEFINITION
   PUBLIC
   FINAL
@@ -45,8 +46,8 @@ CLASS zcl_ca_ops_cfg_gate DEFINITION
       RETURNING
         VALUE(rv_allowed) TYPE abap_bool.
 
-    "! Editing the singleton of an app: at least one of ZCD_OPS 01 (create), 02 (change) or
-    "! 06 (delete) for the payment engine area; each child operation checks its own activity
+    "! Editing the singleton of an app: at least one of ZCA_OPS 01 (create), 02 (change) or
+    "! 06 (delete) for the area; each child operation checks its own activity
     METHODS may_edit
       IMPORTING
         iv_area        TYPE zif_ca_ops_types=>ty_area

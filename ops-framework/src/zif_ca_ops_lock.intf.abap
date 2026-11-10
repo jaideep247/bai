@@ -1,12 +1,13 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_ca_ops_lock.intf.abap
 *& Purpose:
-*& One run per payment engine area + variant at a time. The lock survives COMMIT WORK
+*& One run per area + variant at a time. The lock survives COMMIT WORK
 *& (engines commit per package) and is released by the engine at the end.
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
+*& 2026-11-10 | Moved from ZIF_CD_OPS_LOCK to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - run lock per area and variant</p>
+"! <p class="shorttext synchronized">Operations framework - run lock per area and variant</p>
 INTERFACE zif_ca_ops_lock
   PUBLIC.
 

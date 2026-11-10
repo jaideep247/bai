@@ -11,8 +11,9 @@
 *& 2026-11-06 | Initial version (run lock).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Test seams ENQUEUE / DEQUEUE around the lock function calls (coverage gap closure).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_LOCK to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - run lock (E_TABLE on ZCA_OPS_LOCK)</p>
+"! <p class="shorttext synchronized">Operations framework - run lock (E_TABLE on ZCA_OPS_LOCK)</p>
 CLASS zcl_ca_ops_lock DEFINITION
   PUBLIC
   FINAL

@@ -28,7 +28,7 @@ CLASS ltc_params DEFINITION FINAL FOR TESTING
       BEGIN OF gc_test,
         int_set      TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_TOP_N',
         int_default  TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_TIMEOUT_SEC',
-        int_open     TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_MAX_AGE_H_EBS',
+        int_open     TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_MAX_AGE_H_ANY',
         int_bad      TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_LOOKBACK_RUNS',
         bool_off     TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_FLAG_OFF',
         bool_on      TYPE zif_ca_ops_types=>ty_param_name VALUE 'ZT_FLAG_ON',

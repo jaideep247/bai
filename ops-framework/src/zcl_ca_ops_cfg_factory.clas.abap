@@ -6,8 +6,9 @@
 *& ZCL_CA_OPS_CFG_INJECTOR. Getters never read the database.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_FACTORY to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: factory</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: factory</p>
 CLASS zcl_ca_ops_cfg_factory DEFINITION
   PUBLIC
   FINAL

@@ -92,7 +92,7 @@ CLASS ltc_freshness IMPLEMENTATION.
   METHOD run.
     GET TIME STAMP FIELD DATA(lv_now).
     rs_run-run_id     = iv_run_id.
-    rs_run-pe_area    = iv_pe_area.
+    rs_run-area    = iv_pe_area.
     rs_run-variant    = iv_variant.
     rs_run-status     = zif_ca_ops_types=>gc_run_status-success.
     rs_run-ended_at   = cl_abap_tstmp=>subtract_secs( tstmp = CONV timestamp( lv_now ) secs = iv_seconds ).
@@ -234,7 +234,7 @@ CLASS ltc_critical IMPLEMENTATION.
   METHOD finding.
     rs_finding-run_id      = gc_run.
     rs_finding-finding_no  = iv_no.
-    rs_finding-pe_area     = iv_pe_area.
+    rs_finding-area     = iv_pe_area.
     rs_finding-object_type = iv_object_type.
     rs_finding-object_key  = iv_object_key.
     rs_finding-check_code  = gc_code.

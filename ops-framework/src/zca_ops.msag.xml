@@ -233,12 +233,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
-     <MSGNR>407</MSGNR>
-     <TEXT>No authorization for &amp;1 of &amp;2 configuration (object ZCA_OPS)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>408</MSGNR>
      <TEXT>Changes could not be recorded on transport request &amp;1</TEXT>
     </T100>
@@ -301,12 +295,6 @@
      <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>787</MSGNR>
      <TEXT>Exception &amp;1 / &amp;2 changed meanwhile - not resolved, nothing saved</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCA_OPS</ARBGB>
-     <MSGNR>788</MSGNR>
-     <TEXT>Open exceptions of request &amp;1 could not be read - record not saved</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -271,10 +271,10 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF is_selection-test_mode = abap_false.
-      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                              iv_variant = is_selection-variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                          iv_variant = is_selection-variant
                                                          iv_holder  = lv_holder ).
         rs_report-run         = ls_refusal-run.
@@ -310,7 +310,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF is_selection-test_mode = abap_false.
-      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-health_check
+      zcl_ca_ops_factory=>get_lock( )->release( iv_area  = zif_cd_ops_types=>gc_pe_area-health_check
                                                 iv_variant = is_selection-variant ).
     ENDIF.
   ENDMETHOD.
@@ -325,7 +325,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
     DATA(lv_today) = mo_clock->today( ).
     rs_report-report_date = COND #( WHEN is_selection-report_date IS INITIAL THEN lv_today
                                     ELSE is_selection-report_date ).
-    rs_report-run = mo_store->start_run( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-health_check
+    rs_report-run = mo_store->start_run( iv_area    = zif_cd_ops_types=>gc_pe_area-health_check
                                          iv_variant   = is_selection-variant
                                          iv_test_mode = is_selection-test_mode ).
     IF rs_report-run-started_at IS INITIAL.
@@ -440,7 +440,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
           RAISE EXCEPTION CAST zcx_ca_ops_error( lx_error ).
         ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e804(zcd_ops) WITH rs_report-run-pe_area rs_report-run-variant
+          MESSAGE e804(zcd_ops) WITH rs_report-run-area rs_report-run-variant
           EXPORTING
             previous = lx_error.
     ENDTRY.
@@ -863,7 +863,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
                                 iv_name    = CONV #( zif_cd_hck_types=>gc_param_prefix-max_run && ls_status-pe_area )
                                 iv_default = lv_default_run ).
       ls_status-hung_runs = lines( mo_store->get_stale_runs(
-        iv_pe_area        = ls_status-pe_area
+        iv_area        = ls_status-pe_area
         iv_started_before = cl_abap_tstmp=>subtractsecs( tstmp = lv_now
                                                          secs  = ls_status-max_run_min * gc_seconds_per_minute )
         iv_exclude_run    = mv_run_id ) ).

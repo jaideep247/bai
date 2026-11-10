@@ -257,10 +257,10 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                              iv_variant = iv_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                          iv_variant = iv_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -305,7 +305,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-ebs
+      zcl_ca_ops_factory=>get_lock( )->release( iv_area  = zif_cd_ops_types=>gc_pe_area-ebs
                                                 iv_variant = iv_variant ).
     ENDIF.
   ENDMETHOD.
@@ -322,7 +322,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
 
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     DATA(lv_started) = zcl_ca_ops_factory=>get_clock( )->now( ).
-    rs_result-run = lo_store->start_run( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-ebs
+    rs_result-run = lo_store->start_run( iv_area    = zif_cd_ops_types=>gc_pe_area-ebs
                                          iv_variant   = iv_variant
                                          iv_test_mode = iv_test_mode ).
     IF iv_test_mode = abap_false.
@@ -483,7 +483,7 @@ CLASS zcl_cd_ebs_engine IMPLEMENTATION.
           RAISE EXCEPTION CAST zcx_ca_ops_error( lx_error ).
         ENDIF.
         RAISE EXCEPTION TYPE zcx_cd_ops_error
-          MESSAGE e804(zcd_ops) WITH rs_result-run-pe_area rs_result-run-variant
+          MESSAGE e804(zcd_ops) WITH rs_result-run-area rs_result-run-variant
           EXPORTING
             previous = lx_error.
     ENDTRY.

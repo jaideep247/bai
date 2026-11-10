@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_ca_ops_auth.clas.testclasses.abap
 *& Purpose:
-*& Unit tests of the ZCD_OPS authorisation wrapper through its test seams:
+*& Unit tests of the ZCA_OPS authorisation wrapper through its test seams:
 *& area-wide check without company code, company-code check with one, and
 *& check( ) raising message 041 when refused. The kernel AUTHORITY-CHECK is
 *& replaced by TEST-INJECTION; does not prove live SAP runtime behavior.
@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Company-code test uses activity 02 (activity 43 removed, read-only scope).
 *& 2026-11-10 | may_read_table through test seam AUTH_TABLE (S_TABU_NAM 03).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_AUTH to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_auth DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

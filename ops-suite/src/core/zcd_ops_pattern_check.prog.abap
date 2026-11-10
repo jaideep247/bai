@@ -106,7 +106,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD main.
     TRY.
         zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-display
-                                                iv_pe_area  = zcl_cd_ops_pattern_check=>pe_area_of( p_area ) ).
+                                                iv_area  = zcl_cd_ops_pattern_check=>pe_area_of( p_area ) ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         MESSAGE lx_error TYPE 'S' DISPLAY LIKE 'E'.
         RETURN.

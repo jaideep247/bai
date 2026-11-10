@@ -182,7 +182,7 @@ CLASS lhc_suppression IMPLEMENTATION.
   METHOD auth.
     rv_auth = COND #( WHEN zcl_ca_ops_factory=>get_auth( )->is_allowed(
                              iv_activity = iv_activity
-                             iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ) = abap_true
+                             iv_area   = zif_cd_ops_types=>gc_pe_area-health_check ) = abap_true
                       THEN if_abap_behv=>auth-allowed
                       ELSE if_abap_behv=>auth-unauthorized ).
   ENDMETHOD.

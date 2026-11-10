@@ -17,54 +17,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>001</MSGNR>
-     <TEXT>Run ID could not be generated</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>002</MSGNR>
-     <TEXT>[&amp;1] run &amp;2 ended &amp;3 / RAG &amp;4</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>003</MSGNR>
-     <TEXT>[&amp;1][&amp;2] &amp;3 finding(s) - rule &amp;4</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>004</MSGNR>
-     <TEXT>Run &amp;1 status &amp;2, RAG &amp;3, items &amp;4,</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>005</MSGNR>
-     <TEXT>failed &amp;1, blocked &amp;2.</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>006</MSGNR>
-     <TEXT>&amp;1 more finding(s): see the exceptions app (Fiori ZUI_CD_OPS_EXC).</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>007</MSGNR>
-     <TEXT>Channel &amp;1 not configured or inactive in ZCD_OPS_ALCHN</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>008</MSGNR>
-     <TEXT>Passed on re-run &amp;1</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>010</MSGNR>
      <TEXT>Insert into table &amp;1 failed</TEXT>
     </T100>
@@ -79,36 +31,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>012</MSGNR>
      <TEXT>Read of table &amp;1 failed</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>020</MSGNR>
-     <TEXT>Alert for route &amp;1 could not be sent</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>021</MSGNR>
-     <TEXT>Alert rule &amp;1 has no recipient</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>025</MSGNR>
-     <TEXT>Application log &amp;1/&amp;2 written only in part (&amp;3 of &amp;4 lines)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>026</MSGNR>
-     <TEXT>E-mail for &amp;1 was not accepted by SAPconnect (BCS send result)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>027</MSGNR>
-     <TEXT>Alert route &amp;1: &amp;2 is not a shared SO23 distribution list</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -137,20 +59,8 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>040</MSGNR>
-     <TEXT>Run for &amp;1 &amp;2 is already active (lock held by &amp;3)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>041</MSGNR>
      <TEXT>No authorization for &amp;1 activity &amp;2</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>042</MSGNR>
-     <TEXT>Lock service failed for &amp;1 &amp;2 (run not started)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -167,18 +77,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>060</MSGNR>
-     <TEXT>Purge &amp;1: &amp;2 row(s) older than &amp;3 (&amp;4)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>061</MSGNR>
-     <TEXT>Exception is closed (disposition &amp;1): no further action possible</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>062</MSGNR>
      <TEXT>A reason is required</TEXT>
     </T100>
@@ -187,30 +85,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>063</MSGNR>
      <TEXT>Four-eyes: &amp;1 requested this and cannot approve it</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>064</MSGNR>
-     <TEXT>No waiver request is pending for this exception</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>065</MSGNR>
-     <TEXT>Waiver end date &amp;1 is in the past</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>066</MSGNR>
-     <TEXT>An owner (user) is required</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>067</MSGNR>
-     <TEXT>A waiver request by &amp;1 is already pending</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1889,38 +1763,8 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>402</MSGNR>
-     <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>403</MSGNR>
-     <TEXT>Transport request &amp;1 does not exist</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>404</MSGNR>
-     <TEXT>&amp;1 is not a customizing request or customizing task</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>405</MSGNR>
-     <TEXT>Transport request &amp;1 is released or no longer modifiable</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>407</MSGNR>
      <TEXT>No authorization for &amp;1 of &amp;2 configuration (object ZCD_OPS)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>408</MSGNR>
-     <TEXT>Changes could not be recorded on transport request &amp;1</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -1975,12 +1819,6 @@
      <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>418</MSGNR>
      <TEXT>&amp;1 is not a valid PCRE pattern (matched to the whole value, any case)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>419</MSGNR>
-     <TEXT>Channel &amp;1 cannot deliver to &amp;2 (e-mail: shared SO23 list name)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -2873,12 +2711,6 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>742</MSGNR>
-     <TEXT>Alert rule &amp;1: pattern &amp;2 is not valid PCRE - rule not applied</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>743</MSGNR>
      <TEXT>Pattern &amp;1 is not valid PCRE</TEXT>
     </T100>
@@ -3137,80 +2969,14 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>786</MSGNR>
-     <TEXT>Exception &amp;1 (&amp;2) changed by a user during the run - left for next run</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>787</MSGNR>
-     <TEXT>Exception &amp;1 / &amp;2 changed meanwhile - not resolved, nothing saved</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>788</MSGNR>
      <TEXT>Open exceptions of request &amp;1 could not be read - record not saved</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>800</MSGNR>
-     <TEXT>Application log &amp;1/&amp;2 not created (BAL_LOG_CREATE return code &amp;3)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>801</MSGNR>
-     <TEXT>Application log &amp;1/&amp;2 not saved (BAL_DB_SAVE return code &amp;3)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>802</MSGNR>
-     <TEXT>Alert log ID could not be generated - alert not delivered</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>803</MSGNR>
-     <TEXT>Run &amp;1, job &amp;2 / &amp;3 - exceptions app ZUI_CD_OPS_EXC</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
      <MSGNR>804</MSGNR>
      <TEXT>Run &amp;1 &amp;2 aborted by an error:</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>805</MSGNR>
-     <TEXT>Alert dispatch failed for the run of &amp;1:</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>806</MSGNR>
-     <TEXT>E-mail for &amp;1: SAPconnect commit failed (return code &amp;2)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>807</MSGNR>
-     <TEXT>File &amp;2 not resolved or not valid in logical path / file name &amp;1 (FILE)</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>808</MSGNR>
-     <TEXT>File name &amp;1 not allowed: enter a name only, without a path or ..</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZCD_OPS</ARBGB>
-     <MSGNR>809</MSGNR>
-     <TEXT>No authorisation to &amp;2 file &amp;1 (S_DATASET)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

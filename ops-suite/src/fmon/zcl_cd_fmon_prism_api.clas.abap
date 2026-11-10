@@ -86,7 +86,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
     ENDIF.
 
     IF zcl_ca_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-create
-                                                    iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor )
+                                                    iv_area  = zif_cd_ops_types=>gc_pe_area-file_monitor )
        = abap_false.
       rs_response = respond( iv_status_code = zif_cd_fmon_prism_types=>gc_http-forbidden
                              iv_status      = zif_cd_fmon_prism_types=>gc_api_status-rejected
@@ -193,7 +193,7 @@ CLASS zcl_cd_fmon_prism_api IMPLEMENTATION.
   METHOD record_failure.
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
     TRY.
-        DATA(ls_run) = lo_store->start_run( iv_pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor
+        DATA(ls_run) = lo_store->start_run( iv_area = zif_cd_ops_types=>gc_pe_area-file_monitor
                                             iv_variant = zif_cd_fmon_prism_types=>gc_api_variant ).
         DATA(lt_findings) = VALUE zif_ca_ops_types=>tt_finding(
           ( object_type = zif_cd_fmon_prism_types=>gc_object_type_event

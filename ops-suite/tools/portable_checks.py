@@ -10,7 +10,8 @@ import csv, json, os, re, subprocess, sys, datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
-COMMIT_ALLOWED = {'zcl_ca_ops_store.clas.abap', 'zcl_ca_ops_chn_email.clas.abap'}
+# COMMIT WORK is the operations framework's (store, e-mail channel): none in the suite (2026-11-10)
+COMMIT_ALLOWED = set()
 
 def abap_files():
     for d, _, files in os.walk(SRC):

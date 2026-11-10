@@ -2,7 +2,7 @@
 *& Artifact: zcl_ca_ops_chn_applog.clas.abap
 *& Purpose:
 *& Alert channel APPLOG: writes the alert to the application log (SLG1).
-*& Destination 'OBJECT/SUBOBJECT', default ZCD_OPS/ALERT. Thin wrapper over the
+*& Destination 'OBJECT/SUBOBJECT', default ZCA_OPS/ALERT. Thin wrapper over the
 *& BAL function modules; each call sits in a test seam (BAL_CREATE, BAL_ADD,
 *& BAL_SAVE, BAL_REFRESH), so the own test include proves the error handling;
 *& the BAL database write is covered by the QA1 integration test.
@@ -11,8 +11,9 @@
 *& 2026-11-06 | SLG1 external ID area/run/rule, BAL_LOG_REFRESH after save, partial log reported (audit A45, SLG1).
 *& 2026-11-06 | Test seams around the four BAL calls; return codes kept in locals (coverage gap closure).
 *& 2026-11-10 | Own messages for create (800) and save (801) failures, each with the return code.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_APPLOG to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert channel application log</p>
+"! <p class="shorttext synchronized">Operations framework - alert channel application log</p>
 CLASS zcl_ca_ops_chn_applog DEFINITION
   PUBLIC
   FINAL
@@ -43,7 +44,7 @@ CLASS zcl_ca_ops_chn_applog IMPLEMENTATION.
     SPLIT is_message-destination AT '/' INTO lv_object lv_sub.
     ls_log-object    = COND #( WHEN lv_object IS NOT INITIAL THEN condense( lv_object ) ELSE gc_default_object ).
     ls_log-subobject = COND #( WHEN lv_sub IS NOT INITIAL THEN condense( lv_sub ) ELSE gc_default_subobject ).
-    " SLG1: external ID = payment engine area / run / rule (set by the router)
+    " SLG1: external ID = area / run / rule (set by the router)
     ls_log-extnumber = COND #( WHEN is_message-extnumber IS NOT INITIAL THEN is_message-extnumber
                                ELSE is_message-rule_id ).
     ls_log-aldate    = sy-datum.

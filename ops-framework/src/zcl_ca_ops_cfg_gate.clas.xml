@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CFG_GATE</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - config apps: gate for behaviour pools</DESCRIPT>
+    <DESCRIPT>Ops framework - config apps: gate for behaviour pools</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

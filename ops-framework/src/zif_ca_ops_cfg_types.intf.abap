@@ -29,7 +29,6 @@ INTERFACE zif_ca_ops_cfg_types
   TYPES ty_value_list    TYPE string.
   TYPES ty_msg_number    TYPE n LENGTH 3.
   TYPES ty_msg_var       TYPE c LENGTH 50.
-  TYPES ty_amount        TYPE p LENGTH 12 DECIMALS 4.
   TYPES ty_names         TYPE STANDARD TABLE OF ty_name WITH EMPTY KEY.
 
   "! Client settings (T000 / SCC4) that decide what may be changed

@@ -106,7 +106,7 @@ CLASS lcl_report IMPLEMENTATION.
   METHOD run.
     TRY.
         zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
-                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-ebs ).
+                                                iv_area   = zif_cd_ops_types=>gc_pe_area-ebs ).
         DATA(ls_result) = NEW zcl_cd_ebs_engine( )->run( io_source    = build_source( )
                                                          iv_variant   = p_var
                                                          iv_test_mode = p_test ).

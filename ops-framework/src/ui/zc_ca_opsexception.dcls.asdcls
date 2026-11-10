@@ -1,5 +1,5 @@
 // Artifact: zc_ca_opsexception.dcls.asdcls
-// Purpose: Read access to the exceptions app (service ZUI_CA_OPS_EXC): authorization object ZCD_OPS
+// Purpose: Read access to the exceptions app (service ZUI_CA_OPS_EXC): authorization object ZCA_OPS
 //          with ZCA_PARAR = the area of the exception and ACTVT 03, as the dashboard DCLs. The action
 //          history is shown with the area of its exception (path _Exception). Actions (assign, resolve,
 //          waive) keep their own instance checks in the behaviour pool.

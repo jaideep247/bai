@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_FILE_PATH</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - file name to logical path (FILE)</DESCRIPT>
+    <DESCRIPT>Ops framework - file name to logical path (FILE)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

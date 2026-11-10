@@ -85,13 +85,13 @@ PAIRS = [
     # Completed run statuses of the "as of" / KPI views
     ('ebs_completed_run_status',
      ['src/ebs/zi_cd_ebsrunbase.ddls.asddls', 'src/ebs/zi_cd_ebsrunlast.ddls.asddls'], _RUN_STATUS,
-     'src/core/zif_cd_ops_types.intf.abap',
+     '../ops-framework/src/zif_ca_ops_types.intf.abap',
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error', 'gc_run_status-no_data'],
      'set', None),
     ('fmon_hck_completed_run_status',
      ['src/fmon/zi_cd_fmonrunlast.ddls.asddls', 'src/hck/zi_cd_hckrunlast.ddls.asddls',
       'src/core/zi_cd_payoutrunlast.ddls.asddls'], _RUN_STATUS,
-     'src/core/zif_cd_ops_types.intf.abap',
+     '../ops-framework/src/zif_ca_ops_types.intf.abap',
      ['gc_run_status-success', 'gc_run_status-warning', 'gc_run_status-error'], 'set', None),
     # Stale thresholds (table consolidation 2026-11-08): ZCA_PARAM MON_STALE_AFTER_MIN_<area> through
     # ZI_CD_OpsStaleCfg (the CDS holds the parameter area and name prefix as literals), else the

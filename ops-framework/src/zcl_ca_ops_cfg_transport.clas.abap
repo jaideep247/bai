@@ -12,14 +12,15 @@
 *&    with TRANSPORT_REQUEST, CREATE, UPDATE, DELETE (REF TO data).
 *& If the names differ, adapt only this method; the gate and the behaviour
 *& pools do not change. Fallback if the API is not available: function
-*& payment engine areas TR_OBJECTS_CHECK / TR_OBJECTS_INSERT with E071K TABU keys
+*& areas TR_OBJECTS_CHECK / TR_OBJECTS_INSERT with E071K TABU keys
 *& (VERIFY-SE37).
 *& The API call sits in test seam CTS_API (own test include: error mapping).
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-06 | Test seam CTS_API; API error kept in a local, raised after the seam (coverage gap closure).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_TRANSPORT to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: transport recording</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: transport recording</p>
 CLASS zcl_ca_ops_cfg_transport DEFINITION
   PUBLIC
   FINAL

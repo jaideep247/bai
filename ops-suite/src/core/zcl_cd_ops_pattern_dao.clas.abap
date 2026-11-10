@@ -540,7 +540,7 @@ CLASS zcl_cd_ops_pattern_dao IMPLEMENTATION.
           INTO CORRESPONDING FIELDS OF TABLE @DATA(lt_step).
         rr_rows = NEW tt_step( lt_step ).
       WHEN zif_cd_ops_pattern_types=>gc_table-alert_rule.
-        SELECT rule_id, pe_area, min_severity, rule_pattern, check_pattern, group1_pattern, group2_pattern,
+        SELECT rule_id, area, min_severity, rule_pattern, check_pattern, group1_pattern, group2_pattern,
                min_rag, on_abort, channel, destination, digest, max_items, throttle_min, quiet_from, quiet_to,
                escalate_after, escalation_dest, esc_override, active, changed_by, changed_at, last_changed_by,
                last_changed_at, local_last_changed_at

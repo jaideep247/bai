@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_ca_ops_alert_dao.clas.abap
 *& Purpose:
-*& SQL for the alert router: rules (payment engine area or '*'), channels and the delivery
+*& SQL for the alert router: rules (area or '*'), channels and the delivery
 *& log. The log write is part of the caller's LUW (the engine commits).
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
@@ -9,8 +9,9 @@
 *& 2026-11-06 | claim / complete (durable claim before send), get_repeat_keys (audit A17); escalation override read (A46).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert repository</p>
+"! <p class="shorttext synchronized">Operations framework - alert repository</p>
 CLASS zcl_ca_ops_alert_dao DEFINITION
   PUBLIC
   FINAL

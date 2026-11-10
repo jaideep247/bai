@@ -6,7 +6,7 @@
 *& delivery. Severity B is never held back by quiet hours.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | Cap keeps the most severe findings (B > E > W > I, stable order); digest severity from the full
 *& 2026-11-06 |               selection; held-back count in text and HTML (audit A63).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
@@ -16,10 +16,11 @@
 *&              exceptions app (message 803) - the receiver finds the run without searching.
 *& 2026-11-10 | Missing bank ACK (user request 2026-11-10): findings with ACK evidence get their own table
 *&              (house bank, bank, file, method, payments, amount, payment run, times, overdue; totals per
-*&              currency; most overdue first) and the impact-first subject (ZCL_CD_OPS_ACK_MAIL); other
+*&              currency; most overdue first) and the impact-first subject (a consumer's class); other
 *&              findings stay in the general table. Text version with the same content.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_POLICY to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert rule policy</p>
+"! <p class="shorttext synchronized">Operations framework - alert rule policy</p>
 CLASS zcl_ca_ops_alert_policy DEFINITION
   PUBLIC
   FINAL
@@ -32,7 +33,7 @@ CLASS zcl_ca_ops_alert_policy DEFINITION
     METHODS constructor
       IMPORTING
         io_section TYPE REF TO zif_ca_ops_alert_section OPTIONAL.
-    "! Markup of the alert e-mail - not text; words are text symbols / ZCD_OPS messages
+    "! Markup of the alert e-mail - not text; words are text symbols / ZCA_OPS messages
     CONSTANTS:
       BEGIN OF gc_html,
         p_open       TYPE string VALUE `<p>`,

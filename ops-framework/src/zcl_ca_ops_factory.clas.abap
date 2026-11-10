@@ -17,7 +17,7 @@
 *& 2026-11-07 | get_params: runtime parameters, the session adapter over ZCA_PARAM (store serves no parameters).
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS: framework services only
-*&            | (payment engine services stay in the consumer's factory); CHECK_VERSION (ZCA_PARAM release).
+*&            | (consumer services stay in the consumer's factory); CHECK_VERSION (ZCA_PARAM release).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven

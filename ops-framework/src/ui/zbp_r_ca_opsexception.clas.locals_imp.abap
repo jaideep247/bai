@@ -1,17 +1,18 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_ca_opsexception.clas.locals_imp.abap
 *& Purpose:
-*& Handler of the exceptions app: instance authorisation (ZCD_OPS 02 per
+*& Handler of the exceptions app: instance authorisation (ZCA_OPS 02 per
 *& area, 85 to approve a waiver), action availability per disposition and
 *& the four actions. Each action asks ZCL_CA_OPS_EXC_POLICY, updates the
 *& exception and writes one history row. Thin: no rule is decided here.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: INSERT INTO TABLE.
 *& 2026-11-10 | Every action sets LastChangedAt (ETag of the BO, concurrency review: the batch store writes
 *&            | an exception only while its stamp is the one it read).
+*& 2026-11-10 | Moved from ZBP_R_CD_OPSEXCEPTION to the reusable framework ZCA_OPS (local implementations).
 *&---------------------------------------------------------------------*
 "! Content IDs of the history rows created by each action (one per action)
 INTERFACE lif_c.

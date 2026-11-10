@@ -61,7 +61,7 @@ ENDCLASS.
 CLASS ltd_auth IMPLEMENTATION.
   METHOD zif_ca_ops_auth~is_allowed.
     mv_activity = iv_activity.
-    mv_pe_area  = iv_pe_area.
+    mv_pe_area  = iv_area.
     rv_allowed  = mv_allowed.
   ENDMETHOD.
 ENDCLASS.
@@ -92,7 +92,7 @@ CLASS ltd_store IMPLEMENTATION.
     mv_rollbacks += 1.
   ENDMETHOD.
   METHOD zif_ca_ops_store~start_run.
-    rs_run-pe_area = iv_pe_area.
+    rs_run-area = iv_area.
     rs_run-variant = iv_variant.
   ENDMETHOD.
   METHOD zif_ca_ops_store~save_findings.

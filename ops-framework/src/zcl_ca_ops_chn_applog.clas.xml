@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CHN_APPLOG</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - alert channel application log</DESCRIPT>
+    <DESCRIPT>Operations framework - alert channel application log</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

@@ -443,10 +443,10 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
     DATA lv_holder TYPE syuname.
 
     IF iv_test_mode = abap_false.
-      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                              iv_variant = gc_lock_variant
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                          iv_variant = gc_lock_variant
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -511,7 +511,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
 
   METHOD release_lock.
     IF iv_test_mode = abap_false.
-      zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
+      zcl_ca_ops_factory=>get_lock( )->release( iv_area  = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                 iv_variant = gc_lock_variant ).
     ENDIF.
   ENDMETHOD.
@@ -523,7 +523,7 @@ CLASS zcl_cd_fmon_engine IMPLEMENTATION.
           iv_test_mode     = iv_test_mode ).
 
     DATA(ls_run) = mo_store->start_run(
-      iv_pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
+      iv_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
       iv_variant   = COND #( WHEN mv_single = abap_true THEN gc_event_variant
                              WHEN iv_iface_id IS INITIAL THEN 'ALL' ELSE iv_iface_id )
       iv_test_mode = iv_test_mode ).

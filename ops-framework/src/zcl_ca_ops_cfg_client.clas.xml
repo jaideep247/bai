@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CFG_CLIENT</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - config apps: T000 / E070 reads</DESCRIPT>
+    <DESCRIPT>Ops framework - config apps: T000 / E070 reads</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

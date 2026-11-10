@@ -1,16 +1,17 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_ca_ops_alert.intf.abap
 *& Purpose:
-*& Alert router port used by every payment engine area. dispatch( ) applies the alert
+*& Alert router port used by every area. dispatch( ) applies the alert
 *& rules in ZCA_OPS_ALRULE; send( ) delivers a prepared report (e.g. the
-*& morning report) by e-mail to the recipients of a route parameter.
+*& daily report) by e-mail to the recipients of a route parameter.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-05 | dispatch( ) added: configurable rules, channels, throttling.
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
-*& 2026-11-07 | Comment: recipients ALERT_<route> in ZCA_PARAM (ZCD_OPS_PARAM retired).
+*& 2026-11-07 | Comment: recipients ALERT_<route> in ZCA_PARAM (the former parameter table retired).
+*& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert router port</p>
+"! <p class="shorttext synchronized">Operations framework - alert router port</p>
 INTERFACE zif_ca_ops_alert
   PUBLIC.
 
@@ -24,7 +25,7 @@ INTERFACE zif_ca_ops_alert
     RAISING
       zcx_ca_ops_error.
 
-  "! Apply the configured alert rules of the run's payment engine area to its findings and
+  "! Apply the configured alert rules of the run's area to its findings and
   "! deliver through the configured channels. Delivery failures are logged in
   "! ZCA_OPS_ALLOG and never raised; raises only when configuration cannot be read.
   METHODS dispatch

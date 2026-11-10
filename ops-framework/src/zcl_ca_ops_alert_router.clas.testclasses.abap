@@ -10,12 +10,13 @@
 *& 2026-11-06 | Delivered message carries the intent key and raise time (webhook de-duplication).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-06 | Test invalid_rule_pattern_logged: a rule pattern that is not valid PCRE is logged F, nothing sent.
-*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake the former in-memory parameter fake
 *&            | (semantics of ZCL_CA_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | Delivered message no longer carries intent key / raise time (webhook fields removed).
 *& 2026-11-07 | Parameters over ZCA_PARAM (zcl_ca_ops_param_seed injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
 *& 2026-11-10 | alert_id_failure_raises: no UUID for the alert log raises 802 (test seam ALERT_ID), nothing sent.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -140,7 +141,7 @@ CLASS ltc_alert_router DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_test,
-        rule_id    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'EBS_BLOCK',
+        rule_id    TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_BLOCK',
         dest       TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ops@example.com',
         escalation TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'lead@example.com',
         now        TYPE timestampl VALUE '20261105080000.0000000',
@@ -260,7 +261,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     ls_rule-esc_override    = is_flags-esc_override.
     ls_rule-active          = is_flags-rule_active.
     IF is_flags-bad_pattern = abap_true.
-      ls_rule-check_pattern = '(EBS'.
+      ls_rule-check_pattern = '(ZT'.
     ENDIF.
     IF is_flags-quiet_at_night = abap_true.
       ls_rule-quiet_from = '220000'.
@@ -486,7 +487,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
         configure_scenario( default_flags( ) ).
         mo_store->mo_params->set( iv_name = 'ALERT_MORNING' iv_value = gc_test-dest ).
 
-        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
+        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Daily report`
                                                iv_html = `<p>ok</p>` ).
 
         cl_abap_unit_assert=>assert_equals( act = lines( mo_channel->mt_delivered ) exp = 1
@@ -505,7 +506,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
   METHOD send_without_recipient_fails.
     configure_scenario( default_flags( ) ).
     TRY.
-        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
+        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Daily report`
                                                iv_html = `<p>ok</p>` ).
         cl_abap_unit_assert=>fail( msg = 'A report without recipients must raise' ).
       CATCH zcx_ca_ops_error.
@@ -615,7 +616,7 @@ CLASS ltc_alert_router IMPLEMENTATION.
     configure_scenario( ls_flags ).
     mo_store->mo_params->set( iv_name = 'ALERT_MORNING' iv_value = gc_test-dest ).
     TRY.
-        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Morning report`
+        zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'MORNING' iv_subject = `Daily report`
                                                iv_html = `<p>ok</p>` ).
         cl_abap_unit_assert=>fail( msg = 'An inactive channel must raise' ).
       CATCH zcx_ca_ops_error.

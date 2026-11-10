@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_STORE</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - DB store (ZCA_OPS_RUN / FINDING)</DESCRIPT>
+    <DESCRIPT>Operations framework - DB store (ZCA_OPS_RUN / FINDING)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

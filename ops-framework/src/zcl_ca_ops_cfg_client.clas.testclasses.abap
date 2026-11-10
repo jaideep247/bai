@@ -7,6 +7,7 @@
 *& and an unknown request. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CLIENT to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_client DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

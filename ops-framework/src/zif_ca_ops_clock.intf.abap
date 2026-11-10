@@ -1,11 +1,12 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_ca_ops_clock.intf.abap
 *& Purpose:
-*& Operations suite - clock (injectable for tests)
+*& Operations framework - clock (injectable for tests)
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-10 | Moved from ZIF_CD_OPS_CLOCK to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - clock (injectable for tests)</p>
+"! <p class="shorttext synchronized">Operations framework - clock (injectable for tests)</p>
 INTERFACE zif_ca_ops_clock
   PUBLIC.
 

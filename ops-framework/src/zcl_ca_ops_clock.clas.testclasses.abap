@@ -6,6 +6,7 @@
 *& does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CLOCK to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_clock DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

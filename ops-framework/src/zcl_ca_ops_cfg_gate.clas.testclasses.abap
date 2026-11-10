@@ -9,6 +9,7 @@
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | Per-table create test withdrawn: new rows only by transport from DV1 (D-3).
 *& 2026-11-08 | MAY_EDIT: any of the activities 01 / 02 / 06 allows editing, none refuses it.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_GATE to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_client DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -212,7 +213,7 @@ CLASS ltc_gate IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: authorisation object ZCD_OPS is asked for the app's payment engine area and the activity
+  " Rule: authorisation object ZCA_OPS is asked for the app's area and the activity
   METHOD auth_asks_area_and_actvt.
     TRY.
         configure_scenario( VALUE #( dv1 = abap_true authorized = abap_true ) ).
@@ -221,7 +222,7 @@ CLASS ltc_gate IMPLEMENTATION.
                                        iv_actvt  = zif_ca_ops_cfg_types=>gc_actvt-change )
           msg = 'The answer of the authorisation check is returned' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_area exp = zcl_ca_ops_param_seed=>gc_test_area-second
-                                            msg = 'Payment engine area passed to the check' ).
+                                            msg = 'Area passed to the check' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_actvt exp = zif_ca_ops_cfg_types=>gc_actvt-change
                                             msg = 'Activity passed to the check' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -255,7 +256,7 @@ CLASS ltc_gate IMPLEMENTATION.
           act = cut( )->may_edit( zcl_ca_ops_param_seed=>gc_test_area-second )
           msg = 'Delete (06) alone allows editing' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_area exp = zcl_ca_ops_param_seed=>gc_test_area-second
-                                            msg = 'Checked for the payment engine area of the app' ).
+                                            msg = 'Checked for the area of the app' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

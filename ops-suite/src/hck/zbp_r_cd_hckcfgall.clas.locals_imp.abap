@@ -1263,7 +1263,7 @@ CLASS lsc_zr_cd_hckcfgall IMPLEMENTATION.
           ir_create    = REF #( create )
           ir_update    = REF #( update )
           ir_delete    = REF #( delete ) ).
-      CATCH zcx_cd_ops_error INTO DATA(lx_error).
+      CATCH zcx_ca_ops_error INTO DATA(lx_error).
         " A recording client must never keep changes that are not on the request
         RAISE SHORTDUMP lx_error.
     ENDTRY.

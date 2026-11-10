@@ -12,7 +12,7 @@
 *& 2026-11-06 | Exception carry-forward in save_findings; reconcile( ) auto-resolves.
 *& 2026-11-06 | Carry-forward keeps a pending waiver request (exceptions app).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | get_stale_runs: running runs older than a limit, own run excluded (audit A06).
 *& 2026-11-06 | Parameter cache is run-scoped: start_run takes a fresh snapshot (audit A64).
 *& 2026-11-06 | Performance fix 5: carry-forward reads by (OBJECT_TYPE, OBJECT_KEY) pairs; earlier rows found
@@ -20,7 +20,7 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-07 | Implements ZIF_CA_OPS_PARAMS (via ZIF_CA_OPS_STORE): get_range (I / EQ rows of the list);
 *&            | SLA parameter names / default from zif_ca_ops_types.
-*& 2026-11-07 | Parameters moved to ZCA_PARAM: ZCD_OPS_PARAM reads removed; start_run renews the
+*& 2026-11-07 | Parameters moved to ZCA_PARAM: the former parameter table reads removed; start_run renews the
 *&            | snapshot of zcl_ca_ops_factory=>GET_PARAMS (A64), SLA days read there.
 *& 2026-11-10 | Lost update with the exceptions app (concurrency review): every write sets LAST_CHANGED_AT;
 *&            | supersede (carry-forward) and resolve (reconcile) write a row only while its disposition and
@@ -35,11 +35,11 @@
 *&            | ZCA_PARAM); start_run checks the release of ZCA_PARAM (044) and the area (043) first;
 *&            | SLA_DAYS_<area>_<severity> in area CA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - DB store (ZCA_OPS_RUN / FINDING)</p>
+"! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
 "! writes ZCA_OPS_RUN and ZCA_OPS_FINDING. Findings of severity B/E/W are
 "! created as owned exceptions (status OPEN) with an SLA due date taken from
-"! parameter SLA_DAYS_<payment engine area>_<severity> (fallback SLA_DAYS_DEFAULT, 1; ZCA_PARAM).
+"! parameter SLA_DAYS_<area>_<severity> (fallback SLA_DAYS_DEFAULT, 1; ZCA_PARAM).
 CLASS zcl_ca_ops_store DEFINITION
   PUBLIC
   FINAL
@@ -73,7 +73,7 @@ CLASS zcl_ca_ops_store DEFINITION
     TYPES tt_block TYPE SORTED TABLE OF ty_block WITH UNIQUE KEY object_type object_key check_code.
 
     "! New exceptions inherit from the open / assigned / waived exception of an
-    "! earlier run (same payment engine area, object type, object key, check code), which is
+    "! earlier run (same area, object type, object key, check code), which is
     "! superseded. Only rows with disposition O are candidates. A superseded row is written only while it
     "! is as read; a row a user changed meanwhile is read and carried forward once more, and if it changed
     "! again the new row stays information and an information finding says so (the user's change wins)

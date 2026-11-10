@@ -10,7 +10,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | ltc_destination: CHANNEL_CLASS / INVALID_DESTINATION (SO23 lists).
-*& 2026-11-10 | Moved from the tests of ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (generic
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (test include; generic
 *&            | checks; threshold order and posting areas stay with the consumer's checks).
 *&---------------------------------------------------------------------*
 "! Alert configuration from memory: only the channels are read by the checks
@@ -40,7 +40,7 @@ ENDCLASS.
 CLASS ltd_channel DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
     INTERFACES zif_ca_ops_alert_channel.
-    CONSTANTS gc_known TYPE string VALUE `ZCD_RTBSUP`.
+    CONSTANTS gc_known TYPE string VALUE `ZT_LIST`.
     DATA mv_delivered TYPE abap_bool.
 ENDCLASS.
 
@@ -103,7 +103,7 @@ CLASS ltc_checks IMPLEMENTATION.
   " Rule: names are compared in upper case, as the dictionary stores them
   METHOD ddic_name_accepts_lower_case.
     TRY.
-        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>is_valid_name( 'zcd_btc_rule' )
+        cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>is_valid_name( 'zt_config' )
                                           msg = 'A lower-case DDIC name is valid' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -164,7 +164,7 @@ CLASS ltc_checks IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a plug-in class is accepted only if it implements the payment engine area interface
+  " Rule: a plug-in class is accepted only if it implements the area interface
   METHOD class_with_interface_accepted.
     TRY.
         cl_abap_unit_assert=>assert_true( act = zcl_ca_ops_cfg_checks=>implements( iv_class     = gc_test-channel

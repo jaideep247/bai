@@ -1,0 +1,21 @@
+# Words that belong to a consumer, never to the framework (tools/checks.py, check customer_terms).
+# One term per line, matched as a whole word, case ignored, in src/, the message texts and the text
+# elements. Extend it with the names of every new consumer, system, bank or team.
+payment engine
+PRISM
+IRIS
+PCLM
+JPMC
+BOA
+PNC
+USAA
+FS-CD
+FSCD
+FI-CA
+FICA
+EBS
+FMON
+HCK
+RTB
+Control-M
+morning report

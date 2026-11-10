@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_EXC_DAO</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - exception repository</DESCRIPT>
+    <DESCRIPT>Operations framework - exception repository</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

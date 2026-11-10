@@ -9,15 +9,15 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
-*& 2026-11-07 | old_hck_result_is_deleted (purge target HCK_RESULT).
+*& 2026-11-07 | test of the check verdict target.
 *& 2026-11-07 | old_outcome_version_deleted (purge target PAY_OUTCOME: closed versions and runs before
 *&            | the cutoff; the current version of a recent payment stays).
 *& 2026-11-08 | Retention 90 days of PAY_OUTCOME: an open cheque 120 days old keeps its current version,
 *&            | a cleared payment 91 days old and a version closed 91 days ago are purged.
 *& 2026-11-10 | run_purge_takes_history (exception history purged with its findings), old_file_purged_
-*&            | open_kept (registry by business date, file of an open FMON exception kept).
+*&            | open_kept (registry by business date, file of an open exception kept).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE_DAO to the reusable framework ZCA_OPS: tests of RUN and
-*&            | ALERT_LOG (the suite's targets are tested with ZCL_CD_OPS_PURGE_TARGET); registry test.
+*&            | ALERT_LOG (the suite's targets are tested with a consumer's class); registry test.
 *&---------------------------------------------------------------------*
 CLASS ltc_purge_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

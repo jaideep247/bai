@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CFG_FACTORY</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - config apps: factory</DESCRIPT>
+    <DESCRIPT>Ops framework - config apps: factory</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

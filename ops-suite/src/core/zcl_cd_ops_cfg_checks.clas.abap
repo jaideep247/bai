@@ -45,8 +45,8 @@ CLASS zcl_cd_ops_cfg_checks DEFINITION
     "! Not checked when either threshold is zero (not maintained).
     CLASS-METHODS thresholds_ordered
       IMPORTING
-        iv_amber           TYPE zif_ca_ops_cfg_types=>ty_amount
-        iv_red             TYPE zif_ca_ops_cfg_types=>ty_amount
+        iv_amber           TYPE zif_cd_ops_cfg_types=>ty_amount
+        iv_red             TYPE zif_cd_ops_cfg_types=>ty_amount
         iv_higher_is_worse TYPE abap_bool
       RETURNING
         VALUE(rv_ordered)  TYPE abap_bool.

@@ -6,9 +6,9 @@
 *& Worst severity in a finding list (blank when empty)
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | text( ): user-facing texts are ZCD_OPS messages (phase 5, remove hardcoding).
-*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | text( ): user-facing texts are ZCA_OPS messages (phase 5, remove hardcoding).
+*& 2026-11-06 | Texts moved to message class ZCA_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Configured patterns are PCRE (user decision 2026-11-06): pcre_valid, pcre_match
 *&              (whole value, case-insensitive), pcre_literals (specificity).
@@ -18,8 +18,9 @@
 *&              CONFIG / CODE), account_label (house bank / account ID or masked number), job_link
 *&              (batch job of the running program; GET_JOB_RUNTIME_INFO in test seam JOB_INFO).
 *& 2026-11-10 | format_amount: thousands separators and two decimals (missing bank ACK alert).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_UTIL to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - pure helper functions</p>
+"! <p class="shorttext synchronized">Operations framework - pure helper functions</p>
 "! Stateless helpers. No database access.
 CLASS zcl_ca_ops_util DEFINITION
   PUBLIC

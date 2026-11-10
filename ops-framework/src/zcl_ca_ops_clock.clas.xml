@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CLOCK</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - system clock</DESCRIPT>
+    <DESCRIPT>Operations framework - system clock</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

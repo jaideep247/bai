@@ -2,11 +2,12 @@
 *& Artifact: zcl_ca_ops_cfg_auth.clas.testclasses.abap
 *& Purpose:
 *& Unit tests of the configuration-app authorisation adapter: the decision
-*& and the activity / payment engine area handed to the core authorisation
+*& and the activity / area handed to the core authorisation
 *& come from the injected ZIF_CA_OPS_AUTH double (zcl_ca_ops_injector); does
 *& not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_AUTH to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_auth DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -79,7 +80,7 @@ CLASS ltc_cfg_auth IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: the core ZCD_OPS check decides, area-wide (no company code), with the app's activity
+  " Rule: the core ZCA_OPS check decides, area-wide (no company code), with the app's activity
   METHOD allowed_user_is_authorized.
     TRY.
         configure_scenario( VALUE #( allowed = abap_true ) ).
@@ -89,7 +90,7 @@ CLASS ltc_cfg_auth IMPLEMENTATION.
                                             msg = 'Activity handed through' ).
         cl_abap_unit_assert=>assert_equals( act = mo_auth->mv_area
                                             exp = zcl_ca_ops_param_seed=>gc_test_area-first
-                                            msg = 'Payment engine area handed through' ).
+                                            msg = 'Area handed through' ).
         cl_abap_unit_assert=>assert_initial( act = mo_auth->mv_bukrs msg = 'Company code not restricted' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

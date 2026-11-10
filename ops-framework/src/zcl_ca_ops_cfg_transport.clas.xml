@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CFG_TRANSPORT</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - config apps: transport recording</DESCRIPT>
+    <DESCRIPT>Ops framework - config apps: transport recording</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

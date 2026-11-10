@@ -10,14 +10,15 @@
 *& sit in test seams (DLI_READ, BCS_SEND, BCS_COMMIT); the real delivery is
 *& covered by the QA1 integration test.
 *& Modification log:
-*& 2026-11-05 | Initial version (replaces ZCL_CD_OPS_ALERT_MAIL).
+*& 2026-11-05 | Initial version (replaces a consumer's class).
 *& 2026-11-06 | BCS send result checked (audit A45).
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Test seams BCS_SEND / BCS_COMMIT; send result and BCS error in locals; document type constant (coverage gap closure).
 *& 2026-11-07 | Recipients are SO23 shared distribution lists (user decision); CHECK_DESTINATION, test seam DLI_READ.
 *& 2026-11-10 | COMMIT WORK AND WAIT; a failed commit raises 806, so the router logs FAILED, never SENT.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_EMAIL to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert channel e-mail (BCS)</p>
+"! <p class="shorttext synchronized">Operations framework - alert channel e-mail (BCS)</p>
 CLASS zcl_ca_ops_chn_email DEFINITION
   PUBLIC
   FINAL

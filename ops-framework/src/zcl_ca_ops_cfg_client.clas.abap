@@ -7,8 +7,9 @@
 *& client is treated as production (no new entries) - fail closed.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CLIENT to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: T000 / E070 reads</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: T000 / E070 reads</p>
 CLASS zcl_ca_ops_cfg_client DEFINITION
   PUBLIC
   FINAL

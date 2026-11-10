@@ -11,19 +11,20 @@
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-07 | Recipients are SO23 shared lists: seam DLI_READ, 027 and CHECK_DESTINATION tests.
 *& 2026-11-10 | commit_failure_raises_806: a failed COMMIT WORK AND WAIT is a failed delivery.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_EMAIL to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_email DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_rule TYPE zif_ca_ops_types=>ty_rule_id VALUE 'EBS_BLOCK'.
+    CONSTANTS gc_rule TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_BLOCK'.
     "! Two shared SO23 lists, semicolon and blank tolerated, any case
-    CONSTANTS gc_recipients TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZCD_RTBSUP; zcd_rtblead'.
+    CONSTANTS gc_recipients TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZT_LIST; zt_lead'.
     "! The only name the injected SAPoffice lookup does not know
-    CONSTANTS gc_unknown_list TYPE string VALUE `ZCD_NOLIST`.
+    CONSTANTS gc_unknown_list TYPE string VALUE `ZT_NOLIST`.
     "! Longer than SO_OBJ_NAM: must never resolve to a truncated list
-    CONSTANTS gc_long_list TYPE string VALUE `ZCD_RTB_SUPPORT_LIST`.
+    CONSTANTS gc_long_list TYPE string VALUE `ZT_SHARED_LIST_LONG`.
     CONSTANTS gc_msgno_no_recipient TYPE symsgno VALUE '021'.
     CONSTANTS gc_msgno_unknown_list TYPE symsgno VALUE '027'.
     CONSTANTS gc_msgno_refused TYPE symsgno VALUE '026'.
@@ -87,7 +88,7 @@ CLASS ltc_chn_email IMPLEMENTATION.
     ENDIF.
     " SAPoffice: every list is shared except the one unknown name
     TEST-INJECTION dli_read.
-      lv_found = xsdbool( lv_dli <> 'ZCD_NOLIST' ).
+      lv_found = xsdbool( lv_dli <> 'ZT_NOLIST' ).
     END-TEST-INJECTION.
     IF is_flags-refused = abap_true.
       TEST-INJECTION bcs_send.

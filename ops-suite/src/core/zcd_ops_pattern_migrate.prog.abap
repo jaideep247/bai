@@ -83,7 +83,7 @@ CLASS lcl_app IMPLEMENTATION.
                                                         ( zif_cd_ops_types=>gc_pe_area-health_check ) )
          INTO DATA(lv_area).
       IF lo_auth->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-display
-                              iv_pe_area  = lv_area ) = abap_true.
+                              iv_area  = lv_area ) = abap_true.
         INSERT lv_area INTO TABLE lt_areas.
       ELSE.
         MESSAGE s041(zcd_ops) WITH |{ zif_ca_ops_auth=>gc_object } { lv_area }| zif_ca_ops_auth=>gc_activity-display
@@ -142,7 +142,7 @@ CLASS lcl_app IMPLEMENTATION.
       INSERT zcl_cd_ops_pattern_check=>pe_area_of_table( <ls_row>-table ) INTO TABLE lt_areas.
     ENDLOOP.
     LOOP AT lt_areas ASSIGNING FIELD-SYMBOL(<lv_area>).
-      IF lo_gate->is_authorized( iv_pe_area = <lv_area>
+      IF lo_gate->is_authorized( iv_area = <lv_area>
                                  iv_actvt   = zif_ca_ops_cfg_types=>gc_actvt-change ) = abap_false.
         MESSAGE s407(zcd_ops) WITH zif_ca_ops_cfg_types=>gc_actvt-change <lv_area> DISPLAY LIKE 'E'.
         RETURN.

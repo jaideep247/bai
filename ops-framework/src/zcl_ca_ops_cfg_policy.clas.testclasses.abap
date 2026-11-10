@@ -8,6 +8,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (written before the class, RAP config apps).
 *& 2026-11-07 | Per-table create tests withdrawn: new rows only by transport from DV1 (D-3).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_POLICY to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_policy DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

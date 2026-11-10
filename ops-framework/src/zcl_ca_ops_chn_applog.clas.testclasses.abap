@@ -8,14 +8,15 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
 *& 2026-11-10 | Create and save failures: own messages 800 / 801 with the return code.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CHN_APPLOG to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_chn_applog DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
 
   PRIVATE SECTION.
-    CONSTANTS gc_rule TYPE zif_ca_ops_types=>ty_rule_id VALUE 'EBS_BLOCK'.
-    CONSTANTS gc_destination TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZCD_OPS/EBS'.
+    CONSTANTS gc_rule TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_BLOCK'.
+    CONSTANTS gc_destination TYPE zif_ca_ops_types=>ty_alert_dest VALUE 'ZCA_OPS/ZT'.
     CONSTANTS gc_msgno_not_created TYPE symsgno VALUE '800'.
     CONSTANTS gc_msgno_not_saved TYPE symsgno VALUE '801'.
     CONSTANTS gc_save_subrc TYPE sysubrc VALUE 2.

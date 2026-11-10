@@ -7,14 +7,15 @@
 *& transaction FILE (FILE_GET_NAME_USING_PATH), the result is validated
 *& against the logical file name of the purpose (FILE_VALIDATE_NAME), and
 *& S_DATASET is checked explicitly for the activity (AUTHORITY_CHECK_DATASET,
-*& READ for the EBS input file, WRITE for the morning report export). The
+*& READ for an input file, WRITE for an export). The
 *& logical names are constants (zif_ca_ops_types=>GC_LOGICAL_FILE), created
 *& in FILE as a setup step (Implementation_Order.md). Each SAP call sits in a
 *& test seam (FILE_NAME, FILE_VALIDATE, FILE_AUTH); results in locals.
 *& Modification log:
 *& 2026-11-10 | Initial version (directory traversal: logical paths only).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_FILE_PATH to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - file name to logical path (FILE)</p>
+"! <p class="shorttext synchronized">Ops framework - file name to logical path (FILE)</p>
 CLASS zcl_ca_ops_file_path DEFINITION
   PUBLIC
   FINAL

@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_ALERT_ROUTER</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - configurable alert router</DESCRIPT>
+    <DESCRIPT>Operations framework - configurable alert router</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

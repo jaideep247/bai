@@ -6,8 +6,9 @@
 *& testable without a system.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
+*& 2026-11-10 | Moved from ZIF_CD_OPS_CFG_CLIENT to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: client and request reads</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: client and request reads</p>
 INTERFACE zif_ca_ops_cfg_client
   PUBLIC.
 

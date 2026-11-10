@@ -54,7 +54,7 @@ CLASS lhc_handled IMPLEMENTATION.
     IF requested_authorizations-%create = if_abap_behv=>mk-on.
       result-%create = COND #( WHEN zcl_ca_ops_factory=>get_auth( )->is_allowed(
                                       iv_activity = zif_ca_ops_auth=>gc_activity-change
-                                      iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
+                                      iv_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ) = abap_true
                                THEN if_abap_behv=>auth-allowed
                                ELSE if_abap_behv=>auth-unauthorized ).
     ENDIF.
@@ -125,13 +125,13 @@ CLASS lsc_handled IMPLEMENTATION.
       ENDIF.
       TRY.
           " As FMON keys request "files": the request reference in upper case (one keyed read per record)
-          <ls_created>-open = lo_exc_dao->find_open( iv_pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
+          <ls_created>-open = lo_exc_dao->find_open( iv_area    = zif_cd_ops_types=>gc_pe_area-file_monitor
                                                      iv_object_key = to_upper( <ls_row>-RequestRef ) ).
         CATCH cx_sy_open_sql_db.
           INSERT VALUE #( %tky = <ls_row>-%tky ) INTO TABLE failed-handled.
           INSERT VALUE #( %tky = <ls_row>-%tky
                           %msg = new_message( id       = zif_cd_ops_types=>gc_message_class
-                                              number   = zif_ca_ops_exc_types=>gc_msg-open_read_failed
+                                              number   = zif_cd_ops_types=>gc_msg-exc_open_read_failed
                                               severity = if_abap_behv_message=>severity-error
                                               v1       = <ls_row>-RequestRef ) ) INTO TABLE reported-handled.
       ENDTRY.

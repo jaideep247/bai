@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_LOCK</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - run lock (E_TABLE on ZCA_OPS_LOCK)</DESCRIPT>
+    <DESCRIPT>Operations framework - run lock (E_TABLE on ZCA_OPS_LOCK)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

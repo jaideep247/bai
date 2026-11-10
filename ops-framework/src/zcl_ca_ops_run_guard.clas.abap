@@ -14,11 +14,12 @@
 *& An alert dispatch that fails adds an ALERT_FAILED finding (never swallowed).
 *& Modification log:
 *& 2026-11-06 | Initial version (run lock).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-10 | abort( ) for the run boundary of the engines; refuse commits after its dispatch;
 *&            | ALERT_FAILED finding when the dispatch fails (was swallowed).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - refused run (run lock held)</p>
+"! <p class="shorttext synchronized">Operations framework - refused run (run lock held)</p>
 CLASS zcl_ca_ops_run_guard DEFINITION
   PUBLIC
   FINAL

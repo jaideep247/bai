@@ -1,11 +1,12 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_ca_ops_clock.clas.abap
 *& Purpose:
-*& Operations suite - system clock
+*& Operations framework - system clock
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CLOCK to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - system clock</p>
+"! <p class="shorttext synchronized">Operations framework - system clock</p>
 CLASS zcl_ca_ops_clock DEFINITION
   PUBLIC
   FINAL

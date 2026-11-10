@@ -2,15 +2,16 @@
 *& Artifact: zif_ca_ops_exc_dao.intf.abap
 *& Purpose:
 *& Repository for closing exceptions outside the exceptions business object
-*& (PRISM payment request handled manually): find the
+*& (middleware payment request handled manually): find the
 *& open exception of an object and close it with a history row.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
-*& 2026-11-07 | Purpose: the EBS release approval is no longer a caller (read-only scope).
+*& 2026-11-07 | Purpose: the release approval is no longer a caller (read-only scope).
 *& 2026-11-10 | Concurrency review: FIND_OPEN returns the disposition and change stamp read; RESOLVE writes
 *&            | all or nothing - each exception only while it is as read, else nothing (787).
+*& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_DAO to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - exception repository</p>
+"! <p class="shorttext synchronized">Operations framework - exception repository</p>
 INTERFACE zif_ca_ops_exc_dao
   PUBLIC.
 

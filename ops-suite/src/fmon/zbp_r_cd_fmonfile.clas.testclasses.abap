@@ -22,7 +22,7 @@ ENDCLASS.
 CLASS ltd_auth IMPLEMENTATION.
   METHOD zif_ca_ops_auth~is_allowed.
     INSERT iv_activity INTO TABLE mt_activities.
-    mv_pe_area = iv_pe_area.
+    mv_pe_area = iv_area.
     rv_allowed = mv_allowed.
   ENDMETHOD.
 ENDCLASS.

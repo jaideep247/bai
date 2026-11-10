@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zif_ca_ops_store.intf.abap
 *& Purpose:
-*& One auditable store for all payment engine areas: run headers (ZCA_OPS_RUN)
+*& One auditable store for all areas: run headers (ZCA_OPS_RUN)
 *& and findings (ZCA_OPS_FINDING). Runtime parameters are not served here:
 *& zcl_ca_ops_factory=>GET_PARAMS (ZCA_PARAM).
 *& Modification log:
@@ -12,9 +12,10 @@
 *& 2026-11-06 | refresh_params: parameter snapshot per run (audit A64).
 *& 2026-11-07 | Parameters split into ZIF_CA_OPS_PARAMS (INTERFACES + ALIASES, no caller changes).
 *& 2026-11-07 | ZIF_CA_OPS_PARAMS no longer included: parameters come from ZCA_PARAM via the factory.
+*& 2026-11-10 | Moved from ZIF_CD_OPS_STORE to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - shared result store</p>
-"! One auditable store for all payment engine areas: run headers (ZCA_OPS_RUN) and
+"! <p class="shorttext synchronized">Operations framework - shared result store</p>
+"! One auditable store for all areas: run headers (ZCA_OPS_RUN) and
 "! findings (ZCA_OPS_FINDING). start_run renews the parameter snapshot (A64).
 INTERFACE zif_ca_ops_store
   PUBLIC.
@@ -31,7 +32,7 @@ INTERFACE zif_ca_ops_store
       zcx_ca_ops_error.
 
   "! Append findings to a run; cs_run-finding_count is advanced. An exception (B/E/W)
-  "! raised again for the same payment engine area, object and check code inherits disposition,
+  "! raised again for the same area, object and check code inherits disposition,
   "! owner, due date and first-seen time of the open one, which becomes superseded (S).
   METHODS save_findings
     IMPORTING
@@ -50,7 +51,7 @@ INTERFACE zif_ca_ops_store
 
   METHODS commit.
 
-  "! Auto-resolve open exceptions (O, A) of earlier runs of the payment engine area whose object
+  "! Auto-resolve open exceptions (O, A) of earlier runs of the area whose object
   "! key (it_object_keys) or GROUP2 (it_groups) this run evaluated without raising
   "! them again. Exceptions raised again were already carried forward by
   "! save_findings; waived exceptions (W) are never touched.
@@ -66,7 +67,7 @@ INTERFACE zif_ca_ops_store
   "! Callers commit the run header first, so the run itself survives.
   METHODS rollback DEFAULT IGNORE.
 
-  "! Most recent completed run of a payment engine area (and variant, when given)
+  "! Most recent completed run of a area (and variant, when given)
   METHODS get_last_run
     IMPORTING
       iv_area     TYPE zif_ca_ops_types=>ty_area

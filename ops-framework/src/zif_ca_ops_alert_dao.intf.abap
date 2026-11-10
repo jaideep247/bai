@@ -7,12 +7,13 @@
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | claim, complete, get_repeat_keys (audit A17, DEFAULT IGNORE).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
+*& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - alert configuration and log</p>
+"! <p class="shorttext synchronized">Operations framework - alert configuration and log</p>
 INTERFACE zif_ca_ops_alert_dao
   PUBLIC.
 
-  "! Active rules of a payment engine area plus rules for payment engine area '*'
+  "! Active rules of a area plus rules for area '*'
   METHODS get_rules
     IMPORTING
       iv_area       TYPE zif_ca_ops_types=>ty_area

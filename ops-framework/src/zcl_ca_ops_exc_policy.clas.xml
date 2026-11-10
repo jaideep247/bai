@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_EXC_POLICY</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - exception lifecycle rules</DESCRIPT>
+    <DESCRIPT>Operations framework - exception lifecycle rules</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

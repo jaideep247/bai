@@ -7,14 +7,14 @@
 *& class. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (retention purge, gap G1).
-*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake ZCL_CD_OPS_PARAMS_MEM
+*& 2026-11-07 | Store double: get_param / get_range delegate to the shared fake the former in-memory parameter fake
 *&            | (semantics of ZCL_CA_OPS_STORE: condensed, blank = default).
 *& 2026-11-07 | Parameters over ZCA_PARAM (zcl_ca_ops_param_seed injected with INJECT_PARAMS); the store double
 *&            | serves no parameters.
 *& 2026-11-07 | Comment: RETENTION_DAYS_RUN in ZCA_PARAM.
-*& 2026-11-07 | Six purge targets (HCK_RESULT added): one more empty-target commit.
+*& 2026-11-07 | Six purge targets (verdicts added): one more empty-target commit.
 *& 2026-11-07 | Seven purge targets (PAY_OUTCOME added): one more empty-target commit.
-*& 2026-11-10 | deletes_in_packages: exception history counted, target FMON_FILE (one more empty target).
+*& 2026-11-10 | deletes_in_packages: exception history counted, file registry target (one more empty target).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG; registered_target_purged (registry row: plug-in double and its own retention
 *&            | parameter); wrong_target_class_stops (nothing deleted when a registry class is no target).

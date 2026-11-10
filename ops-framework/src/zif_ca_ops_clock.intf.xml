@@ -5,7 +5,7 @@
    <VSEOINTERF>
     <CLSNAME>ZIF_CA_OPS_CLOCK</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - clock (injectable for tests)</DESCRIPT>
+    <DESCRIPT>Operations framework - clock (injectable for tests)</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>

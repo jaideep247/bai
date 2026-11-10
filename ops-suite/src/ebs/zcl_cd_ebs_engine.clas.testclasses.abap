@@ -101,7 +101,7 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
   METHOD zif_ca_ops_store~start_run.
     mv_starts += 1.
-    rs_run-pe_area    = iv_pe_area.
+    rs_run-area    = iv_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
     rs_run-status    = zif_ca_ops_types=>gc_run_status-running.
@@ -155,7 +155,7 @@ CLASS ltd_alert IMPLEMENTATION.
     mt_findings = it_findings.
     ms_run = is_run.
     IF mv_fail = abap_true.
-      RAISE EXCEPTION TYPE zcx_cd_ops_error MESSAGE e020(zcd_ops) WITH 'UNIT'.
+      RAISE EXCEPTION TYPE zcx_ca_ops_error MESSAGE e020(zca_ops) WITH 'UNIT'.
     ENDIF.
   ENDMETHOD.
 ENDCLASS.

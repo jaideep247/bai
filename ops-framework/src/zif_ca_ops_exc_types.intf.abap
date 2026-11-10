@@ -8,8 +8,9 @@
 *& 2026-11-07 | History action RELEASE removed with the blocked-line release (read-only scope).
 *& 2026-11-10 | Concurrency review: TY_EXC_OPEN (key with the disposition and change stamp read - the
 *&            | guard of a resolve; replaces TY_EXC_KEY), code EXC_CHANGED_DEFERRED, messages 786-788.
+*& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_TYPES to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - exception lifecycle types</p>
+"! <p class="shorttext synchronized">Operations framework - exception lifecycle types</p>
 INTERFACE zif_ca_ops_exc_types
   PUBLIC.
 
@@ -24,7 +25,7 @@ INTERFACE zif_ca_ops_exc_types
       resolve     TYPE ty_action VALUE 'RESOLVE',
       waive_req   TYPE ty_action VALUE 'WAIVE_REQ',
       waive_ok    TYPE ty_action VALUE 'WAIVE_OK',
-      "! Handled manually outside SAP (FMON manual status, PRISM request, design 6.4/6.5)
+      "! Handled manually outside SAP (a manual status or request of a consumer)
       manual      TYPE ty_action VALUE 'MANUAL',
     END OF gc_action.
 
@@ -51,7 +52,7 @@ INTERFACE zif_ca_ops_exc_types
       waiver_req_by TYPE syuname,
     END OF ty_state.
 
-  "! Policy decision: allowed, or the ZCD_OPS message number that explains why not
+  "! Policy decision: allowed, or the ZCA_OPS message number that explains why not
   TYPES:
     BEGIN OF ty_decision,
       allowed TYPE abap_bool,
@@ -59,7 +60,7 @@ INTERFACE zif_ca_ops_exc_types
       v1      TYPE symsgv,
     END OF ty_decision.
 
-  "! ZCD_OPS messages of the exception lifecycle
+  "! ZCA_OPS messages of the exception lifecycle
   CONSTANTS:
     BEGIN OF gc_msg,
       not_open        TYPE symsgno VALUE '061',
@@ -73,8 +74,6 @@ INTERFACE zif_ca_ops_exc_types
       changed_deferred TYPE symsgno VALUE '786',
       "! Exception &1 / &2 changed meanwhile - not resolved, nothing saved
       changed_meanwhile TYPE symsgno VALUE '787',
-      "! Open exceptions of request &1 could not be read - record not saved
-      open_read_failed TYPE symsgno VALUE '788',
     END OF gc_msg.
 
 ENDINTERFACE.

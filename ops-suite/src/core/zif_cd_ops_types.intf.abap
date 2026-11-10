@@ -203,6 +203,8 @@ INTERFACE zif_cd_ops_types
     BEGIN OF gc_msg,
       pattern_invalid             TYPE zif_ca_ops_types=>ty_msgno VALUE '743',
       pattern_too_long            TYPE zif_ca_ops_types=>ty_msgno VALUE '744',
+      "! Open exceptions of request &1 could not be read - record not saved (FMON handled-manually save)
+      exc_open_read_failed        TYPE zif_ca_ops_types=>ty_msgno VALUE '788',
     END OF gc_msg.
 
 ENDINTERFACE.

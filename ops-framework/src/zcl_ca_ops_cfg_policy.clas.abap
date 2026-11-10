@@ -9,8 +9,9 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP configuration apps, design 5).
 *& 2026-11-07 | Per-table create withdrawn: new rows only by transport from DV1 (user decision, D-3).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_POLICY to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Ops suite - config apps: change policy</p>
+"! <p class="shorttext synchronized">Ops framework - config apps: change policy</p>
 CLASS zcl_ca_ops_cfg_policy DEFINITION
   PUBLIC
   FINAL

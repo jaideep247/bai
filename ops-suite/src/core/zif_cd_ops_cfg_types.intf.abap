@@ -21,6 +21,9 @@
 INTERFACE zif_cd_ops_cfg_types
   PUBLIC.
 
+  "! Thresholds of the health check (ZCD_HCK_THRESH, ZCL_CD_OPS_CFG_CHECKS=>THRESHOLDS_ORDERED)
+  TYPES ty_amount TYPE p LENGTH 12 DECIMALS 4.
+
   "! Message class ZCD_OPS, range 400-449 (configuration apps of the suite)
   CONSTANTS:
     BEGIN OF gc_msg,

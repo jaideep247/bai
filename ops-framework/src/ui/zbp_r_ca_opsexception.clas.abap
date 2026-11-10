@@ -6,6 +6,7 @@
 *& made by ZCL_CA_OPS_EXC_POLICY, authorisation by ZCL_CA_OPS_AUTH.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-10 | Moved from ZBP_R_CD_OPSEXCEPTION to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Owned exceptions - behaviour pool</p>
 CLASS zbp_r_ca_opsexception DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF zr_ca_opsexception.

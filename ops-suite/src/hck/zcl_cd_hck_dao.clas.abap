@@ -625,19 +625,19 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
   METHOD zif_cd_hck_dao~get_overdue_exceptions.
     CONSTANTS lc_no_date TYPE d VALUE '00000000'.
     " index ZCA_OPS_FINDING~OPN: CLIENT, PE_AREA, DISPOSITION, DUE_DATE
-    SELECT pe_area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
+    SELECT area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
       FROM zca_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
         AND due_date    < @iv_today
         AND due_date    > @lc_no_date
-      GROUP BY pe_area
-      ORDER BY pe_area
+      GROUP BY area
+      ORDER BY area
       INTO CORRESPONDING FIELDS OF TABLE @rt_overdue.
   ENDMETHOD.
 
 
   METHOD zif_cd_hck_dao~get_open_exceptions.
-    SELECT pe_area, group1, group2, object_key, check_code, severity, message, disposition,
+    SELECT area, group1, group2, object_key, check_code, severity, message, disposition,
            owner, due_date, created_at
       FROM zca_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )

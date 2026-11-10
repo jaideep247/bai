@@ -379,7 +379,7 @@ CLASS ltc_alert_policy IMPLEMENTATION.
   " B12: the receiver sees the system in the subject and the run / job link in the body
   METHOD mail_names_system_and_job.
     DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
-    CONSTANTS lc_jobname TYPE btcjob VALUE 'ZCD_EBS_VALIDATE_JPMC'.
+    CONSTANTS lc_jobname TYPE btcjob VALUE 'ZT_JOB_VALIDATE'.
     CONSTANTS lc_jobcount TYPE btcjobcnt VALUE '11223344'.
     TRY.
         ms_run-jobname  = lc_jobname.

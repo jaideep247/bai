@@ -489,10 +489,10 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     IF iv_test_mode = abap_false.
       " An overlapping start of the same mode is refused (RUN_LOCKED), never run twice; the modes have
       " their own locks, so a nightly or sweep run never blocks the 5-minute FAST run
-      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+      IF zcl_ca_ops_factory=>get_lock( )->acquire( EXPORTING iv_area = zif_cd_ops_types=>gc_pe_area-core
                                                              iv_variant = variant( )
                                                    IMPORTING ev_holder  = lv_holder ) = abap_false.
-        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+        DATA(ls_refusal) = zcl_ca_ops_run_guard=>refuse( iv_area = zif_cd_ops_types=>gc_pe_area-core
                                                          iv_variant = variant( )
                                                          iv_holder  = lv_holder ).
         rs_result-run      = ls_refusal-run.
@@ -522,7 +522,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
     mo_dao     = zcl_cd_ops_factory=>get_pay_outcome_dao( ).
     mo_outcome = zcl_cd_ops_factory=>get_pay_outcome( ).
     mo_request = zcl_cd_ops_factory=>get_pay_request( ).
-    rs_result-run = mo_store->start_run( iv_pe_area   = zif_cd_ops_types=>gc_pe_area-core
+    rs_result-run = mo_store->start_run( iv_area   = zif_cd_ops_types=>gc_pe_area-core
                                          iv_variant   = variant( )
                                          iv_test_mode = iv_test_mode ).
     IF iv_test_mode = abap_false.
@@ -1705,7 +1705,7 @@ CLASS zcl_cd_ops_pay_snapshot IMPLEMENTATION.
 
 
   METHOD release_lock.
-    zcl_ca_ops_factory=>get_lock( )->release( iv_pe_area = zif_cd_ops_types=>gc_pe_area-core
+    zcl_ca_ops_factory=>get_lock( )->release( iv_area = zif_cd_ops_types=>gc_pe_area-core
                                               iv_variant = variant( ) ).
   ENDMETHOD.
 

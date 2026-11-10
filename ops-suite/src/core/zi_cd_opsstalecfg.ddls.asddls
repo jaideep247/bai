@@ -10,6 +10,7 @@
 //          parameter-name prefix are literals compared with ZIF_CD_OPS_TYPES (portable check
 //          cds_abap_parity). No row (definition not transported) = the as-of view's delivered literal.
 // Modification log: 2026-11-08 | Initial version (table consolidation: ZCD_OPS_MONCFG into ZCA_PARAM).
+//                   2026-11-10 | Area CHAR 16 (parameter areas CD_EBS, CD_FMON, CD_HCK, CD_OPS; framework ZCA_OPS).
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Monitor stale threshold per area (ZCA_PARAM)'
 @Metadata.ignorePropagatedAnnotations: true
@@ -19,8 +20,8 @@ define view entity ZI_CD_OpsStaleCfg
                                          and Val.name = Def.name
                                          and Val.numb = 1
 {
-      // MON_STALE_AFTER_MIN_FMON -> FMON
-  key cast( replace( Def.name, 'MON_STALE_AFTER_MIN_', '' ) as abap.char( 4 ) ) as PaymentEngineArea,
+      // MON_STALE_AFTER_MIN_CD_FMON -> CD_FMON (the area: a parameter area of ZCA_PARAM, 2026-11-10)
+  key cast( replace( Def.name, 'MON_STALE_AFTER_MIN_', '' ) as abap.char( 16 ) ) as PaymentEngineArea,
       // The framework validates the value type INT (MIN 1) on save, so the text is a number.
       // VERIFY-ADT: CHAR -> INT4 cast of a parameter value (CDS view entity, 7.58)
       cast( case when Val.low is null or Val.low = ''

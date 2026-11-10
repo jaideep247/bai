@@ -91,7 +91,7 @@ CLASS ltd_rows IMPLEMENTATION.
   METHOD finding.
     rs_finding-run_id      = iv_file_id.
     rs_finding-finding_no  = iv_finding_no.
-    rs_finding-pe_area     = iv_pe_area.
+    rs_finding-area     = iv_pe_area.
     rs_finding-object_type = zif_cd_fmon_types=>gc_object_type.
     rs_finding-object_key  = |FILE_{ iv_finding_no }|.
     rs_finding-reference   = zcl_cd_fmon_util=>file_hex( iv_file_id ).
@@ -103,7 +103,7 @@ CLASS ltd_rows IMPLEMENTATION.
 
   METHOD run.
     rs_run-run_id    = iv_run_id.
-    rs_run-pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor.
+    rs_run-area   = zif_cd_ops_types=>gc_pe_area-file_monitor.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
     rs_run-status    = iv_status.

@@ -112,7 +112,7 @@ CLASS ltd_rows IMPLEMENTATION.
   METHOD finding.
     rs_finding-run_id      = iv_run_id.
     rs_finding-finding_no  = iv_finding_no.
-    rs_finding-pe_area     = gc_pe_area.
+    rs_finding-area     = gc_pe_area.
     rs_finding-object_type = zif_cd_hck_types=>gc_object_type.
     rs_finding-object_key  = iv_check_id.
     rs_finding-group1      = iv_category.
@@ -137,7 +137,7 @@ CLASS ltd_rows IMPLEMENTATION.
 
   METHOD run.
     rs_run-run_id     = iv_run_id.
-    rs_run-pe_area    = gc_pe_area.
+    rs_run-area    = gc_pe_area.
     rs_run-test_mode  = iv_test_mode.
     rs_run-status     = iv_status.
     rs_run-ended_at   = iv_ended_at.

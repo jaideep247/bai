@@ -50,7 +50,7 @@ CLASS ltd_store IMPLEMENTATION.
   METHOD zif_ca_ops_store~start_run.
     mv_start_calls = mv_start_calls + 1.
     rs_run-run_id    = '0123456789ABCDEF0123456789ABCDEF'.
-    rs_run-pe_area    = iv_pe_area.
+    rs_run-area    = iv_area.
     rs_run-variant   = iv_variant.
     rs_run-test_mode = iv_test_mode.
     rs_run-status    = zif_ca_ops_types=>gc_run_status-running.
@@ -85,7 +85,7 @@ CLASS ltd_store IMPLEMENTATION.
 
 
   METHOD zif_ca_ops_store~get_last_run.
-    READ TABLE mt_last_runs INTO rs_run WITH KEY pe_area = iv_pe_area.
+    READ TABLE mt_last_runs INTO rs_run WITH KEY area = iv_area.
     IF sy-subrc <> 0.
       CLEAR rs_run.
     ENDIF.
@@ -96,7 +96,7 @@ CLASS ltd_store IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_ca_ops_store~get_stale_runs.
-    LOOP AT mt_running INTO DATA(ls_run) WHERE pe_area = iv_pe_area AND run_id <> iv_exclude_run.
+    LOOP AT mt_running INTO DATA(ls_run) WHERE area = iv_area AND run_id <> iv_exclude_run.
       IF ls_run-started_at < iv_started_before.
         INSERT ls_run INTO TABLE rt_runs.
       ENDIF.
@@ -471,7 +471,7 @@ CLASS ltc_engine IMPLEMENTATION.
     IF is_flags-include_pe_areas = abap_true.
       mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'EBS,FMON' ).
       ls_last_run-run_id     = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'.
-      ls_last_run-pe_area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
+      ls_last_run-area     = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-started_at = ltd_clock=>gc_base.
       IF is_flags-fmon_two_hours = abap_true.
         ls_last_run-started_at = cl_abap_tstmp=>subtractsecs( tstmp = ltd_clock=>gc_base
@@ -485,7 +485,7 @@ CLASS ltc_engine IMPLEMENTATION.
                                   iv_value = is_flags-fmon_stale ).
       ENDIF.
       IF is_flags-ebs_never_ran = abap_false.
-        ls_last_run-pe_area = zif_cd_ops_types=>gc_pe_area-ebs.
+        ls_last_run-area = zif_cd_ops_types=>gc_pe_area-ebs.
         INSERT ls_last_run INTO TABLE mo_store->mt_last_runs.
       ENDIF.
     ENDIF.
@@ -494,7 +494,7 @@ CLASS ltc_engine IMPLEMENTATION.
     IF is_flags-fmon_hung = abap_true.
       CLEAR ls_last_run.
       ls_last_run-run_id     = 'EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.
-      ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-file_monitor.
+      ls_last_run-area    = zif_cd_ops_types=>gc_pe_area-file_monitor.
       ls_last_run-status     = zif_ca_ops_types=>gc_run_status-running.
       ls_last_run-started_at = '20261105010000.0000000'.
       INSERT ls_last_run INTO TABLE mo_store->mt_running.
@@ -504,7 +504,7 @@ CLASS ltc_engine IMPLEMENTATION.
       mo_store->mo_params->set( iv_name = 'HCK_WATCH_PE_AREAS' iv_value = 'HCK' ).
       CLEAR ls_last_run.
       ls_last_run-run_id     = '0123456789ABCDEF0123456789ABCDEF'.
-      ls_last_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+      ls_last_run-area    = zif_cd_ops_types=>gc_pe_area-health_check.
       ls_last_run-status     = zif_ca_ops_types=>gc_run_status-running.
       ls_last_run-started_at = '20261105010000.0000000'.
       INSERT ls_last_run INTO TABLE mo_store->mt_running.
@@ -1014,7 +1014,7 @@ CLASS ltc_engine IMPLEMENTATION.
   METHOD hung_run_fails_self.
     TRY.
         configure_scenario( VALUE #( green_checks = 1 include_pe_areas = abap_true fmon_hung = abap_true ) ).
-        ASSIGN mo_store->mt_last_runs[ pe_area = zif_cd_ops_types=>gc_pe_area-file_monitor ]
+        ASSIGN mo_store->mt_last_runs[ area = zif_cd_ops_types=>gc_pe_area-file_monitor ]
           TO FIELD-SYMBOL(<ls_prior_run>).
         IF <ls_prior_run> IS NOT ASSIGNED.
           cl_abap_unit_assert=>fail( msg = 'Fixture must include the previous FMON run' ).

@@ -40,7 +40,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD main.
     TRY.
         zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
-                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ).
+                                                iv_area   = zif_cd_ops_types=>gc_pe_area-file_monitor ).
         DATA(ls_result) = zcl_cd_fmon_factory=>get_engine( )->run(
           iv_business_date = p_date
           iv_iface_id      = CONV #( to_upper( p_iface ) )

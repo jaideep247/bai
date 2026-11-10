@@ -11,9 +11,14 @@ DAO = os.path.join(ROOT, 'src', 'core', 'zcl_cd_ops_pattern_dao.clas.abap')
 FIELD = re.compile(r'^\s*(key\s+)?([a-z_0-9]+)\s*:', re.I)
 
 
+# the alert rules are a table of the operations framework (ops-framework/ddic, 2026-11-10)
+DDIC_DIRS = [os.path.join(ROOT, 'ddic', f) for f in sorted(os.listdir(os.path.join(ROOT, 'ddic')))] + \
+            [os.path.join(ROOT, '..', 'ops-framework', 'ddic')]
+
+
 def ddl_fields(table):
-    for folder in os.listdir(os.path.join(ROOT, 'ddic')):
-        path = os.path.join(ROOT, 'ddic', folder, table + '.tabl.ddl')
+    for folder in DDIC_DIRS:
+        path = os.path.join(folder, table + '.tabl.ddl')
         if os.path.exists(path):
             body = open(path, encoding='utf-8').read().split('{', 1)[1].split('}', 1)[0]
             return [m.group(2).lower() for line in body.splitlines()

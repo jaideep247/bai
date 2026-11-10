@@ -153,7 +153,7 @@ CLASS ltc_dao IMPLEMENTATION.
     INSERT ls_row INTO TABLE mt_metrics.
     DATA ls_run TYPE zca_ops_run.
     ls_run-run_id     = lv_run_byte.
-    ls_run-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+    ls_run-area    = zif_cd_ops_types=>gc_pe_area-health_check.
     ls_run-status     = iv_status.
     ls_run-started_at = iv_at.
     INSERT ls_run INTO TABLE mt_runs.
@@ -170,7 +170,7 @@ CLASS ltc_dao IMPLEMENTATION.
     DATA ls_row TYPE zca_ops_finding.
     ls_row-run_id      = '0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A'.
     ls_row-finding_no  = iv_no.
-    ls_row-pe_area      = iv_pe_area.
+    ls_row-area      = iv_pe_area.
     ls_row-severity    = zif_ca_ops_types=>gc_severity-error.
     ls_row-disposition = iv_disposition.
     ls_row-due_date    = iv_due.
@@ -324,7 +324,7 @@ CLASS ltc_dao IMPLEMENTATION.
         mo_cut->save_metrics( lt_metrics ).
         DATA ls_run TYPE zca_ops_run.
         ls_run-run_id  = ls_metric-run_id.
-        ls_run-pe_area = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_run-area = zif_cd_ops_types=>gc_pe_area-health_check.
         ls_run-status  = zif_ca_ops_types=>gc_run_status-success.
         INSERT ls_run INTO TABLE mt_runs.
         go_env->insert_test_data( mt_runs ).

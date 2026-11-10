@@ -1,20 +1,21 @@
 *&---------------------------------------------------------------------*
-*& Artifact: zcl_cd_ops_util.clas.testclasses.abap
+*& Artifact: zcl_ca_ops_util.clas.testclasses.abap
 *& Purpose:
 *& Domain tests of the shared helpers: severity ranking, RAG derivation, key
 *& normalisation, list splitting, HTML escaping, elapsed time, safe decimal
 *& conversion. No doubles. Does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Test text_fills_message_vars (texts as ZCD_OPS messages).
-*& 2026-11-06 | Texts moved to message class ZCD_OPS (phase 5: no hardcoded texts).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Test text_fills_message_vars (texts as ZCA_OPS messages).
+*& 2026-11-06 | Texts moved to message class ZCA_OPS (phase 5: no hardcoded texts).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | PCRE patterns: whole-value match, case ignored, invalid pattern, literal count.
-*& 2026-11-07 | param_int (shared integer parameter helper) over the shared fake ZCL_CD_OPS_PARAMS_MEM.
+*& 2026-11-07 | param_int (shared integer parameter helper) over the shared fake the former in-memory parameter fake.
 *& 2026-11-07 | Tests of the removed rag_from_value dropped.
-*& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CD_OPS_PARAM_SEED, INT parameter without definition
+*& 2026-11-07 | param_int over ZCA_PARAM (ZCL_CA_OPS_PARAM_SEED, INT parameter without definition
 *&            | default): a value that is not a number is a logged parameter error and gives the default.
 *& 2026-11-10 | exception_trace, error_class, account_label, job_link (test seam JOB_INFO); format_amount.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_UTIL to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_util DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -151,7 +152,7 @@ CLASS ltc_util IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: an integer parameter reads the maintained value (ZCA_PARAM over ZCL_CD_OPS_PARAM_SEED)
+  " Rule: an integer parameter reads the maintained value (ZCA_PARAM over ZCL_CA_OPS_PARAM_SEED)
   METHOD int_param_reads_value.
     CONSTANTS lc_name TYPE zif_ca_ops_types=>ty_param_name VALUE 'PURGE_PACKAGE_SIZE'.
     DATA(lo_params) = NEW zcl_ca_ops_param_seed( )->set( iv_name = lc_name iv_value = `25` )->params( ).

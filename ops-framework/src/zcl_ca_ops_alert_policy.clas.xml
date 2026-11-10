@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_ALERT_POLICY</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - alert rule policy</DESCRIPT>
+    <DESCRIPT>Operations framework - alert rule policy</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

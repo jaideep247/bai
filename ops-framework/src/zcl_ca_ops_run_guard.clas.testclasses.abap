@@ -10,6 +10,7 @@
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-10 | Refusal saved in its own LUW and ALERT_FAILED on a failing dispatch; abort( ): rollback,
 *&            | aborted run with RUN_ABORTED (trace, error class), durable before the ON_ABORT dispatch.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_RUN_GUARD to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_alert DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -149,7 +150,7 @@ CLASS ltc_run_guard IMPLEMENTATION.
   METHOD abort_run.
     TRY.
         RAISE EXCEPTION TYPE zcx_ca_ops_error
-          MESSAGE e010(zca_ops) WITH 'ZCD_FMON_FILE'
+          MESSAGE e010(zca_ops) WITH 'ZT_TABLE'
           EXPORTING
             previous = NEW cx_sy_open_sql_db( ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).

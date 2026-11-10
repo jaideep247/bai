@@ -7,7 +7,8 @@
 *& is replaced by TEST-INJECTION; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
-*& 2026-11-08 | Example table ZCD_BTC_RULE (ZCD_BTC_MAP is now the customer posting area ZBTM).
+*& 2026-11-08 | Example table ZT_CONFIG (ZT_CONFIG_OLD is now the customer posting area ZBTM).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_TRANSPORT to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_cfg_transport DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -16,7 +17,7 @@ CLASS ltc_cfg_transport DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS gc_request TYPE zif_ca_ops_cfg_types=>ty_request VALUE 'DV1K900123'.
     CONSTANTS gc_entity TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'BtcMap'.
-    CONSTANTS gc_table TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZCD_BTC_RULE'.
+    CONSTANTS gc_table TYPE zif_ca_ops_cfg_types=>ty_name VALUE 'ZT_CONFIG'.
     CONSTANTS gc_msgno_not_recorded TYPE symsgno VALUE '408'.
 
     TYPES:

@@ -136,7 +136,7 @@ CLASS ltc_file_path IMPLEMENTATION.
 
   METHOD backslash_is_refused.
     configure_scenario( VALUE #( ) ).
-    assert_raises( iv_name = `ebs\..\x.txt` iv_msgno = gc_test-msg_name ).
+    assert_raises( iv_name = `in\..\x.txt` iv_msgno = gc_test-msg_name ).
   ENDMETHOD.
 
 

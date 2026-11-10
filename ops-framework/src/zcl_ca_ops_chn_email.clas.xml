@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CHN_EMAIL</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - alert channel e-mail (BCS)</DESCRIPT>
+    <DESCRIPT>Operations framework - alert channel e-mail (BCS)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_ALERT_DAO</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - alert repository</DESCRIPT>
+    <DESCRIPT>Operations framework - alert repository</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

@@ -59,7 +59,7 @@ CLASS ltc_param_seed IMPLEMENTATION.
   " Rule: the adapter finds every delivered definition in its area (prefix table)
   METHOD area_by_prefix_of_name.
     LOOP AT zcl_cd_ops_param_seed=>definitions( ) ASSIGNING FIELD-SYMBOL(<ls_definition>).
-      cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_params=>area_of( <ls_definition>-name )
+      cl_abap_unit_assert=>assert_equals( act = NEW zcl_cd_ops_param_seed( )->params( )->area_of( <ls_definition>-name )
                                           exp = <ls_definition>-area
                                           msg = |{ <ls_definition>-name } is read from its area| ).
     ENDLOOP.

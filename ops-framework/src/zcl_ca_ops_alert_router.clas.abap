@@ -1,14 +1,14 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zcl_ca_ops_alert_router.clas.abap
 *& Purpose:
-*& Configurable alert router for every payment engine area. Reads ZCA_OPS_ALRULE and
+*& Configurable alert router for every area. Reads ZCA_OPS_ALRULE and
 *& ZCA_OPS_ALCHN through the alert DAO, lets ZCL_CA_OPS_ALERT_POLICY decide
 *& (severity, patterns, quiet hours, throttling, escalation) and delivers via
 *& channel plug-ins. Every decision is logged in ZCA_OPS_ALLOG. A failing
 *& channel is logged and never aborts the calling run. Test-mode runs never alert.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
-*& 2026-11-06 | Check codes, message class and texts as constants / ZCD_OPS messages (phase 5).
+*& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
 *& 2026-11-06 | Durable claim before send, carried-forward exceptions not re-alerted, escalation over run
 *&              history, escalation override, direct send failures surfaced (audit A17, A45, A46).
 *& 2026-11-06 | Channel interface checked before the channel class is created (audit A62).
@@ -16,15 +16,16 @@
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
 *& 2026-11-06 | Modern-syntax sweep: inline CAST, alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | A rule with a pattern that is not valid PCRE is logged FAILED (message 742) and not applied -
-*&              visible in the alert log and the HCK alert health check, never a silent no-match.
+*&              visible in the alert log and a consumer's alert health check, never a silent no-match.
 *& 2026-11-07 | Parameter names / default from zif_ca_ops_types; parameters through GET_PARAMS;
 *&            | escalation window with zcl_ca_ops_util=>PARAM_INT.
 *& 2026-11-07 | Intent key and claim time stay on the claim only (webhook de-duplication fields removed).
 *& 2026-11-10 | An alert ID that cannot be generated raises 802 (was: initial ID, the second one a duplicate
 *&            | key); the caller records ALERT_FAILED. Test seam ALERT_ID. Decisions logged before the error
 *&            | are still written. A failed delivery keeps the exception trace in ZCA_OPS_ALLOG-ERROR.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - configurable alert router</p>
+"! <p class="shorttext synchronized">Operations framework - configurable alert router</p>
 CLASS zcl_ca_ops_alert_router DEFINITION
   PUBLIC
   FINAL
@@ -60,7 +61,7 @@ CLASS zcl_ca_ops_alert_router DEFINITION
         io_dao      TYPE REF TO zif_ca_ops_alert_dao
       RAISING
         zcx_ca_ops_error.
-    "! Consecutive runs of the payment engine area (newest first, current included) in
+    "! Consecutive runs of the area (newest first, current included) in
     "! which the rule fired; a run without an alert of the rule ends the series (A46)
     METHODS count_consecutive
       IMPORTING

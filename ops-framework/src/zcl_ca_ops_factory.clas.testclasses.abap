@@ -11,6 +11,7 @@
 *& 2026-11-06 | Authorisation seam: injected double is returned.
 *& 2026-11-06 | Interface check before instantiation (audit A62).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.

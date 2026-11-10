@@ -1,7 +1,7 @@
 # Message class ZCA_OPS
 
 Messages of the operations framework ZCA_OPS (package `ZCA_OPS`). Numbers of messages that moved from
-the payment engine suite's class ZCD_OPS are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
+the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
 and area checks, purge, exception lifecycle · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths.
@@ -50,7 +50,6 @@ texts <= 73 characters).
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |
 | 405 | Transport request &1 is released or no longer modifiable |
-| 407 | No authorization for &1 of &2 configuration (object ZCA_OPS) |
 | 408 | Changes could not be recorded on transport request &1 |
 | 410 | Class &1 does not exist or does not implement &2 |
 | 413 | Value &1 is not allowed for &2 (allowed: &3) |
@@ -62,7 +61,6 @@ texts <= 73 characters).
 | 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 786 | Exception &1 (&2) changed by a user during the run - left for next run |
 | 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |
-| 788 | Open exceptions of request &1 could not be read - record not saved |
 | 800 | Application log &1/&2 not created (BAL_LOG_CREATE return code &3) |
 | 801 | Application log &1/&2 not saved (BAL_DB_SAVE return code &3) |
 | 802 | Alert log ID could not be generated - alert not delivered |

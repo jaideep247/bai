@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_UTIL</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Operations suite - pure helper functions</DESCRIPT>
+    <DESCRIPT>Operations framework - pure helper functions</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

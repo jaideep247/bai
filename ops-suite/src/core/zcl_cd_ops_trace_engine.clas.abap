@@ -1769,7 +1769,7 @@ CLASS zcl_cd_ops_trace_engine IMPLEMENTATION.
 
   METHOD is_allowed.
     rv_allowed = zcl_ca_ops_factory=>get_auth( )->is_allowed( iv_activity = zif_ca_ops_auth=>gc_activity-display
-                                                              iv_pe_area  = zif_cd_ops_types=>gc_pe_area-core
+                                                              iv_area  = zif_cd_ops_types=>gc_pe_area-core
                                                               iv_bukrs    = iv_bukrs ).
   ENDMETHOD.
 

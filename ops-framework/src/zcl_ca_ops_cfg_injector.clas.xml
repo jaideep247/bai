@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CA_OPS_CFG_INJECTOR</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Ops suite - config apps: test injector</DESCRIPT>
+    <DESCRIPT>Ops framework - config apps: test injector</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

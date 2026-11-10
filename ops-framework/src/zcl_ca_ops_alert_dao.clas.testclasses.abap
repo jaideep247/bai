@@ -9,6 +9,7 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-06 | ltc_alert_dao_reads: rules, channels, log read and insert (coverage gap closure).
 *& 2026-11-07 | Second channel of the ordering test is APPLOG (webhook channel removed).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -58,7 +59,7 @@ CLASS ltc_alert_dao IMPLEMENTATION.
 
   METHOD intent_log.
     rs_log-alert_id   = iv_alert_id.
-    rs_log-rule_id    = 'EBS_BLOCK'.
+    rs_log-rule_id    = 'ZT_BLOCK'.
     rs_log-intent_key = gc_intent.
     rs_log-status     = zif_ca_ops_types=>gc_alert_status-claimed.
   ENDMETHOD.
@@ -134,10 +135,10 @@ CLASS ltc_alert_dao_reads DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     CONSTANTS:
       BEGIN OF gc_test,
-        rule_ebs  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'EBS_BLOCK',
+        rule_first  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_BLOCK',
         rule_any  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ANY_ABORT',
-        rule_hck  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'HCK_RED',
-        rule_off  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'EBS_OFF',
+        rule_second  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_RED',
+        rule_off  TYPE zif_ca_ops_types=>ty_rule_id VALUE 'ZT_OFF',
         any_area  TYPE zif_ca_ops_types=>ty_area VALUE '*',
         mail      TYPE c LENGTH 10 VALUE 'EMAIL',
         applog    TYPE c LENGTH 10 VALUE 'APPLOG',
@@ -182,19 +183,19 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: active rules of the payment engine area plus the '*' rules; inactive and other areas excluded
+  " Rule: active rules of the area plus the '*' rules; inactive and other areas excluded
   METHOD rules_of_area_and_any.
     DATA lt_rows TYPE STANDARD TABLE OF zca_ops_alrule WITH EMPTY KEY.
     DATA ls_row TYPE zca_ops_alrule.
     TRY.
-        ls_row-rule_id = gc_test-rule_ebs.
+        ls_row-rule_id = gc_test-rule_first.
         ls_row-area = zcl_ca_ops_param_seed=>gc_test_area-first.
         ls_row-active  = abap_true.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-rule_id = gc_test-rule_any.
         ls_row-area = gc_test-any_area.
         INSERT ls_row INTO TABLE lt_rows.
-        ls_row-rule_id = gc_test-rule_hck.
+        ls_row-rule_id = gc_test-rule_second.
         ls_row-area = zcl_ca_ops_param_seed=>gc_test_area-second.
         INSERT ls_row INTO TABLE lt_rows.
         ls_row-rule_id = gc_test-rule_off.
@@ -203,7 +204,7 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
         INSERT ls_row INTO TABLE lt_rows.
         go_env->insert_test_data( lt_rows ).
         DATA(lt_rules) = mo_cut->get_rules( zcl_ca_ops_param_seed=>gc_test_area-first ).
-        cl_abap_unit_assert=>assert_equals( act = lines( lt_rules ) exp = 2 msg = 'EBS rule and * rule' ).
+        cl_abap_unit_assert=>assert_equals( act = lines( lt_rules ) exp = 2 msg = 'Area rule and * rule' ).
         cl_abap_unit_assert=>assert_equals( act = lt_rules[ 1 ]-rule_id exp = gc_test-rule_any
                                             msg = 'Ordered by rule ID' ).
       CATCH cx_root INTO DATA(lx_error).
@@ -238,18 +239,18 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
     DATA ls_log TYPE zif_ca_ops_types=>ty_alert_log.
     TRY.
         ls_log-alert_id = gc_test-alert_old.
-        ls_log-rule_id  = gc_test-rule_ebs.
+        ls_log-rule_id  = gc_test-rule_first.
         ls_log-sent_at  = gc_test-early.
         INSERT ls_log INTO TABLE lt_log.
         ls_log-alert_id = gc_test-alert_new.
         ls_log-sent_at  = gc_test-late.
         INSERT ls_log INTO TABLE lt_log.
         mo_cut->insert_log( lt_log ).
-        DATA(lt_read) = mo_cut->get_log( iv_rule_id = gc_test-rule_ebs iv_since = gc_test-since ).
+        DATA(lt_read) = mo_cut->get_log( iv_rule_id = gc_test-rule_first iv_since = gc_test-since ).
         cl_abap_unit_assert=>assert_equals( act = lines( lt_read ) exp = 2 msg = 'Both rows inserted' ).
         cl_abap_unit_assert=>assert_equals( act = lt_read[ 1 ]-sent_at exp = gc_test-late msg = 'Newest first' ).
         cl_abap_unit_assert=>assert_initial(
-          act = mo_cut->get_log( iv_rule_id = gc_test-rule_hck iv_since = gc_test-before )
+          act = mo_cut->get_log( iv_rule_id = gc_test-rule_second iv_since = gc_test-before )
           msg = 'Other rule has no log' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
@@ -262,7 +263,7 @@ CLASS ltc_alert_dao_reads IMPLEMENTATION.
     TRY.
         mo_cut->insert_log( VALUE #( ) ).
         cl_abap_unit_assert=>assert_initial(
-          act = mo_cut->get_log( iv_rule_id = gc_test-rule_ebs iv_since = gc_test-before )
+          act = mo_cut->get_log( iv_rule_id = gc_test-rule_first iv_since = gc_test-before )
           msg = 'Nothing written' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).

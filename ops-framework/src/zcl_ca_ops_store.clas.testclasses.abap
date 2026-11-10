@@ -16,8 +16,8 @@
 *&            | newest earlier row inherited.
 *& 2026-11-06 | ltc_store_runs: finish, last run, runs since, findings read (coverage gap closure).
 *& 2026-11-07 | Parameter semantics pinned (blank = default, condensed, get_range) - the same cases
-*&            | as the shared fake ZCL_CD_OPS_PARAMS_MEM.
-*& 2026-11-07 | Parameters over ZCA_PARAM (zcl_ca_ops_param_seed, ZCD_OPS_PARAM no longer doubled); the
+*&            | as the shared fake the former in-memory parameter fake.
+*& 2026-11-07 | Parameters over ZCA_PARAM (zcl_ca_ops_param_seed, the former parameter table no longer doubled); the
 *&            | read semantics (blank, condensed, range) moved to ZCL_CA_OPS_PARAMS's tests; A64 proved
 *&            | through zcl_ca_ops_factory=>GET_PARAMS.
 *& 2026-11-10 | Concurrency review (lost update with the exceptions app): a user who waives an exception
@@ -26,6 +26,7 @@
 *&            | a waiver given while reconcile resolves is never overwritten; every write sets the change
 *&            | stamp. The user's action is simulated by the clock double (the run asks the clock for the
 *&            | stamp right after its read).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_STORE to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 "! Clock double. A user of the exceptions app can act "during" a run: from the hook_from-th to the
 "! hook_to-th call of NOW (the store asks for the write stamp right after its read) the exception
@@ -84,7 +85,7 @@ CLASS ltc_store DEFINITION FINAL FOR TESTING
         key        TYPE zif_ca_ops_types=>ty_object_key VALUE 'S0001/1',
         other_key  TYPE zif_ca_ops_types=>ty_object_key VALUE 'S0009/1',
         check_code TYPE zif_ca_ops_types=>ty_check_code VALUE 'UNMAPPED_BTC',
-        group      TYPE zif_ca_ops_types=>ty_group VALUE 'HCK_A01',
+        group      TYPE zif_ca_ops_types=>ty_group VALUE 'ZT_A01',
         owner      TYPE syuname VALUE 'OPS_OWNER',
         due        TYPE d VALUE '20261110',
         first_seen TYPE timestampl VALUE '20261101060000.0000000',
@@ -828,7 +829,7 @@ CLASS ltc_store_runs IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Rule: a finished run is the last run of its payment engine area, with its status
+  " Rule: a finished run is the last run of its area, with its status
   METHOD finished_run_is_last_run.
     TRY.
         DATA(ls_run) = finished_run( gc_test-variant ).

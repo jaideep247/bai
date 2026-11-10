@@ -5,20 +5,21 @@
 *& disposition and change stamp read) and closes them as resolved with one
 *& ZCA_OPS_EXC_HIST row each - all or nothing: an exception is written only
 *& while it is as read, the history rows only when every exception was
-*& written. Used where an exception is closed by another app's save (PRISM
+*& written. Used where an exception is closed by another app's save (middleware
 *& payment request handled manually). No commit - caller's LUW.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-06 | Webhook key peArea (rename regression fixed); column names in comments.
 *& 2026-11-06 | Performance fix 5: index OBJ is (MANDT, AREA, OBJECT_KEY) - the object type is not known here.
 *& 2026-11-06 | Field symbols: read-only loop work areas as ASSIGNING FIELD-SYMBOL (Performance_Review.md).
-*& 2026-11-07 | Purpose: the EBS release approval is no longer a caller (read-only scope).
+*& 2026-11-07 | Purpose: the release approval is no longer a caller (read-only scope).
 *& 2026-11-10 | Concurrency review: guarded resolve (WHERE key AND disposition AND LAST_CHANGED_AT as read,
 *&            | sy-dbcnt counted) - a half-written closure is never possible: a count short of the exceptions
 *&            | raises 787 before the history insert; LAST_CHANGED_AT set; history inserted accepting duplicate
 *&            | keys with a count check.
+*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_DAO to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - exception repository</p>
+"! <p class="shorttext synchronized">Operations framework - exception repository</p>
 CLASS zcl_ca_ops_exc_dao DEFINITION
   PUBLIC
   FINAL

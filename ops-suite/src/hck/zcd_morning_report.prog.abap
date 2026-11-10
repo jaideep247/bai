@@ -160,7 +160,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD run.
     TRY.
         zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
-                                                iv_pe_area   = zif_cd_ops_types=>gc_pe_area-health_check ).
+                                                iv_area   = zif_cd_ops_types=>gc_pe_area-health_check ).
       CATCH zcx_ca_ops_error INTO DATA(lx_auth).
         " B9: in background the job ends cancelled (Control-M red), never green
         IF sy-batch = abap_true.

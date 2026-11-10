@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_CD_HCK_C_ALERT_HEALTH</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Health check - alert delivery health (ZCD_OPS_ALLOG)</DESCRIPT>
+    <DESCRIPT>Health check - alert delivery health (ZCA_OPS_ALLOG)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

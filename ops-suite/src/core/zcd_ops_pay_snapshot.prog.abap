@@ -62,7 +62,7 @@ CLASS lcl_app IMPLEMENTATION.
   METHOD main.
     TRY.
         zcl_ca_ops_factory=>get_auth( )->check( iv_activity = zif_ca_ops_auth=>gc_activity-execute
-                                                iv_pe_area  = zif_cd_ops_types=>gc_pe_area-core ).
+                                                iv_area  = zif_cd_ops_types=>gc_pe_area-core ).
         DATA(ls_result) = NEW zcl_cd_ops_pay_snapshot( )->run( iv_test_mode = xsdbool( p_test = abap_true )
                                                                is_selection = selection( ) ).
       CATCH zcx_ca_ops_error INTO DATA(lx_ops).

@@ -10,6 +10,7 @@
 *& 2026-11-10 | Concurrency review: find_open returns the stamp read; resolve sets LAST_CHANGED_AT; an
 *&            | exception a user changed after it was read is not resolved and no history row is written
 *&            | (787 - the caller ends the LUW without commit).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_DAO to the reusable framework ZCA_OPS (test include).
 *&---------------------------------------------------------------------*
 CLASS ltc_exc_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

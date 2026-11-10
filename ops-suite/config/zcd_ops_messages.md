@@ -2,44 +2,23 @@
 
 Number ranges: 001–099, 700–799 and 800–849 core · 100–199 and 500–599 EBS · 200–299 and 600–649 FMON · 300–399 and 650–699 HCK · 400–449 configuration apps (RAP).
 Every user-facing text of the suite is one of these messages (built with `ZCL_CD_OPS_UTIL=>TEXT( )`) or a text symbol (`docs/text_elements/`); numbers are referenced through the `gc_msg-*` constants of each area's types interface.
-Create in SE91 exactly as listed (short texts ≤ 73 characters).
+Create in SE91 exactly as listed (short texts ≤ 73 characters). Messages the operations framework raises moved to its class ZCA_OPS with their numbers (2026-11-10, `ops-framework/config/zca_ops_messages.md`); a number listed there is not reused here.
 
 | No. | Text |
 |---|---|
 | 000 | &1 &2 &3 &4 |
-| 001 | Run ID could not be generated |
-| 002 | [&1] run &2 ended &3 / RAG &4 |
-| 003 | [&1][&2] &3 finding(s) - rule &4 |
-| 004 | Run &1 status &2, RAG &3, items &4, |
-| 005 | failed &1, blocked &2. |
-| 006 | &1 more finding(s): see the exceptions app (Fiori ZUI_CA_OPS_EXC). |
-| 007 | Channel &1 not configured or inactive in ZCA_OPS_ALCHN |
-| 008 | Passed on re-run &1 |
 | 010 | Insert into table &1 failed |
 | 011 | Update of table &1 failed |
 | 012 | Read of table &1 failed |
-| 020 | Alert for route &1 could not be sent |
-| 021 | Alert rule &1 has no recipient |
-| 025 | Application log &1/&2 written only in part (&3 of &4 lines) |
-| 026 | E-mail for &1 was not accepted by SAPconnect (BCS send result) |
-| 027 | Alert route &1: &2 is not a shared SO23 distribution list |
 | 030 | Class &1 does not exist |
 | 031 | Class &1 cannot be instantiated as a plug-in |
 | 032 | Class &1 does not implement interface &2 |
 | 033 | Plug-in interface &1 does not exist |
-| 040 | Run for &1 &2 is already active (lock held by &3) |
 | 041 | No authorization for &1 activity &2 |
-| 042 | Lock service failed for &1 &2 (run not started) |
 | 050 | Configuration missing: &1 &2 |
 | 051 | Configuration value &1 for &2 is invalid |
-| 060 | Purge &1: &2 row(s) older than &3 (&4) |
-| 061 | Exception is closed (disposition &1): no further action possible |
 | 062 | A reason is required |
 | 063 | Four-eyes: &1 requested this and cannot approve it |
-| 064 | No waiver request is pending for this exception |
-| 065 | Waiver end date &1 is in the past |
-| 066 | An owner (user) is required |
-| 067 | A waiver request by &1 is already pending |
 | 100 | Code &1 &2 bank &3 flow &4 not mapped in ZBTM: blocked, never suspense |
 | 101 | Category &1 is configured never to post |
 | 102 | Run stopped: &1 consecutive packages above &2 % failures |
@@ -319,12 +298,7 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 397 | held: |
 | 398 | - not held: |
 | 399 | - holds but must not: |
-| 402 | Enter a customizing request: changes in this client are recorded |
-| 403 | Transport request &1 does not exist |
-| 404 | &1 is not a customizing request or customizing task |
-| 405 | Transport request &1 is released or no longer modifiable |
 | 407 | No authorization for &1 of &2 configuration (object ZCD_OPS) |
-| 408 | Changes could not be recorded on transport request &1 |
 | 410 | Class &1 does not exist or does not implement &2 |
 | 411 | Table &1 does not exist in the ABAP dictionary |
 | 412 | Field &1 does not exist in table &2 |
@@ -334,7 +308,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 416 | Rule group &1 has no active rule in ZCD_BTC_RULE |
 | 417 | &1 must be greater than zero |
 | 418 | &1 is not a valid PCRE pattern (matched to the whole value, any case) |
-| 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
 | 420 | &1: each token must be BLANK or one register state character |
 | 421 | &1 is not a finding code of the in-flight check (upper case) |
 | 422 | &1 is required when &2 is '&3' |
@@ -483,7 +456,6 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 739 | Clearing &1: returns lot items with different return reasons (&2) |
 | 740 | NOC lot &1 item &2: NOC reason &3 (INFOF &4) |
 | 741 | No NOC lot item for clearing &1 or payment reference &2 |
-| 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 743 | Pattern &1 is not valid PCRE |
 | 744 | Converted pattern &1 is longer than &2 (&3 characters) - not written |
 | 745 | Pattern migration: &1 converted, &2 refused, &3 unchanged; test mode &4 |
@@ -527,19 +499,8 @@ Create in SE91 exactly as listed (short texts ≤ 73 characters).
 | 783 | Source &1 not judged in &2 runs in a row (limit &3): |
 | 784 | Source &1 stopped by a configuration error (&2 runs) - fix by transport: |
 | 785 | Evidence &1 (&2) could not be read - its purposes are not judged: |
-| 786 | Exception &1 (&2) changed by a user during the run - left for next run |
-| 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |
 | 788 | Open exceptions of request &1 could not be read - record not saved |
-| 800 | Application log &1/&2 not created (BAL_LOG_CREATE return code &3) |
-| 801 | Application log &1/&2 not saved (BAL_DB_SAVE return code &3) |
-| 802 | Alert log ID could not be generated - alert not delivered |
-| 803 | Run &1, job &2 / &3 - exceptions app ZUI_CA_OPS_EXC |
 | 804 | Run &1 &2 aborted by an error: |
-| 805 | Alert dispatch failed for the run of &1: |
-| 806 | E-mail for &1: SAPconnect commit failed (return code &2) |
-| 807 | File &2 not resolved or not valid in logical path / file name &1 (FILE) |
-| 808 | File name &1 not allowed: enter a name only, without a path or .. |
-| 809 | No authorisation to &2 file &1 (S_DATASET) |
 | 810 | File &1 could not be opened or read |
 | 812 | Field &1 of table &2 is not approved for EBS lookups (ZCD_OPS_TABWL) |
 | 813 | No authorisation to display table &1 (S_TABU_NAM 03) |

@@ -27,7 +27,7 @@ class BpTestsTemplateTest(unittest.TestCase):
 
     def test_permission_read_on_root_entity(self):
         self.assertIn('GET PERMISSIONS ONLY GLOBAL AUTHORIZATION ENTITY zr_cd_opscfgall', self.text)
-        self.assertIn("VALUE 'CORE'", self.text)
+        self.assertIn("VALUE 'CD_OPS'", self.text)
 
     def test_every_assertion_has_a_message(self):
         for call in re.findall(r'cl_abap_unit_assert=>assert_\w+\((.*?)\)\.', self.text, re.S):
@@ -38,7 +38,8 @@ class BpTestsTemplateTest(unittest.TestCase):
             self.assertLessEqual(len(name), 30, name)
 
     def test_one_include_per_app(self):
-        names = {rap_generate.bp_tests(app).splitlines()[1] for app in rap_generate.SPEC.values()}
+        names = {rap_generate.localize(rap_generate.bp_tests(app), app).splitlines()[1]
+                 for app in rap_generate.SPEC.values()}
         self.assertEqual(len(names), len(rap_generate.SPEC))
 
 
@@ -61,17 +62,17 @@ class ActivityPerChildTest(unittest.TestCase):
     def test_root_create_needs_01_edit_needs_one(self):
         text = rap_generate.bp_locals(self.app, self.tables)
         for t in self.tables:
-            self.assertIn(f"result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-create )",
+            self.assertIn(f"result-%assoc-_{t['alias']} = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-create )",
                           text)
         self.assertIn('result-%action-Edit = lcl_auth=>edit( ).', text)
-        self.assertIn('->may_edit( gc_pe_area )', text)
-        self.assertIn("VALUE 'HCK'", text)
+        self.assertIn('->may_edit( gc_area )', text)
+        self.assertIn("VALUE 'CD_HCK'", text)
 
     def test_child_change_02_delete_06(self):
         text = rap_generate.bp_locals(self.app, self.tables)
-        self.assertEqual(text.count('result-%update = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-change )'),
+        self.assertEqual(text.count('result-%update = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-change )'),
                          len(self.tables))
-        self.assertEqual(text.count('result-%delete = lcl_auth=>answer( zif_cd_ops_cfg_types=>gc_actvt-delete )'),
+        self.assertEqual(text.count('result-%delete = lcl_auth=>answer( zif_ca_ops_cfg_types=>gc_actvt-delete )'),
                          len(self.tables))
 
     def test_permission_tests_per_activity(self):
@@ -90,16 +91,16 @@ class PcreCheckTemplateTest(unittest.TestCase):
     def test_pcre_check_calls_the_one_helper(self):
         lines = rap_generate.abap_check(self.TABLE, ('pcre', 'pattern'), 'EbsCfgAll')
         text = chr(10).join(lines)
-        self.assertIn('zcl_cd_ops_util=>pcre_valid( ls_row-Pattern ) = abap_false', text)
+        self.assertIn('zcl_ca_ops_util=>pcre_valid( ls_row-Pattern ) = abap_false', text)
         self.assertIn('gc_msg-pattern_invalid', text)
         self.assertIn('element = lif_c=>gc_el-pattern', text)
 
     def test_every_pattern_field_is_validated(self):
         expected = {('ebs', 'zcd_ebs_flow_pat', 'pattern'), ('fmon', 'zcd_fmon_iface', 'name_pattern'),
                     ('hck', 'zcd_job_step', 'jobname'), ('hck', 'zcd_hck_seqout', 'seq_pattern'),
-                    ('core', 'zca_ops_alrule', 'rule_pattern'),
-                    ('core', 'zca_ops_alrule', 'check_pattern'), ('core', 'zca_ops_alrule', 'group1_pattern'),
-                    ('core', 'zca_ops_alrule', 'group2_pattern')}
+                    ('framework', 'zca_ops_alrule', 'rule_pattern'),
+                    ('framework', 'zca_ops_alrule', 'check_pattern'), ('framework', 'zca_ops_alrule', 'group1_pattern'),
+                    ('framework', 'zca_ops_alrule', 'group2_pattern')}
         found = {(mod, t[0], c[1]) for mod, app in rap_generate.SPEC.items() for t in app['tables']
                  for c in t[6] if c[0] == 'pcre'}
         self.assertEqual(found, expected)
@@ -121,7 +122,7 @@ class ConditionalCheckTemplateTest(unittest.TestCase):
 
     def test_when_values_guard_the_checks(self):
         text = self.text(('when', 'kind', 'DURATION', [('required', 'max_minutes'), ('blank', 'due_time')]))
-        self.assertTrue(text.startswith('    IF zcl_cd_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )'))
+        self.assertTrue(text.startswith('    IF zcl_ca_ops_cfg_checks=>in_list( iv_value = CONV #( ls_row-Kind )'))
         self.assertIn('iv_list  = lif_c=>gc_when-probe_kind_duration ) = abap_true.', text)
         self.assertIn('IF ls_row-MaxMinutes IS INITIAL.', text)
         self.assertIn('gc_msg-required v1 = lif_c=>gc_el-maxminutes', text)
@@ -148,7 +149,7 @@ class ConditionalCheckTemplateTest(unittest.TestCase):
 
     def test_form_is_a_whole_value_pcre(self):
         text = self.text(('when', 'kind', 'X', [('form', 'scope', '[DC].{3}')]))
-        self.assertIn('zcl_cd_ops_util=>pcre_match( iv_value   = ls_row-Scope', text)
+        self.assertIn('zcl_ca_ops_util=>pcre_match( iv_value   = ls_row-Scope', text)
         self.assertIn('gc_msg-form_invalid', text)
 
     def test_one_name_two_values_is_refused(self):

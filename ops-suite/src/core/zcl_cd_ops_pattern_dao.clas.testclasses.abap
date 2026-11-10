@@ -258,16 +258,16 @@ CLASS ltc_pattern_dao IMPLEMENTATION.
         go_env->insert_test_data( lt_runs ).
         ls_finding-run_id     = '000000000000000000000000000000E1'.
         ls_finding-finding_no = 1.
-        ls_finding-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_finding-area    = zif_cd_ops_types=>gc_pe_area-health_check.
         ls_finding-object_key = 'HCK_C04/AGE_DAYS/US01'.
         INSERT ls_finding INTO TABLE lt_findings.
         ls_finding-finding_no = 2.
-        ls_finding-pe_area    = zif_cd_ops_types=>gc_pe_area-ebs.
+        ls_finding-area    = zif_cd_ops_types=>gc_pe_area-ebs.
         ls_finding-object_key = 'S0001/1'.
         INSERT ls_finding INTO TABLE lt_findings.
         ls_finding-run_id     = '000000000000000000000000000000E2'.
         ls_finding-finding_no = 1.
-        ls_finding-pe_area    = zif_cd_ops_types=>gc_pe_area-health_check.
+        ls_finding-area    = zif_cd_ops_types=>gc_pe_area-health_check.
         ls_finding-object_key = 'HCK_A01/OLD'.
         INSERT ls_finding INTO TABLE lt_findings.
         go_env->insert_test_data( lt_findings ).

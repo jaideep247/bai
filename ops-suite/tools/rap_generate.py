@@ -282,7 +282,8 @@ def localize(text, app):
     for old, new in (('ZR_CD_', 'ZR_CA_'), ('ZC_CD_', 'ZC_CA_'), ('ZI_CD_', 'ZI_CA_'), ('zr_cd_', 'zr_ca_'),
                      ('zc_cd_', 'zc_ca_'), ('zi_cd_', 'zi_ca_'), ('zbp_r_cd_', 'zbp_r_ca_'),
                      ('lsc_zr_cd_', 'lsc_zr_ca_'), ('zif_cd_ops_cfg_types=>gc_msg', 'zif_ca_ops_cfg_types=>gc_msg'),
-                     ('zif_cd_ops_types=>gc_message_class', 'zif_ca_ops_types=>gc_message_class')):
+                     ('zif_cd_ops_types=>gc_message_class', 'zif_ca_ops_types=>gc_message_class'),
+                     ('ZCL_CD_OPS_CFG_CHECKS', 'ZCL_CA_OPS_CFG_CHECKS')):
         text = text.replace(old, new)
     return text
 
@@ -964,7 +965,7 @@ def bp_locals(app, tables):
           '          ir_create    = REF #( create )',
           '          ir_update    = REF #( update )',
           '          ir_delete    = REF #( delete ) ).',
-          '      CATCH zcx_cd_ops_error INTO DATA(lx_error).',
+          '      CATCH zcx_ca_ops_error INTO DATA(lx_error).',
           '        " A recording client must never keep changes that are not on the request',
           '        RAISE SHORTDUMP lx_error.',
           '    ENDTRY.',

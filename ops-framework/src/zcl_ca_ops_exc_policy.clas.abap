@@ -6,8 +6,9 @@
 *& it by a different user (four-eyes). Pure: no database, no clock, no user.
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
+*& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS.
 *&---------------------------------------------------------------------*
-"! <p class="shorttext synchronized">Operations suite - exception lifecycle rules</p>
+"! <p class="shorttext synchronized">Operations framework - exception lifecycle rules</p>
 CLASS zcl_ca_ops_exc_policy DEFINITION
   PUBLIC
   FINAL
