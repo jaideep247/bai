@@ -2,6 +2,29 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (control register and daily control review)
+
+User decisions 2026-11-10: a daily sign-off per control and business date (who, when, observation); no
+incidents in SAP; statuses derived from the source, never copied; configuration by transport.
+
+### Added
+- Control register `ZCA_OPS_CONTROL` (owner, backup, team, review cut-off, runbook link, sequence),
+  `ZCA_OPS_CTLT` (guidance per language), `ZCA_OPS_CTLCHK` (checks a control covers: area of the findings,
+  `RULE_ID` / `CHECK_CODE` / `GROUP2`, exact value) in the generated app `ZUI_CA_OPS_CFG`; checks on save:
+  owner / backup user (437, `ZIF_CA_OPS_AUTH=>USER_EXISTS`), team (438, `CONTROL_TEAMS`), runbook link (439).
+- Daily control review: sign-off table `ZCA_OPS_REVIEW`; status per business date derived in CDS from the live
+  findings of the date (B / E action required, W watch), awaiting and overdue review; RAP BO
+  `ZR_CA_OpsCtlReview` with action *Mark reviewed* (lock + ETag), DCL by area, service `ZUI_CA_OPS_REV`;
+  `ZCL_CA_OPS_REVIEW_POLICY`, `ZIF_CA_OPS_REVIEW_DAO` / `ZCL_CA_OPS_REVIEW_DAO` (factory / injector slot),
+  `ZIF_CA_OPS_CTL_TYPES`, domain `ZCA_OPS_CTL_STATUS` (translatable status texts); messages 076-080;
+  `docs/CONTROL_REVIEW.md`.
+- Exceptions app: action *Classify* (reason code of an open exception, `ZCA_OPS_FINDING-REASON_CODE`, history
+  action CLASSIFY, message 068), carried forward by the store.
+- Built-in purge target `REVIEW`; parameters `CONTROL_TIME_ZONE`, `CONTROL_TEAMS`, `EXC_REASON_CODES`,
+  `RETENTION_DAYS_REVIEW` (area `CA_OPS`, 15 definitions); name prefixes `CONTROL_` / `EXC_` read in `CA_OPS`.
+- Tests: review policy, review DAO (OSQL), control CDS (`ZCL_CA_OPS_CTL_CDS_TEST`), control field checks,
+  classification policy, review purge.
+
 ## [Unreleased] - 2026-11-10 (alert e-mail templates)
 
 User decisions 2026-11-10: every alert e-mail is an editable template (SAP e-mail templates, object type

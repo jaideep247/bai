@@ -26,7 +26,7 @@ Names to look up in `TADIR` before the first pull (C3) - patterns, `*` = any cha
 | Programs | `ZCA_OPS_RETENTION`, `ZCA_OPS_DEMO` | - |
 | Tables | `ZCA_OPS_*` (8), draft tables `ZCA_D_ALCHN`, `ZCA_D_ALRULE`, `ZCA_D_OPSCFG`, `ZCA_D_PURGE` | `ZCA_PARAM_*` (3), draft tables `ZCA_D_PARAREA`, `ZCA_D_PARDEF`, `ZCA_D_PARVAL` |
 | Domains, data elements | - | `ZCA_PARAM_*` |
-| CDS, behaviour, service, access control | `ZR_CA_*`, `ZC_CA_*`, `ZI_CA_*`, `ZA_CA_*` (e.g. `ZR_CA_ALERTRULE`, `ZA_CA_EXCWAIVER`), `ZUI_CA_OPS_CFG`, `ZUI_CA_OPS_EXC` (+ bindings `*_O4`) | `ZR_CA_PARAM*`, `ZC_CA_PARAM*`, `ZI_CA_PARAM*`, `ZUI_CA_PARAM` (+ binding `*_O4`) |
+| CDS, behaviour, service, access control | `ZR_CA_*`, `ZC_CA_*`, `ZI_CA_*`, `ZA_CA_*` (e.g. `ZR_CA_ALERTRULE`, `ZA_CA_EXCWAIVER`), `ZUI_CA_OPS_CFG`, `ZUI_CA_OPS_EXC`, `ZUI_CA_OPS_REV` (+ bindings `*_O4`); tables `ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT`, `ZCA_OPS_CTLCHK`, `ZCA_OPS_REVIEW`, domain `ZCA_OPS_CTL_STATUS` | `ZR_CA_PARAM*`, `ZC_CA_PARAM*`, `ZI_CA_PARAM*`, `ZUI_CA_PARAM` (+ binding `*_O4`) |
 | Authorisation (SU21 / SU20) | object `ZCA_OPS` | object class `ZCA`, object `ZCA_PARAM`, field `ZCA_PARAR` |
 | Message classes (SE91) | `ZCA_OPS` | `ZCA_PARAM` |
 | Application log (SLG0) | object `ZCA_OPS`, sub-object `ALERT` | - |
@@ -53,8 +53,10 @@ PREFIX, starting folder `/src/`); none needs a consumer.
    tables first, then the rest (V01).
 3. Consumers, each from its own repository, after the framework.
 
-After the pull create in ADT the service bindings `ZUI_CA_OPS_EXC_O4` and `ZUI_CA_OPS_CFG_O4`
-(OData V4 - UI) on the service definitions of the same name, and publish them.
+After the pull create in ADT the service bindings `ZUI_CA_OPS_EXC_O4`, `ZUI_CA_OPS_CFG_O4` and
+`ZUI_CA_OPS_REV_O4` (daily control review, 2026-11-10) (OData V4 - UI) on the service definitions of the same
+name, and publish them. The review app is a Fiori elements list report on `ZUI_CA_OPS_REV_O4` (entity
+`ControlReview`); the control register is maintained in `ZUI_CA_OPS_CFG_O4` (`docs/CONTROL_REVIEW.md`).
 
 ## 2. Authorisation
 
@@ -92,11 +94,12 @@ Users who maintain parameters also need the parameter framework's object `ZCA_PA
 In the parameter app (`ZUI_CA_PARAM_O4`), in the customizing client on a customizing request:
 
 1. Area **`CA_OPS`** (`config/param_areas.csv`, 1 row).
-2. The **11 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
+2. The **15 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
    `ALERT_EXC_APP_LINK`, `ALERT_MAIL_RENDERER`, `ALERT_SECTION_CLASS`, `ALERT_TEMPLATE_DEFAULT`,
-   `ALERT_TIME_ZONE`, `PURGE_PACKAGE_SIZE`, `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_RUN`,
-   `SLA_DAYS_DEFAULT`) exactly as listed - meaning and defaults in `docs/PARAMETERS.md`.
-3. Value rows only where the default does not fit (e.g. `ALERT_DEFAULT` = the SO23 list of the support team).
+   `ALERT_TIME_ZONE`, `CONTROL_TEAMS`, `CONTROL_TIME_ZONE`, `EXC_REASON_CODES`, `PURGE_PACKAGE_SIZE`,
+   `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_REVIEW`, `RETENTION_DAYS_RUN`, `SLA_DAYS_DEFAULT`) exactly as listed - meaning and defaults in `docs/PARAMETERS.md`.
+3. Value rows only where the default does not fit (e.g. `ALERT_DEFAULT` = the SO23 list of the support team,
+   `CONTROL_TIME_ZONE` = the time zone of the business date of the daily control review, e.g. `CST`).
 
 Each consumer then delivers its own names in area `CA_OPS` (`ALERT_<route>`, `SLA_DAYS_<area>_<B|E|W>`,
 retention parameters of its purge targets) from its own seed files.

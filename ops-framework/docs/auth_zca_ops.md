@@ -24,13 +24,20 @@ Permitted activities (SU21 → Activities) — the same activities the first con
 | ACTVT | Meaning | Framework entry points |
 |---|---|---|
 | 01 | Create a configuration row (DV1 only, transport) | configuration apps (create of a child row; editing the singleton) |
-| 02 | Change (configuration row; assign / resolve an exception) | configuration apps, exceptions app `ZUI_CA_OPS_EXC` |
+| 02 | Change (configuration row; assign / resolve / classify an exception; sign off a control) | configuration apps, exceptions app `ZUI_CA_OPS_EXC`, daily control review `ZUI_CA_OPS_REV` (action *Mark reviewed*) |
 | 03 | Display | every app and DCL, ALV reports |
 | 06 | Delete a configuration row (DV1 only, transport) | configuration apps |
 | 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); a consumer's batch programs (its area) |
 | 85 | Approve (second person) | waiver approval in the exceptions app |
 
 Configuration apps (generated, `tools/rap_generate.py` - the framework's app; a consumer's apps by its own wrapper of the same shared generator): each activity is checked on its own per child entity and the area of the app — 01 create, 02 change, 06 delete; editing the singleton needs at least one of them. The framework's app `ZUI_CA_OPS_CFG` (alert rules, alert channels, purge targets) checks area `CA_OPS`.
+
+**Daily control review - activity of the sign-off (decision 2026-11-10).** The sign-off uses the existing change
+activity **02** of the control's area, not a new activity: the reviewer is the operator who already works the
+area's exceptions with 02, so no SU21 change and no new role field are needed; a display role (03) sees the
+review but cannot sign off. A landscape that wants sign-off separated from exception handling adds an activity
+(e.g. a customer activity in TACT) to the object and changes `ZBP_R_CA_OPSCTLREVIEW` - documented here as the
+alternative, not built.
 
 ## 3. Roles (PFCG) — proposal
 
@@ -48,6 +55,7 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 |---|---|---|
 | `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | `( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` |
 | `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | area of the exception (path `_Exception.Area`) |
+| `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | `( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` - the area of the control |
 
 VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58).
 
