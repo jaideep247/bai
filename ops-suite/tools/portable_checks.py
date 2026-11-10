@@ -5,11 +5,20 @@ Evidence of house-rule compliance only - NOT SAP activation, ATC or ABAP Unit
 results (usage checks: tools/usage_checks.py). Writes docs/portable_checks.json, docs/Coverage_Run_Register.csv (one row per class:
 own test include / covered by / exempt, from tools/test_path_register.csv) and
 docs/Changed_Artifacts.csv.  Usage:  python3 tools/portable_checks.py [abaplint-binary]
+
+The checks the suite shares with both frameworks (artefact header, SELECT *, FINAL, test class
+risk / duration, name lengths, method names, PCRE only, no CP / NP) are the shared ones
+(../../tools/abaptools/checks.py and name_checks.py); the list and the suite's own checks are here.
+
+Modification log:
+2026-11-10 | Common checks from the shared tools (tools/abaptools); the suite's list unchanged.
 """
 import csv, json, os, re, subprocess, sys, datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
+sys.path.insert(0, os.path.join(ROOT, '..', 'tools'))
+from abaptools import checks as shared  # noqa: E402
 # COMMIT WORK is the operations framework's (store, e-mail channel): none in the suite (2026-11-10)
 COMMIT_ALLOWED = set()
 
@@ -36,21 +45,17 @@ def check(name, failures, detail):
                    'failures': failures[:50]})
 
 files = list(abap_files())
-hdr, names, short, select_star, fae, bukrs, final, risk, tnames, commits, writes = ([] for _ in range(11))
+names, short, fae, bukrs, tnames, commits, writes = ([] for _ in range(7))
 for f in files:
     rel = os.path.relpath(f, ROOT)
     text = open(f, encoding='utf-8').read()
     code = strip_comments(text)
     base = os.path.basename(f)
-    if not re.search(r'^\*& Artifact: ' + re.escape(base) + r'\s*$', text, re.M):
-        hdr.append(rel)
     if len(obj_name(f)) > 30:
         names.append(rel)
     for m in re.finditer(r'shorttext synchronized">([^<]*)<', text):
         if len(m.group(1)) > 60:
             short.append(f'{rel}: {m.group(1)}')
-    if re.search(r'\bSELECT\s+(SINGLE\s+)?\*', code, re.I):
-        select_star.append(rel)
     for m in re.finditer(r'METHOD\s+([\w~]+)\.(.*?)ENDMETHOD\.', code, re.S | re.I):
         body = m.group(2)
         if re.search(r'FOR\s+ALL\s+ENTRIES', body, re.I) and not re.search(r'IS\s+(NOT\s+)?INITIAL|CHECK\s+\w', body, re.I):
@@ -58,17 +63,6 @@ for f in files:
     # the generated parameter seed holds parameter values (e.g. PURGE_PACKAGE_SIZE 1000), not company codes
     if re.search(r"'1000'", code) and 'testclasses' not in base and base != 'zcl_cd_ops_param_seed.clas.abap':
         bukrs.append(rel)
-    if base.endswith('.clas.abap'):
-        m = re.search(r'CLASS\s+\w+\s+DEFINITION(.*?)\.', code, re.S | re.I)
-        if m and 'PUBLIC' in m.group(1).upper() and 'ABSTRACT' not in m.group(1).upper() \
-                and 'FINAL' not in m.group(1).upper() and not obj_name(f).startswith('zcx_'):
-            final.append(rel)
-    for m in re.finditer(r'CLASS\s+(\w+)\s+DEFINITION([^.]*?)FOR\s+TESTING([^.]*)\.', code, re.S | re.I):
-        tail = (m.group(2) + m.group(3)).upper()
-        if 'ABSTRACT' in tail and 'RISK' not in tail:
-            continue
-        if ('RISK LEVEL' in tail or 'DURATION' in tail) and ('HARMLESS' not in tail or 'SHORT' not in tail):
-            risk.append(f'{rel}: {m.group(1)}')
     tests = re.findall(r'METHODS\s+(\w+)\s+FOR\s+TESTING', code, re.I)
     for t in tests:
         if len(t) > 30:
@@ -81,14 +75,14 @@ for f in files:
     if base.endswith('.prog.abap') and re.search(r'^\s*WRITE\b', code, re.I | re.M):
         writes.append(rel)
 
-check('artifact_header_present', hdr, 'Every ABAP source starts with the Artifact/Purpose/Modification log header.')
+check('artifact_header_present', shared.check_artifact_header(ROOT), 'Every ABAP source starts with the Artifact/Purpose/Modification log header.')
 check('object_names_max_30', names, 'Every object name is 30 characters or fewer.')
 check('short_text_max_60', short, 'Every SE24 short text (ABAP Doc shorttext) is 60 characters or fewer.')
-check('no_select_star', select_star, 'No SELECT * (explicit field lists only).')
+check('no_select_star', shared.check_no_select_star(ROOT), 'No SELECT * (explicit field lists only).')
 check('fae_guarded', fae, 'Every method with FOR ALL ENTRIES checks the driver table for INITIAL first.')
 check('no_hardcoded_company_code', bukrs, "No hard-coded company code '1000' in production code.")
-check('concrete_classes_final', final, 'Every concrete public class is FINAL.')
-check('tests_harmless_short', risk, 'Every test class is RISK LEVEL HARMLESS DURATION SHORT.')
+check('concrete_classes_final', shared.check_final(ROOT), 'Every concrete public class is FINAL.')
+check('tests_harmless_short', shared.check_test_classes(ROOT), 'Every test class is RISK LEVEL HARMLESS DURATION SHORT.')
 check('test_method_names_max_30', tnames, 'Every test method name is 30 characters or fewer.')
 check('commit_only_in_sanctioned_objects', commits, 'COMMIT WORK only in the store (LUW owner) and the e-mail channel (BCS).')
 check('no_write_lists', writes, 'Programs use ALV / HTML output, never WRITE lists.')

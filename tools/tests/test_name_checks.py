@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fixture tests for tools/name_checks.py (portable checks name_lengths and method_names):
+"""Fixture tests for tools/abaptools/name_checks.py (portable checks name_lengths and method_names):
 each case writes a small fixture suite into a temporary folder.
 
-Run:  python3 -m unittest discover -s tools/tests      (from ops-suite/)
+Run:  python3 -m unittest discover -s tools/tests      (from the repository root)
 """
 import os
 import shutil
@@ -10,8 +10,8 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-import name_checks  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from abaptools import name_checks  # noqa: E402
 
 GOOD_CLASS = """CLASS zcl_cd_fixture DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.

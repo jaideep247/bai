@@ -13,7 +13,6 @@ when all tables serialized cleanly (exit 1 and nothing written otherwise). Uncha
 files are never rewritten. --check writes nothing and exits 1 when a file is out of date.
 
 Modification log:
-2026-11-05 | Initial version.
 2026-11-10 | The engine moved to the shared tools (tools/abaptools, one serializer for the suite and
            | both frameworks); settings in config/repository.json; option --check.
 """

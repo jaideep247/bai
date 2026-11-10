@@ -9,7 +9,6 @@ document, its payment engine areas and the table header.
 Usage (from ops-suite/): python3 tools/class_purpose.py [--check]
 
 Modification log:
-2026-11-05 | Initial version.
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); option --check.
 """
 import os

@@ -24,7 +24,6 @@ Shared engine (tools/abaptools); a component's wrapper tools/modernize.py sets i
 --phases: run only these phases (default: all; quickfix only with --abaplint).
 
 Modification log:
-2026-11-06 | Initial version (ops suite).
 2026-11-10 | Moved to the shared tools (tools/abaptools): table renames and the files never rewritten
            | are the profile of the wrapper.
 """

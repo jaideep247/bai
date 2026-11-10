@@ -2,9 +2,10 @@ name: abaplint
 
 on:
   push:
-    paths: ['ops-suite/**', 'param-framework/src/**', '.github/workflows/abaplint.yml']
+    paths: ['ops-suite/**', 'param-framework/src/**', 'ops-framework/**', 'tools/abaptools/**', 'tools/tests/**',
+            '.github/workflows/abaplint.yml']
   pull_request:
-    paths: ['ops-suite/**', 'param-framework/src/**']
+    paths: ['ops-suite/**', 'param-framework/src/**', 'ops-framework/**', 'tools/abaptools/**', 'tools/tests/**']
 
 jobs:
   lint:
@@ -26,6 +27,9 @@ jobs:
       - name: Show versions
         run: abaplint --version && python3 --version
       - name: Generator tests (serializer stages output, never writes partial XML)
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Shared tool tests (tools/abaptools)
+        working-directory: .
         run: python3 -m unittest discover -s tools/tests -v
       - name: ATC-equivalent checks (abaplint.atc.json)
         run: python3 tools/portable_checks.py "$(command -v abaplint)"

@@ -8,7 +8,6 @@ Usage:  python3 tools/abapgit_serialize.py [--check]
 --check writes nothing and exits 1 when a generated file is missing or out of date.
 
 Modification log:
-2026-11-07 | Initial version.
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the wrapper.
 """
 import os

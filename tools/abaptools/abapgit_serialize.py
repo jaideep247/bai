@@ -32,7 +32,6 @@ files are never rewritten.   Usage:  python3 tools/abapgit_serialize.py [--check
 --check writes nothing and exits 1 when a generated file is missing or out of date.
 
 Modification log:
-2026-11-07 | Initial version (parameter framework).
 2026-11-10 | Operations framework: message rows without a constant column, programs, text pools.
 2026-11-10 | One engine for every component (tools/abaptools): message columns, .abapgit.xml path and
            | IGNORE list, secondary indexes and message truncation are settings; output unchanged.

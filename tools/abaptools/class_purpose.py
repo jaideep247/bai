@@ -11,7 +11,6 @@ Usage (from the component folder): python3 tools/class_purpose.py [--check]
 --check writes nothing and exits 1 when the table is out of date.
 
 Modification log:
-2026-11-05 | Initial version (ops suite).
 2026-11-10 | Moved to the shared tools (tools/abaptools): document, area map and header are the
            | wrapper's; option --check.
 """

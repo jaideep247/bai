@@ -1,14 +1,16 @@
 # Quality gate of the operations framework ZCA_OPS. The framework lives in the folder
 # ops-framework/ of the repository jaideep247/bai; copy this file to
 # .github/workflows/ops-framework-abaplint.yml there (paths filter below). Its abaplint.json
-# reads ../param-framework/src as a dependency, so both folders are checked out.
+# reads ../param-framework/src as a dependency and its tools call the shared engines in
+# ../tools/abaptools, so the three folders are checked out.
 name: ops-framework
 
 on:
   push:
-    paths: ['ops-framework/**', 'param-framework/**', '.github/workflows/ops-framework-abaplint.yml']
+    paths: ['ops-framework/**', 'param-framework/**', 'tools/abaptools/**', 'tools/tests/**',
+            '.github/workflows/ops-framework-abaplint.yml']
   pull_request:
-    paths: ['ops-framework/**', 'param-framework/**']
+    paths: ['ops-framework/**', 'param-framework/**', 'tools/abaptools/**', 'tools/tests/**']
 
 jobs:
   lint:
@@ -30,7 +32,12 @@ jobs:
         run: abaplint abaplint.json
       - name: abapGit metadata up to date
         run: python3 tools/abapgit_serialize.py --check
+      - name: Generated parameter seed and configuration app up to date
+        run: python3 tools/param_definitions.py --check && python3 tools/rap_generate.py --check
       - name: House checks
         run: python3 tools/checks.py
       - name: Tool tests
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Shared tool tests (tools/abaptools)
+        working-directory: .
         run: python3 -m unittest discover -s tools/tests -v

@@ -2,9 +2,9 @@ name: param-framework
 
 on:
   push:
-    paths: ['param-framework/**', '.github/workflows/param-framework-abaplint.yml']
+    paths: ['param-framework/**', 'tools/abaptools/**', 'tools/tests/**', '.github/workflows/param-framework-abaplint.yml']
   pull_request:
-    paths: ['param-framework/**']
+    paths: ['param-framework/**', 'tools/abaptools/**', 'tools/tests/**']
 
 jobs:
   lint:
@@ -29,4 +29,7 @@ jobs:
       - name: House checks
         run: python3 tools/checks.py
       - name: Tool tests
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Shared tool tests (tools/abaptools)
+        working-directory: .
         run: python3 -m unittest discover -s tools/tests -v

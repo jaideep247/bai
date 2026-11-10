@@ -1,11 +1,11 @@
-"""Fixture tests for the no_cp_patterns portable check (tools/name_checks.py)."""
+"""Fixture tests for the no_cp_patterns portable check (tools/abaptools/name_checks.py)."""
 import os
 import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-import name_checks  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from abaptools import name_checks  # noqa: E402
 
 
 class NoCpPatternsTest(unittest.TestCase):

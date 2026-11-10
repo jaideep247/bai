@@ -30,7 +30,7 @@ Permitted activities (SU21 → Activities) — the same activities the first con
 | 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); a consumer's batch programs (its area) |
 | 85 | Approve (second person) | waiver approval in the exceptions app |
 
-Configuration apps (generated, `ops-suite/tools/rap_generate.py`): each activity is checked on its own per child entity and the area of the app — 01 create, 02 change, 06 delete; editing the singleton needs at least one of them. The framework's app `ZUI_CA_OPS_CFG` (alert rules, alert channels, purge targets) checks area `CA_OPS`.
+Configuration apps (generated, `tools/rap_generate.py` - the framework's app; a consumer's apps by its own wrapper of the same shared generator): each activity is checked on its own per child entity and the area of the app — 01 create, 02 change, 06 delete; editing the singleton needs at least one of them. The framework's app `ZUI_CA_OPS_CFG` (alert rules, alert channels, purge targets) checks area `CA_OPS`.
 
 ## 3. Roles (PFCG) — proposal
 
@@ -40,7 +40,7 @@ Configuration apps (generated, `ops-suite/tools/rap_generate.py`): each activity
 | `Z_CA_OPS_BATCH` (job user) | `CA_OPS` + the consumer areas it runs | 16 | * |
 | `Z_CA_OPS_CONFIG` (configuration owner of the framework) | `CA_OPS` | 01, 02, 03, 06 | * |
 
-A consumer adds its own roles with its areas (the payment engine suite: `ops-suite/config/auth_zcd_ops.md`). Segregation of duties: the operator (02) and the approver (85) of an area are different users; the exceptions app also refuses an approval by the requester (four-eyes).
+A consumer adds its own roles with its areas (in its own authorisation sheet; the demo consumer: area `CA_DEMO`, `docs/INSTALL.md`). Segregation of duties: the operator (02) and the approver (85) of an area are different users; the exceptions app also refuses an approval by the requester (four-eyes).
 
 ## 3a. Read access (DCL)
 
@@ -53,6 +53,6 @@ VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58).
 
 ## 3b. Checks offline
 
-`ops-suite/tools/auth_checks.py` (portable check `auth_fields_defined`) reads §1 and §2 of this sheet and fails when an `AUTHORITY-CHECK` on `ZCA_OPS` (`zif_ca_ops_auth=>gc_object`) or a `pfcg_auth( ZCA_OPS, … )` in the framework or the suite names a field the sheet does not define. A wrong field name makes every kernel check fail (sy-subrc 12) and every DCL deny.
+A consumer's offline check may read §1 and §2 of this sheet and fail when an `AUTHORITY-CHECK` on `ZCA_OPS` (`zif_ca_ops_auth=>gc_object`) or a `pfcg_auth( ZCA_OPS, … )` in the framework or the consumer names a field the sheet does not define (the first consumer has such a check, `auth_fields_defined`). A wrong field name makes every kernel check fail (sy-subrc 12) and every DCL deny.
 
 **S_DATASET.** `ZCL_CA_OPS_FILE_PATH=>PHYSICAL` resolves application server files only through a logical path of transaction FILE named by the consumer and checks `S_DATASET` (`AUTHORITY_CHECK_DATASET`, READ / WRITE). **S_TABU_NAM.** `ZIF_CA_OPS_AUTH=>MAY_READ_TABLE` checks display (03) of every table a consumer reads by a configured name.

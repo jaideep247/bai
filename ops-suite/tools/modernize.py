@@ -11,7 +11,6 @@ Usage (from ops-suite/):
                              [--phases tables,exceptions,naming,quickfix]
 
 Modification log:
-2026-11-06 | Initial version.
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the suite's profile.
 """
 import os

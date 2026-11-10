@@ -31,10 +31,11 @@ maps every finding to the mechanism that prevents it.
 
 ## Consumers
 
-The operations framework ZCA_OPS (`ops-framework/`) is installed after this framework and needs release
-1.1.0 or later: its areas are parameter areas of `ZCA_PARAM_AREA` (one area register) and its
-authorisation object `ZCA_OPS` uses the object class `ZCA` and the field `ZCA_PARAR` defined here.
-Install order **ZCA_PARAM -> ZCA_OPS -> consumer** (e.g. the payment engine suite, `ops-suite/`).
+The operations framework ZCA_OPS (its own component, shipped next to this one) is installed after this
+framework and needs release 1.1.0 or later: its areas are parameter areas of `ZCA_PARAM_AREA` (one area
+register) and its authorisation object `ZCA_OPS` uses the object class `ZCA` and the field `ZCA_PARAR`
+defined here. Install order **ZCA_PARAM -> ZCA_OPS -> consumer**. This component needs neither: it
+depends on SAP standard only (check `packaging` of `tools/checks.py`).
 
 ## Install with abapGit
 

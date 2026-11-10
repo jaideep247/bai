@@ -152,8 +152,8 @@ operations suite, `ZIF_CD_OPS_PARAMS`) keeps its callers and adds one adapter cl
 ### 6a. Seed files (delivered areas, definitions and example values)
 
 The framework itself delivers no data; a consumer delivers its areas and definitions as
-seed files next to its code (the operations suite: `ops-suite/config/param_areas.csv`,
-`param_definitions.csv`, `param_values.csv`) and enters them in the app in the customizing
+seed files next to its code (e.g. `config/param_areas.csv`, `config/param_definitions.csv`,
+`config/param_values.csv` of the consumer's component) and enters them in the app in the customizing
 client on a customizing request (no SM30, no direct table load). Format - UTF-8 CSV, header
 row exactly as below, one row per table row, flags `X` or blank, a field with a comma in
 double quotes:
