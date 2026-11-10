@@ -48,4 +48,4 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 - The table of SAP's Stripe refund call: key back to the request (FIN number / payment intent), status field, success / failure values, time stamp (question 4) - the one anti-join read of COLL_R3_REFUND in its data access class (OSQL test).
 - Limits: hours allowed for R2 and R3 (question 5) and the time-stamp field each limit counts from. Decision D-PO3 (approved 2026-11-10): limits in hours are checked by the check classes ZCL_CD_COLL_C_NO_ANSWER (R2) and ZCL_CD_COLL_C_REFUND (R3), not by no-code rows (they count days).
 - Index of the status table that starts with the status field (and the company-code field) for R1, R4 and R2 (docs/VERIFY.md of the framework, V48).
-- Area CD_COLL in ZCA_PARAM_AREA, role Z_CD_OPS_COLL (config/auth_zcd_ops.md), SO23 list of rule COLL_LIFE, owner and backup of the process in DV1.
+- Area CD_COLL in ZCA_PARAM_AREA, role Z_CD_OPS_COLL (config/auth_zcd_ops.md; display of CD_COLL is already in business role ZCD_OPS_PROD_SUPPORT since 2026-11-10), SO23 list of rule COLL_LIFE, owner and backup of the process in DV1.
