@@ -33,6 +33,11 @@ and the channel refuses the route before anything is sent if a list was deleted 
 
 ## ZCA_OPS_ALRULE
 
+**Rules of business processes (process onboarding, 2026-11-10)** are seed rows of `config/alert_rules.csv` (the
+columns of `ZCA_OPS_ALRULE`, written by `tools/abaptools/new_process.py`): one rule per process, area of the process,
+`GROUP1_PATTERN` = the process ID (the framework's runner stamps GROUP1 = process). Delivered: `COLL_LIFE`
+(process `CD_COLL` / `BASE_REQ_LIFE`, inactive, ‹SO23 list›; `config/control_seed.md` §2b).
+
 RULE / CHECK / GROUP1 / GROUP2 patterns are **PCRE matched to the complete value, case ignored** (blank = any;
 user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKED` = exactly that code. The
 configuration app refuses a pattern that does not compile (message 418); check what a pattern captures with

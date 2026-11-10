@@ -94,6 +94,7 @@ ZCL_CD_HCK_C_ALERT_HEALTH,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_APPLOG,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CHQ_STATUS,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_CONFIG_DRIFT,own test include,,6,90,,Not run in target SAP
+ZCL_CD_HCK_C_FRAMEWORK,own test include,,4,90,,Not run in target SAP
 ZCL_CD_HCK_C_GENERIC_AGG,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_GL_TRANSFER,own test include,,5,90,,Not run in target SAP
 ZCL_CD_HCK_C_INFLIGHT,own test include,,61,90,,Not run in target SAP

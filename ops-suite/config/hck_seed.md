@@ -88,6 +88,7 @@ uncapped count.
 | D_CONFIG_DRIFT | Customizing drift vs golden baseline | D | ZCL_CD_HCK_C_CONFIG_DRIFT | X | 90 | M | | | | 120 |
 | D_PARAM_INVALID | Parameters ZCA_PARAM refuses (areas CD_OPS / CD_EBS / CD_FMON / CD_HCK) | D | ZCL_CD_HCK_C_PARAM | X | 95 | H | | | | 60 |
 | D_POSTAREA_INVALID | Entries of the posting areas ZRSN / ZPMC / ZBTM / ZBTR the suite cannot use (2026-11-08) | D | ZCL_CD_HCK_C_POSTAREA | X | 96 | H | | | | 60 |
+| D_PROC_ONBOARD | Registered business processes integrated end to end (process onboarding, 2026-11-10) | D | ZCL_CD_HCK_C_FRAMEWORK | X | 97 | M | `ZCL_CA_OPS_CHK_ONBOARD` | | | 60 |
 | E_JOBS | Cancelled, long-running and late jobs | E | ZCL_CD_HCK_C_TECH_JOBS | X | 100 | H | `ZCD_.*` | `120` (min) | `30` (grace min) | 60 |
 | E_SYSTEM | Short dumps, update errors, locks | E | ZCL_CD_HCK_C_TECH_SYS | X | 110 | M | | | | 60 |
 | E_ALERT_DELIVERY | Alert delivery health (failed / throttled) | E | ZCL_CD_HCK_C_ALERT_HEALTH | X | 120 | M | `24` (hours) | | | 60 |
@@ -106,6 +107,13 @@ uncapped count.
 `E_QUEUES` PARAM4 = bgRFC source (blank = bgRFC not monitored, information finding): `TABLE=<bgRFC unit / error table, VERIFY in SE11 / SBGRFCMON>;NAME=<queue or destination field>;DEST=<destination field>;STATE=<state field, omit = every row is an error>;DATE=<DATS field>;TIME=<TIMS field>` (≤ 100 characters) plus a `ZCD_OPS_TABWL` row HCK / READ for that table. The qRFC sources TRFCQOUT / TRFCQIN are delivered (field names VERIFY-DDIC, constants of `ZIF_CD_HCK_RUNTIME_TYPES`).
 
 `A_PRQ_NOT_PAID` (2026-11-08) has no PARAM1-4: it reads the request rows of the payment worklist (`ZCD_PAY_OUTCOME`, payment document blank) due before today - one finding per source + stage + due date, severity **E: RED from the morning after the due date** (threshold row `PRQ_NOT_PAID` `*` 1 / 1), examples `PAYOUT_EXAMPLES`, row cap `HCK_INFLIGHT_MAX_ROWS`. The due date (requested payment date, cut-off `PAYOUT_REQ_CUTOFF` per source, default `*=190000` in `FMON_TIME_ZONE`, next business day of the `A_INFLIGHT` PARAM1 calendar) and the stage are decided by the snapshot (`ZIF_CD_OPS_PAY_REQUEST`); a request cancelled after SUCCESS follows the cancellation rule of `C_PRQ_CANCEL` PARAM2. Alerts: the existing rule `HCK_RED` (E findings of a red check) - no own rule.
+`D_PROC_ONBOARD` (2026-11-10, process onboarding) runs the framework's onboarding check through the adapter
+`ZCL_CD_HCK_C_FRAMEWORK` (PARAM1 = a class implementing `ZIF_CA_OPS_CHECK`, PARAM2 = area of the framework
+registry rows it reads, blank = CD_HCK): every active process of `ZCA_OPS_PROC` without an active check
+(error), a check without control, an area without alert rule, an owner who is not a user, own tables without
+purge target, or no role / an inactive area (warnings) - findings in area CD_HCK, object key `<area>/<process>`.
+In this landscape the framework's own registry row `CA_OPS` / `ONBOARDING` stays inactive (one report of each
+gap, here in the morning report). No threshold row (findings, no metrics); alerts by `HCK_RED` (E findings).
 `HCK_SELF` (health of the health check) is built in — no row needed.
 
 **Known-table checks (USAA reference, `docs/USAA_Known_Tables.md`).** Confirmed: `ZZ_STATUS` with `SUCCESS` (never the highest `COUNTER`), `SOURCE`, `ZCD_SPE_EXCP_LOG` needed for every failure, `ZECT_STATUS` 3 / 4 / 9 terminal and 10 → 9 allowed, `DFKKOP-ZZ_FIN_TRANS_NUM`. Every `‹SE11›` name is validated against the DDIC at run time — a wrong name gives a `PLUGIN_ERROR` (message 304), never a wrong count. `AUGDT` (clearing date) on DFKKOP: VERIFY-SE11. Each value query is limited by its `DATE` field (message 323) and by `ROWS` (default 50 000).

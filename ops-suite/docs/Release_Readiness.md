@@ -137,6 +137,30 @@ inactive and P7 partial, each with the exact SE11 / business question (`config/c
 Found and fixed on the way: `ZCL_CD_HCK_DAO->GET_OVERDUE_EXCEPTIONS` selected `AREA` into a structure whose component
 is `PE_AREA` (CORRESPONDING by name left the area blank; now `AREA AS PE_AREA`).
 
+## Process onboarding (2026-11-10)
+
+A new business process is added through the operations framework (`ops-framework/docs/ADDING_A_BUSINESS_PROCESS.md`):
+own area, process and check registry rows (no-code aggregate rows or one class implementing `ZIF_CA_OPS_CHECK`), a
+control, an alert rule; the framework runs it (`ZCA_OPS_CHECK_RUN`) and shows it in the exceptions app, the daily
+review and the area dashboard `ZUI_CA_OPS_DASH` with freshness. The suite adopts the contract through the adapter
+`ZCL_CD_HCK_C_FRAMEWORK` (HCK row `D_PROC_ONBOARD`: the framework's onboarding check in the morning report) and the
+portable check `process_onboarding`. Worked example delivered **inactive** with placeholders: collections request
+lifecycle `CD_COLL` / `BASE_REQ_LIFE` (P2, `config/control_seed.md` §2b). Nothing activated, no ABAP Unit run.
+
+| Gate | Evidence |
+|---|---|
+| Gate 1 (DV1) | `ops-framework/docs/VERIFY.md` V46-V54; suite V55 (below); ABAP Unit of `ZCL_CD_HCK_C_FRAMEWORK` (4 tests) |
+| Before P2 is activated | suite V56 (below); `docs/processes/CD_COLL_BASE_REQ_LIFE.md` VERIFY list |
+
+**Suite VERIFY items (numbers continue after the framework's V54; never reused).**
+- **V55 (DV1):** the morning report with row `D_PROC_ONBOARD` (`ZCL_CD_HCK_C_FRAMEWORK`, PARAM1 `ZCL_CA_OPS_CHK_ONBOARD`): with no active registered process the check is green with no finding; a test process without alert rule gives one `PROC_NO_ALERT_RULE` finding in area CD_HCK (GROUP2 `D_PROC_ONBOARD`) and the next run after the rule is added resolves it; the framework registry row `CA_OPS` / `ONBOARDING` is inactive in this landscape.
+- **V56 (VERIFY-SE11 / business, before activating P2):** the six questions of `config/control_seed.md` §2a P2 answered; the placeholders of `config/processes/CD_COLL_BASE_REQ_LIFE.json` replaced and the scaffold run; area `CD_COLL`, role `Z_CD_OPS_COLL`, SO23 list of rule `COLL_LIFE`; index of the status table (framework V48); `ZCL_CD_COLL_C_REFUND` and its data access class written with an OSQL test.
+
+**Decisions for the user (D-PO1 ... D-PO3).**
+- **D-PO1 Own area per process.** `CD_COLL` proposed for the collections request lifecycle (runs in `CD_HCK` would be the morning report's "last run" and mask a missing report); alternative: keep P2 in the morning report as HCK rows (`ZCD_HCK_AGG` / adapter rows) - not built.
+- **D-PO2 Onboarding check in the morning report** (`D_PROC_ONBOARD`) instead of the framework job `CA_OPS` / `MORNING`; the other is left inactive (one report per gap).
+- **D-PO3 R2 / R3 limits in hours.** The no-code aggregate works in days; hours need the check class (or a later time-stamp field of the framework's aggregate rows).
+
 ## Control center (2026-11-10)
 
 Daily controls with sign-off (framework `ZCA_OPS`: control register, review app `ZUI_CA_OPS_REV`, exception classification), payment lifecycle, open reconciliation variances and the business date on the overview page (`Dashboard_Production_Support.md` §1a). Nothing activated, no ABAP Unit run.

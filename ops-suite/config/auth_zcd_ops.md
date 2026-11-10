@@ -9,6 +9,8 @@
 
 The areas are parameter areas of ZCA_PARAM (`config/param_areas.csv`, one area register): `CD_EBS` EBS validation · `CD_FMON` file monitoring · `CD_HCK` health check / morning report · `CD_OPS` cross-area objects of the suite (payment worklist and trace, transactions dashboard, approved tables). The framework's own objects (alert rules and channels, purge targets, retention purge `ZCA_OPS_RETENTION`) use area `CA_OPS`. Before 2026-11-10 the values were `EBS`, `FMON`, `HCK`, `CORE`.
 
+**Business processes onboarded through the framework (process onboarding, 2026-11-10).** A process monitored by the framework's check registry gets its **own area** (its runs would otherwise be the "last run" of an engine's area, e.g. the morning report's self-check of `CD_HCK`): proposal `CD_COLL` - collections payment request lifecycle (BASE), process `BASE_REQ_LIFE` (`config/process_register.csv`, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). The area is created in ZCA_PARAM and added to the roles below **when the process is activated** (P2 open, `config/control_seed.md` §2a); until then nothing is delivered for it.
+
 ## 2. Activities used by the suite
 
 The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: record a PRISM status event), 02 change, 03 display, 06 delete, 16 execute, 85 approve - see `ops-framework/docs/auth_zca_ops.md` §2. `BUKRS` keeps restricting objects with a company code (statement, open item, threshold row); area-wide checks pass it as `DUMMY`.
@@ -23,6 +25,7 @@ The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: 
 | `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK | 03, 85 | own company codes |
 | `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | CD_FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
+| `Z_CD_OPS_COLL` (collections operations - process `BASE_REQ_LIFE`, proposal, created on activation of P2) | CD_COLL | 02, 03 (job user: `Z_CD_OPS_BATCH` gets CD_COLL 16) | own company codes |
 
 Segregation of duties: the operator (02) and the approver (85) of a payment engine area and company code are different users; the apps additionally refuse an approval by the requester (four-eyes).
 

@@ -12,6 +12,7 @@ risk / duration, name lengths, method names, PCRE only, no CP / NP) are the shar
 
 Modification log:
 2026-11-10 | Common checks from the shared tools (tools/abaptools); the suite's list unchanged.
+2026-11-10 | process_onboarding (process onboarding of the operations framework: registered processes complete).
 """
 import csv, json, os, re, subprocess, sys, datetime
 
@@ -176,6 +177,17 @@ import cds_abap_parity  # noqa: E402
 check('cds_abap_parity', cds_abap_parity.failures(ROOT),
       f'{len(cds_abap_parity.PAIRS)} CDS literal(s) / ABAP constant pairs agree (XBLNR rule, dashboard date '
       'windows, credit indicator, reversal reason, completed run statuses, stale thresholds).')
+
+# Process onboarding (2026-11-10): every registered business process of config/ is integrated end to end
+from abaptools import onboarding  # noqa: E402
+check('process_onboarding',
+      onboarding.failures(ROOT, auth_docs=('config/auth_zcd_ops.md',),
+                          source_roots=('src', os.path.join('..', 'ops-framework', 'src')),
+                          extra_roots=(os.path.join(ROOT, '..', 'ops-framework'),)),
+      'Every registered business process (config/process_register.csv) has checks, a control covering each '
+      'check (GROUP2), an alert rule of its area, an owner (or an owner team in its document), purge coverage '
+      'and a role of config/auth_zcd_ops.md; no active row carries a placeholder or VERIFY marker; aggregate '
+      'rows read approved tables (tools/abaptools/onboarding.py).')
 
 lint_bin = sys.argv[1] if len(sys.argv) > 1 else None
 lint_detail, lint_failures = 'abaplint not run (no binary given)', ['not run']

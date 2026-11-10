@@ -4,10 +4,10 @@
     "purpose": "Portable consistency evidence; not SAP activation, ATC, runtime or coverage",
     "generated": "2026-11-10"
   },
-  "passed": 28,
-  "total": 28,
-  "abap_files": 349,
-  "declared_unit_methods": 1530,
+  "passed": 29,
+  "total": 29,
+  "abap_files": 351,
+  "declared_unit_methods": 1534,
   "measured_coverage": null,
   "checks": [
     {
@@ -167,15 +167,21 @@
       "failures": []
     },
     {
+      "name": "process_onboarding",
+      "passed": true,
+      "detail": "Every registered business process (config/process_register.csv) has checks, a control covering each check (GROUP2), an alert rule of its area, an owner (or an owner team in its document), purge coverage and a role of config/auth_zcd_ops.md; no active row carries a placeholder or VERIFY marker; aggregate rows read approved tables (tools/abaptools/onboarding.py).",
+      "failures": []
+    },
+    {
       "name": "abaplint_clean",
       "passed": true,
-      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 349 files.",
+      "detail": "abaplint (v758 syntax, SAP stubs from abaplint/deps): 0 issue(s) over 351 files.",
       "failures": []
     },
     {
       "name": "atc_equivalent_clean",
       "passed": true,
-      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1185 file(s), 3 documented exemption(s).",
+      "detail": "ATC-equivalent abaplint rule set: 3 finding(s) over 1188 file(s), 3 documented exemption(s).",
       "failures": []
     }
   ]
