@@ -38,9 +38,10 @@ checks R1-R4, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). Same shape as `Z_CD_OP
 | Launchpad | business catalog `ZCD_OPS_BC_COLL` (tiles *Owned exceptions* filtered to area `CD_COLL`, *Area dashboard*), page *Exceptions* and *Overview* of space *Production Support* | entry points |
 
 Not in the role (by design): `85` (waiver approval - `Z_CD_OPS_APPROVER` with `CD_COLL`, another person), `16` (the check run -
-job user `Z_CD_OPS_BATCH`), `01` / `06` (configuration - `Z_CD_OPS_CONFIG`, DV1 only), and the sign-off of the control
-*Base-rejected items* (`BASE_REJECTS` belongs to area `CD_HCK`, so it is signed off with `CD_HCK` 02 by the shift reviewer;
-moving the control to `CD_COLL` would let this team sign it off - not done). No business-table authorisation: the checks only
+job user `Z_CD_OPS_BATCH`), `01` / `06` (configuration - `Z_CD_OPS_CONFIG`, DV1 only). **Sign-off:** the control
+*Base-rejected items* (`BASE_REJECTS`) belongs to area `CD_COLL` (moved from `CD_HCK` 2026-11-10, user decision), so this
+team signs it off in the daily control review with its `CD_COLL` 02 (per company-code slice, D-CC5); the shift
+reviewers (`ZCD_OPS_REVIEWER`) sign it off only if their role also carries `CD_COLL` 02. No business-table authorisation: the checks only
 read (`ZCA_OPS_TABWL` approved tables, `S_TABU_NAM` 03 of the job user). Delivery: the PFCG roles are created with the values
 above when P2 is activated (area `CD_COLL` in `ZCA_PARAM_AREA` first); display of `CD_COLL` is already in business role
 `ZCD_OPS_PROD_SUPPORT` (`docs/Dashboard_Production_Support.md` §4). Test: QA1 case OVP-16 plus the two-user script

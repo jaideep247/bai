@@ -12,10 +12,10 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 
 | Check | Kind | Schedule group | Company-code aware | Covered by control |
 |---|---|---|---|---|
-| `COLL_R1_PENDING` | aggregate (no code) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
-| `COLL_R2_SCHEDULED` | class `ZCL_CD_COLL_C_NO_ANSWER` (limit in hours, D-PO3) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
-| `COLL_R3_REFUND` | class `ZCL_CD_COLL_C_REFUND` | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
-| `COLL_R4_SRCPOSTED` | aggregate (no code) | DAILY | X | `CD_HCK` / `BASE_REJECTS` |
+| `COLL_R1_PENDING` | aggregate (no code) | DAILY | X | `CD_COLL` / `BASE_REJECTS` |
+| `COLL_R2_SCHEDULED` | class `ZCL_CD_COLL_C_NO_ANSWER` (limit in hours, D-PO3) | DAILY | X | `CD_COLL` / `BASE_REJECTS` |
+| `COLL_R3_REFUND` | class `ZCL_CD_COLL_C_REFUND` | DAILY | X | `CD_COLL` / `BASE_REJECTS` |
+| `COLL_R4_SRCPOSTED` | aggregate (no code) | DAILY | X | `CD_COLL` / `BASE_REJECTS` |
 
 | Aggregate | Table | Function | Status | Limits amber / red |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@ Role (PFCG, ZCA_OPS for the area): `Z_CD_OPS_COLL`
 | Run | job `ZCA_OPS_CHECK_RUN` with `P_AREA` = `CD_COLL`, `P_GROUP` = `DAILY`, test mode off (job user: ZCA_OPS 16 for `CD_COLL`) |
 | Findings and exceptions | app `ZUI_CA_OPS_EXC`, area `CD_COLL`, GROUP1 = `BASE_REQ_LIFE`, GROUP2 = check |
 | Alerts | rule `COLL_LIFE` (area `CD_COLL`, GROUP1 `BASE_REQ_LIFE`, severity E or worse) to `‹SO23 list - confirm›` |
-| Daily review | control `BASE_REJECTS` (`ZUI_CA_OPS_REV`) |
+| Daily review | control `CD_COLL` / `BASE_REJECTS` (`ZUI_CA_OPS_REV`), signed off by the collections operations team (`Z_CD_OPS_COLL`, CD_COLL 02) |
 | Dashboard and freshness | app `ZUI_CA_OPS_DASH`, area `CD_COLL`; stale after `CHECK_STALE_MIN_CD_COLL` (else `CHECK_STALE_MIN_DEFAULT`) minutes |
 | Purge | findings only: purged with their runs (built-in target RUN) |
 | Morning completeness | `ZCL_CA_OPS_CHK_ONBOARD` reports a missing piece of this process |

@@ -232,7 +232,7 @@ reads a business table until the questions of §2a are answered.
 ```json
 { "area": "CD_COLL", "process": "BASE_REQ_LIFE", "name": "Collections payment request lifecycle (BASE)",
   "auth_role": "Z_CD_OPS_COLL", "schedule_group": "DAILY", "active": false,
-  "control": {"area": "CD_HCK", "id": "BASE_REJECTS", "create": false},
+  "control": {"area": "CD_COLL", "id": "BASE_REJECTS", "create": false},
   "alert_rule": {"id": "COLL_LIFE", "min_severity": "E", "destination": "‹SO23 list - confirm›"},
   "checks": [
     {"id": "COLL_R1_PENDING", "bukrs_aware": true,

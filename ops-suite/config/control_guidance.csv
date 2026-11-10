@@ -1,7 +1,7 @@
 LANGU,AREA,CONTROL_ID,GUIDANCE
 E,CD_FMON,PAYMENT_FILES,"Confirm every expected payment file was generated, sent and accepted; for a missing, late or rejected file record the interface, the run and the next action."
 E,CD_HCK,CLEARING_JOB,Confirm the clearing job cycle finished in its window without cancelled steps; for a late or cancelled step record the job and whether a restart is safe.
-E,CD_HCK,BASE_REJECTS,"Review rejected Base items and record the reason, affected count, and next action. Group by rejection reason and verify a retry is safe before execution."
+E,CD_COLL,BASE_REJECTS,"Review payment requests BASE rejected after SCHEDULED: every premium already collected through Stripe must show a successful refund. Record the reason, affected count and next action; refunds and retries stay with the existing SAP procedures."
 E,CD_HCK,ECT_PENDING,"Review ECT items still pending and their age; record the oldest item, the count and who follows up."
 E,CD_FMON,OUTBOUND_IFACE,Confirm the outbound files reached the gateway and were delivered; record any file still queued or failed and the next action.
 E,CD_HCK,BLACKLINE,Confirm the reconciliation keys of the day reached the G/L for the BlackLine extract; record missing keys and the follow-up.
