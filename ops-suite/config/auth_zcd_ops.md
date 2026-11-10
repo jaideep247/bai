@@ -9,7 +9,7 @@
 
 The areas are parameter areas of ZCA_PARAM (`config/param_areas.csv`, one area register): `CD_EBS` EBS validation · `CD_FMON` file monitoring · `CD_HCK` health check / morning report · `CD_OPS` cross-area objects of the suite (payment worklist and trace, transactions dashboard, approved tables). The framework's own objects (alert rules and channels, purge targets, retention purge `ZCA_OPS_RETENTION`) use area `CA_OPS`. Before 2026-11-10 the values were `EBS`, `FMON`, `HCK`, `CORE`.
 
-**Business processes onboarded through the framework (process onboarding, 2026-11-10).** A process monitored by the framework's check registry gets its **own area** (its runs would otherwise be the "last run" of an engine's area, e.g. the morning report's self-check of `CD_HCK`): proposal `CD_COLL` - collections payment request lifecycle (BASE), process `BASE_REQ_LIFE` (`config/process_register.csv`, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). The area is created in ZCA_PARAM and added to the roles below **when the process is activated** (P2 open, `config/control_seed.md` §2a); until then nothing is delivered for it.
+**Business processes onboarded through the framework (process onboarding, 2026-11-10).** A process monitored by the framework's check registry gets its **own area** (its runs would otherwise be the "last run" of an engine's area, e.g. the morning report's self-check of `CD_HCK`): proposal `CD_COLL` - collections payment request lifecycle (BASE), process `BASE_REQ_LIFE` (`config/process_register.csv`, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). The area is created in ZCA_PARAM **when the process is activated** (P2 open, `config/control_seed.md` §2a); the roles are defined in §3 (operator `Z_CD_OPS_COLL`, `CD_COLL` in `Z_CD_OPS_BATCH` and `Z_CD_OPS_APPROVER`, display in `ZCD_OPS_PROD_SUPPORT`, 2026-11-10) and created in PFCG on activation.
 
 ## 2. Activities used by the suite
 
@@ -20,12 +20,31 @@ The same activities as before on `ZCD_OPS`: 01 create (configuration row; FMON: 
 | Role | ZCA_PARAR | ACTVT | BUKRS |
 |---|---|---|---|
 | `Z_CD_OPS_DISPLAY` | * | 03 | * |
-| `Z_CD_OPS_BATCH` (Control-M job user) | CD_EBS, CD_FMON, CD_HCK, CD_OPS, CA_OPS | 16 | * |
+| `Z_CD_OPS_BATCH` (Control-M job user) | CD_EBS, CD_FMON, CD_HCK, CD_OPS, CA_OPS, CD_COLL (check run `ZCA_OPS_CHECK_RUN` of the collections request lifecycle, 2026-11-10) | 16 | * |
 | `Z_CD_OPS_OPERATOR` (RTB operations) | CD_EBS, CD_FMON, CD_HCK | 02, 03 | own company codes |
-| `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK | 03, 85 | own company codes |
+| `Z_CD_OPS_APPROVER` (team lead, not the operator) | CD_EBS, CD_FMON, CD_HCK, CD_COLL (waivers of the collections request lifecycle, 2026-11-10) | 03, 85 | own company codes |
 | `Z_CD_OPS_CONFIG` (configuration owner) | per payment engine area | 01, 02, 03, 06 (create, change, display, delete of configuration rows; each checked on its own) | * |
 | `Z_CD_OPS_PRISM` (PRISM technical user `PRISM_FMON`, type B) | CD_FMON | 01 | DUMMY — plus `S_ICF` ICF_FIELD `SERVICE`, ICF_VALUE `ZCD_PRISM` (the SICF node's authorisation value) |
-| `Z_CD_OPS_COLL` (collections operations - process `BASE_REQ_LIFE`; area approved 2026-11-10 (D-PO1), role created on activation of P2) | CD_COLL | 02, 03 (job user: `Z_CD_OPS_BATCH` gets CD_COLL 16) | own company codes |
+| `Z_CD_OPS_COLL` (collections operations - operator of process `BASE_REQ_LIFE`, 2026-11-10; details below) | CD_COLL | 02, 03 | own company codes |
+
+**`Z_CD_OPS_COLL` - collections operations (operator of the collections request lifecycle, 2026-11-10).** Single role for the
+team that works the exceptions of process `CD_COLL` / `BASE_REQ_LIFE` (BASE request lifecycle and Stripe premium refund,
+checks R1-R4, `docs/processes/CD_COLL_BASE_REQ_LIFE.md`). Same shape as `Z_CD_OPS_OPERATOR`, for one area:
+
+| Authorisation | Values | Gives |
+|---|---|---|
+| `ZCA_OPS` | ZCA_PARAR `CD_COLL`; ACTVT `02`, `03`; BUKRS the team's company codes | display of the area's findings, exceptions and area dashboard rows (DCL rule of §3d); assign, resolve, request a waiver and classify an exception of those company codes (`ZCL_CA_OPS_EXC_POLICY=>MAY_ACT`) |
+| `S_SERVICE` | `ZUI_CA_OPS_EXC_O4` (exceptions app), `ZUI_CA_OPS_DASH_O4` (area dashboard), `ZUI_CD_OPS_OVERVIEW_O4` (overview cards) | the three OData services the team opens |
+| Launchpad | business catalog `ZCD_OPS_BC_COLL` (tiles *Owned exceptions* filtered to area `CD_COLL`, *Area dashboard*), page *Exceptions* and *Overview* of space *Production Support* | entry points |
+
+Not in the role (by design): `85` (waiver approval - `Z_CD_OPS_APPROVER` with `CD_COLL`, another person), `16` (the check run -
+job user `Z_CD_OPS_BATCH`), `01` / `06` (configuration - `Z_CD_OPS_CONFIG`, DV1 only), and the sign-off of the control
+*Base-rejected items* (`BASE_REJECTS` belongs to area `CD_HCK`, so it is signed off with `CD_HCK` 02 by the shift reviewer;
+moving the control to `CD_COLL` would let this team sign it off - not done). No business-table authorisation: the checks only
+read (`ZCA_OPS_TABWL` approved tables, `S_TABU_NAM` 03 of the job user). Delivery: the PFCG roles are created with the values
+above when P2 is activated (area `CD_COLL` in `ZCA_PARAM_AREA` first); display of `CD_COLL` is already in business role
+`ZCD_OPS_PROD_SUPPORT` (`docs/Dashboard_Production_Support.md` §4). Test: QA1 case OVP-16 plus the two-user script
+(Test_and_Validation §6.16) with a `CD_COLL` exception of company code 1000.
 
 Segregation of duties: the operator (02) and the approver (85) of a payment engine area and company code are different users; the apps additionally refuse an approval by the requester (four-eyes).
 
