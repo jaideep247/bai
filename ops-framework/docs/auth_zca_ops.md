@@ -53,11 +53,42 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 
 | Projection (service) | DCL | Condition |
 |---|---|---|
-| `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | `( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` |
-| `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | area of the exception (path `_Exception.Area`) |
-| `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | `( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` - the area of the control |
+| `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | the company-code rule of §3c on `Area`, `CompanyCode` (company code of the finding) |
+| `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | the rule of §3c on the exception (path `_Exception.Area`, `_Exception.CompanyCode`) |
+| `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | the rule of §3c on `Area` (of the control) and `CompanyCode` (of the slice) |
 
-VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58).
+VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36.
+
+## 3c. Company-code isolation (2026-11-10)
+
+> **First principle:** a finding of a company code is read, counted and changed only by users authorised for that company code; a finding without one belongs to the area.
+> **Analogy:** a shared mailroom with locked pigeonholes per company - the noticeboard (area-level notices) is for everyone of the department, a pigeonhole opens only with its own key.
+
+**Data.** `ZCA_OPS_FINDING-BUKRS` (data element `BUKRS`): the company code of the finding, **blank = not company-specific** (an area-level finding: a run, a file, a job, a configuration problem). The producer fills `TY_FINDING-COMPANY_CODE` where it knows the company code at finding time (no extra read); `ZCL_CA_OPS_STORE` stores it. The exception history `ZCA_OPS_EXC_HIST` keeps the exception key (run, finding number) and **no copy** of the company code - its DCL reads it through the path `_Exception.CompanyCode`. The company code is **part of the identity of an exception**: the carry-forward inherits owner, waiver, reason code and due date only from an earlier exception with the same object type, object key, check code **and company code** (two findings that differ only in the company code are two exceptions; an object key need not contain the company code).
+
+**Read rule (every DCL on findings, history, slices and counts built on them):**
+
+```
+( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+and ( CompanyCode is initial
+   or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) )
+```
+
+Area authorised AND ( company code blank OR ( area, company code ) authorised ). **Area-level rows (blank company code) are visible with the area authorisation** - the rule, not a switch. A switch is not cheap: a DCL cannot read a parameter, so "area-level rows only for users with every company code" would be a second variant of every role (`BUKRS = '*'` as fixed value of the first condition - VERIFY-ADT that a fixed `'*'` requires full authorisation) - **a decision for the owner of the roles**, not built.
+
+**Counts and aggregates.** A DCL on an aggregating view entity filters the **result rows** of that view, after its GROUP BY; the DCLs of the views underneath are not evaluated when a view reads them (access control applies to the entity the ABAP SQL / OData request names), and `inheriting conditions from entity` copies the conditions onto the elements of the reading view - also after its aggregation. So a count that mixes company codes in one row cannot be protected by any DCL. The framework and its consumers therefore never aggregate across company codes in one row: **the company code is a key of every row that carries a count of findings** - a finding row has its own company code; an aggregate is a **slice** per company code (the daily control review: `ZI_CA_OpsCtlSlice`, one row per control, business date and company code; blank = the area-level slice that always exists). A DCL on the slice's own company code is a filter on the findings before a card or an analytical list sums the slices (OData `$apply` aggregates after the DCL's WHERE). Run telemetry that has no company code (run status, RAG, runtime, item counters of `ZCA_OPS_RUN`, the evidence run of a control) is area-level and sits on the area-level slice only, so a sum over the slices counts it once.
+
+**Write rule.** Every action on an exception (assign, resolve, request / approve waiver, classify) and the sign-off of a control slice is authorised with the company code of the object: `ZCL_CA_OPS_EXC_POLICY=>MAY_ACT` - `ZCA_OPS` with the activity for the area (BUKRS `DUMMY`) and, for a company code, for the area with `BUKRS` = that company code (instance authorisation of `ZBP_R_CA_OPSEXCEPTION` and `ZBP_R_CA_OPSCTLREVIEW`). A user of company code 1000 can neither change nor approve nor sign off an object of 2000; area-level objects need the area authorisation only.
+
+**Alerts.** An alert rule (`ZCA_OPS_ALRULE`) has the pattern `BUKRS_PATTERN` (PCRE on the company code of the finding, complete value, blank = any; checked on save like the other patterns). A rule whose list serves one company code names it (`1000`); findings of another company code never reach that list, and area-level findings reach it only when the pattern accepts blank (`1000|`). A rule without a company-code pattern sends every company code's findings of its area to its list - use it only for lists that may see them all. Run-level triggers (RAG, abort) carry no findings and are area-level.
+
+| Object | Read (DCL) | Write |
+|---|---|---|
+| Exceptions app `ZC_CA_OpsException` / `ZC_CA_OpsExcHist` | rule above (history: path to the exception) | `MAY_ACT` with the exception's company code (02; 85 to approve a waiver) |
+| Daily control review `ZC_CA_OpsCtlReview` (slice per company code) | rule above on the slice's company code | `MAY_ACT` with the slice's company code (02) |
+| Alert e-mail | - | rule pattern `BUKRS_PATTERN` |
+
+Tests: `ZCL_CA_OPS_EXC_POLICY` (`ltc_isolation`: own company code allowed, other refused, area-level with the area, other area refused, activity counts), `ZCL_CA_OPS_STORE` (`stores_company_code`, `carry_other_company_separate`), `ZCL_CA_OPS_ALERT_POLICY` (`bukrs_pattern_keeps_list`), `ZCL_CA_OPS_REVIEW_DAO` (`slices_are_separate`), `ZCL_CA_OPS_CTL_CDS_TEST` (`ltc_slice`, `ltc_day`), `ZCL_CA_OPS_DCL_TEST` (access-control double: user A of one company code). VERIFY V35-V43.
 
 ## 3b. Checks offline
 

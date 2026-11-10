@@ -45,6 +45,17 @@ Global filter: none mandatory (the area entities have different dimensions); eac
 
 **No incidents in SAP (user decision 2026-11-10):** no incident card, no incident number or field anywhere; an *Action required* control carries an observation and a next action in its sign-off. No manual entry of payments or variances - SAP is the evidence.
 
+### 1b. Company-code isolation (2026-11-10)
+
+Every card that shows findings or counts them reads rows that carry a company code: the critical exceptions (company
+code of the finding), the daily controls (one row per control, business date and company code - the framework's review
+slices; blank = area-level slice), the variances (company code of the reconciliation group), the area cards (EBS run /
+KPI slices, HCK check / KPI slices). The DCL `ZC_CD_OPSOVERVIEW` and the area DCLs apply the rule *area authorised AND
+( company code blank OR ( area, company code ) authorised )*, so a KPI card of a user of company code 1000 sums the
+area-level rows and the rows of 1000 only (`$apply` aggregates after the DCL). A central user sees one daily-control row
+per control and date plus one per company code with findings; "checks reviewed n / m" counts slices
+(`config/auth_zcd_ops.md` §3d, `ops-framework/docs/CONTROL_REVIEW.md` §2a). Freshness is area-level (runs only).
+
 ## 2. Design decision — one overview service (VERIFY-ADT for the alternative)
 
 **Chosen: one service `ZUI_CD_OPS_OVERVIEW`** that re-exposes the KPI and latest-problem projections of the four area dashboards (the same CDS objects as in the area services, the same DCL roles) and adds two cross-area entities (`ZC_CD_OpsCritExc`, `ZC_CD_OpsFreshness`).

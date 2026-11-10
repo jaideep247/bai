@@ -6,6 +6,7 @@
 *& test double; does not prove live SAP runtime behavior.
 *& Modification log:
 *& 2026-11-06 | Initial version (coverage gap closure: own test include).
+*& 2026-11-10 | per_company_code (company-code isolation).
 *&---------------------------------------------------------------------*
 CLASS ltd_dao DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -45,6 +46,7 @@ CLASS ltc_overdue_exc DEFINITION FINAL FOR TESTING
     METHODS teardown.
     METHODS overdue_per_area FOR TESTING.
     METHODS nothing_overdue_is_zero FOR TESTING.
+    METHODS per_company_code FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -79,6 +81,27 @@ CLASS ltc_overdue_exc IMPLEMENTATION.
       ls_overdue-oldest_due = gc_oldest.
       INSERT ls_overdue INTO TABLE mo_dao->mt_overdue.
     ENDIF.
+  ENDMETHOD.
+
+
+  " Rule (company-code isolation): the overdue exceptions of a company code are its own metric (DIM2 and company
+  " code of the metric), so its threshold finding carries the company code
+  METHOD per_company_code.
+    CONSTANTS lc_bukrs TYPE bukrs VALUE 'US01'.
+    TRY.
+        INSERT VALUE #( pe_area = zif_cd_ops_types=>gc_pe_area-ebs bukrs = lc_bukrs item_count = gc_items
+                        oldest_due = gc_oldest ) INTO TABLE mo_dao->mt_overdue.
+        DATA(ls_result) = act( ).
+        cl_abap_unit_assert=>assert_equals( act = lines( ls_result-metrics ) exp = 2 msg = 'Count and age' ).
+        LOOP AT ls_result-metrics ASSIGNING FIELD-SYMBOL(<ls_metric>).
+          cl_abap_unit_assert=>assert_equals( act = <ls_metric>-company_code exp = lc_bukrs
+                                              msg = 'Company code of the metric' ).
+          cl_abap_unit_assert=>assert_equals( act = <ls_metric>-dim2 exp = CONV zif_cd_hck_types=>ty_dim( lc_bukrs )
+                                              msg = 'Company code as second dimension' ).
+        ENDLOOP.
+      CATCH cx_root INTO DATA(lx_error).
+        cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 

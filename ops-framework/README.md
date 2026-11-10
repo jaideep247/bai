@@ -20,7 +20,7 @@ standard. Both components stay separate and are shipped together (user decision 
 
 | Piece | Objects |
 |---|---|
-| Store | `ZIF_CA_OPS_STORE` / `ZCL_CA_OPS_STORE`, tables `ZCA_OPS_RUN`, `ZCA_OPS_FINDING`, `ZCA_OPS_EXC_HIST` |
+| Store | `ZIF_CA_OPS_STORE` / `ZCL_CA_OPS_STORE`, tables `ZCA_OPS_RUN`, `ZCA_OPS_FINDING` (with the company code of a finding, `BUKRS`, blank = area-level - company-code isolation, `docs/auth_zca_ops.md` §3c), `ZCA_OPS_EXC_HIST` |
 | Exceptions | `ZIF_CA_OPS_EXC_DAO` / `ZCL_CA_OPS_EXC_DAO`, `ZCL_CA_OPS_EXC_POLICY`, `ZIF_CA_OPS_EXC_TYPES`; app `ZUI_CA_OPS_EXC` (RAP BO `ZR_CA_OpsException`, sub-package `ZCA_OPS_UI`; actions assign, resolve, request / approve waiver, **classify** - reason code of an open exception, `ZCA_OPS_FINDING-REASON_CODE`, values `EXC_REASON_CODES`, carried forward) |
 | Alerting | `ZIF_CA_OPS_ALERT` / `ZCL_CA_OPS_ALERT_ROUTER`, `ZCL_CA_OPS_ALERT_POLICY`, `ZIF_CA_OPS_ALERT_DAO` / `ZCL_CA_OPS_ALERT_DAO`, channels `ZIF_CA_OPS_ALERT_CHANNEL` (`ZCL_CA_OPS_CHN_EMAIL`, `ZCL_CA_OPS_CHN_APPLOG`), consumer sections `ZIF_CA_OPS_ALERT_SECTION`; tables `ZCA_OPS_ALRULE`, `ZCA_OPS_ALCHN`, `ZCA_OPS_ALLOG` |
 | Alert e-mail templates | `ZIF_CA_OPS_MAIL_TEMPLATE`, `ZCL_CA_OPS_MAIL_TPL_SMTG` (SAP e-mail templates), `ZCL_CA_OPS_MAIL_TPL_BUILTIN` (built-in layout, fallback), `ZCL_CA_OPS_MAIL_COMPOSER`; data source `ZI_CA_OPS_ALERTMAILCTX`; generic template `ZCA_OPS_ALERT_DEFAULT` (`templates/`, documented source) - `docs/ALERT_TEMPLATES.md` |
@@ -126,7 +126,7 @@ zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'ZPE_DAILY' iv_subject = lv_s
 
 ```abap
 ls_finding-business_date = ls_statement-stmt_date.        " blank = not known: the template never breaks
-ls_finding-company_code  = ls_statement-bukrs.
+ls_finding-company_code  = ls_statement-bukrs.       " stored (BUKRS): read / change authorisation, alert routing
 ls_finding-account       = lv_account_label.               " house bank / account ID or masked - never in full
 ls_finding-item_count    = ls_file-record_count.
 ls_finding-context       = lv_label_line.                " labelled lines, never amounts (DETAILS: only with SHOW_AMOUNTS)

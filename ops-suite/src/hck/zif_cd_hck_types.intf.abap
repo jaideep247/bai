@@ -550,6 +550,8 @@ INTERFACE zif_cd_hck_types
   TYPES:
     BEGIN OF ty_overdue,
       pe_area     TYPE zif_ca_ops_types=>ty_area,
+      "! Company code of the overdue exceptions (blank = area-level; company-code isolation)
+      bukrs      TYPE bukrs,
       item_count TYPE int8,
       oldest_due TYPE d,
     END OF ty_overdue.

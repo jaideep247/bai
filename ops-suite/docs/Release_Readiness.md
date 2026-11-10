@@ -98,6 +98,31 @@ The generic core moved to the framework ZCA_OPS (`ops-framework/`); its own VERI
 - **VERIFY (runtime):** a run of each area with the areas registered in ZCA_PARAM (else ZCA_OPS 043); the bank ACK table in the alert e-mail with `ALERT_SECTION_CLASS` = `ZCL_CD_OPS_ACK_MAIL`; `ZCA_OPS_RETENTION` in test mode lists the six suite targets of `config/purge_targets.csv`.
 - **Not run:** nothing of ZCA_OPS or of the changed suite has been activated or executed in an SAP system; the evidence is offline (abaplint, portable checks, tool tests).
 
+## Company-code isolation (2026-11-10)
+
+An external review found that findings, exception history and counts were filtered by area only. Now every finding
+carries its company code (`ZCA_OPS_FINDING-BUKRS`, blank = area-level), every read path applies *area authorised AND
+( company code blank OR ( area, company code ) authorised )*, counts are slices per company code, write actions check
+the object's company code and alert rules can be scoped to a company code (`config/auth_zcd_ops.md` §3d,
+`ops-framework/docs/auth_zca_ops.md` §3c). Nothing activated, no ABAP Unit run.
+
+| Gate | Evidence |
+|---|---|
+| Gate 1 (DV1) | `ops-framework/docs/VERIFY.md` V35-V43 (SE11 fields / keys, DCL syntax `IS INITIAL`, UNION slice views, access-control double); suite V44 (below); ABAP Unit of the tests named in `Test_and_Validation_Document.md` §6.16 criterion 6 |
+| Gate 2 (QA1) | two-user test CC-01 ... CC-24 (`Test_and_Validation_Document.md` §6.16), all acceptance criteria |
+
+**Suite VERIFY items.**
+- **V44 (design guard):** FMON findings are area-level because `ZCD_FMON_IFACE` has no company code; if one is ever added, slice `ZI_CD_FmonFileExc` (and the file rows) per company code before filling it.
+- **VERIFY-SE11:** `ZCD_HCK_METRIC-BUKRS` (new non-key field, data element `BUKRS`).
+- **VERIFY-ADT:** the suite's slice views (`ZI_CD_EbsRunSlice`, `ZI_CD_HckCheckSlice`, `ZI_CD_HckRunSlice`, `ZI_CD_HckOpenSlice`: UNION with a cast literal key); `ZR_CD_HckRun` over its slices; the DCL `ZC_CD_HCKSUPPRESS` with BUKRS mapped next to a fixed `ZCA_PARAR`; analytics queries apply the cube's DCL (V36 of the framework list covers the syntax).
+
+**Decisions for the user (D-CC1 ... D-CC5).**
+- **D-CC1 Area-level rows visible with the area authorisation.** The rule delivered; the strict variant (area-level rows only for users with every company code) needs a second condition in every role (`BUKRS = '*'` as a fixed value, VERIFY-ADT) - not built.
+- **D-CC2 Run telemetry is area-level.** Run status, RAG, runtime and item counters (EBS lines validated / passed / failed, HCK checks red / amber / green, the run message with the health score) have no company code and are shown on the area-level slice to every user of the area. Hiding them from company-code users is the strict variant of D-CC1.
+- **D-CC3 Area-level health checks that count items of every company code** (`A_INFLIGHT`, `A_GL_TRANSFER`, `C_CHQ_STATUS`, PRQ checks): their counts include every company code. To make one company-specific, group its measurement by company code (generic aggregates: configuration `GROUP_FIELD` = BUKRS; the coded checks: a change per check).
+- **D-CC4 Central e-mails.** The morning report (`ALERT_MORNING`) and every seeded alert rule (blank `BUKRS_PATTERN`) go to central SO23 lists with all company codes; company-specific lists need their own rules (`config/alert_seed.md`) - confirm the membership of the lists.
+- **D-CC5 Daily controls per slice.** A control shows one row per company code with findings (plus the area-level row) and each slice is signed off separately; alternative (one sign-off per control by a user with every company code) is not built.
+
 ## Control center (2026-11-10)
 
 Daily controls with sign-off (framework `ZCA_OPS`: control register, review app `ZUI_CA_OPS_REV`, exception classification), payment lifecycle, open reconciliation variances and the business date on the overview page (`Dashboard_Production_Support.md` §1a). Nothing activated, no ABAP Unit run.

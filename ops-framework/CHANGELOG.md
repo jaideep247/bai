@@ -2,6 +2,28 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (company-code isolation)
+
+An external review found that a user restricted to one company code could see findings, history and counts
+of another company code (findings had no company code; the DCLs filtered by area only).
+
+### Added
+- `ZCA_OPS_FINDING-BUKRS` (company code of the finding, blank = not company-specific), stored by the store
+  from `TY_FINDING-COMPANY_CODE`; part of the identity of an exception in the carry-forward.
+- Read rule of the DCLs: area authorised AND ( company code blank OR ( area, company code ) authorised ) on
+  the exceptions app, its history (path to the exception) and the daily control review.
+- Daily control review per company-code slice: `ZI_CA_OpsCtlSlice`; key `BUKRS` of `ZCA_OPS_REVIEW` and of
+  `ZR_CA_OpsCtlReview` / `ZC_CA_OpsCtlReview`; status, findings, open exceptions and sign-off per slice.
+- Write rule: `ZCL_CA_OPS_EXC_POLICY=>MAY_ACT` in the instance authorisation of the exceptions app and the
+  review app (company code of the object).
+- Alert rule pattern `BUKRS_PATTERN` (`ZCA_OPS_ALRULE`, app `ZUI_CA_OPS_CFG`, checked on save).
+- Tests: isolation policy, store, alert policy, review DAO, control CDS slices, DCL holder
+  `ZCL_CA_OPS_DCL_TEST` (access-control double). `docs/auth_zca_ops.md` §3c; VERIFY V35-V43.
+
+### Changed
+- `ZIF_CA_OPS_REVIEW_DAO=>LOCK` takes the company code of the slice (lock argument with `BUKRS`).
+- Retention target REVIEW deletes by the full key including `BUKRS`.
+
 ## [Unreleased] - 2026-11-10 (pilot review: alert audit log)
 
 - Fixed: routing decisions (throttled, quiet hours, repeat, failed by `SEND`) were written with a blank

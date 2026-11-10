@@ -344,6 +344,78 @@ ABAP Unit (DV1): `ZCL_CD_OPS_UTIL` (whole value, part of value no match, case, t
 | PA-04 | Invalid entries | ZBTM scheme `*`, ZPMC house-bank entry without calendar, ZBTR LIFECYCLE role LEG | One `POSTAREA_INVALID` finding each (427 / 422 / 424) | pending |
 | AUTH-01 | ZCA_OPS per child (configuration apps) | Users with 02 only / 01 only / 06 only for HCK | 02: change yes, create / delete refused; 01: create yes, change refused; 06: delete yes; none: no Edit | pending |
 
+### 6.16 Company-code isolation - two-user test (DV1, repeated in QA1; 2026-11-10)
+
+> **First principle:** a user scoped to one company code proves the isolation only if the same data shows a different, predictable picture to a user of the other company code.
+> **Analogy:** two tenants with keys to the same corridor but different flats - each walks every door and writes down which ones open.
+
+Rule under test: area authorised AND ( company code blank OR ( area, company code ) authorised ) - `config/auth_zcd_ops.md` §3d, `ops-framework/docs/auth_zca_ops.md` §3c.
+
+**Users (PFCG, DV1 / QA1 only).**
+
+| User | ZCA_OPS ZCA_PARAR | ACTVT | BUKRS | Also |
+|---|---|---|---|---|
+| **A** | CD_EBS, CD_FMON, CD_HCK, CD_OPS | 02, 03, 85 | **1000** | `S_SERVICE` of the bindings, launchpad catalogs |
+| **B** | CD_EBS, CD_FMON, CD_HCK, CD_OPS | 02, 03, 85 | **2000** | same |
+| **C** (control) | same areas | 03 | * | display role `Z_CD_OPS_DISPLAY` |
+
+**Data (DV1, created by real runs where possible, else inserted by the test lead with SE16N in DV1 only; record the run IDs).**
+
+| # | Object | Company code | How |
+|---|---|---|---|
+| D1 | EBS statement with an open E finding (e.g. S02 balance) and a line finding R05 | 1000 | EBS run on a test statement of a house bank of 1000 |
+| D2 | EBS statement with an open B finding (R14 unmapped code) | 2000 | EBS run on a test statement of a house bank of 2000 |
+| D3 | EBS run-level finding (`ENG` / plug-in error) | blank | the same EBS run (or a run with an invalid rule) |
+| D4 | HCK generic aggregate grouped by BUKRS over its red threshold for 1000 and for 2000 | 1000, 2000 | `ZCD_HCK_AGG` row with `GROUP_FIELD` = BUKRS, thresholds per company code (`ZCD_HCK_THRESH`) |
+| D5 | `A_RECON_3WAY` break of a set of 1000 and of a set of 2000 | 1000, 2000 | two reconciliation sets (`ZCD_HCK_RCSET`) with a known difference |
+| D6 | HCK job-cycle finding (`B_CYCLE_TODAY`) | blank | job cycle with a missing step |
+| D7 | FMON missing file (`F_MISSING`) | blank | expected file not delivered |
+| D8 | Flagged payments (`PAY_SOURCE_AMBIGUOUS`) of 1000 and of 2000 | 1000, 2000 | payments of both company codes in two sources |
+| D9 | Overdue exceptions of 1000 and 2000 (due date in the past) | 1000, 2000 | D1 / D2 with SLA 0 days, next morning report |
+| D10 | Controls `BAI_EXCEPTIONS` (D1, D2, D3), `DAILY_RECON` (D5), `CLEARING_JOB` (D6) active in the control register | slices: blank, 1000, 2000 | `config/control_register.csv` |
+| D11 | Suppression of the D4 check for 2000 | 2000 | created by user B |
+
+**Read cases (each as A, B and C; "own" = the user's company code).**
+
+| ID | App / card / count / drill-down | Expected for A | Expected for B | Result |
+|---|---|---|---|---|
+| CC-01 | Exceptions app `ZUI_CA_OPS_EXC`, list without filter | D1, D3, D4-1000, D5-1000, D6, D7, D8-1000 (+ area-level rows) - no row of 2000 | D2, D3, D4-2000, D5-2000, D6, D7, D8-2000 - no row of 1000 | pending |
+| CC-02 | Exceptions app: object page of D2 by URL (key typed by A) | not found / no authorisation (no data shown) | shown with history | pending |
+| CC-03 | Exceptions app: history of D1 after an *Assign* by A | visible to A; not to B | D2's history only | pending |
+| CC-04 | Exceptions app: value help / filter *Company code* | values 1000 and blank only (no 2000 appears in the result) | 2000 and blank | pending |
+| CC-05 | EBS dashboard: statements, lines, findings, problems list card | statements and lines of 1000; findings D1, D3 | of 2000; D2, D3 | pending |
+| CC-06 | EBS dashboard: run history (one run), KPI tile of the day | run listed once with its line counters; finding counts = D1 + D3 only; KPI tile counts D1 + D3 | run once; D2 + D3 | pending |
+| CC-07 | EBS drill-down run -> findings, statement -> findings | D1, D3 / D1 only | D2, D3 / D2 only | pending |
+| CC-08 | HCK dashboard: check list, red / amber card, categories, KPI | check of D4 with 1 open exception (1000), recon check with 1 (1000), cycle check with D6; verdict counters once; KPI open count = own + area-level | same with 2000 | pending |
+| CC-09 | HCK metric history of D4 (drill-down check -> metrics) | metric of 1000 and metrics without company code; never the 2000 value | 2000 | pending |
+| CC-10 | HCK run list | each run once; finding count = own + area-level | same | pending |
+| CC-11 | Suppressions app | D11 not listed | D11 listed | pending |
+| CC-12 | FMON dashboard (files, KPI, open exceptions) | D7 and all files (area-level) | same | pending |
+| CC-13 | Overview: open critical exceptions card + its count | D1, D3, D5-1000 ... (B / E only) - count without 2000 | 2000 counterpart | pending |
+| CC-14 | Overview: daily controls (checks reviewed n / m, flagged, attention queue) | slices blank and 1000 of each control; *BAI exceptions* 1000 slice shows status of D1 only (Action required), never D2's B | blank and 2000; *BAI exceptions* 2000 slice from D2 | pending |
+| CC-15 | Overview: open variances card | D5-1000 only | D5-2000 only | pending |
+| CC-16 | Daily control review `ZUI_CA_OPS_REV` | slices blank and 1000; counters sum these | blank and 2000 | pending |
+| CC-17 | Analytics queries (findings, metrics) in a query browser / RSRT | totals without any 2000 finding / metric | without 1000 | pending |
+| CC-18 | User C (BUKRS *) on CC-01 ... CC-17 | every row of both company codes and area-level; totals = A + B - area-level counted once | - | pending |
+
+**Write cases (refused across company codes).**
+
+| ID | Action | Expected for A on 2000 objects | Expected for A on 1000 / area-level objects | Result |
+|---|---|---|---|---|
+| CC-20 | Exceptions app: assign, resolve, request waiver, classify on D2 (by key, e.g. OData request) | refused (HTTP 403 / action not allowed); no `ZCA_OPS_EXC_HIST` row | allowed on D1 and D3, one history row each | pending |
+| CC-21 | Approve waiver on D2 requested by B | refused (85 for 2000 missing) | allowed on a waiver of D1 requested by another user of 1000 | pending |
+| CC-22 | Daily control review: *Mark reviewed* on the 2000 slice of *BAI exceptions* | refused | allowed on blank and 1000 slices; one `ZCA_OPS_REVIEW` row per slice (`BUKRS` 1000 / blank) | pending |
+| CC-23 | Suppression: create for 2000, end D11, approve a 2000 request | refused with message 840 | allowed for 1000 / blank | pending |
+| CC-24 | Alert rule with `BUKRS_PATTERN` 1000 and its own SO23 list | the list receives D1 / D4-1000 / D5-1000 findings only; D2 never; area-level only with pattern `1000\|` (`ZCA_OPS_ALLOG`, e-mail) | - | pending |
+
+**Acceptance criteria (all must hold; a single violation stops the pilot):**
+1. No row, count, sum, card value, value-help value or drill-down target of company code 2000 is visible to A, and none of 1000 to B (CC-01 ... CC-17).
+2. Area-level rows (blank company code) are visible to A, B and C with the area authorisation; run and verdict counters appear once per run / check for every user (CC-06, CC-08, CC-10).
+3. C sees everything; for every count, A's value + B's value - the area-level part = C's value.
+4. Every write case CC-20 ... CC-23 is refused across company codes and leaves no row in `ZCA_OPS_FINDING` (changed fields), `ZCA_OPS_EXC_HIST`, `ZCA_OPS_REVIEW` or `ZCD_HCK_SUPPRESS`; the same action on the own company code succeeds.
+5. CC-24: no alert e-mail of a list scoped to 1000 contains a finding of 2000.
+6. Offline evidence before DV1: `ZCL_CA_OPS_DCL_TEST`, `ZCL_CD_OPS_DCL_TEST`, `ZCL_CA_OPS_EXC_POLICY` `ltc_isolation`, `ZCL_CD_HCK_SUPPRESSION` `ltc_company_code`, `ZCL_CA_OPS_CTL_CDS_TEST` `ltc_slice` / `ltc_day`, `ZCL_CD_EBS_DASH_CDS_TEST` `run_sliced_by_company_code` green (VERIFY V38, V39).
+
 ## 7. Behaviour comparison — legacy against new (shadow run, QA1)
 
 Procedure: `Legacy_Parity_Comparison.md` §4. Every difference must map to D1–D11 of that document.

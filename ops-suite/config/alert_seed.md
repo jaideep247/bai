@@ -54,6 +54,17 @@ configuration app refuses a pattern that does not compile (message 418); check w
 | ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — | ZCD_OPS_ALERT_ABORT | |
 | RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — | ZCD_OPS_ALERT_LOCKED | |
 
+**Company-code lists (company-code isolation, 2026-11-10).** Every rule has the pattern `BUKRS_PATTERN` (PCRE on the
+company code of the finding, complete value, blank = any; app `ZUI_CA_OPS_CFG`, checked on save). The seeded rules
+above keep it **blank**: their SO23 lists (`ZCD_PAYOPS`, `ZCD_RETOPS`, `ZCD_RTBSUP`, `ZCD_COMPL`, `ZCD_RTBLEAD`) are
+central lists that serve every company code - **VERIFY with RTB operations** that no member of these lists is scoped to
+one company code. A list that serves one company code gets its own rule (copy of the area's rule, own SO23 list,
+`BUKRS_PATTERN` = the company code, e.g. `1000`; `1000|` also routes the area-level findings of the area); the central
+rule then names the remaining company codes (e.g. `(?!1000).*` - PCRE, complete value; blank company codes match it)
+so a finding never reaches the list of another company code. Which findings carry a company code:
+`config/auth_zcd_ops.md` §3d (EBS statements and lines, flagged payments, generic aggregates by BUKRS, reconciliation
+sets, overdue exceptions; FMON is area-level). Run-level triggers (RAG, abort) carry no findings and stay area-level.
+
 **E-mail templates and amounts (user decisions 2026-11-10).** Every rule names its SAP e-mail template
 (`TEMPLATE_ID`, documented sources in `templates/`, created in DV1 and transported; a blank rule uses the
 channel default, else the framework's generic `ZCA_OPS_ALERT_DEFAULT`; a message with missing bank ACK files

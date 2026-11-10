@@ -41,6 +41,8 @@
 *& 2026-11-10 | get_table_fields checks S_TABU_NAM 03 (ZIF_CA_OPS_AUTH=>MAY_READ_TABLE) first: every dynamic read
 *&            | (aggregate, values, queues, reference rows, drift hash) describes its table there - 813.
 *& 2026-11-10 | save_metrics: company code of the metric (ZCD_HCK_METRIC-BUKRS, company-code isolation).
+*& 2026-11-10 | get_overdue_exceptions per area and company code (company-code isolation); AREA read AS PE_AREA (the
+*&            | target component - CORRESPONDING left the area blank before).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - DAO (all SQL and system reads)</p>
 "! Every standard-table field not confirmed in DEVELOPMENT_STANDARDS is
@@ -626,14 +628,16 @@ CLASS zcl_cd_hck_dao IMPLEMENTATION.
 
   METHOD zif_cd_hck_dao~get_overdue_exceptions.
     CONSTANTS lc_no_date TYPE d VALUE '00000000'.
-    " index ZCA_OPS_FINDING~OPN: CLIENT, PE_AREA, DISPOSITION, DUE_DATE
-    SELECT area, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
+    " index ZCA_OPS_FINDING~OPN: CLIENT, AREA, DISPOSITION, DUE_DATE. Per area and company code of the
+    " exceptions (company-code isolation: a count never mixes two company codes); AREA named as the target
+    " component PE_AREA (CORRESPONDING maps by name - without the alias the area stayed blank)
+    SELECT area AS pe_area, bukrs, COUNT(*) AS item_count, MIN( due_date ) AS oldest_due
       FROM zca_ops_finding
       WHERE disposition IN ( @zif_cd_hck_types=>gc_disposition-open, @zif_cd_hck_types=>gc_disposition-assigned )
         AND due_date    < @iv_today
         AND due_date    > @lc_no_date
-      GROUP BY area
-      ORDER BY area
+      GROUP BY area, bukrs
+      ORDER BY area, bukrs
       INTO CORRESPONDING FIELDS OF TABLE @rt_overdue.
   ENDMETHOD.
 

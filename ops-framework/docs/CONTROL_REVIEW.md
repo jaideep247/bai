@@ -3,7 +3,7 @@
 > **First principle:** a control's status is read from the findings of the checks it covers; only the person's sign-off is stored.
 > **Analogy:** a shift handover sheet where the gauges fill themselves in — the supervisor only initials each line, and a line turns red again if a gauge moves after the initials.
 
-Status 2026-11-10: written and statically checked offline (abaplint 0 issues); **nothing activated, no ABAP Unit run**. Reusable: a consumer registers its controls as configuration rows and reads the derived rows for its own cards; the framework never names a consumer.
+Status 2026-11-10: written and statically checked offline (abaplint 0 issues); **nothing activated, no ABAP Unit run**. Company-code slices added 2026-11-10 (§2a). Reusable: a consumer registers its controls as configuration rows and reads the derived rows for its own cards; the framework never names a consumer.
 
 ## 1. Objects
 
@@ -21,6 +21,10 @@ Status 2026-11-10: written and statically checked offline (abaplint 0 issues); *
 ## 2. Which findings belong to a control
 
 A covered-check row selects findings of its **check area** whose `RULE_ID`, `CHECK_CODE` or `GROUP2` **equals** the value (one row per value; a family of checks is several rows). Exact values, not patterns: the status is joined in CDS for the review app and the consumers' overview cards, and a PCRE cannot be evaluated in a join (`Performance_Review.md` of the first consumer, §6b). Rows of one control must not overlap (a finding matching two rows is counted twice in the open exceptions).
+
+## 2a. Slices per company code (company-code isolation, 2026-11-10)
+
+A row of the review is a **slice**: control, business date and company code (`ZI_CA_OpsCtlSlice`). The **area-level slice** (blank company code) exists for every active control and date and holds the findings without company code and the run evidence; a **company-code slice** exists where that company code has findings of the control on the date, open exceptions of the control now, or a sign-off of the date. Status, finding count, open exceptions and sign-off of a slice are those of its own company code only (`ZI_CA_OpsCtlFindDay`, `ZI_CA_OpsCtlOpen` per company code; `ZCA_OPS_REVIEW` key `BUKRS`). Each slice is signed off on its own, by a reviewer with `ZCA_OPS` 02 for the area and, for a company code, that `BUKRS`. The read DCL `ZC_CA_OPSCTLREVIEW` applies the company-code rule (`docs/auth_zca_ops.md` §3c) to the slice; the counters (`ControlCount`, `ReviewedCount`, ...) count slices, so a card of a user of one company code sums only the area-level slice and the slices of that company code. A central user with every company code sees one row per control and date plus one per company code with findings - the price of never mixing two company codes in one status. The evidence run is area-level (a run has no company code) and the same on every slice of the date.
 
 ## 3. Status of a control on a business date (derived, never stored)
 
@@ -49,4 +53,4 @@ Service `ZUI_CA_OPS_REV`, entity `ControlReview`. Filters: current business date
 
 ## 7. VERIFY
 
-V26-V33 of `VERIFY.md`.
+V26-V33 of `VERIFY.md`; company-code slices V35, V37, V38, V40, V41.

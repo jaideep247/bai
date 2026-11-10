@@ -32,11 +32,11 @@ Segregation of duties: the operator (02) and the approver (85) of a payment engi
 
 | Dashboard (service) | ZCA_PARAR | BUKRS | ACTVT | DCL |
 |---|---|---|---|---|
-| File monitoring (`ZUI_CD_FMON_FLOW`) | CD_FMON | — | 03 | `ZC_CD_FMONFLOW` |
-| EBS validation (`ZUI_CD_EBS_DASH`) | CD_EBS | — (area-wide, as the EBS run) | 03 | `ZC_CD_EBSDASH` |
-| Health checks (`ZUI_CD_HCK_DASH`) | CD_HCK | — | 03 | `ZC_CD_HCKDASH` |
+| File monitoring (`ZUI_CD_FMON_FLOW`) | CD_FMON | open exceptions: company code of the finding (rule of §3d); files, events, KPI: — (area-level, FMON has no company code) | 03 | `ZC_CD_FMONFLOW` |
+| EBS validation (`ZUI_CD_EBS_DASH`) | CD_EBS | company code of the statement / line / finding; run and KPI rows per company-code slice (rule of §3d); as-of: — | 03 | `ZC_CD_EBSDASH` |
+| Health checks (`ZUI_CD_HCK_DASH`) | CD_HCK | company code of the finding / metric; check, category, run, KPI, red-amber rows per company-code slice (rule of §3d); as-of: — | 03 | `ZC_CD_HCKDASH` |
 | Transactions (`ZUI_CD_TRX_DASH`, `cds/ZUI_CD_TRX_REQ`) | **CD_OPS** | **company code of the open item** (payment run rows: area only) | 03 | `ZC_CD_TRXDASH`, `ZC_CD_TRXREQ` |
-| Production-support overview (`ZUI_CD_OPS_OVERVIEW`) | the area of each card / row | as the area dashboard | 03 | the area DCLs + `ZC_CD_OPSOVERVIEW` |
+| Production-support overview (`ZUI_CD_OPS_OVERVIEW`) | the area of each card / row | as the area dashboard; critical exceptions, daily controls (slice) and variances by the rule of §3d; payment lifecycle by company code; freshness: — | 03 | the area DCLs + `ZC_CD_OPSOVERVIEW` |
 
 **Why CD_OPS for transactions (no new value):** the transactions dashboard shows the same evidence as the 360° payment trace (request, open item, payment run, bank line, return), which is guarded by CORE 03 plus the company code of each item (`Payment_Trace.md` §6). One area keeps one rule for "may see payment evidence"; a new value (e.g. TRX) would need a domain change and a second grant for the same data. CORE 03 already covers the read-only alert / parameter apps — a user who should see neither gets no CORE. Company code is mapped in the DCL, so `Z_CD_OPS_OPERATOR` (own company codes) sees only its own transactions.
 
@@ -88,11 +88,11 @@ The operations apps were readable with `S_SERVICE` alone (`#NOT_REQUIRED`). Thei
 
 | Projection (service) | DCL | Condition |
 |---|---|---|
-| `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | `( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` |
-| `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | area of the exception (path `_Exception.Area`) |
+| `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | the rule of §3d on area and company code of the finding |
+| `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | the rule of §3d on the exception (path `_Exception`) |
 | `ZC_CD_FmonFile` (`ZUI_CD_FMON_MAN`) | `ZC_CD_FMONFILE` | fixed `ZCA_PARAR = 'CD_FMON'`, ACTVT 03 (no area element in the view) |
 | `ZC_CD_FmonPrqWa` (`ZUI_CD_FMON_PRQ`) | `ZC_CD_FMONPRQWA` | fixed `ZCA_PARAR = 'CD_FMON'`, ACTVT 03 |
-| `ZC_CD_HckSuppress` (`ZUI_CD_HCK_SUP`) | `ZC_CD_HCKSUPPRESS` | fixed `ZCA_PARAR = 'CD_HCK'`, ACTVT 03 |
+| `ZC_CD_HckSuppress` (`ZUI_CD_HCK_SUP`) | `ZC_CD_HCKSUPPRESS` | fixed `ZCA_PARAR = 'CD_HCK'`, ACTVT 03, and BUKRS of a suppression of a company code (§3d) |
 
 VERIFY-ADT: `pfcg_auth` with an empty element list and fixed field values, and the path to the parent entity, on 7.58. Roles: `Z_CD_OPS_DISPLAY` (03, all areas) already covers them; `Z_CD_OPS_OPERATOR` / `_APPROVER` carry 03 for their areas.
 
@@ -100,6 +100,30 @@ VERIFY-ADT: `pfcg_auth` with an empty element list and fixed field values, and t
 
 **S_DATASET (2026-11-10).** The application-server files of the suite are reached only through logical paths of transaction FILE: `ZCD_OPS_EBS_IN` (EBS bank file, READ) and `ZCD_OPS_HCK_OUT` (morning report CSV, WRITE), each with a logical file name of the same name for `FILE_VALIDATE_NAME`. The user enters a file name only (no `/`, `\` or `..`, message 808). Roles running these programs need `S_DATASET` with the program name, activity `33` (read) / `34` (write) - and `06` (delete) for the export, whose temporary file is deleted - for the physical path of the logical path.
 
+## 3d. Company-code isolation (2026-11-10)
+
+> **First principle:** a user scoped to company code 1000 never sees findings, history, counts or drill-downs of company code 2000 - in any app, card, count, value help or navigation.
+> **Analogy:** one office building, one lock per company on each filing cabinet; the department noticeboard (area-level notices) is open to the department.
+
+The rule is the framework's (`ops-framework/docs/auth_zca_ops.md` §3c): **area authorised AND ( company code blank OR ( area, company code ) authorised )**; area-level rows (blank company code: runs, files, jobs, configuration problems) are visible with the area authorisation. Making that switchable needs a second variant of every role (a decision, not built).
+
+**Fill matrix - where the company code of a finding comes from (no new database read in a hot path):**
+
+| Check family | Company code filled | Blank (area-level) |
+|---|---|---|
+| EBS validation (rules S01-S13, R01-R22) | statement and line findings: the statement's company code (FEBKO-BUKRS, already in the package - `ZCL_CD_EBS_ENGINE->ADD_CONTEXT`) | run findings (`ENG`, circuit breaker `CB`, plug-in errors at run level), bank-file findings before import (object FILE) |
+| Payment worklist / snapshot (`ZCL_CD_OPS_PAY_SNAPSHOT`) | `PAY_SOURCE_AMBIGUOUS` aggregate: one finding per class, finding, run date **and company code** of its payments | technical findings (`SNAPSHOT_FAILED`, `PAY_OUTCOME_CONFIG`, `PARALLEL_OFF`, `BATCH_INCOMPLETE`, `READ_CAPPED`) |
+| Payment trace, payment requests, transactions dashboard | - (no findings; read per company code by `ZC_CD_TRXDASH` / `ZC_CD_TRXREQ` and the trace) | - |
+| File monitoring (all F_* checks, PRISM evidence) | - | every finding: the interface register `ZCD_FMON_IFACE` has no company code (adding one would need the per-file counts sliced first, VERIFY V44) |
+| Health checks - generic aggregate / volume (`ZCD_HCK_AGG`) | aggregates with `GROUP_FIELD` = `BUKRS` (`ZIF_CD_HCK_TYPES=>GC_COMPANY_CODE_FIELD`): metric, metric history (`ZCD_HCK_METRIC-BUKRS`) and threshold findings carry the group value | aggregates grouped by another field or not grouped |
+| Health checks - `A_RECON_3WAY` (`ZCL_CD_HCK_C_RECON3`) | metrics and findings of a reconciliation set: the set's company code (`ZCD_HCK_RCSET-BUKRS`) | the check's configuration findings without a set |
+| Health checks - overdue exceptions (`C_OVERDUE`) | per area **and company code** of the exceptions (DIM2, metric company code) | overdue exceptions without company code |
+| Health checks - all others (jobs, cycles, queues, number ranges, parameters, posting areas, drift, application log, technical, alert health, `A_INFLIGHT`, `A_GL_TRANSFER`, `C_CHQ_STATUS`, PRQ checks) | - | area-level: no company-code dimension in their measurement (`A_INFLIGHT`, `A_GL_TRANSFER`, `C_CHQ_STATUS`, PRQ checks count items of every company code - decision D-CC3 in `Release_Readiness.md`) |
+
+**DCLs changed (rule above on every entity built on findings, history, metrics or their counts):** `ZC_CA_OPSEXCEPTION` (exceptions + history), `ZC_CA_OPSCTLREVIEW` (framework); `ZC_CD_EBSDASH` (statements, lines, returns / NOC, findings, problems, run and KPI slices; as-of area-level), `ZC_CD_FMONFLOW` (open exceptions; files, events, KPI, failures area-level), `ZC_CD_HCKDASH` (checks, categories, runs, metrics, findings, KPI, red-amber; as-of area-level), `ZC_CD_HCKSUPPRESS` (BUKRS of the suppression), `ZC_CD_OPSOVERVIEW` (critical exceptions, daily controls, variances; freshness area-level), `ZI_CD_OPSANALYTICS` (findings and metrics with their cubes; runs and files area-level). Unchanged: `ZC_CD_TRXDASH`, `ZC_CD_TRXREQ` (already by company code), `ZC_CD_FMONFILE`, `ZC_CD_FMONPRQWA` (files and PRISM requests handled manually: FMON objects without company code, no findings). **Counts:** a row that counts findings is a slice per company code (EBS runs and KPI `ZI_CD_EbsRunSlice`, HCK checks `ZI_CD_HckCheckSlice`, runs `ZI_CD_HckRunSlice`, KPI `ZI_CD_HckOpenSlice`, categories, the framework's control review `ZI_CA_OpsCtlSlice`): run and verdict telemetry on the area-level slice only, the findings of a company code on its own slice - the DCL on the slice is a filter on the findings before the analytical list or card sums (`$apply` after the DCL's WHERE). The run header's finding count of every company code (`ZCA_OPS_RUN-FINDING_COUNT`, `ZCD_HCK_RESULT-FINDING_COUNT`) is no longer exposed (EBS / HCK as-of, HCK check, analytics run cube). Navigations from a slice to findings read the target entity with its own DCL.
+
+**Write side:** exceptions app actions and the control review sign-off with the object's company code (framework, `ZCL_CA_OPS_EXC_POLICY=>MAY_ACT`); suppressions: create (validation on save), end and approve of a suppression of a company code need `ZCA_OPS` 02 / 85 for `CD_HCK` with that `BUKRS` (`ZCL_CD_HCK_SUPPRESSION=>CHECK_COMPANY_CODE`, message 840); a suppression of a company code now also matches the findings of that company code (their `BUKRS`), not only object keys that contain it. **Alerts:** rule pattern `BUKRS_PATTERN` (`config/alert_seed.md`). **Morning report e-mail** (`ALERT_MORNING`) is a central report to one SO23 list with the exceptions of every company code - area-level by design (decision D-CC4).
+
 ## Daily control review (2026-11-10)
 
-Reviewers sign off the suite's controls in the framework app `ZUI_CA_OPS_REV` with `ZCA_OPS` **02** for the control's area (`CD_FMON`, `CD_EBS`, `CD_HCK`) - the activity decision is the framework's (`ops-framework/docs/auth_zca_ops.md` §2). Proposed role `ZCD_OPS_REVIEWER`: ZCA_PARAR = the control areas, ACTVT 02 + 03, BUKRS *; display of the review list needs 03 only. The overview cards of the control center are read with 03 (DCL `ZC_CD_OPSOVERVIEW`; payment lifecycle and payments additionally by company code). The control register itself (owners, cut-offs, covered checks) is configuration of area `CA_OPS` in `ZUI_CA_OPS_CFG` (01 / 02 / 06, DV1, transport; existing rows editable in production through the configuration gate).
+Reviewers sign off the suite's controls in the framework app `ZUI_CA_OPS_REV` with `ZCA_OPS` **02** for the control's area (`CD_FMON`, `CD_EBS`, `CD_HCK`) - the activity decision is the framework's (`ops-framework/docs/auth_zca_ops.md` §2). Since the company-code isolation a row is a slice (control, date, company code; blank = area-level) and the sign-off of a company-code slice needs 02 with that `BUKRS`. Proposed role `ZCD_OPS_REVIEWER`: ZCA_PARAR = the control areas, ACTVT 02 + 03, BUKRS *; display of the review list needs 03 only. The overview cards of the control center are read with 03 (DCL `ZC_CD_OPSOVERVIEW`; payment lifecycle and payments additionally by company code). The control register itself (owners, cut-offs, covered checks) is configuration of area `CA_OPS` in `ZUI_CA_OPS_CFG` (01 / 02 / 06, DV1, transport; existing rows editable in production through the configuration gate).
