@@ -34,6 +34,9 @@
 *&            | members ZCD_PAY_OUTPKGM), package status C (configuration error), guard row GC_GUARD_SOURCE,
 *&            | configuration messages GC_CONFIG_MSG, codes PAY_OUTCOME_CONFIG / PAY_EVIDENCE_FAILED, parameter
 *&            | PAYOUT_FAIL_ESCALATE, messages 780-785.
+*& 2026-11-10 | Sizing for 200 000-400 000 payments a normal day and 2 million on a peak day: defaults
+*&            | PAYOUT_MAX_PACKAGES 60 (was 20), PAYOUT_PARALLEL 8 (was 4), PAYOUT_BATCH_MAX_PACKAGES 1500
+*&            | (was 1000) - as config/param_definitions.csv; docs/Performance_Review.md section 10a.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Payment outcome - types and constants</p>
 "! Shared by ZIF_CD_OPS_PAY_OUTCOME (evaluator), ZIF_CD_OPS_PAY_OUTCOME_DAO (snapshot SQL),
@@ -668,13 +671,13 @@ INTERFACE zif_cd_ops_payout_types
   CONSTANTS:
     BEGIN OF gc_param_default,
       package_size TYPE i VALUE 5000,
-      max_packages TYPE i VALUE 20,
+      max_packages TYPE i VALUE 60,
       initial_days TYPE i VALUE 10,
-      parallel     TYPE i VALUE 4,
+      parallel     TYPE i VALUE 8,
       wait_sec     TYPE i VALUE 600,
       examples     TYPE i VALUE 10,
       fail_escalate TYPE i VALUE 3,
-      batch_max_packages TYPE i VALUE 1000,
+      batch_max_packages TYPE i VALUE 1500,
       req_cutoff   TYPE string VALUE `*=190000`,
       "! Snapshot lag (minutes) above which it is stale: MON_STALE_AFTER_MIN_CORE (core freshness row of
       "! the production-support overview, A_INFLIGHT evidence PARTIAL); 6 x the 5-minute cadence

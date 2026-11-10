@@ -416,7 +416,7 @@ DPAYH-ZZ_PAYMENT_STATUS values (confirmed by the user 2026-11-08): `ISSUED` file
 > **First principle:** a payment that is not final is still in flight on day 400 - the check counts what is open, not what fits in a window.
 > **Analogy:** the depot counts every parcel still on its shelves from the shelf labels, rather than re-scanning each parcel every morning; only parcels that arrived after the last label run are scanned by hand.
 
-Volume (user 2026-11-08): about 200 000 payments a normal day, two peak days of about 2 000 000, about 8 million a month. The former read (payments of the look-back window, `HCK_INFLIGHT_MAX_ROWS` 5 000 per window, re-evaluated live every morning) covered only a fraction of a peak day, and a payment stuck longer than the window dropped out.
+Volume (user 2026-11-08, updated 2026-11-10): 200 000-400 000 payments a normal day, two peak days of about 2 000 000, about 8 million a month. The former read (payments of the look-back window, `HCK_INFLIGHT_MAX_ROWS` 5 000 per window, re-evaluated live every morning) covered only a fraction of a peak day, and a payment stuck longer than the window dropped out.
 
 | Step | What | Bound |
 |---|---|---|
