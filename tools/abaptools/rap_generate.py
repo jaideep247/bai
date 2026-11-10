@@ -63,7 +63,7 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         ('dest', ('channel'|'class', field), dest_field, ...): the alert channel plug-in checks
 #         the destination(s) it would deliver to (ZCL_CD_OPS_CFG_CHECKS=>INVALID_DESTINATION;
 #         e-mail = shared SO23 distribution lists) - message 419
-#         ('valid', field, 'zcl_x=>method', msg): a value check of the payment engine area (the
+#         ('valid', field, 'zcl_x=>method', msg): a value check of the consumer's area (the
 #         method takes iv_value, returns abap_true when valid) - message gc_msg-<msg>
 #         ('when', field, condition, [checks]): the checks apply only to rows whose field meets the
 #         condition - 'A,B' (one of the values), BLANK or FILLED (table consolidation 2026-11-08:
@@ -75,9 +75,9 @@ HDR_LOG_LOCALS = (HDR_LOG + '\n*& 2026-11-06 | Values in local constants interfa
 #         (ZCL_CA_OPS_CFG_CHECKS=>AREA_VALID; one area register) - message 435 (framework app)
 #         ('param', area_field, name_field): the parameter is defined in ZCA_PARAM
 #         (ZCL_CA_OPS_CFG_CHECKS=>PARAM_EXISTS) - message 434 (framework app)
-#         ('approved', field, table_field): the field of the table must be approved for the EBS
-#         lookup rule R21 in ZCD_OPS_TABWL (area EBS, purpose LOOKUP, field-level;
-#         ZCL_CD_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check) - message 812
+#         ('approved', field, table_field): the field of the table must be approved in the
+#         consumer's approved-table list (field-level lookup approval of the consumer's
+#         ZCL_CD_OPS_CFG_CHECKS=>LOOKUP_APPROVED, the runtime check; consumer apps only) - message 812
 # ---------------------------------------------------------------------------
 BLANK, FILLED = '<blank>', '<filled>'
 # Profile (configure( ) of the wrapper): ROOT component folder; SPEC the apps; RENAME element names
