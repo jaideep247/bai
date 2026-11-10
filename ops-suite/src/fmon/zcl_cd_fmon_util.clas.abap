@@ -9,7 +9,8 @@
 *& 2026-11-06 | Long references keep their identity through a SHA-1 digest; IS_DIGEST_REF, CANONICAL_NAME (audit A100).
 *& 2026-11-06 | PCRE instead of the obsolete POSIX regex in matches( ).
 *& 2026-11-07 | IFACE_DAY_KEY: one object key of interface-day findings (expected files, stage deadlines).
-*& 2026-11-10 | NEW_FINDING: business date, payment method and record count of the file for the alert e-mail.
+*& 2026-11-10 | NEW_FINDING: business date, payment method and record count of the file for the alert e-mail;
+*&            | NEW_KEY_FINDING: optional business date of the expected file.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring - pure helper functions</p>
 CLASS zcl_cd_fmon_util DEFINITION
@@ -33,9 +34,11 @@ CLASS zcl_cd_fmon_util DEFINITION
         VALUE(rs_finding) TYPE zif_ca_ops_types=>ty_finding.
 
     "! Finding without a registered file (expected file, source, check)
+    "! @parameter iv_business_date | business date of an expected file (alert e-mail context)
     CLASS-METHODS new_key_finding
       IMPORTING
         iv_iface_id       TYPE zif_cd_fmon_types=>ty_iface_id OPTIONAL
+        iv_business_date  TYPE d OPTIONAL
         iv_object_key     TYPE clike
         is_check          TYPE zif_cd_fmon_types=>ty_chk
         iv_code           TYPE zif_ca_ops_types=>ty_check_code
@@ -169,6 +172,7 @@ CLASS zcl_cd_fmon_util IMPLEMENTATION.
                                      THEN zif_ca_ops_types=>gc_action-exception
                                      ELSE zif_ca_ops_types=>gc_action-notify ).
     rs_finding-message     = iv_message.
+    rs_finding-business_date = iv_business_date.
   ENDMETHOD.
 
 

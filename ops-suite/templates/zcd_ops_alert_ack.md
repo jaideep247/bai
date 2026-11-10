@@ -1,0 +1,92 @@
+# E-mail template ZCD_OPS_ALERT_ACK
+
+> Documented source of an SAP e-mail template (object type SMTG) of the payment engine operations suite
+> (2026-11-10). abapGit support for SMTG is not verified (VERIFY-ADT V22): the template is created in DV1
+> from this page and transported. Layout and placeholders follow the framework's generic template
+> `ZCA_OPS_ALERT_DEFAULT`; this one adds the business heading, the impact and what to do.
+
+| Attribute | Value |
+|---|---|
+| Template ID | `ZCD_OPS_ALERT_ACK` |
+| Description | Ops suite: missing or late bank ACK |
+| Package | `ZCD_OPS` |
+| Data source | `ZI_CA_OPS_ALERTMAILCTX` (framework; key `ALERT_ID`) |
+| Used by | `FMON_ACK` (proposed) and every rule that selects ACK findings without a template of its own (section `ZCL_CD_OPS_ACK_MAIL`, `GC_ACK_TEMPLATE`) |
+| Priority | P2 - 1 h in business hours |
+| Amounts shown | **yes** - payments and amounts per file and totals per currency (user decision 2026-11-10); `SHOW_AMOUNTS` = X on `FMON_ACK` |
+| Business context in the tables | section table: house bank, bank, file name, payment method, payments, amount, payment run, generated / delivered / ACK due, overdue by; totals per currency |
+
+## Subject
+
+```
+{{SUBJECT}}
+```
+
+The subject is the impact-first ACK subject of `ZCL_CD_OPS_ACK_MAIL`: `[SYSID][CD_FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00; USD 1,234,567.80`.
+
+## HTML body
+
+```html
+<p><b>{{SUBJECT}}</b></p>
+<p><b>Missing or late bank acknowledgement.</b> Payment files were delivered to the bank but the bank has not acknowledged them in time: the payments may not be executed.</p>
+<p>{{RUN_LINE}}<br>{{REFERENCE_LINE}}</p>
+<table cellpadding="2">
+  <tr><td><b>Area</b></td><td>{{AREA}} {{AREA_TEXT}}</td></tr>
+  <tr><td><b>Alert rule</b></td><td>{{RULE_ID}}</td></tr>
+  <tr><td><b>Severity</b></td><td>{{SEVERITY}} {{SEVERITY_TEXT}}</td></tr>
+  <tr><td><b>Check</b></td><td>{{CHECK_CODE}}</td></tr>
+  <tr><td><b>Findings</b></td><td>{{FINDINGS_TOTAL}} (new {{FINDINGS_NEW}}, repeated {{FINDINGS_REPEATED}}, overdue {{FINDINGS_OVERDUE}})</td></tr>
+  <tr><td><b>Not listed (above the limit)</b></td><td>{{FINDINGS_HELD_BACK}}</td></tr>
+  <tr><td><b>Due date / owner</b></td><td>{{DUE_DATE}} {{OWNER}}</td></tr>
+  <tr><td><b>Run started / ended</b></td><td>{{STARTED_AT}} / {{ENDED_AT}}</td></tr>
+  <tr><td><b>Exceptions app</b></td><td>{{EXCEPTIONS_LINK}}</td></tr>
+</table>
+<p><b>What to do</b></p>
+<ul>
+  <li>Most overdue file first (table below): check with the bank whether the file was received.</li>
+  <li>Check the transmission in PRISM and the file monitoring dashboard (file name, ACK due).</li>
+  <li>A payment count or amount shown as unknown was not delivered by the source - never 0.</li>
+</ul>
+{{TABLE_SECTION}}
+{{TABLE_MAIN}}
+```
+
+## Text body
+
+```
+{{SUBJECT}}
+Missing or late bank acknowledgement. Payment files were delivered to the bank but the bank has not acknowledged them in time: the payments may not be executed.
+{{REFERENCE_LINE}}
+Area: {{AREA}} {{AREA_TEXT}}
+Alert rule: {{RULE_ID}}
+Severity: {{SEVERITY}} {{SEVERITY_TEXT}}
+Check: {{CHECK_CODE}}
+Findings: {{FINDINGS_TOTAL}} (new {{FINDINGS_NEW}}, repeated {{FINDINGS_REPEATED}}, overdue {{FINDINGS_OVERDUE}})
+Not listed (above the limit): {{FINDINGS_HELD_BACK}}
+Due date / owner: {{DUE_DATE}} {{OWNER}}
+Run started / ended: {{STARTED_AT}} / {{ENDED_AT}}
+Exceptions app: {{EXCEPTIONS_LINK}}
+What to do:
+- Most overdue file first (table below): check with the bank whether the file was received.
+- Check the transmission in PRISM and the file monitoring dashboard (file name, ACK due).
+- A payment count or amount shown as unknown was not delivered by the source - never 0.
+{{TABLE_SECTION}}
+{{TABLE_MAIN}}
+```
+
+## Placeholders
+
+Standard context keys of the framework (`ops-framework/docs/ALERT_TEMPLATES.md` section 3), plain text;
+a key not known for a message is blank. `{{TABLE_SECTION}}` / `{{TABLE_MAIN}}` mark where the code puts
+its tables (escaped cells); a template without them gets the tables appended and the alert log row says so.
+
+## DV1 creation steps
+
+1. Activate the framework data source `ZI_CA_OPS_ALERTMAILCTX` and the generic template first
+   (`ops-framework/templates/zca_ops_alert_default.md`).
+2. ADT *New > E-mail Template* (or Fiori *Maintain Email Templates*): ID and description above, package
+   `ZCD_OPS`, data source `ZI_CA_OPS_ALERTMAILCTX`; paste subject, HTML and text; activate (VERIFY-ADT:
+   placeholder syntax `{{NAME}}`, `ops-framework/docs/ALERT_TEMPLATES.md` V17-V25).
+3. Set `TEMPLATE_ID` of the rule(s) above in `ZUI_CA_OPS_CFG` (customizing request, `config/alert_seed.md`).
+4. QA1: trigger the rule once; `ZCA_OPS_ALLOG` shows the template, `RENDERER` = `SMTG`, no `RENDER_INFO`.
+5. Transport DV1 -> QA1 -> PS4 with the suite. Never edited in PS4 (user decision 2026-11-10).

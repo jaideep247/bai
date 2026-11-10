@@ -5,10 +5,10 @@
 
 ## ZCA_OPS_ALCHN
 
-| CHANNEL | CLASS_NAME | DESTINATION | ACTIVE |
-|---|---|---|---|
-| EMAIL | ZCL_CA_OPS_CHN_EMAIL | *(blank — rule gives the SO23 list)* | X |
-| APPLOG | ZCL_CA_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X |
+| CHANNEL | CLASS_NAME | DESTINATION | ACTIVE | TEMPLATE_ID |
+|---|---|---|---|---|
+| EMAIL | ZCL_CA_OPS_CHN_EMAIL | *(blank — rule gives the SO23 list)* | X | *(blank — generic `ZCA_OPS_ALERT_DEFAULT`)* |
+| APPLOG | ZCL_CA_OPS_CHN_APPLOG | ZCD_OPS/ALERT | X | *(blank — the log takes the text)* |
 
 **SLG1 kept to a minimum (user decision 2026-11-07).** No delivered rule writes the application log: findings are
 already in `ZCA_OPS_FINDING` (dashboards, morning report), alert attempts in `ZCA_OPS_ALLOG`, parameter errors in the
@@ -25,7 +25,7 @@ and the channel refuses the route before anything is sent if a list was deleted 
 
 | SO23 list (proposed — confirm) | Who | Used by |
 |---|---|---|
-| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA, FMON_BAIDL, FMON_REGEN |
+| ZCD_PAYOPS | Payment operations | EBS_BLOCK, EBS_ERROR, FMON_SLA, FMON_ACK, FMON_FILE, FMON_BAIDL, FMON_REGEN |
 | ZCD_RETOPS | Returns / NOC operations | FMON_PART |
 | ZCD_COMPL | Compliance | NOC_AGING |
 | ZCD_RTBSUP | RTB support | HCK_RED, HCK_RECON, ALL_ABORT, RUN_LOCKED, morning report |
@@ -38,19 +38,40 @@ user decision 2026-11-06): `.*SLA.*` = any check code containing SLA, `RUN_LOCKE
 configuration app refuses a pattern that does not compile (message 418); check what a pattern captures with
 `ZCD_OPS_PATTERN_CHECK` (areas ALERT_*). AREA `*` is not a pattern (it means every area). Since 2026-11-10 the alert rules and channels are tables of the operations framework (`ZCA_OPS_ALRULE` / `ZCA_OPS_ALCHN`, app `ZUI_CA_OPS_CFG`); AREA is a parameter area of ZCA_PARAM (`CD_EBS`, `CD_FMON`, `CD_HCK`, `CD_OPS`, or `*`).
 
-| RULE_ID | AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| EBS_BLOCK | CD_EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD |
-| EBS_ERROR | CD_EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — |
-| FMON_PART | CD_FMON | E | | .*PARTIAL.* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
-| FMON_SLA | CD_FMON | E | | .*SLA.* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD |
-| FMON_BAIDL | CD_FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD |
-| NOC_AGING | CD_FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — |
-| FMON_REGEN | CD_FMON | E | | FILE_REGENERATED_NOT_FAILED\|PRISM_DUPLICATE_NAME\|REGENERATION_MISSING | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD |
-| HCK_RED | CD_HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD |
-| HCK_RECON | CD_HCK | E | | (RECON_BREAK\|RECON_SUBLEDGER_BREAK\|STRIPE_GROUP_BREAK) | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD |
-| ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — |
-| RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — |
+| RULE_ID | AREA | MIN_SEVERITY | RULE_PATTERN | CHECK_PATTERN | MIN_RAG | ON_ABORT | CHANNEL | DESTINATION | DIGEST | MAX_ITEMS | THROTTLE_MIN | QUIET | ESCALATE_AFTER / DEST | TEMPLATE_ID | SHOW_AMOUNTS |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| EBS_BLOCK | CD_EBS | B | | | | | EMAIL | ZCD_PAYOPS | X | 50 | 0 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_EBS_BLOCK | |
+| EBS_ERROR | CD_EBS | E | | | A | X | EMAIL | ZCD_PAYOPS | X | 50 | 60 | 22:00–06:00 | — | ZCD_OPS_ALERT_EBS | |
+| FMON_PART | CD_FMON | E | | LOT_.* *(proposed 2026-11-10; was `.*PARTIAL.*`, which matches no check code the suite raises)* | | | EMAIL | ZCD_RETOPS | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RETURNS | |
+| FMON_SLA | CD_FMON | E | F_(SLA\|PRISM.*\|FILERCV) *(proposed 2026-11-10)* | *(blank; was `.*SLA.*`, which matches no check code - the SLA codes are `NO_<stage>` / `<stage>_LATE`)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_SLA | |
+| FMON_ACK *(new, proposed 2026-11-10)* | CD_FMON | E | | (NO_)?BANK_ACK(_LATE)?\|ACK_.*_MISMATCH | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_ACK | X |
+| FMON_FILE *(new, proposed 2026-11-10)* | CD_FMON | E | F_(MISSING\|REJECT\|DUP\|SIZE\|PRF.*) | (?!REGENERATION_M\|PRISM_DUP).* *(those two go to FMON_REGEN)* | | | EMAIL | ZCD_PAYOPS | X | 50 | 30 | — | 3 / ZCD_RTBLEAD | ZCD_OPS_ALERT_FMON_FILE | |
+| FMON_BAIDL | CD_FMON | E | | STAGE_DEADLINE_MISSED | | | EMAIL | ZCD_PAYOPS | X | 10 | 0 | — | 6 / ZCD_RTBLEAD | ZCD_OPS_ALERT_DEADLINE | |
+| NOC_AGING | CD_FMON | E | | NOC_AGING.* | | | EMAIL | ZCD_COMPL | X | 100 | 1440 | — | — | ZCD_OPS_ALERT_NOC | |
+| FMON_REGEN | CD_FMON | E | | .*REGEN.*\|PRISM_DUP.* *(2026-11-10: was the three codes spelled out - 68 characters, longer than the pattern field CHAR 35)* | | | EMAIL | ZCD_PAYOPS | X | 20 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_REGEN | |
+| HCK_RED | CD_HCK | E | | | R | X | EMAIL | ZCD_RTBSUP | X | 50 | 60 | 22:00–06:00 | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_HCK | |
+| HCK_RECON | CD_HCK | E | | .*_BREAK *(2026-11-10: was the three codes spelled out - 56 characters, longer than CHAR 35)* | | | EMAIL | ZCD_RTBSUP | X | 50 | 0 | — | 2 / ZCD_RTBLEAD | ZCD_OPS_ALERT_RECON | |
+| ALL_ABORT | * | B | | | | X | EMAIL | ZCD_RTBSUP | X | 20 | 15 | — | — | ZCD_OPS_ALERT_ABORT | |
+| RUN_LOCKED | * | E | | RUN_LOCKED | | | EMAIL | ZCD_RTBSUP | | 10 | 60 | — | — | ZCD_OPS_ALERT_LOCKED | |
+
+**E-mail templates and amounts (user decisions 2026-11-10).** Every rule names its SAP e-mail template
+(`TEMPLATE_ID`, documented sources in `templates/`, created in DV1 and transported; a blank rule uses the
+channel default, else the framework's generic `ZCA_OPS_ALERT_DEFAULT`; a message with missing bank ACK files
+uses `ZCD_OPS_ALERT_ACK` when its rule names none). `SHOW_AMOUNTS` = X only on `FMON_ACK`: the missing bank
+ACK alert shows payments and amounts (user decision); whether other alerts show amounts is an open decision -
+the flag stays blank until it is taken (`Release_Readiness.md` §5). The ACK section shows its file amounts
+whatever rule carries it. Review of every alert and its business context: `docs/ALERT_CONTEXT_REVIEW.md`.
+
+**Patterns corrected (proposed 2026-11-10, confirm before transport).** `FMON_SLA` (`.*SLA.*`) and `FMON_PART`
+(`.*PARTIAL.*`) matched no check code the suite raises (the SLA check raises `NO_<stage>` / `<stage>_LATE`, e.g.
+`NO_PRISM_HANDOFF`, `BANK_ACK_LATE`; partial return lots are `LOT_UNPROCESSED` / `LOT_NOT_FOUND`), and no rule
+selected the missing bank ACK findings or the file failures (`FILE_MISSING`, `NACK`, `FILE_FAILED`,
+`DUPLICATE_FILE`, size, PRISM failed) - they reached only the morning report and the dashboards.
+`FMON_SLA` now selects the SLA checks by check ID (rule pattern; the ACK stage check `F_BANKACK` goes to
+`FMON_ACK`), `FMON_PART` the lot checks, new `FMON_ACK` the ACK codes and new `FMON_FILE` the file checks by check
+ID (`config/fmon_seed.md`). Every pattern fits the field (CHAR 35): `FMON_REGEN` and `HCK_RECON` spelled their codes out
+in 68 / 56 characters and are shortened to patterns that select the same codes. Check what a pattern captures with
+`ZCD_OPS_PATTERN_CHECK` before the transport.
 
 **Regenerated files (facts confirmed by the user 2026-11-07).** `FMON_REGEN` sends `FILE_REGENERATED_NOT_FAILED` (B: a possible duplicate payment file to the bank / IRIS — also from the instant PRISM unit, within seconds), `PRISM_DUPLICATE_NAME` and `REGENERATION_MISSING` to payment operations at once (THROTTLE_MIN 0), escalation to `ZCD_RTBLEAD` after 2 runs. `FILE_REPLACED` is information (severity I) and alerts nobody. The CHECK_PATTERN is PCRE matched to the complete check code (`|` = or).
 
@@ -81,7 +102,7 @@ Priority (receiver side, `docs/ALERTING.md` — Priority mapping; acknowledgemen
 | RULE_ID | Priority | Acknowledge within |
 |---|---|---|
 | EBS_BLOCK, ALL_ABORT, FMON_REGEN | P1 | 15 min, 24×7 |
-| EBS_ERROR, FMON_PART, FMON_SLA, FMON_BAIDL, HCK_RED, HCK_RECON, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
+| EBS_ERROR, FMON_PART, FMON_SLA, FMON_ACK, FMON_FILE, FMON_BAIDL, HCK_RED, HCK_RECON, RUN_LOCKED, NOC_AGING | P2 | 1 h in business hours |
 | (warnings W) | P3 | Next business day — morning report and dashboards, no alert |
 
 ESC_OVERRIDE (new rule field, A46): `X` lets a due escalation pass the throttle window — suggested on
@@ -133,7 +154,7 @@ The delivered values equal the CDS fallback literals and their ABAP constants (`
 
 ## Missing bank ACK mail — layout (user request 2026-11-10; sample with made-up values)
 
-Findings `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` and `STAGE_DEADLINE_MISSED` of stage `ACK_RECEIVED` carry their file evidence; any FMON rule that selects them (e.g. `FMON_ERR`) sends this layout - no new rule is needed. Since 2026-11-10 the table is the suite's alert section plug-in `ZCL_CD_OPS_ACK_MAIL` (`ZIF_CA_OPS_ALERT_SECTION`) of the framework's alert policy, configured in parameter `ALERT_SECTION_CLASS` (area `CA_OPS`, value row in `config/param_values.csv`).
+Findings `NO_BANK_ACK`, `BANK_ACK_LATE`, `ACK_COUNT_MISMATCH`, `ACK_AMOUNT_MISMATCH` and `STAGE_DEADLINE_MISSED` of stage `ACK_RECEIVED` carry their file evidence; any FMON rule that selects them sends this layout - the seeds had none (the `FMON_ERR` named here before does not exist), so rule `FMON_ACK` is proposed above (2026-11-10). Since 2026-11-10 the subject is the key `SUBJECT` and the table the block `TABLE_SECTION` of the e-mail template `ZCD_OPS_ALERT_ACK` (`templates/zcd_ops_alert_ack.md`); the built-in layout shows the same. Since 2026-11-10 the table is the suite's alert section plug-in `ZCL_CD_OPS_ACK_MAIL` (`ZIF_CA_OPS_ALERT_SECTION`) of the framework's alert policy, configured in parameter `ALERT_SECTION_CLASS` (area `CA_OPS`, value row in `config/param_values.csv`).
 
 Subject: `[PS4][CD_FMON][E] Missing bank ACK: 2 file(s), 121 payments, CAD 2,500.00; USD 1,234,567.80`
 

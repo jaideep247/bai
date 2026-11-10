@@ -14,6 +14,7 @@
 *& 2026-11-08 | Table consolidation: deadline rows are ZCD_FMON_SLA rows of kind DEADLINE (ZCD_FMON_DEADL
 *&            | merged); resolution day type, NORMAL, '*' unchanged.
 *& 2026-11-10 | DETAILS name the missed stage (label line; the missing bank ACK alert reads it).
+*& 2026-11-10 | Alert e-mail context: business date and the missed stage line (CONTEXT) of the finding.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">File monitoring check - stage deadline by clock time</p>
 "! Row choice per interface and stage: the day type of the expectation, MONTH_END / RETURNS_DAY
@@ -142,6 +143,9 @@ CLASS zcl_cd_fmon_chk_deadline IMPLEMENTATION.
       ls_finding-group2  = lv_cond.
       " the stage as a labelled line: the missing bank ACK alert recognises an ACK deadline by it
       ls_finding-details = zcl_cd_fmon_ack_alert=>missed_stage_line( ls_missed-stage ).
+      " alert e-mail context (2026-11-10): business date and the missed stage on every rule
+      ls_finding-business_date = is_ctx-business_date.
+      ls_finding-context       = ls_finding-details.
       INSERT ls_finding INTO TABLE rt_findings.
     ENDLOOP.
   ENDMETHOD.

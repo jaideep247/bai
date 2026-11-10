@@ -27,6 +27,8 @@ Retrigger of job cycles from SAP (Framework 4, second half) is the next phase: i
 | `FMON_FILE_MONITORING.md` | Business/ops and technical |
 | `HCK_MORNING_REPORT.md` | Business/ops and technical |
 | `ALERTING.md` | Ops and administrators |
+| `ALERT_CONTEXT_REVIEW.md` | Ops, RTB, reviewers — every alert the suite sends: rule, recipients, e-mail template, business context before / after, gaps left (2026-11-10) |
+| `../templates/` (folder `ops-suite/templates`) | Configuration owners, Basis — the suite's SAP e-mail templates (SMTG) as documented sources with the DV1 creation steps |
 | `Legacy_Parity_Comparison.md` | Reviewers — every difference to the legacy validators |
 | `TDD_Approach_and_Coverage.md` | Developers / reviewers — test levels, what is and is not unit tested |
 | `Test_and_Validation_Document.md` | CAB evidence (Draft until executed in QA1) |

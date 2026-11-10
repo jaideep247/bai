@@ -33,10 +33,18 @@ Suite-level alert: **RUN_LOCKED** (check code, every payment engine area) — a 
 
 ### Alert e-mail layout (2026-11-10)
 
-- **Subject** starts with the system ID: `[PS4][EBS][E] …` - a test-system alert is never mistaken for production.
+- **Subject** starts with the system ID, impact first: `[PS4][CD_EBS][E] UNMAPPED_BTC: 12 finding(s)` - a test-system alert is never mistaken for production.
 - **Body** names the run ID, the batch job (name / count, SM37) and the exceptions app (message 803) under the run line.
 - **Missing bank ACK** (file monitoring): impact-first subject and a dedicated table per file - see `config/alert_seed.md` (*Missing bank ACK mail*) and `FMON_FILE_MONITORING.md` §A3c.
 - **Failures of the router itself** are findings ALERT_FAILED of the run (every area) and stuck claims are measured by `E_ALERT_DELIVERY` (`ALERT_CLAIM_STUCK`).
+
+### Alert e-mail templates (user decisions 2026-11-10)
+
+- **Every alert e-mail is an editable SAP e-mail template** (object type SMTG, ADT / Fiori *Maintain Email Templates*), changed in DV1 and transported (DV1 -> QA1 -> PS4), never edited in production. Mechanism, context keys and VERIFY items: `ops-framework/docs/ALERT_TEMPLATES.md`.
+- **Which template:** the rule's `TEMPLATE_ID` (every seed rule names one, `config/alert_seed.md`), else the missing bank ACK template `ZCD_OPS_ALERT_ACK` for a message with ACK files, else the channel default, else the framework's generic `ZCA_OPS_ALERT_DEFAULT`. The suite's templates are documented sources in `templates/` (one per alert type, plus `ZCD_OPS_MORNING_REPORT`, parameter `HCK_MAIL_TEMPLATE`).
+- **Content:** plain-text placeholders for the standard keys (system, client, area, rule, severity, check, run, job, start / end, findings total / new / repeated / overdue, due date, owner, exceptions app) and the tables `{{TABLE_SECTION}}` (missing bank ACK files) / `{{TABLE_MAIN}}` (findings with business date, company code, masked account, payment method, count, details) put in by the code after rendering. Each template adds the business heading, the impact and *what to do*.
+- **Amounts** only on rules with `SHOW_AMOUNTS` = X (seeded on `FMON_ACK` only; the other rules are an open decision). The ACK table always shows payments and amounts (user decision).
+- **Fallback, never silent:** when SMTG is not usable (API missing, template missing / inactive, rendering failed) the built-in layout with the same content is sent and `ZCA_OPS_ALLOG-RENDER_INFO` names the reason (`RENDERER` = `BUILTIN`); `ALERT_MAIL_RENDERER` = `BUILTIN` switches templates off. Review of every alert and its context: `docs/ALERT_CONTEXT_REVIEW.md`.
 
 ## Part B — Technical
 

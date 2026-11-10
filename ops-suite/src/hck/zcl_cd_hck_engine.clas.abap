@@ -44,7 +44,7 @@
 *&            | re-raised - never left in status R. PLUGIN_ERROR and ALERT_FAILED keep the exception trace
 *&            | (DETAILS) and error class.
 *& 2026-11-10 | Alert e-mail context: every finding names its health check, category and priority (message
-*&            | 839, detail line); the morning report goes out in its e-mail template (HCK_MAIL_TEMPLATE).
+*&            | 839, context line); the morning report goes out in its e-mail template (HCK_MAIL_TEMPLATE).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Health check - engine (run checks, score, persist)</p>
 "! Per check: plug-in by class name (ZCD_HCK_DEF), runtime measured against
@@ -639,7 +639,7 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
 
   METHOD finalize_result.
     " alert e-mail context (2026-11-10): which health check, its category and priority - a labelled
-    " detail line after the finding's own lines (exceptions app and e-mail)
+    " context line of the finding (no amounts: shown on every alert rule)
     DATA(lv_check_line) = zcl_cd_ops_util=>text( iv_msgno = zif_cd_hck_types=>gc_msg-check_context
                                                  iv_v1    = cs_result-check_id
                                                  iv_v2    = cs_result-category
@@ -652,9 +652,9 @@ CLASS zcl_cd_hck_engine IMPLEMENTATION.
       IF <ls_finding>-object_key IS INITIAL.
         <ls_finding>-object_key = cs_result-check_id.
       ENDIF.
-      IF <ls_finding>-details NS lv_check_line.
-        <ls_finding>-details = COND #( WHEN <ls_finding>-details IS INITIAL THEN lv_check_line
-                                       ELSE |{ <ls_finding>-details }{ cl_abap_char_utilities=>newline }{ lv_check_line }| ).
+      IF <ls_finding>-context NS lv_check_line.
+        <ls_finding>-context = COND #( WHEN <ls_finding>-context IS INITIAL THEN lv_check_line
+                                       ELSE |{ <ls_finding>-context }{ cl_abap_char_utilities=>newline }{ lv_check_line }| ).
       ENDIF.
     ENDLOOP.
 

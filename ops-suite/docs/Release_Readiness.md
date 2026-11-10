@@ -86,6 +86,7 @@ Source: principal architecture review and the static repository audit (findings 
 **Decisions:**
 - **User decision 2026-11-10:** amounts and payment counts are shown in the missing bank ACK alert (house bank, file, payments, amount, payment run, timing).
 - **Open (user):** masking of amounts in the other alert e-mails and in message variables (`abap-secure-coding` §2: no amounts in messages) - today amounts appear in finding texts and alerts; bank account numbers are masked (house bank / account ID, else the last four characters).
+- **2026-11-10 (alert e-mail templates):** the decision is now configuration - rule flag `SHOW_AMOUNTS` (`ZCA_OPS_ALRULE`), default off, seeded X only on `FMON_ACK`: the amount column, the amount totals and the amount in a digest subject appear only on rules with the flag. **Still open (user):** whether other rules get the flag, and amounts inside finding texts (a single-finding subject and the message column carry the finding text as written by the check; `docs/ALERT_CONTEXT_REVIEW.md` lists the checks whose texts contain amounts).
 
 ## Operations framework ZCA_OPS (2026-11-10)
 
