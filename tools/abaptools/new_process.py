@@ -14,7 +14,8 @@ seed files with the columns of the tables, one row per table row - and its docum
   config/control_checks.csv     the checks the control covers (ZCA_OPS_CTLCHK, GROUP2 = check ID)
   config/alert_rules.csv        the alert rule of the area (ZCA_OPS_ALRULE)
   config/purge_targets.csv      the purge target of own tables (ZCA_OPS_PURGE), when the process has any
-  config/param_areas.csv        the area, when it is new (ZCA_PARAM_AREA)
+  config/param_areas.csv        the area, when it is new and the process active (ZCA_PARAM_AREA; an inactive
+                                process names it in its document only)
   docs/processes/<AREA>_<PROCESS>.md   the document: owner team, role, checks, Fiori apps, job, parameters to
                                 deliver, VERIFY items
   <skeleton_dir>/zcl_..._c_....clas.abap + .clas.testclasses.abap   a check class skeleton (ZIF_CA_OPS_CHECK)
@@ -187,7 +188,9 @@ def rows_of(spec):
         out['purge_targets.csv'].append({
             'TARGET': spec['purge_target'], 'CLASS_NAME': spec['purge_class'], 'PARAM_AREA': 'CA_OPS',
             'PARAM_NAME': spec.get('purge_param', f'RETENTION_DAYS_{spec["purge_target"]}'), 'ACTIVE': on})
-    if spec.get('new_area'):
+    # A new area is delivered with an active process only: a delivered inactive area would be reported
+    # every day by the consumer's parameter check; the document names it for the activation
+    if spec.get('new_area') and spec.get('active', True):
         out['param_areas.csv'].append({'AREA': area, 'DESCRIPTION': spec['new_area'].get('description', spec['name']),
                                        'OWNER_TEAM': spec['new_area'].get('owner_team', spec.get('owner_team', '')),
                                        'PROD_EDITABLE': YES, 'ACTIVE': on})
@@ -350,7 +353,11 @@ def document(spec, out):
               '| Purge | ' + (f'target `{spec["purge_target"]}` (`ZCA_OPS_PURGE`)' if spec.get('own_data')
                                else 'findings only: purged with their runs (built-in target RUN)') + ' |',
               f'| Morning completeness | `ZCL_CA_OPS_CHK_ONBOARD` reports a missing piece of this process |',
-              '', '## Parameters to deliver (area CA_OPS, definitions of the consumer)', '',
+              '', '## Parameters to deliver (area CA_OPS, definitions of the consumer)', '']
+    if spec.get('new_area') and not spec.get('active', True):
+        lines += [f'- Area `{area}` itself (`config/param_areas.csv`: {spec["new_area"].get("description", "")}) - '
+                  'added on activation, never delivered inactive (the parameter check would report it daily)']
+    lines += [
               f'- `SLA_DAYS_{area}_E`, `SLA_DAYS_{area}_W` - due date of the exceptions (else `SLA_DAYS_DEFAULT`)',
               f'- `CHECK_STALE_MIN_{area}` - freshness of the dashboard (else `CHECK_STALE_MIN_DEFAULT`)']
     if spec.get('own_data'):

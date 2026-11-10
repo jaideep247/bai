@@ -134,6 +134,21 @@ it lists RUN, ALERT_LOG and every active purge target of `ZCA_OPS_PURGE` with th
 
 How a consumer writes findings, raises alerts and plugs in: `README.md` (section *How a consumer uses it*).
 
+## 6a. Process onboarding: registered checks, area dashboard, morning completeness check (2026-11-10)
+
+1. After the pull: the four new entities of `ZUI_CA_OPS_CFG` (business processes, registered checks, aggregate
+   checks, approved tables) come with the regenerated configuration app; create the service binding
+   **`ZUI_CA_OPS_DASH_O4`** (OData V4 - UI) of the area dashboard and a list report app (or the binding preview)
+   on entity `CheckStatus`; give the readers ZCA_OPS 03 for their areas (DCL `ZC_CA_OPSCHECKSTATUS`).
+2. Morning completeness check: enter the row of `config/check_registry.csv` (`CA_OPS` / `ONBOARDING`, class
+   `ZCL_CA_OPS_CHK_ONBOARD`, schedule group `MORNING`), **set it active** and schedule `ZCA_OPS_CHECK_RUN` with
+   `P_AREA` = `CA_OPS`, `P_GROUP` = `MORNING`, test mode off (job user ZCA_OPS 16 for `CA_OPS`) - unless a
+   consumer runs the class in its own daily report (then leave the row inactive: one report per gap).
+3. Each business process: `docs/ADDING_A_BUSINESS_PROCESS.md` (scaffold `../tools/abaptools/new_process.py`,
+   rows in `ZUI_CA_OPS_CFG`, one job `ZCA_OPS_CHECK_RUN` per area and schedule group).
+4. Optional: `CHECK_STALE_MIN_DEFAULT` (1500 minutes) or a definition `CHECK_STALE_MIN_<area>` per area
+   (`docs/PARAMETERS.md`).
+
 ## 7. Verify the installation (demo report)
 
 The optional sub-package `ZCA_OPS_DEMO` is a complete, minimal consumer: report `ZCA_OPS_DEMO` starts a run
@@ -155,5 +170,8 @@ writes one information finding (jobs ended), an error (jobs cancelled - an open 
 6. Run the ABAP Unit tests of the packages (`ZCA_OPS`, `ZCA_OPS_UI`, `ZCA_OPS_DEMO`) and the ATC default variant.
 7. Production: do not import `ZCA_OPS_DEMO`, or delete it after the check (it holds no data of its own;
    delete the `CA_DEMO` area, its rule and its runs with the retention purge or leave them in DV1 / QA1).
+
+8. Process onboarding (section 6a): run `ZCA_OPS_CHECK_RUN` in test mode for area `CA_OPS`, group `MORNING`
+   (message 102 and the findings in a list; with no registered process: no finding); VERIFY V46-V54.
 
 Record the results against `docs/VERIFY.md` in the release pack.

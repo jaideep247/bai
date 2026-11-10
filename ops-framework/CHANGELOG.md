@@ -2,6 +2,37 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (process onboarding)
+
+Goal (user, 2026-11-10): a new business process is added and integrated end to end - from Fiori to backend -
+mostly by configuration plus at most one small check class.
+
+### Added
+- Check contract `ZIF_CA_OPS_CHECK` and the generic runner `ZCL_CA_OPS_CHECK_RUNNER` / report `ZCA_OPS_CHECK_RUN`:
+  one run per area and schedule group (run variant) with authorisation 16, run lock, run header durable first,
+  every active check of the registry `ZCA_OPS_CHECK` (class by name, interface checked first), GROUP1 = process
+  and GROUP2 = check stamped on every finding, a check that raises = `CHECK_FAILED` and the run continues,
+  auto-resolve of complete checks only (reconcile by GROUP2), alert rules after the commit (`ALERT_FAILED`
+  when the dispatch raises), abort through `ZCL_CA_OPS_RUN_GUARD`.
+- Process register `ZCA_OPS_PROC` (area, process, owner, backup, runbook, role, own tables, purge target).
+- No-code aggregate check `ZCL_CA_OPS_CHK_AGG`: rows of `ZCA_OPS_AGG` over tables approved per area in
+  `ZCA_OPS_TABWL` - COUNT of the rows in a status or AGE of the oldest, one database aggregate per row, grouped by
+  the company-code field (findings carry BUKRS), amber / red limits; builder `ZCL_CA_OPS_AGG_QUERY` (DDIC-checked
+  names, quoted literals, fixed operators), S_TABU_NAM 03 per table. The framework's equivalent of the first
+  consumer's generic aggregate (which keeps its richer metric version).
+- Onboarding check `ZCL_CA_OPS_CHK_ONBOARD` (registry row `CA_OPS` / `ONBOARDING`, schedule group `MORNING`,
+  delivered inactive): a registered process without an active check, a control covering each check, an alert
+  rule of its area, an owner who is a user, a purge target for own tables, a role and an active area.
+- Area dashboard `ZUI_CA_OPS_DASH` (`ZR_CA_OpsCheckStatus`, `ZC_CA_OpsCheckStatus`, DCL `ZC_CA_OPSCHECKSTATUS`):
+  per area, check and company-code slice the last run, status, open exceptions and freshness (parameters
+  `CHECK_STALE_MIN_<area>`, `CHECK_STALE_MIN_DEFAULT` = 1500 minutes; prefix `CHECK_` read in `CA_OPS`).
+- The four tables in `ZUI_CA_OPS_CFG` (generated; table and field checks of aggregate rows, messages 082 / 083).
+- `ZIF_CA_OPS_CHECK_DAO` / `ZCL_CA_OPS_CHECK_DAO`, `ZIF_CA_OPS_CHK_TYPES`; factory `GET_CHECK_DAO`, injector
+  `INJECT_CHECK_DAO`; messages 082-103; seed files `config/process_register.csv`, `check_registry.csv`,
+  `check_aggregates.csv`, `approved_tables.csv`.
+- Offline: check `process_onboarding` of `tools/checks.py` (shared engine `../tools/abaptools/onboarding.py`),
+  scaffold `../tools/abaptools/new_process.py`; guide `docs/ADDING_A_BUSINESS_PROCESS.md`; VERIFY V46-V54.
+
 ## [Unreleased] - 2026-11-10 (company-code isolation)
 
 An external review found that a user restricted to one company code could see findings, history and counts

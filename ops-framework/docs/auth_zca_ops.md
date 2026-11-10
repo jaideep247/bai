@@ -27,7 +27,7 @@ Permitted activities (SU21 → Activities) — the same activities the first con
 | 02 | Change (configuration row; assign / resolve / classify an exception; sign off a control) | configuration apps, exceptions app `ZUI_CA_OPS_EXC`, daily control review `ZUI_CA_OPS_REV` (action *Mark reviewed*) |
 | 03 | Display | every app and DCL, ALV reports |
 | 06 | Delete a configuration row (DV1 only, transport) | configuration apps |
-| 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); a consumer's batch programs (its area) |
+| 16 | Execute | `ZCA_OPS_RETENTION` (area `CA_OPS`); `ZCA_OPS_CHECK_RUN` (the area of the run - the generic runner of the check registry, process onboarding 2026-11-10); a consumer's batch programs (its area) |
 | 85 | Approve (second person) | waiver approval in the exceptions app |
 
 Configuration apps (generated, `tools/rap_generate.py` - the framework's app; a consumer's apps by its own wrapper of the same shared generator): each activity is checked on its own per child entity and the area of the app — 01 create, 02 change, 06 delete; editing the singleton needs at least one of them. The framework's app `ZUI_CA_OPS_CFG` (alert rules, alert channels, purge targets) checks area `CA_OPS`.
@@ -56,8 +56,11 @@ A consumer adds its own roles with its areas (in its own authorisation sheet; th
 | `ZC_CA_OpsException` (`ZUI_CA_OPS_EXC`) | `ZC_CA_OPSEXCEPTION` | the company-code rule of §3c on `Area`, `CompanyCode` (company code of the finding) |
 | `ZC_CA_OpsExcHist` (same service) | `ZC_CA_OPSEXCEPTION` | the rule of §3c on the exception (path `_Exception.Area`, `_Exception.CompanyCode`) |
 | `ZC_CA_OpsCtlReview` (`ZUI_CA_OPS_REV`) | `ZC_CA_OPSCTLREVIEW` | the rule of §3c on `Area` (of the control) and `CompanyCode` (of the slice) |
+| `ZC_CA_OpsCheckStatus` (`ZUI_CA_OPS_DASH`, area dashboard, 2026-11-10) | `ZC_CA_OPSCHECKSTATUS` | the rule of §3c on `Area` (of the check) and `CompanyCode` (of the slice: blank = area-level row with run and freshness, else the open exceptions of that company code) |
 
-VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36.
+VERIFY-ADT: `pfcg_auth` on a projection view and on a path to the parent (7.58) - V04, V36, V51.
+
+**Business processes (process onboarding, 2026-11-10).** A registered process (`ZCA_OPS_PROC`) names in `AUTH_ROLE` the PFCG role that grants `ZCA_OPS` for its area (03 display, 02 operator, 16 for the job user of `ZCA_OPS_CHECK_RUN`); the onboarding check reports a process without a role or whose area is not an active parameter area (`PROC_NO_AUTH`), and the offline check `process_onboarding` requires the role in the consumer's authorisation sheet. A process gets its own area when its runs would otherwise be the latest run of another engine's area.
 
 ## 3c. Company-code isolation (2026-11-10)
 

@@ -134,6 +134,17 @@ class OnboardingTest(unittest.TestCase):
         new_process.scaffold(self.root, placeholder)
         self.assertEqual(self.failures(), [])
 
+    def test_inactive_new_area_not_delivered(self):
+        changes = dict(new_process.scaffold(self.root, spec(active=False)))
+        self.assertNotIn(os.path.join('config', 'param_areas.csv'), changes)
+        with open(os.path.join(self.root, 'docs', 'processes', 'ZPE_OPS_PAY_LIFE.md'), encoding='utf-8') as fh:
+            self.assertIn('added on activation', fh.read())
+
+    def test_active_process_needs_area(self):
+        new_process.scaffold(self.root, spec())
+        self.rewrite('param_areas.csv', lambda r: None)
+        self.assertTrue(any('not a parameter area' in f for f in self.failures()))
+
     def test_no_check_fails(self):
         new_process.scaffold(self.root, spec())
         self.rewrite('check_registry.csv', lambda r: None)

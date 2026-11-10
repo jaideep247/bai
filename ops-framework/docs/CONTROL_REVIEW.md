@@ -20,7 +20,7 @@ Status 2026-11-10: written and statically checked offline (abaplint 0 issues); *
 
 ## 2. Which findings belong to a control
 
-A covered-check row selects findings of its **check area** whose `RULE_ID`, `CHECK_CODE` or `GROUP2` **equals** the value (one row per value; a family of checks is several rows). Exact values, not patterns: the status is joined in CDS for the review app and the consumers' overview cards, and a PCRE cannot be evaluated in a join (`Performance_Review.md` of the first consumer, §6b). Rows of one control must not overlap (a finding matching two rows is counted twice in the open exceptions).
+A covered-check row selects findings of its **check area** whose `RULE_ID`, `CHECK_CODE` or `GROUP2` **equals** the value (one row per value; a family of checks is several rows). A check of the check registry (process onboarding, 2026-11-10) is covered by its **`GROUP2` = check ID** row: the generic runner stamps GROUP2 on every finding of the check, and the onboarding check counts only `GROUP2` rows of active controls as coverage. Exact values, not patterns: the status is joined in CDS for the review app and the consumers' overview cards, and a PCRE cannot be evaluated in a join (`Performance_Review.md` of the first consumer, §6b). Rows of one control must not overlap (a finding matching two rows is counted twice in the open exceptions).
 
 ## 2a. Slices per company code (company-code isolation, 2026-11-10)
 

@@ -42,4 +42,4 @@ define table zca_ops_agg {
   local_last_changed_at : abp_locinst_lastchange_tstmpl;
 }
 // Read by ZCL_CA_OPS_CHECK_DAO=>GET_AGGREGATES (area, check, active). The table read needs an index that starts
-// with the status field (and the company-code field) - VERIFY-SE11 per approved table (docs/VERIFY.md V46).
+// with the status field (and the company-code field) - VERIFY-SE11 per approved table (docs/VERIFY.md V48).

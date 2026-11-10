@@ -6,7 +6,7 @@
 Area `CA_OPS` (`config/param_areas.csv`); definitions `config/param_definitions.csv`, generated into
 `ZCL_CA_OPS_PARAM_SEED` by `tools/param_definitions.py` (check `param_definitions` of `tools/checks.py`).
 Read through `ZCL_CA_OPS_FACTORY=>GET_PARAMS( )`: a name with prefix `ALERT_`, `SLA_`, `RETENTION_` or
-`PURGE_`, `CONTROL_` or `EXC_` is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
+`PURGE_`, `CONTROL_`, `EXC_` or `CHECK_` is read in `CA_OPS`; a value the framework resolves (maintained value or definition default)
 wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS( )`, never silent.
 
 | Name | Type | Default | Read by | Meaning |
@@ -18,6 +18,7 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `ALERT_TEMPLATE_DEFAULT` | CHAR (template ID) | ZCA_OPS_ALERT_DEFAULT | alert router | Generic e-mail template when neither rule, section nor channel names one |
 | `ALERT_TIME_ZONE` | CHAR (TTZZ zone) | UTC | alert policy (via router) | Time zone of the run start / end shown in the alert e-mail |
 | `ALERT_EXC_APP_LINK` | CHAR | — | alert policy (via router) | Link to the exceptions app in the alert e-mail (blank = the app's name) |
+| `CHECK_STALE_MIN_DEFAULT` | INT ≥ 1 | 1500 | area dashboard CDS (`ZI_CA_OpsChkStaleD`) | Minutes after which the latest completed run of an area and schedule group is stale on the area dashboard `ZUI_CA_OPS_DASH` when the area has no `CHECK_STALE_MIN_<area>` (process onboarding, 2026-11-10) |
 | `CONTROL_TIME_ZONE` | CHAR (TTZZ zone) | UTC | control review CDS (`ZI_CA_OpsCtlTz`) | Time zone of the business date of a control, of its review cut-off and of the sign-off time shown (a consumer delivers its value row, e.g. `CST`) |
 | `CONTROL_TEAMS` | LIST | ONSITE,OFFSHORE | `ZCL_CA_OPS_CFG_CHECKS=>TEAM_VALID` | Teams a control may name (control register, checked on save) |
 | `EXC_REASON_CODES` | LIST | TIMING,INVESTIGATING | exceptions app (action *Classify*) | Reason codes an open exception may be classified with |
@@ -34,6 +35,7 @@ wins over the caller's default; an unreadable parameter is listed by `GET_ERRORS
 | `ALERT_<route>` | `SEND( iv_route )` | `ALERT_MORNING` |
 | `SLA_DAYS_<area>_<B / E / W>` | store (due date of a new exception) | `SLA_DAYS_CD_EBS_E` |
 | `RETENTION_DAYS_<target>` (any name: the registry row names area and parameter) | purge (`ZCA_OPS_PURGE`) | `RETENTION_DAYS_FMON_EVENT` |
+| `CHECK_STALE_MIN_<area>` (INT ≥ 1, minutes) | area dashboard CDS (`ZI_CA_OpsChkStaleA`, read in CDS like `CONTROL_TIME_ZONE`) | `CHECK_STALE_MIN_CD_COLL` (with the example process, on activation) |
 
 Values (landscape-specific, e.g. recipient lists, the section class) are value rows of the framework
 app `ZUI_CA_PARAM_O4`; definitions travel only by transport.

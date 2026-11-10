@@ -181,6 +181,6 @@ def failures(root, auth_docs, source_roots, extra_roots=()):
             out.append(f'process {label}: no role (AUTH_ROLE)')
         elif not re.search(r'(?<![\w])' + re.escape(role) + r'(?![\w])', auth_text):
             out.append(f'process {label}: role {role} not in the authorisation sheet ({", ".join(auth_docs)})')
-        if proc['AREA'] not in areas:
+        if is_active and proc['AREA'] not in areas:
             out.append(f'process {label}: area {proc["AREA"]} is not a parameter area (param_areas)')
     return out
