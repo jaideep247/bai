@@ -11,6 +11,8 @@
 *& Modification log:
 *& 2026-11-10 | Initial version (framework ZCA_OPS: the consumer-specific table of the alert message,
 *&            | formerly called by the alert policy directly, is a plug-in).
+*& 2026-11-10 | TEMPLATE_ID: the section names the e-mail template of its messages (alert e-mail templates);
+*&            | its table is the block TABLE_SECTION of the template.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert message section</p>
 "! A consumer's own table in the alert message for the findings it owns.
@@ -47,5 +49,14 @@ INTERFACE zif_ca_ops_alert_section
       it_findings    TYPE zif_ca_ops_types=>tt_finding
     RETURNING
       VALUE(rv_text) TYPE string.
+
+  "! E-mail template of a message whose findings include owned ones, when the rule names none
+  "! (blank = the channel's, then the generic template). The section's table goes where the
+  "! template has the placeholder TABLE_SECTION.
+  METHODS template_id DEFAULT IGNORE
+    IMPORTING
+      it_findings           TYPE zif_ca_ops_types=>tt_finding
+    RETURNING
+      VALUE(rv_template_id) TYPE zif_ca_ops_types=>ty_template_id.
 
 ENDINTERFACE.

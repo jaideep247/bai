@@ -26,6 +26,8 @@ define table zca_d_alrule {
   escalationdest : abap.char(255);
   escoverride : abap_boolean;
   active : abap_boolean;
+  templateid : abap.char(30);
+  showamounts : abap_boolean;
   changedby : syuname;
   changedat : timestampl;
   lastchangedby : abp_lastchange_user;

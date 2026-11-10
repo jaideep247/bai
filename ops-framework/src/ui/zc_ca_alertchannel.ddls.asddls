@@ -11,6 +11,7 @@ define view entity ZC_CA_AlertChannel
       ClassName,
       Destination,
       Active,
+      TemplateId,
       ChangedBy,
       ChangedAt,
       LastChangedBy,

@@ -46,6 +46,10 @@ define view entity ZR_CA_AlertRule
       esc_override as EscOverride,
       @EndUserText.label: 'Active'
       active as Active,
+      @EndUserText.label: 'E-mail template (SMTG template ID)'
+      template_id as TemplateId,
+      @EndUserText.label: 'Show amounts in the e-mail'
+      show_amounts as ShowAmounts,
       @EndUserText.label: 'Changed by (SM30)'
       changed_by as ChangedBy,
       @EndUserText.label: 'Changed at (SM30)'

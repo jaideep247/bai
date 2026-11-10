@@ -10,6 +10,7 @@
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-07 | Comment: recipients ALERT_<route> in ZCA_PARAM (the former parameter table retired).
 *& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT to the reusable framework ZCA_OPS.
+*& 2026-11-10 | SEND: optional e-mail template around the prepared report (alert e-mail templates).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert router port</p>
 INTERFACE zif_ca_ops_alert
@@ -17,11 +18,14 @@ INTERFACE zif_ca_ops_alert
 
   "! Deliver a prepared HTML report by e-mail. Recipients: ZCA_PARAM
   "! ALERT_<route>, fallback ALERT_DEFAULT; none maintained = nothing sent.
+  "! @parameter iv_template_id | e-mail template around the report (the report is its block
+  "! TABLE_MAIN, the subject its key SUBJECT); blank = the report as it is
   METHODS send
     IMPORTING
-      iv_route   TYPE zif_ca_ops_types=>ty_param_name
-      iv_subject TYPE string
-      iv_html    TYPE string
+      iv_route       TYPE zif_ca_ops_types=>ty_param_name
+      iv_subject     TYPE string
+      iv_html        TYPE string
+      iv_template_id TYPE zif_ca_ops_types=>ty_template_id OPTIONAL
     RAISING
       zcx_ca_ops_error.
 

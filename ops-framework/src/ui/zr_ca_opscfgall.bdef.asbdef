@@ -75,6 +75,8 @@ etag master LocalLastChangedAt
     EscalationDest = escalation_dest;
     EscOverride = esc_override;
     Active = active;
+    TemplateId = template_id;
+    ShowAmounts = show_amounts;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;
@@ -108,6 +110,7 @@ etag master LocalLastChangedAt
     ClassName = class_name;
     Destination = destination;
     Active = active;
+    TemplateId = template_id;
     ChangedBy = changed_by;
     ChangedAt = changed_at;
     LastChangedBy = last_changed_by;

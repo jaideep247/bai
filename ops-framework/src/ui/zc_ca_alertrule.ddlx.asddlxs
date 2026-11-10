@@ -76,6 +76,12 @@ annotate entity ZC_CA_AlertRule with
   @UI.identification: [{ position: 200 }]
   Active;
 
+  @UI.identification: [{ position: 210 }]
+  TemplateId;
+
+  @UI.identification: [{ position: 220 }]
+  ShowAmounts;
+
   @UI.hidden: true
   ChangedBy;
 

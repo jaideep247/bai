@@ -3,7 +3,7 @@
 Messages of the operations framework ZCA_OPS (package `ZCA_OPS`). Numbers of messages that moved from
 the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
-and area checks, purge, exception lifecycle · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+and area checks, purge, exception lifecycle, alert e-mail templates (070-075) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -17,7 +17,7 @@ texts <= 73 characters).
 | 000 | &1 &2 &3 &4 |
 | 001 | Run ID could not be generated |
 | 002 | [&1] run &2 ended &3 / RAG &4 |
-| 003 | [&1][&2] &3 finding(s) - rule &4 |
+| 003 | [&1][&2] &3: &4 finding(s) |
 | 004 | Run &1 status &2, RAG &3, items &4, |
 | 005 | failed &1, blocked &2. |
 | 006 | &1 more finding(s): see the exceptions app (Fiori ZUI_CA_OPS_EXC). |
@@ -47,6 +47,12 @@ texts <= 73 characters).
 | 065 | Waiver end date &1 is in the past |
 | 066 | An owner (user) is required |
 | 067 | A waiver request by &1 is already pending |
+| 070 | E-mail renderer &1 not available in this system - built-in layout sent |
+| 071 | E-mail template &1 not found or inactive &2 - built-in layout sent |
+| 072 | E-mail template &1 not rendered &2 - built-in layout sent |
+| 073 | E-mail template &1 has no placeholder for &2 - table added at the end |
+| 074 | [&1][&2] &3: &4 finding(s), |
+| 075 | E-mail template &1 not used: ALERT_MAIL_RENDERER is BUILTIN |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |
@@ -59,6 +65,7 @@ texts <= 73 characters).
 | 419 | Channel &1 cannot deliver to &2 (e-mail: shared SO23 list name) |
 | 434 | Parameter &1 is not defined in area &2 (ZCA_PARAM) |
 | 435 | &1 is not a parameter area of ZCA_PARAM_AREA (or * for every area) |
+| 436 | &1 is not an e-mail template ID (SMTG, upper case) or does not exist |
 | 742 | Alert rule &1: pattern &2 is not valid PCRE - rule not applied |
 | 786 | Exception &1 (&2) changed by a user during the run - left for next run |
 | 787 | Exception &1 / &2 changed meanwhile - not resolved, nothing saved |

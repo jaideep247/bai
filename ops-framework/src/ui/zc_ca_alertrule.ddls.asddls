@@ -27,6 +27,8 @@ define view entity ZC_CA_AlertRule
       EscalationDest,
       EscOverride,
       Active,
+      TemplateId,
+      ShowAmounts,
       ChangedBy,
       ChangedAt,
       LastChangedBy,

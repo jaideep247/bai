@@ -112,6 +112,38 @@ CLASS zcl_ca_ops_param_seed DEFINITION
     CONSTANTS:
       BEGIN OF gc_d003,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'ALERT_EXC_APP_LINK',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Exceptions app link in the alert e-mail (blank = app name)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d003.
+    CONSTANTS:
+      BEGIN OF gc_d004,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'ALERT_MAIL_RENDERER',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'SMTG',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE 'SMTG|BUILTIN',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE 'X',
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Alert e-mail renderer: SMTG (built-in fallback) or BUILTIN',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d004.
+    CONSTANTS:
+      BEGIN OF gc_d005,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'ALERT_SECTION_CLASS',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
         value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CLASS',
@@ -124,9 +156,41 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE 'X',
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Consumer section of the alert message (blank = none)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d003.
+      END OF gc_d005.
     CONSTANTS:
-      BEGIN OF gc_d004,
+      BEGIN OF gc_d006,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'ALERT_TEMPLATE_DEFAULT',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'ZCA_OPS_ALERT_DEFAULT',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z/][A-Z0-9_/]{0,29}',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE 'X',
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Generic alert e-mail template (rule and channel name none)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d006.
+    CONSTANTS:
+      BEGIN OF gc_d007,
+        area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
+        name            TYPE zif_ca_param_types=>ty_name VALUE 'ALERT_TIME_ZONE',
+        kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
+        value_type      TYPE zif_ca_param_types=>ty_value_type VALUE 'CHAR',
+        min_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        max_value       TYPE zif_ca_param_types=>ty_value VALUE IS INITIAL,
+        default_value   TYPE zif_ca_param_types=>ty_value VALUE 'UTC',
+        allowed_pcre    TYPE zif_ca_param_types=>ty_value VALUE '[A-Z0-9_]{1,6}',
+        interface_name  TYPE zif_ca_param_types=>ty_interface VALUE IS INITIAL,
+        mandatory       TYPE abap_bool VALUE IS INITIAL,
+        developer_owned TYPE abap_bool VALUE IS INITIAL,
+        description     TYPE zif_ca_param_types=>ty_description VALUE 'Time zone of the times in the alert e-mail (TTZZ)',
+        owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
+      END OF gc_d007.
+    CONSTANTS:
+      BEGIN OF gc_d008,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'PURGE_PACKAGE_SIZE',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -140,9 +204,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Rows deleted per purge package',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d004.
+      END OF gc_d008.
     CONSTANTS:
-      BEGIN OF gc_d005,
+      BEGIN OF gc_d009,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_ALERT_LOG',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -156,9 +220,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of alert log rows (days; at least 30 applied)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d005.
+      END OF gc_d009.
     CONSTANTS:
-      BEGIN OF gc_d006,
+      BEGIN OF gc_d010,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'RETENTION_DAYS_RUN',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -172,9 +236,9 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'Retention of runs and findings (days; >= 30)',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d006.
+      END OF gc_d010.
     CONSTANTS:
-      BEGIN OF gc_d007,
+      BEGIN OF gc_d011,
         area            TYPE zif_ca_param_types=>ty_area VALUE 'CA_OPS',
         name            TYPE zif_ca_param_types=>ty_name VALUE 'SLA_DAYS_DEFAULT',
         kind            TYPE zif_ca_param_types=>ty_kind VALUE 'P',
@@ -188,8 +252,8 @@ CLASS zcl_ca_ops_param_seed DEFINITION
         developer_owned TYPE abap_bool VALUE IS INITIAL,
         description     TYPE zif_ca_param_types=>ty_description VALUE 'SLA days of an exception when SLA_DAYS_<area>_<sev> blank',
         owner           TYPE zif_ca_param_types=>ty_owner VALUE 'OPS FRAMEWORK',
-      END OF gc_d007.
-    "! Delivered definitions 1-7 (at most 100 per method)
+      END OF gc_d011.
+    "! Delivered definitions 1-11 (at most 100 per method)
     CLASS-METHODS definitions_part_1
       RETURNING
         VALUE(rt_definitions) TYPE zif_ca_param_types=>tt_definition.
@@ -222,6 +286,10 @@ CLASS zcl_ca_ops_param_seed IMPLEMENTATION.
     INSERT CORRESPONDING #( gc_d005 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d006 ) INTO TABLE rt_definitions.
     INSERT CORRESPONDING #( gc_d007 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d008 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d009 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d010 ) INTO TABLE rt_definitions.
+    INSERT CORRESPONDING #( gc_d011 ) INTO TABLE rt_definitions.
   ENDMETHOD.
 
 

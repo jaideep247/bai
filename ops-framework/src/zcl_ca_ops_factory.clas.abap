@@ -18,6 +18,7 @@
 *& 2026-11-10 | A caught cast error is kept as PREVIOUS of the raised error (exception chain).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS: framework services only
 *&            | (consumer services stay in the consumer's factory); CHECK_VERSION (ZCA_PARAM release).
+*& 2026-11-10 | GET_MAIL_TEMPLATE: renderer of alert e-mails from SAP e-mail templates (injectable).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -66,6 +67,12 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_purge_dao.
 
+    "! Renderer of alert e-mails from SAP e-mail templates (the injected double, else the SMTG
+    "! adapter ZCL_CA_OPS_MAIL_TPL_SMTG; the built-in layout is not a slot - it is pure logic)
+    CLASS-METHODS get_mail_template
+      RETURNING
+        VALUE(ro_template) TYPE REF TO zif_ca_ops_mail_template.
+
     "! Exception repository (closing exceptions from other apps' saves)
     CLASS-METHODS get_exc_dao
       RETURNING
@@ -111,6 +118,7 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_auth_double TYPE REF TO zif_ca_ops_auth.
     CLASS-DATA go_lock_double TYPE REF TO zif_ca_ops_lock.
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_ca_ops_purge_dao.
+    CLASS-DATA go_mail_template_double TYPE REF TO zif_ca_ops_mail_template.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -193,6 +201,12 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_purge_dao.
     ro_dao = COND #( WHEN go_purge_dao_double IS BOUND THEN go_purge_dao_double
                      ELSE NEW zcl_ca_ops_purge_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_mail_template.
+    ro_template = COND #( WHEN go_mail_template_double IS BOUND THEN go_mail_template_double
+                          ELSE NEW zcl_ca_ops_mail_tpl_smtg( ) ).
   ENDMETHOD.
 
 

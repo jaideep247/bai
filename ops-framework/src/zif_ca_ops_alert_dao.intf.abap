@@ -8,6 +8,8 @@
 *& 2026-11-06 | claim, complete, get_repeat_keys (audit A17, DEFAULT IGNORE).
 *& 2026-11-06 | Modern-syntax sweep: alert tables ZCA_OPS_ALCHN / ALLOG / ALRULE.
 *& 2026-11-10 | Moved from ZIF_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS.
+*& 2026-11-10 | GET_EXCEPTION_FACTS (business context of the alert e-mail); template fields of rules,
+*&            | channels and log rows.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert configuration and log</p>
 INTERFACE zif_ca_ops_alert_dao
@@ -57,5 +59,13 @@ INTERFACE zif_ca_ops_alert_dao
       iv_run_id      TYPE zif_ca_ops_types=>ty_run_id
     RETURNING
       VALUE(rt_keys) TYPE zif_ca_ops_types=>tt_repeat_key.
+
+  "! Stored exceptions of a run (open or assigned): occurrences, SLA due date and owner - the
+  "! business context of the alert e-mail (new / repeated / overdue, due date, owner)
+  METHODS get_exception_facts DEFAULT IGNORE
+    IMPORTING
+      iv_run_id       TYPE zif_ca_ops_types=>ty_run_id
+    RETURNING
+      VALUE(rt_facts) TYPE zif_ca_ops_types=>tt_exception_fact.
 
 ENDINTERFACE.

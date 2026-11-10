@@ -35,6 +35,7 @@ INTERFACE lif_c.
       quietfrom                      TYPE string VALUE `QUIETFROM`,
       quietto                        TYPE string VALUE `QUIETTO`,
       rulepattern                    TYPE string VALUE `RULEPATTERN`,
+      templateid                     TYPE string VALUE `TEMPLATEID`,
     END OF gc_el,
     BEGIN OF gc_ent,
       alertchannel                   TYPE string VALUE `AlertChannel`,
@@ -367,6 +368,10 @@ CLASS lhc_alertchannel IMPLEMENTATION.
       IF lv_dest_invalid IS NOT INITIAL.
         INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-dest_invalid v1 = ls_row-ClassName v2 = lv_dest_invalid
                         element = lif_c=>gc_el-destination ) INTO TABLE lt_msg.
+      ENDIF.
+      IF zcl_ca_ops_cfg_checks=>template_valid( ls_row-TemplateId ) = abap_false.
+        INSERT VALUE #( number = zif_ca_ops_cfg_types=>gc_msg-template_invalid v1 = ls_row-TemplateId
+                        element = lif_c=>gc_el-templateid ) INTO TABLE lt_msg.
       ENDIF.
 
       LOOP AT lt_msg INTO DATA(ls_msg).

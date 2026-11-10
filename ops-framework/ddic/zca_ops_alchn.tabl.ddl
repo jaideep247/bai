@@ -11,6 +11,8 @@ define table zca_ops_alchn {
   // Default destination when the rule has none
   destination   : abap.char(255);
   active        : abap_boolean;
+  // Default e-mail template of the channel when the rule names none (SMTG template ID)
+  template_id   : abap.char(30);
   changed_by    : syuname;
   changed_at    : timestampl;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

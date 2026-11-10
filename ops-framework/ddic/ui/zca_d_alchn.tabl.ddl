@@ -10,6 +10,7 @@ define table zca_d_alchn {
   classname : seoclsname;
   destination : abap.char(255);
   active : abap_boolean;
+  templateid : abap.char(30);
   changedby : syuname;
   changedat : timestampl;
   lastchangedby : abp_lastchange_user;

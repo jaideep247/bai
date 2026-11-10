@@ -14,6 +14,8 @@ define view entity ZR_CA_AlertChannel
       destination as Destination,
       @EndUserText.label: 'Active'
       active as Active,
+      @EndUserText.label: 'E-mail template (SMTG template ID)'
+      template_id as TemplateId,
       @EndUserText.label: 'Changed by (SM30)'
       changed_by as ChangedBy,
       @EndUserText.label: 'Changed at (SM30)'

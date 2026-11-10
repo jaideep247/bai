@@ -30,7 +30,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>003</MSGNR>
-     <TEXT>[&amp;1][&amp;2] &amp;3 finding(s) - rule &amp;4</TEXT>
+     <TEXT>[&amp;1][&amp;2] &amp;3: &amp;4 finding(s)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -209,6 +209,42 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>070</MSGNR>
+     <TEXT>E-mail renderer &amp;1 not available in this system - built-in layout sent</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>071</MSGNR>
+     <TEXT>E-mail template &amp;1 not found or inactive &amp;2 - built-in layout sent</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>072</MSGNR>
+     <TEXT>E-mail template &amp;1 not rendered &amp;2 - built-in layout sent</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>073</MSGNR>
+     <TEXT>E-mail template &amp;1 has no placeholder for &amp;2 - table added at the end</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>074</MSGNR>
+     <TEXT>[&amp;1][&amp;2] &amp;3: &amp;4 finding(s),</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>075</MSGNR>
+     <TEXT>E-mail template &amp;1 not used: ALERT_MAIL_RENDERER is BUILTIN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>
@@ -277,6 +313,12 @@
      <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>435</MSGNR>
      <TEXT>&amp;1 is not a parameter area of ZCA_PARAM_AREA (or * for every area)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>436</MSGNR>
+     <TEXT>&amp;1 is not an e-mail template ID (SMTG, upper case) or does not exist</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>

@@ -20,6 +20,10 @@ define table zca_ops_allog {
   // Alert intent (SHA-1 of rule, run, channel, destination, subject) and attempt (A17)
   intent_key    : abap.char(40);
   attempt       : abap.int4;
+  // E-mail template asked for, renderer used (SMTG / BUILTIN) and the fallback or table note (2026-11-10)
+  template_id   : abap.char(30);
+  renderer      : abap.char(10);
+  render_info   : abap.char(255);
 }
 // Secondary index RUL: throttling / escalation
 // @index RUL: MANDT, RULE_ID, SENT_AT

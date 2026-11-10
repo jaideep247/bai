@@ -6,6 +6,10 @@
 *& (severity, patterns, quiet hours, throttling, escalation) and delivers via
 *& channel plug-ins. Every decision is logged in ZCA_OPS_ALLOG. A failing
 *& channel is logged and never aborts the calling run. Test-mode runs never alert.
+*& E-mail messages are rendered from their template (rule, consumer section,
+*& channel, generic ALERT_TEMPLATE_DEFAULT) by the SAP e-mail template adapter
+*& when ALERT_MAIL_RENDERER = SMTG; when it cannot be used the built-in layout
+*& of the policy is sent and the reason is kept on the alert log row.
 *& Modification log:
 *& 2026-11-05 | Initial version (ops suite consolidation).
 *& 2026-11-06 | Check codes, message class and texts as constants / ZCA_OPS messages (phase 5).
@@ -24,6 +28,11 @@
 *&            | key); the caller records ALERT_FAILED. Test seam ALERT_ID. Decisions logged before the error
 *&            | are still written. A failed delivery keeps the exception trace in ZCA_OPS_ALLOG-ERROR.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_ROUTER to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Alert e-mail templates (user decisions 2026-11-10): settings of the e-mail (ALERT_TIME_ZONE,
+*&            | ALERT_EXC_APP_LINK) and the stored exceptions of the run (GET_EXCEPTION_FACTS) for the
+*&            | context; template of the message, else the channel's, else ALERT_TEMPLATE_DEFAULT; rendered
+*&            | after the claim by the SMTG adapter (ALERT_MAIL_RENDERER), built-in layout as fallback; the
+*&            | template, renderer and fallback note on the alert log row. SEND: optional template.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configurable alert router</p>
 CLASS zcl_ca_ops_alert_router DEFINITION
@@ -43,6 +52,10 @@ CLASS zcl_ca_ops_alert_router DEFINITION
     DATA mt_log    TYPE zif_ca_ops_types=>tt_alert_log.
     "! Findings of the run raised again only by carry-forward (not re-alerted, A17)
     DATA mt_repeat TYPE zif_ca_ops_types=>tt_repeat_key.
+    "! Stored exceptions of the run (e-mail context: new / repeated / overdue, due date, owner)
+    DATA mt_facts TYPE zif_ca_ops_types=>tt_exception_fact.
+    "! Renderer of SAP e-mail templates, created once per router (ZCL_CA_OPS_FACTORY=>GET_MAIL_TEMPLATE)
+    DATA mo_template TYPE REF TO zif_ca_ops_mail_template.
 
     METHODS route_selection
       IMPORTING
@@ -87,8 +100,21 @@ CLASS zcl_ca_ops_alert_router DEFINITION
         iv_subject     TYPE clike OPTIONAL
         iv_error       TYPE clike OPTIONAL
         iv_alert_id    TYPE zif_ca_ops_types=>ty_run_id OPTIONAL
+        is_render      TYPE zif_ca_ops_types=>ty_alert_message OPTIONAL
       RAISING
         zcx_ca_ops_error.
+
+    "! Settings of the alert e-mail: time zone, exceptions app link, today
+    METHODS mail_settings
+      RETURNING
+        VALUE(rs_settings) TYPE zcl_ca_ops_alert_policy=>ty_mail_settings.
+
+    "! E-mail message: its template (message, channel, generic) rendered by the SAP e-mail template
+    "! adapter (ALERT_MAIL_RENDERER = SMTG); else, or when it cannot be used, the built-in layout
+    "! stays and RENDER_INFO names why. Other channels (application log): the built-in text.
+    METHODS render
+      CHANGING
+        cs_message TYPE zif_ca_ops_types=>ty_alert_message.
 
     "! The consumer section of the message (parameter ALERT_SECTION_CLASS; blank = none). A class
     "! that cannot be created is logged as a failed alert decision and the message goes without it
@@ -116,8 +142,9 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     IF is_run-test_mode = abap_true.
       RETURN.
     ENDIF.
-    CLEAR mt_log.
-    mo_policy = NEW #( io_section = section( is_run ) ).
+    CLEAR: mt_log, mt_facts.
+    mo_policy = NEW #( io_section = section( is_run )
+                       is_mail    = mail_settings( ) ).
 
     DATA(lo_dao) = zcl_ca_ops_factory=>get_alert_dao( ).
     DATA(lt_rules) = lo_dao->get_rules( is_run-area ).
@@ -143,6 +170,10 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         DATA(lt_selection) = mo_policy->select( it_rules    = lt_rules
                                                 is_run      = is_run
                                                 it_findings = it_findings ).
+        IF lt_selection IS NOT INITIAL.
+          " one read by the run key: the business context of the e-mail (new / repeated / overdue)
+          mt_facts = lo_dao->get_exception_facts( is_run-run_id ).
+        ENDIF.
         LOOP AT lt_selection ASSIGNING FIELD-SYMBOL(<ls_selection>).
           route_selection( is_selection = <ls_selection>
                            is_run       = is_run
@@ -209,6 +240,26 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     ls_message-text        = iv_subject.
     ls_message-severity    = zif_ca_ops_types=>gc_severity-info.
     ls_message-extnumber   = |{ iv_route }|.
+    " A prepared report in a template (iv_template_id): the report is the block TABLE_MAIN
+    IF iv_template_id IS NOT INITIAL.
+      DATA(lv_token) = zcl_ca_ops_mail_composer=>token( iv_block = zif_ca_ops_types=>gc_mail_block-main
+                                                        iv_seed  = |{ ls_message-alert_id }| ).
+      ls_message-template_id                       = iv_template_id.
+      ls_message-renderer                          = zif_ca_ops_types=>gc_renderer-builtin.
+      ls_message-context-header-subject            = iv_subject.
+      ls_message-context-header-headline           = iv_subject.
+      ls_message-context-header-system_id          = sy-sysid.
+      ls_message-context-header-client             = sy-mandt.
+      ls_message-context-header-rule_id            = iv_route.
+      ls_message-context-header-time_zone          = mail_settings( )-time_zone.
+      ls_message-context-header-exceptions_link    = mail_settings( )-exc_link.
+      ls_message-context-header-table_main         = lv_token.
+      ls_message-context-blocks = VALUE #( ( name  = zif_ca_ops_types=>gc_mail_block-main
+                                             token = lv_token
+                                             html  = iv_html
+                                             text  = iv_subject ) ).
+      render( CHANGING cs_message = ls_message ).
+    ENDIF.
     TRY.
         CAST zif_ca_ops_alert_channel(
           zcl_ca_ops_factory=>get_plugin( iv_class_name = ls_channel-class_name
@@ -216,14 +267,14 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
         )->deliver( ls_message ).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
                  iv_status = zif_ca_ops_types=>gc_alert_status-sent
-                 iv_destination = ls_message-destination iv_subject = iv_subject
-                 iv_alert_id = ls_message-alert_id ).
+                 iv_destination = ls_message-destination iv_subject = ls_message-subject
+                 iv_alert_id = ls_message-alert_id is_render = ls_message ).
         lo_dao->insert_log( mt_log ).
       CATCH zcx_ca_ops_error INTO DATA(lx_error).
         add_log( iv_rule_id = CONV #( iv_route ) iv_channel = ls_message-channel is_run = ls_run
                  iv_status = zif_ca_ops_types=>gc_alert_status-failed
-                 iv_destination = ls_message-destination iv_subject = iv_subject
-                 iv_error = lx_error->get_text( ) iv_alert_id = ls_message-alert_id ).
+                 iv_destination = ls_message-destination iv_subject = ls_message-subject
+                 iv_error = lx_error->get_text( ) iv_alert_id = ls_message-alert_id is_render = ls_message ).
         lo_dao->insert_log( mt_log ).
         RAISE EXCEPTION lx_error.
       CATCH cx_sy_move_cast_error INTO DATA(lx_cast).
@@ -317,7 +368,8 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     ENDIF.
     deliver_messages( it_messages = mo_policy->build_messages( is_selection   = ls_selection
                                                               is_run         = is_run
-                                                              iv_destination = lv_destination )
+                                                              iv_destination = lv_destination
+                                                              it_facts       = mt_facts )
                       is_channel  = ls_channel
                       is_run      = is_run
                       io_dao      = io_dao ).
@@ -341,9 +393,17 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     ENDTRY.
 
     DATA(lo_store) = zcl_ca_ops_factory=>get_store( ).
+    " the generic template when neither the rule, the consumer section nor the channel names one
+    DATA(lv_default_template) = CONV zif_ca_ops_types=>ty_template_id(
+      zcl_ca_ops_factory=>get_params( )->get_param( iv_name    = zif_ca_ops_types=>gc_param-template_default
+                                                    iv_default = CONV #( zif_ca_ops_types=>gc_param_default-template_default ) ) ).
     LOOP AT it_messages INTO DATA(ls_message).
       ls_message-alert_id  = new_id( ).
       ls_message-extnumber = |{ is_run-area }/{ is_run-run_id }/{ ls_message-rule_id }|.
+      ls_message-template_id = zcl_ca_ops_mail_composer=>template_for( iv_rule    = ls_message-template_id
+                                                                       iv_channel = is_channel-template_id
+                                                                       iv_default = lv_default_template ).
+      " the intent key and the claim carry the code's subject: a template change is no new alert
       " A17: durable claim first (status C, committed) - a second dispatcher sees it and a
       " failure after the external send still leaves evidence of the delivery attempt
       DATA(ls_claim) = VALUE zif_ca_ops_types=>ty_alert_log( alert_id    = ls_message-alert_id
@@ -355,12 +415,18 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
                                                             status      = zif_ca_ops_types=>gc_alert_status-claimed
                                                             destination = ls_message-destination
                                                             subject     = ls_message-subject
-                                                            intent_key  = intent_key( ls_message ) ).
+                                                            intent_key  = intent_key( ls_message )
+                                                            template_id = ls_message-template_id ).
       IF io_dao->claim( ls_claim ) = abap_true.
         CONTINUE.
       ENDIF.
       lo_store->commit( ).
+      " rendered after the claim: a data source by key finds the alert log row
+      render( CHANGING cs_message = ls_message ).
       DATA(ls_final) = ls_claim.
+      ls_final-subject     = ls_message-subject.
+      ls_final-renderer    = ls_message-renderer.
+      ls_final-render_info = ls_message-render_info.
       TRY.
           lo_channel->deliver( ls_message ).
           ls_final-status = zif_ca_ops_types=>gc_alert_status-sent.
@@ -434,7 +500,43 @@ CLASS zcl_ca_ops_alert_router IMPLEMENTATION.
     ls_log-destination = iv_destination.
     ls_log-subject     = iv_subject.
     ls_log-error       = iv_error.
+    ls_log-template_id = is_render-template_id.
+    ls_log-renderer    = is_render-renderer.
+    ls_log-render_info = is_render-render_info.
     INSERT ls_log INTO TABLE mt_log.
+  ENDMETHOD.
+
+
+  METHOD mail_settings.
+    DATA(lo_params) = zcl_ca_ops_factory=>get_params( ).
+    rs_settings-time_zone = to_upper( lo_params->get_param( iv_name    = zif_ca_ops_types=>gc_param-mail_time_zone
+                                                            iv_default = CONV #( zif_ca_ops_types=>gc_param_default-mail_time_zone ) ) ).
+    rs_settings-exc_link  = lo_params->get_param( zif_ca_ops_types=>gc_param-exc_app_link ).
+    rs_settings-today     = zcl_ca_ops_factory=>get_clock( )->today( ).
+  ENDMETHOD.
+
+
+  METHOD render.
+    IF cs_message-channel <> zif_ca_ops_types=>gc_channel-email.
+      RETURN.
+    ENDIF.
+    DATA(lv_renderer) = to_upper( zcl_ca_ops_factory=>get_params( )->get_param(
+                                    iv_name    = zif_ca_ops_types=>gc_param-mail_renderer
+                                    iv_default = CONV #( zif_ca_ops_types=>gc_param_default-mail_renderer ) ) ).
+    IF lv_renderer = zif_ca_ops_types=>gc_renderer-builtin.
+      " switched off: the built-in layout is sent, the log names the template that was not used
+      cs_message-render_info = zcl_ca_ops_util=>text( iv_msgno = zif_ca_ops_types=>gc_msg-tpl_renderer_off
+                                                      iv_v1    = cs_message-template_id ).
+      RETURN.
+    ENDIF.
+    IF mo_template IS NOT BOUND.
+      mo_template = zcl_ca_ops_factory=>get_mail_template( ).
+    ENDIF.
+    " never silent, never blocking: a template that cannot be used leaves the built-in layout
+    zcl_ca_ops_mail_composer=>apply( EXPORTING io_template = mo_template
+                                               iv_renderer = zif_ca_ops_types=>gc_renderer-smtg
+                                               iv_alert_id = cs_message-alert_id
+                                     CHANGING  cs_message  = cs_message ).
   ENDMETHOD.
 
 

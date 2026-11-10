@@ -12,6 +12,8 @@ Usage: python3 tools/rap_generate.py [--check]
 Modification log:
 2026-11-10 | Initial version (the framework's app was generated from its first consumer's generator;
            | the engine is shared, tools/abaptools). Output unchanged.
+2026-11-10 | E-mail template of alert rules and channels (TEMPLATE_ID, check template_invalid 436) and the
+           | rule flag SHOW_AMOUNTS (alert e-mail templates).
 """
 import os
 import sys
@@ -37,7 +39,8 @@ SPEC = {
               ('pcre', 'rule_pattern'), ('pcre', 'check_pattern'), ('pcre', 'group1_pattern'),
               ('pcre', 'group2_pattern'), ('dest', ('channel', 'channel'), 'destination', 'escalation_dest')]),
             ('zca_ops_alchn', 'AlertChannel', 'zca_d_alchn', 'Channel', 'Alert channels', [],
-             [('class', 'class_name', 'ZIF_CA_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination')]),
+             [('class', 'class_name', 'ZIF_CA_OPS_ALERT_CHANNEL'), ('dest', ('class', 'class_name'), 'destination'),
+              ('valid', 'template_id', 'zcl_ca_ops_cfg_checks=>template_valid', 'template_invalid')]),
             # Purge targets of consumers (registry, 2026-11-10): plug-in class and retention parameter
             ('zca_ops_purge', 'PurgeTarget', 'zca_d_purge', 'Purge target', 'Purge targets of consumers', [],
              [('class', 'class_name', 'ZIF_CA_OPS_PURGE_TARGET'), ('area', 'param_area', False),
@@ -51,7 +54,8 @@ LABELS = {'area': 'Area (* = every area)', 'param_area': 'Area of the retention 
           'param_name': 'Retention parameter (ZCA_PARAM)', 'target': 'Purge target',
           'last_changed_by': 'Last changed by', 'last_changed_at': 'Last changed at',
           'local_last_changed_at': 'Changed at (instance)', 'changed_by': 'Changed by (SM30)',
-          'changed_at': 'Changed at (SM30)'}
+          'changed_at': 'Changed at (SM30)', 'template_id': 'E-mail template (SMTG template ID)',
+          'show_amounts': 'Show amounts in the e-mail'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

@@ -24,6 +24,10 @@ annotate entity ZC_CA_AlertChannel with
   @UI.identification: [{ position: 40 }]
   Active;
 
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  TemplateId;
+
   @UI.hidden: true
   ChangedBy;
 

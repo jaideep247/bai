@@ -15,6 +15,8 @@
 *& 2026-11-07 | CHANNEL_CLASS / INVALID_DESTINATION: alert destinations checked by their channel.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_CFG_CHECKS to the reusable framework ZCA_OPS (generic checks only);
 *&            | AREA_VALID (one area register) and PARAM_EXISTS (purge registry) added.
+*& 2026-11-10 | TEMPLATE_VALID: e-mail template ID of a rule / channel (syntax, existence where the SMTG API
+*&            | is available; message 436).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - config apps: field checks</p>
 CLASS zcl_ca_ops_cfg_checks DEFINITION
@@ -109,7 +111,18 @@ CLASS zcl_ca_ops_cfg_checks DEFINITION
       RETURNING
         VALUE(rv_exists) TYPE abap_bool.
 
+    "! E-mail template ID of an alert rule or channel: blank, or upper-case letters, digits,
+    "! underscore and namespace slashes (at most 30); and, where the SAP e-mail template API is
+    "! available, an existing template (ZIF_CA_OPS_MAIL_TEMPLATE=>EXISTS; else syntax only)
+    CLASS-METHODS template_valid
+      IMPORTING
+        iv_template_id  TYPE zif_ca_ops_types=>ty_template_id
+      RETURNING
+        VALUE(rv_valid) TYPE abap_bool.
+
   PRIVATE SECTION.
+    "! E-mail template ID (SMTG): VERIFY-ADT the allowed characters of a template ID
+    CONSTANTS gc_template_pattern TYPE string VALUE `[A-Z/][A-Z0-9_/]{0,29}`.
     "! DDIC / class name: letters, digits, underscore, namespace slashes, max 30
     CONSTANTS gc_name_pattern TYPE string VALUE `^[A-Z/][A-Z0-9_/]{0,29}$`.
     CLASS-METHODS describe
@@ -259,6 +272,22 @@ CLASS zcl_ca_ops_cfg_checks IMPLEMENTATION.
       CATCH zcx_ca_ops_error.
         rv_valid = abap_false.
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD template_valid.
+    IF iv_template_id IS INITIAL.
+      rv_valid = abap_true.
+      RETURN.
+    ENDIF.
+    " matched to the complete value; upper case only (the router reads the ID as it is stored)
+    DATA(lv_id) = condense( iv_template_id ).
+    IF lv_id <> to_upper( lv_id )
+       OR zcl_ca_ops_util=>pcre_match( iv_value   = lv_id
+                                       iv_pattern = gc_template_pattern ) = abap_false.
+      RETURN.
+    ENDIF.
+    rv_valid = zcl_ca_ops_factory=>get_mail_template( )->exists( iv_template_id ).
   ENDMETHOD.
 
 

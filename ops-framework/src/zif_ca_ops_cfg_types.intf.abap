@@ -13,6 +13,7 @@
 *&            | constants, activities and the messages of the gate and of the framework app (class
 *&            | ZCA_OPS; 434 parameter, 435 area); the area is ZIF_CA_OPS_TYPES=>TY_AREA (was TY_PE_AREA
 *&            | CHAR 4); a consumer's field check messages stay in its own types interface.
+*& 2026-11-10 | Message 436: e-mail template ID of an alert rule / channel not valid (alert e-mail templates).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -136,6 +137,8 @@ INTERFACE zif_ca_ops_cfg_types
       param_invalid     TYPE ty_msg_number VALUE '434',
       "! Alert rule: the area is neither * nor a parameter area of ZCA_PARAM_AREA
       area_invalid      TYPE ty_msg_number VALUE '435',
+      "! Alert rule / channel: the e-mail template ID is not valid or the template does not exist
+      template_invalid  TYPE ty_msg_number VALUE '436',
     END OF gc_msg.
 
 ENDINTERFACE.

@@ -32,6 +32,11 @@ define table zca_ops_alrule {
   // X = a due escalation is delivered even inside the throttle window (audit A46)
   esc_override    : abap_boolean;
   active          : abap_boolean;
+  // E-mail template of the rule (SAP e-mail template ID, SMTG; blank = channel default, then generic).
+  // VERIFY-SE11: data element of the SMTG template ID and its length (CHAR 30 assumed)
+  template_id     : abap.char(30);
+  // X = amounts of the findings are shown in the e-mail (default off, 2026-11-10)
+  show_amounts    : abap_boolean;
   changed_by      : syuname;
   changed_at      : timestampl;
   // RAP configuration apps (design 5): set by the framework, ignored by engines

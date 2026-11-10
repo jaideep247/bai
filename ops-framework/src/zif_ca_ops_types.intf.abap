@@ -24,6 +24,13 @@
 *&            | area = parameter area of ZCA_PARAM (TY_AREA, field AREA, was AREA CHAR 4); parameters in
 *&            | area CA_OPS (GC_PARAM_AREA); message class ZCA_OPS; version constants (GC_VERSION,
 *&            | GC_PARAM_MIN_VERSION); alert section plug-in interface; purge target types.
+*& 2026-11-10 | Alert e-mail templates (user decisions 2026-11-10): template ID of a rule / channel, rule
+*&            | flag SHOW_AMOUNTS, business context of a finding (business date, company code, account
+*&            | label, payment method, count), standard context keys of the alert e-mail (TY_MAIL_HEADER),
+*&            | table blocks and their tokens, renderer SMTG / BUILTIN, exception facts of a run, template
+*&            | and render outcome on the alert message and log; parameters ALERT_MAIL_RENDERER,
+*&            | ALERT_TEMPLATE_DEFAULT, ALERT_TIME_ZONE, ALERT_EXC_APP_LINK; messages 070-075;
+*&            | name of the exceptions app (GC_EXC_APP).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -87,6 +94,15 @@ INTERFACE zif_ca_ops_types
       "! Plug-in class of a consumer's own section of the alert message (ZIF_CA_OPS_ALERT_SECTION;
       "! blank = none)
       alert_section    TYPE ty_param_name VALUE 'ALERT_SECTION_CLASS',
+      "! Renderer of the alert e-mail: SMTG (SAP e-mail templates, built-in layout when not usable)
+      "! or BUILTIN (built-in layout only) [SMTG]
+      mail_renderer    TYPE ty_param_name VALUE 'ALERT_MAIL_RENDERER',
+      "! Generic e-mail template when neither the rule nor the channel names one [ZCA_OPS_ALERT_DEFAULT]
+      template_default TYPE ty_param_name VALUE 'ALERT_TEMPLATE_DEFAULT',
+      "! Time zone of the times shown in the alert e-mail [UTC]
+      mail_time_zone   TYPE ty_param_name VALUE 'ALERT_TIME_ZONE',
+      "! Link to the exceptions app shown in the alert e-mail (blank = the app's name, message 803)
+      exc_app_link     TYPE ty_param_name VALUE 'ALERT_EXC_APP_LINK',
       "! Rows deleted per purge package [1000]
       purge_package    TYPE ty_param_name VALUE 'PURGE_PACKAGE_SIZE',
       "! SLA days of an exception when SLA_DAYS_<area>_<severity> is blank [1]
@@ -120,6 +136,11 @@ INTERFACE zif_ca_ops_types
       sla_days       TYPE i VALUE 1,
       "! Retention of a purge target whose parameter cannot be read (the definition default applies first)
       retention_days TYPE i VALUE 400,
+      "! Alert e-mail: SAP e-mail templates first (GC_RENDERER-SMTG), the framework's generic
+      "! template (templates/zca_ops_alert_default.md) and the time zone of the times shown
+      mail_renderer    TYPE ty_param_value VALUE 'SMTG',
+      template_default TYPE ty_param_value VALUE 'ZCA_OPS_ALERT_DEFAULT',
+      mail_time_zone   TYPE ty_param_value VALUE 'UTC',
     END OF gc_param_default.
 
   "! A name prefix and the area its parameters are read in (ZIF_CA_OPS_PARAMS=>ADD_PREFIXES)
@@ -273,6 +294,16 @@ INTERFACE zif_ca_ops_types
       details     TYPE string,
       "! TRANSIENT / DATA / CONFIG / CODE for a finding raised at a catch boundary (else blank)
       error_class TYPE ty_error_class,
+      "! Business context of the finding for the alert e-mail (2026-11-10; not stored in
+      "! ZCA_OPS_FINDING - the producer fills what it knows at finding time, blank = not known):
+      "! business date (statement, file, due date), company code, account as a label that may be
+      "! e-mailed (house bank / account ID or a masked number - never a full account number),
+      "! payment method, number of payments / items the finding stands for (0 = not known)
+      business_date TYPE d,
+      company_code  TYPE c LENGTH 4,
+      account       TYPE c LENGTH 40,
+      pay_method    TYPE c LENGTH 10,
+      item_count    TYPE i,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 
@@ -315,6 +346,125 @@ INTERFACE zif_ca_ops_types
       text  TYPE string,
     END OF ty_param_error.
   TYPES tt_param_error TYPE SORTED TABLE OF ty_param_error WITH UNIQUE KEY area name.
+
+  "! ---- Alert e-mail templates (2026-11-10, docs/ALERT_TEMPLATES.md) ----
+  "! E-mail template ID (SAP e-mail template, object type SMTG; VERIFY-SE11: the data element of
+  "! the template ID and its length - CHAR 30 assumed)
+  TYPES ty_template_id TYPE c LENGTH 30.
+  "! Renderer of an alert e-mail
+  TYPES ty_renderer    TYPE c LENGTH 10.
+  CONSTANTS:
+    BEGIN OF gc_renderer,
+      "! SAP e-mail templates (CL_SMTG_EMAIL_API); the built-in layout when not usable
+      smtg    TYPE ty_renderer VALUE 'SMTG',
+      "! The framework's built-in layout (no template)
+      builtin TYPE ty_renderer VALUE 'BUILTIN',
+    END OF gc_renderer.
+  "! The exceptions app named in the alert e-mail when ALERT_EXC_APP_LINK is blank
+  CONSTANTS gc_exc_app TYPE ty_message VALUE 'ZUI_CA_OPS_EXC'.
+
+  "! Name of a table block = the placeholder of the template that marks where it goes
+  TYPES ty_mail_block_name TYPE c LENGTH 30.
+  CONSTANTS:
+    BEGIN OF gc_mail_block,
+      "! The findings of the message (general table)
+      main    TYPE ty_mail_block_name VALUE 'TABLE_MAIN',
+      "! A consumer's own section (ZIF_CA_OPS_ALERT_SECTION), e.g. missing bank ACK files
+      section TYPE ty_mail_block_name VALUE 'TABLE_SECTION',
+    END OF gc_mail_block.
+  "! Prefix of the plain token that stands for a table block in the rendered e-mail (letters and
+  "! digits only: an engine that escapes placeholder values leaves it unchanged)
+  CONSTANTS gc_mail_token_prefix TYPE string VALUE `ZCAOPSTABLE`.
+
+  "! Standard business-context keys of an alert e-mail: plain text only (never markup), the
+  "! placeholders of every template (component name = placeholder name, upper case). A key that is
+  "! not known for the message is blank - a template never breaks on it. TABLE_MAIN / TABLE_SECTION
+  "! hold the tokens the code replaces by its tables after rendering.
+  TYPES:
+    BEGIN OF ty_mail_header,
+      "! [SYSID][AREA][severity] what : how many / how much
+      subject            TYPE ty_message,
+      "! The subject without the system / area / severity prefix
+      headline           TYPE ty_message,
+      system_id          TYPE c LENGTH 8,
+      client             TYPE c LENGTH 3,
+      area               TYPE c LENGTH 16,
+      area_text          TYPE c LENGTH 60,
+      rule_id            TYPE c LENGTH 10,
+      severity           TYPE c LENGTH 1,
+      severity_text      TYPE c LENGTH 20,
+      "! Check code of the message (blank when the findings have several)
+      check_code         TYPE c LENGTH 30,
+      "! Text of the most severe finding
+      check_text         TYPE ty_message,
+      run_id             TYPE c LENGTH 32,
+      run_variant        TYPE c LENGTH 30,
+      run_status         TYPE c LENGTH 1,
+      run_rag            TYPE c LENGTH 1,
+      "! Run status, RAG and item counts (messages 004 / 005)
+      run_line           TYPE ty_message,
+      job_name           TYPE c LENGTH 32,
+      job_count          TYPE c LENGTH 8,
+      "! Start / end of the run in TIME_ZONE (ALERT_TIME_ZONE)
+      started_at         TYPE c LENGTH 30,
+      ended_at           TYPE c LENGTH 30,
+      time_zone          TYPE c LENGTH 6,
+      findings_total     TYPE c LENGTH 10,
+      findings_new       TYPE c LENGTH 10,
+      findings_repeated  TYPE c LENGTH 10,
+      findings_overdue   TYPE c LENGTH 10,
+      "! Findings of the selection beyond MAX_ITEMS (not listed)
+      findings_held_back TYPE c LENGTH 10,
+      "! Earliest SLA due date of the open exceptions of the message (ISO) and its owner
+      due_date           TYPE c LENGTH 10,
+      owner              TYPE c LENGTH 12,
+      "! Exceptions app: ALERT_EXC_APP_LINK, else its name
+      exceptions_link    TYPE ty_message,
+      "! Run, job and exceptions app (message 803)
+      reference_line     TYPE ty_message,
+      "! Amount totals per currency - only when the rule shows amounts (SHOW_AMOUNTS)
+      amount_total       TYPE ty_message,
+      table_main         TYPE c LENGTH 80,
+      table_section      TYPE c LENGTH 80,
+    END OF ty_mail_header.
+
+  "! A table block: the code renders it (escaped cells); the token marks its place in the template
+  TYPES:
+    BEGIN OF ty_mail_block,
+      name  TYPE ty_mail_block_name,
+      token TYPE string,
+      html  TYPE string,
+      text  TYPE string,
+    END OF ty_mail_block.
+  TYPES tt_mail_block TYPE STANDARD TABLE OF ty_mail_block WITH EMPTY KEY.
+
+  TYPES:
+    BEGIN OF ty_mail_context,
+      header TYPE ty_mail_header,
+      blocks TYPE tt_mail_block,
+    END OF ty_mail_context.
+
+  "! Output of a renderer: subject, HTML body, text body (table blocks still as their tokens)
+  TYPES:
+    BEGIN OF ty_mail_rendered,
+      subject TYPE string,
+      html    TYPE string,
+      text    TYPE string,
+    END OF ty_mail_rendered.
+
+  "! Facts of the stored exceptions of a run (ZCA_OPS_FINDING) for the e-mail context: new or
+  "! repeated (carried forward), overdue, due date and owner
+  TYPES:
+    BEGIN OF ty_exception_fact,
+      object_type TYPE ty_object_type,
+      object_key  TYPE ty_object_key,
+      check_code  TYPE ty_check_code,
+      occurrences TYPE i,
+      due_date    TYPE d,
+      owner       TYPE syuname,
+    END OF ty_exception_fact.
+  TYPES tt_exception_fact TYPE HASHED TABLE OF ty_exception_fact
+                          WITH UNIQUE KEY object_type object_key check_code.
 
   "! ---- Alert router (ZCA_OPS_ALRULE / _ALCHN / _ALLOG) ----
   TYPES ty_channel     TYPE c LENGTH 10.
@@ -378,6 +528,12 @@ INTERFACE zif_ca_ops_types
       "! X = a due escalation is delivered even inside the throttle window (audit A46)
       esc_override    TYPE abap_bool,
       active          TYPE abap_bool,
+      "! E-mail template of the rule's messages (SMTG template ID; blank = channel default, then the
+      "! generic template ALERT_TEMPLATE_DEFAULT, then the built-in layout)
+      template_id     TYPE ty_template_id,
+      "! X = amounts and currencies of the findings are shown in the e-mail (default off: whether
+      "! alerts show amounts is decided per rule)
+      show_amounts    TYPE abap_bool,
     END OF ty_alert_rule.
   TYPES tt_alert_rule TYPE STANDARD TABLE OF ty_alert_rule WITH EMPTY KEY.
 
@@ -388,6 +544,8 @@ INTERFACE zif_ca_ops_types
       "! Default destination when the rule has none
       destination TYPE ty_alert_dest,
       active      TYPE abap_bool,
+      "! Default e-mail template of the channel when the rule names none
+      template_id TYPE ty_template_id,
     END OF ty_alert_channel.
   TYPES tt_alert_channel TYPE STANDARD TABLE OF ty_alert_channel WITH EMPTY KEY.
 
@@ -406,6 +564,13 @@ INTERFACE zif_ca_ops_types
       item_count  TYPE i,
       "! External ID of the application log (SLG1): area / run / rule
       extnumber   TYPE ty_extnumber,
+      "! Business context (standard keys and table blocks) the e-mail is rendered from
+      context     TYPE ty_mail_context,
+      "! Template asked for (rule, section, channel, generic) and the renderer that produced HTML /
+      "! text; RENDER_INFO names a fallback to the built-in layout or a table appended at the end
+      template_id TYPE ty_template_id,
+      renderer    TYPE ty_renderer,
+      render_info TYPE ty_message,
     END OF ty_alert_message.
   TYPES tt_alert_message TYPE STANDARD TABLE OF ty_alert_message WITH EMPTY KEY.
 
@@ -425,6 +590,10 @@ INTERFACE zif_ca_ops_types
       "! dispatcher per intent and attempt (unique index INT, audit A17)
       intent_key  TYPE ty_intent_key,
       attempt     TYPE i,
+      "! E-mail template asked for, renderer used and the fallback / table note (2026-11-10)
+      template_id TYPE ty_template_id,
+      renderer    TYPE ty_renderer,
+      render_info TYPE ty_message,
     END OF ty_alert_log.
   TYPES tt_alert_log TYPE STANDARD TABLE OF ty_alert_log WITH EMPTY KEY.
 
@@ -454,6 +623,13 @@ INTERFACE zif_ca_ops_types
       alert_run_reference   TYPE ty_msgno VALUE '803',
       run_aborted           TYPE ty_msgno VALUE '804',
       alert_dispatch_failed TYPE ty_msgno VALUE '805',
+      "! Alert e-mail templates (2026-11-10)
+      tpl_unavailable       TYPE ty_msgno VALUE '070',
+      tpl_not_found         TYPE ty_msgno VALUE '071',
+      tpl_render_failed     TYPE ty_msgno VALUE '072',
+      tpl_token_missing     TYPE ty_msgno VALUE '073',
+      alert_subject_amount  TYPE ty_msgno VALUE '074',
+      tpl_renderer_off      TYPE ty_msgno VALUE '075',
     END OF gc_msg.
 
 ENDINTERFACE.

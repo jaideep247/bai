@@ -416,7 +416,7 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         ls_selection-rule     = ms_rule.
         ls_selection-findings = VALUE #( ( ls_owned ) ( ls_other ) ).
         DATA(lo_section) = NEW ltd_section( ).
-        DATA(lt_messages) = NEW zcl_ca_ops_alert_policy( lo_section )->build_messages(
+        DATA(lt_messages) = NEW zcl_ca_ops_alert_policy( io_section = lo_section )->build_messages(
                               is_selection   = ls_selection
                               is_run         = ms_run
                               iv_destination = gc_test-dest ).
