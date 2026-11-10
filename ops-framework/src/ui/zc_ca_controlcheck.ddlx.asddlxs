@@ -1,4 +1,4 @@
-// UI annotations: Alerting, purge targets and controls - Checks covered by a control
+// UI annotations: Processes, checks, alerting, purge targets and controls - Checks covered by a control
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Covered check',
                      typeNamePlural: 'Checks covered by a control',

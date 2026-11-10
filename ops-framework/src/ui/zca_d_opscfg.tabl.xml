@@ -7,7 +7,7 @@
     <DDLANGUAGE>E</DDLANGUAGE>
     <TABCLASS>TRANSP</TABCLASS>
     <CLIDEP>X</CLIDEP>
-    <DDTEXT>Draft: Alerting, purge targets and controls (singleton)</DDTEXT>
+    <DDTEXT>Draft: Processes, checks, alerting, purge targets and contro</DDTEXT>
     <MAINFLAG></MAINFLAG>
     <CONTFLAG>A</CONTFLAG>
     <EXCLASS>1</EXCLASS>

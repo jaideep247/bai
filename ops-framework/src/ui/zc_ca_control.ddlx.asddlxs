@@ -1,4 +1,4 @@
-// UI annotations: Alerting, purge targets and controls - Controls (daily review)
+// UI annotations: Processes, checks, alerting, purge targets and controls - Controls (daily review)
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Control',
                      typeNamePlural: 'Controls (daily review)',

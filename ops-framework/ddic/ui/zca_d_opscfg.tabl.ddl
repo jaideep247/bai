@@ -1,4 +1,4 @@
-@EndUserText.label : 'Draft: Alerting, purge targets and controls (singleton)'
+@EndUserText.label : 'Draft: Processes, checks, alerting, purge targets and contro'
 @AbapCatalog.enhancement.category : #NOT_EXTENSIBLE
 @AbapCatalog.tableCategory : #TRANSPARENT
 @AbapCatalog.deliveryClass : #A

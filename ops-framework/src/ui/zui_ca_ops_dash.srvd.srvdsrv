@@ -1,0 +1,8 @@
+@EndUserText.label: 'Operations framework: area dashboard'
+@ObjectModel.leadingEntity.name: 'ZC_CA_OPSCHECKSTATUS'
+// Binding to create in ADT: ZUI_CA_OPS_DASH_O4 (OData V4 - UI). Read-only: no behaviour definition.
+// Area dashboard of the check registry (process onboarding, 2026-11-10): status, open exceptions, last run
+// and freshness per area, registered check and company-code slice.
+define service ZUI_CA_OPS_DASH {
+  expose ZC_CA_OpsCheckStatus as CheckStatus;
+}

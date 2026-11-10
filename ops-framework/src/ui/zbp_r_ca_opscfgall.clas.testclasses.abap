@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Artifact: zbp_r_ca_opscfgall.clas.testclasses.abap
 *& Purpose:
-*& Permission tests of the Alerting, purge targets and controls behaviour pool through EML
+*& Permission tests of the Processes, checks, alerting, purge targets and controls behaviour pool through EML
 *& GET PERMISSIONS ONLY GLOBAL AUTHORIZATION (ZCA_OPS of the area of the app
 *& per activity: edit with 01 / 02 / 06, create 01 on the root association,
 *& change 02 and delete 06 on a child entity; gate doubles of

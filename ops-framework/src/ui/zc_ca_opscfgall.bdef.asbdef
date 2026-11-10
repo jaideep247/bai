@@ -18,6 +18,10 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _Control { create; with draft; }
   use association _ControlText { create; with draft; }
   use association _ControlCheck { create; with draft; }
+  use association _Process { create; with draft; }
+  use association _RegisteredCheck { create; with draft; }
+  use association _AggregateCheck { create; with draft; }
+  use association _ApprovedTable { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -66,6 +70,42 @@ use etag
 }
 
 define behavior for ZC_CA_ControlCheck alias ControlCheck
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_Process alias Process
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_RegisteredCheck alias RegisteredCheck
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_AggregateCheck alias AggregateCheck
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_ApprovedTable alias ApprovedTable
 use etag
 {
   use update;

@@ -287,6 +287,138 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>082</MSGNR>
+     <TEXT>Table &amp;1 does not exist in the ABAP Dictionary</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>083</MSGNR>
+     <TEXT>&amp;1 is not a field of table &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>084</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 failed:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>085</MSGNR>
+     <TEXT>No active check registered for area &amp;1, schedule group &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>086</MSGNR>
+     <TEXT>Table &amp;1 is not approved for area &amp;2 (ZCA_OPS_TABWL)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>087</MSGNR>
+     <TEXT>No authorisation to display table &amp;1 (S_TABU_NAM)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>088</MSGNR>
+     <TEXT>Operator &amp;1 is not allowed for field &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>089</MSGNR>
+     <TEXT>&amp;1 is not a number (field &amp;2)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>090</MSGNR>
+     <TEXT>Aggregate &amp;1: function &amp;2 is not COUNT or AGE</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>091</MSGNR>
+     <TEXT>Aggregate &amp;1: &amp;2 is not a date field of table &amp;3</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>092</MSGNR>
+     <TEXT>Check &amp;1 of area &amp;2 has no active aggregate row (ZCA_OPS_AGG)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>093</MSGNR>
+     <TEXT>Aggregate &amp;1 could not be read from table &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>094</MSGNR>
+     <TEXT>&amp;1 &amp;2: &amp;3 row(s) match (limit &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>095</MSGNR>
+     <TEXT>&amp;1 &amp;2: the oldest row is &amp;3 day(s) old (limit &amp;4)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>096</MSGNR>
+     <TEXT>Process &amp;1 of area &amp;2 has no active check (ZCA_OPS_CHECK)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>097</MSGNR>
+     <TEXT>Process &amp;1 of area &amp;2: check &amp;3 is covered by no active control</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>098</MSGNR>
+     <TEXT>Process &amp;1: no active alert rule for area &amp;2 (ZCA_OPS_ALRULE)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>099</MSGNR>
+     <TEXT>Process &amp;1 of area &amp;2: owner &amp;3 missing or not a user of this client</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Process &amp;1 of area &amp;2: purge target &amp;3 missing or inactive</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Process &amp;1 of area &amp;2: no role named or area not active (&amp;3)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Area &amp;1 group &amp;2: &amp;3 check(s) run, &amp;4 finding(s)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Aggregate &amp;1: company-code field required (check &amp;2 is per company)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZCA_OPS</ARBGB>
      <MSGNR>402</MSGNR>
      <TEXT>Enter a customizing request: changes in this client are recorded</TEXT>
     </T100>

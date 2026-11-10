@@ -20,6 +20,7 @@
 *&            | (consumer services stay in the consumer's factory); CHECK_VERSION (ZCA_PARAM release).
 *& 2026-11-10 | GET_MAIL_TEMPLATE: renderer of alert e-mails from SAP e-mail templates (injectable).
 *& 2026-11-10 | GET_REVIEW_DAO: repository of the daily control review (injectable).
+*& 2026-11-10 | GET_CHECK_DAO: data access of the check registry (process onboarding, injectable).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - factory</p>
 "! Single resolution point for the framework services and for configuration-driven
@@ -79,6 +80,11 @@ CLASS zcl_ca_ops_factory DEFINITION
       RETURNING
         VALUE(ro_dao) TYPE REF TO zif_ca_ops_review_dao.
 
+    "! Data access of the check registry, aggregate checks and onboarding check
+    CLASS-METHODS get_check_dao
+      RETURNING
+        VALUE(ro_dao) TYPE REF TO zif_ca_ops_check_dao.
+
     "! Exception repository (closing exceptions from other apps' saves)
     CLASS-METHODS get_exc_dao
       RETURNING
@@ -126,6 +132,7 @@ CLASS zcl_ca_ops_factory DEFINITION
     CLASS-DATA go_purge_dao_double TYPE REF TO zif_ca_ops_purge_dao.
     CLASS-DATA go_mail_template_double TYPE REF TO zif_ca_ops_mail_template.
     CLASS-DATA go_review_dao_double TYPE REF TO zif_ca_ops_review_dao.
+    CLASS-DATA go_check_dao_double TYPE REF TO zif_ca_ops_check_dao.
     CLASS-DATA gt_plugin_double TYPE tt_plugin_double.
     "! Installed ZCA_PARAM release as seen by CHECK_VERSION (test seam: a double release)
     CLASS-DATA gv_param_version_double TYPE string.
@@ -220,6 +227,12 @@ CLASS zcl_ca_ops_factory IMPLEMENTATION.
   METHOD get_review_dao.
     ro_dao = COND #( WHEN go_review_dao_double IS BOUND THEN go_review_dao_double
                      ELSE NEW zcl_ca_ops_review_dao( ) ).
+  ENDMETHOD.
+
+
+  METHOD get_check_dao.
+    ro_dao = COND #( WHEN go_check_dao_double IS BOUND THEN go_check_dao_double
+                     ELSE NEW zcl_ca_ops_check_dao( ) ).
   ENDMETHOD.
 
 

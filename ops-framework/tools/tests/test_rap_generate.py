@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Tests of the framework's RAP generator profile (tools/rap_generate.py): the app is complete
 and generated, every pattern field of the alert rules is validated as PCRE on save, the control register
-(2026-11-10) checks owner / backup, team, runbook link and the finding field on save.
+(2026-11-10) checks owner / backup, team, runbook link and the finding field on save; the check registry of
+the process onboarding (2026-11-10) checks the plug-in interface, the aggregate functions and operators, and
+the table and field names of an aggregate row on save.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-framework/)
 """
@@ -35,7 +37,20 @@ class FrameworkAppTest(unittest.TestCase):
     def test_tables_are_framework_tables(self):
         tables = [t[0] for t in rap_generate.SPEC['framework']['tables']]
         self.assertEqual(tables, ['zca_ops_alrule', 'zca_ops_alchn', 'zca_ops_purge',
-                                  'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk'])
+                                  'zca_ops_control', 'zca_ops_ctlt', 'zca_ops_ctlchk',
+                                  'zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'])
+
+    def test_check_registry_checked_on_save(self):
+        checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}
+        self.assertIn(('class', 'class_name', 'ZIF_CA_OPS_CHECK'), checks['zca_ops_check'])
+        self.assertIn(('enum', 'agg_func', 'COUNT,AGE'), checks['zca_ops_agg'])
+        self.assertIn(('enum', 'status_op', ',EQ,NE,IN'), checks['zca_ops_agg'])
+        self.assertIn(('table', 'tabname'), checks['zca_ops_agg'])
+        fields = {c[1] for c in checks['zca_ops_agg'] if c[0] == 'field'}
+        self.assertEqual(fields, {'date_field', 'bukrs_field', 'status_field', 'cond_field'})
+        self.assertIn(('table', 'table_name'), checks['zca_ops_tabwl'])
+        for table in ('zca_ops_proc', 'zca_ops_check', 'zca_ops_agg', 'zca_ops_tabwl'):
+            self.assertIn(('area', 'area', False), checks[table])
 
     def test_control_register_checked_on_save(self):
         checks = {t[0]: t[6] for t in rap_generate.SPEC['framework']['tables']}

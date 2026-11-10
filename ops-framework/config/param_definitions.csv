@@ -6,6 +6,7 @@ CA_OPS,ALERT_MAIL_RENDERER,P,CHAR,,,SMTG,SMTG|BUILTIN,,X,,Alert e-mail renderer:
 CA_OPS,ALERT_SECTION_CLASS,P,CLASS,,,,,ZIF_CA_OPS_ALERT_SECTION,,X,Consumer section of the alert message (blank = none),OPS FRAMEWORK
 CA_OPS,ALERT_TEMPLATE_DEFAULT,P,CHAR,,,ZCA_OPS_ALERT_DEFAULT,"[A-Z/][A-Z0-9_/]{0,29}",,,X,Generic alert e-mail template (rule and channel name none),OPS FRAMEWORK
 CA_OPS,ALERT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,,,Time zone of the times in the alert e-mail (TTZZ),OPS FRAMEWORK
+CA_OPS,CHECK_STALE_MIN_DEFAULT,P,INT,1,,1500,,,,,Area dashboard: a run older than this is stale (minutes),OPS FRAMEWORK
 CA_OPS,CONTROL_TEAMS,P,LIST,,,"ONSITE,OFFSHORE",,,X,,Teams a control may name (control register; comma list),OPS FRAMEWORK
 CA_OPS,CONTROL_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of business date and review cut-off (TTZZ),OPS FRAMEWORK
 CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK

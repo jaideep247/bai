@@ -1,4 +1,4 @@
-// UI annotations: Alerting, purge targets and controls - Alert rules
+// UI annotations: Processes, checks, alerting, purge targets and controls - Alert rules
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Alert rule',
                      typeNamePlural: 'Alert rules',

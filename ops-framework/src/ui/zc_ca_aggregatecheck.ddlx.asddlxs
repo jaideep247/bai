@@ -1,0 +1,84 @@
+// UI annotations: Processes, checks, alerting, purge targets and controls - Aggregate checks (no code)
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Aggregate',
+                     typeNamePlural: 'Aggregate checks (no code)',
+                     title: { type: #STANDARD, value: 'Area' } } }
+annotate entity ZC_CA_AggregateCheck with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Area;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  CheckId;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  AggId;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Description;
+
+  @UI.lineItem: [{ position: 50 }]
+  @UI.identification: [{ position: 50 }]
+  Tabname;
+
+  @UI.lineItem: [{ position: 60 }]
+  @UI.identification: [{ position: 60 }]
+  AggFunc;
+
+  @UI.lineItem: [{ position: 70 }]
+  @UI.identification: [{ position: 70 }]
+  DateField;
+
+  @UI.lineItem: [{ position: 80 }]
+  @UI.identification: [{ position: 80 }]
+  MinAgeDays;
+
+  @UI.identification: [{ position: 90 }]
+  BukrsField;
+
+  @UI.identification: [{ position: 100 }]
+  StatusField;
+
+  @UI.identification: [{ position: 110 }]
+  StatusOp;
+
+  @UI.identification: [{ position: 120 }]
+  StatusValue;
+
+  @UI.identification: [{ position: 130 }]
+  CondField;
+
+  @UI.identification: [{ position: 140 }]
+  CondOp;
+
+  @UI.identification: [{ position: 150 }]
+  CondValue;
+
+  @UI.identification: [{ position: 160 }]
+  Amber;
+
+  @UI.identification: [{ position: 170 }]
+  Red;
+
+  @UI.identification: [{ position: 180 }]
+  CheckCode;
+
+  @UI.identification: [{ position: 190 }]
+  Active;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

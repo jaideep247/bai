@@ -4,7 +4,8 @@ Messages of the operations framework ZCA_OPS (package `ZCA_OPS`). Numbers of mes
 the message class of its first consumer (ZCD_OPS) are kept (ZCD_OPS nnn = ZCA_OPS nnn), new messages use free
 numbers of the same range. Ranges: 001-099 runs, store, alerting, plug-ins, lock, authorisation, version
 and area checks, purge, exception lifecycle (classification 068), alert e-mail templates (070-075), daily
-control review (076-080) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
+control review (076-080) · 082-103 check registry, generic runner, no-code aggregate check and
+process onboarding check (2026-11-10; 082 / 083 also the table and field checks of the configuration app) · 400-449 configuration apps (RAP) · 700-849 alert patterns,
 exception concurrency, application log, alert IDs, run abort, e-mail, logical file paths · 900-909 the
 optional demo consumer `ZCA_OPS_DEMO` (sub-package `src/demo`; unused when the demo is not installed).
 Every user-facing text of the framework is one of these messages (built with `ZCL_CA_OPS_UTIL=>TEXT( )`
@@ -61,6 +62,28 @@ texts <= 73 characters).
 | 079 | Control &1 for &2 is being reviewed by &3 |
 | 080 | Lock service failed for the review of control &1 for &2 |
 | 081 | Alert audit log incomplete: &1 of &2 row(s) not saved (ZCA_OPS_ALLOG) |
+| 082 | Table &1 does not exist in the ABAP Dictionary |
+| 083 | &1 is not a field of table &2 |
+| 084 | Check &1 of area &2 failed: |
+| 085 | No active check registered for area &1, schedule group &2 |
+| 086 | Table &1 is not approved for area &2 (ZCA_OPS_TABWL) |
+| 087 | No authorisation to display table &1 (S_TABU_NAM) |
+| 088 | Operator &1 is not allowed for field &2 |
+| 089 | &1 is not a number (field &2) |
+| 090 | Aggregate &1: function &2 is not COUNT or AGE |
+| 091 | Aggregate &1: &2 is not a date field of table &3 |
+| 092 | Check &1 of area &2 has no active aggregate row (ZCA_OPS_AGG) |
+| 093 | Aggregate &1 could not be read from table &2 |
+| 094 | &1 &2: &3 row(s) match (limit &4) |
+| 095 | &1 &2: the oldest row is &3 day(s) old (limit &4) |
+| 096 | Process &1 of area &2 has no active check (ZCA_OPS_CHECK) |
+| 097 | Process &1 of area &2: check &3 is covered by no active control |
+| 098 | Process &1: no active alert rule for area &2 (ZCA_OPS_ALRULE) |
+| 099 | Process &1 of area &2: owner &3 missing or not a user of this client |
+| 100 | Process &1 of area &2: purge target &3 missing or inactive |
+| 101 | Process &1 of area &2: no role named or area not active (&3) |
+| 102 | Area &1 group &2: &3 check(s) run, &4 finding(s) |
+| 103 | Aggregate &1: company-code field required (check &2 is per company) |
 | 402 | Enter a customizing request: changes in this client are recorded |
 | 403 | Transport request &1 does not exist |
 | 404 | &1 is not a customizing request or customizing task |

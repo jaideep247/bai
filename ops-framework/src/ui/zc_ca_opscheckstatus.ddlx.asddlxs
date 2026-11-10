@@ -1,0 +1,92 @@
+// UI annotations: Area dashboard - status per registered check (service ZUI_CA_OPS_DASH)
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Check', typeNamePlural: 'Checks by area',
+                  title: { type: #STANDARD, value: 'CheckName' },
+                  description: { type: #STANDARD, value: 'CheckId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'Area', direction: #ASC }, { by: 'ProcessId', direction: #ASC },
+                                          { by: 'CheckId', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+annotate entity ZC_CA_OpsCheckStatus with
+{
+  @UI.facet: [ { id: 'Check', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Check', position: 10 },
+               { id: 'Run', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Run',
+                 label: 'Latest run and freshness', position: 20 } ]
+  @EndUserText.label: 'Area'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  Area;
+  @EndUserText.label: 'Check ID'
+  @UI.lineItem: [ { position: 30, importance: #HIGH } ]
+  @UI.identification: [ { position: 30 } ]
+  CheckId;
+  @EndUserText.label: 'Company code (blank = area-level)'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  CompanyCode;
+  @EndUserText.label: 'Business process'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  ProcessId;
+  @EndUserText.label: 'Process name'
+  @UI.identification: [ { position: 25 } ]
+  ProcessName;
+  @EndUserText.label: 'Check'
+  @UI.lineItem: [ { position: 35, importance: #HIGH } ]
+  @UI.identification: [ { position: 35 } ]
+  CheckName;
+  @EndUserText.label: 'Schedule group'
+  @UI.selectionField: [ { position: 30 } ]
+  @UI.identification: [ { position: 40 } ]
+  ScheduleGroup;
+  @EndUserText.label: 'Check class'
+  @UI.identification: [ { position: 50 } ]
+  ClassName;
+  @EndUserText.label: 'Reports per company code'
+  @UI.identification: [ { position: 60 } ]
+  IsCompanyCodeAware;
+  @UI.hidden: true
+  LastRunId;
+  @EndUserText.label: 'Last run started (UTC)'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 10 } ]
+  LastRunAt;
+  @EndUserText.label: 'Last run status (S, W, E, A)'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 20 } ]
+  LastRunStatus;
+  @EndUserText.label: 'Last run RAG'
+  @UI.lineItem: [ { position: 70, importance: #MEDIUM, criticality: 'RunCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 30, criticality: 'RunCriticality' } ]
+  LastRunRag;
+  @UI.hidden: true
+  RunCriticality;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 50, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.dataPoint: { qualifier: 'OpenExceptions', title: 'Open exceptions', criticality: 'StatusCriticality' }
+  OpenExceptions;
+  @EndUserText.label: 'Status (worst open exception)'
+  @UI.lineItem: [ { position: 45, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  @UI.identification: [ { position: 70, criticality: 'StatusCriticality' } ]
+  Status;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Stale after (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 50 } ]
+  StaleAfterMinutes;
+  @EndUserText.label: 'Age of the last run (minutes)'
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 40, criticality: 'StaleCriticality' } ]
+  AgeMinutes;
+  @EndUserText.label: 'Stale (no recent run)'
+  @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'StaleCriticality' } ]
+  @UI.selectionField: [ { position: 60 } ]
+  @UI.fieldGroup: [ { qualifier: 'Run', position: 60, criticality: 'StaleCriticality' } ]
+  IsStale;
+  @UI.hidden: true
+  StaleCriticality;
+  @UI.hidden: true
+  SliceCount;
+  @UI.hidden: true
+  FlaggedCount;
+}

@@ -12,6 +12,7 @@
 *& 2026-11-06 | Interface check before instantiation (audit A62).
 *& 2026-11-06 | Modern-syntax sweep: no trailing RETURN.
 *& 2026-11-10 | Moved from ZCL_CD_OPS_FACTORY to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | injected_check_dao_returned, real_check_dao_created (check registry, process onboarding).
 *&---------------------------------------------------------------------*
 CLASS ltd_clock DEFINITION FINAL FOR TESTING.
   PUBLIC SECTION.
@@ -45,6 +46,15 @@ CLASS ltd_auth IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltd_check_dao DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_ca_ops_check_dao PARTIALLY IMPLEMENTED.
+ENDCLASS.
+
+CLASS ltd_check_dao IMPLEMENTATION.
+ENDCLASS.
+
+
 CLASS ltc_factory DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
   DURATION SHORT.
@@ -59,6 +69,8 @@ CLASS ltc_factory DEFINITION FINAL FOR TESTING
     METHODS class_name_case_insensitive  FOR TESTING.
     METHODS injected_clock_is_returned   FOR TESTING.
     METHODS injected_auth_is_returned    FOR TESTING.
+    METHODS injected_check_dao_returned  FOR TESTING.
+    METHODS real_check_dao_created       FOR TESTING.
     METHODS unrelated_class_not_created  FOR TESTING.
     METHODS matching_interface_creates   FOR TESTING.
     METHODS unknown_interface_refused    FOR TESTING.
@@ -151,6 +163,24 @@ CLASS ltc_factory IMPLEMENTATION.
     zcl_ca_ops_injector=>inject_auth( lo_double ).
     cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_factory=>get_auth( ) exp = lo_double
                                         msg = 'Injected authorisation double must be returned' ).
+  ENDMETHOD.
+
+
+  " The check registry is read through one seam: runner, aggregate and onboarding checks are testable
+  METHOD injected_check_dao_returned.
+    DATA(lo_double) = NEW ltd_check_dao( ).
+    zcl_ca_ops_injector=>inject_check_dao( lo_double ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_ca_ops_factory=>get_check_dao( ) exp = lo_double
+                                        msg = 'Injected check registry double must be returned' ).
+  ENDMETHOD.
+
+
+  " Without a double the real data access is returned (and the reset removes the double)
+  METHOD real_check_dao_created.
+    zcl_ca_ops_injector=>inject_check_dao( NEW ltd_check_dao( ) ).
+    zcl_ca_ops_injector=>reset( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( zcl_ca_ops_factory=>get_check_dao( ) IS INSTANCE OF zcl_ca_ops_check_dao )
+                                      msg = 'The real check registry data access after the reset' ).
   ENDMETHOD.
 
 

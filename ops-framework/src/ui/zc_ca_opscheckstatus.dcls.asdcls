@@ -1,0 +1,18 @@
+// Artifact: zc_ca_opscheckstatus.dcls.asdcls
+// Purpose: Read access to the area dashboard (service ZUI_CA_OPS_DASH): authorization object ZCA_OPS with
+//          ZCA_PARAR = the area of the check and ACTVT 03 - and, for a company-code slice, the same object with
+//          BUKRS = the company code of the slice (company-code isolation, docs/auth_zca_ops.md section 3c): area
+//          authorised AND ( company code blank OR ( area, company code ) authorised ). Every count of a row is
+//          of its own company code only (ZI_CA_OpsChkSlice), so this filter on the row is a filter on the
+//          findings before a card sums the slices.
+// Modification log: 2026-11-10 | Initial version (process onboarding: area dashboard and freshness).
+// VERIFY-ADT: aspect pfcg_auth on a projection view (7.58); BUKRS not mapped in the first condition = not
+//             checked; IS INITIAL in an access condition (fallback: CompanyCode = ' ').
+@EndUserText.label: 'Area dashboard - read access'
+@MappingRole: true
+define role ZC_CA_OpsCheckStatus {
+  grant select on ZC_CA_OpsCheckStatus
+    where ( Area ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )
+      and ( CompanyCode is initial
+         or ( Area, CompanyCode ) = aspect pfcg_auth( ZCA_OPS, ZCA_PARAR, BUKRS, ACTVT = '03' ) );
+}

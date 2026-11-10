@@ -1,4 +1,4 @@
-@EndUserText.label: 'Alerting, purge targets and controls'
+@EndUserText.label: 'Processes, checks, alerting, purge targets and controls'
 @ObjectModel.leadingEntity.name: 'ZC_CA_OPSCFGALL'
 define service ZUI_CA_OPS_CFG {
   expose ZC_CA_OpsCfgAll as OpsCfgAll;
@@ -8,4 +8,8 @@ define service ZUI_CA_OPS_CFG {
   expose ZC_CA_Control as Control;
   expose ZC_CA_ControlText as ControlText;
   expose ZC_CA_ControlCheck as ControlCheck;
+  expose ZC_CA_Process as Process;
+  expose ZC_CA_RegisteredCheck as RegisteredCheck;
+  expose ZC_CA_AggregateCheck as AggregateCheck;
+  expose ZC_CA_ApprovedTable as ApprovedTable;
 }

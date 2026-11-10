@@ -15,6 +15,8 @@
 *&            | CHAR 4); a consumer's field check messages stay in its own types interface.
 *& 2026-11-10 | Message 436: e-mail template ID of an alert rule / channel not valid (alert e-mail templates).
 *& 2026-11-10 | Messages 437-439: control register (owner / backup user, team, runbook link).
+*& 2026-11-10 | TABLE_INVALID / FIELD_INVALID (082 / 083): table and field checks of the aggregate rows
+*&            | and approved tables of the check registry (process onboarding).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -146,6 +148,10 @@ INTERFACE zif_ca_ops_cfg_types
       team_invalid      TYPE ty_msg_number VALUE '438',
       "! Control: the runbook link is not an http / https link
       url_invalid       TYPE ty_msg_number VALUE '439',
+      "! Aggregate check / approved table: the table is not a DDIC table (process onboarding, 2026-11-10)
+      table_invalid     TYPE ty_msg_number VALUE '082',
+      "! Aggregate check: the field is not a field of the row's table
+      field_invalid     TYPE ty_msg_number VALUE '083',
     END OF gc_msg.
 
 ENDINTERFACE.

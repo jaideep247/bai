@@ -1,4 +1,4 @@
-// UI annotations: Alerting, purge targets and controls - Control guidance per language
+// UI annotations: Processes, checks, alerting, purge targets and controls - Control guidance per language
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Guidance',
                      typeNamePlural: 'Control guidance per language',

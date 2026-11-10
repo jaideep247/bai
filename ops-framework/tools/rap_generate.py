@@ -17,6 +17,8 @@ Modification log:
 2026-11-10 | Control register of the daily review: controls (owner / backup user 437, team 438, runbook URL
            | 439), guidance per language and the checks a control covers (exact values).
 2026-11-10 | Alert rules: company-code pattern BUKRS_PATTERN (PCRE, checked on save as the other patterns).
+2026-11-10 | Process onboarding: business processes, registered checks, aggregate rows (table 082 / field 083
+           | checks) and approved tables.
 """
 import os
 import sys
@@ -35,7 +37,7 @@ SPEC = {
     'framework': dict(
         ddic='', draft_ddic='ui', prefix='ca',
         folder='ui', pe_area='CA_OPS', root='OpsCfgAll', draft='zca_d_opscfg', service='ZUI_CA_OPS_CFG',
-        title='Alerting, purge targets and controls', tables=[
+        title='Processes, checks, alerting, purge targets and controls', tables=[
             ('zca_ops_alrule', 'AlertRule', 'zca_d_alrule', 'Alert rule', 'Alert rules', [],
              [('area', 'area', True), ('enum', 'min_severity', ',' + SEV),
               ('enum', 'min_rag', ',R,A,G'), ('window', 'quiet_from', 'quiet_to'),
@@ -61,6 +63,22 @@ SPEC = {
             ('zca_ops_ctlchk', 'ControlCheck', 'zca_d_ctlchk', 'Covered check', 'Checks covered by a control', [],
              [('area', 'area', False), ('area', 'check_area', False),
               ('enum', 'match_field', 'RULE_ID,CHECK_CODE,GROUP2')]),
+            # Process onboarding (2026-11-10): business processes, the check registry of the generic runner,
+            # the no-code aggregate rows and the tables they may read (approved per area)
+            ('zca_ops_proc', 'Process', 'zca_d_proc', 'Process', 'Business processes', [],
+             [('area', 'area', False), ('valid', 'owner', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
+              ('valid', 'backup', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid'),
+              ('valid', 'runbook_url', 'zcl_ca_ops_cfg_checks=>url_valid', 'url_invalid')]),
+            ('zca_ops_check', 'RegisteredCheck', 'zca_d_check', 'Check', 'Registered checks', [],
+             [('area', 'area', False), ('class', 'class_name', 'ZIF_CA_OPS_CHECK')]),
+            ('zca_ops_agg', 'AggregateCheck', 'zca_d_agg', 'Aggregate', 'Aggregate checks (no code)', [],
+             [('area', 'area', False), ('enum', 'agg_func', 'COUNT,AGE'), ('enum', 'status_op', ',EQ,NE,IN'),
+              ('enum', 'cond_op', ',EQ,NE,GT,LT,GE,LE,IN'), ('table', 'tabname'),
+              ('field', 'date_field', 'tabname'), ('field', 'bukrs_field', 'tabname'),
+              ('field', 'status_field', 'tabname'), ('field', 'cond_field', 'tabname')]),
+            ('zca_ops_tabwl', 'ApprovedTable', 'zca_d_tabwl', 'Approved table', 'Tables approved for aggregate checks', [],
+             [('area', 'area', False), ('table', 'table_name'),
+              ('valid', 'approved_by', 'zcl_ca_ops_cfg_checks=>user_valid', 'user_invalid')]),
         ]),
 }
 
@@ -77,7 +95,20 @@ LABELS = {'area': 'Area (alert rules: * = every area)', 'param_area': 'Area of t
           'langu': 'Language', 'cutoff_time': 'Review cut-off (local time, CONTROL_TIME_ZONE)',
           'team': 'Team (parameter CONTROL_TEAMS)', 'check_area': 'Area of the findings',
           'match_field': 'Finding field (RULE_ID / CHECK_CODE / GROUP2)', 'match_value': 'Value (exact)',
-          'guidance': 'Guidance for the reviewer'}
+          'guidance': 'Guidance for the reviewer',
+          # Process onboarding (2026-11-10)
+          'process_id': 'Business process', 'auth_role': 'Role (PFCG) granting ZCA_OPS for the area',
+          'own_data': 'Writes own tables (purge target required)', 'purge_target': 'Purge target of own tables',
+          'sched_group': 'Schedule group (run variant)',
+          'bukrs_aware': 'Reports per company code', 'agg_id': 'Aggregate ID (rule ID of the findings)',
+          'tabname': 'Table (approved for the area)', 'agg_func': 'Function (COUNT or AGE)',
+          'date_field': 'Date field (AGE counts from it)', 'min_age_days': 'Minimum age (days)',
+          'bukrs_field': 'Company-code field (one result each)', 'status_field': 'Status field',
+          'status_op': 'Status operator (EQ, NE, IN)', 'status_value': 'Status value(s)',
+          'cond_field': 'Condition field', 'cond_op': 'Condition operator', 'cond_value': 'Condition value(s)',
+          'amber': 'Amber limit (rows or days, 0 = none)', 'red': 'Red limit (rows or days, 0 = none)',
+          'check_code': 'Check code of the findings', 'table_name': 'Table',
+          'approved_by': 'Approved by (reviewer)'}
 
 _engine.configure(ROOT=ROOT, SPEC=SPEC, RENAME={}, TOKENS=TOKENS, LABELS=LABELS)
 

@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Alerting, purge targets and controls'
+@EndUserText.label: 'Processes, checks, alerting, purge targets and controls'
 @Metadata.allowExtensions: true
 @ObjectModel.semanticKey: ['SingletonID']
 define root view entity ZC_CA_OpsCfgAll
@@ -15,5 +15,9 @@ define root view entity ZC_CA_OpsCfgAll
       _PurgeTarget : redirected to composition child ZC_CA_PurgeTarget,
       _Control : redirected to composition child ZC_CA_Control,
       _ControlText : redirected to composition child ZC_CA_ControlText,
-      _ControlCheck : redirected to composition child ZC_CA_ControlCheck
+      _ControlCheck : redirected to composition child ZC_CA_ControlCheck,
+      _Process : redirected to composition child ZC_CA_Process,
+      _RegisteredCheck : redirected to composition child ZC_CA_RegisteredCheck,
+      _AggregateCheck : redirected to composition child ZC_CA_AggregateCheck,
+      _ApprovedTable : redirected to composition child ZC_CA_ApprovedTable
 }

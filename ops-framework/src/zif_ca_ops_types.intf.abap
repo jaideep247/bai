@@ -35,6 +35,8 @@
 *& 2026-11-10 | Name prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, reason codes).
 *& 2026-11-10 | Company-code isolation: TY_FINDING-COMPANY_CODE is stored (ZCA_OPS_FINDING-BUKRS); alert rule
 *&            | pattern on the company code (TY_ALERT_RULE-BUKRS_PATTERN).
+*& 2026-11-10 | Error classes: configuration messages of the check registry (082-092, 103) are CONFIG;
+*&            | name prefix CHECK_ read in area CA_OPS (freshness of the area dashboard).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -134,6 +136,8 @@ INTERFACE zif_ca_ops_types
       control   TYPE ty_param_name VALUE 'CONTROL_',
       "! Exception lifecycle (ZIF_CA_OPS_EXC_TYPES=>GC_PARAM, 2026-11-10)
       exception TYPE ty_param_name VALUE 'EXC_',
+      "! Check registry and area dashboard (ZIF_CA_OPS_CHK_TYPES=>GC_PARAM, 2026-11-10)
+      check     TYPE ty_param_name VALUE 'CHECK_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters
@@ -205,7 +209,8 @@ INTERFACE zif_ca_ops_types
   CONSTANTS:
     BEGIN OF gc_error_rule,
       transient_msgno TYPE string VALUE `040,042`,
-      config_msgno    TYPE string VALUE `007,021,027,030,031,032,033,041,043,044,807,808,809`,
+      config_msgno    TYPE string VALUE `007,021,027,030,031,032,033,041,043,044,082,083,085,086,087,088,089,`
+                                    & `090,091,092,103,807,808,809`,
       transient_class TYPE string VALUE `CX_SY_OPEN_SQL_DB,CX_SQL_EXCEPTION`,
       code_prefix     TYPE string VALUE `CX_SY_`,
     END OF gc_error_rule.
