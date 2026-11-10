@@ -4,8 +4,8 @@ Artifact: tools/param_definitions.py
 Purpose:  The suite's runtime parameters in the framework ZCA_PARAM (areas CD_OPS, CD_EBS,
           CD_FMON, CD_HCK, and the suite's own names in the operations framework's area CA_OPS:
           ALERT_<route>, SLA_DAYS_<area>_<severity>, RETENTION_DAYS_<suite purge target>).
-          The generator is the operations framework's (ops-framework/tools/param_definitions.py);
-          this file is the suite's profile: seed class ZCL_CD_OPS_PARAM_SEED, the prefix table of
+          The generator is the shared engine (../../tools/abaptools/param_definitions.py, also used
+          by the operations framework's profile); this file is the suite's profile: seed class ZCL_CD_OPS_PARAM_SEED, the prefix table of
           ZCL_CD_OPS_FACTORY=>PARAM_PREFIXES plus the framework's, the run-time names and the code
           defaults of the suite. Same checks (portable check param_definitions_complete).
 Usage:    python3 tools/param_definitions.py           -> regenerate the seed class
@@ -17,17 +17,17 @@ Modification log:
 2026-11-10 | The generator moved to the operations framework (ops-framework/tools/param_definitions.py,
            | configure( )); this file holds the suite's profile. Framework names (ALERT_, SLA_,
            | PURGE_, RETENTION_) read area CA_OPS; the suite's names there are its rows in area CA_OPS.
+2026-11-10 | The generator moved to the shared tools (tools/abaptools); own instance of the engine.
 """
-import importlib.util
 import os
 import re
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_GENERIC = os.path.join(_HERE, '..', '..', 'ops-framework', 'tools', 'param_definitions.py')
-_spec = importlib.util.spec_from_file_location('ops_framework_param_definitions_suite', _GENERIC)
-_gen = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_gen)
+sys.path.insert(0, os.path.join(_HERE, '..', '..', 'tools'))
+import abaptools  # noqa: E402
+
+_gen = abaptools.fresh('param_definitions', 'ops_suite')
 
 FW = os.path.join('..', 'ops-framework')
 FW_TYPES = os.path.join(FW, 'src', 'zif_ca_ops_types.intf.abap')

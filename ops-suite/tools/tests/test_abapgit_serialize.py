@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fixture tests for tools/abapgit_serialize.py (audit A89 and secondary indexes).
 
-Each test copies ops-suite into a temporary directory, changes one DDL there and runs the
+Each test copies ops-suite (and the shared engine tools/abaptools) into a temporary directory, changes one DDL there and runs the
 serializer of the copy, so the repository itself is never touched.
 
 Run:  python3 -m unittest discover -s tools/tests      (from ops-suite/)
@@ -26,6 +26,9 @@ class SerializerFixture(unittest.TestCase):
         # the serializer writes ../.abapgit.xml, so the copy sits one level down
         self.root = os.path.join(self.tmp, 'ops-suite')
         shutil.copytree(SUITE, self.root, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__'))
+        # the wrapper calls the shared engine two levels up (<repository>/tools/abaptools)
+        shutil.copytree(os.path.join(SUITE, '..', 'tools', 'abaptools'), os.path.join(self.tmp, 'tools', 'abaptools'),
+                        ignore=shutil.ignore_patterns('__pycache__'))
         # bring the copy to a clean, serialized state first
         self.assertEqual(self.run_serializer().returncode, 0)
 
@@ -72,7 +75,7 @@ class SerializerFixture(unittest.TestCase):
             fh.write(text.replace("@EndUserText.label : '", "@EndUserText.label : 'Changed ", 1))
         result = self.run_serializer()
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('ack_known_bad', result.stdout)
+        self.assertIn('ack_known_bad', result.stdout.lower())
         self.assertEqual(self.xml_snapshot(), before)
 
     def test_unknown_index_field_writes_nothing(self):

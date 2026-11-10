@@ -1,0 +1,22 @@
+{
+  "starting_folder": "/ops-suite/src/",
+  "master_language": "E",
+  "abapgit_xml": "../.abapgit.xml",
+  "ignore": ["/.gitignore", "/LICENSE", "/README.md"],
+  "packages": {
+    "": ["ZCD_OPS", "Payment engine operations suite"],
+    "core": ["ZCD_OPS_CORE", "Ops suite: store, alerting, factory"],
+    "ebs": ["ZCD_OPS_EBS", "Ops suite: EBS validation (BAI2 / CAMT)"],
+    "fmon": ["ZCD_OPS_FMON", "Ops suite: file monitoring"],
+    "hck": ["ZCD_OPS_HCK", "Ops suite: health check, morning report"]
+  },
+  "ddic_package_folder": "core",
+  "secondary_indexes": true,
+  "message_class": {
+    "name": "ZCD_OPS",
+    "text": "Payment engine operations suite",
+    "source": "config/zcd_ops_messages.md",
+    "folder": "core",
+    "truncate": true
+  }
+}

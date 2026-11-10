@@ -11,6 +11,7 @@
     "name": "ZCA_PARAM",
     "text": "Cross-application parameter framework",
     "source": "config/zca_param_messages.md",
-    "folder": ""
+    "folder": "",
+    "columns": 3
   }
 }
