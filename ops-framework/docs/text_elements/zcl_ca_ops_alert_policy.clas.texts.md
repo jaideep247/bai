@@ -18,7 +18,7 @@ context key SEVERITY_TEXT. Sentences with values are messages of class ZCA_OPS (
 | Text symbol | C10 | Account |
 | Text symbol | C11 | Payment method |
 | Text symbol | C12 | Count |
-| Text symbol | C13 | Details |
+| Text symbol | C13 | Context / details |
 | Text symbol | S01 | Block |
 | Text symbol | S02 | Error |
 | Text symbol | S03 | Warning |

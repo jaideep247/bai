@@ -94,8 +94,10 @@ not known for the message (with rendering by key: blank unless stored, see secti
 check, object type / key, reference, business date, company code, account (a label that may be
 e-mailed: house bank / account ID or a masked number - the producer masks, never a full number),
 payment method, count, amount + currency (**only when the rule's `SHOW_AMOUNTS` = X**), message,
-details (the finding's labelled DETAILS lines). The fields business date, company code, account,
-payment method and count are new components of `ZIF_CA_OPS_TYPES=>TY_FINDING` (not stored in
+context / details: the finding's `CONTEXT` lines (labelled business context, never amounts - always
+shown) and, **only with `SHOW_AMOUNTS`**, its `DETAILS` (the check's free text, which may carry amounts,
+e.g. reconciliation differences). The fields business date, company code, account, payment method,
+count and context are new components of `ZIF_CA_OPS_TYPES=>TY_FINDING` (not stored in
 `ZCA_OPS_FINDING`): the producer fills what it knows at finding time. The text body lists the same,
 labelled.
 
@@ -140,7 +142,8 @@ documented source stays the reference of the content.
 - A section plug-in (`ZIF_CA_OPS_ALERT_SECTION`) may name the template of the messages that hold its
   findings (`TEMPLATE_ID`, optional method) - used when the rule names none.
 - Fill the business context of the findings where the data is at hand (`BUSINESS_DATE`, `COMPANY_CODE`,
-  `ACCOUNT` masked, `PAY_METHOD`, `ITEM_COUNT`) and labelled DETAILS lines; no extra database reads for it.
+  `ACCOUNT` masked, `PAY_METHOD`, `ITEM_COUNT`, labelled `CONTEXT` lines without amounts); no extra database
+  reads for it. `DETAILS` reach the e-mail only on rules with `SHOW_AMOUNTS`.
 - Amounts: set `SHOW_AMOUNTS` on the rules whose receivers are to see them.
 
 ## 8. VERIFY items (nothing has run in SAP)

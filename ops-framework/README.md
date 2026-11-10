@@ -128,6 +128,7 @@ ls_finding-business_date = ls_statement-stmt_date.        " blank = not known: t
 ls_finding-company_code  = ls_statement-bukrs.
 ls_finding-account       = lv_account_label.               " house bank / account ID or masked - never in full
 ls_finding-item_count    = ls_file-record_count.
+ls_finding-context       = lv_label_line.                " labelled lines, never amounts (DETAILS: only with SHOW_AMOUNTS)
 ```
 
 5. **Add an alert section plug-in** (optional) - the consumer's own table in the alert message: a class

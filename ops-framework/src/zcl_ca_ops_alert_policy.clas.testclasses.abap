@@ -659,7 +659,8 @@ CLASS ltc_alert_policy IMPLEMENTATION.
   ENDMETHOD.
 
 
-  " Business context of a finding (business date, company code, ...) is shown when known
+  " Business context of a finding (business date, company code, ...) is shown when known; the free
+  " details only on rules that show amounts
   METHOD finding_context_is_shown.
     DATA ls_selection TYPE zcl_ca_ops_alert_policy=>ty_selection.
     TRY.
@@ -667,7 +668,8 @@ CLASS ltc_alert_policy IMPLEMENTATION.
         ls_finding-business_date = '20261109'.
         ls_finding-company_code  = 'ZT01'.
         ls_finding-account       = 'HB001/AC01'.
-        ls_finding-details       = 'Label: value'.
+        ls_finding-context       = 'Label: value'.
+        ls_finding-details       = 'Paid: USD 9,999.00'.
         ls_selection-rule     = ms_rule.
         ls_selection-findings = VALUE #( ( ls_finding ) ).
         DATA(lt_messages) = mo_cut->build_messages( is_selection   = ls_selection
@@ -678,7 +680,9 @@ CLASS ltc_alert_policy IMPLEMENTATION.
                                                          AND ls_message-html CS 'HB001/AC01' )
                                           msg = 'Business date, company code and account in the table' ).
         cl_abap_unit_assert=>assert_true( act = xsdbool( ls_message-text CS 'ZT01' AND ls_message-text CS 'Label: value' )
-                                          msg = 'The text names the context and the detail lines' ).
+                                          msg = 'The text names the context lines' ).
+        cl_abap_unit_assert=>assert_char_np( act = ls_message-html exp = '*9,999.00*'
+                                             msg = 'Details (may carry amounts) only with SHOW_AMOUNTS' ).
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.

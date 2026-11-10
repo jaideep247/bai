@@ -31,6 +31,7 @@
 *&            | and render outcome on the alert message and log; parameters ALERT_MAIL_RENDERER,
 *&            | ALERT_TEMPLATE_DEFAULT, ALERT_TIME_ZONE, ALERT_EXC_APP_LINK; messages 070-075;
 *&            | name of the exceptions app (GC_EXC_APP).
+*& 2026-11-10 | TY_FINDING-CONTEXT: labelled business-context lines for the alert e-mail (never amounts).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -304,6 +305,10 @@ INTERFACE zif_ca_ops_types
       account       TYPE c LENGTH 40,
       pay_method    TYPE c LENGTH 10,
       item_count    TYPE i,
+      "! Labelled lines of business context for the alert e-mail ("label: value", newline separated;
+      "! never amounts - shown on every rule). DETAILS is the check's free text and may carry amounts:
+      "! the e-mail shows it only on rules with SHOW_AMOUNTS
+      context       TYPE string,
     END OF ty_finding.
   TYPES tt_finding TYPE STANDARD TABLE OF ty_finding WITH EMPTY KEY.
 

@@ -691,9 +691,10 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
         lv_line = |{ lv_line }{ gc_part_separator }{ lt_columns[ sy-tabix ]-label }{ gc_label_separator }{ <lv_cell> }|.
       ENDLOOP.
       INSERT lv_line INTO TABLE lt_lines.
-      " the labelled detail lines of the finding, indented
-      IF <ls_finding>-details IS NOT INITIAL.
-        SPLIT <ls_finding>-details AT lv_newline INTO TABLE DATA(lt_details).
+      " the labelled context (and, with SHOW_AMOUNTS, the detail lines) of the finding, indented
+      DATA(lv_details) = lt_cells[ lines( lt_cells ) ].
+      IF lv_details IS NOT INITIAL.
+        SPLIT lv_details AT lv_newline INTO TABLE DATA(lt_details).
         LOOP AT lt_details ASSIGNING FIELD-SYMBOL(<lv_detail>) WHERE table_line IS NOT INITIAL.
           INSERT |{ gc_indent }{ <lv_detail> }| INTO TABLE lt_lines.
         ENDLOOP.
@@ -730,6 +731,13 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
     DATA(lv_amount) = COND string(
       WHEN iv_show_amounts = abap_true AND is_finding-amount <> 0
       THEN condense( |{ is_finding-currency } { zcl_ca_ops_util=>format_amount( CONV #( is_finding-amount ) ) }| ) ).
+    " details: the labelled context always; the check's free text (may carry amounts) only with SHOW_AMOUNTS
+    DATA(lv_details) = COND string(
+      WHEN iv_show_amounts = abap_true AND is_finding-context IS NOT INITIAL AND is_finding-details IS NOT INITIAL
+      THEN |{ is_finding-context }{ cl_abap_char_utilities=>newline }{ is_finding-details }|
+      WHEN iv_show_amounts = abap_true AND is_finding-details IS NOT INITIAL
+      THEN is_finding-details
+      ELSE is_finding-context ).
     rt_cells = VALUE #( ( CONV #( is_finding-severity ) )
                         ( CONV #( is_finding-rule_id ) )
                         ( CONV #( is_finding-check_code ) )
@@ -743,7 +751,7 @@ CLASS zcl_ca_ops_alert_policy IMPLEMENTATION.
                         ( COND #( WHEN is_finding-item_count > 0 THEN |{ is_finding-item_count }| ) )
                         ( lv_amount )
                         ( CONV #( is_finding-message ) )
-                        ( is_finding-details ) ).
+                        ( lv_details ) ).
   ENDMETHOD.
 
 
