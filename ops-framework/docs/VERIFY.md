@@ -24,3 +24,12 @@ recorded in the release pack.
 | V14 | Runtime | Demo (`docs/INSTALL.md` section 7): test mode writes nothing and sends nothing; test mode off with *Sample* stores a run of area `CA_DEMO` with an open error and warning exception (exceptions app), one SLG1 entry `ZCA_OPS` / `ALERT` by rule `DEMO_LOG` and its `ZCA_OPS_ALLOG` row; a second run without *Sample* resolves the exceptions it no longer raises; without ZCA_OPS 16 for `CA_DEMO` the report stops with 041 |
 | V15 | ABAP Unit | `ZCL_CA_OPS_DEMO` (local doubles injected through `ZCL_CA_OPS_INJECTOR`) and `ZCL_CA_OPS_DEMO_DAO` (OSQL double of `TBTCO`, incl. the client filter) |
 | V16 | Runtime | Messages 900-903 of `ZCA_OPS` (texts and variables of the demo findings and of its result message) |
+| V17 | VERIFY-ADT | `CL_SMTG_EMAIL_API` exists; static `GET_INSTANCE` (`IV_TEMPLATE_ID`, returning `RO_INSTANCE`) - constants of `ZCL_CA_OPS_MAIL_TPL_SMTG` |
+| V18 | VERIFY-ADT | `RENDER_W_DATA` (`IV_LANGUAGE`, data parameter assumed `IR_DATA`, `EV_SUBJECT` / `EV_BODY_HTML` / `EV_BODY_TEXT`); components mapped to placeholders by name |
+| V19 | VERIFY-ADT | `RENDER` with `IT_DATA_KEY` (`NAME` / `VALUE`, key `ALERT_ID` of `ZI_CA_OPS_ALERTMAILCTX`) |
+| V20 | VERIFY-ADT | Exception classes of the API; `GET_INSTANCE` raises for an unknown / inactive template |
+| V21 | VERIFY-SE11 | Data element and length of the SMTG template ID (CHAR 30 assumed in `ZCA_OPS_ALRULE` / `_ALCHN` / `_ALLOG`) and its allowed characters |
+| V22 | VERIFY-ADT | abapGit support of object type SMTG in DV1 (else templates stay documented sources, `templates/`) |
+| V23 | VERIFY-ADT | Placeholder syntax `{{NAME}}`, case of the element names in the template editor; `ZI_CA_OPS_ALERTMAILCTX` with `cast( ' ' as abap.char(n) )` elements accepted as data source |
+| V24 | Runtime | A token (letters and digits) survives rendering unchanged and is replaced by the table |
+| V25 | Runtime | QA1: alert e-mails rendered from templates (`ZCA_OPS_ALLOG-RENDERER` = `SMTG`); a deleted template gives the built-in layout and `RENDER_INFO` 071; `ALERT_MAIL_RENDERER` = `BUILTIN` gives 075 |

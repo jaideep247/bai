@@ -91,13 +91,24 @@ Users who maintain parameters also need the parameter framework's object `ZCA_PA
 In the parameter app (`ZUI_CA_PARAM_O4`), in the customizing client on a customizing request:
 
 1. Area **`CA_OPS`** (`config/param_areas.csv`, 1 row).
-2. The **7 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
-   `ALERT_SECTION_CLASS`, `PURGE_PACKAGE_SIZE`, `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_RUN`,
+2. The **11 definitions** of `config/param_definitions.csv` (`ALERT_DEFAULT`, `ALERT_ESCALATION_WINDOW_H`,
+   `ALERT_EXC_APP_LINK`, `ALERT_MAIL_RENDERER`, `ALERT_SECTION_CLASS`, `ALERT_TEMPLATE_DEFAULT`,
+   `ALERT_TIME_ZONE`, `PURGE_PACKAGE_SIZE`, `RETENTION_DAYS_ALERT_LOG`, `RETENTION_DAYS_RUN`,
    `SLA_DAYS_DEFAULT`) exactly as listed - meaning and defaults in `docs/PARAMETERS.md`.
 3. Value rows only where the default does not fit (e.g. `ALERT_DEFAULT` = the SO23 list of the support team).
 
 Each consumer then delivers its own names in area `CA_OPS` (`ALERT_<route>`, `SLA_DAYS_<area>_<B|E|W>`,
 retention parameters of its purge targets) from its own seed files.
+
+## 4a. E-mail templates (SAP e-mail templates, SMTG)
+
+1. Check in DV1 that the template API exists (`CL_SMTG_EMAIL_API`, SE24) and confirm the VERIFY-ADT names of
+   `docs/ALERT_TEMPLATES.md` section 8 before the first alert e-mail. Without it the framework sends the
+   built-in layout and records the fallback on each alert log row - nothing else changes.
+2. Activate the data source `ZI_CA_OPS_ALERTMAILCTX`, then create the generic template
+   `ZCA_OPS_ALERT_DEFAULT` from `templates/zca_ops_alert_default.md` (DV1 steps there) on a workbench request
+   of the framework; transport it. Templates are never edited in production.
+3. To switch templates off: `ALERT_MAIL_RENDERER` = `BUILTIN`.
 
 ## 5. Retention purge job
 

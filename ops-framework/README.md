@@ -23,6 +23,7 @@ standard. Both components stay separate and are shipped together (user decision 
 | Store | `ZIF_CA_OPS_STORE` / `ZCL_CA_OPS_STORE`, tables `ZCA_OPS_RUN`, `ZCA_OPS_FINDING`, `ZCA_OPS_EXC_HIST` |
 | Exceptions | `ZIF_CA_OPS_EXC_DAO` / `ZCL_CA_OPS_EXC_DAO`, `ZCL_CA_OPS_EXC_POLICY`, `ZIF_CA_OPS_EXC_TYPES`; app `ZUI_CA_OPS_EXC` (RAP BO `ZR_CA_OpsException`, sub-package `ZCA_OPS_UI`) |
 | Alerting | `ZIF_CA_OPS_ALERT` / `ZCL_CA_OPS_ALERT_ROUTER`, `ZCL_CA_OPS_ALERT_POLICY`, `ZIF_CA_OPS_ALERT_DAO` / `ZCL_CA_OPS_ALERT_DAO`, channels `ZIF_CA_OPS_ALERT_CHANNEL` (`ZCL_CA_OPS_CHN_EMAIL`, `ZCL_CA_OPS_CHN_APPLOG`), consumer sections `ZIF_CA_OPS_ALERT_SECTION`; tables `ZCA_OPS_ALRULE`, `ZCA_OPS_ALCHN`, `ZCA_OPS_ALLOG` |
+| Alert e-mail templates | `ZIF_CA_OPS_MAIL_TEMPLATE`, `ZCL_CA_OPS_MAIL_TPL_SMTG` (SAP e-mail templates), `ZCL_CA_OPS_MAIL_TPL_BUILTIN` (built-in layout, fallback), `ZCL_CA_OPS_MAIL_COMPOSER`; data source `ZI_CA_OPS_ALERTMAILCTX`; generic template `ZCA_OPS_ALERT_DEFAULT` (`templates/`, documented source) - `docs/ALERT_TEMPLATES.md` |
 | Run control | `ZIF_CA_OPS_LOCK` / `ZCL_CA_OPS_LOCK` (lock argument `ZCA_OPS_LOCK`), `ZCL_CA_OPS_RUN_GUARD` (refuse / abort) |
 | Configuration apps | gate `ZCL_CA_OPS_CFG_GATE` (+ `_CLIENT`, `_TRANSPORT`, `_AUTH`, `_POLICY`, `_FACTORY`, `_INJECTOR`, `ZIF_CA_OPS_CFG_*`), field checks `ZCL_CA_OPS_CFG_CHECKS`; app `ZUI_CA_OPS_CFG` (alert rules, channels, purge targets; generated) |
 | Retention purge | `ZCL_CA_OPS_PURGE`, `ZIF_CA_OPS_PURGE_DAO` / `ZCL_CA_OPS_PURGE_DAO`, targets `ZIF_CA_OPS_PURGE_TARGET`, registry `ZCA_OPS_PURGE`, report `ZCA_OPS_RETENTION` |
@@ -114,6 +115,21 @@ zcl_ca_ops_factory=>get_alert( )->send( iv_route = 'ZPE_DAILY' iv_subject = lv_s
 " recipients: parameter ALERT_ZPE_DAILY in area CA_OPS (SO23 lists), fallback ALERT_DEFAULT
 ```
 
+   **Every alert e-mail is a template** (SAP e-mail templates, `docs/ALERT_TEMPLATES.md`): the rule's
+   `TEMPLATE_ID`, else the section's, else the channel's, else `ALERT_TEMPLATE_DEFAULT`
+   (`ZCA_OPS_ALERT_DEFAULT`); the template has plain-text placeholders for the standard context keys
+   (`{{SUBJECT}}`, `{{AREA}}`, `{{RULE_ID}}`, `{{FINDINGS_TOTAL}}`, `{{DUE_DATE}}`, ...) and the markers
+   `{{TABLE_MAIN}}` / `{{TABLE_SECTION}}` where the code puts its tables. When SAP e-mail templates cannot be
+   used the built-in layout is sent and the alert log row says why. Amounts are shown only on rules with
+   `SHOW_AMOUNTS` = X. Fill the business context of a finding where it is known at finding time:
+
+```abap
+ls_finding-business_date = ls_statement-stmt_date.        " blank = not known: the template never breaks
+ls_finding-company_code  = ls_statement-bukrs.
+ls_finding-account       = lv_account_label.               " house bank / account ID or masked - never in full
+ls_finding-item_count    = ls_file-record_count.
+```
+
 5. **Add an alert section plug-in** (optional) - the consumer's own table in the alert message: a class
    implementing `ZIF_CA_OPS_ALERT_SECTION`, named in the parameter `ALERT_SECTION_CLASS` (area `CA_OPS`):
 
@@ -133,6 +149,9 @@ CLASS zcl_pe_alert_section IMPLEMENTATION.
     rv_html = |<table>...</table>|.
   ENDMETHOD.
   METHOD zif_ca_ops_alert_section~text.
+  ENDMETHOD.
+  METHOD zif_ca_ops_alert_section~template_id.  " optional: template of messages with owned findings
+    rv_template_id = 'ZPE_ALERT_ACK'.             " its table goes where the template has {{TABLE_SECTION}}
   ENDMETHOD.
 ENDCLASS.
 ```
@@ -178,6 +197,8 @@ ENDCLASS.
 | `docs/INSTALL.md` | installing at a new customer: checklist (name clashes, reuse rights), pull order, SU21, roles, SLG0, SO23, parameters, purge job, first area, verification with the demo |
 | `docs/auth_zca_ops.md` | authorisation object ZCA_OPS: fields, activities, roles, DCLs |
 | `docs/PARAMETERS.md` | the framework's parameters (area CA_OPS) and the names consumers complete |
+| `docs/ALERT_TEMPLATES.md` | alert e-mail templates: how a mail is built, context keys, configuration, fallback, delivery, VERIFY items |
+| `templates/` | the framework's e-mail templates as documented sources (generic template `ZCA_OPS_ALERT_DEFAULT`) |
 | `docs/VERIFY.md` | what offline checks cannot prove |
 | `CHANGELOG.md` | changes, releases |
 

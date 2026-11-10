@@ -2,6 +2,42 @@
 
 All notable changes of the operations framework (`ops-framework/` in jaideep247/bai).
 
+## [Unreleased] - 2026-11-10 (alert e-mail templates)
+
+User decisions 2026-11-10: every alert e-mail is an editable template (SAP e-mail templates, object type
+SMTG), templates change in DV1 and move by transport only, whether alerts show amounts is configuration
+(default off). Release constant unchanged (`GC_VERSION` 1.0.0) until the release is cut.
+
+### Added
+- Renderer port `ZIF_CA_OPS_MAIL_TEMPLATE`; SAP e-mail template adapter `ZCL_CA_OPS_MAIL_TPL_SMTG` (the only
+  caller of `CL_SMTG_EMAIL_API`, dynamic calls, test seams, VERIFY-ADT); built-in layout
+  `ZCL_CA_OPS_MAIL_TPL_BUILTIN` (fallback, same content); composer `ZCL_CA_OPS_MAIL_COMPOSER` (template order
+  rule > section > channel > generic, plain tokens for table blocks, tables put in after rendering, a
+  template without placeholder gets the table appended and the log records it); factory slot
+  `GET_MAIL_TEMPLATE` / `INJECT_MAIL_TEMPLATE`.
+- Standard business-context keys of the alert e-mail (`ZIF_CA_OPS_TYPES=>TY_MAIL_HEADER`), table blocks
+  `TABLE_MAIN` / `TABLE_SECTION`; business context of a finding (`TY_FINDING`: business date, company code,
+  account label, payment method, count; not stored); exception facts of a run (`GET_EXCEPTION_FACTS`: new /
+  repeated / overdue, due date, owner).
+- Fields `ZCA_OPS_ALRULE-TEMPLATE_ID` / `-SHOW_AMOUNTS`, `ZCA_OPS_ALCHN-TEMPLATE_ID`, `ZCA_OPS_ALLOG-TEMPLATE_ID`
+  / `-RENDERER` / `-RENDER_INFO`; configuration app regenerated (check on save, message 436).
+- CDS data source `ZI_CA_OPS_ALERTMAILCTX`; generic template `ZCA_OPS_ALERT_DEFAULT` as a documented source
+  (`templates/zca_ops_alert_default.md`); `docs/ALERT_TEMPLATES.md`.
+- Parameters `ALERT_MAIL_RENDERER`, `ALERT_TEMPLATE_DEFAULT`, `ALERT_TIME_ZONE`, `ALERT_EXC_APP_LINK` (area
+  `CA_OPS`, 11 definitions); messages 070-075, 436.
+- `SEND( )`: optional template around a prepared report.
+- Section plug-in: optional method `TEMPLATE_ID` (DEFAULT IGNORE - existing sections unchanged).
+
+### Changed
+- Findings table of the alert e-mail: amounts only when the rule has `SHOW_AMOUNTS` (was always shown); a
+  column is shown when a finding has a value; details lines shown. Digest subject impact first:
+  `[SYSID][AREA][severity] <check or rule>: <n> finding(s)` (message 003 reworded; 074 with amounts).
+- The router renders e-mail messages after the claim; the claim keeps the code's subject and intent key.
+
+### Offline evidence
+- abaplint 0 issues, `tools/checks.py` 16/16, generators up to date. Not proven offline:
+  `docs/VERIFY.md` V17-V25 (`docs/ALERT_TEMPLATES.md` section 8).
+
 ## [Unreleased] - 2026-11-10 (customer kit)
 
 Release constant unchanged (`GC_VERSION` 1.0.0): nothing of the framework's behaviour changed.
