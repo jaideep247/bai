@@ -15,7 +15,7 @@
 *& 2026-11-10 | Pilot review: routing decisions were logged with a blank intent key and attempt 0, so with
 *&            | the unique index INT a second decision collided and ACCEPTING DUPLICATE KEYS dropped it
 *&            | silently. A row without an intent now carries its alert ID (hex, 32 characters - a dispatch
-*&            | intent is a 40-character SHA-1, so the two never meet); rows the database refuses raise 076;
+*&            | intent is a 40-character SHA-1, so the two never meet); rows the database refuses raise 081;
 *&            | COMPLETE's fallback insert is checked as well.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - alert repository</p>
@@ -102,7 +102,7 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
     INSERT zca_ops_allog FROM TABLE @lt_db ACCEPTING DUPLICATE KEYS.
     IF sy-dbcnt <> lines( lt_db ).
       RAISE EXCEPTION TYPE zcx_ca_ops_error
-        MESSAGE e076(zca_ops) WITH |{ lines( lt_db ) - sy-dbcnt }| |{ lines( lt_db ) }|.
+        MESSAGE e081(zca_ops) WITH |{ lines( lt_db ) - sy-dbcnt }| |{ lines( lt_db ) }|.
     ENDIF.
   ENDMETHOD.
 
@@ -157,7 +157,7 @@ CLASS zcl_ca_ops_alert_dao IMPLEMENTATION.
       INSERT zca_ops_allog FROM @( CORRESPONDING #( is_log ) ).
       IF sy-subrc <> 0.
         RAISE EXCEPTION TYPE zcx_ca_ops_error
-          MESSAGE e076(zca_ops) WITH '1' '1'.
+          MESSAGE e081(zca_ops) WITH '1' '1'.
       ENDIF.
     ENDIF.
   ENDMETHOD.

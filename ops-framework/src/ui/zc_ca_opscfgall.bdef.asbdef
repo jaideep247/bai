@@ -15,6 +15,9 @@ define behavior for ZC_CA_OpsCfgAll alias OpsCfgAll
   use association _AlertRule { create; with draft; }
   use association _AlertChannel { create; with draft; }
   use association _PurgeTarget { create; with draft; }
+  use association _Control { create; with draft; }
+  use association _ControlText { create; with draft; }
+  use association _ControlCheck { create; with draft; }
 }
 
 define behavior for ZC_CA_AlertRule alias AlertRule
@@ -36,6 +39,33 @@ use etag
 }
 
 define behavior for ZC_CA_PurgeTarget alias PurgeTarget
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_Control alias Control
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_ControlText alias ControlText
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CA_ControlCheck alias ControlCheck
 use etag
 {
   use update;

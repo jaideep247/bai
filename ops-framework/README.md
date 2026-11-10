@@ -21,11 +21,12 @@ standard. Both components stay separate and are shipped together (user decision 
 | Piece | Objects |
 |---|---|
 | Store | `ZIF_CA_OPS_STORE` / `ZCL_CA_OPS_STORE`, tables `ZCA_OPS_RUN`, `ZCA_OPS_FINDING`, `ZCA_OPS_EXC_HIST` |
-| Exceptions | `ZIF_CA_OPS_EXC_DAO` / `ZCL_CA_OPS_EXC_DAO`, `ZCL_CA_OPS_EXC_POLICY`, `ZIF_CA_OPS_EXC_TYPES`; app `ZUI_CA_OPS_EXC` (RAP BO `ZR_CA_OpsException`, sub-package `ZCA_OPS_UI`) |
+| Exceptions | `ZIF_CA_OPS_EXC_DAO` / `ZCL_CA_OPS_EXC_DAO`, `ZCL_CA_OPS_EXC_POLICY`, `ZIF_CA_OPS_EXC_TYPES`; app `ZUI_CA_OPS_EXC` (RAP BO `ZR_CA_OpsException`, sub-package `ZCA_OPS_UI`; actions assign, resolve, request / approve waiver, **classify** - reason code of an open exception, `ZCA_OPS_FINDING-REASON_CODE`, values `EXC_REASON_CODES`, carried forward) |
 | Alerting | `ZIF_CA_OPS_ALERT` / `ZCL_CA_OPS_ALERT_ROUTER`, `ZCL_CA_OPS_ALERT_POLICY`, `ZIF_CA_OPS_ALERT_DAO` / `ZCL_CA_OPS_ALERT_DAO`, channels `ZIF_CA_OPS_ALERT_CHANNEL` (`ZCL_CA_OPS_CHN_EMAIL`, `ZCL_CA_OPS_CHN_APPLOG`), consumer sections `ZIF_CA_OPS_ALERT_SECTION`; tables `ZCA_OPS_ALRULE`, `ZCA_OPS_ALCHN`, `ZCA_OPS_ALLOG` |
 | Alert e-mail templates | `ZIF_CA_OPS_MAIL_TEMPLATE`, `ZCL_CA_OPS_MAIL_TPL_SMTG` (SAP e-mail templates), `ZCL_CA_OPS_MAIL_TPL_BUILTIN` (built-in layout, fallback), `ZCL_CA_OPS_MAIL_COMPOSER`; data source `ZI_CA_OPS_ALERTMAILCTX`; generic template `ZCA_OPS_ALERT_DEFAULT` (`templates/`, documented source) - `docs/ALERT_TEMPLATES.md` |
 | Run control | `ZIF_CA_OPS_LOCK` / `ZCL_CA_OPS_LOCK` (lock argument `ZCA_OPS_LOCK`), `ZCL_CA_OPS_RUN_GUARD` (refuse / abort) |
-| Configuration apps | gate `ZCL_CA_OPS_CFG_GATE` (+ `_CLIENT`, `_TRANSPORT`, `_AUTH`, `_POLICY`, `_FACTORY`, `_INJECTOR`, `ZIF_CA_OPS_CFG_*`), field checks `ZCL_CA_OPS_CFG_CHECKS`; app `ZUI_CA_OPS_CFG` (alert rules, channels, purge targets; generated) |
+| Configuration apps | gate `ZCL_CA_OPS_CFG_GATE` (+ `_CLIENT`, `_TRANSPORT`, `_AUTH`, `_POLICY`, `_FACTORY`, `_INJECTOR`, `ZIF_CA_OPS_CFG_*`), field checks `ZCL_CA_OPS_CFG_CHECKS`; app `ZUI_CA_OPS_CFG` (alert rules, channels, purge targets, controls and their checks and guidance; generated) |
+| Control register and daily review | tables `ZCA_OPS_CONTROL`, `ZCA_OPS_CTLT` (guidance per language), `ZCA_OPS_CTLCHK` (checks a control covers) in `ZUI_CA_OPS_CFG`; sign-off `ZCA_OPS_REVIEW`; review app `ZUI_CA_OPS_REV` (RAP BO `ZR_CA_OpsCtlReview`, action *Mark reviewed*); status per business date derived in CDS from the findings (`ZI_CA_OpsCtlFind` ... `ZI_CA_OpsCtlState`), never stored; `ZCL_CA_OPS_REVIEW_POLICY`, `ZIF_CA_OPS_REVIEW_DAO` / `ZCL_CA_OPS_REVIEW_DAO`, `ZIF_CA_OPS_CTL_TYPES`, domain `ZCA_OPS_CTL_STATUS` - `docs/CONTROL_REVIEW.md` |
 | Retention purge | `ZCL_CA_OPS_PURGE`, `ZIF_CA_OPS_PURGE_DAO` / `ZCL_CA_OPS_PURGE_DAO`, targets `ZIF_CA_OPS_PURGE_TARGET`, registry `ZCA_OPS_PURGE`, report `ZCA_OPS_RETENTION` |
 | Utilities | `ZIF_CA_OPS_TYPES`, `ZCX_CA_OPS_ERROR` (message class `ZCA_OPS`), `ZCL_CA_OPS_UTIL`, `ZCL_CA_OPS_CLOCK`, `ZCL_CA_OPS_FILE_PATH`, `ZCL_CA_OPS_AUTH` (object `ZCA_OPS`), `ZIF_CA_OPS_PARAMS` / `ZCL_CA_OPS_PARAMS` (adapter over ZCA_PARAM), `ZCL_CA_OPS_FACTORY` / `ZCL_CA_OPS_INJECTOR`, `ZCL_CA_OPS_PARAM_SEED` (generated, tests) |
 
@@ -41,7 +42,7 @@ repository, see `.abapgit.xml`). **Step by step for a new customer, with the che
   `zip -d zca_ops.zip 'src/demo/*'`), then in abapGit *New Offline* -> package `ZCA_OPS` -> *Import ZIP* -> *Pull*.
 - After the pull: register area `CA_OPS` and the definitions of `config/param_definitions.csv` in the
   ZCA_PARAM app (`ZUI_CA_PARAM_O4`), create the service bindings `ZUI_CA_OPS_EXC_O4` and
-  `ZUI_CA_OPS_CFG_O4` (OData V4 - UI), create the SLG0 object `ZCA_OPS` / sub-object `ALERT` when
+  `ZUI_CA_OPS_CFG_O4` and `ZUI_CA_OPS_REV_O4` (OData V4 - UI), create the SLG0 object `ZCA_OPS` / sub-object `ALERT` when
   a rule uses the APPLOG channel, run ABAP Unit and ATC, run the demo report `ZCA_OPS_DEMO`, work through
   `docs/VERIFY.md`.
 
@@ -184,9 +185,14 @@ ENDCLASS.
 "                PARAM_AREA = CA_OPS, PARAM_NAME = RETENTION_DAYS_ZPE_EVENT (definition delivered by the consumer)
 ```
 
-7. **Errors.** Derive the consumer's exception from `ZCX_CA_OPS_ERROR` and redefine `CLASSIFY` for its
+7. **Register daily controls** (optional): rows of `ZCA_OPS_CONTROL` / `ZCA_OPS_CTLT` / `ZCA_OPS_CTLCHK` in
+   `ZUI_CA_OPS_CFG` name the consumer's checks (area of the findings, `RULE_ID` / `CHECK_CODE` / `GROUP2` =
+   exact value); the framework derives each control's status per business date from their findings, the
+   reviewers sign off in `ZUI_CA_OPS_REV`, and the consumer's own cards select from `ZR_CA_OpsCtlReview`
+   (`docs/CONTROL_REVIEW.md`). Nothing to code.
+8. **Errors.** Derive the consumer's exception from `ZCX_CA_OPS_ERROR` and redefine `CLASSIFY` for its
    message class (TRANSIENT / CONFIG); `ZCL_CA_OPS_UTIL=>ERROR_CLASS` walks the whole chain.
-8. **Tests.** `ZCL_CA_OPS_INJECTOR` writes doubles into `ZCL_CA_OPS_FACTORY` (`INJECT_STORE`, `INJECT_ALERT`,
+9. **Tests.** `ZCL_CA_OPS_INJECTOR` writes doubles into `ZCL_CA_OPS_FACTORY` (`INJECT_STORE`, `INJECT_ALERT`,
    `INJECT_AUTH`, `INJECT_CLOCK`, ..., `RESET` in `teardown`); `NEW zcl_ca_ops_param_seed( )` is an in-memory
    parameter store over the real ZCA_PARAM logic (areas `ZT_OPS_A` / `_B` for tests). The demo's test
    include shows all of it without a database.
@@ -200,6 +206,7 @@ ENDCLASS.
 | `docs/PARAMETERS.md` | the framework's parameters (area CA_OPS) and the names consumers complete |
 | `docs/ALERT_TEMPLATES.md` | alert e-mail templates: how a mail is built, context keys, configuration, fallback, delivery, VERIFY items |
 | `templates/` | the framework's e-mail templates as documented sources (generic template `ZCA_OPS_ALERT_DEFAULT`) |
+| `docs/CONTROL_REVIEW.md` | control register and daily control review: which findings belong to a control, derived status, sign-off, awaiting / overdue review, review app |
 | `docs/VERIFY.md` | what offline checks cannot prove |
 | `CHANGELOG.md` | changes, releases |
 

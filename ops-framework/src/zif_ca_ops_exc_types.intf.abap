@@ -9,6 +9,8 @@
 *& 2026-11-10 | Concurrency review: TY_EXC_OPEN (key with the disposition and change stamp read - the
 *&            | guard of a resolve; replaces TY_EXC_KEY), code EXC_CHANGED_DEFERRED, messages 786-788.
 *& 2026-11-10 | Moved from ZIF_CD_OPS_EXC_TYPES to the reusable framework ZCA_OPS.
+*& 2026-11-10 | Classification of an open exception: action CLASSIFY, reason codes (parameter
+*&            | EXC_REASON_CODES, delivered TIMING and INVESTIGATING), message 068.
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - exception lifecycle types</p>
 INTERFACE zif_ca_ops_exc_types
@@ -17,6 +19,8 @@ INTERFACE zif_ca_ops_exc_types
   TYPES ty_action TYPE c LENGTH 10.
   TYPES ty_reason TYPE c LENGTH 255.
   TYPES ty_reference TYPE c LENGTH 70.
+  "! Classification of an open exception (ZCA_OPS_FINDING-REASON_CODE)
+  TYPES ty_reason_code TYPE c LENGTH 12.
 
   "! ZCA_OPS_EXC_HIST-ACTION
   CONSTANTS:
@@ -27,7 +31,30 @@ INTERFACE zif_ca_ops_exc_types
       waive_ok    TYPE ty_action VALUE 'WAIVE_OK',
       "! Handled manually outside SAP (a manual status or request of a consumer)
       manual      TYPE ty_action VALUE 'MANUAL',
+      "! Reason code given to an open exception (it stays open)
+      classify    TYPE ty_action VALUE 'CLASSIFY',
     END OF gc_action.
+
+  "! Delivered reason codes (values of parameter EXC_REASON_CODES; a landscape may add more)
+  CONSTANTS:
+    BEGIN OF gc_reason_code,
+      "! A difference that a later day's posting or statement clears (e.g. a reconciliation variance)
+      timing        TYPE ty_reason_code VALUE 'TIMING',
+      "! Operations are investigating the exception
+      investigating TYPE ty_reason_code VALUE 'INVESTIGATING',
+    END OF gc_reason_code.
+
+  "! Parameters of the exception lifecycle (area CA_OPS)
+  CONSTANTS:
+    BEGIN OF gc_param,
+      "! Reason codes an open exception may be classified with (comma list) [TIMING,INVESTIGATING]
+      reason_codes TYPE zif_ca_ops_types=>ty_param_name VALUE 'EXC_REASON_CODES',
+    END OF gc_param.
+
+  CONSTANTS:
+    BEGIN OF gc_param_default,
+      reason_codes TYPE zif_ca_ops_types=>ty_param_value VALUE 'TIMING,INVESTIGATING',
+    END OF gc_param_default.
 
   "! An open exception as read: key, disposition, owner and change stamp (ZCA_OPS_FINDING-LAST_CHANGED_AT).
   "! A resolve writes the row only while disposition and stamp are still the ones read (2026-11-10)
@@ -70,6 +97,8 @@ INTERFACE zif_ca_ops_exc_types
       date_in_past    TYPE symsgno VALUE '065',
       owner_missing   TYPE symsgno VALUE '066',
       request_pending TYPE symsgno VALUE '067',
+      "! The reason code is not one of the values of parameter EXC_REASON_CODES
+      reason_code_invalid TYPE symsgno VALUE '068',
       "! Exception &1 (&2) changed by a user during the run - left for next run
       changed_deferred TYPE symsgno VALUE '786',
       "! Exception &1 / &2 changed meanwhile - not resolved, nothing saved

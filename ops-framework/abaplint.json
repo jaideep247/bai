@@ -37,7 +37,8 @@
     "unused_ddic": {
       "exclude": [
         "/src/ui/zca_d_[a-z]+\\.tabl\\.xml$",
-        "/src/zca_ops_lock\\.tabl\\.xml$"
+        "/src/zca_ops_lock\\.tabl\\.xml$",
+        "/src/zca_ops_(control|ctlt|ctlchk)\\.tabl\\.xml$"
       ]
     },
     "definitions_top": false,

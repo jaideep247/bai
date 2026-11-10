@@ -13,6 +13,7 @@
 *& 2026-11-10 | Every action sets LastChangedAt (ETag of the BO, concurrency review: the batch store writes
 *&            | an exception only while its stamp is the one it read).
 *& 2026-11-10 | Moved from ZBP_R_CD_OPSEXCEPTION to the reusable framework ZCA_OPS (local implementations).
+*& 2026-11-10 | Action classifyException: reason code of an open exception (EXC_REASON_CODES), history CLASSIFY.
 *&---------------------------------------------------------------------*
 "! Content IDs of the history rows created by each action (one per action)
 INTERFACE lif_c.
@@ -22,6 +23,7 @@ INTERFACE lif_c.
       resolve   TYPE abp_behv_cid VALUE 'RESOLVE',
       waive_req TYPE abp_behv_cid VALUE 'WAIVE_REQ',
       waive_ok  TYPE abp_behv_cid VALUE 'WAIVE_OK',
+      classify  TYPE abp_behv_cid VALUE 'CLASSIFY',
     END OF gc_cid.
 ENDINTERFACE.
 
@@ -45,6 +47,9 @@ CLASS lhc_exception DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS approvewaiver FOR MODIFY
       IMPORTING keys FOR ACTION Exception~approveWaiver RESULT result.
+
+    METHODS classifyexception FOR MODIFY
+      IMPORTING keys FOR ACTION Exception~classifyException RESULT result.
 
     "! Allowed (enabled) or not (disabled) as a feature-control value
     METHODS fc
@@ -81,7 +86,9 @@ CLASS lhc_exception IMPLEMENTATION.
                       %action-requestWaiver    = COND #( WHEN requested_authorizations-%action-requestWaiver = if_abap_behv=>mk-on
                                                          THEN lv_change )
                       %action-approveWaiver    = COND #( WHEN requested_authorizations-%action-approveWaiver = if_abap_behv=>mk-on
-                                                         THEN lv_approve ) ) INTO TABLE result.
+                                                         THEN lv_approve )
+                      %action-classifyException = COND #( WHEN requested_authorizations-%action-classifyException = if_abap_behv=>mk-on
+                                                          THEN lv_change ) ) INTO TABLE result.
     ENDLOOP.
   ENDMETHOD.
 
@@ -102,6 +109,9 @@ CLASS lhc_exception IMPLEMENTATION.
       ENDIF.
       IF requested_features-%action-requestWaiver = if_abap_behv=>mk-on.
         <ls_result>-%action-requestWaiver = fc( xsdbool( lv_open = abap_true AND ls_exception-WaiverReqBy IS INITIAL ) ).
+      ENDIF.
+      IF requested_features-%action-classifyException = if_abap_behv=>mk-on.
+        <ls_result>-%action-classifyException = fc( lv_open ).
       ENDIF.
       " four-eyes: the requester never sees an enabled Approve button
       IF requested_features-%action-approveWaiver = if_abap_behv=>mk-on.
@@ -294,6 +304,56 @@ CLASS lhc_exception IMPLEMENTATION.
                                                ToDisp     = zif_ca_ops_types=>gc_disposition-waived
                                                Owner      = ls_exception-Owner
                                                Reason     = ls_exception-WaiverReason
+                                               CreatedBy  = sy-uname
+                                               CreatedAt  = lv_now ) ) ) ).
+    ENDLOOP.
+    READ ENTITIES OF zr_ca_opsexception IN LOCAL MODE
+      ENTITY Exception ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_result).
+    result = VALUE #( FOR ls_row IN lt_result ( %tky = ls_row-%tky %param = ls_row ) ).
+  ENDMETHOD.
+
+
+  METHOD classifyexception.
+    READ ENTITIES OF zr_ca_opsexception IN LOCAL MODE
+      ENTITY Exception ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_exceptions).
+    DATA(lv_now) = zcl_ca_ops_factory=>get_clock( )->now( ).
+    DATA(lv_allowed) = zcl_ca_ops_factory=>get_params( )->get_param(
+                         iv_name    = zif_ca_ops_exc_types=>gc_param-reason_codes
+                         iv_default = CONV #( zif_ca_ops_exc_types=>gc_param_default-reason_codes ) ).
+    LOOP AT lt_exceptions INTO DATA(ls_exception).
+      DATA(ls_key) = keys[ KEY id %tky = ls_exception-%tky ].
+      DATA(ls_decision) = zcl_ca_ops_exc_policy=>can_classify(
+                            is_state       = VALUE #( disposition   = ls_exception-Disposition
+                                                      waiver_req_by = ls_exception-WaiverReqBy )
+                            iv_reason_code = ls_key-%param-ReasonCode
+                            iv_allowed     = lv_allowed ).
+      IF ls_decision-allowed = abap_false.
+        INSERT VALUE #( %tky = ls_exception-%tky ) INTO TABLE failed-exception.
+        INSERT VALUE #( %tky = ls_exception-%tky
+                        %msg = new_message( id = zif_ca_ops_types=>gc_message_class number = ls_decision-msgno
+                                            severity = if_abap_behv_message=>severity-error v1 = ls_decision-v1 ) )
+          INTO TABLE reported-exception.
+        CONTINUE.
+      ENDIF.
+      DATA(lv_code) = CONV zif_ca_ops_exc_types=>ty_reason_code( to_upper( condense( ls_key-%param-ReasonCode ) ) ).
+      MODIFY ENTITIES OF zr_ca_opsexception IN LOCAL MODE
+        ENTITY Exception
+          UPDATE FIELDS ( ReasonCode LastChangedAt )
+          WITH VALUE #( ( %tky          = ls_exception-%tky
+                          ReasonCode    = lv_code
+                          LastChangedAt = lv_now ) )
+        ENTITY Exception
+          CREATE BY \_History
+          FIELDS ( HistAction FromDisp ToDisp Owner Reason CreatedBy CreatedAt )
+          WITH VALUE #( ( %tky    = ls_exception-%tky
+                          %target = VALUE #( ( %cid       = lif_c=>gc_cid-classify
+                                               HistAction = zif_ca_ops_exc_types=>gc_action-classify
+                                               FromDisp   = ls_exception-Disposition
+                                               ToDisp     = ls_exception-Disposition
+                                               Owner      = ls_exception-Owner
+                                               Reason     = condense( |{ lv_code } { ls_key-%param-Reason }| )
                                                CreatedBy  = sy-uname
                                                CreatedAt  = lv_now ) ) ) ).
     ENDLOOP.

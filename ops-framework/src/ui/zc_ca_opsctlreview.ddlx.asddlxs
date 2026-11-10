@@ -1,0 +1,146 @@
+// UI annotations: Daily control review (list report, service ZUI_CA_OPS_REV)
+// Default filter: the current business date (IsCurrentDay = X, today in CONTROL_TIME_ZONE); clear it and pick
+// a business date to review another day. Flagged = Watch + Action required.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Control review', typeNamePlural: 'Daily control review',
+                  title: { type: #STANDARD, value: 'ControlName' },
+                  description: { type: #STANDARD, value: 'ControlId' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BusinessDate', direction: #DESC },
+                                          { by: 'StatusRank', direction: #DESC },
+                                          { by: 'Sequence', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Flagged', text: 'Flagged (watch and action required)', filter: 'IsFlagged EQ X' },
+                        { qualifier: 'Awaiting', text: 'Awaiting review', filter: 'IsAwaitingReview EQ X' } ]
+annotate entity ZC_CA_OpsCtlReview with
+{
+  @UI.facet: [ { id: 'Control', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE, label: 'Control', position: 10 },
+               { id: 'Status', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Status',
+                 label: 'Status and evidence', position: 20 },
+               { id: 'Review', purpose: #STANDARD, type: #FIELDGROUP_REFERENCE, targetQualifier: 'Review',
+                 label: 'Sign-off', position: 30 } ]
+
+  @EndUserText.label: 'Area'
+  @UI.identification: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  Area;
+  @EndUserText.label: 'Control ID'
+  @UI.identification: [ { position: 20 } ]
+  ControlId;
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 5, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 10 } ]
+  BusinessDate;
+  @EndUserText.label: 'Control'
+  @UI.lineItem: [ { position: 10, importance: #HIGH },
+                  { type: #FOR_ACTION, dataAction: 'markReviewed', label: 'Mark reviewed' } ]
+  @UI.identification: [ { position: 30 },
+                        { type: #FOR_ACTION, dataAction: 'markReviewed', label: 'Mark reviewed' } ]
+  ControlName;
+  @EndUserText.label: 'Category'
+  @UI.lineItem: [ { position: 20, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 40 } ]
+  Category;
+  @EndUserText.label: 'Status'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, criticality: 'StatusCriticality' } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 10, criticality: 'StatusCriticality' } ]
+  @UI.selectionField: [ { position: 30 } ]
+  ControlStatus;
+  @UI.hidden: true
+  StatusText;
+  @UI.hidden: true
+  StatusRank;
+  @UI.hidden: true
+  StatusCriticality;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 50 } ]
+  Owner;
+  @EndUserText.label: 'Backup'
+  @UI.identification: [ { position: 60 } ]
+  Backup;
+  @EndUserText.label: 'Team'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 70 } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Team;
+  @EndUserText.label: 'Review cut-off (local time)'
+  @UI.lineItem: [ { position: 55, importance: #LOW } ]
+  @UI.identification: [ { position: 80 } ]
+  CutoffTime;
+  @EndUserText.label: 'Runbook'
+  @UI.identification: [ { position: 90, type: #WITH_URL, url: 'RunbookUrl' } ]
+  RunbookUrl;
+  @UI.hidden: true
+  Sequence;
+  @EndUserText.label: 'Guidance'
+  @UI.identification: [ { position: 100 } ]
+  Guidance;
+  @EndUserText.label: 'Time zone'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 90 } ]
+  TimeZone;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 20 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Findings of the date'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 20 } ]
+  FindingCount;
+  @EndUserText.label: 'Latest finding (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 30 } ]
+  LastFindingAt;
+  @EndUserText.label: 'Open exceptions'
+  @UI.lineItem: [ { position: 60, importance: #HIGH } ]
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 40 } ]
+  OpenExceptions;
+  @EndUserText.label: 'Evidence (latest run of the date)'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 50 } ]
+  EvidenceRun;
+  @EndUserText.label: 'Evidence run started (UTC)'
+  @UI.fieldGroup: [ { qualifier: 'Status', position: 60 } ]
+  EvidenceRunAt;
+  @EndUserText.label: 'Status at sign-off'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 10 } ]
+  StatusAtReview;
+  @EndUserText.label: 'Check result'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 20 } ]
+  ReviewResult;
+  @UI.hidden: true
+  ResultText;
+  @EndUserText.label: 'Evidence at sign-off'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 30 } ]
+  ReviewedEvidenceRun;
+  @EndUserText.label: 'Checked by'
+  @UI.lineItem: [ { position: 80, importance: #MEDIUM } ]
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 40 } ]
+  ReviewedBy;
+  @EndUserText.label: 'Verified at (UTC)'
+  ReviewedAt;
+  @EndUserText.label: 'Verified on (local)'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 50 } ]
+  ReviewedOnLocal;
+  @EndUserText.label: 'Verified at (local time)'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 60 } ]
+  ReviewedTimeLocal;
+  @EndUserText.label: 'Observation'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 70 } ]
+  Observation;
+  @EndUserText.label: 'Next action'
+  @UI.fieldGroup: [ { qualifier: 'Review', position: 80 } ]
+  NextAction;
+  @UI.hidden: true
+  LastChangedAt;
+  @EndUserText.label: 'Signed off'
+  IsReviewed;
+  @EndUserText.label: 'Awaiting review'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 50 } ]
+  IsAwaitingReview;
+  @EndUserText.label: 'Flagged (watch or action required)'
+  @UI.selectionField: [ { position: 35 } ]
+  IsFlagged;
+  @EndUserText.label: 'Review overdue'
+  @UI.lineItem: [ { position: 75, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 60 } ]
+  IsReviewOverdue;
+}

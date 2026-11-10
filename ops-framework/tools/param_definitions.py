@@ -12,6 +12,7 @@ Modification log:
 2026-11-07 | Initial version (parameters moved to ZCA_PARAM).
 2026-11-10 | Moved to ops-framework/tools and made configurable (profile FRAMEWORK).
 2026-11-10 | The engine moved to the shared tools (tools/abaptools); this file is the framework's profile.
+2026-11-10 | Default of RETENTION_DAYS_REVIEW (daily control review) from ZCL_CA_OPS_PURGE.
 """
 import os
 import re
@@ -53,6 +54,7 @@ DEFAULTS = {
     'SLA_DAYS_DEFAULT': ('const', OPS_TYPES, 'gc_param_default-sla_days'),
     'RETENTION_DAYS_RUN': ('const', _PURGE, 'gc_run_days'),
     'RETENTION_DAYS_ALERT_LOG': ('const', _PURGE, 'gc_alert_log_days'),
+    'RETENTION_DAYS_REVIEW': ('const', _PURGE, 'gc_review_days'),
 }
 
 TYPES_FILE = re.compile(r'zif_ca_ops\w*types\.intf\.abap$')

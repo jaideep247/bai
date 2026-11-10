@@ -11,6 +11,7 @@
 *& 2026-11-10 | Field ZCA_PARAR (SU20, auth_zcd_ops.md section 1); a wrong field name failed every check.
 *& 2026-11-10 | may_read_table: S_TABU_NAM 03 in test seam AUTH_TABLE (was a consumer's DDIC helper, now shared).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_AUTH to the reusable framework ZCA_OPS.
+*& 2026-11-10 | user_exists in test seam USER_EXISTS (SUSR_USER_CHECK_EXISTENCE, control register).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - authorisation check ZCA_OPS</p>
 "! Object ZCA_OPS must exist (SU21, config/auth_zcd_ops.md) before activation.
@@ -56,6 +57,23 @@ CLASS zcl_ca_ops_auth IMPLEMENTATION.
         ID zif_ca_ops_auth=>gc_table_auth-id_actvt FIELD zif_ca_ops_auth=>gc_table_auth-display
         ID zif_ca_ops_auth=>gc_table_auth-id_table FIELD lv_table.
       rv_allowed = xsdbool( sy-subrc = 0 ).
+    END-TEST-SEAM.
+  ENDMETHOD.
+
+
+  METHOD zif_ca_ops_auth~user_exists.
+    IF iv_user IS INITIAL.
+      RETURN.
+    ENDIF.
+    TEST-SEAM user_exists.
+      " VERIFY-ADT: function module and its exception (user master USR02, read by SAP)
+      CALL FUNCTION 'SUSR_USER_CHECK_EXISTENCE'
+        EXPORTING
+          user_name            = iv_user
+        EXCEPTIONS
+          user_name_not_exists = 1
+          OTHERS               = 2.
+      rv_exists = xsdbool( sy-subrc = 0 ).
     END-TEST-SEAM.
   ENDMETHOD.
 

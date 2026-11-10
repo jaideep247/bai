@@ -1,4 +1,4 @@
-// UI annotations: Approved tables - Approved tables per reader
+// UI annotations: Approved tables and payment stages - Approved tables per reader
 @Metadata.layer: #CORE
 @UI: { headerInfo: { typeName: 'Approved table',
                      typeNamePlural: 'Approved tables per reader',

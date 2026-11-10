@@ -8,7 +8,7 @@ define view entity ZR_CA_AlertRule
       @EndUserText.label: 'Rule ID'
   key rule_id as RuleId,
       1 as SingletonID,
-      @EndUserText.label: 'Area (* = every area)'
+      @EndUserText.label: 'Area (alert rules: * = every area)'
       area as Area,
       @EndUserText.label: 'Minimum severity'
       min_severity as MinSeverity,

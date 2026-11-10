@@ -4,6 +4,9 @@
 // the Fiori elements overview page (docs/Dashboard_Production_Support.md). It re-exposes the KPI
 // and latest-problem projections of the four area dashboards (same CDS objects, same DCL) and
 // adds the cross-area cards. Read-only: no behaviour definition.
+// 2026-11-10: control center cards - business date as global filter field (BusinessDate; default: the
+// current business date, IsCurrentDay = X, today in CONTROL_TIME_ZONE); the sign-off is the framework's
+// review app ZUI_CA_OPS_REV.
 define service ZUI_CD_OPS_OVERVIEW {
   // Cross-area cards
   expose ZC_CD_OpsCritExc   as CriticalException;
@@ -20,4 +23,11 @@ define service ZUI_CD_OPS_OVERVIEW {
   // Transactions card
   expose ZC_CD_TrxKpi       as TransactionKpi;
   expose ZC_CD_TrxProblem   as TransactionProblem;
+  // Control center (2026-11-10): daily controls (checks reviewed, controls flagged, daily health checks,
+  // attention queue), payment lifecycle and its payments, open reconciliation variances
+  expose ZC_CD_OpsCtlDay     as ControlDay;
+  expose ZI_CA_OpsCtlStatusT as ControlStatusText;
+  expose ZC_CD_PayLifecycle  as PaymentLifecycle;
+  expose ZC_CD_PayOfDay      as PaymentOfDay;
+  expose ZC_CD_OpsVariance   as ReconVariance;
 }

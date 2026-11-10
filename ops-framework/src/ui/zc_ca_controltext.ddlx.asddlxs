@@ -1,0 +1,35 @@
+// UI annotations: Alerting, purge targets and controls - Control guidance per language
+@Metadata.layer: #CORE
+@UI: { headerInfo: { typeName: 'Guidance',
+                     typeNamePlural: 'Control guidance per language',
+                     title: { type: #STANDARD, value: 'Langu' } } }
+annotate entity ZC_CA_ControlText with
+{
+  @UI.facet: [ { id: 'Details', purpose: #STANDARD, type: #IDENTIFICATION_REFERENCE,
+                label: 'Details', position: 10 } ]
+
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{ position: 10 }]
+  Langu;
+
+  @UI.lineItem: [{ position: 20 }]
+  @UI.identification: [{ position: 20 }]
+  Area;
+
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{ position: 30 }]
+  ControlId;
+
+  @UI.lineItem: [{ position: 40 }]
+  @UI.identification: [{ position: 40 }]
+  Guidance;
+
+  @UI.hidden: true
+  LastChangedBy;
+
+  @UI.hidden: true
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

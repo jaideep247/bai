@@ -5,7 +5,7 @@
    <SRVD>
     <NAME>ZUI_CA_OPS_CFG</NAME>
     <TYPE>SRVD/SRV</TYPE>
-    <DESCRIPTION>Alerting and purge targets</DESCRIPTION>
+    <DESCRIPTION>Alerting, purge targets and controls</DESCRIPTION>
     <LANGUAGE>EN</LANGUAGE>
     <MASTER_LANGUAGE>EN</MASTER_LANGUAGE>
     <SOURCE_URI>./zui_ca_ops_cfg/source/main</SOURCE_URI>

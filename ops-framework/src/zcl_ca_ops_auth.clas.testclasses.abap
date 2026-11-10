@@ -10,6 +10,7 @@
 *& 2026-11-07 | Company-code test uses activity 02 (activity 43 removed, read-only scope).
 *& 2026-11-10 | may_read_table through test seam AUTH_TABLE (S_TABU_NAM 03).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_AUTH to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | user_exists through test seam USER_EXISTS; a blank user is no user.
 *&---------------------------------------------------------------------*
 CLASS ltc_auth DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS
@@ -34,6 +35,7 @@ CLASS ltc_auth DEFINITION FINAL FOR TESTING
     METHODS refused_check_raises_041 FOR TESTING.
     METHODS allowed_check_passes FOR TESTING.
     METHODS table_display_decides FOR TESTING.
+    METHODS user_exists_by_seam FOR TESTING.
 
     METHODS configure_scenario
       IMPORTING
@@ -141,6 +143,16 @@ CLASS ltc_auth IMPLEMENTATION.
     END-TEST-INJECTION.
     cl_abap_unit_assert=>assert_false( act = mo_cut->may_read_table( 'T000' )
                                        msg = 'Without S_TABU_NAM 03 the table is not read' ).
+  ENDMETHOD.
+
+
+  " Rule: an existing user passes, a blank user never (no function call)
+  METHOD user_exists_by_seam.
+    TEST-INJECTION user_exists.
+      rv_exists = abap_true.
+    END-TEST-INJECTION.
+    cl_abap_unit_assert=>assert_true( act = mo_cut->user_exists( sy-uname ) msg = 'Existing user' ).
+    cl_abap_unit_assert=>assert_false( act = mo_cut->user_exists( space ) msg = 'Blank user is no user' ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -37,7 +37,7 @@ INTERFACE zif_ca_ops_alert_dao
   "! Audit rows of routing decisions (throttled, quiet hours, repeat, failed, sent by SEND). A row
   "! without an alert intent gets its alert ID (hex) as INTENT_KEY and attempt 0, so the unique
   "! index INT (MANDT, INTENT_KEY, ATTEMPT) never makes two decisions collide; a row the database
-  "! still does not take is an error (message 076), never a silent loss
+  "! still does not take is an error (message 081), never a silent loss
   METHODS insert_log
     IMPORTING
       it_log TYPE zif_ca_ops_types=>tt_alert_log

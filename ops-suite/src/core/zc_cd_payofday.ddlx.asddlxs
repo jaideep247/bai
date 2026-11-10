@@ -1,0 +1,62 @@
+// UI annotations: Production support - payments of a business date ("View payments")
+// List of the payments of the date; the payment document opens the payment trace (ZCDPaymentTrace-display,
+// proposed transaction). No manual entry: SAP is the evidence.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment', typeNamePlural: 'Payments of the business date',
+                  title: { type: #STANDARD, value: 'PaymentDocument' },
+                  description: { type: #STANDARD, value: 'PaymentStatus' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'PaymentDocument', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_PayOfDay with
+{
+  @EndUserText.label: 'Business date (run date)'
+  @UI.lineItem: [ { position: 10, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Payment run'
+  @UI.lineItem: [ { position: 20, importance: #LOW } ]
+  RunId;
+  @EndUserText.label: 'Payment reference'
+  @UI.lineItem: [ { position: 30, importance: #HIGH, type: #WITH_INTENT_BASED_NAVIGATION,
+                    semanticObjectAction: 'display' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  PaymentDocument;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 40, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Source'
+  @UI.lineItem: [ { position: 50, importance: #MEDIUM } ]
+  SourceSystem;
+  @EndUserText.label: 'Payment method'
+  @UI.lineItem: [ { position: 60, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 50 } ]
+  PaymentMethod;
+  @EndUserText.label: 'House bank'
+  HouseBank;
+  @EndUserText.label: 'Status'
+  @UI.lineItem: [ { position: 70, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 60 } ]
+  PaymentStatus;
+  @EndUserText.label: 'Stage'
+  @UI.selectionField: [ { position: 70 } ]
+  Stage;
+  @EndUserText.label: 'Stage'
+  @UI.lineItem: [ { position: 75, importance: #LOW } ]
+  StageLabel;
+  @EndUserText.label: 'Currency'
+  Currency;
+  @EndUserText.label: 'Amount'
+  @UI.lineItem: [ { position: 80, importance: #HIGH } ]
+  Amount;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Payments'
+  @UI.dataPoint: { qualifier: 'Payments', title: 'Payments' }
+  PaymentCount;
+}

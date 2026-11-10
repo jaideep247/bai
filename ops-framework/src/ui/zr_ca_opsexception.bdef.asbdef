@@ -15,7 +15,7 @@ etag master LastChangedAt
   field ( readonly ) RunId, FindingNo, Area, ObjectType, ObjectKey, Group1, Group2, RuleId, CheckCode,
                      Severity, ActionCode, Amount, Currency, Reference, Message, Disposition, Owner, DueDate,
                      ResolvedBy, ResolvedAt, Resolution, FirstSeenAt, Occurrences, WaiverUntil, WaiverReqBy,
-                     WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt;
+                     WaiverReqAt, WaiverReason, CreatedAt, LastChangedAt, ReasonCode;
 
   // VERIFY-ADT: internal create by association (history written only by the actions)
   association _History { internal create; }
@@ -24,6 +24,8 @@ etag master LastChangedAt
   action ( features : instance ) resolveException parameter ZA_CA_ExcReason result [1] $self;
   action ( features : instance ) requestWaiver parameter ZA_CA_ExcWaiver result [1] $self;
   action ( features : instance ) approveWaiver result [1] $self;
+  // 2026-11-10: reason code of an open exception (TIMING, INVESTIGATING, ... - parameter EXC_REASON_CODES)
+  action ( features : instance ) classifyException parameter ZA_CA_ExcClassify result [1] $self;
 
   mapping for zca_ops_finding
   {
@@ -56,6 +58,7 @@ etag master LastChangedAt
     WaiverReason = waiver_reason;
     CreatedAt    = created_at;
     LastChangedAt = last_changed_at;
+    ReasonCode   = reason_code;
   }
 }
 

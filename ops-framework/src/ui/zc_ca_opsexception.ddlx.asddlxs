@@ -1,6 +1,7 @@
 // UI annotations: Owned exceptions (exceptions app)
 // 2026-11-07: navigation to FEBAN / FPCPL removed - the suite records exceptions and does not
 // reprocess statements or clarify payment lots (read-only scope)
+// 2026-11-10: action Classify (reason code of an open exception, e.g. TIMING / INVESTIGATING)
 @Metadata.layer: #CORE
 @UI.headerInfo: { typeName: 'Exception', typeNamePlural: 'Exceptions',
                   title: { type: #STANDARD, value: 'CheckCode' },
@@ -14,12 +15,14 @@ annotate entity ZC_CA_OpsException with
                   { type: #FOR_ACTION, dataAction: 'assignOwner', label: 'Assign' },
                   { type: #FOR_ACTION, dataAction: 'resolveException', label: 'Resolve' },
                   { type: #FOR_ACTION, dataAction: 'requestWaiver', label: 'Request waiver' },
-                  { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' } ]
+                  { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' },
+                  { type: #FOR_ACTION, dataAction: 'classifyException', label: 'Classify' } ]
   @UI.identification: [ { position: 10 },
                         { type: #FOR_ACTION, dataAction: 'assignOwner', label: 'Assign' },
                         { type: #FOR_ACTION, dataAction: 'resolveException', label: 'Resolve' },
                         { type: #FOR_ACTION, dataAction: 'requestWaiver', label: 'Request waiver' },
-                        { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' } ]
+                        { type: #FOR_ACTION, dataAction: 'approveWaiver', label: 'Approve waiver' },
+                  { type: #FOR_ACTION, dataAction: 'classifyException', label: 'Classify' } ]
   @UI.selectionField: [ { position: 10 } ]
   Area;
   @UI.lineItem: [ { position: 20, importance: #HIGH } ]
@@ -77,6 +80,11 @@ annotate entity ZC_CA_OpsException with
   ResolvedAt;
   @UI.identification: [ { position: 220 } ]
   Resolution;
+  // Classification by operations (2026-11-10): e.g. TIMING, INVESTIGATING (parameter EXC_REASON_CODES)
+  @UI.lineItem: [ { position: 90, importance: #MEDIUM } ]
+  @UI.identification: [ { position: 230 } ]
+  @UI.selectionField: [ { position: 70 } ]
+  ReasonCode;
   @UI.hidden: true
   RunId;
   @UI.hidden: true

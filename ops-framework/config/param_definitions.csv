@@ -6,7 +6,11 @@ CA_OPS,ALERT_MAIL_RENDERER,P,CHAR,,,SMTG,SMTG|BUILTIN,,X,,Alert e-mail renderer:
 CA_OPS,ALERT_SECTION_CLASS,P,CLASS,,,,,ZIF_CA_OPS_ALERT_SECTION,,X,Consumer section of the alert message (blank = none),OPS FRAMEWORK
 CA_OPS,ALERT_TEMPLATE_DEFAULT,P,CHAR,,,ZCA_OPS_ALERT_DEFAULT,"[A-Z/][A-Z0-9_/]{0,29}",,,X,Generic alert e-mail template (rule and channel name none),OPS FRAMEWORK
 CA_OPS,ALERT_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,,,Time zone of the times in the alert e-mail (TTZZ),OPS FRAMEWORK
+CA_OPS,CONTROL_TEAMS,P,LIST,,,"ONSITE,OFFSHORE",,,X,,Teams a control may name (control register; comma list),OPS FRAMEWORK
+CA_OPS,CONTROL_TIME_ZONE,P,CHAR,,,UTC,"[A-Z0-9_]{1,6}",,X,,Time zone of business date and review cut-off (TTZZ),OPS FRAMEWORK
+CA_OPS,EXC_REASON_CODES,P,LIST,,,"TIMING,INVESTIGATING",,,X,,Reason codes of an open exception (classification),OPS FRAMEWORK
 CA_OPS,PURGE_PACKAGE_SIZE,P,INT,1,,1000,,,,,Rows deleted per purge package,OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_ALERT_LOG,P,INT,,,180,,,,,Retention of alert log rows (days; at least 30 applied),OPS FRAMEWORK
+CA_OPS,RETENTION_DAYS_REVIEW,P,INT,,,400,,,,,Retention of daily control sign-offs (days; >= 30),OPS FRAMEWORK
 CA_OPS,RETENTION_DAYS_RUN,P,INT,,,400,,,,,Retention of runs and findings (days; >= 30),OPS FRAMEWORK
 CA_OPS,SLA_DAYS_DEFAULT,P,INT,0,,1,,,,,SLA days of an exception when SLA_DAYS_<area>_<sev> blank,OPS FRAMEWORK

@@ -26,6 +26,7 @@ define root view entity ZC_CA_OpsException
       ResolvedBy,
       ResolvedAt,
       Resolution,
+      ReasonCode,
       FirstSeenAt,
       Occurrences,
       WaiverUntil,

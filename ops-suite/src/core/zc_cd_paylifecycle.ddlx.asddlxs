@@ -1,0 +1,48 @@
+// UI annotations: Production support - payment lifecycle (overview page, entity PaymentLifecycle)
+// Analytical card on chart Lifecycle (tracked payments of the business date per stage, ordered by the
+// configured SEQ); card header navigates to the payments of the date (entity PaymentOfDay, "View payments").
+// VERIFY-ADT: order of the bars by StageSequence in the OVP analytical card (presentation variant sort order).
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Payment stage', typeNamePlural: 'Payment lifecycle',
+                  title: { type: #STANDARD, value: 'StageLabel' } }
+@UI.chart: [ { qualifier: 'Lifecycle',
+               title: 'Tracked payments on the business date',
+               chartType: #BAR,
+               dimensions: [ 'Stage' ],
+               measures: [ 'PaymentCount' ],
+               dimensionAttributes: [ { dimension: 'Stage', role: #CATEGORY } ],
+               measureAttributes: [ { measure: 'PaymentCount', role: #AXIS_1 } ] } ]
+@UI.presentationVariant: [ { qualifier: 'Lifecycle',
+                             sortOrder: [ { by: 'StageSequence', direction: #ASC } ],
+                             visualizations: [ { type: #AS_CHART, qualifier: 'Lifecycle' } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_PayLifecycle with
+{
+  @EndUserText.label: 'Business date'
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @EndUserText.label: 'Company code'
+  @UI.lineItem: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'Stage'
+  @UI.lineItem: [ { position: 30 } ]
+  Stage;
+  @UI.hidden: true
+  StageSequence;
+  @EndUserText.label: 'Stage'
+  StageLabel;
+  @EndUserText.label: 'Counted from'
+  StageSource;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Payments'
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.dataPoint: { qualifier: 'Payments', title: 'Tracked payments' }
+  PaymentCount;
+}

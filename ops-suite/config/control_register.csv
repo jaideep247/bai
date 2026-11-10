@@ -1,0 +1,13 @@
+AREA,CONTROL_ID,DESCRIPTION,CATEGORY,OWNER,BACKUP,TEAM,CUTOFF_TIME,RUNBOOK_URL,ACTIVE,SEQ
+CD_FMON,PAYMENT_FILES,Payment files,Payments,,,,083000,,X,10
+CD_HCK,CLEARING_JOB,Clearing job,Batch processing,,,,083000,,X,20
+CD_HCK,BASE_REJECTS,Base-rejected items,Exceptions,,,,090000,,,30
+CD_HCK,ECT_PENDING,ECT pending items,Disbursements,,,,090000,,,40
+CD_FMON,OUTBOUND_IFACE,Outbound ZICD / ZCD,Interfaces,,,,090000,,X,50
+CD_HCK,BLACKLINE,BlackLine,Reconciliation,,,,090000,,X,60
+CD_EBS,BAI_EXCEPTIONS,BAI exceptions,Banking,,,,090000,,X,70
+CD_EBS,MANUAL_RETRIEVALS,Manual retrievals,Disbursements,,,,090000,,X,80
+CD_HCK,MISSING_CHECK_IDS,Missing check IDs,Disbursements,,,,090000,,,90
+CD_FMON,PENDING_ACKS,Pending acknowledgements,Interfaces,,,,090000,,X,100
+CD_FMON,RETURNS_NOTIF,Returns notifications,Payments,,,,090000,,X,110
+CD_HCK,DAILY_RECON,Daily reconciliation,Reconciliation,,,,090000,,X,120

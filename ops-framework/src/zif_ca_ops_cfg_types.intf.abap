@@ -14,6 +14,7 @@
 *&            | ZCA_OPS; 434 parameter, 435 area); the area is ZIF_CA_OPS_TYPES=>TY_AREA (was TY_PE_AREA
 *&            | CHAR 4); a consumer's field check messages stay in its own types interface.
 *& 2026-11-10 | Message 436: e-mail template ID of an alert rule / channel not valid (alert e-mail templates).
+*& 2026-11-10 | Messages 437-439: control register (owner / backup user, team, runbook link).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - configuration apps: types</p>
 INTERFACE zif_ca_ops_cfg_types
@@ -139,6 +140,12 @@ INTERFACE zif_ca_ops_cfg_types
       area_invalid      TYPE ty_msg_number VALUE '435',
       "! Alert rule / channel: the e-mail template ID is not valid or the template does not exist
       template_invalid  TYPE ty_msg_number VALUE '436',
+      "! Control: owner or backup is not a user of this client
+      user_invalid      TYPE ty_msg_number VALUE '437',
+      "! Control: the team is not a value of parameter CONTROL_TEAMS
+      team_invalid      TYPE ty_msg_number VALUE '438',
+      "! Control: the runbook link is not an http / https link
+      url_invalid       TYPE ty_msg_number VALUE '439',
     END OF gc_msg.
 
 ENDINTERFACE.

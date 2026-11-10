@@ -2,7 +2,7 @@ managed implementation in class zbp_r_cd_opscfgall unique;
 strict ( 2 );
 with draft;
 
-// Approved tables: singleton root (virtual, nothing persisted) - lock, total ETag,
+// Approved tables and payment stages: singleton root (virtual, nothing persisted) - lock, total ETag,
 // draft and the customizing request; every customizing table is a child.
 define behavior for ZR_CD_OpsCfgAll alias OpsCfgAll
 with unmanaged save
@@ -16,6 +16,7 @@ authorization master ( global )
   field ( readonly ) SingletonID, LastChangedAtMax;
 
   association _ApprovedTable { create ( features : global ); with draft; }
+  association _PayStage { create ( features : global ); with draft; }
 
   draft action Edit;
   draft action Activate optimized;
@@ -25,6 +26,8 @@ authorization master ( global )
   {
     validation ApprovedTable ~ validateFields;
     validation ApprovedTable ~ validateTransport;
+    validation PayStage ~ validateFields;
+    validation PayStage ~ validateTransport;
   }
 }
 
@@ -56,6 +59,39 @@ etag master LocalLastChangedAt
     Active = active;
     ApprovedBy = approved_by;
     Description = description;
+    LastChangedBy = last_changed_by;
+    LastChangedAt = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZR_CD_PayStage alias PayStage
+persistent table zcd_ops_paystage
+with additional save
+draft table zcd_d_paystage
+lock dependent by _OpsCfgAll
+// ZCA_OPS per child (2026-11-08): change 02 and delete 06 here, create 01 on the root
+// association. VERIFY-ADT: child entity as global authorization master with draft (7.58).
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  update;
+  delete ( features : global );
+  field ( readonly ) SingletonID, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+  field ( readonly : update ) Stage;
+  field ( mandatory : create ) Stage;
+  association _OpsCfgAll { with draft; }
+  validation validateFields on save { create; update; }
+  // VERIFY-ADT: delete as trigger of a validation (transport check of deletions)
+  validation validateTransport on save { create; update; delete; }
+  mapping for zcd_ops_paystage
+  {
+    Stage = stage;
+    Seq = seq;
+    Label = label;
+    Source = source;
+    MatchValue = match_value;
+    Active = active;
     LastChangedBy = last_changed_by;
     LastChangedAt = last_changed_at;
     LocalLastChangedAt = local_last_changed_at;

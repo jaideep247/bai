@@ -3,9 +3,10 @@
 *& Purpose:
 *& Retention purge of the framework's history and of the targets consumers
 *& register: runs with their findings and exception history (RUN), alert
-*& log (ALERT_LOG), then every active row of ZCA_OPS_PURGE (a class of
-*& ZIF_CA_OPS_PURGE_TARGET and its retention parameter). Retention days per
-*& target in ZCA_PARAM (RETENTION_DAYS_RUN / _ALERT_LOG in area CA_OPS, a
+*& log (ALERT_LOG), sign-offs of the daily control review (REVIEW), then
+*& every active row of ZCA_OPS_PURGE (a class of ZIF_CA_OPS_PURGE_TARGET and
+*& its retention parameter). Retention days per target in ZCA_PARAM
+*& (RETENTION_DAYS_RUN / _ALERT_LOG / _REVIEW in area CA_OPS, a
 *& registered target's own parameter), never below 30 days. Every target is
 *& created before anything is deleted (a wrong registry row stops the run
 *& first). Test mode counts only; otherwise deletes package by package with
@@ -20,6 +21,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PURGE to the reusable framework ZCA_OPS: built-in targets RUN and
 *&            | ALERT_LOG, consumer targets from the registry ZCA_OPS_PURGE (plug-ins of
 *&            | ZIF_CA_OPS_PURGE_TARGET, retention parameter per row); result column DEPENDENT (was FINDINGS).
+*& 2026-11-10 | Built-in target REVIEW (sign-offs of the daily control review, RETENTION_DAYS_REVIEW 400).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - retention purge</p>
 CLASS zcl_ca_ops_purge DEFINITION
@@ -65,6 +67,7 @@ CLASS zcl_ca_ops_purge DEFINITION
     "! Built-in defaults of the framework's targets (the parameter definitions deliver the same)
     CONSTANTS gc_run_days TYPE i VALUE 400.
     CONSTANTS gc_alert_log_days TYPE i VALUE 180.
+    CONSTANTS gc_review_days TYPE i VALUE 400.
 
     TYPES:
       BEGIN OF ty_target_cfg,
@@ -76,7 +79,7 @@ CLASS zcl_ca_ops_purge DEFINITION
       END OF ty_target_cfg.
     TYPES tt_target_cfg TYPE STANDARD TABLE OF ty_target_cfg WITH EMPTY KEY.
 
-    "! RUN first (its findings are the largest table), ALERT_LOG, then the registered targets
+    "! RUN first (its findings are the largest table), ALERT_LOG, REVIEW, then the registered targets
     METHODS targets
       IMPORTING
         io_dao            TYPE REF TO zif_ca_ops_purge_dao
@@ -159,6 +162,11 @@ CLASS zcl_ca_ops_purge IMPLEMENTATION.
         param_area   = zif_ca_ops_types=>gc_param_area
         param_name   = |{ zif_ca_ops_types=>gc_param_prefix-retention_days }{ zif_ca_ops_purge_dao=>gc_target-alert_log }|
         default_days = gc_alert_log_days
+        handler      = io_dao )
+      ( target       = zif_ca_ops_purge_dao=>gc_target-review
+        param_area   = zif_ca_ops_types=>gc_param_area
+        param_name   = |{ zif_ca_ops_types=>gc_param_prefix-retention_days }{ zif_ca_ops_purge_dao=>gc_target-review }|
+        default_days = gc_review_days
         handler      = io_dao ) ).
     LOOP AT io_dao->get_targets( ) ASSIGNING FIELD-SYMBOL(<ls_row>).
       TRY.

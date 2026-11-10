@@ -12,7 +12,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_ALERT_DAO to the reusable framework ZCA_OPS (test include).
 *& 2026-11-10 | facts_of_open_exceptions: GET_EXCEPTION_FACTS reads the open / assigned exceptions of the run.
 *& 2026-11-10 | decisions_get_own_intent: routing decisions without an intent get distinct audit keys
-*&            | (the unique index INT itself exists only in the target system - VERIFY V26).
+*&            | (the unique index INT itself exists only in the target system - VERIFY V34).
 *&---------------------------------------------------------------------*
 CLASS ltc_alert_dao DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS

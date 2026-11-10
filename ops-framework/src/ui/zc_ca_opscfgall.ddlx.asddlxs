@@ -1,7 +1,7 @@
-// UI annotations: Alerting and purge targets
+// UI annotations: Alerting, purge targets and controls
 @Metadata.layer: #CORE
-@UI: { headerInfo: { typeName: 'Alerting and purge targets',
-                     typeNamePlural: 'Alerting and purge targets',
+@UI: { headerInfo: { typeName: 'Alerting, purge targets and controls',
+                     typeNamePlural: 'Alerting, purge targets and controls',
                      title: { type: #STANDARD, value: 'SingletonID' } } }
 annotate entity ZC_CA_OpsCfgAll with
 {
@@ -13,7 +13,13 @@ annotate entity ZC_CA_OpsCfgAll with
     { id: 'AlertChannel', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
       label: 'Alert channels', position: 30, targetElement: '_AlertChannel' },
     { id: 'PurgeTarget', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
-      label: 'Purge targets of consumers', position: 40, targetElement: '_PurgeTarget' }
+      label: 'Purge targets of consumers', position: 40, targetElement: '_PurgeTarget' },
+    { id: 'Control', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Controls (daily review)', position: 50, targetElement: '_Control' },
+    { id: 'ControlText', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Control guidance per language', position: 60, targetElement: '_ControlText' },
+    { id: 'ControlCheck', purpose: #STANDARD, type: #LINEITEM_REFERENCE,
+      label: 'Checks covered by a control', position: 70, targetElement: '_ControlCheck' }
   ]
 
   @UI.lineItem: [{ position: 10 }]

@@ -13,9 +13,19 @@ define behavior for ZC_CD_OpsCfgAll alias OpsCfgAll
   use action Prepare;
 
   use association _ApprovedTable { create; with draft; }
+  use association _PayStage { create; with draft; }
 }
 
 define behavior for ZC_CD_ApprovedTable alias ApprovedTable
+use etag
+{
+  use update;
+  use delete;
+
+  use association _OpsCfgAll { with draft; }
+}
+
+define behavior for ZC_CD_PayStage alias PayStage
 use etag
 {
   use update;

@@ -32,6 +32,7 @@
 *&            | ALERT_TEMPLATE_DEFAULT, ALERT_TIME_ZONE, ALERT_EXC_APP_LINK; messages 070-075;
 *&            | name of the exceptions app (GC_EXC_APP).
 *& 2026-11-10 | TY_FINDING-CONTEXT: labelled business-context lines for the alert e-mail (never amounts).
+*& 2026-11-10 | Name prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, reason codes).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - shared types and constants</p>
 "! Runs, findings, severities, RAG, dispositions, alerting and parameters of the
@@ -127,6 +128,10 @@ INTERFACE zif_ca_ops_types
       sla       TYPE ty_param_name VALUE 'SLA_',
       retention TYPE ty_param_name VALUE 'RETENTION_',
       purge     TYPE ty_param_name VALUE 'PURGE_',
+      "! Control register and daily control review (ZIF_CA_OPS_CTL_TYPES=>GC_PARAM, 2026-11-10)
+      control   TYPE ty_param_name VALUE 'CONTROL_',
+      "! Exception lifecycle (ZIF_CA_OPS_EXC_TYPES=>GC_PARAM, 2026-11-10)
+      exception TYPE ty_param_name VALUE 'EXC_',
     END OF gc_param_area_prefix.
 
   "! Delivered defaults of the framework parameters

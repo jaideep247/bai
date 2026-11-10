@@ -3,7 +3,7 @@
 > **First principle:** support starts every shift from one page that says, per area, "is the monitor alive, and is anything red" — and each card opens the dashboard that proves it.
 > **Analogy:** a hospital ward's nurses' station board — one row per patient (area) with vital signs and a red light, the board shows when each reading was taken, and a tap on a row opens the full chart.
 
-Status 2026-11-06: CDS and service written and statically checked offline (abaplint 0 issues); **not activated, ABAP Unit not executed**. The overview page app (manifest) and every launchpad object (space, pages, catalogs, tiles, target mappings, roles) are **documentation only** — the repository carries no FLP or UI5 objects; they are created in the target system (step 1f of `Implementation_Order.md`).
+Status 2026-11-10: **control center** added (daily controls with sign-off, payment lifecycle, open reconciliation variances, business-date filter - §1a). Status 2026-11-06: CDS and service written and statically checked offline (abaplint 0 issues); **not activated, ABAP Unit not executed**. The overview page app (manifest) and every launchpad object (space, pages, catalogs, tiles, target mappings, roles) are **documentation only** — the repository carries no FLP or UI5 objects; they are created in the target system (step 1f of `Implementation_Order.md`).
 
 ## 1. The page
 
@@ -21,9 +21,29 @@ Fiori elements **overview page (OVP)**, OData V4, one data source: service `ZUI_
 | Health checks – reds | List | `HealthRedCheck` | Red and amber checks of the last run | `ZCDHealthCheck-analyze` |
 | **Transactions** | Analytical + KPI | `TransactionKpi` (chart `Worklist`, variant `Today`, data points `Entries`, `Open`, `Exceptions`, `RequestsNotPaid`) | The payment worklist per worklist date (exceptions-only, 2026-11-08): open payments and requests, exceptions, late payments, requests not paid on their due date - clean payments are not counted | `ZCDTransaction-analyze` |
 | Transactions – errored / stuck | List | `TransactionProblem` | The worklist's exceptions: inconsistent, undetermined, ambiguous, late beyond AMBER / RED, waiting for the status job, requests not paid on their due date | `ZCDTransaction-analyze` (row: `ZCDPaymentTrace-display`, proposed) |
+| **Checks reviewed** (control center) | KPI | `ControlDay` (data point `ChecksReviewed` = reviewed of `ControlCount`; `AwaitingReview`, `ReviewOverdue`) | *Checks reviewed n / m (k awaiting review)* for the business date | Review app *Daily control review* (`ZCAControlReview-manage`) |
+| **Controls flagged** (control center) | KPI | `ControlDay` (data point `ControlsFlagged`; `ActionRequired`, `Watch`) | *Controls flagged n (a require action, w on watch)* | Review app, filter *Flagged* |
+| **Open variances** (control center) | KPI + list | `ReconVariance` (data point `OpenVariances`, selection variant `Unresolved`; variant `Timing` = classified as timing) | Group-days of the three-way reconciliation with a difference beyond tolerance on the business date: expected, SAP actual, variance, disposition | Exceptions app filtered by area CD_HCK (classify TIMING / INVESTIGATING or resolve there); `ZCDHealthCheck-analyze` |
+| **Daily health checks** (control center) | List (table) | `ControlDay` (presentation variant `DailyChecks`) | Control, category, status (Healthy / Watch / Action required, coloured), owner + team, exceptions, awaiting review; "View all controls" | Review app (row: the control and date) |
+| **Payment lifecycle** (control center) | Analytical (bars) | `PaymentLifecycle` (chart `Lifecycle`, sorted by the configured stage order) | Tracked payments of the business date per stage (PENDING ... STOPPED, `ZCD_OPS_PAYSTAGE`) | "View payments": `PaymentOfDay` list (payment reference → payment trace) |
+| **Attention queue** (control center) | List | `ControlDay` (selection variant `Flagged`, presentation variant `Attention`) | Controls with Action required / Watch, open exceptions, awaiting review; "Review queue" | Exceptions app filtered by the control's area; review app |
 | Requests (after SE11) | Analytical | `PaymentRequest` of `cds/ZUI_CD_TRX_REQ` (second data source, §2; parameterised: request date window, as of) | Requested → processed → posted → paid → acknowledged → cleared; errored | Request funnel app |
 
 Global filter: none mandatory (the area entities have different dimensions); each card applies its own selection variant. The page is as fresh as its sources: three cards read monitor runs (the freshness card says how old), the transactions cards are live.
+
+### 1a. Control center (2026-11-10) - business date, time zone, no incidents
+
+**Business date selection (decision).** The control center cards share the global filter fields `IsCurrentDay` and `BusinessDate` (OVP V4 global filter bar: `globalFilterEntitySet` = `ControlDay`, filter fields of the same name on every control center entity). **Default: `IsCurrentDay` = X** (`@Consumption.filter.defaultValue`), which the server computes as *today in the time zone of `CONTROL_TIME_ZONE`* (ZCA_PARAM area `CA_OPS`, value row `CST` = America/Chicago, `ZI_CA_OpsBusDay`) - not the browser's date, so a user in another time zone sees the Chicago business date. To look at another day the user clears *Current business date* and picks a **business date** (any of the last 31 days). CDS parameters are **not** used: OVP V4 cards on parameterised entity sets are release-dependent (VERIFY-ADT) and RAP BOs (the review app) cannot have parameters; a plain filter element works for every card and for the dynamic tiles (`$filter=IsCurrentDay eq true`). The older cards (freshness, critical exceptions, area KPIs) have no business date and ignore the filter.
+
+| Card | Rule (all live, nothing copied) |
+|---|---|
+| Checks reviewed / awaiting / overdue | Framework daily control review (`ops-framework/docs/CONTROL_REVIEW.md`): one row per active control of the suite's areas and business date (`ZR_CA_OpsCtlReview` → `ZR_CD_OpsCtlDay`). **Status** = worst live finding of the control's checks on the date (B / E *Action required*, W *Watch*, else *Healthy*; resolved / waived findings and information findings do not count - so the latest result of the date decides, e.g. a health check that turned green in a later run). **Awaiting review** = no sign-off, or status now worse than at the sign-off, or a finding after the sign-off. **Overdue** = awaiting and past the control's cut-off (local time) or the date is over |
+| Controls flagged | Watch + action required (counters of the same rows) |
+| Open variances | `A_RECON_3WAY` metrics already stored (`ZCD_HCK_METRIC`): the latest measurement of each group-day and leg (bank ↔ G/L, G/L ↔ subledger) whose difference exceeds the tolerance the check used; expected / SAP actual / variance = actual − expected; **disposition from the exception workflow** - the reason code of the break exception (*Classify* in the exceptions app: TIMING, INVESTIGATING), TIMING when the check itself classified the day (`RECON_TIMING`), RESOLVED / WAIVED, OPEN, UNCLASSIFIED (no finding). *Unresolved on selected date* = OPEN, UNCLASSIFIED or a reason other than TIMING; *Classified as timing* = TIMING |
+| Payment lifecycle | Payments of the business date = DPAYH rows with run date LAUFD = the date, proposal runs excluded, the **newest** run row per payment document (a re-run payment counts once, on its newest run), per live `ZZ_PAYMENT_STATUS`; request stages from the current request rows of the worklist due on the date. Stage order, labels and the value each stage counts are rows of `ZCD_OPS_PAYSTAGE` (core configuration app; `config/pay_stages.csv`); a stage without payments shows no bar. Access path: `Performance_Review.md` §11 |
+| View payments | `PaymentOfDay`: payment reference (payment document), request source (from the worklist row when there is one; a clean payment has none - the trace shows it), company code, method, house bank, status, stage, amount; company-code authorisation on the row |
+
+**No incidents in SAP (user decision 2026-11-10):** no incident card, no incident number or field anywhere; an *Action required* control carries an observation and a next action in its sign-off. No manual entry of payments or variances - SAP is the evidence.
 
 ## 2. Design decision — one overview service (VERIFY-ADT for the alternative)
 
@@ -51,7 +71,9 @@ DCL `ZC_CD_OPSOVERVIEW`: `pfcg_auth( ZCA_OPS, ZCA_PARAR, ACTVT = '03' )` on both
 | **EBS validation** (`ZCD_OPS_PG_EBS`) | App tiles *EBS validation dashboard* (`ZCDEbsValidation-analyze`, ALP on `EbsStatement`), *EBS findings* (`ZCDEbsValidation-analyzeFindings`), *EBS runs* (`ZCDEbsValidation-displayRuns`); tiles of `Dashboard_EBS_Validation.md` §5 |
 | **Health checks** (`ZCD_OPS_PG_HCK`) | App tile *Health check dashboard* (`ZCDHealthCheck-analyze`); tiles of `Dashboard_Health_Check.md` §4 |
 | **Transactions** (`ZCD_OPS_PG_TRX`) | App tile *Transactions dashboard* (`ZCDTransaction-analyze`); *Payment runs* (`ZCDTransaction-displayRuns`); after SE11 *Payment requests* (`ZCDPaymentRequest-analyze`); tiles of `Dashboard_Transactions.md` §5; *Payment trace* (`ZCDPaymentTrace-display`, proposed transaction) |
-| **Exceptions** (`ZCD_OPS_PG_EXC`) | Existing owned-exceptions app (`ZCDOpsException-manage` → `ZUI_CD_OPS_EXC_O4`) |
+| **Exceptions** (`ZCD_OPS_PG_EXC`) | Existing owned-exceptions app (`ZCDOpsException-manage` → `ZUI_CA_OPS_EXC_O4`) |
+| **Daily control review** (`ZCD_OPS_PG_REVIEW`, 2026-11-10) | App tile *Daily control review* (`ZCAControlReview-manage` → list report on `ZUI_CA_OPS_REV_O4`, framework); dynamic tiles *Awaiting review* (`ControlReview/$count?$filter=IsCurrentDay eq true and IsAwaitingReview eq true`), *Review overdue* (`... and IsReviewOverdue eq true`) |
+| **Settings & ownership** (`ZCD_OPS_PG_SETTINGS`, 2026-11-10) | App tile *Settings & ownership* (`ZCAOpsConfig-maintain` → `ZUI_CA_OPS_CFG_O4`: controls, owner / backup / team, cut-off, guidance, covered checks; alert rules, purge targets); *Payment lifecycle stages* (`ZCDOpsConfig-maintain` → `ZUI_CD_OPS_CFG_O4`, entity `PayStage`); *Parameters* (`ZUI_CA_PARAM_O4`, e.g. `CONTROL_TIME_ZONE`, `CONTROL_TEAMS`, `EXC_REASON_CODES`) |
 
 Dynamic tile URLs: `/sap/opu/odata4/sap/<binding>/srvd/sap/<service>/0001/<EntitySet>/$count?...` (path confirmed when each binding is published — VERIFY-ADT).
 
@@ -63,7 +85,8 @@ Dynamic tile URLs: `/sap/opu/odata4/sap/<binding>/srvd/sap/<service>/0001/<Entit
 
 | Business role | Space / pages | Catalogs | `S_SERVICE` | ZCD_OPS |
 |---|---|---|---|---|
-| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCA_PARAR FMON, EBS, HCK, CORE; ACTVT 03; BUKRS own company codes (or *) |
+| `ZCD_OPS_PROD_SUPPORT` (L1 / L2, team leads) | Production Support, all pages | all `ZCD_OPS_BC_*` | `ZUI_CD_OPS_OVERVIEW_O4`, `ZUI_CD_FMON_FLOW_O4`, `ZUI_CD_EBS_DASH_O4`, `ZUI_CD_HCK_DASH_O4`, `ZUI_CD_TRX_DASH_O4`, `ZUI_CA_OPS_REV_O4` (+ `ZUI_CD_TRX_REQ_O4` after SE11) | ZCA_PARAR CD_FMON, CD_EBS, CD_HCK, CD_OPS; ACTVT 03; BUKRS own company codes (or *) |
+| `ZCD_OPS_REVIEWER` (shift reviewers, 2026-11-10) | Daily control review page | `ZCD_OPS_BC_REVIEW` | `ZUI_CA_OPS_REV_O4` | ZCA_PARAR of the control areas; ACTVT **02** (sign-off, `ops-framework/docs/auth_zca_ops.md`) and 03 |
 | `ZCD_OPS_FMON_DISPLAY`, `ZCD_OPS_EBS_DISPLAY`, `ZCD_OPS_HCK_DISPLAY`, `ZCD_OPS_TRX_DISPLAY` | one page each + Overview | the area catalog + `ZCD_OPS_BC_OVW` | the area binding + overview binding | that area, 03 |
 
 The roles grant no 02 / 16 / 43 / 85; working an exception still needs the operator role (`config/auth_zcd_ops.md` §3).
@@ -76,7 +99,11 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | `ZR_CD_OpsCritExc`, `ZC_CD_OpsCritExc` (+ DDLX) | root, projection |
 | `ZC_CD_OPSOVERVIEW` | DCL |
 | `ZUI_CD_OPS_OVERVIEW` | service definition (binding `ZUI_CD_OPS_OVERVIEW_O4` in ADT) |
-| `ZCL_CD_OPS_OVW_CDS_TEST` | class (test holder): `ltc_freshness` — `one_row_per_monitor_area`, `stale_by_area_threshold`; `ltc_critical` — `open_block_and_error_only`, `overdue_days_are_counted`, `bank_file_message_hidden` |
+| `ZR_CD_OpsCtlDay`, `ZC_CD_OpsCtlDay` (+ DDLX) | root over the framework's `ZR_CA_OpsCtlReview`, projection (control center, 2026-11-10) |
+| `ZI_CD_PayLifeRun`, `ZI_CD_PayLifeCntU`, `ZI_CD_PayWorkSrc`, `ZR_CD_PayLifecycle`, `ZC_CD_PayLifecycle` (+ DDLX), `ZR_CD_PayOfDay`, `ZC_CD_PayOfDay` (+ DDLX) | payment lifecycle and its payments |
+| `ZCD_OPS_PAYSTAGE` (+ draft `ZCD_D_PAYSTAGE`, entity `PayStage` of `ZUI_CD_OPS_CFG`) | table (C): stages of the lifecycle card |
+| `src/hck`: `ZI_CD_OpsVarBank`, `ZI_CD_OpsVarFica`, `ZI_CD_OpsVarU`, `ZR_CD_OpsVariance`, `ZC_CD_OpsVariance` (+ DDLX) | reconciliation variances |
+| `ZCL_CD_OPS_OVW_CDS_TEST` | class (test holder): `ltc_freshness` — `one_row_per_monitor_area`, `stale_by_area_threshold`; `ltc_critical` — `open_block_and_error_only`, `overdue_days_are_counted`, `bank_file_message_hidden`; 2026-11-10: `ltc_control_day` — `counters_of_the_review`; `ltc_life_run` — `newest_run_counts_once`; `ltc_lifecycle` — `stages_from_configuration`; `ltc_variance_leg` — `latest_beyond_tolerance`; `ltc_variance` — `disposition_from_exception` |
 
 ## 6. VERIFY-ADT
 
@@ -87,6 +114,9 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | OVP V4 KPI / analytical / list cards from `@UI.chart`, `@UI.dataPoint`, `@UI.selectionVariant`, `@UI.presentationVariant` | Card settings in the manifest (`annotationPath`, `selectionAnnotationPath`) |
 | Second data source for the request card | Tile on the Transactions page instead |
 | Navigation from a list-card row to another app by area | Card-level navigation only (owned-exceptions app) |
+| Global filter fields `IsCurrentDay` / `BusinessDate` with `@Consumption.filter.defaultValue` on OVP V4 (control center) | Manifest `filterSettings` default; else the user selects the date |
+| UNION ALL of aggregating selects (`ZI_CD_PayLifeCntU`), OR / comparisons in left outer join ON conditions (`ZI_CD_PayLifeRun`, `ZI_CD_OpsVar*`), concat of CHAR fields for the finding key | Three views; key built in ABAP is not an option (CDS only) - split per leg already done |
+| KPI data point with `targetValueElement` (checks reviewed n / m) | Two data points (reviewed, controls) |
 
 ## 7. QA1 cases
 
@@ -100,3 +130,10 @@ The roles grant no 02 / 16 / 43 / 85; working an exception still needs the opera
 | OVP-06 | EBS bank-file statement error with the account in the message | Listed without message |
 | OVP-07 | Before part B of the transactions dashboard | No "Requests" card; all other cards work |
 | OVP-08 | ST05 while the page loads | SELECT only; one request batch per card |
+| OVP-09 | Control center at 09:15 Chicago, two controls not signed off (cut-offs 08:30 / 09:00) | *Checks reviewed* 10 / 12, 2 awaiting, both overdue; the review app lists the same two |
+| OVP-10 | Sign off a control with *Action required* without next action | Refused (076); with observation and next action saved, counter +1 |
+| OVP-11 | New error finding of a signed-off control | Awaiting review again; *Controls flagged* unchanged count rule (worst live finding) |
+| OVP-12 | Business date = yesterday | All control center cards show yesterday; freshness and critical exceptions unchanged |
+| OVP-13 | RECON3 break on a group-day, then *Classify* TIMING in the exceptions app | *Open variances* −1, *Classified as timing* +1 |
+| OVP-14 | Peak day (2 M payments) - payment lifecycle card and *View payments* | Counts equal SE16H on DPAYH (LAUFD, XVORL blank, newest run per DOC1R); response < 5 s; PlanViz recorded (§11 of `Performance_Review.md`) |
+| OVP-15 | User with CD_OPS / BUKRS US01 only | Lifecycle and payments of US01 only |

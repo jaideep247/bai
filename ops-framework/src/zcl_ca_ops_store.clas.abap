@@ -34,6 +34,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_STORE to the reusable framework ZCA_OPS: column AREA (parameter area of
 *&            | ZCA_PARAM); start_run checks the release of ZCA_PARAM (044) and the area (043) first;
 *&            | SLA_DAYS_<area>_<severity> in area CA_OPS.
+*& 2026-11-10 | Carry-forward keeps the reason code of an exception (REASON_CODE, classification).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - DB store (ZCA_OPS_RUN / FINDING)</p>
 "! Repository for the shared result/exception store. The only class that
@@ -386,7 +387,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
     " index ZCA_OPS_FINDING~OBJ: MANDT, AREA, OBJECT_KEY (fix 5; OBJECT_TYPE is a filter)
     SELECT run_id, finding_no, object_type, object_key, check_code, disposition, owner,
            due_date, resolution, created_at, first_seen_at, occurrences, superseded_by, waiver_until,
-           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at
+           waiver_req_by, waiver_req_at, waiver_reason, last_changed_at, reason_code
       FROM zca_ops_finding
       FOR ALL ENTRIES IN @it_keys
       WHERE area      = @is_run-area
@@ -515,6 +516,7 @@ CLASS zcl_ca_ops_store IMPLEMENTATION.
                                    ELSE is_prev-first_seen_at ).
     cs_new-occurrences   = nmax( val1 = is_prev-occurrences val2 = 1 ) + 1.
     cs_new-owner         = is_prev-owner.
+    cs_new-reason_code   = is_prev-reason_code.
     CASE is_prev-disposition.
       WHEN zif_ca_ops_types=>gc_disposition-waived.
         IF is_prev-waiver_until IS INITIAL OR is_prev-waiver_until >= iv_today.

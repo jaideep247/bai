@@ -1,0 +1,86 @@
+// UI annotations: Production support - reconciliation variances (overview page, entity ReconVariance)
+// KPI card "Open variances" (data point OpenVariances with selection variant Unresolved), filter "Classified as
+// timing" (selection variant Timing); the list navigates to the exceptions app, where a variance is classified
+// (TIMING, INVESTIGATING) or resolved. VERIFY-ADT: card rendering.
+@Metadata.layer: #CORE
+@UI.headerInfo: { typeName: 'Variance', typeNamePlural: 'Reconciliation variances',
+                  title: { type: #STANDARD, value: 'ReconGroup' },
+                  description: { type: #STANDARD, value: 'Leg' } }
+@UI.presentationVariant: [ { sortOrder: [ { by: 'BusinessDate', direction: #DESC },
+                                          { by: 'VarianceCriticality', direction: #ASC } ],
+                             maxItems: 10,
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+@UI.selectionVariant: [ { qualifier: 'Unresolved', text: 'Unresolved on selected date', filter: 'IsUnresolved EQ X' },
+                        { qualifier: 'Timing', text: 'Classified as timing', filter: 'IsTiming EQ X' },
+                        { qualifier: 'Today', text: 'Current business date', filter: 'IsCurrentDay EQ X' } ]
+annotate entity ZC_CD_OpsVariance with
+{
+  @EndUserText.label: 'Check'
+  CheckId;
+  @EndUserText.label: 'Group (company code / G/L account / currency)'
+  @UI.lineItem: [ { position: 20, importance: #HIGH } ]
+  ReconGroup;
+  @UI.hidden: true
+  ReconDay;
+  @EndUserText.label: 'Leg (BANK = bank vs G/L, FICA = G/L vs subledger)'
+  @UI.lineItem: [ { position: 30, importance: #MEDIUM } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Leg;
+  @EndUserText.label: 'Business date (reconciled day)'
+  @UI.lineItem: [ { position: 10, importance: #HIGH } ]
+  @UI.selectionField: [ { position: 20 } ]
+  BusinessDate;
+  @UI.hidden: true
+  PaymentEngineArea;
+  @EndUserText.label: 'Company code'
+  @UI.selectionField: [ { position: 30 } ]
+  CompanyCode;
+  @EndUserText.label: 'G/L account'
+  GlAccount;
+  @EndUserText.label: 'Currency'
+  @UI.lineItem: [ { position: 70, importance: #LOW } ]
+  Currency;
+  @EndUserText.label: 'Measuring run'
+  RunId;
+  @EndUserText.label: 'Measured at (UTC)'
+  MeasuredAt;
+  @EndUserText.label: 'Expected'
+  @UI.lineItem: [ { position: 40, importance: #HIGH } ]
+  ExpectedAmount;
+  @EndUserText.label: 'SAP actual'
+  @UI.lineItem: [ { position: 50, importance: #HIGH } ]
+  ActualAmount;
+  @EndUserText.label: 'Variance (actual - expected)'
+  @UI.lineItem: [ { position: 60, importance: #HIGH, criticality: 'VarianceCriticality' } ]
+  VarianceAmount;
+  @EndUserText.label: 'Tolerance'
+  Tolerance;
+  @EndUserText.label: 'Finding'
+  FindingCode;
+  @EndUserText.label: 'Exception disposition'
+  ExceptionDisposition;
+  @EndUserText.label: 'Reason code'
+  ReasonCode;
+  @EndUserText.label: 'Owner'
+  @UI.lineItem: [ { position: 90, importance: #LOW } ]
+  ExceptionOwner;
+  @EndUserText.label: 'Disposition'
+  @UI.lineItem: [ { position: 80, importance: #HIGH, criticality: 'VarianceCriticality' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  VarianceDisposition;
+  @EndUserText.label: 'Classified as timing'
+  @UI.selectionField: [ { position: 60 } ]
+  IsTiming;
+  @EndUserText.label: 'Unresolved'
+  @UI.selectionField: [ { position: 70 } ]
+  IsUnresolved;
+  @UI.hidden: true
+  VarianceCriticality;
+  @EndUserText.label: 'Current business date'
+  @UI.selectionField: [ { position: 10 } ]
+  @Consumption.filter.defaultValue: 'X'
+  IsCurrentDay;
+  @EndUserText.label: 'Variances'
+  @UI.dataPoint: { qualifier: 'OpenVariances', title: 'Open variances' }
+  VarianceCount;
+}

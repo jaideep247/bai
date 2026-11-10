@@ -7,6 +7,7 @@
 *& Modification log:
 *& 2026-11-06 | Initial version (RAP operations apps, phase 3).
 *& 2026-11-10 | Moved from ZCL_CD_OPS_EXC_POLICY to the reusable framework ZCA_OPS (test include).
+*& 2026-11-10 | Classification: allowed codes only (case ignored), open exceptions only.
 *&---------------------------------------------------------------------*
 CLASS ltc_policy DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -37,6 +38,8 @@ CLASS ltc_policy DEFINITION FINAL
     METHODS approve_needs_request        FOR TESTING.
     METHODS requester_cannot_approve     FOR TESTING.
     METHODS second_user_may_approve      FOR TESTING.
+    METHODS classify_allowed_code_only   FOR TESTING.
+    METHODS closed_cannot_be_classified  FOR TESTING.
 ENDCLASS.
 
 
@@ -181,6 +184,40 @@ CLASS ltc_policy IMPLEMENTATION.
       CATCH cx_root INTO DATA(lx_error).
         cl_abap_unit_assert=>fail( msg = lx_error->get_text( ) ).
     ENDTRY.
+  ENDMETHOD.
+
+
+
+  " Rule: a reason code must be one of the configured codes (case ignored); blank is refused
+  METHOD classify_allowed_code_only.
+    DATA(ls_open) = state( zif_ca_ops_types=>gc_disposition-open ).
+    cl_abap_unit_assert=>assert_true(
+      act = zcl_ca_ops_exc_policy=>can_classify( is_state       = ls_open
+                                                 iv_reason_code = 'timing'
+                                                 iv_allowed     = zif_ca_ops_exc_types=>gc_param_default-reason_codes )-allowed
+      msg = 'TIMING is a delivered reason code' ).
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_exc_policy=>can_classify( is_state       = ls_open
+                                                 iv_reason_code = 'LATER'
+                                                 iv_allowed     = zif_ca_ops_exc_types=>gc_param_default-reason_codes )-msgno
+      exp = zif_ca_ops_exc_types=>gc_msg-reason_code_invalid
+      msg = 'An unknown code is refused with 068' ).
+    cl_abap_unit_assert=>assert_false(
+      act = zcl_ca_ops_exc_policy=>can_classify( is_state       = ls_open
+                                                 iv_reason_code = space
+                                                 iv_allowed     = zif_ca_ops_exc_types=>gc_param_default-reason_codes )-allowed
+      msg = 'A blank code is refused' ).
+  ENDMETHOD.
+
+
+  " Rule: only an open or assigned exception is classified
+  METHOD closed_cannot_be_classified.
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_ca_ops_exc_policy=>can_classify( is_state       = state( zif_ca_ops_types=>gc_disposition-resolved )
+                                                 iv_reason_code = zif_ca_ops_exc_types=>gc_reason_code-investigating
+                                                 iv_allowed     = zif_ca_ops_exc_types=>gc_param_default-reason_codes )-msgno
+      exp = zif_ca_ops_exc_types=>gc_msg-not_open
+      msg = 'A resolved exception is not classified' ).
   ENDMETHOD.
 
 ENDCLASS.

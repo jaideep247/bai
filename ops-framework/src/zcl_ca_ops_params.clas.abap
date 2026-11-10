@@ -18,6 +18,7 @@
 *& 2026-11-10 | Moved from ZCL_CD_OPS_PARAMS_CA to the reusable framework ZCA_OPS: area named by the caller
 *&            | or by the longest registered prefix (consumer prefixes by ADD_PREFIXES, framework prefixes
 *&            | -> CA_OPS); CHECK_AREA over ZIF_CA_PARAM=>CHECK_AREA (one area register).
+*& 2026-11-10 | Prefixes CONTROL_ and EXC_ read in area CA_OPS (control review, exception reason codes).
 *&---------------------------------------------------------------------*
 "! <p class="shorttext synchronized">Operations framework - parameters over ZCA_PARAM</p>
 "! Adapter ZIF_CA_OPS_PARAMS -> ZIF_CA_PARAM. get_param: BOOL via get_bool (X / blank),
@@ -73,7 +74,9 @@ CLASS zcl_ca_ops_params IMPLEMENTATION.
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-alert     area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-sla       area = zif_ca_ops_types=>gc_param_area )
       ( prefix = zif_ca_ops_types=>gc_param_area_prefix-retention area = zif_ca_ops_types=>gc_param_area )
-      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-purge     area = zif_ca_ops_types=>gc_param_area ) ).
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-purge     area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-control   area = zif_ca_ops_types=>gc_param_area )
+      ( prefix = zif_ca_ops_types=>gc_param_area_prefix-exception area = zif_ca_ops_types=>gc_param_area ) ).
   ENDMETHOD.
 
 

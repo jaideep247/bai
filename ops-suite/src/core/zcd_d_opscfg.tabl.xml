@@ -7,7 +7,7 @@
     <DDLANGUAGE>E</DDLANGUAGE>
     <TABCLASS>TRANSP</TABCLASS>
     <CLIDEP>X</CLIDEP>
-    <DDTEXT>Draft: Approved tables (singleton)</DDTEXT>
+    <DDTEXT>Draft: Approved tables and payment stages (singleton)</DDTEXT>
     <MAINFLAG></MAINFLAG>
     <CONTFLAG>A</CONTFLAG>
     <EXCLASS>1</EXCLASS>
